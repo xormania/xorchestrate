@@ -1,6 +1,7 @@
 """Acceptance receipts and actual owned-tmux teardown, including failed runs."""
 
 import json
+import os
 import shutil
 import signal
 import subprocess
@@ -42,6 +43,118 @@ def test_reused_pid_is_never_signaled(monkeypatch):
     monkeypatch.setattr(lifecycle.os, "pidfd_open", lambda *args: called.append(args))
     lifecycle.send_signal(lifecycle.Identity(100, 10), signal.SIGTERM)
     assert called == []
+
+
+@pytest.mark.parametrize("already_spawned", [True, False], ids=["initial-descendant", "later-observed-descendant"])
+def test_unrelated_descendant_remains_excluded_after_its_parent_exits(tmp_path, already_spawned):
+    try:
+        proc_pid = int(Path("/proc/self/stat").read_text().split(" ", 1)[0])
+    except (OSError, ValueError):
+        pytest.skip("real process ancestry requires readable Linux /proc process identities")
+    if proc_pid != os.getpid():
+        pytest.skip("host exposes /proc outside the subprocess PID namespace")
+    ready = tmp_path / "ready"
+    spawn = tmp_path / "spawn"
+    child_pid = tmp_path / "child.pid"
+    release = tmp_path / "release"
+    code = f"""
+import subprocess, sys, time
+from pathlib import Path
+Path({str(ready)!r}).touch()
+while not Path({str(spawn)!r}).exists():
+    time.sleep(0.01)
+child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'], start_new_session=True)
+pid_path = Path({str(child_pid)!r})
+pid_path.with_suffix('.tmp').write_text(str(child.pid))
+pid_path.with_suffix('.tmp').replace(pid_path)
+while not Path({str(release)!r}).exists():
+    time.sleep(0.01)
+"""
+
+    def wait_for(predicate):
+        deadline = time.monotonic() + 5
+        while not predicate() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert predicate()
+
+    with lifecycle.subreaper():
+        parent = subprocess.Popen([sys.executable, "-c", code])
+        owned = None
+        child = None
+        try:
+            wait_for(ready.exists)
+            if already_spawned:
+                spawn.touch()
+                wait_for(child_pid.exists)
+            tracker = lifecycle.OwnedProcesses()
+            if not already_spawned:
+                spawn.touch()
+                wait_for(child_pid.exists)
+                tracker.observe()
+            child = lifecycle.processes()[int(child_pid.read_text())][0]
+            assert lifecycle.processes()[child.pid][1] == parent.pid
+            owned = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"], start_new_session=True)
+            release.touch()
+            parent.wait(timeout=5)
+            assert lifecycle.processes()[child.pid][1] == os.getpid()
+
+            survivors = tracker.observe()
+            assert child not in tracker.known
+            assert {identity.pid for identity in survivors} == {owned.pid}
+            for identity in survivors:
+                lifecycle.send_signal(identity, signal.SIGTERM)
+            owned.wait(timeout=5)
+            tracker.reap()
+            assert tracker.observe() == []
+            assert lifecycle.alive(child), "cleanup must leave the adopted unrelated descendant alive"
+        finally:
+            if parent.poll() is None:
+                parent.terminate()
+            parent.wait(timeout=5)
+            if owned is not None:
+                if owned.poll() is None:
+                    owned.kill()
+                owned.wait(timeout=5)
+            if child is None and child_pid.exists():
+                child = lifecycle.processes().get(int(child_pid.read_text()), (None,))[0]
+            if child is not None:
+                lifecycle.send_signal(child, signal.SIGKILL)
+                wait_for(lambda: not lifecycle.alive(child))
+                os.waitpid(child.pid, os.WNOHANG)
+
+
+@pytest.mark.parametrize("already_spawned", [True, False], ids=["initial-tree", "later-observed-tree"])
+def test_exclusion_follows_the_complete_tree_across_reparenting(monkeypatch, already_spawned):
+    monkeypatch.setattr(lifecycle.os, "getpid", lambda: 1)
+    parent = os.getpid()
+    unrelated = lifecycle.Identity(100, 10)
+    child = lifecycle.Identity(101, 11)
+    grandchild = lifecycle.Identity(102, 12)
+    owned = lifecycle.Identity(200, 20)
+    # Reverse ancestry order requires a transitive closure rather than one pass.
+    descendants = {102: (grandchild, 101, "S"), 101: (child, 100, "S")}
+    snapshot = {**(descendants if already_spawned else {}), 100: (unrelated, parent, "S")}
+    monkeypatch.setattr(lifecycle, "processes", lambda: snapshot)
+    tracker = lifecycle.OwnedProcesses()
+    if not already_spawned:
+        snapshot = {**descendants, **snapshot}
+        assert tracker.observe() == []
+    snapshot = {102: (grandchild, 101, "S"), 101: (child, parent, "S"), 200: (owned, parent, "S")}
+    assert tracker.observe() == [owned]
+    snapshot = {102: (grandchild, parent, "S"), 200: (owned, parent, "S")}
+    assert tracker.observe() == [owned]
+
+
+def test_excluded_pid_reuse_does_not_exclude_a_new_owned_process(monkeypatch):
+    monkeypatch.setattr(lifecycle.os, "getpid", lambda: 1)
+    parent = os.getpid()
+    old = lifecycle.Identity(100, 10)
+    current = lifecycle.Identity(100, 20)
+    snapshot = {100: (old, parent, "S")}
+    monkeypatch.setattr(lifecycle, "processes", lambda: snapshot)
+    tracker = lifecycle.OwnedProcesses()
+    snapshot = {100: (current, parent, "S")}
+    assert tracker.observe() == [current]
 
 
 real_tmux = pytest.mark.skipif(shutil.which("tmux") is None, reason="tmux is installed by the acceptance CI job")

@@ -91,11 +91,26 @@ class OwnedProcesses:
 
     def __init__(self):
         self.parent = os.getpid()
-        self.baseline = {identity for identity, parent, _ in processes().values() if parent == self.parent}
+        self.baseline = set()
         self.known = set()
+        self._exclude_descendants(processes(), {self.parent})
+
+    def _exclude_descendants(self, snapshot, roots):
+        # Keep identities after reparenting: subreaping does not confer ownership
+        # of an unrelated process whose original parent has exited.
+        changed = True
+        while changed:
+            changed = False
+            for identity, parent, _ in snapshot.values():
+                if parent in roots and identity.pid not in roots:
+                    self.baseline.add(identity)
+                    roots.add(identity.pid)
+                    changed = True
 
     def observe(self):
         snapshot = processes()
+        excluded = {identity.pid for identity in self.baseline if snapshot.get(identity.pid, (None,))[0] == identity}
+        self._exclude_descendants(snapshot, excluded)
         roots = {self.parent}
         roots.update(identity.pid for identity in self.known if snapshot.get(identity.pid, (None,))[0] == identity)
         changed = True
