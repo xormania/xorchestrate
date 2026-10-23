@@ -4,8 +4,7 @@
     "pull_request": {},
     "push": {
       "branches": [
-        "master",
-        "feat/extract-agentscient"
+        "master"
       ]
     },
     "workflow_dispatch": {}
@@ -42,7 +41,7 @@
         {
           "name": "Lint runtime and CI",
           "id": "lint",
-          "run": "python3 -m ruff check devtools .github"
+          "run": "python3 -m ruff check devtools .github scripts"
         },
         {
           "name": "Check security lint coverage",

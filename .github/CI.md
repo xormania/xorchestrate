@@ -8,7 +8,7 @@ read-only repository permissions.
 
 ```bash
 python3 -m pip install -r .github/requirements-ci.txt
-python3 -m ruff check devtools .github
+python3 -m ruff check devtools .github scripts
 python3 .github/lint_checks.py
 python3 -m devtools.consistency
 python3 -m unittest discover -s .github/tests -v

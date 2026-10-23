@@ -263,7 +263,7 @@
       "source_git_blob": "a0897d3bccd89d581b7f8d5fde99a5da7200d778",
       "source_mode": "100644",
       "destination": ".github/CI.md",
-      "extraction_git_blob": "34040e49973d2760c21c3aa746bd97487dcb6724",
+      "extraction_git_blob": "b24cd4696cd4c632ddde3f9b284f7bebd55d2acd",
       "status": "adapted"
     },
     {
@@ -326,8 +326,8 @@
       "source_git_blob": "b587db4c786b3cedf1f1edf75001699d61b14d9b",
       "source_mode": "100644",
       "destination": ".github/lint_checks.py",
-      "extraction_git_blob": "b587db4c786b3cedf1f1edf75001699d61b14d9b",
-      "status": "copied"
+      "extraction_git_blob": "1f841207b1b28b37b25441eafa0d829bbdb51276",
+      "status": "adapted"
     },
     {
       "source": "dev",
@@ -362,7 +362,7 @@
       "source_git_blob": "20aafd94149e644a8ea885b2bd0df3cabe49543b",
       "source_mode": "100644",
       "destination": ".github/workflows/ci.yml",
-      "extraction_git_blob": "ffd37e3b21d491097cea86efc2ec9141adfb56a2",
+      "extraction_git_blob": "f4491a3ab98727dc3807541532afe1c777301c4e",
       "status": "adapted"
     },
     {

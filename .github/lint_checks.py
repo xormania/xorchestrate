@@ -50,7 +50,7 @@ class SecurityLintTests(unittest.TestCase):
             root = Path(directory)
             shutil.copyfile(ROOT / "ruff.toml", root / "ruff.toml")
             expected = set()
-            for prefix in ("devtools", ".github/actions/security-probe"):
+            for prefix in ("devtools", ".github/actions/security-probe", "scripts"):
                 (root / prefix).mkdir(parents=True)
                 for code, (unsafe, _) in SAMPLES.items():
                     path = root / prefix / (code.lower() + ".py")
