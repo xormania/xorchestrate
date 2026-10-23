@@ -1,22 +1,25 @@
 # Working on Xorchestrate
 
-The user's current instructions define the task. Preserve unrelated work and report
-what was actually verified. Work on a branch and propose changes through a PR;
-the owner controls merging and releases.
+Xorchestrate is a reusable system for coordinating agents across projects, tools,
+execution environments, and organizational structures.
 
-`devtools/` is the extracted, working Python runtime. Keep its basic operations
-usable with the standard library, without PHP, Docker, a model subscription, or
-the historical toolkit. Native sessions and optional providers have additional
-requirements. Preserve existing behavior while making deliberate extension seams.
+Aim for an elegant, coherent architecture with clear responsibilities, sound
+abstractions, separation of concerns, and appropriate design patterns. Nothing
+should be hardwired: infrastructure, behavior, and policy choices should be
+configurable, replaceable, and extensible. Keep basic use simple as capabilities grow.
 
-`legacy/agentscient/` and `reference/` preserve reusable source and historical
-designs. Their policies, role restrictions, branch conventions, skills, and
-workflow instructions describe the original systems; they do not govern work on
-Xorchestrate. Do not automatically run historical dispatch or provisioning scripts.
-Runtime role policies likewise govern managed sessions, not repository maintainers.
+xor is the project owner and final authority on project direction. Current explicit
+instructions take precedence over earlier plans, proposals, repository guidance,
+and agent decisions. Keep assumptions and recommendations explicit and revisable.
 
-Reuse the imported tests. See `.github/CI.md` for runnable checks and
-`docs/extraction.md` for source revisions, boundaries, and retained assumptions.
-Keep source notices and the extraction manifest when moving imported files.
+Evaluate existing code, tests, and documentation as source material. Reuse useful
+capabilities selectively. Existing behavior, compatibility, and historical rules
+are not automatically requirements. Tests should verify intended behavior and
+evolve when that intent changes.
 
-Use xormania attribution for new commits. Do not add AI co-author trailers.
+Match the requested scope: discussion and planning do not authorize implementation.
+Use proportionate verification and report what was actually checked, including
+material limitations. Preserve unrelated work.
+
+Prepare repository changes on a branch for review. xor controls merging and
+releases. Use xormania attribution for commits; do not add AI co-author trailers.
