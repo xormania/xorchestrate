@@ -96,6 +96,21 @@ class NativeProtocolTests(unittest.TestCase):
             env = {"HOME": str(home), "CODEX_HOME": str(home / "codex")}
             store = Store(state)
             co, xo = Client(state, "owner", env=env), None
+
+            def await_stage(stage, observation):
+                states = {}
+
+                def check():
+                    states.update((row["name"], row["state"]) for row in store.members()
+                                  if row["name"] in {"chief", "worker"})
+                    self.assertNotIn("failed", states.values(), f"Native session failed: {states}")
+                    return observation()
+
+                try:
+                    return until(check, timeout=10)
+                except AssertionError as error:
+                    raise AssertionError(f"{stage}; sessions={states}: {error}") from error
+
             try:
                 co.tool(
                     "direct",
@@ -106,11 +121,21 @@ class NativeProtocolTests(unittest.TestCase):
                         "constraints": "Fixture only",
                     },
                 )
-                until(
+                # This path starts XO, runs a planner, then reuses that worker
+                # slot for the coder. Bound each observable transition instead
+                # of charging all three native launches to one receipt deadline.
+                await_stage("XO startup readiness", lambda: store.events(actor="chief", kind="readiness_ready")["events"])
+                await_stage("Planner handoff adopted", lambda: store.events(actor="chief", kind="plan_adopted")["events"])
+                await_stage("Coder startup readiness", lambda: any(
+                    row["data"].get("role") == "coder"
+                    and row["data"].get("generation") == store.member("worker")["generation"]
+                    for row in store.events(actor="worker", kind="readiness_ready")["events"]
+                ))
+                await_stage(
+                    "Collaborator receipt delivered to CO",
                     lambda: any(
                         "Collaborator receipt observed" in row["body"] for row in store.inbox("owner")["messages"]
                     ),
-                    timeout=10,
                 )
                 before = store.member("worker")
                 self.assertIn(before["state"], {"idle", "active"})
