@@ -65,9 +65,9 @@ def test_pass_requires_worker_exit_and_scenario_receipt(tmp_path, receipt, exit_
 @pytest.mark.parametrize("exit_code", [0, 7])
 def test_terminal_eof_waits_for_the_actual_worker_exit(tmp_path, exit_code):
     completed = tmp_path / "after-eof"
-    code = ("import json,os,time; from pathlib import Path; "
+    code = ("import json,os,signal,time; from pathlib import Path; "
             f"Path({str(tmp_path / 'scenario.json')!r}).write_text(json.dumps({{'status':'passed'}})); "
-            "os.close(0); os.close(1); os.close(2); time.sleep(0.3); "
+            "signal.signal(signal.SIGHUP,signal.SIG_IGN); os.close(0); os.close(1); os.close(2); time.sleep(0.3); "
             f"Path({str(completed)!r}).write_text('worker reached its own exit'); os._exit({exit_code})")
     report = lifecycle.supervise([sys.executable, "-c", code], tmp_path, timeout=10, grace=0.5)
     assert completed.exists(), report
