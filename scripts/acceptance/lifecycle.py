@@ -147,7 +147,8 @@ def supervise(command, run_dir, *, profile="fixture", timeout=120, cwd=None, tmu
     run_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
     started = time.monotonic()
     report = {"version": 1, "profile": profile, "status": "failed", "worker_exit": None,
-              "scenario_status": "missing", "cleanup": {"verified": False}, "failure": None}
+              "scenario_status": "missing", "cleanup": {"verified": False}, "failure": None,
+              "tmux_status_refreshes": 0}
     interrupted = []
     handlers = {}
     process = None
@@ -246,6 +247,9 @@ def supervise(command, run_dir, *, profile="fixture", timeout=120, cwd=None, tmu
                     if interrupted or process.poll() is not None or time.monotonic() >= deadline:
                         raise AcceptanceFailure("interrupted" if interrupted else "tmux_start_failed")
                     time.sleep(0.02)
+                server_identity = processes().get(process.pid, (None,))[0]
+                if server_identity is None:
+                    raise AcceptanceFailure("tmux_start_failed")
                 control("set-window-option", "-g", "remain-on-exit", "on")
                 result = control("new-session", "-d", "-s", "acceptance", "-P", "-F", "#{pane_pid}",
                                  "-x", "160", "-y", "48", "-c", str(cwd or Path.cwd()), "--", *command)
@@ -281,6 +285,12 @@ def supervise(command, run_dir, *, profile="fixture", timeout=120, cwd=None, tmu
                             report["worker_exit"] = -int(number) if isinstance(number, int) and number > 0 else None
                             report["failure"] = "worker_signaled"
                             break
+                        # tmux 3.4 with libutempter can lose the SIGCHLD
+                        # notification in foreground (-D) mode (tmux#4559).
+                        # Ask only our identity-fenced server to reap again;
+                        # its actual wait status is still required to finish.
+                        send_signal(server_identity, signal.SIGCHLD)
+                        report["tmux_status_refreshes"] += 1
                     tracker.reap(exclude=(process.pid,))
                     time.sleep(0.05)
             finally:
