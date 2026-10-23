@@ -1,9 +1,9 @@
 # Local agent development support
 
-> Extracted into Xorchestrate. The code below is the active runtime; references to
-> Agentscient's Symfony product, host setup, and release workflow describe its
-> original environment. Start with the [Xorchestrate README](../README.md) and
-> [extraction map](../docs/extraction.md).
+> Historical implementation retained for selective reuse. This namespace is not
+> the current Xorchestrate application. The procedures and restrictions below
+> describe Agentscient; start with the [current README](../README.md) and
+> [architecture](../docs/hexagonal-architecture.md).
 
 `devtools/` is the dev-lane: independent Python services behind MCP for live agent
 coordination and product development. The Symfony application in `src/`, `config/`

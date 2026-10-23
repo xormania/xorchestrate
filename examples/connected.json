@@ -1,0 +1,122 @@
+{
+  "store": {
+    "adapter": "sqlite",
+    "options": {
+      "path": ".xorchestrate/connected.sqlite3"
+    }
+  },
+  "providers": {
+    "project": {
+      "enabled": false,
+      "adapter": "mcp",
+      "options": {
+        "command": [
+          "/absolute/path/to/project-tools",
+          "serve"
+        ],
+        "cwd": "/absolute/path/to/project",
+        "pass_env": [
+          "PATH",
+          "PROJECT_TOOL_TOKEN"
+        ],
+        "timeout": 30
+      }
+    },
+    "judgment": {
+      "enabled": false,
+      "adapter": "cli",
+      "options": {
+        "command": [
+          "/absolute/path/to/assessment-bridge"
+        ],
+        "pass_env": [
+          "PATH",
+          "ASSESSMENT_API_KEY"
+        ],
+        "timeout": 120,
+        "capabilities": [
+          {
+            "name": "assess",
+            "description": "Assess a question using a configured model and supplied context.",
+            "input_schema": {
+              "type": "object",
+              "properties": {
+                "question": {
+                  "type": "string"
+                },
+                "context": {
+                  "type": "object"
+                },
+                "model": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "question",
+                "context",
+                "model"
+              ],
+              "additionalProperties": false
+            }
+          }
+        ]
+      }
+    }
+  },
+  "sessions": {
+    "worker": {
+      "enabled": false,
+      "adapter": "codex",
+      "options": {
+        "command": [
+          "codex",
+          "app-server",
+          "--listen",
+          "stdio://"
+        ],
+        "cwd": "/absolute/path/to/project",
+        "pass_env": [
+          "PATH",
+          "HOME",
+          "CODEX_HOME"
+        ],
+        "application_tools": true,
+        "timeout": 120
+      }
+    }
+  },
+  "evaluators": {
+    "triage": {
+      "enabled": false,
+      "adapter": "tool",
+      "options": {
+        "provider": "judgment",
+        "capability": "assess",
+        "arguments": {
+          "model": "replace-with-triage-model"
+        }
+      }
+    },
+    "deliberate": {
+      "enabled": false,
+      "adapter": "tool",
+      "options": {
+        "provider": "judgment",
+        "capability": "assess",
+        "arguments": {
+          "model": "replace-with-heavier-model"
+        }
+      }
+    }
+  },
+  "assessment": {
+    "triage": "triage",
+    "escalate": "deliberate",
+    "confidence_threshold": 0.8,
+    "uncertain_outcomes": [
+      "uncertain",
+      "borderline",
+      "review"
+    ]
+  }
+}

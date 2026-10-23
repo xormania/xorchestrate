@@ -17,3 +17,7 @@ __pycache__/
 /vendor/
 /phpunit.xml
 /.phpunit.cache/
+
+# Local runtime state and editable-install metadata
+.xorchestrate/
+*.egg-info/

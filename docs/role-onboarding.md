@@ -1,5 +1,10 @@
 # Shared, role-specific onboarding
 
+> Historical reference: this document describes the imported Agentscient runtime in
+> `devtools/`. Its roles, defaults, restrictions, and setup procedures are not
+> requirements of the current Xorchestrate application. Start with the
+> [current architecture](hexagonal-architecture.md) and [README](../README.md).
+
 Configured harness adapters receive the same startup essentials through MCP. The current
 role determines responsibilities, tools, work/source boundaries, reporting and
 skills. Harness/model/reasoning choices do not change that content or authority.

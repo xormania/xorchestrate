@@ -1,5 +1,10 @@
 # Native CO and role replacement
 
+> Historical reference: this document describes the imported Agentscient runtime in
+> `devtools/`. Its roles, defaults, restrictions, and setup procedures are not
+> requirements of the current Xorchestrate application. Start with the
+> [current architecture](hexagonal-architecture.md) and [README](../README.md).
+
 Initialize the [shared runtime](shared-runtime-config.md), configure the chosen
 harnesses' [native login storage](../devtools/OPERATIONS.md#native-login-storage),
 and enable their vendors. From Linux or WSL2, start the CO:

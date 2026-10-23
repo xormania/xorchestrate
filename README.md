@@ -1,63 +1,112 @@
 # Xorchestrate
 
-A foundation for configurable agent coordination, extracted from Agentscient.
-The current runtime, its tests, and the useful earlier tooling are preserved here
-so development can build on working code.
+Xorchestrate coordinates agents, work, messages, capabilities, and evidence through
+replaceable ports and adapters. Its application owns orchestration; configuration
+selects storage, execution, routing, guardrails, and assessment implementations.
 
-| Location | What is here |
-| --- | --- |
-| `devtools/` | Working Python runtime: MCP, native sessions, message delivery, role packages, work tracking, Git workspaces, telemetry, and provider adapters |
-| `.agents/skills/` | Role and framework assets required by the runtime |
-| `legacy/agentscient/` | Earlier conductor, routing/courier, session adapters, dispatch, workflow, telemetry, contracts, fixtures, and testkit; an independent source collection |
-| `reference/agentscient-dev/` | Original repository guidance and CI machinery, retained for reuse |
+The current application is `xorchestrate/`. It has no required agent hierarchy,
+project stack, model vendor, or evaluator. Project knowledge and explicitly
+chosen standards arrive through configured MCP or CLI tools. Observed tool output
+and model recommendations do not become policy on their own.
 
-The active runtime currently uses the `devtools` Python namespace and
-`agentscient_dev` MCP server name. These identifiers, state formats, and policy
-defaults are retained for compatibility. The earlier toolkit is not imported by
-the active runtime or installed as root-level hooks.
+## Run locally
 
-## Try the core locally
-
-Use Python 3.12 on Linux or WSL2 for the tested development environment. The core
-uses Python's standard library. From the checkout:
+Use Python 3.11 or newer. From the checkout:
 
 ```bash
-python3 -m devtools.run --help
-python3 -m devtools.consistency
-
-# Private, disposable state outside the source tree; no vendor session is started.
-xor_state=$(mktemp -d /tmp/xorchestrate.XXXXXX)
-python3 -m devtools.run init --state "$xor_state" --workspace "$PWD" \
-  --member operator:external --member collaborator:external --co operator
-python3 -m devtools.run status --state "$xor_state"
-python3 -m devtools.run connection --state "$xor_state"
+python3 -m pip install -e .
+python3 -m xorchestrate describe
+python3 -m xorchestrate call create_work --json '{"goal":"Investigate a feature and retain the evidence"}'
+python3 -m xorchestrate call list_work --json '{}'
 ```
 
-`connection` describes the MCP connections. Attach a named member using
-`python3 -m devtools.run mcp --state /absolute/state/path --member MEMBER`.
-The `--operator` connection provides setup authority; use a normal member
-connection for managed work. State contains private runtime information and
-belongs outside Git.
+Without a config file, state is retained in `.xorchestrate/state.sqlite3`; there
+are no external providers, agent processes, or evaluators. `describe` lists the
+application operations. `call` accepts JSON through `--json`, `--input FILE`, or
+standard input. These same operations are exposed through the stdio MCP server:
 
-Managed native sessions additionally require tmux, Linux process/socket support,
-and an installed, authenticated harness. Codex, Claude, and Grok adapters are
-included. Serena source editing uses Docker; Symfony tools require a separately
-configured PHP application. Jev evaluation is optional. None is needed for the
-core example above.
+```bash
+python3 -m xorchestrate --config /absolute/path/team.json serve
+```
 
-## Develop and extend
+For a persistent CLI connection, `run` accepts one JSON request per line and
+returns a `result` or `error` envelope:
 
-- [Extraction map and retained assumptions](docs/extraction.md)
-- [Validation and CI](.github/CI.md)
-- [Runtime code map](devtools/README.md)
-- [Role packages](docs/role-capability-packages.md) and [runtime configuration](docs/shared-runtime-config.md)
-- [Operator reference](devtools/OPERATIONS.md) — inherited Agentscient procedures; see the extraction map before using its provisioning helpers
+```bash
+python3 -m xorchestrate --config /absolute/path/team.json run
+```
 
-Harness and role adapters already have registries. Storage remains SQLite, and
-the current role hierarchy and delivery decisions still contain policy in code.
-General storage, routing, and organization extension points are future work;
-this extraction does not claim those abstractions already exist.
+For example, send `{"action":"list_work","arguments":{}}`. Keep `run` or the MCP
+connection open while using native sessions. A one-shot `call` closes the adapters
+it owns when it exits; a stored session record does not keep its process alive.
 
-The source Symfony product, live working records, credentials, and host state are
-not included. Source revisions and original file hashes are recorded in
-`extraction-manifest.json`; existing license notices are retained in place.
+The CLI actor defaults to `owner`; `--actor` selects the identity bound to that
+local invocation or MCP server process. The local process owner is trusted to
+choose configuration and identity. The stdio server is not a network
+authentication service.
+
+## Connect capabilities and agents
+
+A configuration selects adapters by name and passes their options explicitly:
+
+```json
+{
+  "store": {"adapter": "sqlite", "options": {"path": "state.sqlite3"}},
+  "providers": {
+    "project": {
+      "adapter": "mcp",
+      "options": {"command": ["project-tools", "serve"]}
+    }
+  },
+  "sessions": {
+    "worker": {
+      "adapter": "codex",
+      "options": {
+        "command": ["codex", "app-server", "--listen", "stdio://"],
+        "pass_env": ["PATH", "HOME", "CODEX_HOME"],
+        "application_tools": true
+      }
+    }
+  }
+}
+```
+
+`project-tools` represents an executable you supply. Provider capabilities are
+discovered at runtime and addressed as `provider/name`; adding one does not require
+editing the application. Session drivers communicate with configured agent
+processes. MCP and CLI can supply project context, declared requirements, source
+editing, checks, and other capabilities without teaching the core a particular
+framework or stack.
+
+`application_tools` exposes application operations as native dynamic tools for
+this Codex driver. Calls retain the session's actor identity and pass through the
+same application guardrails as CLI and MCP calls.
+
+Configuration is trusted local code selection: adapters can launch executables or
+load installed `module:factory` implementations. Use config files you control.
+Runtime tool arguments cannot replace a configured executable. Filesystem,
+network, and native tool access also depend on the chosen process environment and
+harness; application guardrails are not an operating-system sandbox.
+
+See [the architecture and contracts](docs/hexagonal-architecture.md),
+[configuration examples](examples/), and [validation](.github/CI.md) for the
+supported behavior and limits. The deterministic tests use real subprocess
+boundaries with fixture servers; they do not establish authenticated vendor or
+Jev endpoint acceptance.
+
+## Source layout
+
+| Location | Purpose |
+| --- | --- |
+| `xorchestrate/` | Current application, ports, adapters, composition, CLI, and MCP input |
+| `tests/hexagonal/` | Application behavior, adapter contracts, process fixtures, and dependency boundaries |
+| `devtools/` | Imported Agentscient implementation retained for selective reuse and source regression |
+| `reference/imported-agent-skills/` | Historical agent instructions, removed from active skill discovery |
+| `legacy/agentscient/` | Earlier conductor, tooling, fixtures, and testkit source collection |
+| `reference/agentscient-dev/` | Original repository guidance and CI machinery |
+
+The imported runtime and historical documents describe their original behavior;
+its roles, path ceilings, evaluator prerequisites, and delivery policies are not
+requirements for the current application. There is no automatic migration of its
+state or a claim of feature parity. Reuse is deliberate, with original license
+notices and [extraction provenance](docs/extraction.md) retained.

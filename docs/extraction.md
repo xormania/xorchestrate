@@ -1,5 +1,10 @@
 # Agentscient extraction
 
+> Historical reference: this document describes the imported Agentscient runtime in
+> `devtools/`. Its roles, defaults, restrictions, and setup procedures are not
+> requirements of the current Xorchestrate application. Start with the
+> [current architecture](hexagonal-architecture.md) and [README](../README.md).
+
 This repository starts with reusable implementation and tests from two immutable
 Agentscient snapshots. The source repository is unchanged.
 
