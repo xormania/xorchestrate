@@ -264,10 +264,23 @@ def supervise(command, run_dir, *, profile="fixture", timeout=120, cwd=None, tmu
                     if time.monotonic() >= deadline:
                         report["failure"] = "timeout"
                         break
-                    status = control("display-message", "-p", "-t", "acceptance:0.0", "#{pane_dead} #{pane_dead_status}").stdout.strip().split()
-                    if status and status[0] == "1":
-                        report["worker_exit"] = int(status[1]) if len(status) > 1 and status[1].isdigit() else -1
-                        break
+                    status = control("display-message", "-p", "-t", "acceptance:0.0",
+                                     "#{pane_dead}|#{pane_dead_status}|#{pane_dead_signal}").stdout.strip().split("|")
+                    # pane_dead means the PTY closed. Its child may still be
+                    # running, or tmux may not have collected SIGCHLD yet.
+                    # Only a populated exit status/signal establishes an exit.
+                    if len(status) == 3 and status[0] == "1":
+                        if status[1].isdigit():
+                            report["worker_exit"] = int(status[1])
+                            break
+                        if status[2]:
+                            # tmux uses a signal name where sys_signame exists,
+                            # and a decimal signal number on Linux builds.
+                            number = (int(status[2]) if status[2].isdigit() else
+                                      getattr(signal, "SIG" + status[2].upper().removeprefix("SIG"), None))
+                            report["worker_exit"] = -int(number) if isinstance(number, int) and number > 0 else None
+                            report["failure"] = "worker_signaled"
+                            break
                     tracker.reap(exclude=(process.pid,))
                     time.sleep(0.05)
             finally:

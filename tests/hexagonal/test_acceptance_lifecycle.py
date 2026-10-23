@@ -62,6 +62,34 @@ def test_pass_requires_worker_exit_and_scenario_receipt(tmp_path, receipt, exit_
 
 
 @real_tmux
+@pytest.mark.parametrize("exit_code", [0, 7])
+def test_terminal_eof_waits_for_the_actual_worker_exit(tmp_path, exit_code):
+    completed = tmp_path / "after-eof"
+    code = ("import json,os,time; from pathlib import Path; "
+            f"Path({str(tmp_path / 'scenario.json')!r}).write_text(json.dumps({{'status':'passed'}})); "
+            "os.close(0); os.close(1); os.close(2); time.sleep(0.3); "
+            f"Path({str(completed)!r}).write_text('worker reached its own exit'); os._exit({exit_code})")
+    report = lifecycle.supervise([sys.executable, "-c", code], tmp_path, timeout=10, grace=0.5)
+    assert completed.exists(), report
+    assert report["worker_exit"] == exit_code, report
+    assert report["status"] == ("passed" if exit_code == 0 else "failed"), report
+    assert report["cleanup"]["verified"], report
+    assert not report["cleanup"]["forced"], report
+
+
+@real_tmux
+def test_worker_signal_is_a_final_failed_exit(tmp_path):
+    code = ("import json,os,signal; from pathlib import Path; "
+            f"Path({str(tmp_path / 'scenario.json')!r}).write_text(json.dumps({{'status':'passed'}})); "
+            "os.kill(os.getpid(),signal.SIGTERM)")
+    report = lifecycle.supervise([sys.executable, "-c", code], tmp_path, timeout=10, grace=0.5)
+    assert report["status"] == "failed", report
+    assert report["failure"] == "worker_signaled", report
+    assert report["worker_exit"] == -signal.SIGTERM, report
+    assert report["cleanup"]["verified"], report
+
+
+@real_tmux
 def test_timeout_reaps_detached_descendant_without_touching_unrelated_process(tmp_path):
     unrelated = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"], start_new_session=True)
     child_pid = tmp_path / "child.pid"
