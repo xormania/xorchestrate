@@ -94,12 +94,27 @@ supported behavior and limits. The deterministic tests use real subprocess
 boundaries with fixture servers; they do not establish authenticated vendor or
 Jev endpoint acceptance.
 
+## Live acceptance fixture
+
+With tmux installed, run the reusable acceptance scenario from the checkout:
+
+```bash
+python3 -m scripts.acceptance --output .xorchestrate/acceptance
+```
+
+It uses a private tmux server, exercises real MCP and subprocess boundaries, and
+retains a receipt plus evidence for each run. The default uses deterministic
+protocol peers and needs no model account. A configured native profile verifies
+a real harness's application-tool callback. See [live acceptance](docs/live-acceptance.md)
+for both profiles, observation, and cleanup behavior.
+
 ## Source layout
 
 | Location | Purpose |
 | --- | --- |
 | `xorchestrate/` | Current application, ports, adapters, composition, CLI, and MCP input |
 | `tests/hexagonal/` | Application behavior, adapter contracts, process fixtures, and dependency boundaries |
+| `scripts/acceptance/` | Reusable tmux acceptance runner, scenarios, and deterministic protocol peers |
 | `devtools/` | Imported Agentscient implementation retained for selective reuse and source regression |
 | `reference/imported-agent-skills/` | Historical agent instructions, removed from active skill discovery |
 | `legacy/agentscient/` | Earlier conductor, tooling, fixtures, and testkit source collection |

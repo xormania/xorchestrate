@@ -54,7 +54,7 @@
         },
         {
           "name": "Compile application and fixtures",
-          "run": "python3 -m compileall -q xorchestrate tests/hexagonal"
+          "run": "python3 -m compileall -q xorchestrate tests/hexagonal scripts/acceptance"
         }
       ]
     },
@@ -115,6 +115,47 @@
           ]
         }
       }
+    },
+    "tmux-acceptance": {
+      "name": "Tmux live acceptance (protocol fixture)",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 5,
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "with": {
+            "python-version": "3.12"
+          }
+        },
+        {
+          "name": "Install application and tmux",
+          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]'\nsudo apt-get update\nsudo apt-get install -y tmux"
+        },
+        {
+          "name": "Verify acceptance scenarios and lifecycle regressions",
+          "run": "python3 -m pytest tests/hexagonal/test_acceptance_*.py -q"
+        },
+        {
+          "name": "Run reusable tmux acceptance fixture",
+          "run": "python3 -m scripts.acceptance --output \"$RUNNER_TEMP/acceptance-evidence\" --timeout 120"
+        },
+        {
+          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "if": "always()",
+          "with": {
+            "name": "tmux-acceptance-evidence",
+            "path": "${{ runner.temp }}/acceptance-evidence/**/report.json\n${{ runner.temp }}/acceptance-evidence/**/scenario.json",
+            "if-no-files-found": "error",
+            "retention-days": 7
+          }
+        }
+      ]
     },
     "imported-runtime": {
       "name": "Imported runtime regression (historical source)",

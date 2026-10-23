@@ -1,7 +1,7 @@
 # Validation
 
-CI runs on GitHub-hosted Ubuntu with Python 3.12. It needs no repository secrets
-or authenticated model accounts. Pinned action revisions use read-only repository
+CI runs on GitHub-hosted Ubuntu; application tests use Python 3.11 and 3.12. It
+needs no repository secrets or authenticated model accounts. Pinned action revisions use read-only repository
 permissions. Pull requests and pushes to `master` or `integration/hexagonal` run
 the checks.
 
@@ -11,7 +11,7 @@ the checks.
 python3 -m pip install -e '.[test]' -r .github/requirements-ci.txt
 python3 -m ruff check xorchestrate tests devtools .github scripts
 python3 .github/lint_checks.py
-python3 -m compileall -q xorchestrate tests/hexagonal
+python3 -m compileall -q xorchestrate tests/hexagonal scripts/acceptance
 python3 -m pytest tests/hexagonal -q
 ```
 
@@ -25,6 +25,30 @@ These checks establish the behavior they exercise. Authenticated native harnesse
 remote MCP providers, and a live Jev endpoint require separate acceptance runs
 with the intended configuration. Fixture success is not evidence that an account
 has access to a particular model or service.
+
+## Tmux live acceptance
+
+The `Tmux live acceptance (protocol fixture)` job installs tmux and runs the
+reusable acceptance scenario in an owned terminal:
+
+```bash
+python3 -m scripts.acceptance --output .xorchestrate/acceptance --timeout 120
+```
+
+This job exercises the public MCP interface across actual process boundaries,
+SQLite persistence, configured capabilities, and session callbacks. It also
+checks termination of the fixture's owned processes and tmux server. Missing
+tmux, scenario failures, timeouts, or failed cleanup make the run fail. There is
+no successful skip for an unavailable dependency.
+
+Each run retains a unique evidence directory. CI uploads its `report.json` and
+`scenario.json` receipts as `tmux-acceptance-evidence` after success or failure and
+retains them for seven days. The job also runs the acceptance scenario, lifecycle,
+and cleanup regressions with tmux installed. Raw configuration, state, and pane
+capture stay outside the upload. The native profile is an explicit local/operator run and is
+not automatically uploaded by this job.
+See [live acceptance](../docs/live-acceptance.md) for observation, receipt
+interpretation, and the configured native profile.
 
 ## Imported source regression
 
