@@ -72,6 +72,52 @@ driver. The operator supplies the harness and account; the receipt is not an
 independent certification of vendor identity or access to a named model. Jev or
 other remote capability acceptance needs a scenario that exercises that service.
 
+## Optional xorder hosts
+
+[xorder](https://github.com/xormania/xorder) supplies two accepted Linux/amd64
+images relevant to these runs. Its generated image pages carry the measured
+inventories and exact identities:
+
+| Environment | Available tooling | Use here |
+| --- | --- | --- |
+| [python-matrix/trixie 1.0.1](https://github.com/xormania/xorder/blob/master/docs/images/python-matrix-trixie.md) | Python 3.12/3.14, SQLite, tmux 3.5a | Credential-free protocol fixture |
+| [harness-live/trixie 1.0.0](https://github.com/xormania/xorder/blob/master/docs/images/harness-live-trixie.md) | Python 3.14, tmux 3.5a, managed vendor CLI installation | Configured native-harness run |
+
+With a working Docker engine, registry access, and an xorder checkout, its
+[public launcher](https://github.com/xormania/xorder/blob/master/scripts/run-image.sh)
+mounts the chosen workspace at `/workspace`. This runs our fixture using the
+accepted Python matrix digest and an interpreter compatible with Xorchestrate:
+
+```bash
+WORKSPACE=/absolute/path/to/xorchestrate CACHE_VOLUME=xorchestrate-fixture-home \
+  bash /absolute/path/to/xorder/scripts/run-image.sh \
+  ghcr.io/xormania/python-matrix@sha256:dc0da00ee10740bb20406e4a0544ed4672e6ed0fc82169c34a246ccd20f93662 \
+  bash -eu -c '
+    python3.12 -m venv /tmp/xorchestrate-acceptance
+    /tmp/xorchestrate-acceptance/bin/python -m pip install -e ".[test]"
+    /tmp/xorchestrate-acceptance/bin/python -m scripts.acceptance --output .xorchestrate/acceptance --timeout 120
+  '
+```
+
+For a native run, start the accepted harness image with a dedicated private HOME
+volume. This example selects Codex installation; the harness image's
+[usage guide](https://github.com/xormania/xorder/blob/master/docs/harness-live.md)
+describes other selections and operator authentication:
+
+```bash
+WORKSPACE=/absolute/path/to/xorchestrate CACHE_VOLUME=xorchestrate-private-harness-home HARNESS_NAMES=codex \
+  bash /absolute/path/to/xorder/scripts/run-image.sh --interactive \
+  ghcr.io/xormania/harness-live@sha256:247e7bd01adcfc0d6ee321906ada6ac182b72905a5deee3b20b952dd5af746d5 bash
+```
+
+Inside the container, prepare a project virtual environment and run the native
+command above with container-visible configuration and workspace paths. Retain
+the image digest and `harnesses status` output with private run evidence. Vendor
+CLIs are installed on initialization, not bundled in image layers; their network
+and authentication prerequisites remain explicit. The image's existing readiness
+evidence covers xordination's launcher. Xorchestrate acceptance on these exact
+images still needs to be run; changing images does not itself verify our fixture.
+
 ## Read the result
 
 The command exits successfully only when the scenario passes, its worker exits
