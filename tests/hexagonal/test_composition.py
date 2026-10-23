@@ -58,11 +58,9 @@ class Session:
         self.options = options
         constructed.append(self)
 
-    def set_tools(self, tools):
-        self.tools = tools
-
-    def set_request_handler(self, handler):
-        self.handler = handler
+    def bind_application_tools(self, capabilities, callback):
+        self.tools = capabilities
+        self.callback = callback
 
     def close(self):
         closed.append(self.label)
@@ -258,7 +256,7 @@ class CompositionTests(unittest.TestCase):
             third.application.call("create_work", {"goal": "The next snapshot denies this"})
         self.assertEqual(failure.exception.code, "denied")
 
-    def test_native_application_tools_use_bound_principal_and_only_supported_context_fields(self):
+    def test_custom_session_tools_use_neutral_callbacks_and_bound_principals(self):
         extension = self.extension()
         runtime = self.runtime({
             "store": {"adapter": "memory"},
@@ -266,30 +264,76 @@ class CompositionTests(unittest.TestCase):
             "sessions": {"agent": {"adapter": extension.__name__ + ":Session", "options": {"application_tools": True}}},
         })
         session = runtime.application.sessions["agent"]
-        self.assertIn("create_work", {tool["name"] for tool in session.tools})
-        work = session.handler("item/tool/call", {
-            "tool": "create_work", "arguments": '{"goal":"Native work"}',
-        }, {"actor": "bound-agent", "work_id": "unused-for-create"})["work"]
+        self.assertIn("create_work", {tool.name for tool in session.tools})
+        self.assertFalse(hasattr(session, "set_request_handler"))
+        work = session.callback("create_work", {"goal": "Native work"},
+                                {"actor": "bound-agent", "work_id": "unused-for-create"})["work"]
         self.assertEqual(work["created_by"], "bound-agent")
-        evidence = session.handler("item/tool/call", {
-            "tool": "record_result", "arguments": {"result": "evidence"},
-        }, {"actor": "bound-agent", "work_id": work["id"]})["evidence"]
+        evidence = session.callback("record_result", {"result": "evidence"},
+                                    {"actor": "bound-agent", "work_id": work["id"]})["evidence"]
         self.assertEqual(evidence["work_id"], work["id"])
-        invocation = session.handler("item/tool/call", {
-            "tool": "invoke", "arguments": {"capability": "custom/echo", "arguments": {}},
-            "callId": "call-1", "threadId": "thread-1",
-        }, {"actor": "bound-agent"})
-        replay = session.handler("item/tool/call", {
-            "tool": "invoke", "arguments": {"capability": "custom/echo", "arguments": {}},
-            "callId": "call-1", "threadId": "thread-1",
-        }, {"actor": "bound-agent"})
+        arguments = {"capability": "custom/echo", "arguments": {"actor": "forged"}, "idempotency_key": "caller-key"}
+        invocation = session.callback("invoke", arguments, {"actor": "bound-agent"}, "adapter-invocation")
+        replay = session.callback("invoke", {**arguments, "idempotency_key": "changed-caller-key"},
+                                  {"actor": "bound-agent"}, "adapter-invocation")
         self.assertEqual(invocation, replay)
         self.assertEqual(invocation["invocation"]["result"]["actor"], "bound-agent")
         self.assertEqual(runtime.application.providers["custom"].calls, 1)
+        self.assertEqual(arguments["idempotency_key"], "caller-key")
         with self.assertRaises(OrchestrationError):
-            session.handler("item/tool/call", {
-                "tool": "create_work", "arguments": {"goal": "A missing principal must not become owner"},
-            }, {})
+            session.callback("create_work", {"goal": "A missing principal must not become owner"}, {})
+        with self.assertRaises(OrchestrationError):
+            session.callback("create_work", '{"goal":"Adapters must decode their native protocol"}', {"actor": "bound-agent"})
+        with self.assertRaises(OrchestrationError):
+            session.callback("invoke", arguments, {"actor": "bound-agent"})
+        self.assertEqual(runtime.application.providers["custom"].calls, 1)
+
+    def test_application_tool_keys_are_scoped_by_configured_driver_without_delimiter_collisions(self):
+        extension = self.extension()
+        runtime = self.runtime({
+            "store": {"adapter": "memory"},
+            "providers": {"custom": {"adapter": extension.__name__ + ":Provider"}},
+            "sessions": {
+                name: {"adapter": extension.__name__ + ":Session", "options": {"application_tools": True}}
+                for name in ("first", "second", "a:b", "a")
+            },
+        })
+        arguments = {"capability": "custom/echo", "arguments": {}}
+        results = []
+        for name, key in (("first", "same-native-key"), ("second", "same-native-key"), ("a:b", "c"), ("a", "b:c")):
+            callback = runtime.application.sessions[name].callback
+            result = callback("invoke", arguments, {"actor": "same-actor"}, key)
+            self.assertEqual(result, callback("invoke", arguments, {"actor": "same-actor"}, key))
+            results.append(result["invocation"]["id"])
+        self.assertEqual(len(set(results)), 4)
+        self.assertEqual(runtime.application.providers["custom"].calls, 4)
+
+    def test_application_tool_key_requirement_comes_from_descriptor_and_binding_is_detached(self):
+        from xorchestrate.composition import _wire_application_tools
+        from xorchestrate.model import Capability
+
+        extension = self.extension()
+        driver = extension.Session({})
+        calls = []
+
+        class Application:
+            def describe(self):
+                return [Capability("extension_action", "Custom effect", {
+                    "type": "object", "properties": {"idempotency_key": {"type": "string"}},
+                    "required": ["idempotency_key"],
+                })]
+
+            def call(self, action, arguments, actor):
+                calls.append((action, arguments, actor))
+                return {"called": True}
+
+        _wire_application_tools("custom", driver, Application())
+        driver.tools[0].input_schema["required"].clear()
+        with self.assertRaises(OrchestrationError):
+            driver.callback("extension_action", {"idempotency_key": "untrusted"}, {"actor": "bound"})
+        self.assertEqual(calls, [])
+        driver.callback("extension_action", {"idempotency_key": "untrusted"}, {"actor": "bound"}, "trusted")
+        self.assertEqual(calls, [("extension_action", {"idempotency_key": 'session:["custom","trusted"]'}, "bound")])
 
     def test_invalid_assessment_configuration_closes_its_store(self):
         extension = self.extension()

@@ -1,2 +1,3 @@
 Read [AGENTS.md](AGENTS.md) for the repository boundaries and working guidance.
-Live harness setup is documented in [devtools/README.md](devtools/README.md).
+Live acceptance setup is documented in [docs/live-acceptance.md](docs/live-acceptance.md).
+Runtime configuration examples are in [examples/README.md](examples/README.md).

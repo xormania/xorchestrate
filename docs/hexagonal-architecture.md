@@ -146,7 +146,9 @@ leaving unrelated actions available:
 ```
 
 Rules can match configured actors, roles, providers, capabilities, and exact
-context values. A matching denial wins over review, and review wins over allow.
+context values. Numeric values compare by value (`1` matches `1.0`); booleans
+remain distinct from numbers, including inside objects and arrays.
+A matching denial wins over review, and review wins over allow.
 Review is a blocked action with an explicit reason; this adapter does not invent
 an approval authority or persist a blanket bypass.
 
@@ -185,6 +187,13 @@ verified outcome, and a reason; it records that reconciliation without repeating
 the external operation. A result retained before a local application failure can
 be reconciled from the retained data.
 
+Successful session-start reconciliation uses only the adapter result already
+retained as `external_result`. A caller cannot supply or replace its backend
+identifiers. An unknown start without that receipt cannot be reconciled into an
+imported native connection. After investigating the external outcome, the caller
+can record the attempt as failed and make a separate authorized start request;
+this does not automatically retry the original operation.
+
 Records use compare-and-replace versions, and each storage transaction commits
 its records and events together. Evidence and returned data remain inspectable;
 the application does not infer successful delivery from a transport merely
@@ -196,13 +205,42 @@ resume support, and reconnect behavior belong to the driver and must be reported
 accurately. An unavailable session handle is not a license to target a reused PID
 or silently create a replacement conversation.
 
+To resume, `start_session` accepts a top-level `resume_session_id` identifying a
+stored application session. The requested driver must match that session's
+driver. The application authorizes `send_session` against the source session's
+actor, work, and evidence context, and `start_session` against the requested
+destination; it verifies both authorization snapshots before the effect.
+Configured policy can permit delegation across actors or work items. A source
+with an unresolved pending or unknown effect must be reconciled first. A stored
+session can still be marked active after an application restart; that alone does
+not prevent authorized resumption.
+
+Resumption creates a new connection record with source lineage as provenance.
+That lineage does not automatically propagate later policy revocation to the new
+record; subsequent actions evaluate current policy in the new session's context.
+Drivers opt into the `ResumableSessionDriver.resume(backend,
+specification)` port and map the stored opaque backend to their native protocol.
+Caller-supplied `specification.resume` native identifiers are rejected.
+Resumable records link through `start_operation_id` to an adapter-issued receipt.
+Pre-fix stored sessions lacking that provenance require a fresh start; caller
+reconciliation results cannot import their native identities.
+
 The supplied Codex adapter accepts complete command arguments, such as
 `["codex","app-server","--listen","stdio://"]`. Its configured `thread` and
-`turn` options carry native settings. An explicit `resume` specification can
-resume a native thread in a new process; it is not automatic recovery of a lost
-driver handle. Sending starts a turn and polling collects notifications. Native
-tools are governed by the chosen native policies, while application-provided
-dynamic tools cross the application's guardrails.
+`turn` options carry native settings. Authorized resumption opens the stored
+native thread in a new process. Sending starts a turn and polling collects
+notifications. Native tools are governed by the chosen native policies, while
+application-provided dynamic tools cross the application's guardrails.
+
+Drivers that expose application tools opt into
+`ApplicationToolSessionDriver.bind_application_tools(capabilities, handler)`.
+The handler receives an action, JSON arguments, trusted session context, and an
+optional adapter invocation key. Composition binds the caller and work context,
+and scopes effect keys to the configured driver. Each adapter translates its
+own protocol, tool descriptors, and request identities; the shared wiring does
+not require Codex request fields. Configured native tools and raw native request
+handlers remain adapter features. Conflicting application/native tool names
+must be resolved in configuration before sessions start.
 
 Native execution policy belongs in trusted adapter options: Codex `thread` and
 `turn`, or ACP `session` settings, including any MCP server commands. By default,

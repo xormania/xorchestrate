@@ -52,6 +52,16 @@ class Sessions:
         return {"stopped": True}
 
 
+class ResumableSessions(Sessions):
+    def __init__(self):
+        super().__init__()
+        self.resumes = []
+
+    def resume(self, source_backend, specification):
+        self.resumes.append((deepcopy(source_backend), deepcopy(specification)))
+        return {"handle": f"resumed-{len(self.resumes)}", "opaque_identity": {"from": deepcopy(source_backend)}}
+
+
 class Evaluator:
     def __init__(self, result):
         self.result = result
@@ -417,6 +427,265 @@ def test_session_output_cannot_redirect_the_driver_handle():
     sent = app.call("send_session", {"session_id": session["id"], "message": {}, "idempotency_key": "send"})
     assert sent["output"]["backend"]["handle"] == "different-process"
     assert sent["session"]["backend"] == session["backend"]
+
+
+def resume_setup(store, driver=None):
+    driver = driver if driver is not None else ResumableSessions()
+    app = application(store, driver=driver)
+    for actor_id in ["alice", "bob"]:
+        app.call("add_actor", {"actor_id": actor_id})
+    source_work = app.call("create_work", {"goal": "Source project"})["work"]
+    destination_work = app.call("create_work", {"goal": "Destination project"})["work"]
+    source = app.call("start_session", {"driver": "agent", "specification": {}, "work_id": source_work["id"], "idempotency_key": "source"}, actor="alice")["session"]
+    arguments = {"driver": "agent", "specification": {}, "resume_session_id": source["id"],
+        "actor_id": "bob", "work_id": destination_work["id"], "idempotency_key": "resume"}
+    return app, driver, source, source_work, destination_work, arguments
+
+
+@pytest.mark.parametrize("denied_action", ["send_session", "start_session"])
+def test_resume_requires_source_control_and_destination_creation(store, denied_action):
+    app, driver, source, source_work, destination_work, arguments = resume_setup(store)
+    seen = {}
+    class ResumeGuardrail:
+        def evaluate(self, action, context):
+            seen[action] = deepcopy(context)
+            return Verdict(action != denied_action)
+    app.guardrail = ResumeGuardrail()
+    with pytest.raises(OrchestrationError) as error:
+        app.call("start_session", arguments, actor="alice")
+    assert error.value.code == "denied"
+    assert driver.resumes == []
+    assert seen["send_session"]["session_actor"] == "alice"
+    assert seen["send_session"]["session"]["id"] == source["id"]
+    assert seen["send_session"]["work"]["id"] == source_work["id"]
+    if denied_action == "start_session":
+        assert seen["start_session"]["session_actor"] == "bob"
+        assert seen["start_session"]["work"]["id"] == destination_work["id"]
+    with store.transaction() as tx:
+        assert len(tx.list("session")) == 1
+
+
+@pytest.mark.parametrize("cross_destination", [False, True])
+def test_authorized_resume_preserves_source_provenance_and_uses_opaque_backend(store, cross_destination):
+    app, driver, source, source_work, destination_work, arguments = resume_setup(store)
+    if not cross_destination:
+        arguments.update({"actor_id": "alice", "work_id": source_work["id"]})
+    app.guardrail = RuleGuardrail({"default": "deny", "rules": [
+        {"actions": ["send_session"], "actors": ["alice"], "where": {"session_actor": "alice", "work.id": source_work["id"]}, "effect": "allow"},
+        {"actions": ["start_session"], "actors": ["alice"], "where": {"session_actor": arguments["actor_id"], "work.id": arguments["work_id"]}, "effect": "allow"},
+    ]})
+    result = app.call("start_session", arguments, actor="alice")
+    assert result["session"]["actor_id"] == arguments["actor_id"]
+    assert result["session"]["work_id"] == arguments["work_id"]
+    assert driver.resumes[0][0] == source["backend"]
+    assert driver.resumes[0][1]["context"] == {"actor": arguments["actor_id"], "delegated_by": "alice", "work_id": arguments["work_id"]}
+    provenance = {"session_id": source["id"], "version": source["version"], "start_operation_id": source["start_operation_id"]}
+    assert result["session"]["resume_source"] == provenance
+    with store.transaction() as tx:
+        operation = tx.get("operation", result["operation_id"])
+        assert operation.data["resume_source"] == provenance
+        assert operation.data["external_result_origin"] == "adapter"
+
+
+@pytest.mark.parametrize("raw_resume", [None, "native-conversation", {"identity": "forged"}])
+def test_start_rejects_raw_resume_identity_in_specification(store, raw_resume):
+    driver = ResumableSessions()
+    app = application(store, driver=driver)
+    with pytest.raises(OrchestrationError) as error:
+        app.call("start_session", {"driver": "agent", "specification": {"resume": raw_resume}, "idempotency_key": "start"})
+    assert error.value.code == "invalid_arguments"
+    assert driver.specifications == [] and driver.resumes == []
+    with store.transaction() as tx:
+        assert tx.list("operation") == []
+
+
+@pytest.mark.parametrize("problem,code", [("missing", "not_found"), ("driver", "driver_mismatch"), ("unsupported", "unsupported_operation")])
+def test_invalid_resume_source_or_driver_fails_before_effect(store, problem, code):
+    driver = Sessions() if problem == "unsupported" else ResumableSessions()
+    app, driver, source, source_work, destination_work, arguments = resume_setup(store, driver)
+    if problem == "missing":
+        arguments["resume_session_id"] = "missing-source"
+    elif problem == "driver":
+        app.sessions["other"] = ResumableSessions()
+        arguments["driver"] = "other"
+    with pytest.raises(OrchestrationError) as error:
+        app.call("start_session", arguments, actor="alice")
+    assert error.value.code == code
+    with store.transaction() as tx:
+        assert len(tx.list("session")) == 1 and len(tx.list("operation")) == 1
+
+
+def test_resume_treats_a_verified_empty_backend_as_opaque_driver_data(store):
+    class EmptyBackend(ResumableSessions):
+        def start(self, specification):
+            return {}
+    app, driver, source, source_work, destination_work, arguments = resume_setup(store, EmptyBackend())
+    resumed = app.call("start_session", arguments, actor="alice")["session"]
+    assert driver.resumes[0][0] == {}
+    assert resumed["resume_source"]["session_id"] == source["id"]
+
+
+@pytest.mark.parametrize("problem", ["unmarked", "no_start_id", "empty_backend"])
+def test_resume_requires_verified_adapter_receipt(store, problem):
+    app, driver, source, source_work, destination_work, arguments = resume_setup(store)
+    with store.transaction() as tx:
+        if problem == "unmarked":
+            record = tx.get("operation", source["start_operation_id"])
+            data = {key: value for key, value in record.data.items() if key != "external_result_origin"}
+        else:
+            record = tx.get("session", source["id"])
+            data = dict(record.data)
+            if problem == "no_start_id":
+                data.pop("start_operation_id")
+            else:
+                data["backend"] = {}
+        tx.put(record.kind, record.key, data, record.version)
+    with pytest.raises(OrchestrationError) as error:
+        app.call("start_session", arguments, actor="alice")
+    assert error.value.code == "unverified_session_result"
+    assert driver.resumes == []
+
+
+@pytest.mark.parametrize("interrupted", [False, True])
+def test_resume_cannot_bypass_source_pending_or_unknown_operation(store, interrupted):
+    class UncertainSessions(ResumableSessions):
+        def send(self, session, message):
+            raise KeyboardInterrupt() if interrupted else TimeoutError()
+    app, driver, source, source_work, destination_work, arguments = resume_setup(store, UncertainSessions())
+    with pytest.raises(KeyboardInterrupt if interrupted else OrchestrationError):
+        app.call("send_session", {"session_id": source["id"], "message": {}, "idempotency_key": "uncertain"}, actor="alice")
+    with pytest.raises(Conflict, match="pending or unresolved"):
+        app.call("start_session", arguments, actor="alice")
+    assert driver.resumes == []
+
+
+@pytest.mark.parametrize("denied_action", ["send_session", "start_session"])
+def test_resume_replay_reauthorizes_source_and_destination(store, denied_action):
+    app, driver, source, source_work, destination_work, arguments = resume_setup(store)
+    result = app.call("start_session", arguments, actor="alice")
+    app.guardrail = RuleGuardrail({"rules": [{"actions": [denied_action], "effect": "deny"}]})
+    with pytest.raises(OrchestrationError) as error:
+        app.call("start_session", arguments, actor="alice")
+    assert error.value.code == "denied"
+    assert len(driver.resumes) == 1
+    app.guardrail = RuleGuardrail()
+    app.sessions.clear()
+    assert app.call("start_session", arguments, actor="alice") == result
+
+
+@pytest.mark.parametrize("replay", [False, True])
+@pytest.mark.parametrize("changed", ["session", "source_work", "source_evidence", "destination_work", "receipt"])
+def test_resume_verifies_source_and_destination_snapshots_before_effect_or_replay(store, replay, changed):
+    app, driver, source, source_work, destination_work, arguments = resume_setup(store)
+    if replay:
+        app.call("start_session", arguments, actor="alice")
+    class ChangingGuardrail:
+        def evaluate(self, action, context):
+            if action == "start_session":
+                with store.transaction() as tx:
+                    if changed == "source_evidence":
+                        tx.put("evidence", "new-source-observation", {"work_id": source_work["id"], "result": "Changed safety assessment"})
+                    else:
+                        kind, key = {
+                            "session": ("session", source["id"]), "source_work": ("work", source_work["id"]),
+                            "destination_work": ("work", destination_work["id"]), "receipt": ("operation", source["start_operation_id"]),
+                        }[changed]
+                        current = tx.get(kind, key)
+                        tx.put(kind, key, {**current.data, "changed": True}, current.version)
+            return Verdict(True)
+    app.guardrail = ChangingGuardrail()
+    with pytest.raises(Conflict):
+        app.call("start_session", arguments, actor="alice")
+    assert len(driver.resumes) == int(replay)
+
+
+@pytest.mark.parametrize("supply_result", [False, True])
+def test_unknown_start_cannot_be_bound_using_caller_reconciliation_result(store, supply_result):
+    class UncertainStart(Sessions):
+        def start(self, specification):
+            raise TimeoutError()
+    app = application(store, driver=UncertainStart())
+    with pytest.raises(OrchestrationError) as error:
+        app.call("start_session", {"driver": "agent", "specification": {}, "idempotency_key": "start"})
+    operation = app.call("get_operation", {"operation_id": error.value.details["operation_id"]})["operation"]
+    arguments = {"operation_id": operation["id"], "expected_version": operation["version"], "outcome": "completed", "reason": "Claimed identity"}
+    if supply_result:
+        arguments["result"] = {"native_id": "someone-elses-thread", "external_result_origin": "adapter"}
+    with pytest.raises(OrchestrationError) as error:
+        app.call("resolve_operation", arguments)
+    assert error.value.code == "unverified_session_result"
+    session = app.call("list_sessions", {})["sessions"][0]
+    assert session["backend"] == {} and session["status"] == "unknown"
+    app.call("resolve_operation", {"operation_id": operation["id"], "expected_version": operation["version"], "outcome": "failed", "reason": "Abandon unverified start"})
+    assert app.call("list_sessions", {})["sessions"][0]["status"] == "failed"
+
+
+class SessionCompletionFailure:
+    def __init__(self, store):
+        self.store, self.armed = store, False
+
+    @contextmanager
+    def transaction(self):
+        wrapper = self
+        with self.store.transaction() as transaction:
+            class Proxy:
+                def __getattr__(self, name):
+                    return getattr(transaction, name)
+
+                def put(self, kind, key, data, expected_version=None):
+                    current = transaction.get(kind, key)
+                    if wrapper.armed and kind == "session" and current and current.data["status"] == "starting" and data.get("status") == "active":
+                        wrapper.armed = False
+                        raise RuntimeError("Simulated local completion failure")
+                    return transaction.put(kind, key, data, expected_version)
+            yield Proxy()
+
+
+def test_retained_start_receipt_can_reconcile_without_caller_backend_override(store):
+    wrapper = SessionCompletionFailure(store)
+    app, driver, source, source_work, destination_work, arguments = resume_setup(wrapper)
+    arguments.pop("actor_id")  # Destination principal is the original caller, alice.
+    wrapper.armed = True
+    with pytest.raises(OrchestrationError) as error:
+        app.call("start_session", arguments, actor="alice")
+    assert error.value.code == "result_unapplied"
+    operation = app.call("get_operation", {"operation_id": error.value.details["operation_id"]})["operation"]
+    assert operation["external_result_origin"] == "adapter"
+    reconciliation = {"operation_id": operation["id"], "expected_version": operation["version"], "outcome": "completed", "reason": "Apply adapter receipt"}
+    with pytest.raises(OrchestrationError) as error:
+        app.call("resolve_operation", {**reconciliation, "result": {"handle": "forged"}}, actor="bob")
+    assert error.value.code == "unverified_session_result"
+    authorizations = []
+    class ReconciliationGuardrail:
+        def evaluate(self, action, context):
+            if action in {"send_session", "start_session", "resolve_operation"}:
+                assert context["actor"] == "bob"
+                assert context["session_actor"] == "alice"
+                assert context["work_id"] == (source_work["id"] if action == "send_session" else destination_work["id"])
+                authorizations.append(action)
+            return Verdict(True)
+    app.guardrail = ReconciliationGuardrail()
+    resolved = app.call("resolve_operation", reconciliation, actor="bob")["operation"]
+    assert authorizations == ["send_session", "start_session", "resolve_operation"]
+    assert resolved["result"]["session"]["actor_id"] == "alice"
+    assert resolved["result"]["session"]["backend"] == operation["external_result"]
+    assert resolved["external_result_origin"] == "adapter"
+    assert len(driver.resumes) == 1
+
+
+def test_resume_reconciliation_cannot_bypass_revoked_source_permission(store):
+    wrapper = SessionCompletionFailure(store)
+    app, driver, source, source_work, destination_work, arguments = resume_setup(wrapper)
+    wrapper.armed = True
+    with pytest.raises(OrchestrationError) as error:
+        app.call("start_session", arguments, actor="alice")
+    operation = app.call("get_operation", {"operation_id": error.value.details["operation_id"]})["operation"]
+    app.guardrail = RuleGuardrail({"rules": [{"actions": ["send_session"], "effect": "deny"}]})
+    with pytest.raises(OrchestrationError) as error:
+        app.call("resolve_operation", {"operation_id": operation["id"], "expected_version": operation["version"], "outcome": "completed", "reason": "Rebind"})
+    assert error.value.code == "denied"
+    with store.transaction() as tx:
+        assert tx.get("operation", operation["id"]).data["status"] == "completed_unapplied"
 
 
 def test_reconciliation_policy_receives_original_work_and_capability_context():

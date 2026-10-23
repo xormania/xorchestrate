@@ -136,6 +136,10 @@ Each run uses its own tmux socket and bypasses personal tmux configuration.
 Cleanup first asks the worker to close its application connections, then checks
 the owned process tree using PID and process-start identity. Timeout and signal
 paths use bounded cleanup and do not target unrelated tmux sessions or processes.
+Run the fixture through its standalone CLI supervisor. Its process tracking assumes
+that supervisor launches only the fixture's children; embedding it in a process
+that also launches unrelated children is not supported. Process snapshots cannot
+attribute a descendant that forks and becomes orphaned entirely between observations.
 The foreground tmux server is waited on so that completion does not leave an
 unreaped server behind. If an otherwise successful worker leaves children that
 require forced termination, acceptance fails with `owned_process_leak`; the

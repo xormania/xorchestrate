@@ -23,6 +23,23 @@ def _strings(value: object, name: str) -> list[str]:
     return value
 
 
+def _same_json_value(left: object, right: object) -> bool:
+    """Compare JSON values without conflating booleans and numbers.
+
+    JSON has one numeric type: 1 and 1.0 describe the same value. Compare
+    numbers directly rather than coercing them to floats and losing precision.
+    """
+    if type(left) in (int, float) and type(right) in (int, float):
+        return left == right
+    if type(left) is not type(right):
+        return False
+    if isinstance(left, dict):
+        return left.keys() == right.keys() and all(_same_json_value(value, right[key]) for key, value in left.items())
+    if isinstance(left, list):
+        return len(left) == len(right) and all(_same_json_value(a, b) for a, b in zip(left, right))
+    return left == right
+
+
 class RuleGuardrail:
     """Allow by default; combine matching rules as deny, then review, then allow.
 
@@ -92,8 +109,7 @@ class RuleGuardrail:
             actual = context
             for part in path.split("."):
                 actual = actual.get(part, missing) if isinstance(actual, dict) else missing
-            # JSON booleans and numbers are distinct even though Python equates them.
-            if actual is missing or json.dumps(actual, sort_keys=True) != json.dumps(expected, sort_keys=True):
+            if actual is missing or not _same_json_value(actual, expected):
                 return False
         return True
 

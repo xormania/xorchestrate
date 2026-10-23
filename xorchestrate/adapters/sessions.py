@@ -2,7 +2,7 @@
 
 Session handles identify a connection owned by this driver instance; they never
 contain a PID or permit attaching to an unrelated process. Native conversation
-IDs may be retained and explicitly resumed with a new start call. A saved handle
+IDs may be retained and explicitly resumed from an authorized stored backend. A saved handle
 alone does not claim a process survived an application restart.
 """
 
@@ -11,10 +11,12 @@ from __future__ import annotations
 import threading
 import uuid
 from collections.abc import Callable
+from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..model import JSON, OrchestrationError
+from ..model import JSON, Capability, OrchestrationError
+from ..ports import ApplicationToolCallback
 from ..schema import check_schema, validate
 from .jsonrpc import JsonLineProcess, command_options, decode_json, encode_json, positive_integer
 
@@ -71,11 +73,15 @@ class _ProcessSessions:
             if observed is not None and observed != live.native_id:
                 raise OrchestrationError("Native session identity does not match the owned connection.", "session_identity")
 
-    def _request(self, live: _LiveSession, method: str, params: Any) -> JSON:
+    def _verified_request(self, live: _LiveSession, params: Any) -> JSON:
         params = _object(params, "Native request", "provider_protocol")
         self._verify_identity(live, params)
         if live.native_id is None:
             raise OrchestrationError("The native session has not established its identity.", "session_identity")
+        return params
+
+    def _request(self, live: _LiveSession, method: str, params: Any) -> JSON:
+        params = self._verified_request(live, params)
         if self._handler is None:
             raise OrchestrationError("No handler is configured for this native request.", "unsupported_method")
         return self._handler(method, params, _object(live.context, "Context"))
@@ -228,6 +234,8 @@ class _NativeSessions(_ProcessSessions):
 
     def _prepare_start(self, specification: JSON, reserved: tuple[str, ...]) -> tuple[JSON, JSON]:
         specification = _object(specification, "Session specification")
+        if "resume" in specification:
+            raise OrchestrationError("Resume requires an authorized source session, not a caller-supplied native ID.", details={"outcome": "not_started"})
         requested = _object(specification.get("parameters", {}), "Native session parameters")
         try:
             validate(requested, self.request_parameters)
@@ -236,18 +244,28 @@ class _NativeSessions(_ProcessSessions):
             raise
         if any(name in requested for name in reserved):
             raise OrchestrationError("Native session identity and dynamic tools are owned by the configured driver.", details={"outcome": "not_started"})
-        resume = specification.get("resume")
-        if resume is not None and (not isinstance(resume, str) or not resume or len(resume) > 4096):
-            raise OrchestrationError("Resume ID must be a nonempty string of at most 4096 characters.", details={"outcome": "not_started"})
         return specification, requested
+
+    def start(self, specification: JSON) -> JSON:
+        return self._launch(specification, None)
+
+    def resume(self, session: JSON, specification: JSON) -> JSON:
+        """Resume a backend selected and authorized by the application."""
+        session = _object(session, "Resume source")
+        if not self.resumable:
+            raise OrchestrationError("Session resumption is not enabled for this driver.", "unsupported_operation", {"outcome": "not_started"})
+        native_id = session.get("native_id")
+        if session.get("protocol") != self.protocol or not isinstance(native_id, str) or not native_id or len(native_id) > 4096:
+            raise OrchestrationError("Resume source does not identify a native session for this protocol.", "session_identity", {"outcome": "not_started"})
+        return self._launch(specification, native_id)
 
 
 class CodexSessionDriver(_NativeSessions):
     """Codex app-server adapter, with explicit process and native policy config.
 
     ``command`` contains the complete argv (typically codex app-server --listen
-    stdio://). ``thread`` holds configured thread/start parameters. A start may
-    supply ``resume`` for an existing thread. Requested ``parameters`` require
+    stdio://). ``thread`` holds configured thread/start parameters. ``resume``
+    accepts an application-authorized stored backend. Requested ``parameters`` require
     an explicit ``request_parameters`` JSON Schema in trusted configuration;
     the default accepts an empty object only. Configured thread parameters win
     over delegated values. Native tools remain under
@@ -263,6 +281,8 @@ class CodexSessionDriver(_NativeSessions):
         super().__init__(options, request_handler)
         self.thread = _object(self.options.get("thread", {}), "Codex thread parameters", "invalid_configuration")
         self.turn = _object(self.options.get("turn", {}), "Codex turn parameters", "invalid_configuration")
+        self._application_tools: dict[str, Capability] = {}
+        self._application_callback: ApplicationToolCallback | None = None
         if "threadId" in self.thread or "threadId" in self.turn or "input" in self.turn:
             raise OrchestrationError("Native thread IDs and turn input belong to the active session.", "invalid_configuration")
         if "dynamic_tools" in self.options:
@@ -286,24 +306,54 @@ class CodexSessionDriver(_NativeSessions):
                 result.append({"type": "function", "name": name, "description": tool.get("description", ""), "inputSchema": schema})
             self.thread["dynamicTools"] = result
 
+    def bind_application_tools(self, capabilities: list[Capability], callback: ApplicationToolCallback) -> None:
+        if not callable(callback) or not isinstance(capabilities, list) or any(not isinstance(item, Capability) for item in capabilities):
+            raise OrchestrationError("Application tools require capability descriptors and a callback.", "invalid_configuration")
+        capabilities = deepcopy(capabilities)
+        with self._lock:
+            configured = [tool for tool in self.thread.get("dynamicTools", []) if tool.get("name") not in self._application_tools]
+            self.set_tools([*configured, *[
+                {"name": item.name, "description": item.description, "inputSchema": item.input_schema}
+                for item in capabilities
+            ]])
+            self._application_tools = {item.name: item for item in capabilities}
+            self._application_callback = callback
+
+    def _application_request(self, live: _LiveSession, params: JSON) -> JSON:
+        arguments = params.get("arguments", {})
+        if isinstance(arguments, str):
+            arguments = decode_json(arguments.encode("utf-8"))
+        arguments = _object(arguments, "Tool arguments")
+        key = None
+        if "callId" in params:
+            call_id = params["callId"]
+            if not isinstance(call_id, str) or not call_id:
+                raise OrchestrationError("Native tool callId must be a nonempty string.")
+            key = "codex:" + encode_json([live.native_id, call_id]).decode("utf-8")
+        return self._application_callback(params["tool"], arguments, _object(live.context, "Context"), key)
+
     def _request(self, live: _LiveSession, method: str, params: Any) -> JSON:
         if method != "item/tool/call":
             return super()._request(live, method, params)
         try:
-            result = super()._request(live, method, params)
+            params = self._verified_request(live, params)
+            action = params.get("tool")
+            if self._application_callback is not None and isinstance(action, str) and action in self._application_tools:
+                result = self._application_request(live, params)
+            else:
+                result = super()._request(live, method, params)
             return {"contentItems": [{"type": "inputText", "text": encode_json(result).decode("utf-8")}], "success": True}
         except OrchestrationError as exc:
             result = {"error": {"code": exc.code, "message": str(exc), "details": exc.details}}
             return {"contentItems": [{"type": "inputText", "text": encode_json(result).decode("utf-8")}], "success": False}
 
-    def start(self, specification: JSON) -> JSON:
+    def _launch(self, specification: JSON, resume: str | None) -> JSON:
         specification, requested = self._prepare_start(specification, ("threadId", "dynamicTools"))
 
         def handshake(live, spec):
             live.process.request("initialize", {"clientInfo": {"name": "xorchestrate", "version": "0.2.0"}, "capabilities": {"experimentalApi": True}})
             live.process.notify("initialized")
             params = {**requested, **self.thread}
-            resume = spec.get("resume")
             if resume is not None:
                 live.native_id = _identifier(resume, "resume ID")
                 params["threadId"] = live.native_id
@@ -354,7 +404,7 @@ class ACPSessionDriver(_NativeSessions):
         if "sessionId" in self.session:
             raise OrchestrationError("Native session IDs belong to the active session.", "invalid_configuration")
 
-    def start(self, specification: JSON) -> JSON:
+    def _launch(self, specification: JSON, resume: str | None) -> JSON:
         specification, requested = self._prepare_start(specification, ("sessionId",))
 
         def handshake(live, spec):
@@ -363,7 +413,6 @@ class ACPSessionDriver(_NativeSessions):
             if self.authentication is not None:
                 live.process.request("authenticate", self.authentication)
             params = {**requested, **self.session}
-            resume = spec.get("resume")
             if resume is not None:
                 if not self.resumable or capabilities.get("loadSession") is not True:
                     raise OrchestrationError("ACP session loading is not enabled and advertised by this agent.", "unsupported_operation", {"outcome": "not_started"})

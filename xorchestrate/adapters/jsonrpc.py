@@ -144,6 +144,7 @@ def run_json_process(options: dict, payload: dict, command_key: str = "command")
     output = bytearray()
     failure: list[Exception] = []
     finished = threading.Event()
+    input_finished = threading.Event()
 
     def read_output():
         try:
@@ -168,6 +169,8 @@ def run_json_process(options: dict, payload: dict, command_key: str = "command")
             process.stdin.close()
         except (OSError, ValueError) as exc:
             failure.append(exc)
+        finally:
+            input_finished.set()
 
     reader = threading.Thread(target=read_output, daemon=True)
     writer = threading.Thread(target=write_input, daemon=True)
@@ -177,6 +180,11 @@ def run_json_process(options: dict, payload: dict, command_key: str = "command")
     try:
         if not finished.wait(max(0, deadline - time.monotonic())):
             raise OrchestrationError("Subprocess exceeded its execution deadline.", "provider_timeout", {"outcome": "unknown"})
+        # A peer can close stdout before it has accepted the request. Do not
+        # accept its result until the writer has finished, including any late
+        # broken pipe. Preserve an already-observed output failure immediately.
+        if not failure and not input_finished.wait(max(0, deadline - time.monotonic())):
+            raise OrchestrationError("Subprocess did not accept input before the deadline.", "provider_timeout", {"outcome": "unknown"})
         if failure:
             if isinstance(failure[0], OrchestrationError):
                 raise failure[0]
@@ -376,6 +384,12 @@ class JsonLineProcess:
                     exc.details.setdefault("outcome", "unknown")
                     self.close()
                 raise
+            except Exception as exc:
+                self.close()
+                raise OrchestrationError("Subprocess exchange failed unexpectedly.", "provider_unavailable", {"outcome": "unknown"}) from exc
+            except BaseException:
+                self.close()
+                raise
 
     def notify(self, method: str, params: dict | None = None) -> None:
         with self._operation_lock:
@@ -388,6 +402,12 @@ class JsonLineProcess:
             # Polling also services server requests whose handlers may already
             # have applied effects before a response could be written.
             exc.details["outcome"] = "unknown"
+            self.close()
+            raise
+        except Exception as exc:
+            self.close()
+            raise OrchestrationError("Subprocess exchange failed unexpectedly.", "provider_unavailable", {"outcome": "unknown"}) from exc
+        except BaseException:
             self.close()
             raise
 

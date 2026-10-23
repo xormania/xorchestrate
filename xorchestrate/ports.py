@@ -48,6 +48,40 @@ class SessionDriver(Protocol):
     def close(self) -> None: ...
 
 
+class ResumableSessionDriver(SessionDriver, Protocol):
+    def resume(self, source_backend: JSON, specification: JSON) -> JSON:
+        """Resume a verified application session using its opaque driver receipt.
+
+        The application authorizes source control and destination creation before
+        calling this optional port. Native identity stays inside the adapter.
+        """
+        ...
+
+
+class ApplicationToolCallback(Protocol):
+    def __call__(self, action: str, arguments: JSON, context: JSON,
+                 idempotency_key: str | None = None) -> JSON:
+        """Call an application action using the owned session's trusted context.
+
+        Adapters decode native arguments and supply a stable invocation key from
+        their verified session identity, never a claimed identity in tool input.
+        Composition namespaces that key by configured driver and requires it
+        when the action schema requires idempotency_key. Context and arguments
+        are detached JSON objects; incoming arguments cannot choose the caller.
+        """
+        ...
+
+
+class ApplicationToolSessionDriver(SessionDriver, Protocol):
+    def bind_application_tools(self, capabilities: list[Capability], callback: ApplicationToolCallback) -> None:
+        """Optionally expose application actions before starting sessions.
+
+        Native tool descriptions, requests and response envelopes belong to the
+        adapter. Ordinary session drivers need not implement this optional port.
+        """
+        ...
+
+
 class Evaluator(Protocol):
     def assess(self, question: str, context: JSON) -> Assessment: ...
     def close(self) -> None: ...

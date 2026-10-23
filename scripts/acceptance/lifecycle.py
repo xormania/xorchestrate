@@ -84,9 +84,11 @@ def subreaper():
 class OwnedProcesses:
     """Track this single-threaded supervisor's new children and descendants.
 
-    Preexisting children are excluded, including their descendants. The runner
+    Preexisting children and their observed descendants are excluded. The runner
     launches only its tmux server and tmux clients after this snapshot. Subreaping
     keeps a child that outlives its immediate parent inside this ownership scope.
+    This standalone supervisor must not launch unrelated children concurrently:
+    snapshots cannot attribute an unseen descendant orphaned between observations.
     """
 
     def __init__(self):

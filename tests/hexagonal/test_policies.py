@@ -1,7 +1,11 @@
+import json
 import unittest
+from unittest.mock import Mock
 
 from xorchestrate.adapters.policies import ConfigurableRouting, RuleGuardrail
-from xorchestrate.model import OrchestrationError
+from xorchestrate.adapters.storage import MemoryStore
+from xorchestrate.application import Application
+from xorchestrate.model import Capability, OrchestrationError
 
 
 class GuardrailTests(unittest.TestCase):
@@ -33,6 +37,59 @@ class GuardrailTests(unittest.TestCase):
         self.assertTrue(policy.evaluate("a", {}).allowed)
         self.assertTrue(policy.evaluate("a", {"arguments": {"value": 1}}).allowed)
         self.assertFalse(policy.evaluate("a", {"arguments": {"value": True}}).allowed)
+
+    def test_where_matches_equivalent_numbers_inside_mixed_json_values(self):
+        pairs = [
+            (1, 1.0), (-1, -1.0), (0, -0.0), (1000, 1e3),
+            (9007199254740992, 9007199254740992.0),
+            ({"items": [1, {"count": 0, "enabled": True}, None], "label": "same"},
+             {"label": "same", "items": [1.0, {"enabled": True, "count": -0.0}, None]}),
+        ]
+        for expected, actual in pairs:
+            for expected, actual in ((expected, actual), (actual, expected)):
+                with self.subTest(expected=expected, actual=actual):
+                    policy = RuleGuardrail({"rules": [{"effect": "deny", "where": {"arguments.value": expected}}]})
+                    self.assertFalse(policy.evaluate("a", {"arguments": {"value": actual}}).allowed)
+
+    def test_where_preserves_json_types_structure_and_numeric_precision(self):
+        pairs = [
+            (True, 1), (True, 1.0), (False, 0), (False, -0.0), (1, "1"),
+            (9007199254740993, 9007199254740992.0),
+            ({"items": [1, {"enabled": True}]}, {"items": [1.0, {"enabled": 1}]}),
+            ({"items": [1, 2]}, {"items": [2.0, 1.0]}),
+            ({"items": [1]}, {"items": [1.0, 2]}),
+            ({"items": [], "optional": None}, {"items": []}),
+            ([1], {"0": 1}),
+        ]
+        for expected, actual in pairs:
+            for expected, actual in ((expected, actual), (actual, expected)):
+                with self.subTest(expected=expected, actual=actual):
+                    policy = RuleGuardrail({"rules": [{"effect": "deny", "where": {"arguments.value": expected}}]})
+                    self.assertTrue(policy.evaluate("a", {"arguments": {"value": actual}}).allowed)
+
+    def test_numeric_spelling_cannot_bypass_a_denied_provider_effect(self):
+        provider = Mock()
+        provider.discover.return_value = [Capability("write", "Write a count", {
+            "type": "object", "properties": {"count": {"type": "integer"}}, "required": ["count"],
+        })]
+        provider.invoke.return_value = {"written": 2}
+        store = MemoryStore()
+        self.addCleanup(store.close)
+        identifiers = iter(range(100))
+        app = Application(
+            store=store, providers={"fixture": provider}, sessions={}, evaluators={},
+            guardrail=RuleGuardrail({"rules": [{"actions": ["invoke"], "effect": "deny",
+                                               "where": {"arguments.arguments.count": 1}}]}),
+            routing=ConfigurableRouting(), clock=lambda: "now", identifiers=lambda: str(next(identifiers)),
+        )
+        for spelling in ("1", "1.0", "1e0"):
+            with self.subTest(spelling=spelling), self.assertRaises(OrchestrationError) as caught:
+                app.call("invoke", {"capability": "fixture/write", "arguments": {"count": json.loads(spelling)},
+                                    "idempotency_key": spelling})
+            self.assertEqual(caught.exception.code, "denied")
+        provider.invoke.assert_not_called()
+        app.call("invoke", {"capability": "fixture/write", "arguments": {"count": 2}, "idempotency_key": "allowed"})
+        provider.invoke.assert_called_once()
 
     def test_rejects_misspelled_policy_and_copies_configuration(self):
         for options in ({"default": "maybe"}, {"rules": [{"effect": "deny", "actons": ["invoke"]}]},

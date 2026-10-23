@@ -189,7 +189,27 @@ work complete or grant permission. When finished with the conversation, stop it:
 
 `run` and MCP `serve` preserve driver instances until their connection ends.
 One-shot `call` closes its owned drivers at exit, so a series of independent
-`call` invocations cannot share a live session handle. A stored native Codex
-thread ID can be explicitly resumed by a new `start_session` with
-`"specification":{"resume":"<NATIVE_THREAD_ID>"}` and a new operation key.
-That is a new driver connection, not automatic recovery of a vanished process.
+`call` invocations cannot share a live session handle. A resumable driver can open
+a new connection from a stored application session:
+
+```json
+{"action":"start_session","arguments":{"driver":"worker","actor_id":"worker","work_id":"<WORK_ID>","resume_session_id":"<SESSION_ID>","specification":{},"idempotency_key":"example-resume-1"}}
+```
+
+`<SESSION_ID>` is the earlier `result.session.id`, not a native thread identifier.
+The driver must match the stored session. Resumption requires authorization to
+send to the source session in its existing actor/work/evidence context and to
+start the requested destination session. Configured guardrails can allow a
+different destination actor or work item. The returned session has a new
+application ID and records its source as provenance; lineage does not make later
+source-policy changes automatically revoke it.
+
+Reconcile any pending or unknown source effect first. A session still marked
+active after a restart can otherwise be resumed. Do not put native identifiers in
+`specification.resume`; the adapter obtains them from the authorized stored
+session. Successful start reconciliation likewise uses its retained
+`external_result`, never caller-supplied backend identifiers. If an unknown start
+has no such receipt, investigate and record a failed outcome before making a
+separate authorized start; reconciliation cannot import an arbitrary connection.
+Sessions saved before the adapter-receipt provenance contract require a fresh
+start.

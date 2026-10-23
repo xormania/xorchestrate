@@ -5,6 +5,7 @@ receive their options as a dict; incoming tool arguments never choose factories.
 """
 import importlib
 import json
+from copy import deepcopy
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -165,7 +166,7 @@ def build(config=None, base_dir=None):
         for name, driver in sessions.items():
             specification = config["sessions"][name]
             if specification.get("options", {}).get("application_tools", False):
-                _wire_application_tools(driver, application)
+                _wire_application_tools(name, driver, application)
         return Runtime(application, resources)
     except BaseException:
         # Construction is transactional with respect to owned process/connection lifetimes.
@@ -176,39 +177,34 @@ def build(config=None, base_dir=None):
         raise
 
 
-def _wire_application_tools(driver, application):
-    if not hasattr(driver, "set_tools") or not hasattr(driver, "set_request_handler"):
+def _wire_application_tools(name, driver, application):
+    bind = getattr(driver, "bind_application_tools", None)
+    if not callable(bind):
         raise OrchestrationError("This session adapter cannot expose application tools.", "configuration_error")
     capabilities = {capability.name: capability for capability in application.describe()}
-    driver.set_tools([
-        {"name": capability.name, "description": capability.description, "inputSchema": capability.input_schema}
-        for capability in capabilities.values()
-    ])
 
-    def handle(method, params, context):
-        if method != "item/tool/call":
-            raise OrchestrationError("No handler is configured for this native request.", "unsupported_request")
-        action = params.get("tool")
-        if not isinstance(action, str):
-            raise OrchestrationError("Native tool name must be a string.")
-        arguments = params.get("arguments", {})
-        if isinstance(arguments, str):
-            arguments = read_json(arguments)
-        if not isinstance(arguments, dict):
-            raise OrchestrationError("Tool arguments must be an object.")
-        arguments = dict(arguments)
-        # Native calls are tied to the process principal, never a claimed actor in arguments.
-        accepts_work = action in capabilities and "work_id" in capabilities[action].input_schema.get("properties", {})
-        if accepts_work and context.get("work_id") and "work_id" not in arguments:
+    def handle(action, arguments, context, idempotency_key=None):
+        if not isinstance(action, str) or action not in capabilities:
+            raise OrchestrationError("Unknown application tool.", "unknown_action")
+        if not isinstance(arguments, dict) or not isinstance(context, dict):
+            raise OrchestrationError("Tool arguments and trusted context must be objects.")
+        arguments = deepcopy(arguments)
+        schema = capabilities[action].input_schema
+        properties = schema.get("properties", {})
+        if "work_id" in properties and context.get("work_id") and "work_id" not in arguments:
             arguments["work_id"] = context["work_id"]
-        if action in {"invoke", "start_session", "send_session", "poll_session", "stop_session"}:
-            call_id = params.get("callId")
-            if not isinstance(call_id, str) or not call_id:
-                raise OrchestrationError("An effectful native tool call needs a callId.")
-            arguments["idempotency_key"] = f"native:{params.get('threadId', '')}:{call_id}"
+        if "idempotency_key" in properties:
+            required = "idempotency_key" in schema.get("required", [])
+            if idempotency_key is None and not required:
+                arguments.pop("idempotency_key", None)
+            elif not isinstance(idempotency_key, str) or not idempotency_key:
+                raise OrchestrationError("This application tool requires a stable invocation key.")
+            else:
+                arguments["idempotency_key"] = "session:" + json.dumps([name, idempotency_key], separators=(",", ":"))
+        # The driver supplies the owned session's principal separately from tool arguments.
         return application.call(action, arguments, actor=context.get("actor"))
 
-    driver.set_request_handler(handle)
+    bind(deepcopy(list(capabilities.values())), handle)
 
 
 def describe(application):

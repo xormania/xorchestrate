@@ -5,8 +5,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from xorchestrate.adapters.sessions import ACPSessionDriver, CodexSessionDriver, JSONRPCSessionDriver
-from xorchestrate.model import OrchestrationError
+from xorchestrate.adapters.sessions import ACPSessionDriver, CodexSessionDriver, JSONRPCSessionDriver, _LiveSession
+from xorchestrate.model import Capability, OrchestrationError
 
 FIXTURE = Path(__file__).parent / "fixtures" / "session_server.py"
 
@@ -115,6 +115,89 @@ class SessionTests(unittest.TestCase):
         self.assert_code("conflict", driver.set_tools, [])
         self.assertEqual(2, len(driver.poll(session)))
 
+    def test_codex_application_tools_translate_descriptors_and_arguments_with_bound_context(self):
+        driver = self.driver(CodexSessionDriver, "codex")
+        capability = Capability("echo", "Application callback", {
+            "type": "object", "properties": {"value": {"type": "string"}},
+        })
+        calls = []
+
+        def callback(action, arguments, context, key):
+            calls.append((action, copy.deepcopy(arguments), copy.deepcopy(context), key))
+            context["actor"] = "callback mutation"
+            return {"echo": arguments["value"]}
+
+        driver.bind_application_tools([capability], callback)
+        session = driver.start({"context": {"actor": "bound-coder", "work_id": "assigned-work"}})
+        result = driver.send(session, {"text": "tool"})
+        self.assertEqual([{"type": "function", "name": "echo", "description": "Application callback",
+                           "inputSchema": capability.input_schema}], result["start"]["dynamicTools"])
+        self.assertTrue(result["tool_response"]["result"]["success"])
+        self.assertEqual(("echo", {"value": "from-native"}, {"actor": "bound-coder", "work_id": "assigned-work"}), calls[0][:3])
+        self.assertTrue(calls[0][3])
+
+        translated = driver._request(driver._get(session), "item/tool/call", {
+            "tool": "echo", "arguments": json.dumps({"value": "JSON arguments", "actor": "claimed-owner"}),
+            "actor": "claimed-owner", "context": {"actor": "claimed-owner"},
+        })
+        self.assertTrue(translated["success"])
+        self.assertEqual({"echo": "JSON arguments"}, json.loads(translated["contentItems"][0]["text"]))
+        self.assertEqual(("echo", {"value": "JSON arguments", "actor": "claimed-owner"},
+                          {"actor": "bound-coder", "work_id": "assigned-work"}, None), calls[1])
+
+    def test_codex_application_invocation_keys_use_verified_identity_without_delimiter_collisions(self):
+        driver = self.driver(CodexSessionDriver, "codex")
+        keys = []
+        driver.bind_application_tools([Capability("echo", "Callback", {"type": "object"})],
+                                      lambda action, arguments, context, key: keys.append(key) or {})
+        for native_id, call_id in (("a:b", "c"), ("a", "b:c"), ("other", "c"), ("a:b", "c")):
+            live = _LiveSession(context={"actor": "coder"}, native_id=native_id)
+            result = driver._request(live, "item/tool/call", {"tool": "echo", "arguments": {}, "callId": call_id})
+            self.assertTrue(result["success"])
+        self.assertEqual(keys[0], keys[3])
+        self.assertEqual(3, len(set(keys[:3])))
+        self.assertTrue(all(keys))
+        rejected = driver._request(_LiveSession(context={"actor": "coder"}, native_id="owned"), "item/tool/call", {
+            "tool": "echo", "arguments": {}, "callId": "c", "threadId": "another-thread",
+        })
+        self.assertFalse(rejected["success"])
+        self.assertEqual("session_identity", json.loads(rejected["contentItems"][0]["text"])["error"]["code"])
+        self.assertEqual(4, len(keys))
+
+    def test_codex_application_tools_coexist_with_configured_tools_and_raw_handlers(self):
+        driver = self.driver(CodexSessionDriver, "codex", dynamic_tools=[{
+            "name": "echo", "description": "Configured native callback", "inputSchema": {"type": "object"},
+        }])
+        raw_calls, application_calls = [], []
+
+        def raw_handler(method, params, context):
+            raw_calls.append((method, params, context))
+            return {"handled": "raw"}
+
+        driver.set_request_handler(raw_handler)
+        driver.bind_application_tools([Capability("record_result", "Application callback", {"type": "object"})],
+                                      lambda *args: application_calls.append(args) or {"handled": "application"})
+        session = driver.start({"context": {"actor": "coder"}})
+        result = driver.send(session, {"text": "tool"})
+        self.assertEqual({"echo", "record_result"}, {tool["name"] for tool in result["start"]["dynamicTools"]})
+        self.assertEqual({"handled": "raw"}, json.loads(result["tool_response"]["result"]["contentItems"][0]["text"]))
+        live = driver._get(session)
+        response = driver._request(live, "item/tool/call", {"tool": "record_result", "arguments": {"result": "observed"}})
+        self.assertEqual({"handled": "application"}, json.loads(response["contentItems"][0]["text"]))
+        self.assertEqual({"handled": "raw"}, driver._request(live, "item/commandExecution/requestApproval", {"threadId": session["native_id"]}))
+        self.assertEqual(["item/tool/call", "item/commandExecution/requestApproval"], [call[0] for call in raw_calls])
+        self.assertEqual(1, len(application_calls))
+        self.assertEqual({"actor": "coder"}, application_calls[0][2])
+
+    def test_codex_application_tool_names_cannot_replace_configured_tools(self):
+        driver = self.driver(CodexSessionDriver, "codex", dynamic_tools=[{
+            "name": "echo", "description": "Configured native callback", "inputSchema": {"type": "object"},
+        }])
+        with patch("xorchestrate.adapters.sessions.JsonLineProcess") as process:
+            self.assert_code("invalid_configuration", driver.bind_application_tools,
+                             [Capability("echo", "Conflicting application callback", {"type": "object"})], lambda *args: {})
+            process.assert_not_called()
+
     def test_native_request_parameters_cannot_supply_policy_or_executables_by_default(self):
         codex = self.driver(CodexSessionDriver, "codex")
         acp = self.driver(ACPSessionDriver, "acp")
@@ -152,6 +235,25 @@ class SessionTests(unittest.TestCase):
                 self.assertEqual("not_started", error.details["outcome"])
                 process.assert_not_called()
 
+    def test_native_resume_identity_cannot_come_from_a_start_specification(self):
+        for cls, mode in ((CodexSessionDriver, "codex"), (ACPSessionDriver, "acp")):
+            driver = self.driver(cls, mode, request_parameters={"type": "object"})
+            for value in ("another-native-id", None):
+                with self.subTest(protocol=mode, resume=value), patch("xorchestrate.adapters.sessions.JsonLineProcess") as process:
+                    error = self.assert_code("invalid_request", driver.start, {"resume": value})
+                    self.assertEqual("not_started", error.details["outcome"])
+                    process.assert_not_called()
+
+    def test_resume_source_requires_a_matching_protocol_and_native_identity(self):
+        for cls, mode in ((CodexSessionDriver, "codex"), (ACPSessionDriver, "acp")):
+            driver = self.driver(cls, mode, **({"resume_supported": True} if mode == "acp" else {}))
+            for source in ({"protocol": "other", "native_id": "thread"}, {"protocol": mode},
+                           {"protocol": mode, "native_id": ""}, {"protocol": mode, "native_id": 1}):
+                with self.subTest(protocol=mode, source=source), patch("xorchestrate.adapters.sessions.JsonLineProcess") as process:
+                    error = self.assert_code("session_identity", driver.resume, source, {})
+                    self.assertEqual("not_started", error.details["outcome"])
+                    process.assert_not_called()
+
     def test_codex_missing_handler_and_identity_mismatch_never_invoke_a_tool(self):
         driver = self.driver(CodexSessionDriver, "codex")
         session = driver.start({})
@@ -180,12 +282,12 @@ class SessionTests(unittest.TestCase):
         driver.close()
         replacement = self.driver(CodexSessionDriver, "codex")
         self.assert_code("session_unavailable", replacement.send, session, {"text": "old handle"})
-        resumed = replacement.start({"resume": session["native_id"]})
+        resumed = replacement.resume(session, {})
         self.assertEqual(session["native_id"], resumed["native_id"])
         self.assertNotEqual(session["instance"], resumed["instance"])
         self.assertTrue(replacement.send(resumed, {"text": "resumed"})["accepted"])
         mismatch = self.driver(CodexSessionDriver, "codex_mismatch")
-        self.assert_code("session_identity", mismatch.start, {"resume": session["native_id"]})
+        self.assert_code("session_identity", mismatch.resume, session, {})
 
     def test_acp_session_authentication_prompt_and_explicit_resume(self):
         driver = self.driver(ACPSessionDriver, "acp", session={"cwd": "/configured", "mcpServers": []}, authentication={"methodId": "operator-login"}, resume_supported=True, request_parameters={
@@ -197,10 +299,12 @@ class SessionTests(unittest.TestCase):
         self.assertEqual("/configured", result["start"]["cwd"])
         self.assertEqual({"methodId": "operator-login"}, result["authentication"])
         self.assertEqual("echo:ACP task", driver.poll(session)[0]["params"]["update"]["content"]["text"])
-        resumed = driver.start({"resume": session["native_id"]})
+        resumed = driver.resume(session, {})
         self.assertEqual(session["native_id"], resumed["native_id"])
         unsupported = self.driver(ACPSessionDriver, "acp")
-        self.assert_code("unsupported_operation", unsupported.start, {"resume": session["native_id"]})
+        with patch("xorchestrate.adapters.sessions.JsonLineProcess") as process:
+            self.assert_code("unsupported_operation", unsupported.resume, session, {})
+            process.assert_not_called()
 
 
 if __name__ == "__main__":

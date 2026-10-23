@@ -83,6 +83,7 @@ _ACTIONS = {
     "acknowledge": _spec("Acknowledge a message delivered to the caller.", {"message_id": _STRING}, ("message_id",)),
     "start_session": _spec("Start a configured session driver, once per explicit idempotency key.", {
         "driver": _STRING, "specification": _OBJECT, "idempotency_key": _STRING, "work_id": _STRING, "actor_id": _STRING,
+        "resume_session_id": _STRING,
     }, ("driver", "specification", "idempotency_key")),
     "send_session": _spec("Send a message through a session driver, once per key.", {
         "session_id": _STRING, "message": _OBJECT, "idempotency_key": _STRING,
@@ -170,7 +171,19 @@ class Application:
         # Detach caller-owned structures so neither adapters nor a caller can mutate
         # the request whose identity is bound to an operation key.
         arguments = deepcopy(arguments)
+        if action == "start_session" and "resume" in arguments["specification"]:
+            raise OrchestrationError("Session identity is reserved; use resume_session_id to reference an application session.", "invalid_arguments")
         context = self._context(actor, arguments)
+        resume_id = arguments.get("resume_session_id") if action == "start_session" else None
+        if action == "resolve_operation" and context["operation"]["action"] == "start_session":
+            resume_id = context["operation"]["arguments"].get("resume_session_id")
+        if resume_id:
+            source = self._resume_context(actor, resume_id)
+            driver = arguments["driver"] if action == "start_session" else context["operation"]["arguments"]["driver"]
+            if source["session"]["driver"] != driver:
+                raise OrchestrationError("Resume source and destination must use the same configured driver.", "driver_mismatch")
+            source["resume_destination"] = {"driver": driver, "actor_id": context["session_actor"], "work_id": context["work_id"]}
+            context["resume_source"] = source
         if action == "invoke":
             context.update({"provider": arguments["capability"].partition("/")[0], "capability": {"name": arguments["capability"]}})
         if "idempotency_key" in arguments:
@@ -224,7 +237,28 @@ class Application:
                 "provider": operation.data["arguments"]["capability"].partition("/")[0]})
         return context
 
+    def _resume_context(self, actor: str, session_id: str) -> JSON:
+        source = self._context(actor, {"session_id": session_id})
+        session = source["session"]
+        if not isinstance(session.get("backend"), dict) or not session.get("start_operation_id"):
+            raise OrchestrationError("The resume source has no verified adapter start receipt; start a fresh session.", "unverified_session_result")
+        with self.store.transaction() as tx:
+            receipt = self._require(tx, "operation", session["start_operation_id"])
+        if (receipt.data.get("action") != "start_session" or receipt.data.get("session_id") != session_id
+                or receipt.data.get("status") != "completed" or receipt.data.get("external_result_origin") != "adapter"
+                or receipt.data.get("external_result") != session["backend"]):
+            raise OrchestrationError("The resume source is not bound to a verified adapter start receipt.", "unverified_session_result")
+        source["resume_receipt"] = _view(receipt)
+        return source
+
     def _authorize(self, action: str, context: JSON) -> None:
+        if action == "start_session" and context.get("resume_source"):
+            self._authorize("send_session", context["resume_source"])
+        elif action == "resolve_operation" and context.get("resume_source"):
+            # Reconciliation cannot turn a denied resume into an authorized
+            # destination binding merely by taking a different application path.
+            start_context = {**context, "arguments": deepcopy(context["operation"]["arguments"])}
+            self._authorize("start_session", start_context)
         verdict = self.guardrail.evaluate(action, deepcopy(context))
         if not verdict.allowed or verdict.review:
             raise OrchestrationError(
@@ -235,7 +269,7 @@ class Application:
     def _verify_context(self, tx: Transaction, context: JSON) -> None:
         # Verify the records and evidence actually supplied to this decision;
         # changes to another work item do not invalidate this authorization.
-        for kind, key in (("work", "work"), ("actor", "actor_record"), ("session", "session"), ("operation", "operation")):
+        for kind, key in (("work", "work"), ("actor", "actor_record"), ("session", "session"), ("operation", "operation"), ("operation", "resume_receipt")):
             previous = context.get(key)
             if previous:
                 current = tx.get(kind, previous["id"])
@@ -249,6 +283,8 @@ class Application:
             current_evidence = {(item.key, item.version) for item in tx.list("evidence") if item.data.get("work_id") == work["id"]}
             if current_evidence != previous_evidence:
                 raise Conflict("Authorization evidence changed; evaluate the current state before retrying.")
+        if context.get("resume_source"):
+            self._verify_context(tx, context["resume_source"])
 
     @staticmethod
     def _require(tx: Transaction, kind: str, key: str) -> Record:
@@ -435,9 +471,16 @@ class Application:
     def _start_session(self, args: JSON, actor: str, context: JSON) -> JSON:
         if args["driver"] not in self.sessions:
             raise OrchestrationError(f"Unknown session driver: {args['driver']}", "not_found")
+        driver = self.sessions[args["driver"]]
         trusted_context = {"actor": args.get("actor_id", actor), "delegated_by": actor, "work_id": context["work_id"]}
         specification = {**deepcopy(args["specification"]), "context": trusted_context}
-        return self._effect("start_session", args, actor, context, lambda operation: self.sessions[args["driver"]].start(specification))
+        source = context.get("resume_source")
+        if source:
+            resume = getattr(driver, "resume", None)
+            if not callable(resume):
+                raise OrchestrationError("The configured driver does not support session resumption.", "unsupported_operation")
+            return self._effect("start_session", args, actor, context, lambda operation: resume(deepcopy(source["session"]["backend"]), specification))
+        return self._effect("start_session", args, actor, context, lambda operation: driver.start(specification))
 
     def _session_effect(self, action: str, args: JSON, actor: str, context: JSON) -> JSON:
         session = context["session"]
@@ -484,9 +527,18 @@ class Application:
             if action == "start_session":
                 if args.get("actor_id"):
                     self._require(tx, "actor", args["actor_id"])
+                provenance = {}
+                if context.get("resume_source"):
+                    source = context["resume_source"]
+                    if source["session"].get("pending_operation"):
+                        raise Conflict("The resume source has a pending or unresolved operation; reconcile it before another effect.")
+                    provenance["resume_source"] = {"session_id": source["session"]["id"], "version": source["session"]["version"],
+                        "start_operation_id": source["resume_receipt"]["id"]}
+                    data.update(deepcopy(provenance))
                 session = self._create(tx, "session", actor, {
                     "driver": args["driver"], "specification": args["specification"], "work_id": data["work_id"],
                     "actor_id": args.get("actor_id", actor), "status": "starting", "backend": {}, "pending_operation": key,
+                    "start_operation_id": key, **provenance,
                 })
                 data["session_id"] = session.key
             elif action.endswith("_session"):
@@ -527,7 +579,7 @@ class Application:
                     raise Conflict("The operation was reconciled while its external call was in progress.")
                 result = self._apply_effect(tx, current, raw)
                 tx.put("operation", key, {**current.data, "status": "completed", "result": result,
-                    "external_result": deepcopy(raw), "finished_at": self.clock()}, current.version)
+                    "external_result": deepcopy(raw), "external_result_origin": "adapter", "finished_at": self.clock()}, current.version)
                 self._event(tx, "operation.completed", actor, operation_id=key, work_id=current.data.get("work_id"))
                 return result
         except Exception as error:
@@ -536,7 +588,7 @@ class Application:
             try:
                 with self.store.transaction() as tx:
                     current = self._require(tx, "operation", key)
-                    changes = {"external_result": deepcopy(raw), "application_error": _error_message(error)}
+                    changes = {"external_result": deepcopy(raw), "external_result_origin": "adapter", "application_error": _error_message(error)}
                     if current.data["status"] in {"pending", "unknown"}:
                         changes["status"] = "completed_unapplied"
                     else:
@@ -631,10 +683,16 @@ class Application:
                 raise OrchestrationError("Only unresolved operations can be reconciled.", "invalid_state")
             data = {**operation.data, "status": args["outcome"], "resolved_by": actor, "resolution": args["reason"], "finished_at": self.clock()}
             if args["outcome"] == "completed":
-                if "result" not in args and "external_result" not in operation.data:
-                    raise OrchestrationError("A verified external result is required to resolve completion.")
-                raw = args["result"] if "result" in args else operation.data["external_result"]
-                data.update({"result": self._apply_effect(tx, operation, raw), "external_result": deepcopy(raw)})
+                if operation.data["action"] == "start_session":
+                    if "result" in args or "external_result" not in operation.data or operation.data.get("external_result_origin") != "adapter":
+                        raise OrchestrationError("Session start completion requires its retained adapter receipt; caller-supplied results cannot bind a session.", "unverified_session_result")
+                    raw = operation.data["external_result"]
+                else:
+                    if "result" not in args and "external_result" not in operation.data:
+                        raise OrchestrationError("A verified external result is required to resolve completion.")
+                    raw = args["result"] if "result" in args else operation.data["external_result"]
+                origin = "caller" if "result" in args else operation.data.get("external_result_origin")
+                data.update({"result": self._apply_effect(tx, operation, raw), "external_result": deepcopy(raw), "external_result_origin": origin})
             else:
                 self._mark_effect_failure(tx, operation, "failed")
                 data["error"] = {"message": args["reason"], "code": "reconciled_failure"}
