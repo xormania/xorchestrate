@@ -1,0 +1,142 @@
+{
+  "name": "CI",
+  "on": {
+    "pull_request": {},
+    "push": {
+      "branches": [
+        "master",
+        "feat/extract-agentscient"
+      ]
+    },
+    "workflow_dispatch": {}
+  },
+  "permissions": {
+    "contents": "read"
+  },
+  "concurrency": {
+    "group": "ci-${{ github.ref }}",
+    "cancel-in-progress": true
+  },
+  "jobs": {
+    "changes": {
+      "name": "Static checks",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 10,
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "with": {
+            "python-version": "3.12"
+          }
+        },
+        {
+          "name": "Install pinned linter",
+          "run": "python3 -m pip install --disable-pip-version-check -r .github/requirements-ci.txt"
+        },
+        {
+          "name": "Lint runtime and CI",
+          "id": "lint",
+          "run": "python3 -m ruff check devtools .github"
+        },
+        {
+          "name": "Check security lint coverage",
+          "run": "python3 .github/lint_checks.py"
+        },
+        {
+          "name": "Check optional toolchain helpers",
+          "run": "python3 -m unittest discover -s .github/tests -v"
+        },
+        {
+          "uses": "cue-lang/setup-cue@b0e30e540a2dae47304ebf16586a5b2db023b61c",
+          "with": {
+            "version": "v0.17.1"
+          }
+        },
+        {
+          "name": "Validate configuration and adapter closure",
+          "env": {
+            "AGENTSCIENT_CUE": "cue"
+          },
+          "run": "python3 -m devtools.role_packages --check\npython3 -m devtools.configuration --check\npython3 -m devtools.consistency"
+        }
+      ]
+    },
+    "runtime": {
+      "name": "Runtime tests",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 20,
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "with": {
+            "python-version": "3.12"
+          }
+        },
+        {
+          "uses": "cue-lang/setup-cue@b0e30e540a2dae47304ebf16586a5b2db023b61c",
+          "with": {
+            "version": "v0.17.1"
+          }
+        },
+        {
+          "name": "Install tmux",
+          "run": "sudo apt-get update\nsudo apt-get install -y tmux"
+        },
+        {
+          "name": "Run complete runtime suite",
+          "env": {
+            "AGENTSCIENT_CUE": "cue",
+            "AGENTSCIENT_REQUIRE_TMUX": "1",
+            "AGENTSCIENT_REQUIRE_ABSTRACT_SOCKETS": "1",
+            "AGENTSCIENT_EVIDENCE_DIR": "${{ runner.temp }}/runtime-evidence"
+          },
+          "run": "python3 -m devtools.tests.run --strict --report \"$AGENTSCIENT_EVIDENCE_DIR/test-census.json\""
+        },
+        {
+          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "if": "always()",
+          "with": {
+            "name": "runtime-evidence",
+            "path": "${{ runner.temp }}/runtime-evidence",
+            "if-no-files-found": "error"
+          }
+        }
+      ]
+    },
+    "legacy": {
+      "name": "Recovered toolkit tests",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 20,
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "with": {
+            "python-version": "3.12"
+          }
+        },
+        {
+          "name": "Check recovered testkit and coordination",
+          "run": "python3 scripts/check_legacy.py"
+        }
+      ]
+    }
+  }
+}

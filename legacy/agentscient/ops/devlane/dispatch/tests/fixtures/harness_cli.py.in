@@ -1,0 +1,487 @@
+#!/usr/bin/env python3
+import hashlib
+import importlib.util
+import json
+import os
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+start_witness = Path(@@START_WITNESS@@)
+ran_model = @@RAN_MODEL@@
+stores_path = @@STORES_PATH@@
+done_path = os.environ.get("TASK_LAUNCH_DONE")
+sleep_s = float(os.environ.get("TASK_LAUNCH_SLEEP") or "0")
+stdout_mode = os.environ.get("TASK_LAUNCH_STDOUT") or "envelope"
+token = os.environ.get("TASK_LAUNCH_TOKEN") or ""
+job = os.environ.get("TASK_LAUNCH_JOB") or "plan"
+verdict = os.environ.get("TASK_LAUNCH_VERDICT") or "approve"
+status = os.environ.get("TASK_LAUNCH_STATUS") or "ok"
+envelope_commit = os.environ.get("TASK_LAUNCH_ENVELOPE_COMMIT") or ""
+epoch = float(os.environ.get("TASK_LAUNCH_STREAM_EPOCH") or "1700000000")
+write_stream = os.environ.get("TASK_LAUNCH_WRITE_STREAM") == "1"
+ignore_session = os.environ.get("TASK_LAUNCH_IGNORE_SESSION") == "1"
+stream_id_override = os.environ.get("TASK_LAUNCH_STREAM_ID") or ""
+commit_rel = os.environ.get("TASK_LAUNCH_COMMIT") or ""
+edit_rel = os.environ.get("TASK_LAUNCH_EDIT") or ""
+orphan = os.environ.get("TASK_LAUNCH_ORPHAN") == "1"
+head_commit = os.environ.get("TASK_LAUNCH_HEAD_COMMIT") or ""
+exit_code = int(os.environ.get("TASK_LAUNCH_EXIT") or "0")
+over_out = int(os.environ.get("TASK_LAUNCH_OVER_OUT") or "0")
+grandchild_path = os.environ.get("TASK_LAUNCH_GRANDCHILD") or ""
+witness = os.environ.get("TASK_LAUNCH_WITNESS")
+
+exe = Path(sys.argv[0]).name if sys.argv else ""
+argv = sys.argv[1:]
+prompt_file = None
+if "--prompt-file" in argv:
+    idx = argv.index("--prompt-file")
+    if idx + 1 < len(argv):
+        prompt_file = argv[idx + 1]
+
+session_id = ""
+if "--session-id" in argv:
+    idx = argv.index("--session-id")
+    if idx + 1 < len(argv):
+        session_id = argv[idx + 1]
+if "-s" in argv:
+    idx = argv.index("-s")
+    if idx + 1 < len(argv):
+        session_id = argv[idx + 1]
+
+stdin_data = sys.stdin.read()
+prompt_text = ""
+if prompt_file:
+    try:
+        prompt_text = Path(prompt_file).read_text(encoding="utf-8")
+    except OSError:
+        prompt_text = ""
+
+env_keys = [
+    "CLICOLOR_FORCE", "FORCE_COLOR", "NO_COLOR", "CLICOLOR", "TERM",
+    "PAGER", "GH_PAGER", "GIT_PAGER", "LESS", "CI", "GIT_TERMINAL_PROMPT",
+    "GIT_EDITOR", "EDITOR", "PYTHONUNBUFFERED", "PYTHONIOENCODING",
+    "LC_ALL", "WF_LANE", "DISPATCH_JOB", "CODEX_HOME", "GROK_HOME",
+    "HOME", "CLAUDE_CONFIG_DIR", "WF_AGENT", "TMPDIR",
+    # The session id the launcher minted for this worker. It is in
+    # the shot so an assertion about the worker's environment can
+    # fail for the right reason: without the key here, a test would
+    # read an absent value whether the launcher set it or not.
+    "CLAUDE_SESSION_ID",
+    "AGENTSCIENT_HOOK_PROFILE",
+]
+env_shot = {k: os.environ[k] for k in env_keys if k in os.environ}
+
+job_parent = Path(os.getcwd()).parent
+last_message = None
+if "-o" in argv:
+    oidx = argv.index("-o")
+    if oidx + 1 < len(argv):
+        last_message = Path(argv[oidx + 1])
+if last_message is None:
+    last_message = job_parent / "out" / "last-message.json"
+
+def _schema_probe():
+    if "--json-schema" not in argv:
+        return False, None, None, "missing"
+    sidx = argv.index("--json-schema")
+    if sidx + 1 >= len(argv):
+        return False, None, None, "no-value"
+    value = argv[sidx + 1]
+    if str(value).lstrip().startswith("{"):
+        try:
+            json.loads(value)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return False, None, None, "inline-invalid"
+        digest = hashlib.sha256(str(value).encode("utf-8")).hexdigest()
+        return True, None, digest, "inline"
+    path = Path(value)
+    try:
+        text = path.read_text(encoding="utf-8")
+        json.loads(text)
+    except (OSError, TypeError, ValueError, json.JSONDecodeError):
+        return False, str(path), None, "unreadable"
+    digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    return True, str(path), digest, "file"
+
+schema_read, schema_path, schema_sha, schema_how = _schema_probe()
+
+def _glob_present(root, pattern):
+    if not root:
+        return False
+    sessions = Path(root) / "sessions"
+    try:
+        return any(sessions.rglob(pattern))
+    except OSError:
+        return False
+
+rollout_present = _glob_present(os.environ.get("CODEX_HOME") or "", "rollout-*.jsonl")
+summary_present = _glob_present(os.environ.get("GROK_HOME") or "", "summary.json")
+
+try:
+    pgid = os.getpgid(0)
+except OSError:
+    pgid = os.getpid()
+tmpdir = os.environ.get("TMPDIR") or ""
+start_witness.parent.mkdir(parents=True, exist_ok=True)
+start_witness.write_text(json.dumps({
+    "pid": os.getpid(),
+    "pgid": pgid,
+    "argv": sys.argv,
+    "cwd": os.getcwd(),
+    "exe": sys.argv[0] if sys.argv else "",
+    "session_id": session_id,
+    "exit_present": (job_parent / "exit").exists(),
+    "tripped_present": (job_parent / "TRIPPED.md").exists(),
+    "last_message_present": last_message.exists(),
+    "schema_read": schema_read,
+    "schema_path": schema_path,
+    "schema_sha": schema_sha,
+    "schema_how": schema_how,
+    "rollout_present": rollout_present,
+    "summary_present": summary_present,
+    "tmpdir": tmpdir or None,
+    "tmpdir_is_dir": bool(tmpdir) and Path(tmpdir).is_dir(),
+}) + "\n", encoding="utf-8")
+
+commit_msg = os.environ.get("TASK_LAUNCH_COMMIT_MSG") or ""
+if commit_msg:
+    out_dir = job_parent / "out"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "COMMIT_MSG").write_text(commit_msg, encoding="utf-8")
+
+if witness:
+    Path(witness).write_text(json.dumps({
+        "argv": sys.argv,
+        "cwd": os.getcwd(),
+        "stdin": stdin_data,
+        "prompt_file": prompt_file,
+        "prompt_text": prompt_text,
+        "env": env_shot,
+        "session_id": session_id,
+        "exe": sys.argv[0] if sys.argv else "",
+        "schema_read": schema_read,
+        "schema_path": schema_path,
+        "schema_sha": schema_sha,
+        "schema_how": schema_how,
+        "last_message_present": last_message.exists(),
+        "rollout_present": rollout_present,
+        "summary_present": summary_present,
+    }), encoding="utf-8")
+
+if grandchild_path:
+    child_pid = os.fork()
+    if child_pid == 0:
+        time.sleep(max(sleep_s, 30))
+        os._exit(0)
+    Path(grandchild_path).write_text(str(child_pid) + "\n", encoding="utf-8")
+
+stream_id = stream_id_override or session_id or "00000000-0000-4000-8000-000000000001"
+if ignore_session:
+    stream_id = "ffffffff-ffff-4fff-8fff-ffffffffffff"
+
+def git(*args):
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+    env.update({
+        "GIT_AUTHOR_NAME": "worker",
+        "GIT_AUTHOR_EMAIL": "worker@example.test",
+        "GIT_COMMITTER_NAME": "worker",
+        "GIT_COMMITTER_EMAIL": "worker@example.test",
+        "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_CONFIG_SYSTEM": os.devnull,
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_TERMINAL_PROMPT": "0",
+    })
+    return subprocess.run(
+        ["git", *args], cwd=os.getcwd(), env=env,
+        capture_output=True, text=True,
+    )
+
+if commit_rel:
+    p = Path(commit_rel)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text("worker-commit\n", encoding="utf-8")
+    git("add", "--", commit_rel)
+    git("commit", "-m", "worker: change the snapshot")
+
+if edit_rel:
+    p = Path(edit_rel)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text("worker-edit-uncommitted\n", encoding="utf-8")
+
+if orphan:
+    tree = git("write-tree")
+    tree_sha = tree.stdout.strip()
+    made = git("commit-tree", tree_sha, "-m", "orphan head")
+    sha = made.stdout.strip()
+    if sha:
+        git("reset", "--soft", sha)
+
+renew_auth = os.environ.get("TASK_LAUNCH_RENEW_AUTH") or ""
+if renew_auth and exe == "grok":
+    # The real CLI renews by writing a temporary file beside auth.json and
+    # renaming it over the name, so a symlink there becomes a regular file.
+    grok_home = Path(os.environ.get("GROK_HOME") or Path(os.environ.get("HOME", "")) / ".grok")
+    auth_path = grok_home / "auth.json"
+    auth_tmp = auth_path.with_name("auth.json.tmp")
+    auth_tmp.write_text(renew_auth, encoding="utf-8")
+    os.replace(auth_tmp, auth_path)
+
+if write_stream and stores_path:
+    spec = importlib.util.spec_from_file_location("task_launch_stores", stores_path)
+    stores = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(stores)
+    cwd = os.getcwd()
+    if exe == "claude":
+        home = os.environ.get("HOME") or ""
+        root = Path(home) / ".claude" / "projects"
+        slug = cwd.replace("/", "-").replace(".", "-")
+        stores.build_claude_store(
+            root, slug, base_timestamp=epoch, cwd=cwd,
+            session_id=stream_id, model=ran_model, effort="high",
+            marker="LAUNCH-FAKE",
+        )
+    elif exe == "codex":
+        home = os.environ.get("CODEX_HOME") or str(Path(os.environ.get("HOME", "")) / ".codex")
+        stores.build_codex_store(
+            Path(home), base_timestamp=epoch, cwd=cwd,
+            session_id=stream_id, model=ran_model, effort="high",
+            marker="LAUNCH-FAKE",
+        )
+        if over_out:
+            for p in Path(home).rglob("rollout-*.jsonl"):
+                extra = {
+                    "timestamp": "2023-11-14T22:13:20.000Z",
+                    "type": "event_msg",
+                    "payload": {
+                        "type": "token_count",
+                        "info": {
+                            "total_token_usage": {
+                                "input_tokens": over_out,
+                                "cached_input_tokens": 0,
+                                "output_tokens": over_out,
+                                "reasoning_output_tokens": 0,
+                                "total_tokens": over_out,
+                            }
+                        },
+                    },
+                }
+                with p.open("a", encoding="utf-8") as fh:
+                    fh.write(json.dumps(extra) + "\n")
+    elif exe == "grok":
+        home = os.environ.get("GROK_HOME") or str(Path(os.environ.get("HOME", "")) / ".grok")
+        usage_raw = os.environ.get("TASK_LAUNCH_GROK_USAGE") or ""
+        usage_runs = json.loads(usage_raw) if usage_raw else None
+        stores.build_grok_store(
+            Path(home), cwd, base_timestamp=epoch, session_id=stream_id,
+            model=ran_model, marker="LAUNCH-FAKE",
+            usage_runs=usage_runs,
+            head_commit=head_commit or None,
+            git_root_dir=cwd,
+            grok_home=home,
+        )
+
+mcp_calls = int(os.environ.get("TASK_LAUNCH_MCP_CALLS") or "0")
+if write_stream and stores_path and exe == "grok":
+    # a live grok always writes chat_history.jsonl beside summary.json
+    grok_home = Path(os.environ.get("GROK_HOME") or Path(os.environ.get("HOME", "")) / ".grok")
+    for p in grok_home.rglob("summary.json"):
+        (p.parent / "chat_history.jsonl").touch()
+if write_stream and stores_path and mcp_calls:
+    home = os.environ.get("HOME") or ""
+    if exe == "claude":
+        files = list((Path(home) / ".claude" / "projects").rglob("*.jsonl"))
+        line = json.dumps({"type": "assistant", "message": {"role": "assistant", "content": [
+            {"type": "tool_use", "id": "toolu_fake", "name": "mcp__agentscient-lane__lane_jobs", "input": {}}]}})
+    elif exe == "codex":
+        files = list(Path(os.environ.get("CODEX_HOME") or Path(home) / ".codex").rglob("rollout-*.jsonl"))
+        line = json.dumps({"timestamp": "2023-11-14T22:13:21.000Z", "type": "event_msg", "payload": {
+            "type": "item_completed", "item": {"type": "McpToolCall", "id": "exec-fake",
+                                               "server": "agentscient_lane", "tool": "lane_jobs", "arguments": {}}}})
+    else:
+        grok_home = Path(os.environ.get("GROK_HOME") or Path(home) / ".grok")
+        files = [p.parent / "chat_history.jsonl" for p in grok_home.rglob("summary.json")]
+        line = json.dumps({"type": "assistant", "content": "", "tool_calls": [{"id": "call-fake", "name": "use_tool",
+                           "arguments": json.dumps({"tool_name": "agentscient_lane__lane_jobs", "tool_input": {}})}]})
+    for target in files:
+        with target.open("a", encoding="utf-8") as fh:
+            for _ in range(mcp_calls):
+                fh.write(line + "\n")
+
+note = os.environ.get("TASK_LAUNCH_NOTE")
+if note == "":
+    note = None
+wrapper = os.environ.get("TASK_LAUNCH_WRAPPER") or ""
+
+def envelope_obj():
+    env = {
+        "job": job,
+        "status": status,
+        "verdict": None if verdict == "null" else verdict,
+        "counts": {"p1": 0, "p2": 0, "p3": 0, "opinions": 0},
+        "findings": [],
+        "artifacts": {},
+        "spend": {"harness": exe if sys.argv else "codex",
+                  "total": 0, "out": 0, "runs": 1},
+        "stamp": {"ref": "harness-placeholder", "started": None, "ended": None},
+        "note": note,
+    }
+    if envelope_commit:
+        env["commit"] = {"subject": "dispatch: pin U10", "body": "why"}
+    return env
+
+# U10 knobs: TASK_LAUNCH_WRAPPER=claude|codex|grok|plain emits each
+# documented stdout/file shape so the E2E path is provable without a
+# token. Default empty/plain keeps today's last-JSON-object scan.
+if wrapper == "claude":
+    field = os.environ.get("TASK_LAUNCH_WRAPPER_FIELD") or "structured_output"
+    subtype = os.environ.get("TASK_LAUNCH_WRAPPER_SUBTYPE") or "success"
+    is_error = os.environ.get("TASK_LAUNCH_WRAPPER_IS_ERROR") == "1"
+    usage_mode = os.environ.get("TASK_LAUNCH_WRAPPER_USAGE") or "tokens"
+    wrap = {
+        "type": "result",
+        "subtype": subtype,
+        "is_error": is_error,
+        "session_id": session_id or stream_id,
+    }
+    if usage_mode == "empty":
+        wrap["usage"] = {}
+    elif usage_mode == "zero":
+        wrap["usage"] = {"input_tokens": 0, "output_tokens": 0}
+        wrap["total_cost_usd"] = 0.0
+    elif usage_mode == "cached":
+        wrap["usage"] = {
+            "input_tokens": 12,
+            "output_tokens": 3000,
+            "cache_read_input_tokens": 480000,
+            "cache_creation_input_tokens": 9000,
+        }
+        wrap["total_cost_usd"] = 0.5
+    else:
+        wrap["usage"] = {"input_tokens": 10, "output_tokens": 4}
+        wrap["total_cost_usd"] = 0.001
+    env = envelope_obj()
+    decoy_note = os.environ.get("TASK_LAUNCH_WRAPPER_DECOY")
+    if decoy_note:
+        # Nested sibling before structured_output: a walk that takes the
+        # first nine-key dict is not reading the documented field.
+        alt = envelope_obj()
+        alt["note"] = decoy_note
+        wrap["alt"] = alt
+    if field == "structured_output":
+        wrap["structured_output"] = env
+        wrap["result"] = "ok"
+    elif field == "result":
+        wrap["result"] = json.dumps(env)
+    else:
+        wrap["result"] = os.environ.get("TASK_LAUNCH_WRAPPER_RESULT") or (
+            "max turns reached"
+        )
+    sys.stdout.write(json.dumps(wrap) + "\n")
+elif wrapper == "codex":
+    env = envelope_obj()
+    field = os.environ.get("TASK_LAUNCH_WRAPPER_FIELD") or "file"
+    agent_note = os.environ.get("TASK_LAUNCH_WRAPPER_AGENT_NOTE") or ""
+    out_path = last_message
+    events = [
+        {"type": "thread.started", "thread_id": session_id or stream_id},
+        {"type": "turn.started"},
+    ]
+    if field in ("agent_message", "both"):
+        agent_env = envelope_obj()
+        if agent_note:
+            agent_env["note"] = agent_note
+        events.append({
+            "type": "item.completed",
+            "item": {"type": "agent_message", "text": json.dumps(agent_env)},
+        })
+    else:
+        events.append({
+            "type": "item.completed",
+            "item": {"type": "reasoning", "text": "working"},
+        })
+    for ev in events:
+        sys.stdout.write(json.dumps(ev) + "\n")
+    if field == "stdout":
+        # Bare nine-key object after NDJSON with no agent_message and
+        # no -o file — the pre-U10 stdout fallback D-ENV-1 keeps.
+        sys.stdout.write(json.dumps(env) + "\n")
+    elif field in ("file", "both"):
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(json.dumps(env) + "\n", encoding="utf-8")
+elif wrapper == "grok":
+    env = envelope_obj()
+    invalid = os.environ.get("TASK_LAUNCH_WRAPPER_INVALID") or ""
+    if invalid == "extra":
+        env["transcript"] = "the whole conversation"
+    elif invalid == "missing":
+        env.pop("note", None)
+    elif invalid == "counts-empty":
+        env["counts"] = {}
+    elif invalid == "counts-p1-string":
+        env["counts"]["p1"] = "lots"
+    elif invalid == "findings-str":
+        env["findings"] = ["not a finding"]
+    elif invalid == "findings-int":
+        env["findings"] = [42]
+    elif invalid == "artifacts-int":
+        env["artifacts"] = {"plan": 1}
+    elif invalid == "artifacts-obj":
+        env["artifacts"] = {"plan": {"inline": "..."}}
+    elif invalid == "commit-null":
+        env["commit"] = None
+    elif invalid == "stamp-extra":
+        env["stamp"]["extra"] = "x"
+    elif invalid == "invalid-approve":
+        env["status"] = "invalid"
+        env["verdict"] = "approve"
+    narration = os.environ.get("TASK_LAUNCH_WRAPPER_NARRATION") or ""
+    if narration:
+        sys.stdout.write(narration)
+    decoy_first = os.environ.get("TASK_LAUNCH_WRAPPER_DECOY_FIRST")
+    if decoy_first:
+        # Fully-valid decoy BEFORE the harness object (D-ENV-2: two
+        # fully-valid objects, the last wins; a first-valid reader
+        # would take this one).
+        first = envelope_obj()
+        first["note"] = decoy_first
+        first.pop("commit", None)
+        sys.stdout.write(json.dumps(first) + "\n")
+    sys.stdout.write(json.dumps(env) + "\n")
+    # Trailing scan-shaped decoy AFTER the harness object (feature
+    # scenario "a grok trailing nested-invalid object loses to an
+    # earlier valid envelope"): nine top-level keys, nested
+    # counts.p1 a string so last-that-validates must skip it.
+    decoy_note = os.environ.get("TASK_LAUNCH_WRAPPER_DECOY")
+    if decoy_note:
+        decoy = envelope_obj()
+        decoy["note"] = decoy_note
+        decoy.pop("commit", None)
+        decoy["verdict"] = "approve"
+        decoy["status"] = "ok"
+        decoy["counts"] = {"p1": "scan", "p2": 0, "p3": 0, "opinions": 0}
+        sys.stdout.write(json.dumps(decoy) + "\n")
+elif stdout_mode == "envelope":
+    sys.stdout.write(json.dumps(envelope_obj()) + "\n")
+elif stdout_mode == "token":
+    sys.stdout.write(token + "\n")
+elif stdout_mode == "prose":
+    sys.stdout.write("VERDICT: approve\n")
+decoy_note = os.environ.get("TASK_LAUNCH_WRAPPER_DECOY")
+if decoy_note and wrapper != "grok":
+    # A trailing nine-key object the last-JSON-object scan would take.
+    # First-source unwrap must ignore it and use the harness field/file.
+    # Grok writes its own decoy after the harness object (see above).
+    decoy = envelope_obj()
+    decoy["note"] = decoy_note
+    sys.stdout.write(json.dumps(decoy) + "\n")
+sys.stdout.flush()
+
+if sleep_s > 0:
+    time.sleep(sleep_s)
+
+if done_path:
+    Path(done_path).write_text("COMPLETED\n", encoding="utf-8")
+
+raise SystemExit(exit_code)

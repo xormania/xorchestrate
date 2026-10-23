@@ -1,0 +1,217 @@
+{
+  "name": "rust-crate",
+  "check": "cargo fmt --check && cargo clippy --offline --all-targets -- -D warnings && cargo test --offline --locked",
+  "probe_timeout": 120,
+  "toolchain": {
+    "install": "cargo fetch",
+    "ready": "command -v cargo >/dev/null && cargo metadata --offline --format-version 1 >/dev/null"
+  },
+  "not_planted": {
+    "K7": "K7 is exercised by python-service.",
+    "K8": "K8 is exercised by python-tooling and symfony-app."
+  },
+  "faults": [
+    {
+      "id": "RC-01",
+      "kind": "K1",
+      "severity": "p1",
+      "location": {
+        "path": "src/shell.rs",
+        "lines": [6, 8]
+      },
+      "declared": {
+        "text": "User-supplied names are passed to Command as arguments, never through sh -c.",
+        "path": "README.md",
+        "lines": [13, 13]
+      },
+      "practiced": {
+        "text": "Command::new(\"sh\").arg(\"-c\").arg(format!(\"printf '%s\\\\n' {name} >/dev/null\")).status()",
+        "path": "src/shell.rs",
+        "lines": [6, 8]
+      },
+      "finding": "User-supplied names are interpolated into sh -c despite the argv declaration.",
+      "neighbour": {
+        "path": "src/shell.rs",
+        "lines": [11, 13],
+        "why_clean": "The neighbouring helper passes the name as one argument to printf."
+      },
+      "probe": "sh probes/rc01.sh",
+      "fix": "fixes/rc01.patch",
+      "visible_to": "audit",
+      "needs": ["command -v cargo"]
+    },
+    {
+      "id": "RC-02",
+      "kind": "K2",
+      "severity": "p1",
+      "location": {
+        "path": "src/store.rs",
+        "lines": [46, 48]
+      },
+      "declared": {
+        "text": "Record paths stay beneath the store root.",
+        "path": "README.md",
+        "lines": [15, 15]
+      },
+      "practiced": {
+        "text": "root.join(name)",
+        "path": "src/store.rs",
+        "lines": [46, 48]
+      },
+      "finding": "record_path joins an untrusted name without checking containment under the root.",
+      "neighbour": {
+        "path": "src/store.rs",
+        "lines": [50, 53],
+        "why_clean": "The checked neighbour normalizes the path and proves it starts with the canonical root."
+      },
+      "probe": "sh probes/rc02.sh",
+      "fix": "fixes/rc02.patch",
+      "visible_to": "both",
+      "needs": ["command -v cargo"]
+    },
+    {
+      "id": "RC-03",
+      "kind": "K3",
+      "severity": "p2",
+      "location": {
+        "path": "src/render.rs",
+        "lines": [4, 6]
+      },
+      "declared": {
+        "text": "A count of zero is an answer and is distinct from an absent record.",
+        "path": "README.md",
+        "lines": [17, 17]
+      },
+      "practiced": {
+        "text": "let n = count.unwrap_or(0); if n == 0 { \"no record\".into() } else { format!(\"count={n}\") }",
+        "path": "src/render.rs",
+        "lines": [4, 6]
+      },
+      "finding": "render_count treats Some(0) as absent via unwrap_or(0) and n == 0.",
+      "neighbour": {
+        "path": "src/render.rs",
+        "lines": [9, 10],
+        "why_clean": "The label renderer matches absence separately from every present label."
+      },
+      "probe": "sh probes/rc03.sh",
+      "fix": "fixes/rc03.patch",
+      "visible_to": "test",
+      "needs": ["command -v cargo"]
+    },
+    {
+      "id": "RC-04",
+      "kind": "K4",
+      "severity": "p1",
+      "location": {
+        "path": "src/audit.rs",
+        "lines": [7, 10]
+      },
+      "declared": {
+        "text": "Credentials never leave the process in failure logs.",
+        "path": "README.md",
+        "lines": [19, 19]
+      },
+      "practiced": {
+        "text": "format!(\"write failed: environment={:?}\\n\", std::env::vars().collect::<Vec<_>>())",
+        "path": "src/audit.rs",
+        "lines": [7, 10]
+      },
+      "finding": "write_failure_log dumps the process environment, including credentials.",
+      "neighbour": {
+        "path": "src/audit.rs",
+        "lines": [13, 15],
+        "why_clean": "The neighbouring logger writes a fixed redaction marker."
+      },
+      "probe": "sh probes/rc04.sh",
+      "fix": "fixes/rc04.patch",
+      "visible_to": "audit",
+      "needs": ["command -v cargo"]
+    },
+    {
+      "id": "RC-05",
+      "kind": "K5",
+      "severity": "p2",
+      "location": {
+        "path": "src/store.rs",
+        "lines": [75, 80]
+      },
+      "declared": {
+        "text": "An unreadable or corrupt store is reported as an error, never served as empty.",
+        "path": "README.md",
+        "lines": [21, 21]
+      },
+      "practiced": {
+        "text": "Err(_) => Ok(Vec::new())",
+        "path": "src/store.rs",
+        "lines": [75, 80]
+      },
+      "finding": "read_records swallows the read error and returns an empty Ok vector.",
+      "neighbour": {
+        "path": "src/store.rs",
+        "lines": [93, 98],
+        "why_clean": "The writer propagates filesystem errors with the question-mark operator."
+      },
+      "probe": "sh probes/rc05.sh",
+      "fix": "fixes/rc05.patch",
+      "visible_to": "test",
+      "needs": ["command -v cargo"]
+    },
+    {
+      "id": "RC-06",
+      "kind": "K6",
+      "severity": "p2",
+      "location": {
+        "path": "src/interval.rs",
+        "lines": [14, 16]
+      },
+      "declared": {
+        "text": "Intervals are half-open, including their start and excluding their end.",
+        "path": "README.md",
+        "lines": [23, 23]
+      },
+      "practiced": {
+        "text": "self.start <= v && v <= self.end",
+        "path": "src/interval.rs",
+        "lines": [14, 16]
+      },
+      "finding": "Interval::contains treats the end as inclusive.",
+      "neighbour": {
+        "path": "src/interval.rs",
+        "lines": [18, 19],
+        "why_clean": "The iterator uses Rust's half-open range expression."
+      },
+      "probe": "sh probes/rc06.sh",
+      "fix": "fixes/rc06.patch",
+      "visible_to": "test",
+      "needs": ["command -v cargo"]
+    },
+    {
+      "id": "RC-07",
+      "kind": "K9",
+      "severity": "p2",
+      "location": {
+        "path": "Cargo.toml",
+        "lines": [15, 15]
+      },
+      "declared": {
+        "text": "Dependencies are pinned to one version and locked.",
+        "path": "README.md",
+        "lines": [25, 25]
+      },
+      "practiced": {
+        "text": "anyhow = \"*\"",
+        "path": "Cargo.toml",
+        "lines": [15, 15]
+      },
+      "finding": "anyhow is a wildcard \"*\" in Cargo.toml while the lock names one version.",
+      "neighbour": {
+        "path": "Cargo.toml",
+        "lines": [16, 16],
+        "why_clean": "The hex dependency is pinned to exactly one locked version."
+      },
+      "probe": "sh probes/rc07.sh",
+      "fix": "fixes/rc07.patch",
+      "visible_to": "audit"
+    }
+  ]
+}

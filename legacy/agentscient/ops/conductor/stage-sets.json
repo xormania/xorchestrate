@@ -1,0 +1,4 @@
+{
+  "contract": ["tests", "check-tests", "tests-fix", "code", "adversarial"],
+  "lane": ["tests", "check-tests", "tests-fix", "code", "security", "adversarial", "fix-tests", "fix-code", "security-re"]
+}

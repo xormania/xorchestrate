@@ -1,0 +1,50 @@
+{
+  "schema": "agentscient.board/v1",
+  "query": "decisions",
+  "started_at": "2026-08-30T12:00:00Z",
+  "ended_at": "2026-08-30T12:00:01Z",
+  "repository": {
+    "root": "/srv/agentscient",
+    "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "branch": "agentscient/board",
+    "evidence": ["obs.git.decisions"]
+  },
+  "observations": {
+    "obs.git.decisions": {
+      "state": "measured",
+      "started_at": "2026-08-30T12:00:00Z",
+      "ended_at": "2026-08-30T12:00:00Z",
+      "command": ["git", "show", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:ops/docs/TODO.md"],
+      "cwd": "/srv/agentscient",
+      "environment": {"lane": "dev"},
+      "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "exit": 0,
+      "raw_sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+    }
+  },
+  "sections": {
+    "decisions": {
+      "state": "measured",
+      "evidence": ["obs.git.decisions"],
+      "items": [
+        {
+          "id": "fixture-repository",
+          "question": "Which GitHub fixture repository should supply the E2E second tier?",
+          "path": "ops/docs/TODO.md",
+          "line": 8,
+          "source_ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "evidence": ["obs.git.decisions"]
+        },
+        {
+          "id": "fixture-repository",
+          "question": "Should the standing no-tree-mutation rule be ratified?",
+          "path": "ops/docs/TODO.md",
+          "line": 9,
+          "source_ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "evidence": ["obs.git.decisions"]
+        }
+      ]
+    }
+  }
+}
+

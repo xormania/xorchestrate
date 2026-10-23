@@ -1,0 +1,477 @@
+{
+ "schema": "agentscient.boundaries/2",
+ "law": "docs/workflow.md: every transition names its actor class, its evidence duty, its failure class and its gate",
+ "owner": "2026-09-12: \"the hook is supposed to have matrix of checks and guarantees - its a framework for verification\"; \"if its not an abstracted boundary - then we don't speak the same language\"",
+ "rows": [
+  {
+   "class": "prune",
+   "boundary": "write",
+   "actor": "session",
+   "trigger": "rm -r of records, state, worktrees or .git",
+   "evidence": "none: data is kept",
+   "gate": "engine",
+   "tests": [
+    "ops/devlane/hooks/tests/test_engine.py::test_prune_and_path_form_unittest"
+   ],
+   "escape": "ask",
+   "event": "PreToolUse",
+   "tools": [
+    "Bash"
+   ],
+   "engine": true,
+   "when": {
+    "pred": "prune_target"
+   },
+   "refuse": {
+    "expected": "data kept (never prune)",
+    "needed": "leave it; move it under .dev/tmp with a note if it is in the way"
+   }
+  },
+  {
+   "class": "graft-first",
+   "boundary": "search",
+   "actor": "session",
+   "trigger": "a grep, rg or git grep search over a code root",
+   "evidence": "a Graft query, a count or a file list instead",
+   "gate": "graft_first",
+   "tests": [
+    "ops/devlane/hooks/tests/test_matrix.py::test_a_content_search_over_a_code_root_is_refused_with_the_graft_query"
+   ],
+   "escape": "none",
+   "event": "PreToolUse",
+   "tools": [
+    "Bash"
+   ],
+   "engine": false
+  },
+  {
+   "class": "test-form",
+   "boundary": "test-run",
+   "actor": "session",
+   "trigger": "unittest given a path instead of discovery",
+   "evidence": "the discover form",
+   "gate": "engine",
+   "tests": [
+    "ops/devlane/hooks/tests/test_engine.py::test_prune_and_path_form_unittest"
+   ],
+   "escape": "none",
+   "event": "PreToolUse",
+   "tools": [
+    "Bash"
+   ],
+   "engine": true,
+   "when": {
+    "pred": "unittest_path_form"
+   },
+   "refuse": {
+    "expected": "the discover form (python3 -m unittest discover -s <tests dir> -p <file>) or ops/bin/suites.sh",
+    "needed": "the discover form"
+   }
+  },
+  {
+   "class": "input-absent",
+   "boundary": "dispatch",
+   "actor": "session",
+   "trigger": "a --scope-file or --input missing or empty",
+   "evidence": "the files, present and non-empty",
+   "gate": "check_dispatch",
+   "tests": [
+    "ops/devlane/hooks/tests/test_matrix.py::test_input_absent_refuses_missing_empty_or_unresolved"
+   ],
+   "escape": "none",
+   "event": "PreToolUse",
+   "tools": [
+    "Bash"
+   ],
+   "engine": false
+  },
+  {
+   "class": "scope-cap",
+   "boundary": "dispatch",
+   "actor": "session",
+   "trigger": "--scope-file over SCOPE_CAP",
+   "evidence": "the file's size against the conf",
+   "gate": "check_dispatch",
+   "tests": [
+    "ops/devlane/hooks/tests/test_matrix.py::test_scope_cap_refuses_a_scope_file_over_the_cap"
+   ],
+   "escape": "none",
+   "event": "PreToolUse",
+   "tools": [
+    "Bash"
+   ],
+   "engine": false
+  },
+  {
+   "class": "bucket-command",
+   "boundary": "dispatch",
+   "actor": "session",
+   "trigger": "an implement scope naming the whole suite",
+   "evidence": "the bucket's tests named",
+   "gate": "check_dispatch",
+   "tests": [
+    "ops/devlane/hooks/tests/test_matrix.py::test_bucket_command_refuses_implement_scope_with_forbidden_runners"
+   ],
+   "escape": "none",
+   "event": "PreToolUse",
+   "tools": [
+    "Bash"
+   ],
+   "engine": false
+  },
+  {
+   "class": "walkthrough",
+   "boundary": "dispatch",
+   "actor": "session",
+   "trigger": "a write job whose inputs carry no first-run walkthrough",
+   "evidence": "the walkthrough section in an input",
+   "gate": "check_dispatch",
+   "tests": [
+    "ops/devlane/hooks/tests/test_matrix.py::test_walkthrough_refuses_author_tests_or_implement_without_the_heading_or_assumption"
+   ],
+   "escape": "none",
+   "event": "PreToolUse",
+   "tools": [
+    "Bash"
+   ],
+   "engine": false
+  },
+  {
+   "class": "stale-base",
+   "boundary": "dispatch",
+   "actor": "session",
+   "trigger": "a worktree whose merge-forward from the trunk would conflict",
+   "evidence": "git merge-tree clean; the dispatcher merges behind forward",
+   "gate": "check_dispatch",
+   "tests": [
+    "ops/devlane/hooks/tests/test_matrix.py::test_stale_base_allows_a_worktree_the_dispatcher_can_merge_forward",
+    "ops/devlane/hooks/tests/test_matrix.py::test_stale_base_refuses_when_the_merge_forward_would_conflict"
+   ],
+   "escape": "none",
+   "event": "PreToolUse",
+   "tools": [
+    "Bash"
+   ],
+   "engine": false
+  },
+  {
+   "class": "contract-vet",
+   "boundary": "dispatch",
+   "actor": "session",
+   "trigger": "harness contracts do not vet as a package",
+   "evidence": "cue vet exit 0",
+   "gate": "check_dispatch",
+   "tests": [
+    "ops/devlane/hooks/tests/test_matrix.py::test_contract_vet_refuses_when_cue_vet_fails"
+   ],
+   "escape": "none",
+   "event": "PreToolUse",
+   "tools": [
+    "Bash"
+   ],
+   "engine": false
+  },
+  {
+   "class": "dispatch-env",
+   "boundary": "dispatch",
+   "actor": "session",
+   "trigger": "a launch without LAUNCHER_PIN, DISPATCH_TIMEOUT and WF_AGENT",
+   "evidence": "the three exported in the run script",
+   "gate": "check_dispatch",
+   "tests": [
+    "ops/devlane/hooks/tests/test_matrix.py::test_dispatch_env_refuses_when_pin_timeout_or_agent_is_missing"
+   ],
+   "escape": "none",
+   "event": "PreToolUse",
+   "tools": [
+    "Bash"
+   ],
+   "engine": false
+  },
+  {
+   "class": "deliverable",
+   "boundary": "branch",
+   "actor": "session",
+   "trigger": "a new worktree, branch, dispatch, ladder start or PR aimed outside the lock",
+   "evidence": "the deliverable lock naming the branch",
+   "gate": "deliverable",
+   "tests": [
+    "ops/devlane/hooks/tests/test_matrix.py::test_a_new_worktree_or_branch_outside_the_lock_is_refused",
+    "ops/devlane/hooks/tests/test_matrix.py::test_no_grant_escapes_the_lock"
+   ],
+   "escape": "none",
+   "event": "PreToolUse",
+   "tools": [
+    "Bash"
+   ],
+   "engine": false
+  },
+  {
+   "class": "pr-proof",
+   "boundary": "pr",
+   "actor": "session",
+   "trigger": "gh pr ready or gh pr merge",
+   "evidence": "a ## Proof section naming corpus rows present at the head and a green ci run on that head",
+   "gate": "pr_proof",
+   "tests": [
+    "ops/devlane/hooks/tests/test_pr_proof.py::test_no_proof_section_refuses",
+    "ops/devlane/hooks/tests/test_pr_proof.py::test_a_grant_is_no_escape"
+   ],
+   "escape": "none",
+   "event": "PreToolUse",
+   "tools": [
+    "Bash"
+   ],
+   "engine": false
+  },
+  {
+   "class": "audit",
+   "boundary": "pr",
+   "actor": "session",
+   "trigger": "gh pr ready",
+   "evidence": "a closed security-audit record at the head, named under `## Proof`, on the codex harness at the model ops/lane.conf names in MODEL_CODEX_SECURITY_AUDIT, whose model.requested and model.ran are both present and agree, whose snapshot.ref_sha and result.head are both present and agree on an audited sha that is a commit id, which carries a result.envelope.findings array, with every commit the branch carries since \u2014 merges judged by their combined diff, what origin/<trunk> already carries excluded \u2014 either inside the records set below, which the gate matches as path prefixes, or a fix commit citing one of its findings at a path that finding's `where` names, the audit's own record under .dev/records/dispatches never exempt, and every finding of its envelope disposed in the findings export at the head",
+   "gate": "audit_at_head",
+   "tests": [
+    "ops/devlane/hooks/tests/test_pr_audit.py::test_ready_passes_with_a_closed_audit_at_the_head",
+    "ops/devlane/hooks/tests/test_pr_audit.py::test_an_open_finding_refuses_and_is_named",
+    "ops/devlane/hooks/tests/test_pr_audit.py::test_a_code_commit_after_the_audit_voids_it_and_names_the_path",
+    "ops/devlane/hooks/tests/test_pr_audit.py::test_a_fix_commit_citing_a_finding_of_the_audit_keeps_it_standing",
+    "ops/devlane/hooks/tests/test_pr_audit.py::test_a_grant_is_no_escape",
+    "ops/devlane/hooks/tests/test_pr_audit.py::test_an_aar_an_idea_and_a_lesson_do_not_void_the_audit",
+    "ops/devlane/hooks/tests/test_pr_audit.py::test_a_conductor_tool_is_not_a_record_and_voids_the_audit",
+    "ops/devlane/hooks/tests/test_pr_audit.py::test_an_audited_sha_that_is_not_a_commit_id_refuses",
+    "ops/devlane/hooks/tests/test_pr_audit.py::test_a_merge_of_an_unaudited_topic_voids_the_audit",
+    "ops/devlane/hooks/tests/test_pr_audit.py::test_a_merges_own_conflict_content_is_judged",
+    "ops/devlane/hooks/tests/test_pr_audit.py::test_rewriting_the_audits_own_record_voids_it",
+    "ops/devlane/hooks/tests/test_pr_audit.py::test_a_record_carrying_only_one_of_the_sha_pair_refuses",
+    "ops/devlane/hooks/tests/test_pr_audit.py::test_a_record_with_no_findings_envelope_refuses",
+    "ops/devlane/hooks/tests/test_pr_audit.py::test_a_fix_commit_touching_no_path_its_finding_names_voids_the_audit",
+    "ops/devlane/hooks/tests/test_pr_audit.py::test_a_fix_commit_carries_its_test_file_beside_the_path_it_names"
+   ],
+   "escape": "none",
+   "event": "PreToolUse",
+   "tools": [
+    "Bash"
+   ],
+   "engine": false,
+   "records": [
+    ".dev/records/",
+    "ops/conductor/handoff/",
+    "ops/conductor/findings/findings.jsonl",
+    "ops/conductor/AAR-",
+    "ops/conductor/ideas/",
+    "ops/conductor/lessons/"
+   ],
+   "owner": "2026-09-16: \"i'd like if you have daybreak security audits made required for draft pr's - and resolution required before they can be made ready for review\"; \"you can't keep re-auditing after fixes - draw a line\""
+  },
+  {
+   "class": "finding-disposition",
+   "boundary": "pr",
+   "actor": "session",
+   "trigger": "gh pr ready",
+   "evidence": "every finding of the security audit that holds at the head named under `## Proof` by <record>#<n> or the record's suffix #<n>, with a disposition token from findings.py DISPOSITIONS at the head equal to the findings export's and one line of judgement; a finding whose record carries `practical` and is disposed ruled has a judgement beginning \"declined: not practical \u2014 \"",
+   "gate": "finding_dispositions",
+   "tests": [
+    "ops/devlane/hooks/tests/test_pr_audit.py::test_every_finding_named_with_a_token_and_a_judgement_passes",
+    "ops/devlane/hooks/tests/test_pr_audit.py::test_a_finding_the_proof_does_not_name_refuses_and_is_named",
+    "ops/devlane/hooks/tests/test_pr_audit.py::test_a_finding_named_with_no_token_refuses",
+    "ops/devlane/hooks/tests/test_pr_audit.py::test_a_token_with_no_judgement_refuses",
+    "ops/devlane/hooks/tests/test_pr_audit.py::test_a_token_the_ledger_does_not_hold_refuses",
+    "ops/devlane/hooks/tests/test_pr_audit.py::test_a_practical_finding_ruled_without_the_decline_refuses",
+    "ops/devlane/hooks/tests/test_pr_audit.py::test_a_practical_finding_declined_as_not_practical_passes"
+   ],
+   "escape": "none",
+   "event": "PreToolUse",
+   "tools": [
+    "Bash"
+   ],
+   "engine": false,
+   "owner": "2026-09-23, relayed by the Lead through the XO at 01:24Z: \"get moving - and make sure i NEVER have to say that again\"; findings are suggestions and judgement is needed"
+  },
+  {
+   "class": "trunk-commit",
+   "boundary": "commit",
+   "actor": "session",
+   "trigger": "git commit, merge, cherry-pick, rebase, revert or am on the trunk or the release branch, or a push to them; a merge of <remote>/<trunk> that git reports as a fast-forward (--ff-only, or HEAD an ancestor of it) creates no commit and passes (LD-38)",
+   "evidence": "the session branch",
+   "gate": "engine",
+   "tests": [
+    "ops/devlane/hooks/tests/test_engine.py::test_git_write_on_protected_and_push_to_protected",
+    "ops/devlane/hooks/tests/test_engine.py::test_a_fast_forward_of_the_trunk_from_its_remote_is_allowed_and_a_merge_commit_is_refused"
+   ],
+   "escape": "none",
+   "event": "PreToolUse",
+   "tools": [
+    "Bash"
+   ],
+   "engine": true,
+   "when": {
+    "any": [
+     {
+      "pred": "git_write_on_protected"
+     },
+     {
+      "pred": "git_push_to_protected"
+     }
+    ]
+   },
+   "refuse": {
+    "expected": "a commit on a session branch (lane/session-<date>-<id>)",
+    "needed": "cut the session branch and commit there: git worktree add ../wt/ag-session-<date>-<id> -b lane/session-<date>-<id> origin/<trunk>; python3 ops/conductor/tools/deliverable.py add lane/session-<date>-<id> --why '<the owner's words>'; one draft PR at close. No grant lifts this row; on the main checkout, git merge --ff-only origin/<trunk> alone passes, and trunk-forward.py runs it at every session start"
+   }
+  },
+  {
+   "class": "claim-unmeasured",
+   "boundary": "publish",
+   "actor": "session",
+   "trigger": "a commit message, PR body or comment, record or law page with a claim and no reading beside it",
+   "evidence": "a sha, a record id, a P- row, #PR, a run id, Ran N tests, or the words not measured, in the paragraph",
+   "gate": "engine",
+   "tests": [
+    "ops/devlane/hooks/tests/test_engine.py::test_claim_without_reading"
+   ],
+   "escape": "none",
+   "event": "PreToolUse",
+   "tools": [
+    "Bash"
+   ],
+   "engine": true,
+   "when": {
+    "pred": "claim_without_reading"
+   },
+   "refuse": {
+    "expected": "every paragraph that claims (enforced, done, landed, merged, green, impossible, verified, fixed, ...) to carry its reading beside the claim: a sha, a record id, a P- row, #PR, a run id, \"Ran N tests\", or the words not measured",
+    "needed": "measure it and cite the reading in the same paragraph, or write that it is not measured; no grant lifts this row (owner, 2026-09-12: \"you have to enforce it before you state it as fact - with evidence\")"
+   }
+  },
+  {
+   "class": "force-push",
+   "boundary": "commit",
+   "actor": "session",
+   "event": "PreToolUse",
+   "tools": [
+    "Bash"
+   ],
+   "trigger": "git push with --force, --force-with-lease or -f",
+   "evidence": "a new commit on the branch; pushed history is never rewritten",
+   "gate": "engine",
+   "engine": true,
+   "escape": "ask",
+   "tests": [
+    "ops/devlane/hooks/tests/test_engine.py::test_a_row_added_as_data_alone_refuses"
+   ],
+   "when": {
+    "pred": "command_matches",
+    "args": {
+     "pattern": "^git (?:-C \\S+ )?push\\b.*(?:--force\\b|--force-with-lease\\b|\\s-f\\b)"
+    }
+   },
+   "refuse": {
+    "expected": "a push that adds commits (branches are never rewritten)",
+    "needed": "push a new commit; never rewrite a pushed branch. This row exists only as data in ops/devlane/hooks/boundaries.json (owner, 2026-09-12: adding a condition is adding a row)"
+   }
+  },
+  {
+   "class": "file-state",
+   "boundary": "write",
+   "actor": "session",
+   "trigger": "a write creating a JSON or text store under the lane's state directory, or a placement file declaring state.engine file",
+   "evidence": "rows in state.db through the state engine (ops/conductor/tools/machine.py); a file only as a record or apparatus a tool writes from its rows, declared in its placement file",
+   "gate": "engine",
+   "tests": [
+    "ops/devlane/hooks/tests/test_engine.py::test_a_file_store_under_the_state_directory_or_a_placement_declaring_file_is_refused"
+   ],
+   "escape": "none",
+   "event": "PreToolUse",
+   "tools": [
+    "Bash",
+    "Write",
+    "Edit",
+    "MultiEdit"
+   ],
+   "engine": true,
+   "when": {
+    "pred": "file_state_store"
+   },
+   "refuse": {
+    "expected": "state as rows in state.db through the state engine (ops/conductor/tools/machine.py); under the state directory only a .db, or a record a tool writes from its rows",
+    "needed": "declare the machine as data in the tool and write through machine.py create and move (the state skill, .claude/skills/state/SKILL.md); a placement declaring file needs the owner's word and a row in FILE_BACKED in ops/conductor/tests/test_state_placement.py. No grant lifts this row (owner, 2026-09-13: \"i need to prevent future default to files when SQLite is better option\")"
+   }
+  },
+  {
+   "class": "done-gate",
+   "boundary": "publish",
+   "actor": "session",
+   "trigger": "at Stop, a completion claim without a reading for the optional deliverable record",
+   "evidence": "the current deliverable reading, when useful to support the claimed outcome",
+   "gate": "engine",
+   "tests": [
+    "ops/devlane/hooks/tests/test_engine.py::test_a_reply_that_says_done_without_a_lock_line_is_sent_back_with_the_lock_reading",
+    "ops/devlane/hooks/tests/test_engine.py::test_three_blocks_per_session_then_the_fourth_passes_and_another_session_still_blocks"
+   ],
+   "escape": "none",
+   "event": "Stop",
+   "tools": [],
+   "engine": true,
+   "when": {
+    "pred": "reply_claims_done"
+   },
+   "refuse": {
+    "expected": "completion claims supported by relevant evidence",
+    "needed": "consider the existing deliverable reading when it helps explain the outcome. No record or prescribed completion phrase is required; repeated advice is capped and is not logged as a missed skill."
+   }
+  },
+  {
+   "class": "kit-import",
+   "boundary": "write",
+   "actor": "session",
+   "trigger": "a write creating a module under a tests/ directory whose text neither imports ops.testkit nor carries `# testkit: exempt <reason>` in its first ten lines",
+   "evidence": "the kit import (from ops.testkit import ...), or the exemption with its reason; docs/tests.md rule 1",
+   "gate": "engine",
+   "tests": [
+    "ops/devlane/hooks/tests/test_engine.py::test_kit_import_refuses_a_new_test_module_without_the_kit_and_passes_import_exemption_and_existing_files"
+   ],
+   "escape": "none",
+   "event": "PreToolUse",
+   "tools": [
+    "Bash",
+    "Write",
+    "Edit",
+    "MultiEdit"
+   ],
+   "engine": true,
+   "when": {
+    "pred": "test_file_without_kit"
+   },
+   "refuse": {
+    "expected": "a new test module that imports the kit (from ops.testkit import World, run, ...) or declares `# testkit: exempt <reason>` in its first ten lines (docs/tests.md rule 1)",
+    "needed": "import the kit, or declare the exemption with its reason. No grant lifts this row: the kit is the one place test machinery lives (D-TESTKIT-1)"
+   }
+  }
+ ],
+ "engine": "ops/devlane/hooks/claude/engine.py evaluates rows with engine: true at the event they bind to; rows with engine: false are still carried by matrix.py's code and are declared here so a class nobody declared cannot refuse",
+ "bindings": {
+  "note": "the session binds engine.py to these events in .claude/settings.json; a row's event names which binding evaluates it",
+  "PreToolUse": [
+   "Bash (after unsafe-command and matrix, in context-precheck.sh)",
+   "Write|Edit|MultiEdit|serena edits"
+  ],
+  "PostToolUse": [
+   "Bash",
+   "Write|Edit|MultiEdit"
+  ],
+  "SessionStart": [
+   "every source"
+  ],
+  "Stop": [
+   "always"
+  ]
+ },
+ "escapes": {
+  "none": "no grant lifts the row; the refusal stands",
+  "grant": "an open hand grant leading the command whose scope covers the path lifts it",
+  "unscoped-grant": "an open grant with no scope lifts it",
+  "ask": "the row answers ask instead of deny: the harness puts the action in front of the owner, and only the owner's click passes it. Only where the action is critical, a forced push or a prune (owner, 2026-09-12: \"i don't want asks unless they're critical\"); a hard row whose remedy is the agent's own (a branch, a reading, the proof) is escape none and denies"
+ },
+ "description": "Diagnostic conditions. Hook output is advisory; CI owns acceptance."
+}

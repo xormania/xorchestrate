@@ -1,0 +1,5 @@
+{
+  "tests": [
+    "ops/bin/suites.sh"
+  ]
+}

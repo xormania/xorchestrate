@@ -1,0 +1,1 @@
+{"tool":"lane_mcp.py","rows":[{"argv":["--config","/dev/null","check"],"class":"config","identity":false},{"argv":["--config","/dev/null","query","lane_start","{\"profile\":\"dev\"}"],"class":"config","identity":false}]}

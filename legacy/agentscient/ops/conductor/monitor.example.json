@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "schedules": {
+    "local": {"enabled": true, "every_s": 30},
+    "forge": {"enabled": true, "every_s": 300}
+  },
+  "monitors": {
+    "jobs": {"enabled": false, "adapter": "dispatch", "schedule": "local", "params": {"store": "./example-dispatch-store", "ids": []}},
+    "context": {"enabled": false, "adapter": "codex-usage", "schedule": "local", "params": {"path": "./example-rollout.jsonl", "max_bytes": 262144}},
+    "github": {"enabled": false, "adapter": "github-rate", "schedule": "forge", "params": {"timeout_s": 10}}
+  },
+  "conditions": {
+    "job_change": {"enabled": true, "monitor": "jobs", "op": "changed", "field": "status", "threshold": null, "cooldown_s": 0},
+    "context_high": {"enabled": true, "monitor": "context", "op": "gt", "field": "context_fraction", "threshold": 0.75, "cooldown_s": 300},
+    "quota_low": {"enabled": true, "monitor": "github", "op": "lt", "field": "remaining_fraction", "threshold": 0.2, "cooldown_s": 300}
+  },
+  "routes": {
+    "jobs": {"enabled": true, "condition": "job_change", "adapter": "queue", "consumer": "operator"},
+    "context": {"enabled": true, "condition": "context_high", "adapter": "queue", "consumer": "operator"},
+    "quota": {"enabled": true, "condition": "quota_low", "adapter": "queue", "consumer": "operator"}
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "schema": "graft-pin/1",
+  "node": {
+    "version": "v24.21.0",
+    "platform": "linux-x64",
+    "url": "https://nodejs.org/dist/v24.21.0/node-v24.21.0-linux-x64.tar.xz",
+    "sha256": "fd8e59d5a511510f6a298afb548f18c7d2b1be404d8b4a27d94fbe49f56cb2d6"
+  },
+  "graft": {
+    "package": "@nanonets/graft",
+    "version": "0.17.0",
+    "source": "https://github.com/trailhq/Graft.git",
+    "revision": "3a85a2f40e283ac0c9b617d9a4bead18d73c3c70",
+    "lock_sha256": "ac93cbe24908d713e913ed9a8c7d1b08ef33ba34708d08129de2d992d2a8a035"
+  }
+}

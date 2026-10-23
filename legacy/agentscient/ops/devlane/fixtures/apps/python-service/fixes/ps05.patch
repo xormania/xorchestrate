@@ -1,0 +1,8 @@
+diff --git a/service/paging.py b/service/paging.py
+--- a/service/paging.py
++++ b/service/paging.py
+@@ -8,3 +8,3 @@
+ def page[T](records: Sequence[T], start: int, stop: int) -> Sequence[T]:
+-    return records[start : stop + 1]
++    return records[start:stop]
+ 

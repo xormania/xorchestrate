@@ -1,0 +1,77 @@
+{
+  "name": "Retain CI toolchain",
+  "on": {
+    "workflow_dispatch": {}
+  },
+  "permissions": {
+    "contents": "read"
+  },
+  "concurrency": {
+    "group": "retain-ci-toolchain",
+    "cancel-in-progress": false
+  },
+  "jobs": {
+    "publish": {
+      "runs-on": "${{ fromJSON(vars.CI_RUNNER_MODE == 'local' && '\"self-hosted\"' || (vars.CI_RUNNER_MODE == '' || vars.CI_RUNNER_MODE == 'hosted') && '\"ubuntu-24.04\"' || 'INVALID_CI_RUNNER_MODE_expected_hosted_or_local') }}",
+      "timeout-minutes": 10,
+      "permissions": {
+        "contents": "write"
+      },
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "name": "Retain checksum-verified executables",
+          "env": {
+            "GH_TOKEN": "${{ github.token }}"
+          },
+          "run": "python3 .github/actions/php-runtime/toolchain.py publish"
+        },
+        {
+          "name": "Install from release with an empty cache",
+          "env": {
+            "GH_TOKEN": "${{ github.token }}"
+          },
+          "run": "export RUNNER_TOOL_CACHE=\"$(mktemp -d \"$RUNNER_TEMP/toolchain-cold.XXXXXX\")\"\npython3 .github/actions/php-runtime/toolchain.py install"
+        },
+        {
+          "name": "Verify selected executables",
+          "run": "php --version\ncomposer --version\nphp -r 'foreach ([\"ctype\",\"dom\",\"iconv\",\"mbstring\",\"xml\",\"xmlwriter\",\"sqlite3\",\"pdo_sqlite\"] as $ext) { if (!extension_loaded($ext)) { fwrite(STDERR, \"Missing: $ext\\n\"); exit(1); } }'"
+        }
+      ]
+    },
+    "verify-hosted": {
+      "needs": [
+        "publish"
+      ],
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 5,
+      "permissions": {
+        "contents": "read"
+      },
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "name": "Install from release with an empty cache",
+          "env": {
+            "GH_TOKEN": "${{ github.token }}"
+          },
+          "run": "export RUNNER_TOOL_CACHE=\"$(mktemp -d \"$RUNNER_TEMP/toolchain-cold.XXXXXX\")\"\npython3 .github/actions/php-runtime/toolchain.py install"
+        },
+        {
+          "name": "Verify selected executables",
+          "run": "php --version\ncomposer --version\nphp -r 'foreach ([\"ctype\",\"dom\",\"iconv\",\"mbstring\",\"xml\",\"xmlwriter\",\"sqlite3\",\"pdo_sqlite\"] as $ext) { if (!extension_loaded($ext)) { fwrite(STDERR, \"Missing: $ext\\n\"); exit(1); } }'"
+        }
+      ]
+    }
+  }
+}

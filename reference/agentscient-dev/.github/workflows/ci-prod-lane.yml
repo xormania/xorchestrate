@@ -1,0 +1,76 @@
+{
+  "name": "prod-lane",
+  "on": {
+    "workflow_call": {},
+    "workflow_dispatch": {}
+  },
+  "permissions": {
+    "contents": "read"
+  },
+  "jobs": {
+    "php": {
+      "runs-on": "${{ fromJSON(vars.CI_RUNNER_MODE == 'local' && '\"self-hosted\"' || (vars.CI_RUNNER_MODE == '' || vars.CI_RUNNER_MODE == 'hosted') && '\"ubuntu-24.04\"' || 'INVALID_CI_RUNNER_MODE_expected_hosted_or_local') }}",
+      "timeout-minutes": 15,
+      "defaults": {
+        "run": {
+          "shell": "bash"
+        }
+      },
+      "env": {
+        "APP_ENV": "test",
+        "APP_DEBUG": "1"
+      },
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "name": "Prepare PHP and Composer",
+          "uses": "./.github/actions/php-runtime"
+        },
+        {
+          "name": "Record revision and tool versions",
+          "run": "mkdir -p var/ci\ngit rev-parse HEAD | tee var/ci/revision.txt\nprintf 'Tested revision: `%s`\\n' \"$(cat var/ci/revision.txt)\" >> \"$GITHUB_STEP_SUMMARY\"\nphp --version\ncomposer --version\nphp devtools/integration/php-runtime.php > var/ci/php-runtime.json"
+        },
+        {
+          "name": "Validate Composer metadata",
+          "run": "composer validate --strict"
+        },
+        {
+          "name": "Install locked dependencies",
+          "run": "composer install --prefer-dist --no-progress --no-interaction\ncomposer check-platform-reqs"
+        },
+        {
+          "name": "Lint application PHP",
+          "run": "find src config packages tests public bin mate -type f -name '*.php' -print0 | xargs -0 -r -n 1 php -l\nphp -l bin/console"
+        },
+        {
+          "name": "Record dependency baseline and available updates",
+          "run": "composer show --locked --format=json > var/ci/dependencies.json\ncomposer outdated --direct --format=json > var/ci/available-updates.json"
+        },
+        {
+          "name": "Check Symfony configuration and container",
+          "run": "php bin/console lint:yaml config --parse-tags\nphp bin/console lint:container\nphp bin/console about"
+        },
+        {
+          "name": "Run PHPUnit",
+          "run": "vendor/bin/phpunit --log-junit var/ci/phpunit.xml --log-events-text var/ci/phpunit-events.log"
+        },
+        {
+          "name": "Upload revision and PHPUnit results",
+          "if": "${{ always() }}",
+          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "with": {
+            "name": "prod-lane-${{ github.run_id }}-${{ github.run_attempt }}",
+            "path": "var/ci/",
+            "if-no-files-found": "error",
+            "retention-days": 30
+          }
+        }
+      ]
+    }
+  }
+}

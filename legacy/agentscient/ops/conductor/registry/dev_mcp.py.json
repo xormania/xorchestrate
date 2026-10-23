@@ -1,0 +1,1 @@
+{"tool": "dev_mcp.py", "rows": [{"argv": ["unknown"], "class": "arguments", "identity": false}, {"argv": ["--binding", "/dev/null", "check"], "class": "config", "identity": false}]}

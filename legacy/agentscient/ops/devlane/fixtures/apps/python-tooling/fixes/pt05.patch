@@ -1,0 +1,8 @@
+diff --git a/tool/service.py b/tool/service.py
+--- a/tool/service.py
++++ b/tool/service.py
+@@ -23,3 +23,3 @@
+     except Exception:
+-        return []
++        raise
+ 

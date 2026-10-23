@@ -1,0 +1,8 @@
+diff --git a/src/Model/Interval.php b/src/Model/Interval.php
+--- a/src/Model/Interval.php
++++ b/src/Model/Interval.php
+@@ -12,3 +12,3 @@
+     {
+-        return $this->start <= $value && $value <= $this->end;
++        return $this->start <= $value && $value < $this->end;
+     }

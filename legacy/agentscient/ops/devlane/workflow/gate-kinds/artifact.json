@@ -1,0 +1,60 @@
+{
+  "kind": "artifact",
+  "version": 1,
+  "stages": [
+    {
+      "name": "draft",
+      "leave_requires": []
+    },
+    {
+      "name": "review",
+      "leave_requires": [],
+      "outcomes": {
+        "accepted": "ratify",
+        "finding": "fix",
+        "rejected": "fix",
+        "denied": "terminal",
+        "aborted": "terminal"
+      }
+    },
+    {
+      "name": "fix",
+      "leave_requires": [],
+      "advance_to": "review",
+      "blocked_by_open_markers": true
+    },
+    {
+      "name": "ratify",
+      "actor": "owner",
+      "leave_requires": [],
+      "outcomes": {
+        "ratified": "terminal",
+        "denied": "terminal",
+        "aborted": "terminal"
+      }
+    }
+  ],
+  "test_scope": [],
+  "harness_scope": [],
+  "checks": [
+    {"name": "vocabulary-wall", "class": "policy",
+     "argv": ["python3", ".dev/app/workflow/checks/vocabulary_wall.py"], "ci": true},
+    {"name": "secret-scan", "class": "security",
+     "argv": ["python3", ".dev/app/workflow/checks/secret_scan.py"], "ci": true},
+    {"name": "commit-trailers", "class": "policy",
+     "argv": ["python3", ".dev/app/workflow/checks/commit_trailers.py",
+              "--since-base"], "ci": true},
+    {"name": "imports", "class": "policy",
+     "argv": ["python3", ".dev/contracts/imports.py"], "ci": true},
+    {"name": "doc-commands", "class": "policy",
+     "argv": ["python3", ".dev/app/workflow/checks/doc_commands.py"], "ci": true},
+    {"name": "doc-covers", "class": "policy",
+     "argv": ["python3", ".dev/app/workflow/checks/doc_covers.py"], "ci": true},
+    {"name": "registry-vet", "class": "policy",
+     "argv": ["python3", ".dev/agentscient/checks/registry_vet.py", "vet",
+              ".dev/agentscient/capabilities.json"], "ci": true},
+    {"name": "anatomy", "class": "policy",
+     "argv": ["python3", ".dev/agentscient/checks/anatomy.py", "vet"],
+     "ci": true}
+  ]
+}

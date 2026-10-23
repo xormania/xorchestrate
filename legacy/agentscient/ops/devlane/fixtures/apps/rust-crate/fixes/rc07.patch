@@ -1,0 +1,8 @@
+diff --git a/Cargo.toml b/Cargo.toml
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -14,3 +14,3 @@
+ [dependencies]
+-anyhow = "*"
++anyhow = "=1.0.104"
+ hex = "=0.4.3"

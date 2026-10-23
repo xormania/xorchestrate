@@ -1,0 +1,15 @@
+#!/bin/sh
+# Trailer diagnostics are local guidance. A broken diagnostic must not stop work.
+set -u
+msg_file=${1:-}
+[ -n "$msg_file" ] || { echo "Diagnostic: no commit message file to inspect" >&2; exit 0; }
+top=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+check="$top/ops/devlane/workflow/checks/commit_trailers.py"
+if [ ! -f "$check" ] || ! command -v python3 >/dev/null 2>&1; then
+    echo "Diagnostic: trailer checker unavailable" >&2
+    exit 0
+fi
+python3 "$check" --message-file "$msg_file" || {
+    echo "Diagnostic: review the trailer findings above; the commit may proceed." >&2
+}
+exit 0
