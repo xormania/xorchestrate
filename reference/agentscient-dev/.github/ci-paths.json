@@ -1,0 +1,91 @@
+{
+  "ignore": [
+    "README.md",
+    "CONTRIB.md",
+    "docs/*.md",
+    "devtools/*.md",
+    "devtools/PROVENANCE-LICENSE",
+    "packages/*.md",
+    ".github/CI.md",
+    ".github/CODEOWNERS",
+    ".github/dependabot.yml",
+    ".editorconfig"
+  ],
+  "all": [
+    ".github/*",
+    ".gitignore"
+  ],
+  "jobs": {
+    "live-mcp": [
+      "devtools/*",
+      ".agents/*",
+      ".claude/*",
+      "AGENTS.md",
+      "CLAUDE.md",
+      "ruff.toml"
+    ],
+    "maker-mate": [
+      "devtools/*",
+      ".agents/*",
+      ".claude/*",
+      "AGENTS.md",
+      "CLAUDE.md",
+      "composer.*",
+      "symfony.lock",
+      ".env*",
+      "src/*",
+      "config/*",
+      "packages/*",
+      "mate/*",
+      "bin/*",
+      "phpunit*.xml*",
+      "tests/bootstrap.php"
+    ],
+    "symfony": [
+      "devtools/integration/php-runtime.php",
+      "composer.*",
+      "symfony.lock",
+      ".env*",
+      "src/*",
+      "config/*",
+      "packages/*",
+      "mate/*",
+      "bin/*",
+      "phpunit*.xml*",
+      "tests/*",
+      "public/*",
+      "assets/*",
+      "templates/*",
+      "translations/*",
+      "migrations/*",
+      "importmap.php",
+      "package.json",
+      "package-lock.json",
+      "yarn.lock",
+      "pnpm-lock.yaml",
+      "webpack.config.js"
+    ],
+    "serena": [
+      "devtools/*",
+      ".agents/*",
+      ".claude/*",
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".phpactor.json"
+    ]
+  },
+  "exclude": {
+    "maker-mate": [
+      "devtools/tests/test_*.py",
+      "devtools/tests/*_fixture.py",
+      "devtools/integration/serena.py",
+      "devtools/serena/*"
+    ],
+    "serena": [
+      "devtools/tests/test_*.py",
+      "devtools/tests/*_fixture.py",
+      "devtools/integration/php-runtime.php",
+      "devtools/integration/symfony.py"
+    ]
+  }
+}

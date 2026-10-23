@@ -1,0 +1,59 @@
+{
+  "schema": "agentscient.board/v1",
+  "query": "prs",
+  "started_at": "2026-08-30T12:00:30Z",
+  "ended_at": "2026-08-30T12:00:31Z",
+  "repository": {
+    "root": "/srv/agentscient",
+    "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "branch": "agentscient/board",
+    "evidence": ["obs.repository"]
+  },
+  "observations": {
+    "obs.repository": {
+      "state": "measured",
+      "started_at": "2026-08-30T12:00:30Z",
+      "ended_at": "2026-08-30T12:00:30Z",
+      "command": ["git", "rev-parse", "HEAD"],
+      "cwd": "/srv/agentscient",
+      "environment": {"lane": "dev"},
+      "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "exit": 0,
+      "raw_sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "obs.prs.live": {
+      "state": "measured",
+      "started_at": "2026-08-30T12:00:00Z",
+      "ended_at": "2026-08-30T12:00:00Z",
+      "command": ["python3", "pr_overview.py", "--json"],
+      "cwd": "/srv/agentscient",
+      "environment": {"lane": "dev"},
+      "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "exit": 0,
+      "raw_sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    "obs.prs.cache-read": {
+      "state": "measured",
+      "started_at": "2026-08-30T12:00:30Z",
+      "ended_at": "2026-08-30T12:00:30Z",
+      "command": ["board-cache-read", "prs"],
+      "cwd": "/srv/agentscient",
+      "environment": {"lane": "dev"},
+      "ref": {"not_applicable": "verified cache"},
+      "exit": 0,
+      "raw_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+    }
+  },
+  "sections": {
+    "prs": {
+      "state": "cached",
+      "evidence": ["obs.prs.live", "obs.prs.cache-read"],
+      "items": [],
+      "observed_at": "2026-08-30T12:00:00Z",
+      "read_at": "2026-08-30T12:00:30Z",
+      "successful_observation": "obs.prs.live",
+      "current_observation": "obs.prs.cache-read"
+    }
+  }
+}
+

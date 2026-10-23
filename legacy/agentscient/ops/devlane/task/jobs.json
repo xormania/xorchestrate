@@ -1,0 +1,107 @@
+{
+ "verify": {
+  "adapter": "direct",
+  "deliverable": "one claim, executed: a reproduction or a refutation",
+  "caps": {"timeout": 3600, "turns": 150},
+  "prompt": null,
+  "constraints": [
+   "read only",
+   "never edit the snapshot"
+  ]
+ },
+ "adversarial-review": {
+  "adapter": "harness",
+  "deliverable": "findings that survived the task's own attempt to refute them",
+  "role": "read",
+  "snapshot": "whole",
+  "caps": {"timeout": 3600, "turns": 150},
+  "prompt": "Review the change at {ref} against {base}. The diff is {diff}. Review only — do not edit.\nAim at: {scope}\nFindings are suggestions: rate each one by a concrete failure on this change's exit path — a wrong result, a crash, or a bypassed refusal, on an invocation someone will actually make. Label every finding with `practical`: `yes` with `failing` set to that invocation as a command, or `no` with `failing` null.\nInputs named by the brief are files under in/, a sibling of out/; read them whole before working.\nLeave `spend` as `{\"harness\": \"<harness>\", \"total\": 0, \"out\": 0, \"runs\": 0}`; the launcher fills it from the session store. Do not read the store.\nAnswer with a single JSON object and nothing else, carrying exactly these keys: job, status, verdict, counts, findings, artifacts, spend, stamp, note. Prose is not a deliverable here — the CONTRIB.md wire block is the human review format, not this job's stdout.",
+  "constraints": [
+   "read only",
+   "do not edit the snapshot"
+  ]
+ },
+ "security-audit": {
+  "adapter": "harness",
+  "deliverable": "security findings against the change, each with a reproduction, that survived the auditor's own attempt to refute them",
+  "role": "read",
+  "snapshot": "whole",
+  "caps": {"timeout": 3600, "turns": 150},
+  "prompt": "Audit the change at {ref} against {base} for security defects. The diff is {diff}; the whole tree is present for context. Audit only — do not edit.\nHunt: injection through any argv, shell, SQL or template seam; secrets or credentials entering the tree, a record, or a log; paths and refs that escape a snapshot, a worktree, or a job directory; permission and sandbox flags weaker than the record claims; trust placed in vendor output without a check; supply-chain surfaces (pins, lockfiles, fetched actions) loosened.\nAim at: {scope}\nEvery finding carries a reproduce command against the tree; a finding without one is an opinion and does not belong in the list. A category you looked at and found clean is a category with zero findings, which is not the same as one you did not look at — say in note what you could not cover. Findings are suggestions: rate each one by a concrete failure on this change's exit path — a wrong result, a crash, or a bypassed refusal, on an invocation someone will actually make. Label every finding with `practical`: `yes` with `failing` set to that invocation as a command, or `no` with `failing` null.\nInputs named by the brief are files under in/, a sibling of out/; read them whole before working.\nLeave `spend` as `{\"harness\": \"<harness>\", \"total\": 0, \"out\": 0, \"runs\": 0}`; the launcher fills it from the session store. Do not read the store.\nThe trust model, ruled by the owner (register D-LAUNCHER-1): this repository is private, every branch is the owner's or a session's, and workers are the lane's own harnesses writing inside snapshots. A finding whose exploit needs an outside contributor or a hostile pull request is P3 under that ruling; P1 is reserved for what breaks the lane's function or integrity, or reaches outside a job, within that model. Answer with a single JSON object and nothing else, carrying exactly these keys: job, status, verdict, counts, findings, artifacts, spend, stamp, note.",
+  "constraints": ["read only", "do not edit the snapshot"]
+ },
+ "author-tests": {
+  "adapter": "harness",
+  "deliverable": "a test file that has been run and is red for the stated reason",
+  "role": "write",
+  "snapshot": "whole",
+  "caps": {"timeout": 3600, "turns": 200},
+  "prompt": "Write tests from the contract at {scope}, for the tree at {ref}. Do not read the implementation. Prove each test red for its own assertion before making it green. Commit each test file as soon as its red is proven — if committing is denied, write it to disk at once — so a run killed at the wall leaves finished work, not residue. Build every world, command and fake through the kit at ops/testkit as docs/tests.md says; a new test module imports the kit or declares `# testkit: exempt <reason>`; a regression is a row with its origin; your note's `reused:` names the kit invariant each table joins, e.g. `reused: testkit.refusal-wire`.\nInputs named by the brief are files under in/, a sibling of out/; read them whole before working.\nReading: the law is already in your context — AGENTS.md and the contracts it imports — so do not read docs/. Read only the files the scope names, and read them in ranges (sed -n '120,180p'), never whole; the inputs under in/ are the exception the line above names. A test run prints its tail, not its whole output.\nSpend: tokens buy state changes, not activity (ops/process/token-thrift.md). Read each input once and never re-read a file you just edited; bound every command's output; run the one test module you are proving, never the whole suite; commit as soon as a red is proven rather than re-checking it. The target is under 3M cached tokens per run.\nLeave `spend` as `{\"harness\": \"<harness>\", \"total\": 0, \"out\": 0, \"runs\": 0}`; the launcher fills it from the session store. Do not read the store.\nAnswer with a single JSON object and nothing else, carrying exactly these keys: job, status, verdict, counts, findings, artifacts, spend, stamp, note (and, for a write job that could not commit, commit).",
+  "constraints": [
+   "do not edit the implementation",
+   "no network"
+  ]
+ },
+ "sweep": {
+  "adapter": "harness",
+  "deliverable": "structured findings over disjoint categories, merged",
+  "role": "read",
+  "snapshot": "whole",
+  "caps": {"timeout": 3600, "turns": 200},
+  "prompt": "Sweep the tree at {ref} for defects in these categories, and ONLY these: {scope}. The categories are disjoint — report each finding under exactly one, and do not repeat a finding across categories.\nCover every category. A category you looked at and found nothing in is a category with zero findings, which is not the same as one you did not look at — if you could not cover one, say so in note and return status invalid rather than reporting a partial sweep as a complete one.\nEvery finding carries a reproduce command that re-derives it; a finding without one is an opinion and does not belong in the list.\nReview only — do not edit.\nInputs named by the brief are files under in/, a sibling of out/; read them whole before working.\nLeave `spend` as `{\"harness\": \"<harness>\", \"total\": 0, \"out\": 0, \"runs\": 0}`; the launcher fills it from the session store. Do not read the store.\nAnswer with a single JSON object and nothing else, carrying exactly these keys: job, status, verdict, counts, findings, artifacts, spend, stamp, note.",
+  "constraints": [
+   "read only",
+   "do not edit the snapshot"
+  ]
+ },
+ "plan": {
+  "adapter": "harness",
+  "deliverable": "a plan written to the job's out/PLAN.md carrying the bucket rule, walkthrough of the first run, every assumption rule, tests by file, machine lines, and calibration row, and an envelope naming it; a plan missing any section is not the deliverable",
+  "role": "read",
+  "outputs": [{"kind": "file", "path": "PLAN.md", "artifact": "plan"}],
+  "snapshot": "whole",
+  "caps": {"timeout": 3600, "turns": 150},
+  "prompt": "Write a plan for the scope below, for the tree at {ref}. Read the snapshot and nothing else. Write the plan to {out}/PLAN.md and name that path in artifacts. Do not edit the snapshot.\nScope: {scope}\nBucket the work by the owner's rule: S is one to three files and one worker run under ten minutes; M is four to eight files as two named S buckets; L is split. Every slice carries what it unblocks; its risk class (touches the dispatcher, the launcher's argv building, a contract: its own slice); the edges it touches and the guarantees it must declare or keep from docs/verified-couplings.md; what it depends on; that it lands green alone; and which slice deserves its own PR. Keep slices ordered by value per cost with dependencies respected.\nInclude a walkthrough of the first run. Trace every stage against the actual environment the job will meet: the snapshot's isolated home and what tools then cannot find, no network, the read-only git directory, each job prompt's demands, and the self-hosted runner's workspace. At every point a worker could improvise, ensure the refusal that must stand there is written beside it.\nEvery assumption measured by a command at write time or made a refusal the run will hit; one that is neither is a finding against the plan; the plan says so of itself.\nName the tests by file and why each is red at the ref. Put the machine lines in the driver's grammar at the end of the plan as tab-separated lines: `slice<TAB>name<TAB>S|M<TAB>class` and `bucket<TAB>name<TAB>S<TAB>files`; the class is a key of ops/conductor/stage-sets.json in the snapshot, the stage set the ladder runs for that slice, chosen by its risk class (contract-only work is `contract`; driver, launcher or other lane code is `lane`); an M slice has exactly two named S buckets. Include a calibration row per slice with the declared bucket and the estimated minutes per stage, in the shape of .dev/wip/calibration-buckets.md.\nDo not run test suites, the suites lever or any command that takes more than a few seconds: the baselines the brief names are already measured, and a re-measurement is a count or a file list (rg -c, rg -l, wc, git ls-files), never a suite run.\nIf you judge you are running long, stop and write up what you have.\nInputs named by the brief are files under in/, a sibling of out/; read them whole before working.\nLeave `spend` as `{\"harness\": \"<harness>\", \"total\": 0, \"out\": 0, \"runs\": 0}`; the launcher fills it from the session store. Do not read the store.\nAnswer with a single JSON object and nothing else, carrying exactly these keys: job, status, verdict, counts, findings, artifacts, spend, stamp, note.",
+  "constraints": [
+   "read only",
+   "do not edit the snapshot"
+  ]
+ },
+ "check-tests": {
+  "adapter": "harness",
+  "deliverable": "the skeptic's findings on the wire: the JSON envelope on stdout, verdict `changes` exactly when any finding exists, each finding a quotation pair; artifacts empty; no file written",
+  "role": "read",
+  "snapshot": "whole",
+  "caps": {"timeout": 3600, "turns": 150},
+  "prompt": "Adopt the role card at ops/process/roles/test-skeptic.md in the tree at {ref}. Judge the tests at {inputs} against the contract named here: {scope}. Do not read any implementation. Refute by default: a test survives only when you can name the broken implementation it would catch. Every refuted or weak test is one finding, a quotation pair: where is the test file and line; claim is `declared (<location>): <the contract or test words, verbatim>; practiced: <the test's evidence, verbatim>; misses: <the broken implementation the test would not catch>`; reproduce is a command against the tree. Verdict is changes exactly when findings is non-empty and approve otherwise; counts are the tally of findings. Write no file: artifacts is an empty object and the envelope on stdout is the whole deliverable. Review only — do not edit. Where a test is a case table, run `python3 ops/testkit/cases.py calibrate --subject <the subject> --mutants <its faults file> --command <the table's discover command>` from the tree root; a table without a fixture set, or a row that stays quiet on the table's planted fault, is one finding. Findings are suggestions: rate each one by a concrete failure on this change's exit path — a wrong result, a crash, or a bypassed refusal, on an invocation someone will actually make. Label every finding with `practical`: `yes` with `failing` set to that invocation as a command, or `no` with `failing` null. A test that breaks a rule of docs/tests.md (rules 1-9) is practical `yes`, because the wall refuses it at CI; its `failing` is the command that refuses it.\nInputs named by the brief are files under in/, a sibling of out/; read them whole before working.\nLeave `spend` as `{\"harness\": \"<harness>\", \"total\": 0, \"out\": 0, \"runs\": 0}`; the launcher fills it from the session store. Do not read the store.\nAnswer with a single JSON object and nothing else, carrying exactly these keys: job, status, verdict, counts, findings, artifacts, spend, stamp, note.",
+  "constraints": [
+   "read only",
+   "do not edit the snapshot"
+  ]
+ },
+ "implement": {
+  "adapter": "harness",
+  "deliverable": "commits in the snapshot that make the named test command pass, trailers per AGENTS.md",
+  "role": "write",
+  "snapshot": "whole",
+  "caps": {"timeout": 3600, "turns": 200},
+  "prompt": "In the tree at {ref}, implement whatever makes this command exit 0: {scope}. Commit in the snapshot as you go, with the trailers AGENTS.md requires; do not edit the files the tests live in, and do not touch the command itself. Record each command you ran as a finding with a reproduce entry. Status is ok only when the named command exits 0 in your final tree; otherwise status is invalid and note names the failing test. Commit if you can; if the sandbox refuses git commit, status stays ok and you write your message to out/COMMIT_MSG (or a commit object with keys subject and body in the envelope) — the launcher commits your tree with that message and your attribution (codex only; grok and claude commit themselves). Verdict is null.\nIf, while working or testing, you find a pre-existing bug, a performance concern, or behavior the task doesn't mention, don't fix, optimize or extend it in this change unless the requested behavior cannot work without it; report it as a follow-up in your summary. Where the task is ambiguous, implement the reading its wording and the surrounding code most directly support, state that assumption in your summary, and don't build for the other readings as well. Verify your work however you like; scratch scripts and quick checks need not be kept. Commit tests only where the task asks for them or this repository already keeps tests for this kind of change, sized like the neighboring test files - roughly one focused test per stated behavior - and don't turn scratch checks into additional permanent test files. This is about extras only: implement every behavior the task asks for, completely.\nThe number of tokens used to edit files is best minimized, all else being equal. Therefore, when it will not affect the end result, try to surgically edit a file rather than rewrite the entire thing.\nInputs named by the brief are files under in/, a sibling of out/; read them whole before working.\nLeave `spend` as `{\"harness\": \"<harness>\", \"total\": 0, \"out\": 0, \"runs\": 0}`; the launcher fills it from the session store. Do not read the store.\nAnswer with a single JSON object and nothing else, carrying exactly these keys: job, status, verdict, counts, findings, artifacts, spend, stamp, note (and, for a write job that could not commit, commit).",
+  "constraints": [
+   "do not edit the files the tests live in",
+   "no network"
+  ]
+ },
+ "adjudicate": {
+  "adapter": "harness",
+  "deliverable": "a ruling at the job's out/RULING.md: UPHELD, PARTIAL or REJECTED per finding, and what the reviewers missed",
+  "role": "read",
+  "outputs": [{"kind": "file", "path": "RULING.md", "artifact": "ruling"}],
+  "snapshot": "whole",
+  "caps": {"timeout": 3600, "turns": 150},
+  "prompt": "Rule on the reviews at {inputs} of the artifact at {ref}. You are given the artifact at that ref and the reports verbatim, and nothing else. Rule UPHELD, PARTIAL or REJECTED per finding, each ruling grounded in a reproduction against the tree, then state what the reviewers missed. Write the ruling to {out}/RULING.md and name that path in artifacts. Review only — do not edit.\nInputs named by the brief are files under in/, a sibling of out/; read them whole before working.\nLeave `spend` as `{\"harness\": \"<harness>\", \"total\": 0, \"out\": 0, \"runs\": 0}`; the launcher fills it from the session store. Do not read the store.\nAnswer with a single JSON object and nothing else, carrying exactly these keys: job, status, verdict, counts, findings, artifacts, spend, stamp, note.",
+  "constraints": [
+   "read only",
+   "do not edit the snapshot"
+  ]
+ }
+}

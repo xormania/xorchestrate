@@ -1,0 +1,1 @@
+{"tool":"correction.py","rows":[{"argv":["check"],"class":"arguments","identity":false},{"argv":["check","--job","implement","--role","write","--at","2026-01-01T00:00:00Z","--follows","20260101T000000Z-review-codex-000000"],"class":"follows","identity":false}]}

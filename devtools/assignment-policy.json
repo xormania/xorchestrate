@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "protected_paths": ["devtools", ".agents", ".claude", "mate", "src/Maker", "templates/maker"],
+  "context_paths": ["composer.json", "composer.lock", "symfony.lock", "vendor", "config", "bin", ".phpactor.json"],
+  "denied_makers": ["make:maker"],
+  "inspection_commands": ["about", "debug:*", "router:match"]
+}

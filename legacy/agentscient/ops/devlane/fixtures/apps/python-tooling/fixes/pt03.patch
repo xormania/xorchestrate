@@ -1,0 +1,8 @@
+diff --git a/tool/cli.py b/tool/cli.py
+--- a/tool/cli.py
++++ b/tool/cli.py
+@@ -24,3 +24,3 @@
+ def render_count(count: int | None) -> str:
+-    if not count:
++    if count is None:
+         return "no record"

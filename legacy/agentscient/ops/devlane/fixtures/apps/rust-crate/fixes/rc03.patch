@@ -1,0 +1,8 @@
+diff --git a/src/render.rs b/src/render.rs
+--- a/src/render.rs
++++ b/src/render.rs
+@@ -4,3 +4,3 @@
+ pub fn render_count(count: Option<u64>) -> String {
+-    let n = count.unwrap_or(0); if n == 0 { "no record".into() } else { format!("count={n}") }
++    match count { None => "no record".into(), Some(n) => format!("count={n}") }
+ }

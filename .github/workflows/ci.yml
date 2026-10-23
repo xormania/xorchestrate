@@ -1,0 +1,213 @@
+{
+  "name": "CI",
+  "on": {
+    "pull_request": {},
+    "push": {
+      "branches": [
+        "master",
+        "integration/hexagonal"
+      ]
+    },
+    "workflow_dispatch": {}
+  },
+  "permissions": {
+    "contents": "read"
+  },
+  "concurrency": {
+    "group": "ci-${{ github.ref }}",
+    "cancel-in-progress": true
+  },
+  "jobs": {
+    "changes": {
+      "name": "Static checks",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 10,
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "with": {
+            "python-version": "3.12"
+          }
+        },
+        {
+          "name": "Install pinned linter",
+          "run": "python3 -m pip install --disable-pip-version-check -r .github/requirements-ci.txt"
+        },
+        {
+          "name": "Lint runtime and CI",
+          "id": "lint",
+          "run": "python3 -m ruff check xorchestrate tests devtools .github scripts"
+        },
+        {
+          "name": "Check security lint coverage",
+          "run": "python3 .github/lint_checks.py"
+        },
+        {
+          "name": "Check optional toolchain helpers",
+          "run": "python3 -m unittest discover -s .github/tests -v"
+        },
+        {
+          "name": "Compile application and fixtures",
+          "run": "python3 -m compileall -q xorchestrate tests/hexagonal scripts/acceptance"
+        }
+      ]
+    },
+    "legacy": {
+      "name": "Recovered toolkit tests",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 20,
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "with": {
+            "python-version": "3.12"
+          }
+        },
+        {
+          "name": "Check recovered testkit and coordination",
+          "run": "python3 scripts/check_legacy.py"
+        }
+      ]
+    },
+    "application": {
+      "name": "Application and adapter tests (Python ${{ matrix.python }})",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 15,
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "with": {
+            "python-version": "${{ matrix.python }}"
+          }
+        },
+        {
+          "name": "Install application dependencies",
+          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]'"
+        },
+        {
+          "name": "Run application, boundary, and subprocess integration tests",
+          "run": "python3 -m pytest tests/hexagonal -q"
+        }
+      ],
+      "strategy": {
+        "matrix": {
+          "python": [
+            "3.11",
+            "3.12"
+          ]
+        }
+      }
+    },
+    "tmux-acceptance": {
+      "name": "Tmux live acceptance (protocol fixture)",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 5,
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "with": {
+            "python-version": "3.12"
+          }
+        },
+        {
+          "name": "Install application and tmux",
+          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]'\nsudo apt-get update\nsudo apt-get install -y tmux"
+        },
+        {
+          "name": "Verify acceptance scenarios and lifecycle regressions",
+          "run": "python3 -m pytest tests/hexagonal/test_acceptance_*.py -q"
+        },
+        {
+          "name": "Run reusable tmux acceptance fixture",
+          "run": "python3 -m scripts.acceptance --output \"$RUNNER_TEMP/acceptance-evidence\" --timeout 120"
+        },
+        {
+          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "if": "always()",
+          "with": {
+            "name": "tmux-acceptance-evidence",
+            "path": "${{ runner.temp }}/acceptance-evidence/**/report.json\n${{ runner.temp }}/acceptance-evidence/**/scenario.json",
+            "if-no-files-found": "error",
+            "retention-days": 7
+          }
+        }
+      ]
+    },
+    "imported-runtime": {
+      "name": "Imported runtime regression (historical source)",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 20,
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "with": {
+            "python-version": "3.12"
+          }
+        },
+        {
+          "name": "Stage historical skill assets for source regression",
+          "run": "mkdir -p .agents\ncp -R reference/imported-agent-skills .agents/skills"
+        },
+        {
+          "uses": "cue-lang/setup-cue@b0e30e540a2dae47304ebf16586a5b2db023b61c",
+          "with": {
+            "version": "v0.17.1"
+          }
+        },
+        {
+          "name": "Install tmux",
+          "run": "sudo apt-get update\nsudo apt-get install -y tmux"
+        },
+        {
+          "name": "Run imported source regression suite",
+          "env": {
+            "AGENTSCIENT_CUE": "cue",
+            "AGENTSCIENT_REQUIRE_TMUX": "1",
+            "AGENTSCIENT_REQUIRE_ABSTRACT_SOCKETS": "1",
+            "AGENTSCIENT_EVIDENCE_DIR": "${{ runner.temp }}/runtime-evidence"
+          },
+          "run": "python3 -m devtools.role_packages --check\npython3 -m devtools.configuration --check\npython3 -m devtools.consistency\npython3 -m devtools.tests.run --strict --report \"$AGENTSCIENT_EVIDENCE_DIR/test-census.json\""
+        },
+        {
+          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "if": "always()",
+          "with": {
+            "name": "runtime-evidence",
+            "path": "${{ runner.temp }}/runtime-evidence",
+            "if-no-files-found": "error"
+          }
+        }
+      ]
+    }
+  }
+}

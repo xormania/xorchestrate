@@ -1,0 +1,10 @@
+diff --git a/tests/test_api.py b/tests/test_api.py
+--- a/tests/test_api.py
++++ b/tests/test_api.py
+@@ -6,5 +6,4 @@
+-def test_boundary_refuses_bad_request(monkeypatch, tmp_path):
+-    monkeypatch.setattr(api, "parse_request", lambda _line: {"verb": "unknown"})
++def test_boundary_refuses_bad_request(tmp_path):
+     response = api.handle("not json", tmp_path)
+     assert response["ok"] is False
+ 

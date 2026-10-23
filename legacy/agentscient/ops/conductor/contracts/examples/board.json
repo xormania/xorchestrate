@@ -1,0 +1,129 @@
+{
+  "schema": "agentscient.board/v1",
+  "query": "all",
+  "started_at": "2026-08-30T12:00:30Z",
+  "ended_at": "2026-08-30T12:00:31Z",
+  "repository": {
+    "root": "/srv/agentscient",
+    "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "branch": "agentscient/board",
+    "evidence": ["obs.repository"]
+  },
+  "observations": {
+    "obs.repository": {
+      "state": "measured",
+      "started_at": "2026-08-30T12:00:30Z",
+      "ended_at": "2026-08-30T12:00:30Z",
+      "command": ["git", "-C", "/srv/agentscient", "rev-parse", "HEAD"],
+      "cwd": "/srv/agentscient",
+      "environment": {"lane": "dev"},
+      "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "exit": 0,
+      "raw_sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "obs.git.branches": {
+      "state": "measured",
+      "started_at": "2026-08-30T12:00:30Z",
+      "ended_at": "2026-08-30T12:00:30Z",
+      "command": ["git", "-C", "/srv/agentscient", "for-each-ref", "refs/heads"],
+      "cwd": "/srv/agentscient",
+      "environment": {"lane": "dev"},
+      "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "exit": 0,
+      "raw_sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    "obs.prs.live": {
+      "state": "measured",
+      "started_at": "2026-08-30T12:00:00Z",
+      "ended_at": "2026-08-30T12:00:00Z",
+      "command": ["python3", ".claude/skills/pr-overview/pr_overview.py", "--json"],
+      "cwd": "/srv/agentscient",
+      "environment": {"lane": "dev"},
+      "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "exit": 0,
+      "raw_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+    },
+    "obs.prs.cache-read": {
+      "state": "measured",
+      "started_at": "2026-08-30T12:00:30Z",
+      "ended_at": "2026-08-30T12:00:30Z",
+      "command": ["board-cache-read", "prs"],
+      "cwd": "/srv/agentscient",
+      "environment": {"lane": "dev", "XDG_STATE_HOME": "/state"},
+      "ref": {"not_applicable": "cache bytes bind their source Git ref in the cached observation"},
+      "exit": 0,
+      "raw_sha256": "4444444444444444444444444444444444444444444444444444444444444444"
+    },
+    "obs.prs.refresh": {
+      "state": "failed",
+      "started_at": "2026-08-30T12:00:30Z",
+      "ended_at": "2026-08-30T12:00:30Z",
+      "command": ["python3", ".claude/skills/pr-overview/pr_overview.py", "--json"],
+      "cwd": "/srv/agentscient",
+      "environment": {"lane": "dev"},
+      "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "exit": 1,
+      "raw_sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+    },
+    "obs.git.decisions": {
+      "state": "measured",
+      "started_at": "2026-08-30T12:00:30Z",
+      "ended_at": "2026-08-30T12:00:30Z",
+      "command": ["git", "-C", "/srv/agentscient", "show", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:ops/docs/TODO.md"],
+      "cwd": "/srv/agentscient",
+      "environment": {"lane": "dev"},
+      "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "exit": 0,
+      "raw_sha256": "6666666666666666666666666666666666666666666666666666666666666666"
+    },
+    "obs.dispatches": {
+      "state": "measured",
+      "started_at": "2026-08-30T12:00:30Z",
+      "ended_at": "2026-08-30T12:00:30Z",
+      "command": ["python3", "ops/devlane/dispatch/launch.py", "status", "--json"],
+      "cwd": "/srv/agentscient",
+      "environment": {"lane": "dev", "DISPATCH_JOBS": "/state/jobs"},
+      "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "exit": 0,
+      "raw_sha256": "7777777777777777777777777777777777777777777777777777777777777777"
+    }
+  },
+  "sections": {
+    "branches": {
+      "state": "measured",
+      "evidence": ["obs.git.branches"],
+      "items": []
+    },
+    "prs": {
+      "state": "cached",
+      "evidence": ["obs.prs.live", "obs.prs.cache-read", "obs.prs.refresh"],
+      "items": [],
+      "observed_at": "2026-08-30T12:00:00Z",
+      "read_at": "2026-08-30T12:00:30Z",
+      "age_seconds": 30,
+      "successful_observation": "obs.prs.live",
+      "current_observation": "obs.prs.cache-read",
+      "failed_refresh_observation": "obs.prs.refresh"
+    },
+    "decisions": {
+      "state": "measured",
+      "evidence": ["obs.git.decisions"],
+      "items": [
+        {
+          "id": "merge-pr-83",
+          "question": "Merge PR #83 (`harness-fixes/dev` → `dev`) — trailers fixed and force-pushed; merging unblocks G-PIN and closes the `launch.py:324` finding on PR #81.",
+          "path": "ops/docs/TODO.md",
+          "line": 8,
+          "source_ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "evidence": ["obs.git.decisions"]
+        }
+      ]
+    },
+    "dispatches": {
+      "state": "measured",
+      "evidence": ["obs.dispatches"],
+      "items": []
+    }
+  }
+}
+

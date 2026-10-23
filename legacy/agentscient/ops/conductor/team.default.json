@@ -1,0 +1,7 @@
+{"schema": "agentscient-team/1",
+ "run": {"name": "lane", "tmux": "agentscient"},
+ "members": [
+   {"name": "co", "harness": "claude", "roles": ["lead"]},
+   {"name": "xo", "harness": "claude", "roles": ["coordinator"]},
+   {"name": "dispatcher", "harness": "codex", "roles": ["dispatcher"]},
+   {"name": "grunt", "harness": "grok", "roles": ["worker"]}]}

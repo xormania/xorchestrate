@@ -1,0 +1,1 @@
+{"tool":"ladder.py","rows":[{"argv":["run"],"class":"arguments","identity":false},{"argv":["stage-sets","/nonexistent/stage-sets.json"],"class":"stage-set","identity":false},{"argv":["check-envelope","-"],"class":"envelope","identity":false}]}

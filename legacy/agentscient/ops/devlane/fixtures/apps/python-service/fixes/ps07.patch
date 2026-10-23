@@ -1,0 +1,8 @@
+diff --git a/pyproject.toml b/pyproject.toml
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -5,3 +5,3 @@
+ dependencies = [
+-  "python-json-logger>=2.0",
++  "python-json-logger==2.0.7",
+   # The exact sibling is the clean dependency neighbour.

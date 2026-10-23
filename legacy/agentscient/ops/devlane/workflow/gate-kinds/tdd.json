@@ -1,0 +1,63 @@
+{
+  "kind": "tdd",
+  "version": 1,
+  "stages": [
+    {
+      "name": "spec",
+      "leave_requires": []
+    },
+    {
+      "name": "red",
+      "leave_requires": ["receipt.red"]
+    },
+    {
+      "name": "impl",
+      "leave_requires": ["receipt.green"],
+      "seals_frozen_set": true
+    },
+    {
+      "name": "review",
+      "leave_requires": [],
+      "outcomes": {
+        "accepted": "advance",
+        "finding": "impl",
+        "denied": "terminal"
+      }
+    },
+    {
+      "name": "ratify",
+      "actor": "owner",
+      "leave_requires": [],
+      "outcomes": {
+        "ratified": "terminal",
+        "denied": "terminal",
+        "aborted": "terminal"
+      }
+    }
+  ],
+  "test_scope": [
+    "crates/*/tests/**",
+    "crates/*/src/**/*_test.rs",
+    ".dev/design/features/**"
+  ],
+  "harness_scope": [
+    "Cargo.toml",
+    "Cargo.lock",
+    ".cargo/**",
+    "rust-toolchain*",
+    "crates/*/build.rs"
+  ],
+  "checks": [
+    {"name": "cargo-test", "class": "build",
+     "argv": ["cargo", "test", "--workspace"]},
+    {"name": "audit", "class": "security",
+     "argv": ["cargo", "audit"]},
+    {"name": "secret-scan", "class": "security",
+     "argv": ["python3", ".dev/app/workflow/checks/secret_scan.py"], "ci": true},
+    {"name": "lint", "class": "quality",
+     "argv": ["python3", ".dev/app/workflow/checks/lint.py"], "ci": true},
+    {"name": "diagnostics", "class": "diagnostics",
+     "argv": ["python3", ".dev/app/workflow/checks/diagnostics.py",
+              "--", "cargo", "check", "--message-format=json"]}
+  ]
+}

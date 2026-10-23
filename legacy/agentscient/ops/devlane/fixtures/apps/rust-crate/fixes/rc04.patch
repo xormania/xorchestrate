@@ -1,0 +1,8 @@
+diff --git a/src/audit.rs b/src/audit.rs
+--- a/src/audit.rs
++++ b/src/audit.rs
+@@ -7,3 +7,3 @@
+ pub fn write_failure_log(path: &Path) -> io::Result<()> {
+-    let body = format!("write failed: environment={:?}\n", std::env::vars().collect::<Vec<_>>());
++    let body = "write failed: token=[REDACTED]\n";
+     fs::write(path, body)

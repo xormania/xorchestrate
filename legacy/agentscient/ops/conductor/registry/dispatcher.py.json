@@ -1,0 +1,1 @@
+{"tool": "dispatcher.py", "rows": [{"argv": ["teleport"], "class": "arguments", "identity": false}, {"argv": ["set", "some-session", "--why", "s"], "class": "identity", "identity": false}]}

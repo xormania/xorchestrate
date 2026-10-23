@@ -1,0 +1,14 @@
+diff --git a/service/export.py b/service/export.py
+--- a/service/export.py
++++ b/service/export.py
+@@ -9,9 +9,8 @@
+ def export_archive(root: Path, name: str) -> subprocess.CompletedProcess[str]:
+     target = root / f"{name}.tgz"
+     return subprocess.run(
+-        f"tar -czf {target} -C {root} {name}",
++        ["tar", "-czf", str(target), "-C", str(root), name],
+         capture_output=True,
+         check=False,
+-        shell=True,
+         text=True,
+     )

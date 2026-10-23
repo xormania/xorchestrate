@@ -1,0 +1,108 @@
+# Routing and review levels — contract
+
+Standing: PROPOSED as a whole, and this contract confers nothing on
+itself. D-OPS-14 through D-OPS-17 were recorded by the conductor
+with the owner's verbatim words attached — the register's only legal
+form for recording on the owner's behalf — and the owner may veto
+any of them on sight. Cross-PR dependencies, declared: the
+discussion record I-029..I-045 rides PR #114, CONTRIB's Draft-first
+section rides PR #116, and this contract is fully citable only once
+both land. Axiom, owner
+2026-09-01: **no more infer — determinate** (I-037). Everything in
+this contract is declared and checkable; nothing is derived by
+guessing.
+
+## The tiers — one direction of flow
+
+Units converge on `dev`; only `dev` reaches `main`. Entry to `dev`
+requires the contractual reviews of the PR's level, proved at the
+ready flip (D-OPS-15) and enforced as a required context. `dev` to
+`main` is the gauntlet — the highest level, uncapped, owner-ratified
+at the end as always.
+
+## The levels — a registry, not code
+
+| level | applies to | requirement set |
+|:--|:--|:--|
+| law | docs-only diffs (contracts, conventions, schemas) | CI's gates family; review skipped only under a special dispensation — a handwork-ledger grant opened per PR, settled at merge, expiring, never standing (D-OPS-16); the grant uses a new ledger class, `law-dispensation`, added to the ledger's registry when this contract lands — named, never blurred into `other` |
+| standard | units through the pipeline | D-OPS-15's six rows plus two-harness review verdicts (Grok AND Codex) pinned to the head sha |
+| elevated | zones or projects that declare it | standard, plus the concern-agent series: single-concern reviewers, each a pre-configured prompt-with-dispatch artifact that stays identical until modified (I-032, I-033), each calibrated on planted-bad and clean fixtures |
+| gauntlet | `dev` → `main` only | everything below, uncapped (D-OPS-17): full suites on the true merge, the concern series, an external ultra-class review, the census clean (no stray, no stacked), the E2E pass, the hand-over probes run as the custody floor, and the owner's ratification |
+
+New levels and new concern rows are data added to this table and its
+registry files, never reopened code. Concern artifacts live under
+`ops/conductor/concerns/` — each one a fixed prompt-with-dispatch
+scope, supplied verbatim as the dispatch job's scope input (the job
+template carries it; it does not replace the template, and the job's
+output contract wins the seam); the first row is `hypocrisy.md`
+(I-042). A PR's level comes from its
+namespace (the project carries the default), overridable upward
+only — never down.
+
+## The namespace — base-led, declared
+
+New branches: `dev/<project>/<wo>/<slug>` — the trunk it feeds
+leads, so a second distinct trunk cut from `main` someday gets its
+own prefix and lane the moment it exists (I-036). Project and
+work-order ids are allocated from their stores, never from recall
+(D-OPS-12). The feeds edge is thereby **declared**: a branch whose
+declared base disagrees with its PR's actual target is a routing
+violation the census reports mechanically. Existing
+`<area>/<slug>` branches are grandfathered as implicitly dev-based
+and are never renamed — branches are the record. CONTRIB.md owns
+naming and wins where it disagrees, so its §Naming bullet is amended
+in this same PR — one law, stated where the doctrine says it rules.
+
+## The dev gate
+
+Ready is earned per D-OPS-15, and the gate's verdict becomes a
+required status context on `dev`: an unearned merge is refused by
+the branch, not by memory. Review verdicts are requirement rows —
+APPROVE at the pinned head, per the level — and a push after ready
+voids them (D-OPS-14; the CONTRIB Draft-first section rides PR
+#116).
+
+## The gauntlet
+
+Runs on every `dev` → `main` promotion, uncapped. Its integrity is
+absolute: bypassing, trimming, or waving through any row is the
+gravest violation class this lane names (owner, 2026-09-01: "it
+should be considered a war-crime to do what we have to do for that
+CI"). Rows are trimmed later from measured data (the I-023 sweep) or
+not at all. The merge itself remains the owner's act, with a merge
+commit, never a squash (AGENTS.md §Git workflow).
+
+Review inside the gauntlet runs as a ladder (owner, 2026-09-01: "a
+sequential codex -> opus -> grok audit with fixes at ech stage";
+"like the hunger games - you have to survive to merge"): three
+harness audits in sequence, each stage's findings fixed and the full
+floor re-run before the next stage looks, so every later auditor
+sees a tree already stripped of what any agent could find. The
+external ultra-class review fires only after the ladder — the scarce
+review never spends on filtered findings — and each stage's
+findings-after-filtration is recorded, which is the per-harness
+marginal-detection series the portfolio doctrine reads, generated by
+the gauntlet as a byproduct. The ladder's order is the owner's seat
+call at promotion time, carried verbatim from the dispatch, never a
+table in this file.
+
+## Failure semantics
+
+A failed requirement blocks the flip or the promotion, files a
+finding naming its lane, and nothing routes around it. A stochastic
+concern row reports its verdict beside its calibration rates, so
+"caught something" and "flaky agent" are distinguishable readings,
+never a coin toss (a stochastic check must still fire and stay
+quiet — AGENTS.md, adapted).
+
+## Adoption order
+
+The dev gate lands first — it hardens what already flows daily. The
+gauntlet lands second: `main` promotions are rare and owner-guarded
+meanwhile. The namespace grammar applies to branches created after
+this contract lands; the levels registry starts with the four rows
+above. One gap declared rather than implied: the first concern row
+ships uncalibrated — its fixture corpus is this session's measured
+hypocrisy union (the conductor's confession and the first sweeps'
+findings), and the elevated level's calibration clause is unmet
+until that corpus lands. A visible gap outranks an imaginary cover.

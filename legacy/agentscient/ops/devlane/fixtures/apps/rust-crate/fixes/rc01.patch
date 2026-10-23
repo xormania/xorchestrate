@@ -1,0 +1,8 @@
+diff --git a/src/shell.rs b/src/shell.rs
+--- a/src/shell.rs
++++ b/src/shell.rs
+@@ -6,3 +6,3 @@
+ pub fn run_helper(name: &str) -> io::Result<ExitStatus> {
+-    Command::new("sh").arg("-c").arg(format!("printf '%s\\n' {name} >/dev/null")).status()
++    Command::new("printf").arg("%s\n").arg(name).status()
+ }

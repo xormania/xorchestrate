@@ -1,0 +1,8 @@
+diff --git a/tool/model.py b/tool/model.py
+--- a/tool/model.py
++++ b/tool/model.py
+@@ -15,3 +15,3 @@
+     def contains(self, value: int) -> bool:
+-        return self.start <= value <= self.end
++        return self.start <= value < self.end
+ 

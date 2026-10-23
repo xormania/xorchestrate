@@ -1,0 +1,56 @@
+{
+  "schema": "agentscient.lane-policy/v1",
+  "standing": "proposal",
+  "shared_read_roots": ["AGENTS.md", "CLAUDE.md", "docs/", "ops/"],
+  "protected_authority_paths": [
+    "AGENTS.md", "CLAUDE.md", "docs/", ".agents/", ".claude/", ".github/", ".mcp.json",
+    "ops/README.md", "ops/devlane/AGENTS.md", "ops/lane.conf", "ops/lane-policy.json",
+    "ops/bin/suites.sh", "ops/bin/dispatch.sh", "ops/bin/go.sh", "ops/bin/ladder.sh",
+    "ops/conductor/tools/dispatch.sh", "ops/conductor/tools/laneconf.py",
+    "ops/conductor/lane-policy.md", "ops/conductor/onboard-lever.md",
+    "ops/conductor/instrument-conventions.md", "ops/conductor/land-lever.md",
+    "ops/devlane/dispatch/CONTRACT.md", "ops/devlane/task/CONTRACT.md",
+    "ops/devlane/task/jobs.json", "ops/devlane/harness/isolation.py",
+    "ops/conductor/tools/lane_policy.py", "ops/conductor/tools/land.py",
+    "ops/conductor/tools/ladder.py", "ops/devlane/dispatch/launch.py",
+    "ops/devlane/dispatch/record.py"
+  ],
+  "profiles": {
+    "dev": {
+      "write_roots": ["ops/"],
+      "forbidden_dependency_roots": [
+        "src/", "packages/", "config/", "public/", "templates/", "assets/",
+        "migrations/", "tests/", "bin/", "translations/", "vendor/",
+        "composer.json", "composer.lock", "symfony.lock", "phpunit.dist.xml",
+        ".env", ".env.dev", ".env.test"
+      ],
+      "authority_maintenance": false,
+      "allow_declared_outputs": true
+    },
+    "prod": {
+      "write_roots": [
+        "src/", "packages/", "config/", "public/", "templates/", "assets/",
+        "migrations/", "tests/", "bin/", "translations/",
+        "composer.json", "composer.lock", "symfony.lock", "phpunit.dist.xml",
+        ".env", ".env.dev", ".env.test"
+      ],
+      "forbidden_dependency_roots": ["ops/"],
+      "authority_maintenance": false,
+      "allow_declared_outputs": true
+    },
+    "authority-maintenance": {
+      "write_roots": [
+        "ops/", "docs/", "AGENTS.md", "CLAUDE.md", ".agents/", ".claude/",
+        ".github/", ".mcp.json"
+      ],
+      "forbidden_dependency_roots": [
+        "src/", "packages/", "config/", "public/", "templates/", "assets/",
+        "migrations/", "tests/", "bin/", "translations/", "vendor/",
+        "composer.json", "composer.lock", "symfony.lock", "phpunit.dist.xml",
+        ".env", ".env.dev", ".env.test"
+      ],
+      "authority_maintenance": true,
+      "allow_declared_outputs": true
+    }
+  }
+}

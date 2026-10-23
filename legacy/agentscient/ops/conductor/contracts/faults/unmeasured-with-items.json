@@ -1,0 +1,49 @@
+{
+  "schema": "agentscient.board/v1",
+  "query": "dispatches",
+  "started_at": "2026-08-30T12:00:00Z",
+  "ended_at": "2026-08-30T12:00:01Z",
+  "repository": {
+    "root": "/srv/agentscient",
+    "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "branch": "agentscient/board",
+    "evidence": ["obs.dispatches"]
+  },
+  "observations": {
+    "obs.dispatches": {
+      "state": "failed",
+      "started_at": "2026-08-30T12:00:00Z",
+      "ended_at": "2026-08-30T12:00:00Z",
+      "command": ["python3", "ops/devlane/dispatch/launch.py", "status", "--json"],
+      "cwd": "/srv/agentscient",
+      "environment": {"lane": "dev"},
+      "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "exit": 1,
+      "raw_sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+    }
+  },
+  "sections": {
+    "dispatches": {
+      "state": "unmeasured",
+      "evidence": ["obs.dispatches"],
+      "refusal": {
+        "code": "board.dispatch-unmeasured",
+        "expected": "launcher status JSON",
+        "found": "launcher command exited 1 while a recalled row exists",
+        "satisfy": "run the launcher status source successfully"
+      },
+      "items": [
+        {
+          "id": "remembered-job",
+          "state": "running",
+          "stage": "implementation",
+          "harness": "codex",
+          "launched_at": "2026-08-30T11:00:00Z",
+          "age_since_launch_s": 3600,
+          "evidence": ["obs.dispatches"]
+        }
+      ]
+    }
+  }
+}
+

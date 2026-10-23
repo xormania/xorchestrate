@@ -1,0 +1,8 @@
+diff --git a/tests/test_tooling.py b/tests/test_tooling.py
+--- a/tests/test_tooling.py
++++ b/tests/test_tooling.py
+@@ -18,3 +18,3 @@
+     def test_checksum_fixture_case(self):
+-        expected = checksum("fixture")
++        expected = 7
+         self.assertEqual(checksum("fixture"), expected)

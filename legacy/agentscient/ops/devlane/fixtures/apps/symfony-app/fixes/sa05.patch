@@ -1,0 +1,10 @@
+diff --git a/src/Service/Ledger.php b/src/Service/Ledger.php
+--- a/src/Service/Ledger.php
++++ b/src/Service/Ledger.php
+@@ -41,4 +41,4 @@
+             return json_decode((string) file_get_contents($path), true, flags: JSON_THROW_ON_ERROR);
+-        } catch (\Throwable) {
+-            return [];
++        } catch (\JsonException $error) {
++            throw new LedgerException('The ledger is corrupt.', previous: $error);
+         }
