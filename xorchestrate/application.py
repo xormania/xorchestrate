@@ -285,6 +285,7 @@ class Application:
 
     def _list_work(self, args: JSON, actor: str, context: JSON) -> JSON:
         with self.store.transaction() as tx:
+            self._verify_context(tx, context)
             return {"work": [_view(r) for r in tx.list("work") if "status" not in args or r.data.get("status") == args["status"]]}
 
     def _update(self, kind: str, args: JSON, actor: str, context: JSON) -> JSON:
@@ -311,6 +312,7 @@ class Application:
 
     def _list_actors(self, args: JSON, actor: str, context: JSON) -> JSON:
         with self.store.transaction() as tx:
+            self._verify_context(tx, context)
             return {"actors": [_view(r) for r in tx.list("actor")]}
 
     def _assign(self, args: JSON, actor: str, context: JSON) -> JSON:
@@ -404,7 +406,9 @@ class Application:
                     raise OrchestrationError(f"Provider {name} returned a duplicate capability.", "invalid_capability")
                 seen.add(capability.name)
                 capabilities.append({**asdict(capability), "name": f"{name}/{capability.name}", "provider": name})
-        return {"capabilities": capabilities}
+        with self.store.transaction() as tx:
+            self._verify_context(tx, context)
+            return {"capabilities": capabilities}
 
     def _invoke(self, args: JSON, actor: str, context: JSON) -> JSON:
         provider_name, separator, name = args["capability"].partition("/")
@@ -696,4 +700,5 @@ class Application:
 
     def _events(self, args: JSON, actor: str, context: JSON) -> JSON:
         with self.store.transaction() as tx:
+            self._verify_context(tx, context)
             return {"events": tx.events(args.get("after", 0), args.get("limit", 100))}

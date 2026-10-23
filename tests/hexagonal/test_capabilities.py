@@ -12,7 +12,10 @@ from unittest.mock import patch
 
 from xorchestrate.adapters.capabilities import CLIProvider, StdioMCPProvider
 from xorchestrate.adapters.jsonrpc import JsonLineProcess
-from xorchestrate.model import OrchestrationError
+from xorchestrate.adapters.policies import ConfigurableRouting, RuleGuardrail
+from xorchestrate.adapters.storage import MemoryStore
+from xorchestrate.application import Application
+from xorchestrate.model import Capability, OrchestrationError
 
 FIXTURE = Path(__file__).parent / "fixtures" / "capability_server.py"
 
@@ -161,6 +164,14 @@ class CapabilityTests(unittest.TestCase):
         self.assertEqual(error.details["outcome"], "not_started")
         self.assertEqual(self.marker.read_text().splitlines(), ["project.custom", "project.custom"])
 
+    def test_catalog_changing_during_pagination_cannot_authorize_execution(self):
+        self.write_definitions([definition(), definition("another.tool")])
+        provider = self.mcp(command=self.argv("mcp", "--fault", "change_during_discovery", "--marker", str(self.marker)))
+        self.assertEqual(len(provider.discover()), 2)
+        error = self.assert_code("capability_changed", lambda: provider.invoke("project.custom", {"value": "x"}, {}))
+        self.assertEqual(error.details["outcome"], "not_started")
+        self.assertFalse(self.marker.exists())
+
     def test_changed_other_tool_is_not_authorized_by_refresh_for_unchanged_tool(self):
         self.write_definitions([definition(), definition("another.tool")])
         provider = self.mcp()
@@ -225,6 +236,52 @@ class CapabilityTests(unittest.TestCase):
                 self.assertEqual(error.details["outcome"], "not_started")
                 self.assertFalse(self.marker.exists())
 
+    def test_per_invocation_descriptor_distinguishes_json_booleans_and_numbers(self):
+        for dynamic_field in ("annotations", "input_schema"):
+            for provider in (self.cli(True), self.mcp()):
+                with self.subTest(field=dynamic_field, provider=type(provider).__name__):
+                    original = definition()
+                    if dynamic_field == "input_schema":
+                        original["input_schema"]["properties"]["value"] = {"enum": ["safe", True]}
+                    self.write_definitions([original])
+                    authorized = asdict(provider.discover()[0])
+                    changed = json.loads(json.dumps(original))
+                    if dynamic_field == "input_schema":
+                        changed["input_schema"]["properties"]["value"]["enum"] = ["safe", 1]
+                    else:
+                        changed["annotations"]["readOnlyHint"] = 1
+                    self.write_definitions([changed])
+                    provider.discover()
+                    error = self.assert_code("capability_changed", lambda: provider.invoke(
+                        "project.custom", {"value": "safe"}, {"capability": authorized},
+                    ))
+                    self.assertEqual(error.details["outcome"], "not_started")
+                    self.assertFalse(self.marker.exists())
+
+    def test_observed_descriptor_and_output_schema_distinguish_json_types(self):
+        for dynamic_field in ("annotations", "input_schema", "output_schema"):
+            with self.subTest(field=dynamic_field):
+                original = definition()
+                if dynamic_field == "input_schema":
+                    original["input_schema"]["properties"]["value"] = {"enum": ["safe", True]}
+                if dynamic_field == "output_schema":
+                    original["output_schema"] = {"type": "object", "properties": {"unused": {"enum": [True]}}}
+                self.write_definitions([original])
+                provider = self.mcp()
+                provider.invoke("project.custom", {"value": "safe", "mode": "change"}, {})
+                changed = json.loads(json.dumps(original))
+                if dynamic_field == "annotations":
+                    changed["annotations"]["readOnlyHint"] = 1
+                elif dynamic_field == "input_schema":
+                    changed["input_schema"]["properties"]["value"]["enum"] = ["safe", 1]
+                else:
+                    changed["output_schema"]["properties"]["unused"]["enum"] = [1]
+                self.write_definitions([changed])
+                before = self.marker.read_text()
+                error = self.assert_code("capability_changed", lambda: provider.invoke("project.custom", {"value": "safe"}, {}))
+                self.assertEqual(error.details["outcome"], "not_started")
+                self.assertEqual(self.marker.read_text(), before)
+
     def test_mcp_malformed_protocol_and_negotiation_are_rejected(self):
         for fault in ("invalid_json", "wrong_id", "bad_error", "version", "repeat_cursor"):
             with self.subTest(fault=fault):
@@ -286,6 +343,49 @@ class CapabilityTests(unittest.TestCase):
         self.assert_code("provider_timeout", lambda: transport.request("large", {"value": "x" * 200000}))
         self.assertLess(time.monotonic() - start, 2)
         self.assertIsNotNone(transport.process.poll())
+
+    def test_oversized_original_request_is_not_started(self):
+        transport = JsonLineProcess({"command": self.argv("mcp"), "max_frame_bytes": 1024})
+        self.addCleanup(transport.close)
+        error = self.assert_code("invalid_request", lambda: transport.request("effect_then_callback", {"value": "x" * 2048}))
+        self.assertEqual(error.details["outcome"], "not_started")
+        self.assertFalse(self.marker.exists())
+
+    def test_oversized_callback_reply_retains_unknown_operation_and_one_effect(self):
+        def handler(method, params):
+            self.assertEqual(method, "perform_effect")
+            with self.marker.open("a") as marker:
+                marker.write("applied\n")
+            return {"value": "x" * 2048}
+
+        transport = JsonLineProcess({"command": self.argv("mcp"), "max_frame_bytes": 1024}, request_handler=handler)
+        self.addCleanup(transport.close)
+
+        class CallbackProvider:
+            def discover(self):
+                return [Capability("callback", "Apply an external callback", {"type": "object"})]
+
+            def invoke(self, name, arguments, context):
+                return transport.request("effect_then_callback", {})
+
+            def close(self):
+                transport.close()
+
+        store = MemoryStore()
+        self.addCleanup(store.close)
+        identifiers = iter(range(100))
+        app = Application(
+            store=store, providers={"tools": CallbackProvider()}, sessions={},
+            guardrail=RuleGuardrail(), routing=ConfigurableRouting(), evaluators={},
+            clock=lambda: "2026-10-23T12:00:00Z", identifiers=lambda: f"record{next(identifiers)}",
+        )
+        arguments = {"capability": "tools/callback", "arguments": {}, "idempotency_key": "once"}
+        error = self.assert_code("operation_unknown", lambda: app.call("invoke", arguments))
+        self.assertEqual(error.details["outcome"], "unknown")
+        operation = app.call("get_operation", {"operation_id": error.details["operation_id"]})["operation"]
+        self.assertEqual(operation["status"], "unknown")
+        self.assert_code("operation_unresolved", lambda: app.call("invoke", arguments))
+        self.assertEqual(self.marker.read_text(), "applied\n")
 
     def test_discovery_and_notifications_have_aggregate_output_bounds(self):
         self.write_definitions([{**definition(f"tool{index}"), "description": "x" * 1000} for index in range(3)])

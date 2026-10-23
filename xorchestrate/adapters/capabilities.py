@@ -67,8 +67,15 @@ def _arguments(arguments, context, schema):
 def _expected_descriptor(capability: Capability, context: dict) -> None:
     # Application-owned context binds this invocation to the descriptor its
     # policy evaluated. It is compared as data and does not confer authority.
-    if "capability" in context and context["capability"] != asdict(capability):
+    if "capability" in context and not _same_json(context["capability"], asdict(capability)):
         raise OrchestrationError("Capability descriptor changed since authorization.", "capability_changed", {"outcome": "not_started"})
+
+
+def _same_json(left, right) -> bool:
+    # Python equality conflates True with 1 (and False with 0), whereas policy
+    # and JSON Schema distinguish booleans from numbers. Ignore object order
+    # while preserving JSON value types throughout nested descriptors.
+    return encode_json(left, sort_keys=True) == encode_json(right, sort_keys=True)
 
 
 def _content_blocks(content):
@@ -305,11 +312,14 @@ class StdioMCPProvider:
                 # Refresh observations without changing the descriptors the
                 # caller explicitly discovered and authorized.
                 self._observed_capabilities, self._observed_outputs, self._dirty = self._read_snapshot(deadline)
+                if self._dirty:
+                    raise OrchestrationError("MCP catalog changed during discovery; obtain a stable snapshot before invocation.", "capability_changed", {"outcome": "not_started"})
             capability = self._capabilities.get(name)
             if capability is None:
                 raise OrchestrationError("Unknown capability.", "not_found", {"outcome": "not_started"})
-            if (self._observed_capabilities.get(name) != capability
-                    or self._observed_outputs.get(name) != self._outputs.get(name)):
+            observed = self._observed_capabilities.get(name)
+            if (observed is None or not _same_json(asdict(observed), asdict(capability))
+                    or not _same_json(self._observed_outputs.get(name), self._outputs.get(name))):
                 raise OrchestrationError("Requested capability changed; discover and authorize it again before invocation.", "capability_changed", {"outcome": "not_started"})
             _arguments(arguments, context, capability.input_schema)
             _expected_descriptor(capability, context)

@@ -547,6 +547,56 @@ def test_completed_replay_verifies_the_work_snapshot_authorized_for_read(store):
         invoke(app, work_id=work["id"])
 
 
+@pytest.mark.parametrize("action", ["list_work", "list_actors", "events", "get_work", "inbox", "list_sessions", "get_operation", "capabilities"])
+@pytest.mark.parametrize("permission", ["roles", "metadata"])
+def test_reads_reject_permission_revocation_after_authorization(store, action, permission):
+    app = application(store, provider=Provider(), driver=Sessions())
+    app.call("add_actor", {"actor_id": "reader", "roles": ["reader"], "metadata": {"read": True}})
+    work = app.call("create_work", {"goal": "Private feature"})["work"]
+    arguments = {"work_id": work["id"]} if action in {"get_work", "inbox", "list_sessions"} else {}
+    if action == "get_operation":
+        arguments = {"operation_id": invoke(app, work_id=work["id"])["operation_id"]}
+    elif action == "inbox":
+        app.call("send_message", {"destination": {"actor": "reader"}, "body": "Private message", "work_id": work["id"]})
+    elif action == "list_sessions":
+        app.call("start_session", {"driver": "agent", "specification": {}, "work_id": work["id"], "idempotency_key": "start"})
+    selector = {"roles": ["reader"]} if permission == "roles" else {"where": {"actor_record.metadata.read": True}}
+    policy = RuleGuardrail({"default": "deny", "rules": [{"actions": [action], "effect": "allow", **selector}]})
+    class RevokingGuardrail:
+        changed = False
+        def evaluate(self, requested, context):
+            decision = policy.evaluate(requested, context)
+            if requested == action and not self.changed:
+                self.changed = True
+                with store.transaction() as tx:
+                    current = tx.get("actor", "reader")
+                    revoked = [] if permission == "roles" else {"read": False}
+                    tx.put("actor", current.key, {**current.data, permission: revoked}, current.version)
+            return decision
+    app.guardrail = RevokingGuardrail()
+    with pytest.raises(Conflict, match="Authorization context changed"):
+        app.call(action, arguments, actor="reader")
+    with pytest.raises(OrchestrationError) as error:
+        app.call(action, arguments, actor="reader")
+    assert error.value.code == "denied"
+
+
+def test_capability_inventory_checks_permission_again_after_discovery(store):
+    class RevokingProvider(Provider):
+        def discover(self):
+            with store.transaction() as tx:
+                current = tx.get("actor", "reader")
+                tx.put("actor", current.key, {**current.data, "roles": []}, current.version)
+            return super().discover()
+    provider = RevokingProvider()
+    app = application(store, provider=provider)
+    app.call("add_actor", {"actor_id": "reader", "roles": ["reader"]})
+    app.guardrail = RuleGuardrail({"default": "deny", "rules": [{"actions": ["capabilities"], "roles": ["reader"], "effect": "allow"}]})
+    with pytest.raises(Conflict, match="Authorization context changed"):
+        app.call("capabilities", {}, actor="reader")
+    assert provider.discoveries == 1
+
+
 @pytest.mark.parametrize("confidence,outcome,expected_escalation", [(0.95, "proceed", False), (None, "proceed", True), (0.6, "proceed", True), (0.99, "borderline", True)])
 def test_triage_escalates_uncertainty_and_remains_evidence(store, confidence, outcome, expected_escalation):
     triage = Evaluator(Assessment(outcome, confidence, "triage", ({"test": "observed"},)))

@@ -95,6 +95,33 @@ wire formats, not a fixture that pretends to evaluate a real question. A CLI
 provider can alternatively use `discovery_command` to obtain its catalog instead
 of the static `capabilities` array shown here.
 
+## Bounded native parameter delegation
+
+Put native execution policy in trusted driver options: Codex uses `thread` and
+`turn`; ACP uses `session`, including configured MCP server commands. Caller
+`specification.parameters` is empty by default. To let a Codex caller choose a
+model from a configured set, add this fragment inside the driver's `options`:
+
+```json
+{
+  "request_parameters": {
+    "type": "object",
+    "properties": {
+      "model": {"enum": ["replace-with-allowed-model-a", "replace-with-allowed-model-b"]}
+    },
+    "additionalProperties": false
+  }
+}
+```
+
+Replace the example identifiers with models available to your harness. A caller
+can then supply `"specification":{"parameters":{"model":"replace-with-allowed-model-a"}}`.
+Unlisted fields and values fail before process creation. Configured `thread` or
+`session` values override delegated values, so leave a field unset there if the
+caller should choose it. Session identities and Codex dynamic tools remain owned
+by the driver. This schema is an explicit delegation; a permissive schema would
+delegate correspondingly broader native configuration choices.
+
 ## A persistent session conversation
 
 After enabling and configuring the required connected entries, launch:

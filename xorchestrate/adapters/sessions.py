@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ..model import JSON, OrchestrationError
+from ..schema import check_schema, validate
 from .jsonrpc import JsonLineProcess, command_options, decode_json, encode_json, positive_integer
 
 
@@ -217,13 +218,39 @@ class JSONRPCSessionDriver(_ProcessSessions):
             return {"stopped": True, "native_id": live.native_id, "result": result}
 
 
-class CodexSessionDriver(_ProcessSessions):
+class _NativeSessions(_ProcessSessions):
+    """Native start parameters require a delegation from trusted composition."""
+
+    def __init__(self, options: JSON, request_handler: Callable | None = None):
+        super().__init__(options, request_handler)
+        self.request_parameters = self.options.get("request_parameters", {"type": "object", "additionalProperties": False})
+        check_schema(self.request_parameters)
+
+    def _prepare_start(self, specification: JSON, reserved: tuple[str, ...]) -> tuple[JSON, JSON]:
+        specification = _object(specification, "Session specification")
+        requested = _object(specification.get("parameters", {}), "Native session parameters")
+        try:
+            validate(requested, self.request_parameters)
+        except OrchestrationError as exc:
+            exc.details["outcome"] = "not_started"
+            raise
+        if any(name in requested for name in reserved):
+            raise OrchestrationError("Native session identity and dynamic tools are owned by the configured driver.", details={"outcome": "not_started"})
+        resume = specification.get("resume")
+        if resume is not None and (not isinstance(resume, str) or not resume or len(resume) > 4096):
+            raise OrchestrationError("Resume ID must be a nonempty string of at most 4096 characters.", details={"outcome": "not_started"})
+        return specification, requested
+
+
+class CodexSessionDriver(_NativeSessions):
     """Codex app-server adapter, with explicit process and native policy config.
 
     ``command`` contains the complete argv (typically codex app-server --listen
     stdio://). ``thread`` holds configured thread/start parameters. A start may
-    supply ``parameters`` for unset fields and ``resume`` for an existing thread.
-    Configured parameters win over requested values. Native tools remain under
+    supply ``resume`` for an existing thread. Requested ``parameters`` require
+    an explicit ``request_parameters`` JSON Schema in trusted configuration;
+    the default accepts an empty object only. Configured thread parameters win
+    over delegated values. Native tools remain under
     the configured Codex sandbox/approval settings; this adapter does not silently
     disable native capabilities or implicitly approve requests.
     """
@@ -270,13 +297,11 @@ class CodexSessionDriver(_ProcessSessions):
             return {"contentItems": [{"type": "inputText", "text": encode_json(result).decode("utf-8")}], "success": False}
 
     def start(self, specification: JSON) -> JSON:
+        specification, requested = self._prepare_start(specification, ("threadId", "dynamicTools"))
+
         def handshake(live, spec):
             live.process.request("initialize", {"clientInfo": {"name": "xorchestrate", "version": "0.2.0"}, "capabilities": {"experimentalApi": True}})
             live.process.notify("initialized")
-            requested = _object(spec.get("parameters", {}), "Codex thread parameters")
-            # Process ownership and dynamic callbacks are composition decisions.
-            if "threadId" in requested or "dynamicTools" in requested:
-                raise OrchestrationError("Use resume for a thread ID and configure dynamic tools on the driver.", details={"outcome": "not_started"})
             params = {**requested, **self.thread}
             resume = spec.get("resume")
             if resume is not None:
@@ -302,13 +327,16 @@ class CodexSessionDriver(_ProcessSessions):
             return _object(live.process.request("turn/start", {**self.turn, "threadId": live.native_id, "input": [{"type": "text", "text": text}]}), "Codex turn result", "provider_protocol")
 
 
-class ACPSessionDriver(_ProcessSessions):
+class ACPSessionDriver(_NativeSessions):
     """Agent Client Protocol over configured stdio, without vendor CLI assumptions.
 
     ACP prompt responses complete a turn, so send is synchronous and subject to
     the configured request timeout. Streamed notifications are retained for poll.
     Native filesystem/terminal client requests require an explicitly bound
     handler; no filesystem or shell capability is advertised by default.
+    Native ``session`` settings, including MCP server commands, come from trusted
+    configuration. Requested parameters require explicit delegation through the
+    configured ``request_parameters`` JSON Schema and are validated before spawn.
     """
 
     protocol = "acp"
@@ -327,14 +355,13 @@ class ACPSessionDriver(_ProcessSessions):
             raise OrchestrationError("Native session IDs belong to the active session.", "invalid_configuration")
 
     def start(self, specification: JSON) -> JSON:
+        specification, requested = self._prepare_start(specification, ("sessionId",))
+
         def handshake(live, spec):
             initialized = _object(live.process.request("initialize", self.initialize), "ACP initialization result", "provider_protocol")
             capabilities = _object(initialized.get("agentCapabilities", {}), "ACP agent capabilities", "provider_protocol")
             if self.authentication is not None:
                 live.process.request("authenticate", self.authentication)
-            requested = _object(spec.get("parameters", {}), "ACP session parameters")
-            if "sessionId" in requested:
-                raise OrchestrationError("Use resume for an existing ACP session ID.", details={"outcome": "not_started"})
             params = {**requested, **self.session}
             resume = spec.get("resume")
             if resume is not None:

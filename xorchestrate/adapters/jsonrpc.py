@@ -65,9 +65,9 @@ def command_options(options: dict, key: str = "command") -> dict:
     return {"args": list(command), "cwd": cwd, "env": env, "shell": False, "start_new_session": os.name == "posix"}
 
 
-def encode_json(value: Any) -> bytes:
+def encode_json(value: Any, *, sort_keys: bool = False) -> bytes:
     try:
-        return json.dumps(value, ensure_ascii=True, allow_nan=False, separators=(",", ":")).encode("utf-8")
+        return json.dumps(value, ensure_ascii=True, allow_nan=False, separators=(",", ":"), sort_keys=sort_keys).encode("utf-8")
     except (TypeError, ValueError, RecursionError) as exc:
         raise OrchestrationError("Value is not valid JSON.", "invalid_request", {"outcome": "not_started"}) from exc
 
@@ -345,8 +345,10 @@ class JsonLineProcess:
             self._next_id += 1
             identifier = self._next_id
             received_before = self._received_total
+            original_dispatched = False
             try:
                 self._write(self._envelope(id=identifier, method=method, params={} if params is None else params), deadline)
+                original_dispatched = True
                 while True:
                     packet = self._receive(deadline)
                     if self._received_total - received_before > self.max_output:
@@ -365,6 +367,11 @@ class JsonLineProcess:
                         raise OrchestrationError("Subprocess returned a JSON-RPC error.", "provider_error", {"outcome": "unknown", "remote_error": error})
                     return packet["result"]
             except OrchestrationError as exc:
+                # Callback response encoding/writes can fail after the original
+                # request and callback effects have executed. Their local
+                # "not_started" classification cannot describe this request.
+                if original_dispatched:
+                    exc.details["outcome"] = "unknown"
                 if exc.code != "provider_error":
                     exc.details.setdefault("outcome", "unknown")
                     self.close()
@@ -377,7 +384,10 @@ class JsonLineProcess:
     def poll_notifications(self) -> list[dict]:
         try:
             return self._poll_notifications()
-        except OrchestrationError:
+        except OrchestrationError as exc:
+            # Polling also services server requests whose handlers may already
+            # have applied effects before a response could be written.
+            exc.details["outcome"] = "unknown"
             self.close()
             raise
 

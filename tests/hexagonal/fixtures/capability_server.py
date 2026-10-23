@@ -103,6 +103,13 @@ else:
                 result["nextCursor"] = "0"
             elif index + 1 < len(tools):
                 result["nextCursor"] = str(index + 1)
+            if options.fault == "change_during_discovery":
+                emit({"jsonrpc": "2.0", "method": "notifications/tools/list_changed"})
+        elif method == "effect_then_callback":
+            emit({"jsonrpc": "2.0", "id": "effect-callback", "method": "perform_effect", "params": {}})
+            if not sys.stdin.readline():
+                break
+            result = {"done": True}
         elif method == "tools/call":
             params = request["params"]
             arguments = params["arguments"]

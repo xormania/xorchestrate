@@ -204,6 +204,15 @@ driver handle. Sending starts a turn and polling collects notifications. Native
 tools are governed by the chosen native policies, while application-provided
 dynamic tools cross the application's guardrails.
 
+Native execution policy belongs in trusted adapter options: Codex `thread` and
+`turn`, or ACP `session` settings, including any MCP server commands. By default,
+Codex and ACP accept only empty caller-supplied `specification.parameters`.
+An operator can delegate bounded choices through an `options.request_parameters`
+JSON Schema; the driver validates those choices before spawning a process.
+Configured native settings override delegated values. Native session identities
+and Codex dynamic tools remain driver-owned even when a schema permits extra
+properties. See the [bounded delegation example](../examples/README.md#bounded-native-parameter-delegation).
+
 The generic JSON-RPC driver uses configurable session start/send/poll/stop methods
 for an installed bridge. ACP is another supplied protocol adapter. The transport
 uses bounded frames, timeouts, explicit environment forwarding, and process

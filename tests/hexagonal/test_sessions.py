@@ -3,6 +3,7 @@ import json
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from xorchestrate.adapters.sessions import ACPSessionDriver, CodexSessionDriver, JSONRPCSessionDriver
 from xorchestrate.model import OrchestrationError
@@ -88,7 +89,9 @@ class SessionTests(unittest.TestCase):
         self.assertEqual({}, driver._sessions)
 
     def test_codex_native_policy_and_tool_configuration_stay_explicit(self):
-        driver = self.driver(CodexSessionDriver, "codex", thread={"sandbox": "workspace-write", "approvalPolicy": "on-request"})
+        driver = self.driver(CodexSessionDriver, "codex", thread={"sandbox": "workspace-write", "approvalPolicy": "on-request"}, request_parameters={
+            "type": "object", "properties": {"model": {"enum": ["configured-by-caller"]}}, "additionalProperties": False,
+        })
         driver.set_tools([{"name": "echo", "description": "Test callback", "inputSchema": {"type": "object"}}])
         contexts = []
 
@@ -98,7 +101,7 @@ class SessionTests(unittest.TestCase):
             return {"echo": params["arguments"]["value"]}
 
         driver.set_request_handler(callback)
-        session = driver.start({"parameters": {"model": "configured-by-caller", "sandbox": "danger-full-access"}, "context": {"actor": "coder"}})
+        session = driver.start({"parameters": {"model": "configured-by-caller"}, "context": {"actor": "coder"}})
         result = driver.send(session, {"text": "tool"})
         self.assertEqual("workspace-write", result["start"]["sandbox"])
         self.assertEqual("on-request", result["start"]["approvalPolicy"])
@@ -111,6 +114,43 @@ class SessionTests(unittest.TestCase):
         self.assertEqual([("item/tool/call", {"actor": "coder"})] * 2, contexts)
         self.assert_code("conflict", driver.set_tools, [])
         self.assertEqual(2, len(driver.poll(session)))
+
+    def test_native_request_parameters_cannot_supply_policy_or_executables_by_default(self):
+        codex = self.driver(CodexSessionDriver, "codex")
+        acp = self.driver(ACPSessionDriver, "acp")
+        cases = [
+            (codex, {"sandbox": "danger-full-access"}),
+            (codex, {"approvalPolicy": "never"}),
+            (codex, {"config": {"mcp_servers": {"injected": {"command": "untrusted"}}}}),
+            (codex, {"model": "not-delegated"}),
+            (acp, {"mcpServers": [{"name": "injected", "command": "untrusted", "args": [], "env": []}]}),
+            (acp, {"cwd": "/not-delegated"}),
+        ]
+        for driver, parameters in cases:
+            with self.subTest(parameters=parameters), patch("xorchestrate.adapters.sessions.JsonLineProcess") as process:
+                error = self.assert_code("invalid_arguments", driver.start, {"parameters": parameters})
+                self.assertEqual("not_started", error.details["outcome"])
+                process.assert_not_called()
+
+    def test_native_parameter_delegation_is_bounded_and_configuration_wins(self):
+        driver = self.driver(CodexSessionDriver, "codex", thread={"model": "operator-selected"}, request_parameters={
+            "type": "object", "properties": {"model": {"enum": ["delegated-model"]}}, "additionalProperties": False,
+        })
+        with patch("xorchestrate.adapters.sessions.JsonLineProcess") as process:
+            self.assert_code("invalid_arguments", driver.start, {"parameters": {"model": "outside-delegation"}})
+            self.assert_code("invalid_arguments", driver.start, {"parameters": {"model": "delegated-model", "sandbox": "danger-full-access"}})
+            process.assert_not_called()
+        session = driver.start({"parameters": {"model": "delegated-model"}})
+        self.assertEqual("operator-selected", driver.send(session, {"text": "hello"})["start"]["model"])
+
+    def test_native_identity_and_tool_binding_remain_owned_under_broad_delegation(self):
+        codex = self.driver(CodexSessionDriver, "codex", request_parameters={"type": "object"})
+        acp = self.driver(ACPSessionDriver, "acp", request_parameters={"type": "object"})
+        for driver, parameters in ((codex, {"threadId": "other"}), (codex, {"dynamicTools": []}), (acp, {"sessionId": "other"})):
+            with self.subTest(parameters=parameters), patch("xorchestrate.adapters.sessions.JsonLineProcess") as process:
+                error = self.assert_code("invalid_request", driver.start, {"parameters": parameters})
+                self.assertEqual("not_started", error.details["outcome"])
+                process.assert_not_called()
 
     def test_codex_missing_handler_and_identity_mismatch_never_invoke_a_tool(self):
         driver = self.driver(CodexSessionDriver, "codex")
@@ -148,7 +188,9 @@ class SessionTests(unittest.TestCase):
         self.assert_code("session_identity", mismatch.start, {"resume": session["native_id"]})
 
     def test_acp_session_authentication_prompt_and_explicit_resume(self):
-        driver = self.driver(ACPSessionDriver, "acp", session={"cwd": "/configured", "mcpServers": []}, authentication={"methodId": "operator-login"}, resume_supported=True)
+        driver = self.driver(ACPSessionDriver, "acp", session={"cwd": "/configured", "mcpServers": []}, authentication={"methodId": "operator-login"}, resume_supported=True, request_parameters={
+            "type": "object", "properties": {"cwd": {"enum": ["/requested"]}}, "additionalProperties": False,
+        })
         session = driver.start({"parameters": {"cwd": "/requested"}})
         result = driver.send(session, {"text": "ACP task"})
         self.assertEqual("end_turn", result["stopReason"])
