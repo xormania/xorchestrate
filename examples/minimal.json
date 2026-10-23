@@ -1,0 +1,8 @@
+{
+  "store": {
+    "adapter": "sqlite",
+    "options": {
+      "path": ".xorchestrate/minimal.sqlite3"
+    }
+  }
+}

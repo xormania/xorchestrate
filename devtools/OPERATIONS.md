@@ -1,5 +1,9 @@
 # Operator reference
 
+> Historical operator procedures for the imported `devtools` runtime. These are
+> not setup instructions or policy requirements for the current Xorchestrate
+> application. See the [current README](../README.md).
+
 Use this guide to configure, inspect or repair the local control plane. For a new
 installation, start with [local setup](../docs/local-agent-readiness.md). For normal
 agent work, use the [role/tool reference](../docs/control-plane-roles-and-tools.md).

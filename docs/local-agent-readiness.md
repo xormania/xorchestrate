@@ -1,5 +1,10 @@
 # Local setup and readiness
 
+> Historical reference: this document describes the imported Agentscient runtime in
+> `devtools/`. Its roles, defaults, restrictions, and setup procedures are not
+> requirements of the current Xorchestrate application. Start with the
+> [current architecture](hexagonal-architecture.md) and [README](../README.md).
+
 The development environment provides independent control-plane MCP services,
 persistent native harness communication, work orders/jobs, telemetry, artifacts,
 managed Git/GitHub delivery, installed Symfony development tools and a separate

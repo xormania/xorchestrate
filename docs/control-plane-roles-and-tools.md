@@ -1,5 +1,10 @@
 # Control-plane roles and tools
 
+> Historical reference: this document describes the imported Agentscient runtime in
+> `devtools/`. Its roles, defaults, restrictions, and setup procedures are not
+> requirements of the current Xorchestrate application. Start with the
+> [current architecture](hexagonal-architecture.md) and [README](../README.md).
+
 This is the reference for the implemented normal MCP interface in this repository.
 [Setup](local-agent-readiness.md) configures the local services;
 [operator documentation](../devtools/OPERATIONS.md) covers their backing APIs.

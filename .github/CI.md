@@ -1,49 +1,55 @@
 # Validation
 
 CI runs on GitHub-hosted Ubuntu with Python 3.12. It needs no repository secrets
-or authenticated model accounts. The workflow uses pinned action revisions and
-read-only repository permissions.
+or authenticated model accounts. Pinned action revisions use read-only repository
+permissions. Pull requests and pushes to `master` or `integration/hexagonal` run
+the checks.
 
-## Active runtime
+## Current application
 
 ```bash
-python3 -m pip install -r .github/requirements-ci.txt
-python3 -m ruff check devtools .github scripts
+python3 -m pip install -e '.[test]' -r .github/requirements-ci.txt
+python3 -m ruff check xorchestrate tests devtools .github scripts
 python3 .github/lint_checks.py
-python3 -m devtools.consistency
-python3 -m unittest discover -s .github/tests -v
-python3 -m devtools.tests.run --report /tmp/xorchestrate-test-census.json
+python3 -m compileall -q xorchestrate tests/hexagonal
+python3 -m pytest tests/hexagonal -q
 ```
 
-The suite reports exact collection, execution, and skips. For the complete CI gate,
-install tmux and CUE v0.17.1, then run:
+Application tests cover orchestration through injected ports. Adapter tests
+exercise persistence, process protocols, discovery, validation, and failures with
+local fixtures. Dependency tests follow the application's local imports to check
+that it does not depend on infrastructure or the imported runtime. They do not
+freeze a role hierarchy, a model choice, or exact documentation language.
 
-```bash
-python3 -m devtools.role_packages --check
-python3 -m devtools.configuration --check
-AGENTSCIENT_CUE=cue AGENTSCIENT_REQUIRE_TMUX=1 \
-  AGENTSCIENT_REQUIRE_ABSTRACT_SOCKETS=1 \
-  python3 -m devtools.tests.run --strict --report /tmp/xorchestrate-test-census.json
-```
+These checks establish the behavior they exercise. Authenticated native harnesses,
+remote MCP providers, and a live Jev endpoint require separate acceptance runs
+with the intended configuration. Fixture success is not evidence that an account
+has access to a particular model or service.
 
-Strict mode fails on skips, unexecuted tests, expected failures, or test failures.
-The transport tests exercise real local MCP/process boundaries with synthetic
-harnesses. Passing them does not establish authenticated vendor/model acceptance.
+## Imported source regression
 
-## Earlier toolkit
+A separately named job checks the historical `devtools` implementation. That job
+stages `reference/imported-agent-skills` back into `.agents/skills` in its own
+checkout because the imported source expects those paths. The new application
+does not load these assets, and they are not installed at the repository root.
 
-The reusable testkit and conductor have their original tests under
-`legacy/agentscient/`. Run only the suites documented in its extraction README;
-the entire historical tree is not an active acceptance gate. Its application
-fixtures deliberately contain faults and are not production applications.
+The imported job installs CUE v0.17.1 and tmux, validates its original catalogs,
+and runs its test census in strict mode. Strict mode fails on skips, unexecuted
+tests, expected failures, or failures. These checks preserve useful source evidence;
+they do not make historical behavior a requirement for the new application.
 
-## Optional integrations
+The earlier toolkit has a separate `scripts/check_legacy.py` job. Only its selected
+suites run; the entire historical tree is not an active acceptance gate. Synthetic
+application fixtures may deliberately contain faults.
 
-Real Serena/Docker, Symfony/Maker/Mate, model subscriptions, GitHub mutation, and
-Jev endpoint acceptance require separately provisioned environments. They are
-not silently substituted with passing stubs. Original CI and its tests are kept
-under `reference/agentscient-dev/.github/` for reuse; they do not run here.
+## Optional infrastructure
 
-The retained PHP toolchain helper is an optional dependency of upstream setup
-scripts. Its release manifest still names the original retained assets; configure
-and provision an appropriate toolchain before using those scripts in a new project.
+The retained PHP helper tests run separately from the application tests. The helper
+manifest and provisioning procedures retain assumptions about the original
+product. Serena/Docker, Symfony/Maker/Mate, model subscriptions, GitHub mutation,
+and original host acceptance need separately provisioned environments. Original CI
+is kept under `reference/agentscient-dev/.github/` as source material.
+
+CI does not request model reviews or merge branches. Review and merge decisions
+follow the authorization for the current effort; the workflow does not impose
+that delivery policy on projects coordinated by Xorchestrate.

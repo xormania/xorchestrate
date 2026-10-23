@@ -1,5 +1,10 @@
 # Runtime telemetry
 
+> Historical reference: this document describes the imported Agentscient runtime in
+> `devtools/`. Its roles, defaults, restrictions, and setup procedures are not
+> requirements of the current Xorchestrate application. Start with the
+> [current architecture](hexagonal-architecture.md) and [README](../README.md).
+
 The private state directory retains `live.sqlite3` events and
 `telemetry/<member>.jsonl` communications. Captures are append-only across restarts;
 each frame includes the component, connection, process, member, generation, native

@@ -1,12 +1,17 @@
 # Contributing
 
-Create an owned branch from `master` and open a PR into `master`. Keep the PR
-focused on the requested behavior, with validation evidence and any unavailable
-checks. The owner decides when to merge.
+Create a branch from the integration branch for the current effort and target that
+branch in the PR. The hexagonal rework uses `integration/hexagonal`; the owner
+decides when it is ready for `master`. Keep each PR coherent and describe the
+resulting behavior, validation evidence, and unavailable checks. Follow the current
+review and merge authorization for the effort.
 
-Preserve imported behavior during relocation. Add abstractions for a concrete
-extension requirement, keep simple configurations simple, and reuse existing tests.
-See [CI](.github/CI.md) and the [extraction map](docs/extraction.md).
+Use [the application architecture](docs/hexagonal-architecture.md) to keep
+orchestration independent of infrastructure and to keep policy choices explicit.
+Imported implementations and tests are reusable source material, not compatibility
+requirements. Carry forward useful mechanisms and revise historical assumptions
+when they conflict with the intended behavior. Keep simple configurations simple.
+See [CI](.github/CI.md) and the [extraction provenance](docs/extraction.md).
 
 Keep original license and source notices. New work is attributed to xormania;
 do not add AI co-author trailers.

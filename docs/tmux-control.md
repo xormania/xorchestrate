@@ -1,5 +1,10 @@
 # Shared terminal control
 
+> Historical reference: this document describes the imported Agentscient runtime in
+> `devtools/`. Its roles, defaults, restrictions, and setup procedures are not
+> requirements of the current Xorchestrate application. Start with the
+> [current architecture](hexagonal-architecture.md) and [README](../README.md).
+
 Install tmux inside WSL2/Linux alongside your logged-in harnesses. Every managed
 Claude, Codex and Grok session starts in an owned tmux terminal. A team uses a
 separate tmux server, with a stable session name per collaborator; it does not
