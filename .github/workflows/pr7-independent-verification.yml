@@ -1,0 +1,76 @@
+name: PR7 independent pinned verification
+
+on:
+  push:
+    branches: [verification/pr7-independent-cfa3549]
+    paths: ['.github/workflows/pr7-independent-verification.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    if: github.repository == 'xormania/xorchestrate'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      TYPESAFE_API_KEY: ''
+      OPENAI_API_KEY: ''
+      ANTHROPIC_API_KEY: ''
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: cfa3549490ee9db1c3e6cad918523cd854902e51
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Install declared offline test dependencies
+        run: |
+          python -m pip install -e '.[test]'
+          sudo apt-get update
+          sudo apt-get install -y tmux
+          mkdir -p .agents reviewer-validation
+          cp -R reference/imported-agent-skills .agents/skills
+      - name: Record pinned candidate and hosted identity
+        run: |
+          python - <<'PY'
+          import json, os, platform, subprocess
+          from pathlib import Path
+          r = {k: os.environ.get(k) for k in ['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_REPOSITORY']}
+          r.update(checked_out_commit=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(), checked_out_tree=subprocess.check_output(['git','rev-parse','HEAD^{tree}'],text=True).strip(), python=platform.python_version(), paid_calls_authorized=False)
+          assert r['checked_out_commit']=='cfa3549490ee9db1c3e6cad918523cd854902e51'
+          Path('reviewer-validation/identity.json').write_text(json.dumps(r, indent=2)+'\n')
+          PY
+          python -m pip freeze > reviewer-validation/versions.txt
+      - name: Run integrated offline suite including local-host skips
+        run: |
+          set -o pipefail
+          python -m pytest experiments/jev_failure_correlation_v2/tests experiments/jev_failure_correlation/tests experiments/jev_failure_correlation/test_corpus.py tests/hexagonal -q -ra --junitxml=reviewer-validation/tests.xml 2>&1 | tee reviewer-validation/tests.log
+          python - <<'PY'
+          import xml.etree.ElementTree as E
+          t=E.parse('reviewer-validation/tests.xml')
+          assert not t.findall('.//failure') and not t.findall('.//error') and not t.findall('.//skipped'), 'Hosted validation retains failed/error/skipped checks'
+          PY
+      - name: Reproduce executable corpus boundaries and controls
+        if: always()
+        run: python -m experiments.jev_failure_correlation_v2.corpus --out reviewer-validation/reproduced-corpus > reviewer-validation/corpus.log 2>&1
+      - name: Verify and replay retained main and supplemental evidence without keys
+        if: always()
+        run: |
+          set -euo pipefail
+          python -m zipfile -e experiments/jev_failure_correlation_v2/evidence/cloud-20261024-01.zip reviewer-validation/replay
+          python -m experiments.jev_failure_correlation_v2.artifacts verify reviewer-validation/replay/cloud-20261024-01 | tee reviewer-validation/seal-before.json
+          python -m experiments.jev_failure_correlation_v2.runner score --out reviewer-validation/replay/cloud-20261024-01 > reviewer-validation/replay.log
+          python -m experiments.jev_failure_correlation_v2.artifacts verify reviewer-validation/replay/cloud-20261024-01 | tee reviewer-validation/seal-after.json
+          python -m zipfile -e experiments/jev_failure_correlation_v2/evidence/supplement-20261024-02.zip reviewer-validation/replay
+          python experiments/jev_failure_correlation_v2/evidence/supplements/random_probe.py replay --out reviewer-validation/replay/supplement-20261024-02 --main reviewer-validation/replay/cloud-20261024-01 > reviewer-validation/supplement-replay.log
+      - name: Preserve independent hosted evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: pr7-independent-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reviewer-validation/
+          retention-days: 30
+          if-no-files-found: error
