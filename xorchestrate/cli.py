@@ -19,6 +19,9 @@ def main(argv=None):
     parser.add_argument("--config", help="Explicit trusted JSON configuration file")
     parser.add_argument("--actor", default="owner", help="Principal for this local process")
     parser.add_argument("--max-frame-bytes", type=int, default=1_048_576)
+    parser.add_argument("--request-workers", type=int, default=8, help="Concurrent MCP effect workers")
+    parser.add_argument("--control-workers", type=int, default=2, help="Reserved MCP observation/control workers")
+    parser.add_argument("--max-pending-requests", type=int, default=64, help="MCP admission bound per worker pool")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("describe", help="List application operations and input schemas")
     call = commands.add_parser("call", help="Run one operation; read JSON from stdin by default")
@@ -29,8 +32,8 @@ def main(argv=None):
     commands.add_parser("serve", help="Serve MCP over stdin/stdout until EOF")
     commands.add_parser("run", help="Process JSON lines {action, arguments} until EOF; retain live sessions")
     args = parser.parse_args(argv)
-    if args.max_frame_bytes < 1 or not args.actor:
-        parser.error("Frame size must be positive and actor must be nonempty.")
+    if min(args.max_frame_bytes, args.request_workers, args.control_workers, args.max_pending_requests) < 1 or not args.actor:
+        parser.error("Frame/concurrency bounds must be positive and actor must be nonempty.")
     try:
         config, base_dir = load_config(args.config)
         with build(config, base_dir) as runtime:
@@ -38,7 +41,8 @@ def main(argv=None):
             if args.command == "describe":
                 _write({"operations": describe(app)}, sys.stdout)
             elif args.command == "serve":
-                serve(app, sys.stdin.buffer, sys.stdout, args.actor, args.max_frame_bytes)
+                serve(app, sys.stdin.buffer, sys.stdout, args.actor, args.max_frame_bytes,
+                      args.request_workers, args.max_pending_requests, args.control_workers)
             elif args.command == "run":
                 for request, error in frames(sys.stdin.buffer, args.max_frame_bytes):
                     try:

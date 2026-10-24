@@ -1,5 +1,7 @@
 """Stdio MCP input adapter. The host supplies one trusted principal per process."""
 import json
+import threading
+from concurrent.futures import ThreadPoolExecutor
 
 from . import __version__
 from .composition import read_json
@@ -95,10 +97,70 @@ def frames(stream, maximum):
             yield None, error
 
 
-def serve(application, stdin, stdout, actor="owner", max_frame_bytes=1_048_576):
+def serve(application, stdin, stdout, actor="owner", max_frame_bytes=1_048_576,
+          request_workers=8, max_pending_requests=64, control_workers=2):
+    """Serve independent RPC requests concurrently with bounded admission.
+
+    Initialization, ping and discovery stay on the input path. Observation and
+    lifecycle control have reserved workers, so held application calls cannot
+    occupy their execution capacity. Each reply retains its request identifier;
+    the CLI's uncorrelated ``run`` interface remains deliberately ordered.
+    """
+    if any(type(value) is not int or value < 1 for value in (request_workers, max_pending_requests, control_workers)):
+        raise OrchestrationError("MCP concurrency limits must be positive integers.", "invalid_configuration")
     server = MCPServer(application, actor)
-    for request, error in frames(stdin, max_frame_bytes):
-        response = server._error(None, -32700, str(error)) if error else server.handle(request)
+    write_lock = threading.Lock()
+    state_lock = threading.Lock()
+    pending = set()
+    failures = []
+    controls = {"poll_session", "stop_session", "detach_session", "get_operation", "list_sessions", "events"}
+    limits = {False: threading.BoundedSemaphore(max_pending_requests), True: threading.BoundedSemaphore(max_pending_requests)}
+
+    def write(response):
         if response is not None:
-            stdout.write(json.dumps(response, allow_nan=False) + "\n")
-            stdout.flush()
+            with write_lock:
+                stdout.write(json.dumps(response, allow_nan=False) + "\n")
+                stdout.flush()
+
+    def execute(request, key, control):
+        try:
+            write(server.handle(request))
+        except Exception as exc:
+            with state_lock:
+                failures.append(exc)
+        finally:
+            with state_lock:
+                pending.discard(key)
+            limits[control].release()
+
+    with ThreadPoolExecutor(max_workers=request_workers) as workers, ThreadPoolExecutor(max_workers=control_workers) as control_pool:
+        for request, error in frames(stdin, max_frame_bytes):
+            if error:
+                write(server._error(None, -32700, str(error)))
+                continue
+            # Synchronous framing/initialization prevents races with pipelined
+            # initialize + call. A notification never executes an application call.
+            if not server.initialized or not (isinstance(request, dict) and request.get("method") == "tools/call" and "id" in request):
+                write(server.handle(request))
+                continue
+            identifier = request.get("id")
+            if type(identifier) not in (int, str) or request.get("jsonrpc") != "2.0":
+                write(server.handle(request))
+                continue
+            params = request.get("params", {})
+            control = isinstance(params, dict) and isinstance(params.get("name"), str) and params["name"] in controls
+            key = (type(identifier), identifier)
+            with state_lock:
+                duplicate = key in pending
+                if not duplicate:
+                    admitted = limits[control].acquire(blocking=False)
+                    if admitted:
+                        pending.add(key)
+            if duplicate:
+                write(server._error(identifier, -32600, "Request identifier is already pending."))
+            elif not admitted:
+                write(server._error(identifier, -32001, "Concurrent request capacity exceeded; this request was not started."))
+            else:
+                (control_pool if control else workers).submit(execute, request, key, control)
+    if failures:
+        raise OrchestrationError("Cannot write MCP response.", "io_error") from failures[0]

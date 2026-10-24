@@ -1,0 +1,121 @@
+[
+  {
+    "name": "grok-native-observation",
+    "mutation": {
+      "new": "                if not matches:\n                    matches = [(\"fabricated-native-call\", {\"used\": False})]\n                if matches:\n                    # ACP observations",
+      "old": "                if matches:\n                    # ACP observations",
+      "path": "xorchestrate/adapters/grok.py"
+    },
+    "selectors": [
+      "tests/hexagonal/test_native_sessions.py::test_grok_requires_execution_observation_and_rejects_conflicting_call_ids",
+      "tests/hexagonal/test_native_sessions.py::test_grok_late_completion_cannot_clear_newer_activity"
+    ],
+    "target": "tests.hexagonal.test_native_sessions::test_grok_requires_execution_observation_and_rejects_conflicting_call_ids",
+    "diagnostic": "GROK_MCP_REQUIRES_NATIVE_EXECUTION",
+    "unaffected": [
+      "tests.hexagonal.test_native_sessions::test_grok_late_completion_cannot_clear_newer_activity"
+    ]
+  },
+  {
+    "name": "requested-selection",
+    "mutation": {
+      "new": "        if False:  # planted loss of retained requested selection\n            specification[\"parameters\"] = deepcopy(session[\"settings\"][\"requested\"])",
+      "old": "        if \"parameters\" not in specification and session.get(\"settings\", {}).get(\"requested\"):\n            specification[\"parameters\"] = deepcopy(session[\"settings\"][\"requested\"])",
+      "path": "xorchestrate/adapters/sessions.py"
+    },
+    "selectors": [
+      "tests/hexagonal/test_native_sessions.py::test_settings_preserve_requested_resolved_observed_and_require_changed_config_policy[codex]",
+      "tests/hexagonal/test_native_sessions.py::test_private_native_marker_retained_across_exchanges_and_resume[codex]"
+    ],
+    "target": "tests.hexagonal.test_native_sessions::test_settings_preserve_requested_resolved_observed_and_require_changed_config_policy[codex]",
+    "diagnostic": "NATIVE_REQUESTED_SELECTION_RETAINED",
+    "unaffected": [
+      "tests.hexagonal.test_native_sessions::test_private_native_marker_retained_across_exchanges_and_resume[codex]"
+    ]
+  },
+  {
+    "name": "claude-native-hook",
+    "mutation": {
+      "new": "            if matched is None:\n                matched = \"planted-unverified-native-call\"\n                live.calls[matched] = {\"used\": False}\n                live.pending_calls.append(matched)",
+      "old": "            if matched is None:\n                raise OrchestrationError(\"Application call has no matching native hook.\", \"native_evidence_missing\")",
+      "path": "xorchestrate/adapters/claude.py"
+    },
+    "selectors": [
+      "tests/hexagonal/test_claude_sessions.py::test_claude_callback_requires_matching_native_hook",
+      "tests/hexagonal/test_claude_sessions.py::test_claude_retained_context_callbacks_progress_without_poll_and_native_identity"
+    ],
+    "target": "tests.hexagonal.test_claude_sessions::test_claude_callback_requires_matching_native_hook",
+    "diagnostic": "CLAUDE_NATIVE_HOOK_REQUIRED",
+    "unaffected": [
+      "tests.hexagonal.test_claude_sessions::test_claude_retained_context_callbacks_progress_without_poll_and_native_identity"
+    ]
+  },
+  {
+    "name": "external-detach",
+    "mutation": {
+      "new": "if method == \"detach\":\n                self.driver.stop(deepcopy(self.backend))\n                self._active = None",
+      "old": "if method == \"detach\":\n                self._active = None",
+      "path": "xorchestrate/adapters/bridge.py"
+    },
+    "selectors": [
+      "tests/hexagonal/test_external_bridge.py::test_external_detach_does_not_terminate_host_and_reconnect_retains_context[codex]",
+      "tests/hexagonal/test_external_bridge.py::test_bridge_config_and_catalog_cannot_be_overridden_by_attachment"
+    ],
+    "target": "tests.hexagonal.test_external_bridge::test_external_detach_does_not_terminate_host_and_reconnect_retains_context[codex]",
+    "diagnostic": "external_detach_must_not_terminate_native_process",
+    "unaffected": [
+      "tests.hexagonal.test_external_bridge::test_bridge_config_and_catalog_cannot_be_overridden_by_attachment"
+    ]
+  },
+  {
+    "name": "crash-uncertainty",
+    "mutation": {
+      "new": "effect[\"status\"] = \"completed\"\n                    effect[\"recovery_reason\"]",
+      "old": "effect[\"status\"] = \"unknown\"\n                    effect[\"recovery_reason\"]",
+      "path": "xorchestrate/adapters/bridge.py"
+    },
+    "selectors": [
+      "tests/hexagonal/test_external_bridge.py::test_actual_host_crash_preserves_unknown_applied_effect_without_replay",
+      "tests/hexagonal/test_external_bridge.py::test_bridge_rejects_manufactured_receipts_and_changed_configuration"
+    ],
+    "target": "tests.hexagonal.test_external_bridge::test_actual_host_crash_preserves_unknown_applied_effect_without_replay",
+    "diagnostic": "killed_host_must_preserve_unknown_effect",
+    "unaffected": [
+      "tests.hexagonal.test_external_bridge::test_bridge_rejects_manufactured_receipts_and_changed_configuration"
+    ]
+  },
+  {
+    "name": "autonomous-callback",
+    "mutation": {
+      "path": "xorchestrate/adapters/jsonrpc.py",
+      "old": "self._callback_queue.put_nowait((key, packet))",
+      "new": "pass  # deliberate fault: lose callback dispatch"
+    },
+    "selectors": [
+      "tests/hexagonal/test_transport_progress.py::test_callback_after_submission_ack_progresses_without_poll",
+      "tests/hexagonal/test_transport_progress.py::test_out_of_order_responses_remain_bound_to_their_request"
+    ],
+    "target": "tests.hexagonal.test_transport_progress::test_callback_after_submission_ack_progresses_without_poll",
+    "diagnostic": "post_ack_callback_progress",
+    "unaffected": [
+      "tests.hexagonal.test_transport_progress::test_out_of_order_responses_remain_bound_to_their_request"
+    ]
+  },
+  {
+    "name": "delivery-uncertainty",
+    "mutation": {
+      "path": "xorchestrate/delivery.py",
+      "old": "status = \"failed\" if isinstance(error, OrchestrationError) and error.details.get(\"outcome\") in {\"failed\", \"not_started\"} else \"unknown\"",
+      "new": "status = \"failed\"  # deliberate fault: convert unknown to definite failure"
+    },
+    "selectors": [
+      "tests/hexagonal/test_delivery.py::test_lost_submission_stays_unknown_across_reconstructed_application[memory]",
+      "tests/hexagonal/test_delivery.py::test_routing_queues_durable_attempt_and_submission_is_not_receipt[memory]"
+    ],
+    "target": "tests.hexagonal.test_delivery::test_lost_submission_stays_unknown_across_reconstructed_application[memory]",
+    "diagnostic": "DELIVERY_UNKNOWN_OUTCOME_PRESERVED",
+    "unaffected": [
+      "tests.hexagonal.test_delivery::test_routing_queues_durable_attempt_and_submission_is_not_receipt[memory]"
+    ]
+  }
+]

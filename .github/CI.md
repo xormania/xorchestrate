@@ -77,3 +77,15 @@ is kept under `reference/agentscient-dev/.github/` as source material.
 CI does not request model reviews or merge branches. Review and merge decisions
 follow the authorization for the current effort; the workflow does not impose
 that delivery policy on projects coordinated by Xorchestrate.
+
+## Complete composed communication and lifecycle fixture
+
+The Python 3.12 application job additionally runs `scripts.verification.multi_harness`
+in `protocol-fixture` mode. It exercises all three native protocol adapters,
+routed durable delivery, independent callback observations, six directed exchanges,
+three held-tool submissions, six unfinished-work exchanges, nine work batches and
+separate lifecycle cases. Its 46-case requested inventory is copied outside the
+candidate for each CI measurement. A fresh independent review must still select
+and inspect its own owner basis/checker; CI copying a file is not independent
+approval of its content. Deterministic evidence is uploaded for seven days.
+Authenticated native mode is never launched by CI.

@@ -16,8 +16,8 @@ class OrchestrationError(ValueError):
 
 
 class Conflict(OrchestrationError):
-    def __init__(self, message: str = "The record changed; read its current version before retrying."):
-        super().__init__(message, "conflict")
+    def __init__(self, message: str = "The record changed; read its current version before retrying.", *, retry_safe: bool = False):
+        super().__init__(message, "conflict", {"retry_safe": True} if retry_safe else None)
 
 
 @dataclass(frozen=True)

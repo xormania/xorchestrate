@@ -35,6 +35,8 @@ flowchart TD
 | Routing policy | Recipients for a destination in the current actor/relationship context | A compulsory organization chart |
 | Guardrail | Whether a requested action is allowed under explicit policy | Model reasoning or arbitrary host isolation |
 | Evaluator | An assessment with rationale, confidence, and evidence | Permission to override policy |
+| Acceptance policy | Decisions over current owner requirements and bound measurements | Replacing missing or failed required evidence with confidence |
+| Session selection / delivery scheduling / retry / receipt | Replaceable routing-to-native-delivery responsibilities | Conflating submission, receipt, response, completion and acceptance |
 | Composition and input adapters | Trusted configuration, adapter lifetime, CLI/MCP encoding and identity | Domain-specific project practices |
 
 The core is usable with supplied ports without importing SQLite, subprocesses,
@@ -72,6 +74,12 @@ The top-level sections are:
 | `routing` | A routing adapter and its options |
 | `evaluators` | Named assessment adapters and their options |
 | `assessment` | Which evaluator supplies triage, when to escalate, and the heavier evaluator |
+| `acceptance` | Current required-check acceptance policy |
+| `session_selection` | Eligible native session for each recipient |
+| `delivery_scheduler` | Manual/default or immediate/configured delivery scheduling |
+| `retry_policy` | Retry permission after a definite failed attempt |
+| `receipt_policy` | Verification of complete exchange evidence |
+| `session_fallbacks` | Explicit unavailable-name to configured-driver substitutions |
 
 An adapter selection may use a supplied alias or a trusted installed
 `module:factory` implementation. Factories receive options, with dependency-aware
@@ -211,9 +219,11 @@ driver. The application authorizes `send_session` against the source session's
 actor, work, and evidence context, and `start_session` against the requested
 destination; it verifies both authorization snapshots before the effect.
 Configured policy can permit delegation across actors or work items. A source
-with an unresolved pending or unknown effect must be reconciled first. A stored
-session can still be marked active after an application restart; that alone does
-not prevent authorized resumption.
+with an unresolved pending or unknown effect must be reconciled before ordinary
+resumption. Explicit `reconnect_session` can restore observation/control while
+retaining the source uncertainty fence; it cannot silently authorize another
+send. Runtime shutdown marks owned connection records disconnected. A crash can
+leave a stale durable state, so adapters also validate their live handles.
 
 Resumption creates a new connection record with source lineage as provenance.
 That lineage does not automatically propagate later policy revocation to the new
@@ -228,8 +238,9 @@ reconciliation results cannot import their native identities.
 The supplied Codex adapter accepts complete command arguments, such as
 `["codex","app-server","--listen","stdio://"]`. Its configured `thread` and
 `turn` options carry native settings. Authorized resumption opens the stored
-native thread in a new process. Sending starts a turn and polling collects
-notifications. Native tools are governed by the chosen native policies, while
+native thread in a new process. Sending acknowledges submission; continuously dispatched native callbacks and
+notifications establish progress and completion separately. Polling reads retained
+observations. Native tools are governed by the chosen native policies, while
 application-provided dynamic tools cross the application's guardrails.
 
 Drivers that expose application tools opt into
@@ -252,7 +263,9 @@ and Codex dynamic tools remain driver-owned even when a schema permits extra
 properties. See the [bounded delegation example](../examples/README.md#bounded-native-parameter-delegation).
 
 The generic JSON-RPC driver uses configurable session start/send/poll/stop methods
-for an installed bridge. ACP is another supplied protocol adapter. The transport
+for an installed bridge. ACP, Grok Build and Claude Code are also supplied
+protocol adapters. The external-session host exposes ownership-aware attachment
+without terminating its native conversation when a client disconnects. The transport
 uses bounded frames, timeouts, explicit environment forwarding, and process
 cleanup. These mechanisms do not make an arbitrary executable safe; choose the
 process environment and capabilities for the intended work.
@@ -263,7 +276,10 @@ process environment and capabilities for the intended work.
 Useful protocol handling, integrity mechanisms, and fixtures can be adapted behind
 the new ports. The active package does not import the legacy runtime and thereby
 inherit its hierarchy, mandatory evaluator setup, source-hash coupling, or
-automatic delivery workflow.
+historical delivery policy. The active application now owns durable delivery
+attempts and composes explicit session selection, scheduling, retry and receipt
+policies; message routing retains the exact actor/relationship snapshot used at
+enqueue. Ordinary caller acknowledgements remain separate from native receipts.
 
 Historical instructions were moved from `.agents/skills` to
 `reference/imported-agent-skills`; their active `.claude/skills` aliases were removed.
@@ -282,3 +298,19 @@ When extending the system, implement or replace the boundary that owns the
 variation, verify the relevant contract, and keep policy choices inspectable.
 A new abstraction earns its place by separating a real responsibility; the port
 list is allowed to evolve with the system.
+
+## Behavioral preservation and verification
+
+See [native sessions](native-sessions.md), [external session lifecycle](external-session-bridge.md),
+[work acceptance](work-acceptance.md), and the [implementation handoff](implementation/HANDOFF.md).
+Owner outcomes and candidate revisions remain separate from subordinate work.
+Native call replay is durably fenced, including actions without application effect
+keys. Observation and control remain available during uncertain effects. Only
+pre-effect optimistic authorization conflicts are eligible for bounded callback
+retry; every retry reevaluates current authorization. A committed message enqueue
+is never repeated because immediate dispatch later conflicts.
+
+The deterministic full suite and local native procedure use the active
+composition and retain requested coverage separately from measured coverage.
+Protocol fixtures do not establish authenticated vendor behavior. Native
+acceptance and independent review have their own explicit states.
