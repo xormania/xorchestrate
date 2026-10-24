@@ -208,6 +208,11 @@ diagnostic, correct failure exit and passing unaffected controls earns
 `detected`. Setup errors, unrelated failures, skipped assertions, missing cases,
 invalid controls and escaped faults are distinct outcomes. Calibration of the
 calibrator covers missing dependencies, timeouts, skips and wrong diagnostics.
+Assertion attribution also checks the terminal raising instruction's source
+span. A different statement on the same line, an exception while evaluating an
+assertion, or missing/ambiguous source positions earns no detection credit.
+Retain the observer's instruction/assertion spans with the raw JUnit. A rejected
+ambiguous observation is not evidence that the planted behavioral fault escaped.
 
 ## Privacy, provenance and limits
 
@@ -255,6 +260,24 @@ protocol-peer regressions are executable references, not installed-vendor proof.
   still gated; it must remain active. Release B and then establish idle. Keep
   hook correlation and native version/ordering; an installed version that cannot
   produce the schedule leaves this measurement pending, not passed.
+- **Overlapping Codex work:** hold A and B through the application/provider
+  boundary and exercise both completion orders, including releasing B first.
+  Keep the older callback gated while inspecting activity and its durable
+  operation. A single completed turn cannot establish global idle. Also retain
+  the schedule where a turn completion arrives before its callback returns;
+  eventual idle needs terminal callback evidence. The independent checker must
+  reject pending or uncertain callbacks/operations even if a native observation
+  claims idle. Preserve valid after-all-completions controls.
+- **Historical inspection:** record native reads while permitted, then apply
+  an explicit inspection denial to one session within otherwise authorized
+  work. Read the current and historical aggregates through an authorized source.
+  Denied nested records must be projected out while authorized records and the
+  unmodified trusted internal evidence remain available.
+- **Native/callback identity:** preserve independently observed native calls,
+  requested and completed application callbacks, and durable session bindings.
+  Their qualified identities must agree. Rechecking copied raw records with a
+  contradictory or null callback identity must reject; a valid native record
+  cannot supply missing authority to a contradictory application record.
 - **Observed callback across reconnect:** gate dispatch after the native
   observation, replace the application connection with a differently authorized
   actor/work, and release the callback. Its old binding must be retained or the
