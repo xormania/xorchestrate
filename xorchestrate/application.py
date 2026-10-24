@@ -371,14 +371,15 @@ class Application(AcceptanceMixin, DeliveryMixin):
             return {"work": _view(record)}
 
     def _get_work(self, args: JSON, actor: str, context: JSON) -> JSON:
-        with self.store.transaction() as tx:
-            self._verify_context(tx, context)
-            work = self._require(tx, "work", args["work_id"])
-            result = {"work": _view(work)}
-            result.update(self._work_acceptance_view(tx, work.key))
-            for kind, plural in (("assignment", "assignments"), ("evidence", "evidence"), ("session", "sessions")):
-                result[plural] = [_view(r) for r in tx.list(kind) if r.data.get("work_id") == work.key]
-            return result
+        return self._inspect_snapshot("get_work", actor, context, lambda tx: self._work_snapshot(tx, args["work_id"]))
+
+    def _work_snapshot(self, tx: Transaction, work_id: str) -> JSON:
+        work = self._require(tx, "work", work_id)
+        result = {"work": _view(work)}
+        result.update(self._work_acceptance_view(tx, work.key))
+        for kind, plural in (("assignment", "assignments"), ("evidence", "evidence"), ("session", "sessions")):
+            result[plural] = [_view(r) for r in tx.list(kind) if r.data.get("work_id") == work.key]
+        return result
 
     def _list_work(self, args: JSON, actor: str, context: JSON) -> JSON:
         with self.store.transaction() as tx:

@@ -27,9 +27,36 @@ S = {"type": "string", "minLength": 1}
 _DELIVERY_RECORDS = {"message": "message", "deliveries": "delivery", "attempts": "delivery_attempt",
     "evidence": "evidence", "sessions": "session", "messages": "message", "all_attempts": "delivery_attempt",
     "observations": "native_observation", "receipts": "delivery_receipt"}
+_ACCEPTANCE_RECORDS = {"requirements": "requirements", "candidate": "candidate", "measurements": "measurement",
+    "acceptance_history": "acceptance_decision", "contributions": "contribution"}
+# Only application-owned result structures are traversed. In particular an
+# evidence result, provider output, session specification or native payload is
+# not a record merely because its user-defined keys resemble these fields.
 _INSPECTION_RESULTS = {"get_delivery": _DELIVERY_RECORDS,
+    "delivery_result": {"delivery": "delivery", "attempt": "delivery_attempt"},
     "native_observations": {"observations": "native_observation", "calls": "native_call"},
-    "inbox": {"messages": "message"}, "list_sessions": {"sessions": "session"}, "list_work": {"work": "work"}}
+    "get_work": {"work": "work", "assignments": "assignment", "evidence": "evidence", "sessions": "session",
+        **_ACCEPTANCE_RECORDS},
+    "get_acceptance": _ACCEPTANCE_RECORDS, "get_operation": {"operation": "operation"},
+    "inbox": {"messages": "message"}, "list_sessions": {"sessions": "session"}, "list_work": {"work": "work"},
+    "list_actors": {"actors": "actor"},
+    **{name: {field: kind} for name, field, kind in (
+        ("create_work", "work", "work"), ("update_work", "work", "work"),
+        ("add_actor", "actor", "actor"), ("update_actor", "actor", "actor"),
+        ("assign", "assignment", "assignment"), ("relate", "relation", "relation"),
+        ("send_message", "message", "message"), ("acknowledge", "message", "message"),
+        ("record_result", "evidence", "evidence"), ("assess", "assessment", "assessment"),
+        ("set_requirements", "requirements", "requirements"), ("set_candidate", "candidate", "candidate"),
+        ("create_contribution", "contribution", "contribution"), ("update_contribution", "contribution", "contribution"),
+        ("run_measurement", "measurement", "measurement"), ("accept_work", "acceptance", "acceptance_decision"),
+        ("invoke", "invocation", "invocation"),
+        ("resolve_operation", "operation", "operation"), ("resolve_native_call", "native_call", "native_call"),
+        ("retry_delivery", "delivery", "delivery"), ("resolve_delivery", "delivery", "delivery"),
+        ("verify_exchange", "receipt", "delivery_receipt"))},
+    **{name: {"session": "session"} for name in ("start_session", "attach_session", "reconnect_session",
+        "send_session", "poll_session", "stop_session", "detach_session")}}
+_INSPECTION_NESTED_RESULTS = {"send_message": {"dispatch": "dispatch_deliveries"},
+    "dispatch_deliveries": {"deliveries": "delivery_result"}}
 DELIVERY_ACTIONS = {
     "dispatch_deliveries": action("Submit eligible durable deliveries; uncertain attempts are never automatically repeated.",
         {"message_id": S, "limit": {"type": "integer", "minimum": 1, "maximum": 1000}}),
@@ -77,19 +104,27 @@ class DeliveryMixin:
         # inspection is not authorization to disclose that graph. Reevaluate
         # the selected policy using each record's own resource bindings.
         projected, contexts = self._inspection_records("get_delivery", actor,
-            {key: (kind, snapshot[key]) for key, kind in _DELIVERY_RECORDS.items() if key != "message"})
+            {key: (kind, [snapshot[key]] if key == "message" else snapshot[key])
+             for key, kind in _DELIVERY_RECORDS.items()})
         selected = self._inspection_context(actor, "message", snapshot["message"])
         self._authorize("get_delivery", selected)
+        if not projected["message"]:
+            raise Conflict("Selected message inspection authority changed.", retry_safe=True)
         with self.store.transaction() as tx:
             self._verify_context(tx, context)
             self._verify_context(tx, selected)
             self._verify_inspection_contexts(tx, contexts)
             if digest(snapshot) != digest(self._delivery_snapshot(tx, args["message_id"])):
                 raise Conflict("Delivery inspection records changed during authorization.", retry_safe=True)
-        return {"message": snapshot["message"], **projected}
+        return {**projected, "message": projected["message"][0]}
 
     def _inspection_context(self, actor, kind, record, cache=None):
         arguments = {key: record[key] for key in ("work_id", "session_id", "message_id") if record.get(key)}
+        if kind == "evidence" and isinstance(record.get("source"), dict):
+            # Session/capability evidence carries its real source binding in
+            # the application's typed source envelope, not at the top level.
+            arguments.update({key: record["source"][key] for key in ("session_id", "operation_id")
+                if record["source"].get(key)})
         if kind == "message":
             arguments["message_id"] = record["id"]
         elif kind == "work":
@@ -98,6 +133,12 @@ class DeliveryMixin:
             arguments["session_id"] = record["id"]
         elif kind == "native_call":
             arguments["native_call_id"] = record["id"]
+        elif kind == "operation":
+            arguments["operation_id"] = record["id"]
+        elif kind == "actor":
+            arguments["actor_id"] = record["id"]
+        elif kind == "assignment":
+            arguments["actor_id"] = record["actor_id"]
         current = self._inspection_basis(actor, arguments, cache)
         current["inspection"] = {"kind": kind, "id": record["id"]}
         current["record"] = deepcopy(record)
@@ -137,27 +178,74 @@ class DeliveryMixin:
                     continue
                 visible = deepcopy(record)
                 payload = visible if kind == "native_call" else visible.get("observation", {}) if kind == "native_observation" else {}
-                nested = payload.get("result")
-                nested_kinds = _INSPECTION_RESULTS.get(payload.get("action"), {})
-                if isinstance(nested, dict) and nested_kinds:
-                    # Historical native read results may themselves contain
-                    # aggregates authorized before the current caller's grant.
-                    # Keep stored raw evidence intact; project its records too.
-                    sections = {key: (child_kind, values if isinstance(values, list) else [values])
-                        for key, child_kind in nested_kinds.items()
-                        if isinstance(values := nested.get(key), (dict, list))}
-                    children, child_contexts = self._inspection_records(action_name, actor, sections, cache)
+                if kind == "operation":
+                    payload = visible
+                if isinstance(payload.get("result"), dict):
+                    payload["result"], child_contexts = self._inspection_result(
+                        action_name, actor, payload.get("action"), payload["result"], cache)
                     contexts.extend(child_contexts)
-                    for key, values in children.items():
-                        replacement = values if isinstance(nested[key], list) else values[0] if values else None
-                        if replacement != nested[key]:
-                            visible["inspection_redacted"] = True
-                        nested[key] = replacement
+                if kind == "message" and isinstance(visible.get("routing_snapshot"), dict):
+                    # Enqueue-time actor/relationship provenance is retained
+                    # internally but does not inherit the message's read grant.
+                    snapshot = visible["routing_snapshot"]
+                    children, child_contexts = self._inspection_records(action_name, actor,
+                        {key: (child_kind, snapshot[key]) for key, child_kind in
+                         (("actors", "actor"), ("relations", "relation")) if isinstance(snapshot.get(key), list)}, cache)
+                    snapshot.update(children)
+                    contexts.extend(child_contexts)
+                if digest(visible) != digest(record):
+                    visible["inspection_redacted"] = True
                 result[section].append(visible)
                 contexts.append(current)
                 if executed is not None:
                     contexts.append(executed)
         return result, contexts
+
+    def _inspection_result(self, action_name, actor, original_action, result, cache):
+        """Project the typed records of a historical application result.
+
+        Current inspection authority governs each nested record, independently
+        of the source session or the permissions in force when it was saved.
+        Stored results and trusted internal receipt inputs remain unchanged.
+        """
+        visible = deepcopy(result)
+        sections = {key: (kind, values if isinstance(values, list) else [values])
+            for key, kind in _INSPECTION_RESULTS.get(original_action, {}).items()
+            if isinstance(values := visible.get(key), (dict, list))}
+        children, contexts = self._inspection_records(action_name, actor, sections, cache)
+        for key, values in children.items():
+            visible[key] = values if isinstance(visible[key], list) else values[0] if values else None
+        for key, child_action in _INSPECTION_NESTED_RESULTS.get(original_action, {}).items():
+            nested = visible.get(key)
+            if isinstance(nested, (dict, list)):
+                children = []
+                for item in nested if isinstance(nested, list) else [nested]:
+                    child, child_contexts = self._inspection_result(action_name, actor, child_action, item, cache)
+                    children.append(child)
+                    contexts.extend(child_contexts)
+                visible[key] = children if isinstance(nested, list) else children[0]
+        return visible, contexts
+
+    def _inspect_snapshot(self, action_name, actor, context, snapshot):
+        """Authorize a public aggregate without changing its trusted source."""
+        with self.store.transaction() as tx:
+            self._verify_context(tx, context)
+            original = snapshot(tx)
+        projected, contexts = self._inspection_result(action_name, actor, action_name, original, {})
+        if "work" in original:
+            selected = self._inspection_context(actor, "work", original["work"])
+            self._authorize(action_name, selected)
+            if projected["work"] is None:
+                raise Conflict("Selected work inspection authority changed.", retry_safe=True)
+            contexts.append(selected)
+        with self.store.transaction() as tx:
+            self._verify_context(tx, context)
+            self._verify_inspection_contexts(tx, contexts)
+            if digest(original) != digest(snapshot(tx)):
+                raise Conflict("Inspection records changed during authorization.", retry_safe=True)
+        if digest(original) != digest(projected):
+            projected["inspection_redacted"] = True
+        return projected
 
     def _verify_inspection_contexts(self, tx, contexts):
         checked = set()
