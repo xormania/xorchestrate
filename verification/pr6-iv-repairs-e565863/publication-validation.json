@@ -1,0 +1,27 @@
+{
+  "stage": "Local publication-copy validation before commit",
+  "initial_attempt": {
+    "cwd": "/workspace/work/pr6-repair-iv/publication",
+    "command": [
+      "sha256sum",
+      "-c",
+      "verification/pr6-iv-repairs-e565863/SHA256SUMS"
+    ],
+    "exit_status": 1,
+    "diagnostic": "Relative checksum entries resolved against the repository root: 18 files not found and the unrelated repository README mismatched. No evidence bytes changed."
+  },
+  "corrected_attempt": {
+    "cwd": "/workspace/work/pr6-repair-iv/publication/verification/pr6-iv-repairs-e565863",
+    "command": [
+      "sha256sum",
+      "-c",
+      "SHA256SUMS"
+    ],
+    "chunk_id": "f23139",
+    "wall_time_seconds": 0.00003885,
+    "exit_code": 0,
+    "original_token_count": 122,
+    "output": "ARCHIVE.sha256: OK\nCI-REPORT.md: OK\nEXECUTION-REPORT.md: OK\nIndependent-Verification-Handoff.md: OK\nPROVENANCE-REPORT.md: OK\nPackage-QA-Evidence.zip: OK\nREADME.md: OK\nREPLAY.md: OK\nRepair-Report.md: OK\nXorchestrate-PR6-IV-Repair-Evidence.zip: OK\narchive-build.json: OK\nclosure-matrix.json: OK\ncommand-run-ledger.json: OK\ninput-identities.json: OK\npackage-manifest.json: OK\npackage-qa-summary.json: OK\nrequirement-selectors.json: OK\nrequirement-summary.json: OK\nrestore_evidence.py: OK\n"
+  },
+  "interpretation": "The corrected check verifies all 19 listed artifacts. This receipt is then included in the final checksum inventory; the primary and QA archives remain byte-identical."
+}

@@ -1,0 +1,116 @@
+{
+  "candidate": "e565863ae72180571678c8f6118ee6e00b129e2e",
+  "tree": "474de55c5947890ab4092daeca7ff39f9bbbc400",
+  "original_distinct": 89,
+  "frozen_distinct": 165,
+  "added_distinct": 46,
+  "final_distinct": 211,
+  "requirements": {
+    "H1": {
+      "original": 5,
+      "frozen": 19,
+      "added": 0,
+      "final": 19,
+      "passed": true
+    },
+    "H2": {
+      "original": 6,
+      "frozen": 24,
+      "added": 11,
+      "final": 35,
+      "passed": true
+    },
+    "H3": {
+      "original": 6,
+      "frozen": 37,
+      "added": 25,
+      "final": 62,
+      "passed": true
+    },
+    "H4": {
+      "original": 8,
+      "frozen": 24,
+      "added": 3,
+      "final": 27,
+      "passed": true
+    },
+    "H5": {
+      "original": 7,
+      "frozen": 27,
+      "added": 19,
+      "final": 46,
+      "passed": true
+    },
+    "H6": {
+      "original": 8,
+      "frozen": 13,
+      "added": 0,
+      "final": 13,
+      "passed": true
+    },
+    "H7": {
+      "original": 10,
+      "frozen": 43,
+      "added": 17,
+      "final": 60,
+      "passed": true
+    },
+    "H8": {
+      "original": 5,
+      "frozen": 39,
+      "added": 27,
+      "final": 66,
+      "passed": true
+    },
+    "B1": {
+      "original": 5,
+      "frozen": 13,
+      "added": 0,
+      "final": 13,
+      "passed": true
+    },
+    "B2": {
+      "original": 9,
+      "frozen": 29,
+      "added": 0,
+      "final": 29,
+      "passed": true
+    },
+    "B3": {
+      "original": 9,
+      "frozen": 9,
+      "added": 0,
+      "final": 9,
+      "passed": true
+    },
+    "B4": {
+      "original": 5,
+      "frozen": 73,
+      "added": 17,
+      "final": 90,
+      "passed": true
+    },
+    "B5": {
+      "original": 6,
+      "frozen": 40,
+      "added": 31,
+      "final": 71,
+      "passed": true
+    },
+    "A1": {
+      "original": 5,
+      "frozen": 17,
+      "added": 7,
+      "final": 24,
+      "passed": true
+    },
+    "A2": {
+      "original": 6,
+      "frozen": 66,
+      "added": 46,
+      "final": 112,
+      "passed": true
+    }
+  },
+  "scope": "Local final execution reconciled; hosted execution will be recorded separately. Overlapping requirement memberships must not be summed; selector/case totals are descriptive."
+}

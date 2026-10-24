@@ -1,0 +1,75 @@
+{
+  "candidate": "e565863ae72180571678c8f6118ee6e00b129e2e",
+  "native_acceptance": "User-planned local authenticated work; not an invented prerequisite for completing repairs.",
+  "previous_open_mapping": {
+    "F01": "IV01",
+    "F07": "IV04",
+    "F08": "IV03",
+    "aggregate-completion": "IV02"
+  },
+  "previously_closed_preserved": [
+    "F02",
+    "F03",
+    "F04",
+    "F05",
+    "F06",
+    "F09",
+    "F10"
+  ],
+  "recommendation": "Proceed to the next fresh-session independent verification of this exact candidate; no merge or release performed.",
+  "rows": [
+    {
+      "after_frozen_candidate": "evidence/final-e565863/witnesses/iv01-closed.json",
+      "before": "evidence/iv01/baseline-witness.json",
+      "controls": "Known-bad missing traversal and requested-phase/collision variants activate; exact disclosure assertion fails; unrelated dependency errors receive no credit.",
+      "finding": "IV01",
+      "invariant": "Current inspection policy binds typed historical/current records to their actual resource and applicable operation scope; allowed projections and trusted raw data remain intact.",
+      "limits": "Bounded deterministic execution; not authenticated vendor acceptance or a fresh-session independent review.",
+      "same_session_adversarial_review": "evidence/adversarial/iv01/frozen-followup-replay/review.json",
+      "sustained_regression": "tests/hexagonal/test_inspection_history.py",
+      "verdict": "closed_in_examined_scope"
+    },
+    {
+      "after_frozen_candidate": "evidence/final-e565863/witnesses/iv02-orders/summary.json",
+      "before": "evidence/iv02/before-witness/summary.json",
+      "controls": "False per-turn idle and injected idle while native tails remain are rejected; all callback permutations, tail permutations and valid early-response controls pass; unrelated errors do not earn detection.",
+      "finding": "IV02",
+      "invariant": "Idle requires no unresolved native turns, continuation tails, submissions, callbacks or applicable durable effects; checker evidence independently vetoes false idle.",
+      "limits": "Bounded deterministic execution; not authenticated vendor acceptance or a fresh-session independent review.",
+      "same_session_adversarial_review": "evidence/adversarial/iv02/committed-after/review.json",
+      "sustained_regression": "tests/hexagonal/test_aggregate_completion.py",
+      "verdict": "closed_in_examined_scope"
+    },
+    {
+      "after_frozen_candidate": "evidence/final-e565863/witnesses/iv03-identities/results.json",
+      "before": "evidence/iv03/before/results.json",
+      "controls": "Wrong/null identities and bypass calibrations reject; valid, unrelated and stale-history controls pass; unrelated checker failure earns no detection.",
+      "finding": "IV03",
+      "invariant": "Each callback/native/session side must independently agree on qualified identity and applicable actor/work bindings; lifecycle raw joins retain explicit contradictions.",
+      "limits": "Bounded deterministic execution; not authenticated vendor acceptance or a fresh-session independent review.",
+      "same_session_adversarial_review": "evidence/adversarial/iv03/REPORT.md",
+      "sustained_regression": "tests/hexagonal/test_callback_identity.py",
+      "verdict": "closed_in_examined_scope"
+    },
+    {
+      "after_frozen_candidate": "evidence/final-e565863/witnesses/iv04-attribution/results.json",
+      "before": "evidence/iv04/baseline-witness/results.json",
+      "controls": "Same-line and separate-line unrelated raises reject; real assertions remain detected in both calibrators; all twelve original faults remain independently valid.",
+      "finding": "IV04",
+      "invariant": "Only an unambiguous executed assertion raise in the intended target frame earns calibration detection credit.",
+      "limits": "Bounded deterministic execution; not authenticated vendor acceptance or a fresh-session independent review.",
+      "same_session_adversarial_review": "evidence/adversarial/iv04/REPORT.md",
+      "sustained_regression": "tests/hexagonal/test_calibration_attribution.py",
+      "verdict": "closed_in_examined_scope"
+    }
+  ],
+  "shared_final_evidence": {
+    "batch_interpretation": "Original four witnesses and native-tail controls passed. Initial extended IV01 wrapper failed because two new files were omitted from the recorder copy list; that failed attempt remains unchanged. The complete seven-probe replay separately passes on the same frozen source.",
+    "complete_scope_replay": "evidence/final-e565863/witnesses-iv01-complete/semantic-verdict.json",
+    "focused_suite": "evidence/final-e565863/repairs.xml",
+    "full_suite": "evidence/final-e565863/application.xml",
+    "original_witness_batch": "evidence/final-e565863/witnesses/semantic-verdict.json",
+    "protocol": "evidence/final-e565863/protocol/report.json"
+  },
+  "tree": "474de55c5947890ab4092daeca7ff39f9bbbc400"
+}
