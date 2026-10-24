@@ -25,9 +25,14 @@ class NativeEncoding:
     peer: str
     kind: str
     source: str
+    result_kind: str
+    result_source: str
 
     def encode(self, action: str, arguments: dict[str, Any]) -> dict[str, Any]:
         return {"kind": self.kind, "source": self.source, "action": action, "arguments": deepcopy(arguments)}
+
+    def encode_result(self, observation: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:
+        return {**deepcopy(observation), "kind": self.result_kind, "source": self.result_source, "result": deepcopy(result)}
 
 
 class CustomObservationDecoder:
@@ -37,18 +42,19 @@ class CustomObservationDecoder:
 
     def decode(self, record, mode):
         item = record["observation"]
-        if item.get("source") != "custom/observation" or item.get("kind") != "custom_command":
+        if item.get("source") != "custom/observation" or item.get("kind") not in {"custom_command", "custom_result"}:
             return []
-        return [{"event": "native_tool", "at": item.get("at", record["created_at"]),
+        event = "native_result" if item["kind"] == "custom_result" else "native_tool"
+        return [{"event": event, "at": item.get("at", record["created_at"]),
                  "call_id": item.get("call_id"), "tool": item.get("action"),
-                 "arguments": deepcopy(item.get("arguments")), "origin": self.origin}]
+                 **{key: deepcopy(item[key]) for key in ("arguments", "result") if key in item}, "origin": self.origin}]
 
 
-CODEX = NativeEncoding("codex", "native_tool_call", "codex/item/tool/call")
-CLAUDE = NativeEncoding("claude", "native_tool", "claude/PreToolUse")
-GROK = NativeEncoding("grok", "native_tool_call", "grok/session/update")
-CUSTOM = NativeEncoding("independent-peer", "custom_command", "custom/observation")
-OTHER_CUSTOM = NativeEncoding("another-independent-peer", "custom_command", "custom/observation")
+CODEX = NativeEncoding("codex", "native_tool_call", "codex/item/tool/call", "native_tool_result", "codex/item/tool/call")
+CLAUDE = NativeEncoding("claude", "native_tool", "claude/PreToolUse", "tool_result", "claude/mcp")
+GROK = NativeEncoding("grok", "native_tool_call", "grok/session/update", "native_tool_result", "grok/session/update")
+CUSTOM = NativeEncoding("independent-peer", "custom_command", "custom/observation", "custom_result", "custom/observation")
+OTHER_CUSTOM = NativeEncoding("another-independent-peer", "custom_command", "custom/observation", "custom_result", "custom/observation")
 
 
 def _binding(value):
@@ -187,6 +193,8 @@ class IdentityEvidenceAdapter:
             container, key = row, "work_id"
         elif change.claim == "application_session":
             container, key = row, "session_id"
+        elif change.claim in {"arguments", "result_payload", "action"}:
+            container, key = row["observation"], "result" if change.claim == "result_payload" else change.claim
         elif change.claim.startswith("result_"):
             container = row["result"]["session"]
             if change.claim in {"result_native_session", "result_incarnation"}:
@@ -218,6 +226,39 @@ class IdentityEvidenceAdapter:
         self.raw["observations"].append(row)
         self.rows["duplicate-callback"] = row
 
+    def add_native_results(self):
+        encodings = {encoding.peer: encoding for encoding in (self.source, self.target)}
+        natives = [row for row in self.raw["observations"] if row["observation"].get("phase") is None]
+        for native in natives:
+            callback = next(row for row in self.raw["observations"]
+                            if row["observation"].get("phase") == "completed"
+                            and row["observation"]["call_id"] == native["observation"]["call_id"]
+                            and row["session_id"] == native["session_id"])
+            encoding = encodings[native["created_by"]]
+            result = {**deepcopy(native), "id": "result-" + native["id"], "created_at": callback["created_at"],
+                      "observation": encoding.encode_result(native["observation"], callback["observation"]["result"])}
+            self.raw["observations"].append(result)
+            if native is self.rows["native"]:
+                self.rows["return"] = result
+            if native is self.rows.get("receipt-native"):
+                self.rows["receipt-return"] = result
+
+    def duplicate_native_result(self):
+        row = {**deepcopy(self.rows["return"]), "id": "independent-duplicate-native-result"}
+        self.raw["observations"].append(row)
+        self.rows["duplicate-return"] = row
+
+    def enrich_return_work(self):
+        self.rows["return"]["observation"]["arguments"]["work_id"] = self.rows["callback"]["observation"]["arguments"]["work_id"]
+
+    def add_opaque_native_result(self):
+        native = self.rows["native"]
+        opaque = {"message": {"id": "unrelated", "work_id": None, "created_by": "opaque-actor"},
+                  "evidence": {"id": "unrelated", "work_id": "opaque-work", "source": "opaque-provider-output"}}
+        observation = self.source.encode_result(native["observation"], opaque)
+        observation.update(call_id="opaque-provider-call", action="invoke", arguments={"capability": "custom/provider"})
+        self.raw["observations"].append({**deepcopy(native), "id": "opaque-provider-return", "observation": observation})
+
     def add_historical_call(self, scope, stale):
         identity = {**self.sessions[self.source.peer], "session_id": "historical-application",
                     "incarnation": "historical-incarnation"}
@@ -225,7 +266,9 @@ class IdentityEvidenceAdapter:
             identity["native_id"] = "unrelated-native-conversation"
         self.raw["sessions"].append({"id": identity["session_id"], "backend": deepcopy(identity),
                                      "actor_id": self.source.peer, "work_id": "session-work"})
-        for side in ("native", "requested", "callback"):
+        for side in ("native", "requested", "callback", "return"):
+            if side not in self.rows:
+                continue
             record = deepcopy(self.rows[side])
             record.update(id="historical-" + record["id"], session_id=identity["session_id"], stale=stale)
             record["observation"].update(identity)
@@ -262,7 +305,7 @@ class IdentityEvidenceAdapter:
     def native_facts(self):
         kwargs = {} if self.decoders is None else {"decoders": self.decoders}
         return [event for event in normalize(self.raw, self.sessions, [], self.run["mode"], **kwargs)
-                if event["event"] == "native_tool"]
+                if event["event"] in {"native_tool", "native_result"}]
 
     def source_native_records(self):
         return [deepcopy(row) for row in self.raw["observations"] if row["observation"].get("phase") is None]

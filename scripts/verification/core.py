@@ -145,6 +145,59 @@ def effect_claims_match(embedded, persisted, peer, sessions):
     return True
 
 
+def same_call_scope(first, other):
+    """A reused call id in a coherent older connection is a different call."""
+    return (other.get("call_id") == first.get("call_id")
+            and (other.get("session_id") == first.get("session_id")
+                 or (other.get("native_id") == first.get("native_id")
+                     and other.get("incarnation") == first.get("incarnation"))))
+
+
+def native_result_matches(fact, native, sessions, context, *, persisted=None, application_arguments=None):
+    """Reconcile a native return with independent input and application effect.
+
+    Only the recognized typed action's identity/effect envelope is interpreted;
+    user results and provider payloads remain opaque. Metadata-only returns may
+    genuinely omit arguments or the returned effect.
+    """
+    peer, tool = native.get("peer"), native.get("tool")
+    if (fact.get("tool") != tool
+            or not native_claims_match(fact, sessions)
+            or peer not in context.origins or fact.get("origin") != context.origins[peer]
+            or fact.get("expected_origin", context.origins[peer]) != context.origins[peer]
+            or any(key in fact and key in native and fact[key] != native[key]
+                   for key in ("observation_work_id", "session_work_id"))):
+        return False
+    if "arguments" in fact:
+        arguments = fact["arguments"]
+        original = native.get("arguments")
+        if not isinstance(arguments, dict) or not isinstance(original, dict):
+            return False
+        if canonical({key: value for key, value in arguments.items() if key not in {"work_id", "idempotency_key"}}) != canonical(
+                {key: value for key, value in original.items() if key not in {"work_id", "idempotency_key"}}):
+            return False
+    argument_claims = [value["work_id"] for value in (native.get("arguments", {}), application_arguments or {}, fact.get("arguments", {}))
+                       if "work_id" in value]
+    if tool in {"send_message", "record_result"} and isinstance(persisted, dict) and "work_id" in persisted:
+        argument_claims.append(persisted["work_id"])
+    if argument_claims and not all(value == argument_claims[0] for value in argument_claims):
+        return False
+    if tool not in {"send_message", "record_result"} or "result" not in fact:
+        return True
+    result = fact["result"]
+    if not isinstance(result, dict):
+        return False
+    kind = "message" if tool == "send_message" else "evidence"
+    if kind not in result:
+        return True
+    embedded = result[kind]
+    saved = persisted if persisted is not None else fact.get("persisted_" + kind)
+    if saved is None or not effect_claims_match(embedded, saved, peer, sessions):
+        return False
+    work_claims = [*argument_claims, *[value["work_id"] for value in (embedded, saved) if "work_id" in value]]
+    return not work_claims or all(value == work_claims[0] for value in work_claims)
+
+
 def match_callback(events, event, sessions, context):
     # Native proof cannot lend its identity to a contradictory application
     # callback. Validate both sides against the applicable session before joining.
@@ -202,6 +255,16 @@ def match_callback(events, event, sessions, context):
         require(effect_claims_match(embedded, persisted, event["peer"], sessions), "application_effect_arguments_mismatch")
         if "work_id" in embedded:
             require(embedded["work_id"] == arguments.get("work_id"), "application_effect_arguments_mismatch")
+    kind = "message" if native.get("tool") == "send_message" else "evidence"
+    effects = [other["persisted_" + kind] for other in events
+               if same_call_scope(event, other) and "persisted_" + kind in other
+               and other.get("event") != "native_result"]
+    for fact in events:
+        if fact.get("event") != "native_result" or not same_call_scope(native, fact):
+            continue
+        require(all(native_result_matches(fact, native, sessions, context, persisted=saved,
+                                          application_arguments=event.get("arguments")) for saved in effects or [None]),
+                "native_result_binding")
     return native
 
 
@@ -288,7 +351,7 @@ def tool_audit(events, sessions, context):
     for event in events:
         if event.get("event") == "tool_completed":
             context.callback(events, event, sessions)
-        if event.get("event") in {"native_tool", "native_discovery", "native_session"}:
+        if event.get("event") in {"native_tool", "native_discovery", "native_session", "native_result"}:
             require(native_claims_match(event, sessions), "native_session_drift")
         require(event.get("event") not in {"native_identity_error", "tool_violation", "unsupported"},
                 "native_protocol_violation")
@@ -394,6 +457,11 @@ def lifecycle_evidence(case, run, lifecycle, context):
                     and fact.get("raw_ref", {}).get("id") != native["id"]
                     and native_conflict(selected, fact, {peer: after}) for fact in facts),
             "lifecycle_retained_observation_binding")
+    for fact in facts:
+        if fact.get("event") == "native_result" and same_call_scope(selected, fact):
+            require(native_result_matches(fact, selected, {peer: after}, context, persisted=saved,
+                                          application_arguments=raw_callback.get("arguments")),
+                    "lifecycle_retained_observation_binding")
     # Source/session scope is independent from an explicitly selected work.
     # Every applicable explicit selected-work claim must agree, including null.
     source_work = [row["work_id"] for row in (actual_after, native, callback) if "work_id" in row]

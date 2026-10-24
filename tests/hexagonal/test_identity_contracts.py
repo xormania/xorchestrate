@@ -6,6 +6,7 @@ from tests.hexagonal.contracts.identity import (
     LIFECYCLE_SCENARIOS,
     assert_identity_scenario,
     assert_native_claim_provenance,
+    assert_native_result_provenance,
 )
 from tests.hexagonal.support.identity_evidence import (
     CLAUDE,
@@ -53,3 +54,10 @@ def test_lifecycle_identity_contract(factory, operation, scenario):
                          ids=("conflicting-actor", "explicit-null", "genuinely-absent"))
 def test_native_identity_normalization_retains_provenance(factory, value, absent):
     assert_native_claim_provenance(factory, value, absent=absent)
+
+
+@pytest.mark.parametrize("factory", FACTORIES)
+@pytest.mark.parametrize("value,absent", (("another-actor", False), (None, False), (None, True)),
+                         ids=("conflicting-actor", "explicit-null", "genuinely-absent"))
+def test_native_result_normalization_retains_provenance(factory, value, absent):
+    assert_native_result_provenance(factory, value, absent=absent)

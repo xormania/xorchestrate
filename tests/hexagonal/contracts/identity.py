@@ -31,6 +31,10 @@ class IdentityScenario:
     duplicate_callback: bool = False
     historical_scope: str | None = None
     historical_stale: bool = False
+    native_results: bool = False
+    duplicate_result: bool = False
+    opaque_result: bool = False
+    returned_default_work: bool = False
 
 
 @dataclass(frozen=True)
@@ -45,6 +49,10 @@ class IdentityEvidencePort(Protocol):
     def duplicate_native(self) -> None: ...
     def duplicate_completed_callback(self) -> None: ...
     def add_historical_call(self, scope: str, stale: bool) -> None: ...
+    def add_native_results(self) -> None: ...
+    def duplicate_native_result(self) -> None: ...
+    def add_opaque_native_result(self) -> None: ...
+    def enrich_return_work(self) -> None: ...
     def select_alternate_work(self) -> None: ...
     def omit_optional_work(self) -> None: ...
     def evaluate(self) -> IdentityOutcome: ...
@@ -55,7 +63,60 @@ class IdentityEvidencePort(Protocol):
 IdentityFactory = Callable[[str, str], IdentityEvidencePort]
 
 
+def _native_result_scenarios(scope: str) -> tuple[IdentityScenario, ...]:
+    """The same independently recorded return claims apply to each proof kind."""
+    diagnostic = "native_result_binding" if scope == "exchange" else "lifecycle_retained_observation_binding"
+    effect_claims = (("return", "embedded_work"), ("return", "embedded_actor")) + (
+        (("return", "embedded_sender"), ("receipt-return", "embedded_work"),
+         ("receipt-return", "embedded_actor"), ("receipt-return", "embedded_source"))
+        if scope == "exchange" else (("return", "embedded_source"),))
+    return (
+        IdentityScenario("native-return-unobserved", scope),
+        IdentityScenario("native-return-coherent", scope, native_results=True),
+        IdentityScenario("native-return-empty-metadata-result", scope,
+                         (ClaimChange("return", "result_payload", {}),), native_results=True),
+        IdentityScenario("native-return-coherent-alternate-work", scope, native_results=True, alternate_work=True),
+        IdentityScenario("native-return-exact-duplicate", scope, native_results=True, duplicate_result=True),
+        IdentityScenario("native-return-opaque-provider-content", scope, opaque_result=True),
+        *tuple(IdentityScenario("native-return-" + claim + "-" + name, scope,
+                                (ClaimChange("return", claim, value),), False, diagnostic, native_results=True)
+               for claim in ("actor", "record_work", "application_session", "native_session", "incarnation",
+                             "nested_session", "argument_work", "arguments")
+               for name, value in (("wrong", "contradictory-identity"), ("null", None))),
+        *tuple(IdentityScenario("native-return-action-" + name, scope,
+                                (ClaimChange("return", "action", value),), False, diagnostic, native_results=True)
+               for name, value in (("contradiction", "invoke"), ("null", None))),
+        *tuple(IdentityScenario("native-return-metadata-only-work-" + name, scope,
+                                (ClaimChange("return", "result_payload", absent=True),
+                                 ClaimChange("return", "argument_work", value)), False, diagnostic, native_results=True)
+               for name, value in (("wrong", "other-work"), ("null", None))),
+        *tuple(IdentityScenario("native-return-" + claim + "-absent", scope,
+                                (ClaimChange("return", claim, absent=True),), native_results=True)
+               for claim in ("actor", "record_work", "nested_session", "arguments", "result_payload")),
+        IdentityScenario("native-return-argument-work-absent", scope,
+                         (ClaimChange("return", "argument_work", absent=True),), native_results=True),
+        IdentityScenario("native-return-argument-work-enriched", scope,
+                         (ClaimChange("native", "argument_work", absent=True),),
+                         native_results=True, returned_default_work=True),
+        *tuple(IdentityScenario("native-" + side + "-" + claim + "-" + name, scope,
+                                (ClaimChange(side, claim, value),), False, diagnostic, native_results=True)
+               for side, claim in effect_claims
+               for name, value in (("wrong", "contradictory-identity"), ("null", None))),
+        *tuple(IdentityScenario("native-" + side + "-" + claim + "-absent", scope,
+                                (ClaimChange(side, claim, absent=True),), native_results=True)
+               for side, claim in effect_claims),
+        *tuple(IdentityScenario("native-return-duplicate-work-" + name, scope,
+                                (ClaimChange("duplicate-return", "embedded_work", value),), False, diagnostic,
+                                native_results=True, duplicate_result=True)
+               for name, value in (("wrong", "other-work"), ("null", None))),
+        *tuple(IdentityScenario("native-return-qualified-history-" + str(stale), scope,
+                                native_results=True, historical_scope="retired", historical_stale=stale)
+               for stale in (False, True)),
+    )
+
+
 EXCHANGE_SCENARIOS = (
+    *_native_result_scenarios("exchange"),
     IdentityScenario("authorized-native", "exchange"),
     IdentityScenario("native-actor-absent", "exchange", (ClaimChange("native", "actor", absent=True),)),
     IdentityScenario("identical-native-duplicate", "exchange", duplicate=True),
@@ -120,6 +181,7 @@ EXCHANGE_SCENARIOS = (
 
 
 LIFECYCLE_SCENARIOS = (
+    *_native_result_scenarios("lifecycle"),
     IdentityScenario("retained-valid", "lifecycle"),
     *tuple(IdentityScenario("operation-session-" + claim + "-" + name, "lifecycle", (ClaimChange("operation", claim, value),),
                             False, "lifecycle_result_binding")
@@ -170,6 +232,14 @@ def assert_identity_scenario(factory: IdentityFactory, scenario: IdentityScenari
     subject = factory(scenario.scope, operation)
     control = subject.evaluate()
     assert control.accepted, ("IV03_VALID_CONTROL", control.detail)
+    if scenario.native_results:
+        subject.add_native_results()
+    if scenario.duplicate_result:
+        subject.duplicate_native_result()
+    if scenario.opaque_result:
+        subject.add_opaque_native_result()
+    if scenario.returned_default_work:
+        subject.enrich_return_work()
     if scenario.alternate_work:
         subject.select_alternate_work()
     if scenario.omit_work:
@@ -180,6 +250,8 @@ def assert_identity_scenario(factory: IdentityFactory, scenario: IdentityScenari
         subject.duplicate_completed_callback()
     if scenario.historical_scope:
         subject.add_historical_call(scenario.historical_scope, scenario.historical_stale)
+    configured_control = subject.evaluate()
+    assert configured_control.accepted, ("IV03_CONFIGURED_VALID_CONTROL", scenario.name, configured_control.detail)
     for change in scenario.changes:
         subject.change_claim(change)
     observed = subject.evaluate()
@@ -198,6 +270,7 @@ def assert_identity_scenario(factory: IdentityFactory, scenario: IdentityScenari
             "application_effect_arguments_mismatch": {"native_callback_missing_or_misbound", "native_call_id_conflict"},
             "persisted_evidence_actor_mismatch": {"sender_receipt_missing_or_duplicate", "native_callback_missing_or_misbound",
                                                   "application_effect_arguments_mismatch"},
+            "native_result_binding": {"independent_native_arguments_mismatch", "native_result_identity_mismatch"},
         }
         allowed = {scenario.diagnostic} | receipt_reasons.get(scenario.diagnostic, set())
         assert allowed & observed.diagnostics, ("IV03_NAMED_REJECTION", scenario.name, observed.detail)
@@ -220,6 +293,26 @@ def assert_native_claim_provenance(factory: IdentityFactory, value: Any, *, abse
     # Projection is a snapshot; later fixture mutations must not rewrite its raw
     # evidence. The expected snapshot comes from input records, not verdicts.
     subject.change_claim(ClaimChange("duplicate", "actor", "later-mutation"))
+    expected = {row["id"]: row for row in originals}
+    assert {fact["raw_ref"]["id"]: fact["raw_observation"] for fact in facts
+            if fact.get("raw_ref", {}).get("id") in expected} == expected
+
+
+def assert_native_result_provenance(factory: IdentityFactory, value: Any, *, absent: bool = False) -> None:
+    subject = factory("exchange", "reconnect")
+    subject.add_native_results()
+    subject.change_claim(ClaimChange("return", "actor", value, absent=absent))
+    originals = subject.source_native_records()
+    facts = subject.native_facts()
+    for record in originals:
+        matching = [fact for fact in facts if fact.get("raw_ref") == {"kind": "native_observation", "id": record["id"]}]
+        assert len(matching) == 1, ("IV03_RETURN_RAW_REFERENCE_PRESERVED", record["id"], facts)
+        fact = matching[0]
+        assert fact.get("raw_observation") == record, "IV03_RETURN_RAW_PROVENANCE_PRESERVED"
+        assert ("native_actor" in fact) == ("created_by" in record), "IV03_RETURN_ABSENCE_IS_NOT_NULL"
+        if "created_by" in record:
+            assert fact["native_actor"] == record["created_by"], "IV03_RETURN_CONFLICTING_ACTOR_PRESERVED"
+    subject.change_claim(ClaimChange("return", "actor", "later-mutation"))
     expected = {row["id"]: row for row in originals}
     assert {fact["raw_ref"]["id"]: fact["raw_observation"] for fact in facts
             if fact.get("raw_ref", {}).get("id") in expected} == expected

@@ -21,6 +21,13 @@ class _Decoder:
                           "arguments": item.get("arguments"), "origin": self.origin})
         if not (fixture or source.startswith(self.prefix)):
             return facts
+        if kind in {"native_tool_result", "tool_result"}:
+            # Preserve every native return envelope, including a contradictory
+            # action on an otherwise matching call. The core interprets typed
+            # effects only for recognized application actions.
+            facts.append({"event": "native_result", "call_id": item.get("call_id"),
+                          "tool": item.get("action"), "origin": self.origin,
+                          **{key: item[key] for key in ("arguments", "result") if key in item}})
         if kind in {"activity", "native_completion", "native_completion_unknown", "turn_completed", "turn_failed"}:
             state = item.get("state") if kind == "activity" else item.get("activity")
             facts.append({"event": "activity", "state": state if state in {"idle", "active", "unknown"} else "unknown",

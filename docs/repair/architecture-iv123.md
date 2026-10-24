@@ -40,6 +40,14 @@ optional claim stays absent; a contradictory explicit claim cannot be replaced
 by a valid claim from another record. Opaque arguments and payloads remain raw
 values rather than an invitation to recursively infer identity.
 
+Applicable typed native return records are included as well as native calls and
+application callbacks. Concrete decoders expose those returns as facts; shared
+rules compare their explicit message/evidence claims with the callback and saved
+effect. A metadata-only native return remains valid. Opaque provider results are
+not interpreted as application effects. This boundary was added after a frozen
+raw replay found contradictory returned work claims still passing; the handoff
+retains that superseded candidate and the failing replay.
+
 The same independent identity scenarios also exercise the application's verified
 receipt policy through a separate subject adapter. That comparison exposed
 product-side joins which could borrow a valid observation's identity and accept

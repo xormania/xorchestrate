@@ -60,7 +60,9 @@ def tool_audit(events, sessions, *, decoders=None):
 
 def _native_facts(raw, sessions, mode, decoders):
     return decode_observations(raw.get("observations", []), sessions,
-        {row["id"]: row for row in raw.get("sessions", [])}, mode, decoders)
+        {row["id"]: row for row in raw.get("sessions", [])}, mode, decoders,
+        effects={"message": {row["id"]: row for row in raw.get("messages", [])},
+                 "evidence": {row["id"]: row for row in raw.get("evidence", [])}})
 
 
 def _prepare(run, cases, decoders):
@@ -74,7 +76,8 @@ def _prepare(run, cases, decoders):
             raw = run.get("raw_records", {})
         else:
             records = next((item["records"] for item in run.get("lifecycle_records", []) if item.get("peer") == peer), {})
-            raw = {"observations": records.get("native_observation", []), "sessions": records.get("session", [])}
+            raw = {"observations": records.get("native_observation", []), "sessions": records.get("session", []),
+                   "evidence": records.get("evidence", [])}
         lifecycle = next((event for event in [*run.get("events", []), *run.get("lifecycle_events", [])]
                           if event.get("event") == "lifecycle" and event.get("peer") == peer
                           and event.get("operation") == operation), {})

@@ -90,14 +90,27 @@ def _callback(snapshot, actor, action, arguments_match, result_match):
                     and observed.get("action") == action and observed.get("arguments") == data["arguments"]
                     and (observed.get("phase") != "completed" or result_match(observed.get("result", {}))),
                     "native_call_id_conflict")
-        for record in native:
+        returned = [record for record in same_call if record.get("observation", {}).get("kind") in
+                    {"native_tool_result", "tool_result"} and record.get("observation", {}).get("source")]
+        for record in [*native, *returned]:
             observed = record["observation"]
             raw = observed.get("arguments", {})
             require(_valid_observation(record, snapshot, actor) and observed.get("action") == action
-                    and isinstance(raw, dict) and all(data["arguments"].get(k) == v for k, v in raw.items()
-                                                     if k != "idempotency_key")
-                    and set(data["arguments"]) - set(raw) <= {"idempotency_key", "work_id"},
+                    and ((record in returned and "arguments" not in observed)
+                         or isinstance(raw, dict) and all(data["arguments"].get(k) == v for k, v in raw.items()
+                                                          if k != "idempotency_key")
+                         and set(data["arguments"]) - set(raw) <= {"idempotency_key", "work_id"}),
                     "independent_native_arguments_mismatch")
+        # A native return is another observation of the application result.
+        # Some adapters retain only the call metadata; when the typed result is
+        # present its explicit identities must agree with the durable effect.
+        for record in returned:
+            observed = record["observation"]
+            result = observed.get("result")
+            kind = "message" if action == "send_message" else "evidence"
+            require("result" not in observed or isinstance(result, dict)
+                    and (kind not in result or result_match(result)),
+                    "native_result_identity_mismatch")
         require(all(_valid_observation(record, snapshot, actor) for record in requests), "native_request_identity_mismatch")
         return {"native": native[0]["id"], "requested": requests[0]["id"], "completed": completed["id"],
                 "session_id": completed["session_id"], "call_id": data["call_id"],

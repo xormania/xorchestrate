@@ -19,7 +19,7 @@ def observation_peer(record, peer_sessions):
     return peer
 
 
-def decode_observations(observations, peer_sessions, session_records, mode, decoders):
+def decode_observations(observations, peer_sessions, session_records, mode, decoders, *, effects=None):
     """Preserve each raw observation and explicit claim around adapter facts.
 
     Peers and decoder origins are supplied by composition. This module knows the
@@ -48,6 +48,13 @@ def decode_observations(observations, peer_sessions, session_records, mode, deco
                 **({"actor_id": session["actor_id"]} if "actor_id" in session else {}),
                 **{key: session.get("backend", {}).get(key) for key in ("native_id", "incarnation")}}
         for fact in decoders[peer].decode(deepcopy(record), mode):
+            if fact.get("event") == "native_result" and isinstance(fact.get("result"), dict):
+                kind = {"send_message": "message", "record_result": "evidence"}.get(fact.get("tool"))
+                if kind is not None:
+                    embedded = fact["result"].get(kind)
+                    saved = (effects or {}).get(kind, {})
+                    if isinstance(embedded, dict) and embedded.get("id") in saved:
+                        fact["persisted_" + kind] = deepcopy(saved[embedded["id"]])
             facts.append({**deepcopy(fact), **identity,
                           "at": fact.get("at", item.get("at", record.get("created_at"))),
                           "expected_origin": decoders[peer].origin,
@@ -71,7 +78,9 @@ def normalize(raw, peer_sessions, provider_events, mode, *, decoders: dict[str, 
     def add(event, peer, at, **data):
         events.append({"event": event, "peer": peer, "at": at, **deepcopy(peer_sessions.get(peer, {})), **deepcopy(data)})
 
-    for fact in decode_observations(observations, peer_sessions, session_records, mode, decoders):
+    for fact in decode_observations(observations, peer_sessions, session_records, mode, decoders,
+            effects={"message": {row["id"]: row for row in raw.get("messages", [])},
+                     "evidence": {row["id"]: row for row in raw.get("evidence", [])}}):
         # Turn facts are consumed independently by the completion ledger. Keep
         # this established application event sequence free of protocol ticks.
         if fact["event"] == "native_turn":
