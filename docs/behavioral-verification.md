@@ -20,9 +20,9 @@ organization restriction.
 | Outstanding-tool exchange | 3 | Submission inside a held provider callback followed by the complete exchange |
 | Unfinished-work exchange | 6 | Complete exchange with submission and reply before later work batches finish |
 | Work batches | 9 | Three independently scored latest-attempt build-log batches for each harness |
-| Native turn completion | 3 | Matching native completion observations after submissions |
+| Native turn completion | 3 | Latest qualified aggregate idle after matching callback completion; applicable pending or unknown durable effects veto completion |
 | Lifecycle | 15 | Resume, external attachment, detach, reconnect and replaced connection for each harness; native retained-memory probes and stale-binding rejection |
-| Native-call audit | 1 | Every actual application callback matches native action, arguments, conversation, incarnation and call identity |
+| Native-call audit | 1 | Every requested and completed application callback independently matches native action, arguments, conversation, session, incarnation, call identity and actor bindings |
 
 Busy submission does not assert interruption during token generation. Reports
 retain acknowledgement-after-reply timing. Unfinished-work cases require the
