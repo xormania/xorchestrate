@@ -1,0 +1,16 @@
+{
+  "repository": "https://github.com/xormania/xorchestrate",
+  "pr": 6,
+  "product_commit": "1fef55c0c0cadd5e1417c0e010f272f6447f8ea4",
+  "product_tree": "75ecb3ef4edbc381012fe74e416a9abd3fb5c667",
+  "original_candidate_commit": "e565863ae72180571678c8f6118ee6e00b129e2e",
+  "original_candidate_tree": "474de55c5947890ab4092daeca7ff39f9bbbc400",
+  "review_publication_commit": "0f55a1a031a047b8730ef37bc6eda20e17e3cdb0",
+  "superseded_product_commit": "42c4d8b9feec2d54b6a9bc0e3fb27fc90af2a004",
+  "superseded_product_tree": "e8e185ee9af57c67212f0bfca08f20a9ef5bf32a",
+  "base_commit": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+  "hosted_integration_commit": "2894c5eb2d210656e6d29293a85836a846672c45",
+  "ci_run": 40141188920,
+  "evidence_publication_role": "This publication commit contains artifacts only; its parent is product_commit. It is not the measured product commit.",
+  "merged": false
+}

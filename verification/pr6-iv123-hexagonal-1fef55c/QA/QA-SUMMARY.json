@@ -1,0 +1,25 @@
+{
+  "passed": true,
+  "product_commit": "1fef55c0c0cadd5e1417c0e010f272f6447f8ea4",
+  "product_tree": "75ecb3ef4edbc381012fe74e416a9abd3fb5c667",
+  "archive_sha256": "fcea4c755438f12f4d5d865d9b2bcf526bb3c532adf882e63ba38dc0895462c9",
+  "archive_bytes": 305525395,
+  "manifest_sha256": "573a1512a2d2579307f1184b1b277fdbe95f6a3d3594e187d0453edf4e40e4d8",
+  "parts": 7,
+  "payload_files": 72508,
+  "payload_bytes": 1507614190,
+  "recorded_symlinks": 1120,
+  "excluded_special_files": 0,
+  "publication_checksums_verified": true,
+  "restored_payloads_verified": true,
+  "source_git_blobs_verified": 1339,
+  "source_archive_sha256": "df3e115ef6b363b2d135292d52c7f2adc4d01cc571ff5d32b01efabfac6eef99",
+  "restored_replay": {
+    "cases": 8,
+    "valid_controls": 2,
+    "rejected_contradictions": 6,
+    "false_accepts": [],
+    "false_rejects": []
+  },
+  "retained_failed_qa_attempt": "source-archive-verification-v2.log: supplemental audit treated tar symlink permission bits as regular executable bits; corrected v3 checks Git link type and regular executable modes."
+}

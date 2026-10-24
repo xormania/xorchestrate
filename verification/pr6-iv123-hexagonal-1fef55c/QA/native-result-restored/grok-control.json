@@ -1,0 +1,940 @@
+{
+  "expected_accept": true,
+  "independent_claim_agreement": true,
+  "record": {
+    "created_at": "2026-10-24T21:50:05.871215+00:00",
+    "created_by": "grok",
+    "driver": "grok",
+    "id": "cf3f05ad533789fc3559fccfe075437899b29bf9c330b2d90f107fd8760995c1",
+    "observation": {
+      "action": "record_result",
+      "arguments": {
+        "result": {
+          "verification": {
+            "case_id": "lifecycle-grok-reconnect",
+            "memory": "3d9e51fa56522bafdca7018f0c26f370",
+            "phase": "lifecycle",
+            "run_id": "2758acc2c2ba4d9fa30382058cfea882"
+          }
+        }
+      },
+      "at": "2026-10-24T21:50:05.707939+00:00",
+      "bridge_bound": true,
+      "bridge_identity_conflict": false,
+      "call_id": "748edee4ceb04d5ea9aa3cd824b73338",
+      "host_id": "2c61d8e95e644677b406d099d93e1667",
+      "incarnation": "2fa37f6623ca471eb049a5f731962106",
+      "kind": "native_tool_result",
+      "native_id": "native-6c328812caef4f43b4e6fb03ae473802",
+      "native_incarnation": "0e1e1b7cd6324dadbee5d9b1d492eb8d",
+      "result": {
+        "evidence": {
+          "created_at": "2026-10-24T21:50:05.705583+00:00",
+          "created_by": "grok",
+          "id": "993fb8ae019b45d5b65149ea40749140",
+          "label": null,
+          "metadata": {},
+          "result": {
+            "verification": {
+              "case_id": "lifecycle-grok-reconnect",
+              "memory": "3d9e51fa56522bafdca7018f0c26f370",
+              "phase": "lifecycle",
+              "run_id": "2758acc2c2ba4d9fa30382058cfea882"
+            }
+          },
+          "source": {
+            "actor": "grok",
+            "type": "caller"
+          },
+          "version": 1,
+          "work_id": "0d8221c688114afabddb504a030cae44"
+        }
+      },
+      "sequence": 41,
+      "source": "grok"
+    },
+    "origin": "adapter",
+    "session_id": "2a2e3117da404e4fa7104f2f95bf8930",
+    "stale": false,
+    "version": 1,
+    "work_id": "0d8221c688114afabddb504a030cae44"
+  },
+  "report": {
+    "bindings": {
+      "candidate_sha256": "53c2873d9311c9492958e4beeec7da801cb9cfe4a76fea8d270dbba775acfc49",
+      "checker_sha256": "372a9d24352752610868ad367912380cb5e1e83ed8b77eea92b02434a1dfc5f5",
+      "configuration_sha256": "566be317634889dae0ec497f7aaea2d8bfa556a60577f7c228c365140d000cf5",
+      "criteria_sha256": "75d44ff3e1c04ad0a82dcdeb3ebd08c2904cc654dd4e4e8b820a9e6dbd5abbf7",
+      "fixture_sha256": "d2e6b553a9b8995ab47097a07a97867504dfa06a1df631e6a479cc8056f5702d",
+      "owner_basis_sha256": "41545d3fab334e432f58f1f1b1367c70bed29bf2c39c1280c3eacd9cbdc783ad"
+    },
+    "cases": [
+      {
+        "evidence": {
+          "event_seqs": [
+            8
+          ]
+        },
+        "id": "startup-codex",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "event_seqs": [
+            31
+          ]
+        },
+        "id": "startup-claude",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "event_seqs": [
+            20
+          ]
+        },
+        "id": "startup-grok",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "attempt_ids": [
+            "b58ca3cc00ec46809d1eff2b63d8113e",
+            "8c9d8a5796964569be81f23a81b1a654"
+          ],
+          "event_seqs": [
+            42,
+            49,
+            54,
+            61,
+            67
+          ],
+          "native_seqs": [
+            40,
+            51,
+            65
+          ],
+          "timing": {
+            "challenge_ack_after_reply": false,
+            "reply_ack_after_receipt": false
+          }
+        },
+        "id": "direct-codex-claude",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "attempt_ids": [
+            "b5812ca767364e66b5715a9638454b5c",
+            "f386f280be0f497aa73740fd1a62c80b"
+          ],
+          "event_seqs": [
+            79,
+            87,
+            92,
+            104,
+            108
+          ],
+          "native_seqs": [
+            77,
+            89,
+            106
+          ],
+          "timing": {
+            "challenge_ack_after_reply": false,
+            "reply_ack_after_receipt": false
+          }
+        },
+        "id": "direct-codex-grok",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "attempt_ids": [
+            "e0e25e6fa38a4393aab9d04474684fb2",
+            "3028f2efdbc2487ca9c486ca8491cb87"
+          ],
+          "event_seqs": [
+            118,
+            124,
+            131,
+            138,
+            143
+          ],
+          "native_seqs": [
+            115,
+            127,
+            140
+          ],
+          "timing": {
+            "challenge_ack_after_reply": false,
+            "reply_ack_after_receipt": false
+          }
+        },
+        "id": "direct-claude-codex",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "attempt_ids": [
+            "1f7276c8dd3045b282d37d8f5c0ed3b6",
+            "9a8ab1d110af45b783cc99dc879497f7"
+          ],
+          "event_seqs": [
+            152,
+            157,
+            162,
+            173,
+            178
+          ],
+          "native_seqs": [
+            149,
+            159,
+            175
+          ],
+          "timing": {
+            "challenge_ack_after_reply": false,
+            "reply_ack_after_receipt": false
+          }
+        },
+        "id": "direct-claude-grok",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "attempt_ids": [
+            "9a81366c28f541a2aa1df93e7201e8b0",
+            "0fd7dc6cdbc945d9934fe519e58df748"
+          ],
+          "event_seqs": [
+            188,
+            200,
+            204,
+            211,
+            217
+          ],
+          "native_seqs": [
+            185,
+            202,
+            214
+          ],
+          "timing": {
+            "challenge_ack_after_reply": false,
+            "reply_ack_after_receipt": false
+          }
+        },
+        "id": "direct-grok-codex",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "attempt_ids": [
+            "78af80faa4eb40eb915faf8ddcc7c920",
+            "6b58a052f740418ab2481f819e6f5c03"
+          ],
+          "event_seqs": [
+            230,
+            239,
+            244,
+            249,
+            254
+          ],
+          "native_seqs": [
+            227,
+            241,
+            251
+          ],
+          "timing": {
+            "challenge_ack_after_reply": false,
+            "reply_ack_after_receipt": false
+          }
+        },
+        "id": "direct-grok-claude",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "attempt_ids": [
+            "0f2f9c6c6f2b41498bef0896c53fc328",
+            "11c606868c134a0daa9279fc9c71427f"
+          ],
+          "event_seqs": [
+            275,
+            282,
+            292,
+            301,
+            306
+          ],
+          "native_seqs": [
+            272,
+            284,
+            303
+          ],
+          "timing": {
+            "challenge_ack_after_reply": false,
+            "reply_ack_after_receipt": false,
+            "reply_before_hold_finished": false
+          }
+        },
+        "id": "busy-claude-codex",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "attempt_ids": [
+            "cdab4e48cf694f718f71c80dbbabce89",
+            "351854d8bc9048a58a817d3c19085918"
+          ],
+          "event_seqs": [
+            321,
+            330,
+            340,
+            346,
+            350
+          ],
+          "native_seqs": [
+            318,
+            337,
+            347
+          ],
+          "timing": {
+            "challenge_ack_after_reply": false,
+            "reply_ack_after_receipt": false,
+            "reply_before_hold_finished": false
+          }
+        },
+        "id": "busy-grok-claude",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "attempt_ids": [
+            "44c441d07f9e4078a5a1e2a07bc89487",
+            "30d86a1622e14103974880d5a387f41a"
+          ],
+          "event_seqs": [
+            372,
+            380,
+            393,
+            403,
+            407
+          ],
+          "native_seqs": [
+            370,
+            385,
+            405
+          ],
+          "timing": {
+            "challenge_ack_after_reply": false,
+            "reply_ack_after_receipt": false,
+            "reply_before_hold_finished": false
+          }
+        },
+        "id": "busy-codex-grok",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "attempt_ids": [
+            "141389f9d8744bbcac6f29004eeed1fa",
+            "14a92bf245a5402e96bc85400d18b9a8"
+          ],
+          "event_seqs": [
+            475,
+            488,
+            539,
+            595,
+            604
+          ],
+          "native_seqs": [
+            472,
+            526,
+            593
+          ],
+          "timing": {
+            "challenge_ack_after_reply": false,
+            "reply_ack_after_receipt": false,
+            "reply_before_work_completed": true
+          }
+        },
+        "id": "work-codex-claude-0",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "attempt_ids": [
+            "f6ea673219764f1190f43e5773ae1ff9",
+            "7d33546ced3d461797ad5f79bcc3278f"
+          ],
+          "event_seqs": [
+            489,
+            533,
+            586,
+            642,
+            657
+          ],
+          "native_seqs": [
+            484,
+            568,
+            641
+          ],
+          "timing": {
+            "challenge_ack_after_reply": false,
+            "reply_ack_after_receipt": false,
+            "reply_before_work_completed": true
+          }
+        },
+        "id": "work-codex-claude-1",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "attempt_ids": [
+            "e874bfb522b445b18266a8070942f209",
+            "0ca5d77dc99946a087ede3a1009723fc"
+          ],
+          "event_seqs": [
+            511,
+            556,
+            585,
+            629,
+            664
+          ],
+          "native_seqs": [
+            501,
+            567,
+            651
+          ],
+          "timing": {
+            "challenge_ack_after_reply": false,
+            "reply_ack_after_receipt": false,
+            "reply_before_work_completed": true
+          }
+        },
+        "id": "work-claude-grok-0",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "attempt_ids": [
+            "71f4787c6f42407dafa407b0a6d74322",
+            "9d556cd432a844f9945806f1c9c440af"
+          ],
+          "event_seqs": [
+            544,
+            573,
+            598,
+            648,
+            674
+          ],
+          "native_seqs": [
+            536,
+            577,
+            669
+          ],
+          "timing": {
+            "challenge_ack_after_reply": false,
+            "reply_ack_after_receipt": false,
+            "reply_before_work_completed": true
+          }
+        },
+        "id": "work-claude-grok-1",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "attempt_ids": [
+            "4af10a8ed2df4fcdb2a97c4569dda400",
+            "62f59fa1c317402e97152160595442a3"
+          ],
+          "event_seqs": [
+            492,
+            517,
+            528,
+            611,
+            622
+          ],
+          "native_seqs": [
+            479,
+            520,
+            615
+          ],
+          "timing": {
+            "challenge_ack_after_reply": false,
+            "reply_ack_after_receipt": false,
+            "reply_before_work_completed": true
+          }
+        },
+        "id": "work-grok-codex-0",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "attempt_ids": [
+            "30eccd046bdb40658ca0a0454ef6e9aa",
+            "b120504dce2f473d9f2c394b1aeb37ab"
+          ],
+          "event_seqs": [
+            509,
+            551,
+            562,
+            632,
+            647
+          ],
+          "native_seqs": [
+            502,
+            553,
+            636
+          ],
+          "timing": {
+            "challenge_ack_after_reply": false,
+            "reply_ack_after_receipt": false,
+            "reply_before_work_completed": true
+          }
+        },
+        "id": "work-grok-codex-1",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "event_seqs": [
+            432
+          ]
+        },
+        "id": "work-batch-codex-0",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "event_seqs": [
+            696
+          ]
+        },
+        "id": "work-batch-codex-1",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "event_seqs": [
+            748
+          ]
+        },
+        "id": "work-batch-codex-2",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "event_seqs": [
+            758
+          ]
+        },
+        "id": "completion-codex",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "callback_observation_id": "b393ed4e872ce59da538e67359b4ec9550955a6b62852852a230575f43ac303c",
+          "evidence_id": "987785e3cafc47b9bb51a404d94a561f",
+          "native_observation_id": "4735e24a81014ae1a149e7f81e4ef74bda3aa52af871cf567ea4502f2c6cb39d",
+          "operation_id": "d0a293e684f165633ac89d32811bc013f40b86570a79ccab3f0fa64c55bace28"
+        },
+        "id": "lifecycle-codex-resume",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "callback_observation_id": "3b9bb3f616d46cc3a7be85043820b00cb8d16cdac6523cba740d07fd50e2937c",
+          "evidence_id": "c41648cfd3684f32b528da7c676241d3",
+          "native_observation_id": "87bccc2d66f25bc2e726aafd786a5684397f4767bcfd1ccb4ce459eecff47dfa",
+          "operation_id": "ba8b21c746e84253edd05db86263b04d12d182de7b4eb7027e7a57f18c3f30c5"
+        },
+        "id": "lifecycle-codex-reconnect",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "callback_observation_id": "6d90d38331da9298193cc9f2d58919a3103a6543ab3aa26e9d7855490a49d1ee",
+          "evidence_id": "9dd5f93f5464465395c24c7bc6b43173",
+          "native_observation_id": "66927cae256b19a1d20c10297f32a268d1c680cecf65b31e4f9ebd95cfa203e3",
+          "operation_id": "682b02c255b92698e94364789fad6ad7ad330ed5ece49982e368ec623d89c35f"
+        },
+        "id": "lifecycle-codex-attach",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "host_process_observation": {
+            "observed_at": "2026-10-24T21:50:00.709014+00:00",
+            "pid": 5559,
+            "returncode": null
+          },
+          "operation_id": "f2938d987c2707b0e83624cc88b0b3a76fbe51396bfbcfd18491fd1043520267"
+        },
+        "id": "lifecycle-codex-detach",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "callback_observation_id": "186e2a8ad094f5143a9cf61ad11412271758aab4e11787ec20619c035e3deda1",
+          "evidence_id": "be92bef356e04de6b5110059d5f11f76",
+          "native_observation_id": "f191dd4f93b61136e29d540b87901a95e6f1cdc03995372b19dba8f36dab747c",
+          "operation_id": "e2fda910b77c182daf4a272f55141885192ce5efe64121dd4fd4fd0a69a1a88b"
+        },
+        "id": "lifecycle-codex-replace",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "event_seqs": [
+            463
+          ]
+        },
+        "id": "work-batch-claude-0",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "event_seqs": [
+            726
+          ]
+        },
+        "id": "work-batch-claude-1",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "event_seqs": [
+            780
+          ]
+        },
+        "id": "work-batch-claude-2",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "event_seqs": [
+            785
+          ]
+        },
+        "id": "completion-claude",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "callback_observation_id": "08ac5d188a11cd5dbe4aaf275e08640e6e6117355642618f4c5eb83f2014ac02",
+          "evidence_id": "3cdc268e87d44ac39930e82e3bcfb5e8",
+          "native_observation_id": "ff668f40be300eeb74681b6f3798ea181441942fd832c76e99f1689a7f3d0f4f",
+          "operation_id": "a2c317141e184673a75be51909233afa60c5ed7500366ae07692de6317b61759"
+        },
+        "id": "lifecycle-claude-resume",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "callback_observation_id": "4298f5f4dfbfcbfce7b9d37044acd6be32710b25a7d4cc70f9d353552207efce",
+          "evidence_id": "d58a702a4de9448ea615749b331ad213",
+          "native_observation_id": "624ca2b6d7272f651775bb81937916ac64f7ccaca473fda647d6772b35c1dbd0",
+          "operation_id": "20e4abd164d2e3c7bf1f07d1ffc497d6c40dbc94bebed2d5090d46595091a893"
+        },
+        "id": "lifecycle-claude-reconnect",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "callback_observation_id": "69b10def4690b4458d25ba6e1745bb705561c7fa02b65b4a3e98aa74d66cc3e7",
+          "evidence_id": "da4c065125e84701aca0ba6cdc8b98a3",
+          "native_observation_id": "98c522b5a7cee05c8eb74e2b352cf813e5e109bcdfab6c0187dce0d830b73d1f",
+          "operation_id": "ce6f63a0fed3a42cec156d4db38d13165f5d1230866a8445015adb0998e6bc81"
+        },
+        "id": "lifecycle-claude-attach",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "host_process_observation": {
+            "observed_at": "2026-10-24T21:50:03.519510+00:00",
+            "pid": 6122,
+            "returncode": null
+          },
+          "operation_id": "44bf83e3a01b1add16e3ecc0079316d1402d474b1c7c59e212f9b0f64a4c4580"
+        },
+        "id": "lifecycle-claude-detach",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "callback_observation_id": "f9914d0eab34391f7db3425a6add73eac25797021278a0113d56c248f117b331",
+          "evidence_id": "3d437b3b409b4a8fa8383a0403a2097b",
+          "native_observation_id": "516ec20162a84be9314dc4c034a4663587a1d1d673714803e579595b40d1217a",
+          "operation_id": "d471a9f7073f684596246e7cb0a2c792129fbbfdac90ee9308ed6e96d0759b01"
+        },
+        "id": "lifecycle-claude-replace",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "event_seqs": [
+            449
+          ]
+        },
+        "id": "work-batch-grok-0",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "event_seqs": [
+            713
+          ]
+        },
+        "id": "work-batch-grok-1",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "event_seqs": [
+            766
+          ]
+        },
+        "id": "work-batch-grok-2",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "event_seqs": [
+            776
+          ]
+        },
+        "id": "completion-grok",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "callback_observation_id": "57c41f3518ed8ccf60acd3f07a7e37294aeca342b5cdce35cfd40a2cd3dd18b1",
+          "evidence_id": "ff78603a66cf4225aa22d9717830a576",
+          "native_observation_id": "9fedd1e92f3e846abb807342f2a84c638f47f82f7396576c9b7ad00c724c0f91",
+          "operation_id": "06786b0afe7ec92c3afdb2f1d06adb52a2036d41215031a62c603262724f17d4"
+        },
+        "id": "lifecycle-grok-resume",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "callback_observation_id": "5443605512c01a25defeb08feb37f96a385779a5def59a597e0fe820be716305",
+          "evidence_id": "993fb8ae019b45d5b65149ea40749140",
+          "native_observation_id": "e5ab72cfc3df2e51ea0ebd358953f2daff854b6e2e54e55c9a7a8df4c19c9e67",
+          "operation_id": "5c20865fbd20c8a0f2be185e166e76965bbd8574c3d40bd6ee3b78e77d1d0924"
+        },
+        "id": "lifecycle-grok-reconnect",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "callback_observation_id": "d5e53e64e1dec702227a654f1f49134a5f3266f3037d298b9803738a5e61d500",
+          "evidence_id": "afc4aae4c4974ff1a413801c065884a3",
+          "native_observation_id": "8c1025b8c4f4ac49fdf3512e7bea23fb2ea92b603b466fac1f6fde026edff62e",
+          "operation_id": "c7833d798b339f8d3666b8202bfe0ed91109351b55cf5129acbf03962d43125a"
+        },
+        "id": "lifecycle-grok-attach",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "host_process_observation": {
+            "observed_at": "2026-10-24T21:50:05.671223+00:00",
+            "pid": 6271,
+            "returncode": null
+          },
+          "operation_id": "0ed58769c5d84b5d95521f60adf0802a0b9cddda9af7ec040c62f5577e38e13c"
+        },
+        "id": "lifecycle-grok-detach",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "callback_observation_id": "6c65f70351608dc1d8ae931dab60b4350cfba593f1ecf2d473bc20b3bea7c672",
+          "evidence_id": "05eb8778f8ab4a4d93dfc13cd8ad3875",
+          "native_observation_id": "a18c746ddf1f03ced2eb3c94d9d2985076b4d2aec5da242393160bc8470d0bc3",
+          "operation_id": "583a7f1d15e82f3ba3e80445f55708f020ee79ea501855c9291dc9780d79c89d"
+        },
+        "id": "lifecycle-grok-replace",
+        "status": "passed"
+      },
+      {
+        "evidence": {
+          "audited_calls": 69
+        },
+        "id": "native-tool-audit",
+        "status": "passed"
+      }
+    ],
+    "diagnostics": [],
+    "discovered": [
+      "startup-codex",
+      "startup-claude",
+      "startup-grok",
+      "direct-codex-claude",
+      "direct-codex-grok",
+      "direct-claude-codex",
+      "direct-claude-grok",
+      "direct-grok-codex",
+      "direct-grok-claude",
+      "busy-claude-codex",
+      "busy-grok-claude",
+      "busy-codex-grok",
+      "work-codex-claude-0",
+      "work-codex-claude-1",
+      "work-claude-grok-0",
+      "work-claude-grok-1",
+      "work-grok-codex-0",
+      "work-grok-codex-1",
+      "work-batch-codex-0",
+      "work-batch-codex-1",
+      "work-batch-codex-2",
+      "completion-codex",
+      "lifecycle-codex-resume",
+      "lifecycle-codex-reconnect",
+      "lifecycle-codex-attach",
+      "lifecycle-codex-detach",
+      "lifecycle-codex-replace",
+      "work-batch-claude-0",
+      "work-batch-claude-1",
+      "work-batch-claude-2",
+      "completion-claude",
+      "lifecycle-claude-resume",
+      "lifecycle-claude-reconnect",
+      "lifecycle-claude-attach",
+      "lifecycle-claude-detach",
+      "lifecycle-claude-replace",
+      "work-batch-grok-0",
+      "work-batch-grok-1",
+      "work-batch-grok-2",
+      "completion-grok",
+      "lifecycle-grok-resume",
+      "lifecycle-grok-reconnect",
+      "lifecycle-grok-attach",
+      "lifecycle-grok-detach",
+      "lifecycle-grok-replace",
+      "native-tool-audit"
+    ],
+    "executed": [
+      "startup-codex",
+      "startup-claude",
+      "startup-grok",
+      "direct-codex-claude",
+      "direct-codex-grok",
+      "direct-claude-codex",
+      "direct-claude-grok",
+      "direct-grok-codex",
+      "direct-grok-claude",
+      "busy-claude-codex",
+      "busy-grok-claude",
+      "busy-codex-grok",
+      "work-batch-codex-0",
+      "work-batch-claude-0",
+      "work-batch-grok-0",
+      "work-codex-claude-0",
+      "work-codex-claude-1",
+      "work-claude-grok-0",
+      "work-claude-grok-1",
+      "work-grok-codex-0",
+      "work-grok-codex-1",
+      "work-batch-codex-1",
+      "work-batch-claude-1",
+      "work-batch-grok-1",
+      "work-batch-codex-2",
+      "work-batch-claude-2",
+      "work-batch-grok-2",
+      "completion-codex",
+      "completion-claude",
+      "completion-grok",
+      "native-tool-audit",
+      "lifecycle-codex-resume",
+      "lifecycle-codex-attach",
+      "lifecycle-codex-detach",
+      "lifecycle-codex-reconnect",
+      "lifecycle-codex-replace",
+      "lifecycle-claude-resume",
+      "lifecycle-claude-attach",
+      "lifecycle-claude-detach",
+      "lifecycle-claude-reconnect",
+      "lifecycle-claude-replace",
+      "lifecycle-grok-resume",
+      "lifecycle-grok-attach",
+      "lifecycle-grok-detach",
+      "lifecycle-grok-reconnect",
+      "lifecycle-grok-replace"
+    ],
+    "mode": "protocol-fixture",
+    "native_acceptance": "pending_local_run",
+    "requested": [
+      "startup-codex",
+      "startup-claude",
+      "startup-grok",
+      "direct-codex-claude",
+      "direct-codex-grok",
+      "direct-claude-codex",
+      "direct-claude-grok",
+      "direct-grok-codex",
+      "direct-grok-claude",
+      "busy-claude-codex",
+      "busy-grok-claude",
+      "busy-codex-grok",
+      "work-codex-claude-0",
+      "work-codex-claude-1",
+      "work-claude-grok-0",
+      "work-claude-grok-1",
+      "work-grok-codex-0",
+      "work-grok-codex-1",
+      "work-batch-codex-0",
+      "work-batch-codex-1",
+      "work-batch-codex-2",
+      "completion-codex",
+      "lifecycle-codex-resume",
+      "lifecycle-codex-reconnect",
+      "lifecycle-codex-attach",
+      "lifecycle-codex-detach",
+      "lifecycle-codex-replace",
+      "work-batch-claude-0",
+      "work-batch-claude-1",
+      "work-batch-claude-2",
+      "completion-claude",
+      "lifecycle-claude-resume",
+      "lifecycle-claude-reconnect",
+      "lifecycle-claude-attach",
+      "lifecycle-claude-detach",
+      "lifecycle-claude-replace",
+      "work-batch-grok-0",
+      "work-batch-grok-1",
+      "work-batch-grok-2",
+      "completion-grok",
+      "lifecycle-grok-resume",
+      "lifecycle-grok-reconnect",
+      "lifecycle-grok-attach",
+      "lifecycle-grok-detach",
+      "lifecycle-grok-replace",
+      "native-tool-audit"
+    ],
+    "status": "passed"
+  },
+  "saved_effect": {
+    "created_at": "2026-10-24T21:50:05.705583+00:00",
+    "created_by": "grok",
+    "id": "993fb8ae019b45d5b65149ea40749140",
+    "label": null,
+    "metadata": {},
+    "result": {
+      "verification": {
+        "case_id": "lifecycle-grok-reconnect",
+        "memory": "3d9e51fa56522bafdca7018f0c26f370",
+        "phase": "lifecycle",
+        "run_id": "2758acc2c2ba4d9fa30382058cfea882"
+      }
+    },
+    "source": {
+      "actor": "grok",
+      "type": "caller"
+    },
+    "version": 1,
+    "work_id": "0d8221c688114afabddb504a030cae44"
+  }
+}

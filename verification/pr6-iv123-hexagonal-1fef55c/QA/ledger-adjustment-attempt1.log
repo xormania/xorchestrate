@@ -1,0 +1,1 @@
+Post-QA command-ledger adjustment initially ran from QA/ while using package-output/QA/ as a relative path, causing FileNotFoundError before any file changed. Retried with an absolute QA path; only replay command metadata changed. No archive, restored evidence or product changes.

@@ -1,0 +1,70 @@
+[
+  {
+    "name": "build",
+    "argv": [
+      "/workspace/work/pr6-review/venv/bin/python",
+      "package_review.py",
+      "build",
+      "--evidence-frozen",
+      "--output",
+      "package-output"
+    ],
+    "cwd": "/workspace/work/pr6-architecture-repair",
+    "exit": 0,
+    "log": "build.log"
+  },
+  {
+    "name": "publication-checksums",
+    "argv": [
+      "sha256sum",
+      "-c",
+      "SHA256SUMS"
+    ],
+    "cwd": "/workspace/work/pr6-architecture-repair/package-output/publish",
+    "exit": 0,
+    "log": "publication-checksums.log"
+  },
+  {
+    "name": "restore",
+    "argv": [
+      "/workspace/work/pr6-review/venv/bin/python",
+      "restore_review.py",
+      "--package",
+      "/workspace/work/pr6-architecture-repair/package-output/publish",
+      "--out",
+      "/workspace/work/pr6-architecture-repair/package-output/restored-qa"
+    ],
+    "exit": 0,
+    "log": "restoration.json"
+  },
+  {
+    "name": "source-archive-v3",
+    "argv": [
+      "/workspace/work/pr6-review/venv/bin/python",
+      "verify_source_archive.py",
+      "--restored",
+      "/workspace/work/pr6-architecture-repair/package-output/restored-qa",
+      "--candidate",
+      "/workspace/work/pr6-architecture-repair/candidate",
+      "--out",
+      "source-archive-verification-v3.json"
+    ],
+    "exit": 0,
+    "log": "source-archive-verification-v3.log"
+  },
+  {
+    "name": "restored-native-result",
+    "argv": [
+      "/workspace/work/pr6-review/venv/bin/python",
+      "/workspace/work/pr6-architecture-repair/package-output/restored-qa/evidence/replay/native_result_claims.py",
+      "--candidate",
+      "/workspace/work/pr6-architecture-repair/candidate",
+      "--input",
+      "/workspace/work/pr6-architecture-repair/package-output/restored-qa/evidence/replay/inputs/protocol",
+      "--out",
+      "/workspace/work/pr6-architecture-repair/package-output/QA/native-result-restored"
+    ],
+    "exit": 0,
+    "log": "native-result-restored.log"
+  }
+]

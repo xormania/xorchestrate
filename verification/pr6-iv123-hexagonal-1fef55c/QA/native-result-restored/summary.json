@@ -1,0 +1,56 @@
+{
+  "candidate": "1fef55c0c0cadd5e1417c0e010f272f6447f8ea4",
+  "false_accepts": [],
+  "false_rejects": [],
+  "input_raw_sha256": "f6add3f7c4abbe99643d1250ee734fe1b771ee31d188ab34f6a6e718440eef9d",
+  "rows": [
+    {
+      "actual_accept": true,
+      "expectation_met": true,
+      "expected_accept": true,
+      "name": "codex-control"
+    },
+    {
+      "actual_accept": false,
+      "expectation_met": true,
+      "expected_accept": false,
+      "name": "codex-wrong-work"
+    },
+    {
+      "actual_accept": false,
+      "expectation_met": true,
+      "expected_accept": false,
+      "name": "codex-null-work"
+    },
+    {
+      "actual_accept": false,
+      "expectation_met": true,
+      "expected_accept": false,
+      "name": "codex-wrong-actor"
+    },
+    {
+      "actual_accept": true,
+      "expectation_met": true,
+      "expected_accept": true,
+      "name": "grok-control"
+    },
+    {
+      "actual_accept": false,
+      "expectation_met": true,
+      "expected_accept": false,
+      "name": "grok-wrong-work"
+    },
+    {
+      "actual_accept": false,
+      "expectation_met": true,
+      "expected_accept": false,
+      "name": "grok-null-work"
+    },
+    {
+      "actual_accept": false,
+      "expectation_met": true,
+      "expected_accept": false,
+      "name": "grok-wrong-actor"
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "verified": true,
+  "files": 72508,
+  "payload_bytes": 1507614190,
+  "archive_sha256": "fcea4c755438f12f4d5d865d9b2bcf526bb3c532adf882e63ba38dc0895462c9",
+  "output": "/workspace/work/pr6-architecture-repair/package-output/restored-qa",
+  "recorded_symlinks": 1120,
+  "excluded_special_files": 0
+}

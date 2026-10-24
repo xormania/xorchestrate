@@ -1,0 +1,50 @@
+{
+  "format": "xorchestrate-pr6-evidence-v1",
+  "product_commit": "1fef55c0c0cadd5e1417c0e010f272f6447f8ea4",
+  "product_tree": "75ecb3ef4edbc381012fe74e416a9abd3fb5c667",
+  "archive_name": "pr6-iv123-evidence.zip",
+  "archive_bytes": 305525395,
+  "archive_sha256": "fcea4c755438f12f4d5d865d9b2bcf526bb3c532adf882e63ba38dc0895462c9",
+  "manifest_sha256": "573a1512a2d2579307f1184b1b277fdbe95f6a3d3594e187d0453edf4e40e4d8",
+  "payload_files": 72508,
+  "payload_bytes": 1507614190,
+  "parts": [
+    {
+      "name": "pr6-iv123-evidence.zip.part0001",
+      "bytes": 47185920,
+      "sha256": "ef9518b7455b5f135ae466bd2296c1c99cebe770b5e5d4ec97a4099ca1b849c0"
+    },
+    {
+      "name": "pr6-iv123-evidence.zip.part0002",
+      "bytes": 47185920,
+      "sha256": "17f723d44391a09367a4fe919bcd5c3ed14457f9e0ec20a037cf51d041e7bcc5"
+    },
+    {
+      "name": "pr6-iv123-evidence.zip.part0003",
+      "bytes": 47185920,
+      "sha256": "e488f1a81926abad4b84c0d6c031c7f27f9767fbf953cc2b2a1c1598eae915ad"
+    },
+    {
+      "name": "pr6-iv123-evidence.zip.part0004",
+      "bytes": 47185920,
+      "sha256": "9831552ef30235113213ee9c246a1f6414890ab2218bfe243db7c2c184572f47"
+    },
+    {
+      "name": "pr6-iv123-evidence.zip.part0005",
+      "bytes": 47185920,
+      "sha256": "2f36eb89e245c9a5d50066f537e66ddf05cbd37db4221a700792042d6f4465b9"
+    },
+    {
+      "name": "pr6-iv123-evidence.zip.part0006",
+      "bytes": 47185920,
+      "sha256": "7e3af762d585d73c8a4c55ad4893fdca94a3417cc3d4aca026f810ddb3b0cda8"
+    },
+    {
+      "name": "pr6-iv123-evidence.zip.part0007",
+      "bytes": 22409875,
+      "sha256": "67fd405cf55b75a3dceeb9f83a6ffd9f17369a044f5bcf9fcdeb0dd076916c9e"
+    }
+  ],
+  "symlinks_recorded": 1120,
+  "special_files_excluded": 0
+}

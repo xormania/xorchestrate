@@ -1,0 +1,56 @@
+{
+  "candidate": "1fef55c0c0cadd5e1417c0e010f272f6447f8ea4",
+  "input_raw_sha256": "f6add3f7c4abbe99643d1250ee734fe1b771ee31d188ab34f6a6e718440eef9d",
+  "rows": [
+    {
+      "name": "codex-control",
+      "expected_accept": true,
+      "actual_accept": true,
+      "expectation_met": true
+    },
+    {
+      "name": "codex-wrong-work",
+      "expected_accept": false,
+      "actual_accept": false,
+      "expectation_met": true
+    },
+    {
+      "name": "codex-null-work",
+      "expected_accept": false,
+      "actual_accept": false,
+      "expectation_met": true
+    },
+    {
+      "name": "codex-wrong-actor",
+      "expected_accept": false,
+      "actual_accept": false,
+      "expectation_met": true
+    },
+    {
+      "name": "grok-control",
+      "expected_accept": true,
+      "actual_accept": true,
+      "expectation_met": true
+    },
+    {
+      "name": "grok-wrong-work",
+      "expected_accept": false,
+      "actual_accept": false,
+      "expectation_met": true
+    },
+    {
+      "name": "grok-null-work",
+      "expected_accept": false,
+      "actual_accept": false,
+      "expectation_met": true
+    },
+    {
+      "name": "grok-wrong-actor",
+      "expected_accept": false,
+      "actual_accept": false,
+      "expectation_met": true
+    }
+  ],
+  "false_accepts": [],
+  "false_rejects": []
+}

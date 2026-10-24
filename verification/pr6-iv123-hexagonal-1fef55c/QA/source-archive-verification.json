@@ -1,0 +1,9 @@
+{
+  "verified": true,
+  "commit": "1fef55c0c0cadd5e1417c0e010f272f6447f8ea4",
+  "tree": "75ecb3ef4edbc381012fe74e416a9abd3fb5c667",
+  "source_archive_sha256": "df3e115ef6b363b2d135292d52c7f2adc4d01cc571ff5d32b01efabfac6eef99",
+  "files": 1339,
+  "all_git_blob_ids_match": true,
+  "candidate_clean": true
+}

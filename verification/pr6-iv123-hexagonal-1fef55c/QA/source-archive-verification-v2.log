@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/workspace/work/pr6-architecture-repair/package-output/QA/verify_source_archive.py", line 37, in <module>
+    assert member.mode & 0o111 == expected[name]['mode'] & 0o111, name
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: legacy/agentscient/.claude/skills/mate-php-environment-check

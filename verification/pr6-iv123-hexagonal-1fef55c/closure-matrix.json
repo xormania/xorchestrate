@@ -1,0 +1,42 @@
+{
+  "product_commit": "1fef55c0c0cadd5e1417c0e010f272f6447f8ea4",
+  "product_tree": "75ecb3ef4edbc381012fe74e416a9abd3fb5c667",
+  "findings": [
+    {
+      "id": "IV01",
+      "verdict": "closed_in_tested_scope",
+      "before": "3 typed assessment disclosures per store;11valid controls",
+      "after": "14closure checks per store;internal inputs/opaque payloads/authorized views preserved",
+      "evidence": "evidence/inspection-repair/final-1fef55c0-summary.json"
+    },
+    {
+      "id": "IV02",
+      "verdict": "closed_in_tested_scope",
+      "before": "Grok accepted-before-start forgedidle false acceptance; liveproduct correctlyactive",
+      "after": "acceptedwork andcallbacks/tails veto completion; valid eventual completion; bridge preservation expansion separately exercised",
+      "evidence": "evidence/replay/after-final/iv02/results/summary.json"
+    },
+    {
+      "id": "IV03",
+      "verdict": "closed_in_tested_scope",
+      "before": "15 original falseaccepts;3duplicate falseaccepts;6additional native-return falseaccepts on superseded42",
+      "after": "30coherent/9duplicate/8native-return/6requestedpair controls pass bothhistorical andfreshraw;2867persistentidentity cases",
+      "evidence": "evidence/replay/REPORT.md",
+      "oracle_adaptation": "Original alternate-work control omitted requested/native-return claims; exact originals and separately strengthened oracle retained."
+    },
+    {
+      "id": "IV04",
+      "verdict": "preserved_in_tested_scope",
+      "after": "32 attributioncases;zero false detectioncredit;12originalfaults independentlyaudited",
+      "evidence": "evidence/iv04-preservation/final-1fef55c0/raw-challenge-audit.json",
+      "separate_followup": "4BOM/Latin1 genuineassertion sensitivitymisses in10positioncases"
+    }
+  ],
+  "followups": [
+    "IV04 source encoding sensitivity",
+    "Previously reported snapshot/status synchronization in focused knownbad completion test",
+    "Architecture migration inventory in docs/repair/architecture-iv123.md"
+  ],
+  "vendor_acceptance": "planned owner-local work;not prerequisite to this handoff",
+  "merge_decision": "xor"
+}
