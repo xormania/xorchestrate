@@ -694,6 +694,18 @@ class SessionBridgeHost:
             conflict = hasattr(self, "backend") and (
                 observation.get("native_id") != self.backend.get("native_id")
                 or observation.get("incarnation") != self.backend.get("incarnation"))
+            # An asynchronous native tool may be the first lease-qualified
+            # observation of its enclosing turn. Preserve that relation so its
+            # later completion can be forwarded. A fresh call never transfers
+            # an already-owned turn, and a stale call cannot bind a new turn.
+            if (not conflict and lease and lease == self._lease
+                    and observation.get("kind") in {"native_tool", "native_tool_call", "tool_call", "native_call"}
+                    and observation.get("call_id")
+                    and self._bindings.get(_call_binding(observation)) == lease):
+                for field in ("turn_id", "prompt_id"):
+                    turn = observation.get(field)
+                    if isinstance(turn, str) and turn:
+                        self._bindings.setdefault((field, turn), lease)
             if lease:
                 for field, value in identities.items():
                     key = _call_binding(observation) if field == "call_id" else (field, value)

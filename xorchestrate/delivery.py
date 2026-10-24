@@ -30,8 +30,9 @@ _DELIVERY_RECORDS = {"message": "message", "deliveries": "delivery", "attempts":
 _ACCEPTANCE_RECORDS = {"requirements": "requirements", "candidate": "candidate", "measurements": "measurement",
     "acceptance_history": "acceptance_decision", "contributions": "contribution"}
 # Only application-owned result structures are traversed. In particular an
-# evidence result, provider output, session specification or native payload is
+# caller/provider evidence result, session specification or native payload is
 # not a record merely because its user-defined keys resemble these fields.
+# Application-generated assessment evidence is a typed exception below.
 _INSPECTION_RESULTS = {"get_delivery": _DELIVERY_RECORDS,
     "delivery_result": {"delivery": "delivery", "attempt": "delivery_attempt"},
     "native_observations": {"observations": "native_observation", "calls": "native_call"},
@@ -186,6 +187,12 @@ class DeliveryMixin:
                     payload["result"], child_contexts = self._inspection_result(
                         action_name, actor, payload.get("action"), payload["result"], cache)
                     contexts.extend(child_contexts)
+                assessment = visible if kind == "assessment" else (
+                    visible.get("result") if kind == "evidence"
+                    and visible.get("source", {}).get("type") == "assessment" else None)
+                if isinstance(assessment, dict):
+                    contexts.extend(self._inspection_assessment_binding(
+                        action_name, actor, assessment, cache))
                 if kind == "message" and isinstance(visible.get("routing_snapshot"), dict):
                     # Enqueue-time actor/relationship provenance is retained
                     # internally but does not inherit the message's read grant.
@@ -202,6 +209,32 @@ class DeliveryMixin:
                 if executed is not None:
                     contexts.append(executed)
         return result, contexts
+
+    def _inspection_assessment_binding(self, action_name, actor, assessment, cache):
+        """Project only the application's typed assessment input snapshots.
+
+        Request context, material inputs/context, evaluator output and caller or
+        provider evidence remain opaque. The retained binding is never changed;
+        this method receives an inspection copy, after its envelope is allowed.
+        """
+        binding = assessment.get("input_binding")
+        if not isinstance(binding, dict):
+            return []
+        sections = {}
+        for field, kind in (("actor_record", "actor"), ("work", "work")):
+            record = binding.get(field)
+            if not isinstance(record, dict):
+                continue
+            # Configured evaluator work fields may omit id. Its application-
+            # owned assessment envelope still supplies the real work binding.
+            if kind == "work":
+                record = {**record, "id": assessment["work_id"]}
+            sections[field] = (kind, [record])
+        children, contexts = self._inspection_records(action_name, actor, sections, cache)
+        for field, records in children.items():
+            if not records:
+                binding[field] = None
+        return contexts
 
     def _inspection_execution(self, actor, payload, cache, executing_actor):
         """Retain the provider/capability scope of a recorded invocation."""

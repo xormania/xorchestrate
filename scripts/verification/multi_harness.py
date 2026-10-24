@@ -350,7 +350,7 @@ def main(argv=None):
     config, base = load_config(args.config)
     config = prepare_config(config, base, directory, args.mode, args.fixture.resolve(), candidate_root)
     candidate = candidate_identity(candidate_root)
-    checker_files = {str(p.relative_to(ROOT)): file_identity(p) for p in sorted(Path(__file__).parent.glob("*.py"))}
+    checker_files = {str(p.relative_to(ROOT)): file_identity(p) for p in sorted(Path(__file__).parent.rglob("*.py"))}
     bindings = {"candidate_sha256": candidate["content_sha256"], "criteria_sha256": digest(canonical(criteria)),
                 "checker_sha256": digest(canonical(checker_files)), "fixture_sha256": digest(canonical(fixture)),
                 "configuration_sha256": digest(canonical(config)), "owner_basis_sha256": digest(args.brief.read_bytes())}

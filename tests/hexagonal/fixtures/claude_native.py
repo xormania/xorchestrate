@@ -9,6 +9,8 @@ import threading
 import uuid
 from pathlib import Path
 
+from controlled_gates import wait_gate
+
 
 def argument(flag):
     return sys.argv[sys.argv.index(flag) + 1]
@@ -160,6 +162,7 @@ def delivery(params):
             decision = hook("PreToolUse", tool_name=body["native_tool"], tool_input={"command": "fixture"},
                             tool_use_id=uuid.uuid4().hex)
             tool("echo", {"marker": "native_permission", "nonce": decision.get("hookSpecificOutput", {}).get("permissionDecision", "defer")})
+        wait_gate(body, "tail")
         hook("Stop", prompt_id=getattr(thread_context, "prompt_id", None))
     except Exception:
         hook("StopFailure", prompt_id=getattr(thread_context, "prompt_id", None))
