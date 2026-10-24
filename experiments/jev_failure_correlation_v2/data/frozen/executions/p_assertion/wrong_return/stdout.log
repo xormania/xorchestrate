@@ -1,0 +1,10 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_________________________________ test_target __________________________________
+test_target.py:9: in test_target
+    assert value == 1, 'TARGET_REQUIREMENT'
+E   AssertionError: TARGET_REQUIREMENT
+E   assert 2 == 1
+=========================== short test summary info ============================
+FAILED test_target.py::test_target - AssertionError: TARGET_REQUIREMENT
+1 failed in 0.02s

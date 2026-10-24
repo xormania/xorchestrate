@@ -1,0 +1,231 @@
+{
+  "candidate_rule": "Fixed non-Jev visible invariant/requirement dispatch; see committed script. Hidden scenario/key/probe_id unavailable to selector.",
+  "classification": "POSTHOC design after inspecting main route counts; selections frozen prospectively before new probe execution",
+  "comparison_basis": "Equal additional investigation call count proxy, not matched dollars or elapsed time. Prefix P3 observations and request identities identical.",
+  "confounds": [
+    "Post-hoc design and outcome exposure during implementation; no confirmatory holdout claim.",
+    "Main P4 uses Jev's candidate; random/simple use fixed non-Jev candidate dispatch. Candidate selection and routing jointly vary.",
+    "Every selected supplement result uses the same frozen deterministic interpretation as main P4 successful probes.",
+    "Static action replay with real new probes; no new end-to-end production outcome or monetized learning measured.",
+    "One random seed on eleven clustered cases cannot estimate policy performance precisely."
+  ],
+  "created_at": "2026-10-24T06:59:42.085808+00:00",
+  "investigation_slots": 5,
+  "limits": {
+    "concurrency": 1,
+    "maximum_seconds": 180,
+    "new_model_calls": 0,
+    "new_probe_calls": 10,
+    "retries": 0
+  },
+  "main_files": {
+    "cases.json": "2966e0c647dacee808bb6d6dd9eb6b6d5cf920d65fc216d3c10d810ebdd95030",
+    "decisions.json": "bc719a4bc807bd28ea4812017427028e2863f08ca4d34c218f5532f554f58992",
+    "manifest.json": "e53563961becd50761873547001ac173b71d423d3747cc3802a6cdec989fb5aa",
+    "packets.json": "0193addc3ab2e6f7df36ad2f73bccc3b1470c895d8d8f5ac6324c5e44fb5408b",
+    "probes.json": "376601d1821bea9049de0dd2b49d9523cf852ddec914a73b7c11a555f43667e4",
+    "transport/attempts.jsonl": "ff57346942bdf44c77c8482268307ca28b1cc9b8eb8a219938716853594f2a3e"
+  },
+  "main_p4_decision_sha256": {
+    "c06e2dd37f2ab": "10d9ae4143a53aeac784e142cc7f629df83167a94c5b5ff29f80623aa3ae0a2e",
+    "c0fb9a45eb2da": "29e7e545f9fc6120527226fb5e9898a14d2601149a5606392b9a43a4d14f7e14",
+    "c19acb40f8797": "69a8d70c555bdac7ebce820c1fe6d55c0ba79f73b80ccbc335e1fe33e7f94326",
+    "c1c062765510d": "1a2f49d466dcb50bad800a9887c81f66c7edc83dc66656b9967a4fb25f6e982f",
+    "c3e667a1b7532": "84540d2c9e8b9f3f7d49e736bc4096217adcd028e04f72b45b2f4121bbd2f026",
+    "c4ac02ef39bfc": "4b16eb0362d112aaedc2cb986a3b404a5aac46bcddeeaaae41e9d7ab3511a87a",
+    "c51eabfc2dae5": "50e8db28d43e3843ce8d4ebc9313d1883e7638390a088f95e8add4e963c0c920",
+    "c5af5e427a2f3": "a3eca471a59cb99e22d6a9233d9be7c49be862c2d70960c25f872542b1b0cd05",
+    "c756d2780a92a": "f852bf4031abcbd7b3de82681b2e9845db6c653dd93038101462ce07c3037bf7",
+    "c85b37db76aaa": "382deec9abc257797c95035c731d051b8c35303ea7eddd31c74257b83ad20b1a",
+    "c94d0a24d43b5": "8c50eb77165cf9f567bef4bd39070049de01d720ea9f5ab91f3964d3068530e0"
+  },
+  "main_run": "/workspace/jev-v2-runs/cloud-20261024-01",
+  "main_source_commit": "9c6d7612e31bb78eb07868b5ac2a046629c5876c",
+  "p3_decision_sha256": {
+    "c06e2dd37f2ab": "ab622c8a648866439a52467eff8869dc91c938cf4146b709d907da42c8fc86b4",
+    "c0fb9a45eb2da": "b6123442587f265f95bdfd2985f926f63407434662c4d5dddc010a18364faa47",
+    "c19acb40f8797": "63d3dc22bbabe40c1b7e44fa61b7e9ee95dd33fca057bd41bf0d2a8bfdf9ee12",
+    "c1c062765510d": "331db97e8a47525eb428bbf4311e60e1512c75592036f2cebf7be3ac9e2e9236",
+    "c3e667a1b7532": "9f0911d0cdb02588f7f4111bfdef5ca348a2a478149f6782e0970bd963b45927",
+    "c4ac02ef39bfc": "8fa5611708632f4d59a74f404d855b041f01eb7313965740c0a160790b5050dc",
+    "c51eabfc2dae5": "e81d88c58d7d82eb8dcaa8af190a8c45d7cf030490036259c40350b5d6505a53",
+    "c5af5e427a2f3": "2b8da65a1e23f49d8010c94f65042241a1378f35457d015587c44df07b704c2d",
+    "c756d2780a92a": "fc57087db95437e9568f9a06f69cec26a659b1f720a4f388543f488b7452d8df",
+    "c85b37db76aaa": "087cd1456a67ed69ff6a463ec24c8b53850b072ee8aca6c155c880d7ad7274fb",
+    "c94d0a24d43b5": "6a9453b3045ceed8995abe89103d26f074e4a977851b34d979708cce55581543"
+  },
+  "paired_case_ids": [
+    "c06e2dd37f2ab",
+    "c0fb9a45eb2da",
+    "c19acb40f8797",
+    "c1c062765510d",
+    "c3e667a1b7532",
+    "c4ac02ef39bfc",
+    "c51eabfc2dae5",
+    "c5af5e427a2f3",
+    "c756d2780a92a",
+    "c85b37db76aaa",
+    "c94d0a24d43b5"
+  ],
+  "plan_document_sha256": "a3527de304a83e12728522b28eb801c5771cdc68cc89fcf8daf316a59dd47921",
+  "population_size": 11,
+  "preparation_commit": "0d8d5187209c1fb2c92e8d2a4305c6f7b40da9aa",
+  "random_seed": 4017,
+  "random_selection": [
+    "c06e2dd37f2ab",
+    "c1c062765510d",
+    "c4ac02ef39bfc",
+    "c51eabfc2dae5",
+    "c94d0a24d43b5"
+  ],
+  "script": "experiments/jev_failure_correlation_v2/evidence/supplements/random_probe.py",
+  "script_sha256": "501c7eda6570523df62a7b0700303eea1bf8029068829859fa08bec30eb38d3d",
+  "signals": {
+    "c06e2dd37f2ab": {
+      "assumed_consequence_units": 100,
+      "candidate": "p_context",
+      "consequence_class": "false_acceptance",
+      "missing_observation_count": 0
+    },
+    "c0fb9a45eb2da": {
+      "assumed_consequence_units": 500,
+      "candidate": "p_effect",
+      "consequence_class": "duplicate_effect",
+      "missing_observation_count": 0
+    },
+    "c19acb40f8797": {
+      "assumed_consequence_units": 10,
+      "candidate": "p_busy",
+      "consequence_class": "wasted_investigation",
+      "missing_observation_count": 0
+    },
+    "c1c062765510d": {
+      "assumed_consequence_units": 100,
+      "candidate": "p_arguments",
+      "consequence_class": "false_acceptance",
+      "missing_observation_count": 0
+    },
+    "c3e667a1b7532": {
+      "assumed_consequence_units": 10,
+      "candidate": "p_busy",
+      "consequence_class": "wasted_investigation",
+      "missing_observation_count": 0
+    },
+    "c4ac02ef39bfc": {
+      "assumed_consequence_units": 0.1,
+      "candidate": "p_assertion",
+      "consequence_class": "low_impact",
+      "missing_observation_count": 0
+    },
+    "c51eabfc2dae5": {
+      "assumed_consequence_units": 100,
+      "candidate": "p_authority",
+      "consequence_class": "false_acceptance",
+      "missing_observation_count": 0
+    },
+    "c5af5e427a2f3": {
+      "assumed_consequence_units": 100,
+      "candidate": "p_replay",
+      "consequence_class": "false_acceptance",
+      "missing_observation_count": 0
+    },
+    "c756d2780a92a": {
+      "assumed_consequence_units": 100,
+      "candidate": "p_replay",
+      "consequence_class": "false_acceptance",
+      "missing_observation_count": 0
+    },
+    "c85b37db76aaa": {
+      "assumed_consequence_units": 100,
+      "candidate": "p_authority",
+      "consequence_class": "false_acceptance",
+      "missing_observation_count": 0
+    },
+    "c94d0a24d43b5": {
+      "assumed_consequence_units": 500,
+      "candidate": "p_effect",
+      "consequence_class": "duplicate_effect",
+      "missing_observation_count": 0
+    }
+  },
+  "simple_priority_order": [
+    "c0fb9a45eb2da",
+    "c94d0a24d43b5",
+    "c06e2dd37f2ab",
+    "c1c062765510d",
+    "c51eabfc2dae5",
+    "c5af5e427a2f3",
+    "c756d2780a92a",
+    "c85b37db76aaa",
+    "c19acb40f8797",
+    "c3e667a1b7532",
+    "c4ac02ef39bfc"
+  ],
+  "simple_rule": "Missing observations first; missing check count descending; frozen consequence units descending; case ID ascending ties.",
+  "simple_selection": [
+    "c06e2dd37f2ab",
+    "c0fb9a45eb2da",
+    "c1c062765510d",
+    "c51eabfc2dae5",
+    "c94d0a24d43b5"
+  ],
+  "terminal_unresolved_cost": "Retained investigate/defer actions carry frozen scenario handling/delay loss; provider/invalid unknown actions stay unknown, not zero.",
+  "valuation_scenarios": {
+    "consequential": {
+      "basis": "analyst assumption; not owner valuation",
+      "currency": "USD",
+      "defer_action": 5.0,
+      "duplicate_effect": 500.0,
+      "false_acceptance": 100.0,
+      "human_minute_usd": [
+        0.0,
+        1.0,
+        3.0
+      ],
+      "investigation_action": 2.0,
+      "low_impact": 0.1,
+      "probe_second_usd": [
+        0.0,
+        0.001,
+        0.01
+      ],
+      "unknown_model_call_usd": [
+        0.001,
+        0.01,
+        0.1,
+        1.0
+      ],
+      "unnecessary_rejection": 20.0,
+      "wasted_investigation": 10.0
+    },
+    "low_stakes": {
+      "basis": "analyst assumption; not owner valuation",
+      "currency": "USD",
+      "defer_action": 0.1,
+      "duplicate_effect": 5.0,
+      "false_acceptance": 2.0,
+      "human_minute_usd": [
+        0.0,
+        1.0,
+        3.0
+      ],
+      "investigation_action": 0.25,
+      "low_impact": 0.1,
+      "probe_second_usd": [
+        0.0,
+        0.001,
+        0.01
+      ],
+      "unknown_model_call_usd": [
+        0.001,
+        0.01,
+        0.1,
+        1.0
+      ],
+      "unnecessary_rejection": 0.5,
+      "wasted_investigation": 1.0
+    }
+  },
+  "version": "posthoc-random-probe-1",
+  "visible_packets_sha256": "90c926dfbd9ecd92acfe47169933d7073ed1b35933aa9b2dbf8f34948b0b74e1"
+}

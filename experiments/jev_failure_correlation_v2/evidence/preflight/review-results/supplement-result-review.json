@@ -1,0 +1,49 @@
+{
+  "plan_sha256": "197bd8547da565db8284bccee821864cb3307e50f9a28350f92098302a53e6ca",
+  "execution_identity": {
+    "commit": "4577eb2c09a211218cfb822f195127d6a8a3f918",
+    "main_source": "9c6d7612e31bb78eb07868b5ac2a046629c5876c",
+    "plan_sha256": "197bd8547da565db8284bccee821864cb3307e50f9a28350f92098302a53e6ca",
+    "script_sha256": "501c7eda6570523df62a7b0700303eea1bf8029068829859fa08bec30eb38d3d",
+    "started_at": "2026-10-24T07:01:23.168603+00:00",
+    "tree": "58930924d0d7fe0db7def67625cd09354d0b9c00"
+  },
+  "verified_executed_probes": 10,
+  "verified_policy_rows": 22,
+  "same_P3_request_prefix": true,
+  "main_source_unchanged": true,
+  "policies": {
+    "random_probe": {
+      "outcomes": {
+        "correct": 9,
+        "unresolved": 2
+      },
+      "corrected_false_clear": 1,
+      "resolved_uncertainty": 1,
+      "probe_calls": 5,
+      "probe_seconds": 0.7763171379992855,
+      "scenario_loss_low_stakes": 0.5,
+      "scenario_loss_consequential": 4
+    },
+    "simple_probe": {
+      "outcomes": {
+        "correct": 9,
+        "unresolved": 2
+      },
+      "corrected_false_clear": 1,
+      "resolved_uncertainty": 1,
+      "probe_calls": 5,
+      "probe_seconds": 0.1756209990003299,
+      "scenario_loss_low_stakes": 0.5,
+      "scenario_loss_consequential": 4
+    }
+  },
+  "main_P4_paired": {
+    "correct": 9,
+    "wrong_terminal": 1,
+    "unresolved": 1,
+    "calls": 5,
+    "seconds": 2.7091800149999017
+  },
+  "interpretation": "Posthoc joint route/candidate/interpreter comparison. Calls match; costs and durations do not. P3 visible structured diagnostic already correct11/11."
+}

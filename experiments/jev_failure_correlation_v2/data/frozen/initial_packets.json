@@ -1,0 +1,3625 @@
+{
+  "cases": [
+    {
+      "id": "c8b932080dc3e",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The reused assessment is still applicable to the evaluator-consumed context.",
+        "consequences": {
+          "class": "false_acceptance",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "current_evidence",
+              "left": true,
+              "note": "A reused assessment must agree with the fresh configured predicate after evaluator-consumed inputs change.",
+              "observed": true,
+              "operator": "eq",
+              "right": true,
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "boundary": "active Application / SQLite / configured evaluator",
+            "details": {
+              "changed_fields": {
+                "title": "Display title revised"
+              },
+              "fresh_accepted": true,
+              "reused_accepted": true
+            }
+          }
+        ],
+        "requirements": [
+          "A reused assessment must agree with the fresh configured predicate after evaluator-consumed inputs change."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "c06e2dd37f2ab",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The reused assessment is still applicable to the evaluator-consumed context.",
+        "consequences": {
+          "class": "false_acceptance",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "current_evidence",
+              "left": true,
+              "note": "A reused assessment must agree with the fresh configured predicate after evaluator-consumed inputs change.",
+              "observed": true,
+              "operator": "eq",
+              "right": false,
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "boundary": "active Application / SQLite / configured evaluator",
+            "details": {
+              "changed_fields": {
+                "context": {
+                  "check_result": "failed"
+                }
+              },
+              "fresh_accepted": false,
+              "reused_accepted": true
+            }
+          }
+        ],
+        "requirements": [
+          "A reused assessment must agree with the fresh configured predicate after evaluator-consumed inputs change."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "c593af9fb49a0",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The reused assessment is still applicable to the evaluator-consumed context.",
+        "consequences": {
+          "class": "false_acceptance",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "current_evidence",
+              "left": null,
+              "note": "A reused assessment must agree with the fresh configured predicate after evaluator-consumed inputs change.",
+              "observed": false,
+              "operator": "eq",
+              "right": null,
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "declared_missing": "The actual boundary result must be collected; the success summary supplies no measurement.",
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "evidence_status": "No current boundary observation was retained.",
+            "run_binding": "operation-current",
+            "summary": "The collector reported success.",
+            "summary_is_measurement": false
+          }
+        ],
+        "requirements": [
+          "A reused assessment must agree with the fresh configured predicate after evaluator-consumed inputs change."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "c4ac02ef39bfc",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The calibration checker credited only the intended target assertion failure.",
+        "consequences": {
+          "class": "low_impact",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "assertion_execution",
+              "left": true,
+              "note": "A verifier may credit intended detection only when the intended comparison actually executes and fails; helper exceptions cannot earn that credit.",
+              "observed": true,
+              "operator": "eq",
+              "right": true,
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "boundary": "real pytest subprocess and actual candidate calibration classifier; controlled fixture",
+            "details": {
+              "actual_exception_origin": "test_target assertion",
+              "candidate_classifier": {
+                "classification": "detected",
+                "expected_diagnostic": "TARGET_REQUIREMENT",
+                "mutation_applied": true,
+                "target": "test_target::test_target",
+                "unaffected": []
+              },
+              "process_returncode": 1,
+              "target_phase": {
+                "actual": 2,
+                "expected": 1,
+                "phase": "comparison"
+              }
+            }
+          }
+        ],
+        "requirements": [
+          "A verifier may credit intended detection only when the intended comparison actually executes and fails; helper exceptions cannot earn that credit."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "c5999881a21d8",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The calibration checker credited only the intended target assertion failure.",
+        "consequences": {
+          "class": "low_impact",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "assertion_execution",
+              "left": true,
+              "note": "A verifier may credit intended detection only when the intended comparison actually executes and fails; helper exceptions cannot earn that credit.",
+              "observed": true,
+              "operator": "eq",
+              "right": false,
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "boundary": "real pytest subprocess and actual candidate calibration classifier; controlled fixture",
+            "details": {
+              "actual_exception_origin": "compute helper before the target comparison",
+              "candidate_classifier": {
+                "classification": "detected",
+                "expected_diagnostic": "TARGET_REQUIREMENT",
+                "mutation_applied": true,
+                "target": "test_target::test_target",
+                "unaffected": []
+              },
+              "process_returncode": 1,
+              "target_phase": {
+                "phase": "entered"
+              }
+            }
+          }
+        ],
+        "requirements": [
+          "A verifier may credit intended detection only when the intended comparison actually executes and fails; helper exceptions cannot earn that credit."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "cb482dcc4a0c1",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The calibration checker credited only the intended target assertion failure.",
+        "consequences": {
+          "class": "low_impact",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "assertion_execution",
+              "left": null,
+              "note": "A verifier may credit intended detection only when the intended comparison actually executes and fails; helper exceptions cannot earn that credit.",
+              "observed": false,
+              "operator": "eq",
+              "right": null,
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "declared_missing": "The actual boundary result must be collected; the success summary supplies no measurement.",
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "evidence_status": "No current boundary observation was retained.",
+            "run_binding": "operation-current",
+            "summary": "The collector reported success.",
+            "summary_is_measurement": false
+          }
+        ],
+        "requirements": [
+          "A verifier may credit intended detection only when the intended comparison actually executes and fails; helper exceptions cannot earn that credit."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "c5dd2167f348a",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The proposed complete-delivery claim has matching native/callback arguments and no later unresolved attempt.",
+        "consequences": {
+          "class": "false_acceptance",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "argument_integrity",
+              "left": {
+                "body": {
+                  "verification": {
+                    "case_id": "case",
+                    "kind": "challenge",
+                    "memory": "",
+                    "nonce": "nonce",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "note": "Executed callback arguments must match the independently observed native request.",
+              "observed": true,
+              "operator": "eq",
+              "right": {
+                "body": {
+                  "verification": {
+                    "case_id": "case",
+                    "kind": "challenge",
+                    "memory": "",
+                    "nonce": "nonce",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            },
+            {
+              "invariant": "effect_uncertainty",
+              "left": "submitted",
+              "note": "A later unknown delivery attempt cannot inherit an earlier submitted status.",
+              "observed": true,
+              "operator": "eq",
+              "right": "submitted",
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "boundary": "production receipt and normalizer; controlled durable-record substitution, not live misdelivery",
+            "details": {
+              "executed_arguments": {
+                "body": {
+                  "verification": {
+                    "case_id": "case",
+                    "kind": "challenge",
+                    "memory": "",
+                    "nonce": "nonce",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "native_arguments": {
+                "body": {
+                  "verification": {
+                    "case_id": "case",
+                    "kind": "challenge",
+                    "memory": "",
+                    "nonce": "nonce",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "normalized_tool_arguments": [
+                {
+                  "body": {
+                    "verification": {
+                      "case_id": "case",
+                      "kind": "challenge",
+                      "memory": "",
+                      "nonce": "nonce",
+                      "run_id": "run"
+                    }
+                  },
+                  "work_id": "w"
+                },
+                {
+                  "body": {
+                    "verification": {
+                      "case_id": "case",
+                      "kind": "reply",
+                      "memory": "secret",
+                      "nonce": "nonce",
+                      "run_id": "run"
+                    }
+                  },
+                  "work_id": "w"
+                },
+                {
+                  "result": {
+                    "verification": {
+                      "case_id": "case",
+                      "memory": "secret",
+                      "nonce": "nonce",
+                      "peer": "grok",
+                      "phase": "received",
+                      "run_id": "run"
+                    }
+                  },
+                  "work_id": "w"
+                }
+              ],
+              "ordered_attempts": [
+                {
+                  "id": "a0",
+                  "incarnation": "grok-epoch",
+                  "message_id": "m1",
+                  "native_id": "grok-native",
+                  "origin": "adapter",
+                  "recipient": "grok",
+                  "sequence": 1,
+                  "session_id": "grok-app",
+                  "status": "submitted",
+                  "submission": {
+                    "submitted": true
+                  }
+                },
+                {
+                  "id": "a1",
+                  "incarnation": "codex-epoch",
+                  "message_id": "m2",
+                  "native_id": "codex-native",
+                  "origin": "adapter",
+                  "recipient": "codex",
+                  "sequence": 1,
+                  "session_id": "codex-app",
+                  "status": "submitted",
+                  "submission": {
+                    "submitted": true
+                  }
+                }
+              ],
+              "receipt": {
+                "claims": {
+                  "received": true,
+                  "responded": true,
+                  "submitted": true,
+                  "task_accepted": "not_measured",
+                  "turn_completed": "not_measured"
+                },
+                "diagnostics": [],
+                "message_id": "m1",
+                "native_calls": [
+                  {
+                    "call_id": "0",
+                    "completed": "obs-0-completed",
+                    "incarnation": "codex-epoch",
+                    "native": "obs-0-native",
+                    "native_id": "codex-native",
+                    "requested": "obs-0-requested",
+                    "session_id": "codex-app"
+                  },
+                  {
+                    "call_id": "1",
+                    "completed": "obs-1-completed",
+                    "incarnation": "grok-epoch",
+                    "native": "obs-1-native",
+                    "native_id": "grok-native",
+                    "requested": "obs-1-requested",
+                    "session_id": "grok-app"
+                  },
+                  {
+                    "call_id": "2",
+                    "completed": "obs-2-completed",
+                    "incarnation": "codex-epoch",
+                    "native": "obs-2-native",
+                    "native_id": "codex-native",
+                    "requested": "obs-2-requested",
+                    "session_id": "codex-app"
+                  }
+                ],
+                "receipt_evidence_id": "e1",
+                "reply_id": "m2",
+                "submissions": [
+                  {
+                    "attempt_id": "a0",
+                    "incarnation": "grok-epoch",
+                    "native_id": "grok-native",
+                    "session_id": "grok-app"
+                  },
+                  {
+                    "attempt_id": "a1",
+                    "incarnation": "codex-epoch",
+                    "native_id": "codex-native",
+                    "session_id": "codex-app"
+                  }
+                ],
+                "verified": true
+              }
+            }
+          }
+        ],
+        "requirements": [
+          "Executed callback arguments must match the independently observed native request.",
+          "A later unknown delivery attempt cannot inherit an earlier submitted status."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "cc191a8053cc3",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The proposed complete-delivery claim has matching native/callback arguments and no later unresolved attempt.",
+        "consequences": {
+          "class": "false_acceptance",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "argument_integrity",
+              "left": {
+                "body": {
+                  "operation": "separate"
+                },
+                "work_id": "other-work"
+              },
+              "note": "Executed callback arguments must match the independently observed native request.",
+              "observed": true,
+              "operator": "eq",
+              "right": {
+                "body": {
+                  "verification": {
+                    "case_id": "case",
+                    "kind": "challenge",
+                    "memory": "",
+                    "nonce": "nonce",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            },
+            {
+              "invariant": "effect_uncertainty",
+              "left": "unknown",
+              "note": "A later unknown delivery attempt cannot inherit an earlier submitted status.",
+              "observed": true,
+              "operator": "eq",
+              "right": "submitted",
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "boundary": "production receipt and normalizer; controlled durable-record substitution, not live misdelivery",
+            "details": {
+              "executed_arguments": {
+                "body": {
+                  "operation": "separate"
+                },
+                "work_id": "other-work"
+              },
+              "native_arguments": {
+                "body": {
+                  "verification": {
+                    "case_id": "case",
+                    "kind": "challenge",
+                    "memory": "",
+                    "nonce": "nonce",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "normalized_tool_arguments": [
+                {
+                  "body": {
+                    "verification": {
+                      "case_id": "case",
+                      "kind": "challenge",
+                      "memory": "",
+                      "nonce": "nonce",
+                      "run_id": "run"
+                    }
+                  },
+                  "work_id": "w"
+                },
+                {
+                  "body": {
+                    "verification": {
+                      "case_id": "case",
+                      "kind": "reply",
+                      "memory": "secret",
+                      "nonce": "nonce",
+                      "run_id": "run"
+                    }
+                  },
+                  "work_id": "w"
+                },
+                {
+                  "result": {
+                    "verification": {
+                      "case_id": "case",
+                      "memory": "secret",
+                      "nonce": "nonce",
+                      "peer": "grok",
+                      "phase": "received",
+                      "run_id": "run"
+                    }
+                  },
+                  "work_id": "w"
+                }
+              ],
+              "ordered_attempts": [
+                {
+                  "id": "a0",
+                  "incarnation": "grok-epoch",
+                  "message_id": "m1",
+                  "native_id": "grok-native",
+                  "origin": "adapter",
+                  "recipient": "grok",
+                  "sequence": 1,
+                  "session_id": "grok-app",
+                  "status": "submitted",
+                  "submission": {
+                    "submitted": true
+                  }
+                },
+                {
+                  "id": "a1",
+                  "incarnation": "codex-epoch",
+                  "message_id": "m2",
+                  "native_id": "codex-native",
+                  "origin": "adapter",
+                  "recipient": "codex",
+                  "sequence": 1,
+                  "session_id": "codex-app",
+                  "status": "submitted",
+                  "submission": {
+                    "submitted": true
+                  }
+                },
+                {
+                  "id": "later-attempt",
+                  "incarnation": "grok-epoch",
+                  "message_id": "m1",
+                  "native_id": "grok-native",
+                  "origin": "adapter",
+                  "recipient": "grok",
+                  "sequence": 2,
+                  "session_id": "grok-app",
+                  "status": "unknown",
+                  "submission": {
+                    "submitted": true
+                  }
+                }
+              ],
+              "receipt": {
+                "diagnostics": [
+                  "native_call_id_conflict"
+                ],
+                "verified": false
+              }
+            }
+          }
+        ],
+        "requirements": [
+          "Executed callback arguments must match the independently observed native request.",
+          "A later unknown delivery attempt cannot inherit an earlier submitted status."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "c1c062765510d",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The proposed complete-delivery claim has matching native/callback arguments and no later unresolved attempt.",
+        "consequences": {
+          "class": "false_acceptance",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "argument_integrity",
+              "left": null,
+              "note": "Executed callback arguments must match the independently observed native request.",
+              "observed": false,
+              "operator": "eq",
+              "right": {
+                "body": {
+                  "verification": {
+                    "case_id": "case",
+                    "kind": "challenge",
+                    "memory": "",
+                    "nonce": "nonce",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            },
+            {
+              "invariant": "effect_uncertainty",
+              "left": null,
+              "note": "A later unknown delivery attempt cannot inherit an earlier submitted status.",
+              "observed": false,
+              "operator": "eq",
+              "right": "submitted",
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "declared_missing": "The actual boundary result must be collected; the success summary supplies no measurement.",
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "evidence_status": "No current boundary observation was retained.",
+            "run_binding": "operation-current",
+            "summary": "The collector reported success.",
+            "summary_is_measurement": false
+          }
+        ],
+        "requirements": [
+          "Executed callback arguments must match the independently observed native request.",
+          "A later unknown delivery attempt cannot inherit an earlier submitted status."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "caeff6c6c4681",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The proposed complete-delivery claim has no later unresolved attempt.",
+        "consequences": {
+          "class": "duplicate_effect",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "effect_uncertainty",
+              "left": "submitted",
+              "note": "Current complete delivery requires the latest attempt to be submitted; an unknown later attempt cannot inherit an older success.",
+              "observed": true,
+              "operator": "eq",
+              "right": "submitted",
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "boundary": "production receipt and normalizer; controlled durable-record substitution, not live misdelivery",
+            "details": {
+              "ordered_attempts": [
+                {
+                  "id": "a0",
+                  "message_id": "m1",
+                  "sequence": 1,
+                  "status": "submitted"
+                },
+                {
+                  "id": "a1",
+                  "message_id": "m2",
+                  "sequence": 1,
+                  "status": "submitted"
+                }
+              ],
+              "receipt": {
+                "claims": {
+                  "received": true,
+                  "responded": true,
+                  "submitted": true,
+                  "task_accepted": "not_measured",
+                  "turn_completed": "not_measured"
+                },
+                "diagnostics": [],
+                "message_id": "m1",
+                "native_calls": [
+                  {
+                    "call_id": "0",
+                    "completed": "obs-0-completed",
+                    "incarnation": "codex-epoch",
+                    "native": "obs-0-native",
+                    "native_id": "codex-native",
+                    "requested": "obs-0-requested",
+                    "session_id": "codex-app"
+                  },
+                  {
+                    "call_id": "1",
+                    "completed": "obs-1-completed",
+                    "incarnation": "grok-epoch",
+                    "native": "obs-1-native",
+                    "native_id": "grok-native",
+                    "requested": "obs-1-requested",
+                    "session_id": "grok-app"
+                  },
+                  {
+                    "call_id": "2",
+                    "completed": "obs-2-completed",
+                    "incarnation": "codex-epoch",
+                    "native": "obs-2-native",
+                    "native_id": "codex-native",
+                    "requested": "obs-2-requested",
+                    "session_id": "codex-app"
+                  }
+                ],
+                "receipt_evidence_id": "e1",
+                "reply_id": "m2",
+                "submissions": [
+                  {
+                    "attempt_id": "a0",
+                    "incarnation": "grok-epoch",
+                    "native_id": "grok-native",
+                    "session_id": "grok-app"
+                  },
+                  {
+                    "attempt_id": "a1",
+                    "incarnation": "codex-epoch",
+                    "native_id": "codex-native",
+                    "session_id": "codex-app"
+                  }
+                ],
+                "verified": true
+              }
+            }
+          }
+        ],
+        "requirements": [
+          "Current complete delivery requires the latest attempt to be submitted; an unknown later attempt cannot inherit an older success."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "cbc761dc81aa1",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The proposed complete-delivery claim has no later unresolved attempt.",
+        "consequences": {
+          "class": "duplicate_effect",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "effect_uncertainty",
+              "left": "unknown",
+              "note": "Current complete delivery requires the latest attempt to be submitted; an unknown later attempt cannot inherit an older success.",
+              "observed": true,
+              "operator": "eq",
+              "right": "submitted",
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "boundary": "production receipt and normalizer; controlled durable-record substitution, not live misdelivery",
+            "details": {
+              "ordered_attempts": [
+                {
+                  "id": "a0",
+                  "message_id": "m1",
+                  "sequence": 1,
+                  "status": "submitted"
+                },
+                {
+                  "id": "a1",
+                  "message_id": "m2",
+                  "sequence": 1,
+                  "status": "submitted"
+                },
+                {
+                  "id": "later-attempt",
+                  "message_id": "m1",
+                  "sequence": 2,
+                  "status": "unknown"
+                }
+              ],
+              "receipt": {
+                "diagnostics": [
+                  "native_submission_missing"
+                ],
+                "verified": false
+              }
+            }
+          }
+        ],
+        "requirements": [
+          "Current complete delivery requires the latest attempt to be submitted; an unknown later attempt cannot inherit an older success."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "cf22aab3d75cf",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The proposed complete-delivery claim has no later unresolved attempt.",
+        "consequences": {
+          "class": "duplicate_effect",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "effect_uncertainty",
+              "left": null,
+              "note": "Current complete delivery requires the latest attempt to be submitted; an unknown later attempt cannot inherit an older success.",
+              "observed": false,
+              "operator": "eq",
+              "right": "submitted",
+              "subject": {
+                "expected": "operation-current",
+                "observed": "another-operation"
+              }
+            }
+          ],
+          "declared_missing": "The actual boundary result must be collected; the success summary supplies no measurement.",
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "evidence_status": "No current boundary observation was retained.",
+            "run_binding": "another-operation",
+            "summary": "The collector reported success.",
+            "summary_is_measurement": false
+          }
+        ],
+        "requirements": [
+          "Current complete delivery requires the latest attempt to be submitted; an unknown later attempt cannot inherit an older success."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "c5af5e427a2f3",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The returned acceptance read accurately represents current owner requirements.",
+        "consequences": {
+          "class": "false_acceptance",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "current_evidence",
+              "left": 3,
+              "note": "A claimed current acceptance read must use the current owner requirement revision.",
+              "observed": true,
+              "operator": "eq",
+              "right": 3,
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "boundary": "actual three adapter implementations with controlled native protocol subprocess peers; no installed vendor",
+            "details": {
+              "current_revision": 3,
+              "fresh_accepted": false,
+              "reported_accepted": false,
+              "reported_revision": 3
+            }
+          }
+        ],
+        "relationship": {
+          "implementation_evidence": "Adapters have separate completed-cache branches; no shared source function or call stack establishing one implementation cause is supplied.",
+          "left": {
+            "adapter": "codex",
+            "current_revision": 3,
+            "reported_revision": 3
+          },
+          "question": "Do these observations establish a shared violated invariant, merely similar behavior, or one common implementation cause?",
+          "right": {
+            "adapter": "grok",
+            "current_revision": 3,
+            "reported_revision": 3
+          }
+        },
+        "requirements": [
+          "A claimed current acceptance read must use the current owner requirement revision."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "c756d2780a92a",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The returned acceptance read accurately represents current owner requirements.",
+        "consequences": {
+          "class": "false_acceptance",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "current_evidence",
+              "left": 1,
+              "note": "A claimed current acceptance read must use the current owner requirement revision.",
+              "observed": true,
+              "operator": "eq",
+              "right": 3,
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "boundary": "actual three adapter implementations with controlled native protocol subprocess peers; no installed vendor",
+            "details": {
+              "current_revision": 3,
+              "fresh_accepted": false,
+              "reported_accepted": true,
+              "reported_revision": 1
+            }
+          }
+        ],
+        "relationship": {
+          "implementation_evidence": "Adapters have separate completed-cache branches; no shared source function or call stack establishing one implementation cause is supplied.",
+          "left": {
+            "adapter": "codex",
+            "current_revision": 3,
+            "reported_revision": 1
+          },
+          "question": "Do these observations establish a shared violated invariant, merely similar behavior, or one common implementation cause?",
+          "right": {
+            "adapter": "grok",
+            "current_revision": 3,
+            "reported_revision": 1
+          }
+        },
+        "requirements": [
+          "A claimed current acceptance read must use the current owner requirement revision."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "cbfa1b0cc1f0f",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The returned acceptance read accurately represents current owner requirements.",
+        "consequences": {
+          "class": "false_acceptance",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "current_evidence",
+              "left": null,
+              "note": "A claimed current acceptance read must use the current owner requirement revision.",
+              "observed": false,
+              "operator": "eq",
+              "right": 3,
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "declared_missing": "The actual boundary result must be collected; the success summary supplies no measurement.",
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "evidence_status": "No current boundary observation was retained.",
+            "run_binding": "operation-current",
+            "summary": "The collector reported success.",
+            "summary_is_measurement": false
+          }
+        ],
+        "relationship": {
+          "implementation_evidence": "Adapters have separate completed-cache branches; no shared source function or call stack establishing one implementation cause is supplied.",
+          "left": {
+            "adapter": "codex",
+            "current_revision": 3,
+            "reported_revision": null
+          },
+          "question": "Do these observations establish a shared violated invariant, merely similar behavior, or one common implementation cause?",
+          "right": {
+            "adapter": "grok",
+            "current_revision": 3,
+            "reported_revision": null
+          }
+        },
+        "requirements": [
+          "A claimed current acceptance read must use the current owner requirement revision."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "c0fb9a45eb2da",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The response and recovery fence preserve an already observed effect across the connection changes.",
+        "consequences": {
+          "class": "duplicate_effect",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "effect_uncertainty",
+              "left": "completed",
+              "note": "After a recorded effect and connection replacement, a missing response must retain uncertainty; after acknowledged completion, completion is valid.",
+              "observed": true,
+              "operator": "in",
+              "right": [
+                "completed"
+              ],
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "boundary": "active Application / SQLite / real FIFO bridge / controlled counter native port",
+            "details": {
+              "connection_replaced": false,
+              "effect_count_before_response": 1,
+              "final_effect_count": 2,
+              "first_response": {
+                "result": {
+                  "operation_id": "dd83f1957a2770f6b863dfe619f0f60813c8af8f30b2e1dd46e4a8350dfc816d",
+                  "output": {
+                    "applied_count": 1
+                  },
+                  "session": {
+                    "actor_id": "owner",
+                    "backend": {
+                      "bridge_endpoint": "/tmp/review-late-effect-dfwotjhx/host",
+                      "bridge_transport": "fifo",
+                      "catalog_identity": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                      "configuration_id": "counter-v1",
+                      "connection_state": "connected",
+                      "handle": "2ccdade1465d4f628b78bc7e48ccb548",
+                      "host_id": "79da3270d95a4eceb6b92fd9ead48690",
+                      "incarnation": "aaab8d8295f641c09d409e6d5ebc12f2",
+                      "instance": "6eee1e44ae224a358f46cac7f641a9bd",
+                      "native_id": "counter-conversation",
+                      "native_incarnation": "counter-native-incarnation",
+                      "native_protocol": null,
+                      "ownership": "external",
+                      "protocol": "bridge",
+                      "resumable": true,
+                      "resume_token": "b10d3c38c3cd412155c0d0ad1c421384e438e8419d432bab0f3e6b366164b16f",
+                      "settings": {
+                        "observed": {},
+                        "requested": {},
+                        "resolved": {}
+                      }
+                    },
+                    "created_at": "2026-10-24T06:37:38.398165+00:00",
+                    "created_by": "owner",
+                    "driver": "external",
+                    "id": "24d3702cf73a4b2eac3a7d6c518e731f",
+                    "pending_operation": null,
+                    "selection": {
+                      "fallback_reason": null,
+                      "requested": "external",
+                      "resolved": "external"
+                    },
+                    "specification": {},
+                    "start_operation_id": "fcda76537fd0e93aa5026d18aaaa04ede7ec274c6d6263da29f11779fe05f9f7",
+                    "status": "active",
+                    "unresolved_effects": [],
+                    "updated_at": "2026-10-24T06:37:38.403562+00:00",
+                    "version": 4,
+                    "work_id": null
+                  }
+                }
+              },
+              "next_response": {
+                "result": {
+                  "operation_id": "c00534cab837ea3ef95480ee28a9ba5c17386855958110b164836f18aa5d3c4a",
+                  "output": {
+                    "applied_count": 2
+                  },
+                  "session": {
+                    "actor_id": "owner",
+                    "backend": {
+                      "bridge_endpoint": "/tmp/review-late-effect-dfwotjhx/host",
+                      "bridge_transport": "fifo",
+                      "catalog_identity": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                      "configuration_id": "counter-v1",
+                      "connection_state": "connected",
+                      "handle": "2ccdade1465d4f628b78bc7e48ccb548",
+                      "host_id": "79da3270d95a4eceb6b92fd9ead48690",
+                      "incarnation": "aaab8d8295f641c09d409e6d5ebc12f2",
+                      "instance": "6eee1e44ae224a358f46cac7f641a9bd",
+                      "native_id": "counter-conversation",
+                      "native_incarnation": "counter-native-incarnation",
+                      "native_protocol": null,
+                      "ownership": "external",
+                      "protocol": "bridge",
+                      "resumable": true,
+                      "resume_token": "b10d3c38c3cd412155c0d0ad1c421384e438e8419d432bab0f3e6b366164b16f",
+                      "settings": {
+                        "observed": {},
+                        "requested": {},
+                        "resolved": {}
+                      }
+                    },
+                    "created_at": "2026-10-24T06:37:38.398165+00:00",
+                    "created_by": "owner",
+                    "driver": "external",
+                    "id": "24d3702cf73a4b2eac3a7d6c518e731f",
+                    "pending_operation": null,
+                    "selection": {
+                      "fallback_reason": null,
+                      "requested": "external",
+                      "resolved": "external"
+                    },
+                    "specification": {},
+                    "start_operation_id": "fcda76537fd0e93aa5026d18aaaa04ede7ec274c6d6263da29f11779fe05f9f7",
+                    "status": "active",
+                    "unresolved_effects": [],
+                    "updated_at": "2026-10-24T06:37:38.405528+00:00",
+                    "version": 6,
+                    "work_id": null
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "requirements": [
+          "After a recorded effect and connection replacement, a missing response must retain uncertainty; after acknowledged completion, completion is valid."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "c94d0a24d43b5",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The response and recovery fence preserve an already observed effect across the connection changes.",
+        "consequences": {
+          "class": "duplicate_effect",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "effect_uncertainty",
+              "left": "operation_failed",
+              "note": "After a recorded effect and connection replacement, a missing response must retain uncertainty; after acknowledged completion, completion is valid.",
+              "observed": true,
+              "operator": "in",
+              "right": [
+                "operation_unknown"
+              ],
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            },
+            {
+              "invariant": "effect_uncertainty",
+              "left": "completed",
+              "note": "Retry of the same intended operation must remain fenced while its old outcome is unresolved.",
+              "observed": true,
+              "operator": "eq",
+              "right": "conflict",
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "boundary": "active Application / SQLite / real FIFO bridge / controlled counter native port",
+            "details": {
+              "connection_replaced": true,
+              "effect_count_before_response": 1,
+              "final_effect_count": 2,
+              "first_response": {
+                "code": "operation_failed",
+                "details": {
+                  "cause": "stale_connection",
+                  "operation_id": "dd83f1957a2770f6b863dfe619f0f60813c8af8f30b2e1dd46e4a8350dfc816d",
+                  "outcome": "failed",
+                  "recording_error": null
+                }
+              },
+              "next_response": {
+                "result": {
+                  "operation_id": "c00534cab837ea3ef95480ee28a9ba5c17386855958110b164836f18aa5d3c4a",
+                  "output": {
+                    "applied_count": 2
+                  },
+                  "session": {
+                    "actor_id": "owner",
+                    "backend": {
+                      "bridge_endpoint": "/tmp/review-late-effect-a9ysy26q/host",
+                      "bridge_transport": "fifo",
+                      "catalog_identity": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                      "configuration_id": "counter-v1",
+                      "connection_state": "connected",
+                      "handle": "6ab456d81fd24ceba000400b869b74c5",
+                      "host_id": "86b069b7d43345f6814eaff282fb87af",
+                      "incarnation": "e8c3d29552f64b60961dbc4a88673c7b",
+                      "instance": "a54fa0b7e6f24031bdaf224771f0959c",
+                      "native_id": "counter-conversation",
+                      "native_incarnation": "counter-native-incarnation",
+                      "native_protocol": null,
+                      "ownership": "external",
+                      "protocol": "bridge",
+                      "resumable": true,
+                      "resume_token": "933542b10d619cf1b8ef53741955c890beddb634866cf34d2010232a0110187c",
+                      "settings": {
+                        "observed": {},
+                        "requested": {},
+                        "resolved": {}
+                      }
+                    },
+                    "created_at": "2026-10-24T06:37:38.419849+00:00",
+                    "created_by": "owner",
+                    "driver": "external",
+                    "id": "c9af8a466caf4896889a28d464b9cccd",
+                    "pending_operation": null,
+                    "resume_source": {
+                      "session_id": "1e7b6c50ed72436f8d360ae1bfa9a17d",
+                      "start_operation_id": "37ef12f898087c9ef837a763747b1d8c7f45505b03382b02f69dc9fefe4ba7ab",
+                      "version": 2
+                    },
+                    "selection": {
+                      "fallback_reason": null,
+                      "requested": "external",
+                      "resolved": "external"
+                    },
+                    "specification": {},
+                    "start_operation_id": "0e3713bf976d7ab6ae0a5df9c23e8d9edb495c072bb2fd2f66ec67da43495ce9",
+                    "status": "active",
+                    "unresolved_effects": [
+                      "dd83f1957a2770f6b863dfe619f0f60813c8af8f30b2e1dd46e4a8350dfc816d"
+                    ],
+                    "updated_at": "2026-10-24T06:37:38.424957+00:00",
+                    "version": 4,
+                    "work_id": null
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "requirements": [
+          "After a recorded effect and connection replacement, a missing response must retain uncertainty; after acknowledged completion, completion is valid.",
+          "Retry of the same intended operation must remain fenced while its old outcome is unresolved."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "c9de3dd808cb8",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The response and recovery fence preserve an already observed effect across the connection changes.",
+        "consequences": {
+          "class": "duplicate_effect",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "effect_uncertainty",
+              "left": null,
+              "note": "After a recorded effect and connection replacement, a missing response must retain uncertainty; after acknowledged completion, completion is valid.",
+              "observed": false,
+              "operator": "in",
+              "right": [
+                "operation_unknown"
+              ],
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            },
+            {
+              "invariant": "effect_uncertainty",
+              "left": null,
+              "note": "Retry of the same intended operation must remain fenced while its old outcome is unresolved.",
+              "observed": false,
+              "operator": "eq",
+              "right": "conflict",
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "declared_missing": "The actual boundary result must be collected; the success summary supplies no measurement.",
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "evidence_status": "No current boundary observation was retained.",
+            "run_binding": "operation-current",
+            "summary": "The collector reported success.",
+            "summary_is_measurement": false
+          }
+        ],
+        "requirements": [
+          "After a recorded effect and connection replacement, a missing response must retain uncertainty; after acknowledged completion, completion is valid.",
+          "Retry of the same intended operation must remain fenced while its old outcome is unresolved."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "cabe25ecf8ef4",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The aggregate activity correctly represents outstanding held callbacks.",
+        "consequences": {
+          "class": "wasted_investigation",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "concurrent_activity",
+              "left": "active",
+              "note": "At least one explicitly held callback remains unfinished, so the aggregate session must remain active.",
+              "observed": true,
+              "operator": "eq",
+              "right": "active",
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "boundary": "actual Claude adapter / subprocess hooks and MCP / controlled protocol peer",
+            "details": {
+              "after_all_complete": "idle",
+              "released_callbacks": 0,
+              "status": {
+                "activity": "active",
+                "connection_state": "connected",
+                "incarnation": "86d097e25dec45709b71e05290111794",
+                "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+                "ownership": "owned",
+                "settings": {
+                  "observed": {
+                    "effort": null,
+                    "model": "fixture-model"
+                  },
+                  "precedence": "trusted_configuration",
+                  "requested": {},
+                  "resolved": {}
+                }
+              },
+              "unfinished_callbacks": 3
+            }
+          }
+        ],
+        "requirements": [
+          "At least one explicitly held callback remains unfinished, so the aggregate session must remain active."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "c3e667a1b7532",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The aggregate activity correctly represents outstanding held callbacks.",
+        "consequences": {
+          "class": "wasted_investigation",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "concurrent_activity",
+              "left": "idle",
+              "note": "At least one explicitly held callback remains unfinished, so the aggregate session must remain active.",
+              "observed": true,
+              "operator": "eq",
+              "right": "active",
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "boundary": "actual Claude adapter / subprocess hooks and MCP / controlled protocol peer",
+            "details": {
+              "after_all_complete": "idle",
+              "released_callbacks": 1,
+              "status": {
+                "activity": "idle",
+                "connection_state": "connected",
+                "incarnation": "86d097e25dec45709b71e05290111794",
+                "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+                "ownership": "owned",
+                "settings": {
+                  "observed": {
+                    "effort": null,
+                    "model": "fixture-model"
+                  },
+                  "precedence": "trusted_configuration",
+                  "requested": {},
+                  "resolved": {}
+                }
+              },
+              "unfinished_callbacks": 2
+            }
+          }
+        ],
+        "requirements": [
+          "At least one explicitly held callback remains unfinished, so the aggregate session must remain active."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "c19acb40f8797",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The aggregate activity correctly represents outstanding held callbacks.",
+        "consequences": {
+          "class": "wasted_investigation",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "concurrent_activity",
+              "left": null,
+              "note": "At least one explicitly held callback remains unfinished, so the aggregate session must remain active.",
+              "observed": false,
+              "operator": "eq",
+              "right": "active",
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "declared_missing": "The actual boundary result must be collected; the success summary supplies no measurement.",
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "evidence_status": "No current boundary observation was retained.",
+            "run_binding": "operation-current",
+            "summary": "The collector reported success.",
+            "summary_is_measurement": false
+          }
+        ],
+        "requirements": [
+          "At least one explicitly held callback remains unfinished, so the aggregate session must remain active."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "c85b37db76aaa",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The executed callback retained the authority and work scope under which it was originally observed.",
+        "consequences": {
+          "class": "false_acceptance",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "authority_binding",
+              "left": "old-actor",
+              "note": "An already observed native call retains its original actor across reconnect.",
+              "observed": true,
+              "operator": "eq",
+              "right": "old-actor",
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            },
+            {
+              "invariant": "authority_binding",
+              "left": "old-work",
+              "note": "An already observed native call retains its original work scope across reconnect.",
+              "observed": true,
+              "operator": "eq",
+              "right": "old-work",
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "boundary": "real FIFO bridge / native callback observation / controlled native port",
+            "details": {
+              "executed_context": {
+                "action": "echo",
+                "actor": "old-actor",
+                "call_id": "observed-old-call",
+                "host_id": "46e15ae8970b46c4b6d515dd09f27159",
+                "incarnation": "272d0498a1c8423bb70eeb4aa060eb2d",
+                "native_id": "controlled-conversation",
+                "native_incarnation": "native-incarnation",
+                "session_id": "old-session",
+                "work_id": "old-work"
+              },
+              "new_incarnation": null,
+              "observed_original_actor": "old-actor",
+              "observed_original_work": "old-work",
+              "old_incarnation": "272d0498a1c8423bb70eeb4aa060eb2d"
+            }
+          }
+        ],
+        "requirements": [
+          "An already observed native call retains its original actor across reconnect.",
+          "An already observed native call retains its original work scope across reconnect."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "cef7128badec1",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The executed callback retained the authority and work scope under which it was originally observed.",
+        "consequences": {
+          "class": "false_acceptance",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "authority_binding",
+              "left": "final-actor",
+              "note": "An already observed native call retains its original actor across reconnect.",
+              "observed": true,
+              "operator": "eq",
+              "right": "old-actor",
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            },
+            {
+              "invariant": "authority_binding",
+              "left": "final-work",
+              "note": "An already observed native call retains its original work scope across reconnect.",
+              "observed": true,
+              "operator": "eq",
+              "right": "old-work",
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "boundary": "real FIFO bridge / native callback observation / controlled native port",
+            "details": {
+              "executed_context": {
+                "action": "echo",
+                "actor": "final-actor",
+                "call_id": "observed-old-call",
+                "host_id": "b8473ce7835a482aa7e5e8a36ae9abe1",
+                "incarnation": "cd9023e443034329b95c0360f16a6a96",
+                "native_id": "controlled-conversation",
+                "native_incarnation": "native-incarnation",
+                "session_id": "final-session",
+                "work_id": "final-work"
+              },
+              "new_incarnation": "cd9023e443034329b95c0360f16a6a96",
+              "observed_original_actor": "old-actor",
+              "observed_original_work": "old-work",
+              "old_incarnation": "0d11cb7212f84ea1a6d9982bf1311a36"
+            }
+          }
+        ],
+        "requirements": [
+          "An already observed native call retains its original actor across reconnect.",
+          "An already observed native call retains its original work scope across reconnect."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    },
+    {
+      "id": "c51eabfc2dae5",
+      "packet": {
+        "actions": [
+          "accept",
+          "reject",
+          "investigate",
+          "defer"
+        ],
+        "candidate_generation": "fixed human-designed candidates; no model generation call",
+        "candidates": {
+          "p_arguments": {
+            "cost_units": 1,
+            "description": "Compare original native arguments with callback arguments before normalization and evaluate the durable receipt.",
+            "invariants": [
+              "argument_integrity",
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_assertion": {
+            "cost_units": 1,
+            "description": "Execute an isolated target assertion, healthy return, and helper exception; retain the exception origin and reached assertion.",
+            "invariants": [
+              "assertion_execution"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_attempts": {
+            "cost_units": 1,
+            "description": "Inspect all ordered delivery attempts including a later unknown attempt and evaluate the durable receipt.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_authority": {
+            "cost_units": 1,
+            "description": "Hold an observed callback across connection replacement and compare original actor/work/incarnation with the executed callback.",
+            "invariants": [
+              "authority_binding"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_busy": {
+            "cost_units": 1,
+            "description": "Hold two native callbacks, release one, inspect activity while the other remains held, then release the second.",
+            "invariants": [
+              "concurrent_activity"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_context": {
+            "cost_units": 1,
+            "description": "Change evaluator-consumed context and a cosmetic title independently; compare old and fresh acceptance on the active application.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_effect": {
+            "cost_units": 1,
+            "description": "Hold a response after an applied effect, reconnect, release the response, then inspect the recovery fence before retry.",
+            "invariants": [
+              "effect_uncertainty"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          },
+          "p_replay": {
+            "cost_units": 1,
+            "description": "Replay the same semantic acceptance call through Codex, Grok, and Claude adapters after an owner revision; compare a fresh native read.",
+            "invariants": [
+              "current_evidence"
+            ],
+            "units": "one controlled boundary execution; costs differ by elapsed time"
+          }
+        },
+        "claim": "The executed callback retained the authority and work scope under which it was originally observed.",
+        "consequences": {
+          "class": "false_acceptance",
+          "exposure": "one controlled operation; production repetition unknown",
+          "reversibility": "acceptance can be withdrawn; already applied effects cannot be assumed reversible",
+          "source": "analyst scenario classification, not measured business loss",
+          "urgency": "no measured deadline"
+        },
+        "facts": {
+          "checks": [
+            {
+              "invariant": "authority_binding",
+              "left": null,
+              "note": "An already observed native call retains its original actor across reconnect.",
+              "observed": false,
+              "operator": "eq",
+              "right": "old-actor",
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            },
+            {
+              "invariant": "authority_binding",
+              "left": null,
+              "note": "An already observed native call retains its original work scope across reconnect.",
+              "observed": false,
+              "operator": "eq",
+              "right": "old-work",
+              "subject": {
+                "expected": "operation-current",
+                "observed": "operation-current"
+              }
+            }
+          ],
+          "declared_missing": "The actual boundary result must be collected; the success summary supplies no measurement.",
+          "policy_defined": true
+        },
+        "observations": [
+          {
+            "evidence_status": "No current boundary observation was retained.",
+            "run_binding": "operation-current",
+            "summary": "The collector reported success.",
+            "summary_is_measurement": false
+          }
+        ],
+        "requirements": [
+          "An already observed native call retains its original actor across reconnect.",
+          "An already observed native call retains its original work scope across reconnect."
+        ],
+        "violation_semantics": "An unsatisfied requirement of this supplied local claim. This does not by itself establish that the product accepted the claim; receipt rejections are retained as correct defensive behavior."
+      }
+    }
+  ],
+  "version": "2.0.1"
+}

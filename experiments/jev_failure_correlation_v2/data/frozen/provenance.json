@@ -1,0 +1,71 @@
+{
+  "boundary_scenarios": 8,
+  "cases": 24,
+  "causal_limit": "Probes execute each boundary; reject/accept decisions and valuation are static policy replay, not production downstream state changes.",
+  "clusters": 7,
+  "development_repeats": "Context, assertion and receipt helper cases reuse known families; none is claimed as fresh incident generalization.",
+  "holdout_material_variants": {
+    "p_authority": "two changes of actor/work connection binding before delayed callback instead of one",
+    "p_busy": "three overlapping holds and middle-first completion instead of two and first completion",
+    "p_effect": "two connection replacements while effect response held instead of one",
+    "p_replay": "two owner revisions with intermediate semantic replay instead of one revision"
+  },
+  "prior_exposure": "Known historical F02\u2013F09 reproductions informed all schedules. Fresh execution and new packets do not imply new mechanisms.",
+  "sources": {
+    "p_arguments": {
+      "boundary": "production receipt and normalizer; controlled durable-record substitution, not live misdelivery",
+      "elapsed_seconds": 0.004074525000078211,
+      "path": "raw/p_arguments.json",
+      "sha256": "9b8376c2a81862dded43a255d8bf9a71b3cc54baf8ee5851435dc24758d68a2f"
+    },
+    "p_assertion": {
+      "boundary": "real pytest subprocess and actual candidate calibration classifier; controlled fixture",
+      "elapsed_seconds": 0.5335916070000621,
+      "path": "raw/p_assertion.json",
+      "sha256": "699ea0da03d1af3ebedbacf428313795b7db4a81a49d0c8d83a59d5c2c72dd00"
+    },
+    "p_attempts": {
+      "boundary": "production receipt and normalizer; controlled durable-record substitution, not live misdelivery",
+      "elapsed_seconds": 0.001359748000027139,
+      "path": "raw/p_attempts.json",
+      "sha256": "df1e515c3f282b68c5432112a115ed16244ebbca95e544b6ee75123bffa33431"
+    },
+    "p_authority": {
+      "boundary": "real FIFO bridge / native callback observation / controlled native port",
+      "elapsed_seconds": 0.014096076999976503,
+      "path": "raw/p_authority.json",
+      "sha256": "9401aed85cc560c199d75a0086c9a7e8d50b27efbffb65607eb08e27bf77c99f"
+    },
+    "p_busy": {
+      "boundary": "actual Claude adapter / subprocess hooks and MCP / controlled protocol peer",
+      "elapsed_seconds": 0.6675129189999325,
+      "path": "raw/p_busy.json",
+      "sha256": "566d32f073b5a3ac881090e9c5bf959a1f82726192410d0dbb608630f7c64ce7"
+    },
+    "p_context": {
+      "boundary": "active Application / SQLite / configured evaluator",
+      "elapsed_seconds": 0.1623497049999969,
+      "path": "raw/p_context.json",
+      "sha256": "15c36206e955678d951aaf4f231c8cfb9e473ce49c672ac50dcf4a553533835e"
+    },
+    "p_effect": {
+      "boundary": "active Application / SQLite / real FIFO bridge / controlled counter native port",
+      "elapsed_seconds": 0.036024334999979146,
+      "path": "raw/p_effect.json",
+      "sha256": "dbe288296cfe8e2ab0663d919c550e7176012508a5b05ba3eec62d990cd00904"
+    },
+    "p_replay": {
+      "boundary": "actual three adapter implementations with controlled native protocol subprocess peers; no installed vendor",
+      "elapsed_seconds": 1.2780892490000042,
+      "path": "raw/p_replay.json",
+      "sha256": "53ee56dd3ef8160ade18f43692d14b81824ef1d46f72e7c26d5e3af766e1eb91"
+    }
+  },
+  "subject": {
+    "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+    "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+  },
+  "v1_role": "development/reference only; no v1 packet reused as holdout",
+  "vendor_behavior": "not tested; subprocess protocol peers establish adapter behavior only",
+  "version": "2.0.1"
+}

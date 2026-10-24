@@ -1,0 +1,9 @@
+{
+  "main": "Passed raw score and ARTIFACTS verification after extracting into /workspace/jev-v2-relocated-replay",
+  "supplement": "Passed raw replay with --main relocated override and ARTIFACTS verification",
+  "main_files": 1203,
+  "supplement_files": 81,
+  "network_calls": 0,
+  "provider_credentials_used": false,
+  "tamper_check": "Changed selected supplement action rejected; original records untouched."
+}

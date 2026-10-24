@@ -1,0 +1,12 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+_________________________________ test_target __________________________________
+test_target.py:7: in test_target
+    value = compute()
+            ^^^^^^^^^
+module.py:2: in compute
+    raise AssertionError('TARGET_REQUIREMENT')
+E   AssertionError: TARGET_REQUIREMENT
+=========================== short test summary info ============================
+FAILED test_target.py::test_target - AssertionError: TARGET_REQUIREMENT
+1 failed in 0.02s

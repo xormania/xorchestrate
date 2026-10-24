@@ -1,0 +1,129 @@
+{
+  "case_count": 24,
+  "files": {
+    "cases.json": "e73a96b01c5b51b3d0386ae8810b78a3b0bef36dd8fc99acc5cf6641748957b0",
+    "executions/p_assertion/healthy/phase.json": "b90e4bac923231b12f1d8e9f7d1ccf2d1516aa828aaadce38954f583779c7a3d",
+    "executions/p_assertion/helper_error/phase.json": "815b68741e0f45e8dcb6a667ded36f9fcd3c191b56e198e914313927b54e9cc8",
+    "executions/p_assertion/wrong_return/phase.json": "e2ccbe06c6f214079cf2cd5b51b45b80f1c5f58ca496c04fb049661c9a9631e8",
+    "executions/p_replay/claude/configuration.json": "3bcf1a519f1ed9d258a6359a106a4e8bcbd268083fb75e937e4257397ef2700f",
+    "executions/p_replay/claude/observed.json": "6d1f18fd8e01ba889723c04cce37bdfc7282d2fe47c5b7fb1a6c82547c15a81c",
+    "executions/p_replay/codex/configuration.json": "74b637da87663ec95e80c716817d8760e08c88591b3857c8c5bfaa1834b434b4",
+    "executions/p_replay/codex/observed.json": "b3fcfa0c67a820af98143ecb22cb941c3695edb5b17f246b88c47904e3c83a06",
+    "executions/p_replay/grok/configuration.json": "144c1bb9547b03994eac8f024d239d4d9bd2baa200a20963b96a9ed8e14a0296",
+    "executions/p_replay/grok/observed.json": "3f1d19cfd99f47b93dfff83ac0494da931ecada3509934035f0df8c174e81678",
+    "initial_key.json": "c96964bcc5d8faefe1d8bc9dd2c5182b37e277886a11b94eb6fa9b1820db1de1",
+    "initial_packets.json": "3b80e579cd3a6177b99554ee1c2b1fdac04a5df5c4616ef68ee9a7038e8a8725",
+    "outcome_key.json": "b086dce341149b5f7d07c01b64a5106ef9eec802a9d656abd5645e333c87c265",
+    "provenance.json": "56e1452ed1914d4c86562ecd026da60452a636c2483d3fb1a259fda374b29f5a",
+    "raw/p_arguments.json": "9b8376c2a81862dded43a255d8bf9a71b3cc54baf8ee5851435dc24758d68a2f",
+    "raw/p_assertion.json": "c2be25cb159c3fe32554f063bb00bf11a2f72d5ce3d68136d97d768d4a84798c",
+    "raw/p_attempts.json": "df1e515c3f282b68c5432112a115ed16244ebbca95e544b6ee75123bffa33431",
+    "raw/p_authority.json": "9af35c406eaf8d3f7b64b3074c51e104d152cde771c1bff06898ec0efb6af0f1",
+    "raw/p_busy.json": "5d5379e4bccff6d70f39eb3bbb04827de2e10e96cae91893088ab2d5b2a0ccdb",
+    "raw/p_context.json": "239ae51c7279ce622bc22540216a7c69a9d9b3eb4b3b2f75a93f55f29a106428",
+    "raw/p_effect.json": "b2c5406dac0891ed572055160d46eb2eee109f1dfc1f1a41c3f48238bb8415f8",
+    "raw/p_replay.json": "fdc5a5071a745ae3a2082ceadac8f5f3006d84293da06ac7b1fa4a76cf80a2b3",
+    "transformations.json": "2eaa3213b37bad5514574bb48cbde64187b3425da1e68e1c0bd5a8c7807fef41"
+  },
+  "independent_clusters": 8,
+  "split_membership_frozen_before_model_evaluation": true,
+  "splits": {
+    "c06e2dd37f2ab": {
+      "group": "g7a518fc6a0bc",
+      "split": "development"
+    },
+    "c0fb9a45eb2da": {
+      "group": "g8c81f57a9b23",
+      "split": "holdout"
+    },
+    "c19acb40f8797": {
+      "group": "gbafd5cf357b5",
+      "split": "holdout"
+    },
+    "c1c062765510d": {
+      "group": "g4c64cc2ad6ad",
+      "split": "calibration"
+    },
+    "c3e667a1b7532": {
+      "group": "gbafd5cf357b5",
+      "split": "holdout"
+    },
+    "c4ac02ef39bfc": {
+      "group": "g8815a39076bc",
+      "split": "development"
+    },
+    "c51eabfc2dae5": {
+      "group": "gbc4c9743d8e9",
+      "split": "holdout"
+    },
+    "c593af9fb49a0": {
+      "group": "g7a518fc6a0bc",
+      "split": "development"
+    },
+    "c5999881a21d8": {
+      "group": "g8815a39076bc",
+      "split": "development"
+    },
+    "c5af5e427a2f3": {
+      "group": "gd9c5d60efb17",
+      "split": "holdout"
+    },
+    "c5dd2167f348a": {
+      "group": "g4c64cc2ad6ad",
+      "split": "calibration"
+    },
+    "c756d2780a92a": {
+      "group": "gd9c5d60efb17",
+      "split": "holdout"
+    },
+    "c85b37db76aaa": {
+      "group": "gbc4c9743d8e9",
+      "split": "holdout"
+    },
+    "c8b932080dc3e": {
+      "group": "g7a518fc6a0bc",
+      "split": "development"
+    },
+    "c94d0a24d43b5": {
+      "group": "g8c81f57a9b23",
+      "split": "holdout"
+    },
+    "c9de3dd808cb8": {
+      "group": "g8c81f57a9b23",
+      "split": "holdout"
+    },
+    "cabe25ecf8ef4": {
+      "group": "gbafd5cf357b5",
+      "split": "holdout"
+    },
+    "caeff6c6c4681": {
+      "group": "gb1413addf815",
+      "split": "calibration"
+    },
+    "cb482dcc4a0c1": {
+      "group": "g8815a39076bc",
+      "split": "development"
+    },
+    "cbc761dc81aa1": {
+      "group": "gb1413addf815",
+      "split": "calibration"
+    },
+    "cbfa1b0cc1f0f": {
+      "group": "gd9c5d60efb17",
+      "split": "holdout"
+    },
+    "cc191a8053cc3": {
+      "group": "g4c64cc2ad6ad",
+      "split": "calibration"
+    },
+    "cef7128badec1": {
+      "group": "gbc4c9743d8e9",
+      "split": "holdout"
+    },
+    "cf22aab3d75cf": {
+      "group": "gb1413addf815",
+      "split": "calibration"
+    }
+  },
+  "version": "2.0.0"
+}

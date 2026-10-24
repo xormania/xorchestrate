@@ -1,0 +1,122 @@
+{
+  "P0": {
+    "all": {
+      "correct": 16,
+      "unresolved": 8
+    },
+    "paired": {
+      "correct": 8,
+      "unresolved": 3
+    }
+  },
+  "P0_probe": {
+    "all": {
+      "correct": 24
+    },
+    "paired": {
+      "correct": 11
+    }
+  },
+  "P1": {
+    "all": {
+      "correct": 11,
+      "unresolved": 11,
+      "wrong_terminal": 2
+    },
+    "paired": {
+      "correct": 6,
+      "unresolved": 4,
+      "wrong_terminal": 1
+    }
+  },
+  "P2": {
+    "all": {
+      "correct": 16,
+      "unresolved": 6,
+      "wrong_terminal": 2
+    },
+    "paired": {
+      "correct": 7,
+      "unresolved": 3,
+      "wrong_terminal": 1
+    }
+  },
+  "P3": {
+    "all": {
+      "correct": 15,
+      "unresolved": 7,
+      "wrong_terminal": 2
+    },
+    "paired": {
+      "correct": 7,
+      "unresolved": 3,
+      "wrong_terminal": 1
+    }
+  },
+  "P4": {
+    "all": {
+      "correct": 19,
+      "unresolved": 3,
+      "wrong_terminal": 2
+    },
+    "paired": {
+      "correct": 9,
+      "unresolved": 1,
+      "wrong_terminal": 1
+    }
+  },
+  "always": {
+    "all": {
+      "correct": 10,
+      "unresolved": 1
+    },
+    "paired": {
+      "correct": 10,
+      "unresolved": 1
+    }
+  },
+  "never": {
+    "all": {
+      "correct": 7,
+      "unresolved": 3,
+      "wrong_terminal": 1
+    },
+    "paired": {
+      "correct": 7,
+      "unresolved": 3,
+      "wrong_terminal": 1
+    }
+  },
+  "random": {
+    "all": {
+      "correct": 7,
+      "unresolved": 3,
+      "wrong_terminal": 1
+    },
+    "paired": {
+      "correct": 7,
+      "unresolved": 3,
+      "wrong_terminal": 1
+    }
+  },
+  "reasoning_only": {
+    "all": {
+      "correct": 7,
+      "unresolved": 4
+    },
+    "paired": {
+      "correct": 7,
+      "unresolved": 4
+    }
+  },
+  "risk": {
+    "all": {
+      "correct": 9,
+      "unresolved": 2
+    },
+    "paired": {
+      "correct": 9,
+      "unresolved": 2
+    }
+  }
+}

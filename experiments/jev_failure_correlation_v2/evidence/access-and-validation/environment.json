@@ -1,0 +1,12 @@
+{
+  "python": "3.12.14",
+  "baseline_test_log": "baseline-existing-tests.log",
+  "baseline_test_xml": "baseline-existing-tests.xml",
+  "credentials": "names/presence only tested; runtime direct Jev smoke passed; values never retained",
+  "smoke": "smoke-01",
+  "smoke_provenance": "development access check before first v2 source commit; raw requests and responses retained, not main measurement",
+  "pricing_source": "https://docs.typesafe.ai/models",
+  "pricing_sha256": "ea492c3cbeb5125e58297f83ec88ef74d71ad897c9d369e495d8cf2526f939fc",
+  "pricing_retrieval_date": "2026-10-24",
+  "network": "Configured proxy requires unsandboxed exec; same inherited proxy and TLS verification used. No environment configuration changes."
+}

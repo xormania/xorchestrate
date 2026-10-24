@@ -1,0 +1,84 @@
+{
+  "status": "approved_with_limits",
+  "reviewer": "separate native agent /root/evidence_review",
+  "reviewed_at": "2026-10-24T06:44:43.936813+00:00",
+  "corpus_sha256": "ca68bf8fa36c7e51da5e2b24764e968605b36a6dc13c62b0e7088135d7b8bd4c",
+  "snapshot_files_sha256": {
+    "cases.json": "70e3e7c948d46f6453cb424bc96b543aa73b93a06aba50f636b514fe286cedb5",
+    "initial_packets.json": "162037ddd32be14ed6025996cdb90d68dea5b3f8e1ea1eaf29d52ac1f4ca7060",
+    "initial_key.json": "09466c0c32fd5cbf2796e82f0da7d966b5d2979b9e2199e942699ce30173929a",
+    "outcome_key.json": "10e5be2d15ad639db12ff7da4da054e7cef1c8e67d86eff5c55679e860c24086",
+    "transformation_packets.json": "9e58e227127e87eb21377db92a7a089fa3dd9714718e771294670c0624499b54",
+    "transformations.json": "589931aa36804a5f006c2d692c2a2869c090e54beb90edd4975221a8a409ca36",
+    "freeze.json": "e8205a8810c11b39e47d94845ed43b6747273d69b6dfcf919e7e84f8a470cce7"
+  },
+  "exposure": {
+    "v1_sources_and_outputs": true,
+    "v2_packet_only_judgments_recorded_before_keys": true,
+    "v2_initial_key_seen_after_first_judgments": true,
+    "v2_outcomes_and_source_seen_after_initial_key_check": true,
+    "v2_model_outputs_seen": false,
+    "shared_implementation_workspace": true,
+    "implementation_authorship": false,
+    "independence_limit": "Separate native invocation sharing parent context and filesystem; communicated corrections to authors; not final separate adversarial review or independent model family."
+  },
+  "checks": {
+    "initial_cases": 24,
+    "initial_judgments": {
+      "supports": 8,
+      "contradicts": 8,
+      "unresolved": 8
+    },
+    "transformation_packets": 30,
+    "scenario_dependency_groups": 7,
+    "split_groups": {
+      "development": 2,
+      "calibration": 1,
+      "holdout": 4
+    },
+    "all_eight_probe_boundaries_independently_rerun": true,
+    "unrelated_failure_controls_not_exercised": true,
+    "freeze_hashes_match": true
+  },
+  "findings": [
+    {
+      "status": "resolved_before_model_evaluation",
+      "finding": "Local claim wording and assertion-credit semantics corrected; completion-claim violations separated from product defects."
+    },
+    {
+      "status": "resolved_before_model_evaluation",
+      "finding": "Hidden assertion operand removed from missing packet; wrong-subject transform now retains foreign facts."
+    },
+    {
+      "status": "resolved_before_model_evaluation",
+      "finding": "Related arguments/attempts variants merged into one calibration dependency group; known schedules materially varied for holdout."
+    },
+    {
+      "status": "limit",
+      "finding": "Explicit invariant names and comparison operands make this evidence-composition evaluation, not unsupervised invariant discovery."
+    },
+    {
+      "status": "limit",
+      "finding": "Known-mechanism variants, small selected correlated sample, and one relationship family do not establish new-mechanism or production generalization."
+    },
+    {
+      "status": "limit",
+      "finding": "All withheld main-case outcomes are adverse; no prevalence or blanket-investigation recommendation follows."
+    },
+    {
+      "status": "limit",
+      "finding": "Protocol peers are not installed-vendor evidence; labels do not establish economic gain, causal policy benefit, or completed required arms."
+    }
+  ],
+  "details": "reviews/preflight.md",
+  "reviewer_probe_evidence": [
+    {
+      "original": "/tmp/jev-v2-independent-probe-review",
+      "retained": "evidence/preflight/independent-probe-review/"
+    },
+    {
+      "original": "/tmp/jev-v2-independent-probe-review-sockets",
+      "retained": "evidence/preflight/independent-probe-review-sockets/"
+    }
+  ]
+}

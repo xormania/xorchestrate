@@ -1,0 +1,929 @@
+{
+  "boundary": "active Application / SQLite / configured evaluator",
+  "records": [
+    {
+      "changes": {
+        "title": "Display title revised"
+      },
+      "fresh": {
+        "accepted": true,
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "assessment_id": "b5fcdd2fae0e4f0b90ac0c2c7ba10725",
+        "assessment_version": 1,
+        "binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "20d59e4ac0a77b23e53f56bb099f94b6d5f8131b6803f03bcb7d6acab7a2502d",
+              2,
+              "7d53c2482f80082f25aba62cca40de4e811eb76589916cc1372e4f519d721da6"
+            ]
+          ],
+          "operations": [
+            [
+              "824aa18d339fa782323c6ca4e2061b6d7bbbb0f179021bc62da9767e5a58a041",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "943eefa4c87d84b50b56956a99f3ee656d1f4b6aa527d776cffc1a7ad99a7725",
+            "revision": 1
+          }
+        },
+        "coverage": {
+          "A": {
+            "checks": [
+              "A"
+            ],
+            "covered": true
+          }
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "id": "c0e1f27c7a8b4ce2a38f0429c21a0e65",
+        "issues": [],
+        "policy_decision": {
+          "accepted": true,
+          "reasons": []
+        },
+        "sequence": 3,
+        "version": 1,
+        "work_id": "1d05dbd127b14a42b72f35f292326216"
+      },
+      "fresh_assessment": {
+        "acceptance_binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "20d59e4ac0a77b23e53f56bb099f94b6d5f8131b6803f03bcb7d6acab7a2502d",
+              2,
+              "7d53c2482f80082f25aba62cca40de4e811eb76589916cc1372e4f519d721da6"
+            ]
+          ],
+          "operations": [
+            [
+              "824aa18d339fa782323c6ca4e2061b6d7bbbb0f179021bc62da9767e5a58a041",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "943eefa4c87d84b50b56956a99f3ee656d1f4b6aa527d776cffc1a7ad99a7725",
+            "revision": 1
+          }
+        },
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "conclusion": {
+          "confidence": 0.99,
+          "details": {},
+          "evaluator": "review",
+          "evidence": [],
+          "outcome": "pass",
+          "rationale": "Fixed configured context predicate"
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "escalation_error": null,
+        "evaluations": [
+          {
+            "confidence": 0.99,
+            "details": {},
+            "evaluator": "review",
+            "evidence": [],
+            "outcome": "pass",
+            "rationale": "Fixed configured context predicate"
+          }
+        ],
+        "id": "b5fcdd2fae0e4f0b90ac0c2c7ba10725",
+        "question": "Evaluate current context",
+        "unresolved": false,
+        "version": 1,
+        "work_id": "1d05dbd127b14a42b72f35f292326216",
+        "work_version": 2
+      },
+      "initial": {
+        "accepted": true,
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "assessment_id": "2add4996387f4f45b6a30277d7e754ae",
+        "assessment_version": 1,
+        "binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "20d59e4ac0a77b23e53f56bb099f94b6d5f8131b6803f03bcb7d6acab7a2502d",
+              2,
+              "7d53c2482f80082f25aba62cca40de4e811eb76589916cc1372e4f519d721da6"
+            ]
+          ],
+          "operations": [
+            [
+              "824aa18d339fa782323c6ca4e2061b6d7bbbb0f179021bc62da9767e5a58a041",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "943eefa4c87d84b50b56956a99f3ee656d1f4b6aa527d776cffc1a7ad99a7725",
+            "revision": 1
+          }
+        },
+        "coverage": {
+          "A": {
+            "checks": [
+              "A"
+            ],
+            "covered": true
+          }
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "id": "5edb9abc07ae4ce1aa034fa64a7d2147",
+        "issues": [],
+        "policy_decision": {
+          "accepted": true,
+          "reasons": []
+        },
+        "sequence": 1,
+        "version": 1,
+        "work_id": "1d05dbd127b14a42b72f35f292326216"
+      },
+      "old_assessment": {
+        "acceptance_binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "20d59e4ac0a77b23e53f56bb099f94b6d5f8131b6803f03bcb7d6acab7a2502d",
+              2,
+              "7d53c2482f80082f25aba62cca40de4e811eb76589916cc1372e4f519d721da6"
+            ]
+          ],
+          "operations": [
+            [
+              "824aa18d339fa782323c6ca4e2061b6d7bbbb0f179021bc62da9767e5a58a041",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "943eefa4c87d84b50b56956a99f3ee656d1f4b6aa527d776cffc1a7ad99a7725",
+            "revision": 1
+          }
+        },
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "conclusion": {
+          "confidence": 0.99,
+          "details": {},
+          "evaluator": "review",
+          "evidence": [],
+          "outcome": "pass",
+          "rationale": "Fixed configured context predicate"
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "escalation_error": null,
+        "evaluations": [
+          {
+            "confidence": 0.99,
+            "details": {},
+            "evaluator": "review",
+            "evidence": [],
+            "outcome": "pass",
+            "rationale": "Fixed configured context predicate"
+          }
+        ],
+        "id": "2add4996387f4f45b6a30277d7e754ae",
+        "question": "Evaluate current context",
+        "unresolved": false,
+        "version": 1,
+        "work_id": "1d05dbd127b14a42b72f35f292326216",
+        "work_version": 1
+      },
+      "persisted": {
+        "acceptance_history": [
+          {
+            "accepted": true,
+            "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+            "assessment_id": "2add4996387f4f45b6a30277d7e754ae",
+            "assessment_version": 1,
+            "binding": {
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "20d59e4ac0a77b23e53f56bb099f94b6d5f8131b6803f03bcb7d6acab7a2502d",
+                  2,
+                  "7d53c2482f80082f25aba62cca40de4e811eb76589916cc1372e4f519d721da6"
+                ]
+              ],
+              "operations": [
+                [
+                  "824aa18d339fa782323c6ca4e2061b6d7bbbb0f179021bc62da9767e5a58a041",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+              "provider_configurations": {
+                "checks": null
+              },
+              "requirements": {
+                "identity": "943eefa4c87d84b50b56956a99f3ee656d1f4b6aa527d776cffc1a7ad99a7725",
+                "revision": 1
+              }
+            },
+            "coverage": {
+              "A": {
+                "checks": [
+                  "A"
+                ],
+                "covered": true
+              }
+            },
+            "created_at": "2026-10-23T20:00:00Z",
+            "created_by": "owner",
+            "current": true,
+            "id": "5edb9abc07ae4ce1aa034fa64a7d2147",
+            "issues": [],
+            "policy_decision": {
+              "accepted": true,
+              "reasons": []
+            },
+            "sequence": 1,
+            "version": 1,
+            "work_id": "1d05dbd127b14a42b72f35f292326216"
+          }
+        ],
+        "acceptance_issues": [],
+        "accepted": true,
+        "candidate": {
+          "candidate": {
+            "configuration": "config:nondefault",
+            "identity": "tree:measured-product"
+          },
+          "id": "1d05dbd127b14a42b72f35f292326216",
+          "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+          "selected_at": "2026-10-23T20:00:00Z",
+          "selected_by": "owner",
+          "version": 1,
+          "work_id": "1d05dbd127b14a42b72f35f292326216"
+        },
+        "contributions": [],
+        "coverage": {
+          "A": {
+            "checks": [
+              "A"
+            ],
+            "covered": true
+          }
+        },
+        "measurements": [
+          {
+            "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "candidate_revision": 1,
+            "check_id": "A",
+            "created_at": "2026-10-23T20:00:00Z",
+            "created_by": "owner",
+            "fingerprint": "f2ce0dbcaf4ad53aa5765da24bf3e5915595464fc3555f14e118eb1e64ba2bb5",
+            "finished_at": "2026-10-23T20:00:00Z",
+            "id": "20d59e4ac0a77b23e53f56bb099f94b6d5f8131b6803f03bcb7d6acab7a2502d",
+            "operation_id": "824aa18d339fa782323c6ca4e2061b6d7bbbb0f179021bc62da9767e5a58a041",
+            "provider_identity": null,
+            "raw_digest": "7d53c2482f80082f25aba62cca40de4e811eb76589916cc1372e4f519d721da6",
+            "raw_response": {
+              "measurement": {
+                "bindings": {
+                  "artifact": {
+                    "name": "result.json",
+                    "sha256": "measured-artifact"
+                  },
+                  "native": {
+                    "incarnation": "incarnation-2",
+                    "session_id": "conversation"
+                  },
+                  "scope": "product"
+                },
+                "candidate": {
+                  "configuration": "config:nondefault",
+                  "identity": "tree:measured-product"
+                },
+                "check_id": "A",
+                "outcomes": {
+                  "A": true
+                },
+                "passed": true,
+                "requirement_revision": 1,
+                "requirements_identity": "943eefa4c87d84b50b56956a99f3ee656d1f4b6aa527d776cffc1a7ad99a7725",
+                "status": "completed",
+                "work_id": "1d05dbd127b14a42b72f35f292326216"
+              }
+            },
+            "request_binding": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "candidate": {
+                "configuration": "config:nondefault",
+                "identity": "tree:measured-product"
+              },
+              "check_id": "A",
+              "outcomes": [
+                "A"
+              ],
+              "requirement_revision": 1,
+              "requirements_identity": "943eefa4c87d84b50b56956a99f3ee656d1f4b6aa527d776cffc1a7ad99a7725",
+              "work_id": "1d05dbd127b14a42b72f35f292326216"
+            },
+            "requirement_revision": 1,
+            "requirements_identity": "943eefa4c87d84b50b56956a99f3ee656d1f4b6aa527d776cffc1a7ad99a7725",
+            "sequence": 1,
+            "status": "completed",
+            "version": 2,
+            "work_id": "1d05dbd127b14a42b72f35f292326216"
+          }
+        ],
+        "requirements": {
+          "checks": {
+            "A": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "capability": "checks/measure",
+              "outcomes": [
+                "A"
+              ]
+            }
+          },
+          "id": "1d05dbd127b14a42b72f35f292326216",
+          "identity": "943eefa4c87d84b50b56956a99f3ee656d1f4b6aa527d776cffc1a7ad99a7725",
+          "objective": "Deliver the complete owner objective",
+          "outcomes": {
+            "A": "Current assessment and required mechanical check"
+          },
+          "revised_at": "2026-10-23T20:00:00Z",
+          "revised_by": "owner",
+          "version": 1,
+          "work_id": "1d05dbd127b14a42b72f35f292326216"
+        }
+      },
+      "reused": {
+        "accepted": true,
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "assessment_id": "2add4996387f4f45b6a30277d7e754ae",
+        "assessment_version": 1,
+        "binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "20d59e4ac0a77b23e53f56bb099f94b6d5f8131b6803f03bcb7d6acab7a2502d",
+              2,
+              "7d53c2482f80082f25aba62cca40de4e811eb76589916cc1372e4f519d721da6"
+            ]
+          ],
+          "operations": [
+            [
+              "824aa18d339fa782323c6ca4e2061b6d7bbbb0f179021bc62da9767e5a58a041",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "943eefa4c87d84b50b56956a99f3ee656d1f4b6aa527d776cffc1a7ad99a7725",
+            "revision": 1
+          }
+        },
+        "coverage": {
+          "A": {
+            "checks": [
+              "A"
+            ],
+            "covered": true
+          }
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "id": "88043f68b945426da2b74d78a90612f7",
+        "issues": [],
+        "policy_decision": {
+          "accepted": true,
+          "reasons": []
+        },
+        "sequence": 2,
+        "version": 1,
+        "work_id": "1d05dbd127b14a42b72f35f292326216"
+      }
+    },
+    {
+      "changes": {
+        "context": {
+          "check_result": "failed"
+        }
+      },
+      "fresh": {
+        "accepted": false,
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "assessment_id": "076b4c068f43416d8be4dfa26e236c47",
+        "assessment_version": 1,
+        "binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "d465cb89b2dc5ccb65b206afb172df5f1c5fc56fbfe221903b30f5ff7a9960f5",
+              2,
+              "689a2d26e855c9c28b6a95c8d4534ce0e04904a0ada905ee59a5b4392a3c6fda"
+            ]
+          ],
+          "operations": [
+            [
+              "be3807c5b2ab66e03214ede3ab73d72d154815f85e00ec33e2dc00ded0ce567f",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "04ebb9aed0d1ef0f644f36f57a048177cc00a9e50bb4e897cf3b4798e965ffc7",
+            "revision": 1
+          }
+        },
+        "coverage": {
+          "A": {
+            "checks": [
+              "A"
+            ],
+            "covered": true
+          }
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "id": "d0dd8e68d93e44098afad4b2a2640f35",
+        "issues": [],
+        "policy_decision": {
+          "accepted": false,
+          "reasons": [
+            {
+              "code": "assessment_unfavorable"
+            }
+          ]
+        },
+        "sequence": 3,
+        "version": 1,
+        "work_id": "b47152a28c6442a087312d0d03b739dd"
+      },
+      "fresh_assessment": {
+        "acceptance_binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "d465cb89b2dc5ccb65b206afb172df5f1c5fc56fbfe221903b30f5ff7a9960f5",
+              2,
+              "689a2d26e855c9c28b6a95c8d4534ce0e04904a0ada905ee59a5b4392a3c6fda"
+            ]
+          ],
+          "operations": [
+            [
+              "be3807c5b2ab66e03214ede3ab73d72d154815f85e00ec33e2dc00ded0ce567f",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "04ebb9aed0d1ef0f644f36f57a048177cc00a9e50bb4e897cf3b4798e965ffc7",
+            "revision": 1
+          }
+        },
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "conclusion": {
+          "confidence": 0.99,
+          "details": {},
+          "evaluator": "review",
+          "evidence": [],
+          "outcome": "reject",
+          "rationale": "Fixed configured context predicate"
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "escalation_error": null,
+        "evaluations": [
+          {
+            "confidence": 0.99,
+            "details": {},
+            "evaluator": "review",
+            "evidence": [],
+            "outcome": "reject",
+            "rationale": "Fixed configured context predicate"
+          }
+        ],
+        "id": "076b4c068f43416d8be4dfa26e236c47",
+        "question": "Evaluate current context",
+        "unresolved": false,
+        "version": 1,
+        "work_id": "b47152a28c6442a087312d0d03b739dd",
+        "work_version": 2
+      },
+      "initial": {
+        "accepted": true,
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "assessment_id": "168ffc880f094424abc028116a3afce1",
+        "assessment_version": 1,
+        "binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "d465cb89b2dc5ccb65b206afb172df5f1c5fc56fbfe221903b30f5ff7a9960f5",
+              2,
+              "689a2d26e855c9c28b6a95c8d4534ce0e04904a0ada905ee59a5b4392a3c6fda"
+            ]
+          ],
+          "operations": [
+            [
+              "be3807c5b2ab66e03214ede3ab73d72d154815f85e00ec33e2dc00ded0ce567f",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "04ebb9aed0d1ef0f644f36f57a048177cc00a9e50bb4e897cf3b4798e965ffc7",
+            "revision": 1
+          }
+        },
+        "coverage": {
+          "A": {
+            "checks": [
+              "A"
+            ],
+            "covered": true
+          }
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "id": "1dd5b07c32e446acbf518cf168adbe4c",
+        "issues": [],
+        "policy_decision": {
+          "accepted": true,
+          "reasons": []
+        },
+        "sequence": 1,
+        "version": 1,
+        "work_id": "b47152a28c6442a087312d0d03b739dd"
+      },
+      "old_assessment": {
+        "acceptance_binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "d465cb89b2dc5ccb65b206afb172df5f1c5fc56fbfe221903b30f5ff7a9960f5",
+              2,
+              "689a2d26e855c9c28b6a95c8d4534ce0e04904a0ada905ee59a5b4392a3c6fda"
+            ]
+          ],
+          "operations": [
+            [
+              "be3807c5b2ab66e03214ede3ab73d72d154815f85e00ec33e2dc00ded0ce567f",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "04ebb9aed0d1ef0f644f36f57a048177cc00a9e50bb4e897cf3b4798e965ffc7",
+            "revision": 1
+          }
+        },
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "conclusion": {
+          "confidence": 0.99,
+          "details": {},
+          "evaluator": "review",
+          "evidence": [],
+          "outcome": "pass",
+          "rationale": "Fixed configured context predicate"
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "escalation_error": null,
+        "evaluations": [
+          {
+            "confidence": 0.99,
+            "details": {},
+            "evaluator": "review",
+            "evidence": [],
+            "outcome": "pass",
+            "rationale": "Fixed configured context predicate"
+          }
+        ],
+        "id": "168ffc880f094424abc028116a3afce1",
+        "question": "Evaluate current context",
+        "unresolved": false,
+        "version": 1,
+        "work_id": "b47152a28c6442a087312d0d03b739dd",
+        "work_version": 1
+      },
+      "persisted": {
+        "acceptance_history": [
+          {
+            "accepted": true,
+            "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+            "assessment_id": "168ffc880f094424abc028116a3afce1",
+            "assessment_version": 1,
+            "binding": {
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "d465cb89b2dc5ccb65b206afb172df5f1c5fc56fbfe221903b30f5ff7a9960f5",
+                  2,
+                  "689a2d26e855c9c28b6a95c8d4534ce0e04904a0ada905ee59a5b4392a3c6fda"
+                ]
+              ],
+              "operations": [
+                [
+                  "be3807c5b2ab66e03214ede3ab73d72d154815f85e00ec33e2dc00ded0ce567f",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+              "provider_configurations": {
+                "checks": null
+              },
+              "requirements": {
+                "identity": "04ebb9aed0d1ef0f644f36f57a048177cc00a9e50bb4e897cf3b4798e965ffc7",
+                "revision": 1
+              }
+            },
+            "coverage": {
+              "A": {
+                "checks": [
+                  "A"
+                ],
+                "covered": true
+              }
+            },
+            "created_at": "2026-10-23T20:00:00Z",
+            "created_by": "owner",
+            "current": true,
+            "id": "1dd5b07c32e446acbf518cf168adbe4c",
+            "issues": [],
+            "policy_decision": {
+              "accepted": true,
+              "reasons": []
+            },
+            "sequence": 1,
+            "version": 1,
+            "work_id": "b47152a28c6442a087312d0d03b739dd"
+          }
+        ],
+        "acceptance_issues": [],
+        "accepted": true,
+        "candidate": {
+          "candidate": {
+            "configuration": "config:nondefault",
+            "identity": "tree:measured-product"
+          },
+          "id": "b47152a28c6442a087312d0d03b739dd",
+          "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+          "selected_at": "2026-10-23T20:00:00Z",
+          "selected_by": "owner",
+          "version": 1,
+          "work_id": "b47152a28c6442a087312d0d03b739dd"
+        },
+        "contributions": [],
+        "coverage": {
+          "A": {
+            "checks": [
+              "A"
+            ],
+            "covered": true
+          }
+        },
+        "measurements": [
+          {
+            "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "candidate_revision": 1,
+            "check_id": "A",
+            "created_at": "2026-10-23T20:00:00Z",
+            "created_by": "owner",
+            "fingerprint": "78240069688b15e837538924b99baf375dab13586f3159e3b6a478ba3e01f2c3",
+            "finished_at": "2026-10-23T20:00:00Z",
+            "id": "d465cb89b2dc5ccb65b206afb172df5f1c5fc56fbfe221903b30f5ff7a9960f5",
+            "operation_id": "be3807c5b2ab66e03214ede3ab73d72d154815f85e00ec33e2dc00ded0ce567f",
+            "provider_identity": null,
+            "raw_digest": "689a2d26e855c9c28b6a95c8d4534ce0e04904a0ada905ee59a5b4392a3c6fda",
+            "raw_response": {
+              "measurement": {
+                "bindings": {
+                  "artifact": {
+                    "name": "result.json",
+                    "sha256": "measured-artifact"
+                  },
+                  "native": {
+                    "incarnation": "incarnation-2",
+                    "session_id": "conversation"
+                  },
+                  "scope": "product"
+                },
+                "candidate": {
+                  "configuration": "config:nondefault",
+                  "identity": "tree:measured-product"
+                },
+                "check_id": "A",
+                "outcomes": {
+                  "A": true
+                },
+                "passed": true,
+                "requirement_revision": 1,
+                "requirements_identity": "04ebb9aed0d1ef0f644f36f57a048177cc00a9e50bb4e897cf3b4798e965ffc7",
+                "status": "completed",
+                "work_id": "b47152a28c6442a087312d0d03b739dd"
+              }
+            },
+            "request_binding": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "candidate": {
+                "configuration": "config:nondefault",
+                "identity": "tree:measured-product"
+              },
+              "check_id": "A",
+              "outcomes": [
+                "A"
+              ],
+              "requirement_revision": 1,
+              "requirements_identity": "04ebb9aed0d1ef0f644f36f57a048177cc00a9e50bb4e897cf3b4798e965ffc7",
+              "work_id": "b47152a28c6442a087312d0d03b739dd"
+            },
+            "requirement_revision": 1,
+            "requirements_identity": "04ebb9aed0d1ef0f644f36f57a048177cc00a9e50bb4e897cf3b4798e965ffc7",
+            "sequence": 1,
+            "status": "completed",
+            "version": 2,
+            "work_id": "b47152a28c6442a087312d0d03b739dd"
+          }
+        ],
+        "requirements": {
+          "checks": {
+            "A": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "capability": "checks/measure",
+              "outcomes": [
+                "A"
+              ]
+            }
+          },
+          "id": "b47152a28c6442a087312d0d03b739dd",
+          "identity": "04ebb9aed0d1ef0f644f36f57a048177cc00a9e50bb4e897cf3b4798e965ffc7",
+          "objective": "Deliver the complete owner objective",
+          "outcomes": {
+            "A": "Current assessment and required mechanical check"
+          },
+          "revised_at": "2026-10-23T20:00:00Z",
+          "revised_by": "owner",
+          "version": 1,
+          "work_id": "b47152a28c6442a087312d0d03b739dd"
+        }
+      },
+      "reused": {
+        "accepted": true,
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "assessment_id": "168ffc880f094424abc028116a3afce1",
+        "assessment_version": 1,
+        "binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "d465cb89b2dc5ccb65b206afb172df5f1c5fc56fbfe221903b30f5ff7a9960f5",
+              2,
+              "689a2d26e855c9c28b6a95c8d4534ce0e04904a0ada905ee59a5b4392a3c6fda"
+            ]
+          ],
+          "operations": [
+            [
+              "be3807c5b2ab66e03214ede3ab73d72d154815f85e00ec33e2dc00ded0ce567f",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "04ebb9aed0d1ef0f644f36f57a048177cc00a9e50bb4e897cf3b4798e965ffc7",
+            "revision": 1
+          }
+        },
+        "coverage": {
+          "A": {
+            "checks": [
+              "A"
+            ],
+            "covered": true
+          }
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "id": "a04222a2cb6e41049482848e3033d25e",
+        "issues": [],
+        "policy_decision": {
+          "accepted": true,
+          "reasons": []
+        },
+        "sequence": 2,
+        "version": 1,
+        "work_id": "b47152a28c6442a087312d0d03b739dd"
+      }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "command": "/workspace/jev-venv/bin/python -m pytest -q experiments/jev_failure_correlation_v2/tests/test_evaluation.py experiments/jev_failure_correlation_v2/tests/test_policies.py experiments/jev_failure_correlation_v2/tests/test_transport.py",
+  "exit_code": 0,
+  "output": "37 passed in 0.51s",
+  "provider_calls": 0,
+  "interpretation": "Existing offline tests; additional behavioral controls recorded in preflight"
+}

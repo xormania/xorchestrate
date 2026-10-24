@@ -1,0 +1,2539 @@
+{
+  "boundary": "actual three adapter implementations with controlled native protocol subprocess peers; no installed vendor",
+  "command": [
+    "/workspace/jev-venv/bin/python",
+    "/workspace/xorchestrate-jev/experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/probe.py",
+    "/workspace/xorchestrate-jev"
+  ],
+  "records": {
+    "claude": {
+      "adapter_replay": {
+        "acceptance_history": [
+          {
+            "accepted": true,
+            "assessment_configuration_identity": null,
+            "assessment_id": null,
+            "assessment_version": null,
+            "binding": {
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "4ae7be3176d040df099ba326288a426ed9a3139de3dfd74515f10a02476523cb",
+                  2,
+                  "03afb02a4ca925125c2c80d10052a49174d35a96a6f7535d01ebf99eaca7f568"
+                ]
+              ],
+              "operations": [
+                [
+                  "fd65ecee1f46b3d9e5d45458508d301e63a6aff5bcc5323fa31d186e353d2347",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:6368006b998b01787369840e420b9051bbb42f27132643710f7404552238af16",
+              "provider_configurations": {
+                "checks": null
+              },
+              "requirements": {
+                "identity": "9a3517a978ea0e8746b752cad726511b8a184492b4d6971a774aa26db56af212",
+                "revision": 1
+              }
+            },
+            "coverage": {
+              "A": {
+                "checks": [
+                  "A"
+                ],
+                "covered": true
+              }
+            },
+            "created_at": "2026-10-24T06:37:37.606420+00:00",
+            "created_by": "owner",
+            "current": true,
+            "id": "01f40f79fcb7496a9782bf5a59f6ecb4",
+            "issues": [],
+            "policy_decision": {
+              "accepted": true,
+              "reasons": []
+            },
+            "sequence": 1,
+            "version": 1,
+            "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+          }
+        ],
+        "acceptance_issues": [],
+        "accepted": true,
+        "candidate": {
+          "candidate": {
+            "configuration": "config:nondefault",
+            "identity": "tree:measured-product"
+          },
+          "id": "9fc1f2b67c484f07bfab1828cc41bf65",
+          "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+          "selected_at": "2026-10-24T06:37:37.598835+00:00",
+          "selected_by": "owner",
+          "version": 1,
+          "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+        },
+        "contributions": [],
+        "coverage": {
+          "A": {
+            "checks": [
+              "A"
+            ],
+            "covered": true
+          }
+        },
+        "measurements": [
+          {
+            "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "candidate_revision": 1,
+            "check_id": "A",
+            "created_at": "2026-10-24T06:37:37.600588+00:00",
+            "created_by": "owner",
+            "fingerprint": "662249217dde19086ff0dc5dbbe4a0ab864dbcdfd572981adf15060b8cfbfaa3",
+            "finished_at": "2026-10-24T06:37:37.604040+00:00",
+            "id": "4ae7be3176d040df099ba326288a426ed9a3139de3dfd74515f10a02476523cb",
+            "operation_id": "fd65ecee1f46b3d9e5d45458508d301e63a6aff5bcc5323fa31d186e353d2347",
+            "provider_identity": null,
+            "raw_digest": "03afb02a4ca925125c2c80d10052a49174d35a96a6f7535d01ebf99eaca7f568",
+            "raw_response": {
+              "measurement": {
+                "bindings": {
+                  "artifact": {
+                    "name": "result.json",
+                    "sha256": "measured-artifact"
+                  },
+                  "native": {
+                    "incarnation": "incarnation-2",
+                    "session_id": "conversation"
+                  },
+                  "scope": "product"
+                },
+                "candidate": {
+                  "configuration": "config:nondefault",
+                  "identity": "tree:measured-product"
+                },
+                "check_id": "A",
+                "outcomes": {
+                  "A": true
+                },
+                "passed": true,
+                "requirement_revision": 1,
+                "requirements_identity": "9a3517a978ea0e8746b752cad726511b8a184492b4d6971a774aa26db56af212",
+                "status": "completed",
+                "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+              }
+            },
+            "request_binding": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "candidate": {
+                "configuration": "config:nondefault",
+                "identity": "tree:measured-product"
+              },
+              "check_id": "A",
+              "outcomes": [
+                "A"
+              ],
+              "requirement_revision": 1,
+              "requirements_identity": "9a3517a978ea0e8746b752cad726511b8a184492b4d6971a774aa26db56af212",
+              "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+            },
+            "requirement_revision": 1,
+            "requirements_identity": "9a3517a978ea0e8746b752cad726511b8a184492b4d6971a774aa26db56af212",
+            "sequence": 1,
+            "status": "completed",
+            "version": 2,
+            "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+          }
+        ],
+        "requirements": {
+          "checks": {
+            "A": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "capability": "checks/measure",
+              "outcomes": [
+                "A"
+              ]
+            }
+          },
+          "id": "9fc1f2b67c484f07bfab1828cc41bf65",
+          "identity": "9a3517a978ea0e8746b752cad726511b8a184492b4d6971a774aa26db56af212",
+          "objective": "Deliver the complete owner objective",
+          "outcomes": {
+            "A": "A"
+          },
+          "revised_at": "2026-10-24T06:37:37.596950+00:00",
+          "revised_by": "owner",
+          "version": 1,
+          "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+        }
+      },
+      "baseline": {
+        "acceptance_history": [
+          {
+            "accepted": true,
+            "assessment_configuration_identity": null,
+            "assessment_id": null,
+            "assessment_version": null,
+            "binding": {
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "4ae7be3176d040df099ba326288a426ed9a3139de3dfd74515f10a02476523cb",
+                  2,
+                  "03afb02a4ca925125c2c80d10052a49174d35a96a6f7535d01ebf99eaca7f568"
+                ]
+              ],
+              "operations": [
+                [
+                  "fd65ecee1f46b3d9e5d45458508d301e63a6aff5bcc5323fa31d186e353d2347",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:6368006b998b01787369840e420b9051bbb42f27132643710f7404552238af16",
+              "provider_configurations": {
+                "checks": null
+              },
+              "requirements": {
+                "identity": "9a3517a978ea0e8746b752cad726511b8a184492b4d6971a774aa26db56af212",
+                "revision": 1
+              }
+            },
+            "coverage": {
+              "A": {
+                "checks": [
+                  "A"
+                ],
+                "covered": true
+              }
+            },
+            "created_at": "2026-10-24T06:37:37.606420+00:00",
+            "created_by": "owner",
+            "current": true,
+            "id": "01f40f79fcb7496a9782bf5a59f6ecb4",
+            "issues": [],
+            "policy_decision": {
+              "accepted": true,
+              "reasons": []
+            },
+            "sequence": 1,
+            "version": 1,
+            "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+          }
+        ],
+        "acceptance_issues": [],
+        "accepted": true,
+        "candidate": {
+          "candidate": {
+            "configuration": "config:nondefault",
+            "identity": "tree:measured-product"
+          },
+          "id": "9fc1f2b67c484f07bfab1828cc41bf65",
+          "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+          "selected_at": "2026-10-24T06:37:37.598835+00:00",
+          "selected_by": "owner",
+          "version": 1,
+          "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+        },
+        "contributions": [],
+        "coverage": {
+          "A": {
+            "checks": [
+              "A"
+            ],
+            "covered": true
+          }
+        },
+        "measurements": [
+          {
+            "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "candidate_revision": 1,
+            "check_id": "A",
+            "created_at": "2026-10-24T06:37:37.600588+00:00",
+            "created_by": "owner",
+            "fingerprint": "662249217dde19086ff0dc5dbbe4a0ab864dbcdfd572981adf15060b8cfbfaa3",
+            "finished_at": "2026-10-24T06:37:37.604040+00:00",
+            "id": "4ae7be3176d040df099ba326288a426ed9a3139de3dfd74515f10a02476523cb",
+            "operation_id": "fd65ecee1f46b3d9e5d45458508d301e63a6aff5bcc5323fa31d186e353d2347",
+            "provider_identity": null,
+            "raw_digest": "03afb02a4ca925125c2c80d10052a49174d35a96a6f7535d01ebf99eaca7f568",
+            "raw_response": {
+              "measurement": {
+                "bindings": {
+                  "artifact": {
+                    "name": "result.json",
+                    "sha256": "measured-artifact"
+                  },
+                  "native": {
+                    "incarnation": "incarnation-2",
+                    "session_id": "conversation"
+                  },
+                  "scope": "product"
+                },
+                "candidate": {
+                  "configuration": "config:nondefault",
+                  "identity": "tree:measured-product"
+                },
+                "check_id": "A",
+                "outcomes": {
+                  "A": true
+                },
+                "passed": true,
+                "requirement_revision": 1,
+                "requirements_identity": "9a3517a978ea0e8746b752cad726511b8a184492b4d6971a774aa26db56af212",
+                "status": "completed",
+                "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+              }
+            },
+            "request_binding": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "candidate": {
+                "configuration": "config:nondefault",
+                "identity": "tree:measured-product"
+              },
+              "check_id": "A",
+              "outcomes": [
+                "A"
+              ],
+              "requirement_revision": 1,
+              "requirements_identity": "9a3517a978ea0e8746b752cad726511b8a184492b4d6971a774aa26db56af212",
+              "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+            },
+            "requirement_revision": 1,
+            "requirements_identity": "9a3517a978ea0e8746b752cad726511b8a184492b4d6971a774aa26db56af212",
+            "sequence": 1,
+            "status": "completed",
+            "version": 2,
+            "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+          }
+        ],
+        "requirements": {
+          "checks": {
+            "A": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "capability": "checks/measure",
+              "outcomes": [
+                "A"
+              ]
+            }
+          },
+          "id": "9fc1f2b67c484f07bfab1828cc41bf65",
+          "identity": "9a3517a978ea0e8746b752cad726511b8a184492b4d6971a774aa26db56af212",
+          "objective": "Deliver the complete owner objective",
+          "outcomes": {
+            "A": "A"
+          },
+          "revised_at": "2026-10-24T06:37:37.596950+00:00",
+          "revised_by": "owner",
+          "version": 1,
+          "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+        }
+      },
+      "direct": {
+        "acceptance_history": [
+          {
+            "accepted": true,
+            "assessment_configuration_identity": null,
+            "assessment_id": null,
+            "assessment_version": null,
+            "binding": {
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "4ae7be3176d040df099ba326288a426ed9a3139de3dfd74515f10a02476523cb",
+                  2,
+                  "03afb02a4ca925125c2c80d10052a49174d35a96a6f7535d01ebf99eaca7f568"
+                ]
+              ],
+              "operations": [
+                [
+                  "fd65ecee1f46b3d9e5d45458508d301e63a6aff5bcc5323fa31d186e353d2347",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:6368006b998b01787369840e420b9051bbb42f27132643710f7404552238af16",
+              "provider_configurations": {
+                "checks": null
+              },
+              "requirements": {
+                "identity": "9a3517a978ea0e8746b752cad726511b8a184492b4d6971a774aa26db56af212",
+                "revision": 1
+              }
+            },
+            "coverage": {
+              "A": {
+                "checks": [
+                  "A"
+                ],
+                "covered": true
+              }
+            },
+            "created_at": "2026-10-24T06:37:37.606420+00:00",
+            "created_by": "owner",
+            "current": false,
+            "id": "01f40f79fcb7496a9782bf5a59f6ecb4",
+            "issues": [],
+            "policy_decision": {
+              "accepted": true,
+              "reasons": []
+            },
+            "sequence": 1,
+            "version": 1,
+            "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+          }
+        ],
+        "acceptance_issues": [
+          {
+            "check_id": "A",
+            "code": "measurement_stale"
+          },
+          {
+            "check_id": "B",
+            "code": "measurement_missing"
+          },
+          {
+            "check_id": "C",
+            "code": "measurement_missing"
+          },
+          {
+            "code": "outcome_uncovered",
+            "outcome": "A"
+          },
+          {
+            "code": "outcome_uncovered",
+            "outcome": "B"
+          },
+          {
+            "code": "outcome_uncovered",
+            "outcome": "C"
+          }
+        ],
+        "accepted": false,
+        "candidate": {
+          "candidate": {
+            "configuration": "config:nondefault",
+            "identity": "tree:measured-product"
+          },
+          "id": "9fc1f2b67c484f07bfab1828cc41bf65",
+          "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+          "selected_at": "2026-10-24T06:37:37.598835+00:00",
+          "selected_by": "owner",
+          "version": 1,
+          "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+        },
+        "contributions": [],
+        "coverage": {
+          "A": {
+            "checks": [],
+            "covered": false
+          },
+          "B": {
+            "checks": [],
+            "covered": false
+          },
+          "C": {
+            "checks": [],
+            "covered": false
+          }
+        },
+        "measurements": [
+          {
+            "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "candidate_revision": 1,
+            "check_id": "A",
+            "created_at": "2026-10-24T06:37:37.600588+00:00",
+            "created_by": "owner",
+            "fingerprint": "662249217dde19086ff0dc5dbbe4a0ab864dbcdfd572981adf15060b8cfbfaa3",
+            "finished_at": "2026-10-24T06:37:37.604040+00:00",
+            "id": "4ae7be3176d040df099ba326288a426ed9a3139de3dfd74515f10a02476523cb",
+            "operation_id": "fd65ecee1f46b3d9e5d45458508d301e63a6aff5bcc5323fa31d186e353d2347",
+            "provider_identity": null,
+            "raw_digest": "03afb02a4ca925125c2c80d10052a49174d35a96a6f7535d01ebf99eaca7f568",
+            "raw_response": {
+              "measurement": {
+                "bindings": {
+                  "artifact": {
+                    "name": "result.json",
+                    "sha256": "measured-artifact"
+                  },
+                  "native": {
+                    "incarnation": "incarnation-2",
+                    "session_id": "conversation"
+                  },
+                  "scope": "product"
+                },
+                "candidate": {
+                  "configuration": "config:nondefault",
+                  "identity": "tree:measured-product"
+                },
+                "check_id": "A",
+                "outcomes": {
+                  "A": true
+                },
+                "passed": true,
+                "requirement_revision": 1,
+                "requirements_identity": "9a3517a978ea0e8746b752cad726511b8a184492b4d6971a774aa26db56af212",
+                "status": "completed",
+                "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+              }
+            },
+            "request_binding": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "candidate": {
+                "configuration": "config:nondefault",
+                "identity": "tree:measured-product"
+              },
+              "check_id": "A",
+              "outcomes": [
+                "A"
+              ],
+              "requirement_revision": 1,
+              "requirements_identity": "9a3517a978ea0e8746b752cad726511b8a184492b4d6971a774aa26db56af212",
+              "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+            },
+            "requirement_revision": 1,
+            "requirements_identity": "9a3517a978ea0e8746b752cad726511b8a184492b4d6971a774aa26db56af212",
+            "sequence": 1,
+            "status": "completed",
+            "version": 2,
+            "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+          }
+        ],
+        "requirements": {
+          "checks": {
+            "A": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "capability": "checks/measure",
+              "outcomes": [
+                "A"
+              ]
+            },
+            "B": {
+              "capability": "checks/measure",
+              "outcomes": [
+                "B"
+              ]
+            },
+            "C": {
+              "capability": "checks/measure",
+              "outcomes": [
+                "C"
+              ]
+            }
+          },
+          "id": "9fc1f2b67c484f07bfab1828cc41bf65",
+          "identity": "467a038fd7386f01bb6b1ff4185b1e5ecf4ae7bf44a3fe86f787ec1fc70e9c26",
+          "objective": "Owner adds recovery after intermediate replay",
+          "outcomes": {
+            "A": "A",
+            "B": "B",
+            "C": "Recovery"
+          },
+          "revised_at": "2026-10-24T06:37:37.946840+00:00",
+          "revised_by": "owner",
+          "version": 3,
+          "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+        }
+      },
+      "fresh_adapter": {
+        "acceptance_history": [
+          {
+            "accepted": true,
+            "assessment_configuration_identity": null,
+            "assessment_id": null,
+            "assessment_version": null,
+            "binding": {
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "4ae7be3176d040df099ba326288a426ed9a3139de3dfd74515f10a02476523cb",
+                  2,
+                  "03afb02a4ca925125c2c80d10052a49174d35a96a6f7535d01ebf99eaca7f568"
+                ]
+              ],
+              "operations": [
+                [
+                  "fd65ecee1f46b3d9e5d45458508d301e63a6aff5bcc5323fa31d186e353d2347",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:6368006b998b01787369840e420b9051bbb42f27132643710f7404552238af16",
+              "provider_configurations": {
+                "checks": null
+              },
+              "requirements": {
+                "identity": "9a3517a978ea0e8746b752cad726511b8a184492b4d6971a774aa26db56af212",
+                "revision": 1
+              }
+            },
+            "coverage": {
+              "A": {
+                "checks": [
+                  "A"
+                ],
+                "covered": true
+              }
+            },
+            "created_at": "2026-10-24T06:37:37.606420+00:00",
+            "created_by": "owner",
+            "current": false,
+            "id": "01f40f79fcb7496a9782bf5a59f6ecb4",
+            "issues": [],
+            "policy_decision": {
+              "accepted": true,
+              "reasons": []
+            },
+            "sequence": 1,
+            "version": 1,
+            "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+          }
+        ],
+        "acceptance_issues": [
+          {
+            "check_id": "A",
+            "code": "measurement_stale"
+          },
+          {
+            "check_id": "B",
+            "code": "measurement_missing"
+          },
+          {
+            "check_id": "C",
+            "code": "measurement_missing"
+          },
+          {
+            "code": "outcome_uncovered",
+            "outcome": "A"
+          },
+          {
+            "code": "outcome_uncovered",
+            "outcome": "B"
+          },
+          {
+            "code": "outcome_uncovered",
+            "outcome": "C"
+          }
+        ],
+        "accepted": false,
+        "candidate": {
+          "candidate": {
+            "configuration": "config:nondefault",
+            "identity": "tree:measured-product"
+          },
+          "id": "9fc1f2b67c484f07bfab1828cc41bf65",
+          "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+          "selected_at": "2026-10-24T06:37:37.598835+00:00",
+          "selected_by": "owner",
+          "version": 1,
+          "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+        },
+        "contributions": [],
+        "coverage": {
+          "A": {
+            "checks": [],
+            "covered": false
+          },
+          "B": {
+            "checks": [],
+            "covered": false
+          },
+          "C": {
+            "checks": [],
+            "covered": false
+          }
+        },
+        "measurements": [
+          {
+            "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "candidate_revision": 1,
+            "check_id": "A",
+            "created_at": "2026-10-24T06:37:37.600588+00:00",
+            "created_by": "owner",
+            "fingerprint": "662249217dde19086ff0dc5dbbe4a0ab864dbcdfd572981adf15060b8cfbfaa3",
+            "finished_at": "2026-10-24T06:37:37.604040+00:00",
+            "id": "4ae7be3176d040df099ba326288a426ed9a3139de3dfd74515f10a02476523cb",
+            "operation_id": "fd65ecee1f46b3d9e5d45458508d301e63a6aff5bcc5323fa31d186e353d2347",
+            "provider_identity": null,
+            "raw_digest": "03afb02a4ca925125c2c80d10052a49174d35a96a6f7535d01ebf99eaca7f568",
+            "raw_response": {
+              "measurement": {
+                "bindings": {
+                  "artifact": {
+                    "name": "result.json",
+                    "sha256": "measured-artifact"
+                  },
+                  "native": {
+                    "incarnation": "incarnation-2",
+                    "session_id": "conversation"
+                  },
+                  "scope": "product"
+                },
+                "candidate": {
+                  "configuration": "config:nondefault",
+                  "identity": "tree:measured-product"
+                },
+                "check_id": "A",
+                "outcomes": {
+                  "A": true
+                },
+                "passed": true,
+                "requirement_revision": 1,
+                "requirements_identity": "9a3517a978ea0e8746b752cad726511b8a184492b4d6971a774aa26db56af212",
+                "status": "completed",
+                "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+              }
+            },
+            "request_binding": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "candidate": {
+                "configuration": "config:nondefault",
+                "identity": "tree:measured-product"
+              },
+              "check_id": "A",
+              "outcomes": [
+                "A"
+              ],
+              "requirement_revision": 1,
+              "requirements_identity": "9a3517a978ea0e8746b752cad726511b8a184492b4d6971a774aa26db56af212",
+              "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+            },
+            "requirement_revision": 1,
+            "requirements_identity": "9a3517a978ea0e8746b752cad726511b8a184492b4d6971a774aa26db56af212",
+            "sequence": 1,
+            "status": "completed",
+            "version": 2,
+            "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+          }
+        ],
+        "requirements": {
+          "checks": {
+            "A": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "capability": "checks/measure",
+              "outcomes": [
+                "A"
+              ]
+            },
+            "B": {
+              "capability": "checks/measure",
+              "outcomes": [
+                "B"
+              ]
+            },
+            "C": {
+              "capability": "checks/measure",
+              "outcomes": [
+                "C"
+              ]
+            }
+          },
+          "id": "9fc1f2b67c484f07bfab1828cc41bf65",
+          "identity": "467a038fd7386f01bb6b1ff4185b1e5ecf4ae7bf44a3fe86f787ec1fc70e9c26",
+          "objective": "Owner adds recovery after intermediate replay",
+          "outcomes": {
+            "A": "A",
+            "B": "B",
+            "C": "Recovery"
+          },
+          "revised_at": "2026-10-24T06:37:37.946840+00:00",
+          "revised_by": "owner",
+          "version": 3,
+          "work_id": "9fc1f2b67c484f07bfab1828cc41bf65"
+        }
+      },
+      "summary": {
+        "adapter_replay_accepted": true,
+        "adapter_replay_current_flags": [
+          true
+        ],
+        "adapter_replay_requirement_revision": 1,
+        "baseline_accepted": true,
+        "baseline_requirement_revision": 1,
+        "direct_current_accepted": false,
+        "direct_current_requirement_revision": 3,
+        "direct_invoke_native_replay_error": "stale_native_result",
+        "fresh_adapter_call_accepted": false,
+        "fresh_adapter_requirement_revision": 3,
+        "protocol": "claude"
+      }
+    },
+    "codex": {
+      "adapter_replay": {
+        "acceptance_history": [
+          {
+            "accepted": true,
+            "assessment_configuration_identity": null,
+            "assessment_id": null,
+            "assessment_version": null,
+            "binding": {
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "20f6ff1dba901165d8b52a0e9a843609aac369049ec061ef32a878706a724ac7",
+                  2,
+                  "2e878e983e15e533174017958d34e4c300b931c6be4f10a72b8165f7297dc7ca"
+                ]
+              ],
+              "operations": [
+                [
+                  "9bd87f42b0473eca4501ae12bb7826bfea00ee1de76b4f50c18b6fc1f17d6d8b",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:6368006b998b01787369840e420b9051bbb42f27132643710f7404552238af16",
+              "provider_configurations": {
+                "checks": null
+              },
+              "requirements": {
+                "identity": "8b7b4592e78f649bbdcd026c56bfe74833d83852dbb78966f31a476876dfdd7b",
+                "revision": 1
+              }
+            },
+            "coverage": {
+              "A": {
+                "checks": [
+                  "A"
+                ],
+                "covered": true
+              }
+            },
+            "created_at": "2026-10-24T06:37:37.264038+00:00",
+            "created_by": "owner",
+            "current": true,
+            "id": "75335c41e2cd46fca026e63a1be30065",
+            "issues": [],
+            "policy_decision": {
+              "accepted": true,
+              "reasons": []
+            },
+            "sequence": 1,
+            "version": 1,
+            "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+          }
+        ],
+        "acceptance_issues": [],
+        "accepted": true,
+        "candidate": {
+          "candidate": {
+            "configuration": "config:nondefault",
+            "identity": "tree:measured-product"
+          },
+          "id": "629ea1aba09f48848d660bb4a67a9f58",
+          "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+          "selected_at": "2026-10-24T06:37:37.253478+00:00",
+          "selected_by": "owner",
+          "version": 1,
+          "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+        },
+        "contributions": [],
+        "coverage": {
+          "A": {
+            "checks": [
+              "A"
+            ],
+            "covered": true
+          }
+        },
+        "measurements": [
+          {
+            "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "candidate_revision": 1,
+            "check_id": "A",
+            "created_at": "2026-10-24T06:37:37.255898+00:00",
+            "created_by": "owner",
+            "fingerprint": "f0fc45f155f449cb8151842981c49ec52104e8d06d0d8da64f7106c2a93062d4",
+            "finished_at": "2026-10-24T06:37:37.260247+00:00",
+            "id": "20f6ff1dba901165d8b52a0e9a843609aac369049ec061ef32a878706a724ac7",
+            "operation_id": "9bd87f42b0473eca4501ae12bb7826bfea00ee1de76b4f50c18b6fc1f17d6d8b",
+            "provider_identity": null,
+            "raw_digest": "2e878e983e15e533174017958d34e4c300b931c6be4f10a72b8165f7297dc7ca",
+            "raw_response": {
+              "measurement": {
+                "bindings": {
+                  "artifact": {
+                    "name": "result.json",
+                    "sha256": "measured-artifact"
+                  },
+                  "native": {
+                    "incarnation": "incarnation-2",
+                    "session_id": "conversation"
+                  },
+                  "scope": "product"
+                },
+                "candidate": {
+                  "configuration": "config:nondefault",
+                  "identity": "tree:measured-product"
+                },
+                "check_id": "A",
+                "outcomes": {
+                  "A": true
+                },
+                "passed": true,
+                "requirement_revision": 1,
+                "requirements_identity": "8b7b4592e78f649bbdcd026c56bfe74833d83852dbb78966f31a476876dfdd7b",
+                "status": "completed",
+                "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+              }
+            },
+            "request_binding": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "candidate": {
+                "configuration": "config:nondefault",
+                "identity": "tree:measured-product"
+              },
+              "check_id": "A",
+              "outcomes": [
+                "A"
+              ],
+              "requirement_revision": 1,
+              "requirements_identity": "8b7b4592e78f649bbdcd026c56bfe74833d83852dbb78966f31a476876dfdd7b",
+              "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+            },
+            "requirement_revision": 1,
+            "requirements_identity": "8b7b4592e78f649bbdcd026c56bfe74833d83852dbb78966f31a476876dfdd7b",
+            "sequence": 1,
+            "status": "completed",
+            "version": 2,
+            "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+          }
+        ],
+        "requirements": {
+          "checks": {
+            "A": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "capability": "checks/measure",
+              "outcomes": [
+                "A"
+              ]
+            }
+          },
+          "id": "629ea1aba09f48848d660bb4a67a9f58",
+          "identity": "8b7b4592e78f649bbdcd026c56bfe74833d83852dbb78966f31a476876dfdd7b",
+          "objective": "Deliver the complete owner objective",
+          "outcomes": {
+            "A": "A"
+          },
+          "revised_at": "2026-10-24T06:37:37.251533+00:00",
+          "revised_by": "owner",
+          "version": 1,
+          "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+        }
+      },
+      "baseline": {
+        "acceptance_history": [
+          {
+            "accepted": true,
+            "assessment_configuration_identity": null,
+            "assessment_id": null,
+            "assessment_version": null,
+            "binding": {
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "20f6ff1dba901165d8b52a0e9a843609aac369049ec061ef32a878706a724ac7",
+                  2,
+                  "2e878e983e15e533174017958d34e4c300b931c6be4f10a72b8165f7297dc7ca"
+                ]
+              ],
+              "operations": [
+                [
+                  "9bd87f42b0473eca4501ae12bb7826bfea00ee1de76b4f50c18b6fc1f17d6d8b",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:6368006b998b01787369840e420b9051bbb42f27132643710f7404552238af16",
+              "provider_configurations": {
+                "checks": null
+              },
+              "requirements": {
+                "identity": "8b7b4592e78f649bbdcd026c56bfe74833d83852dbb78966f31a476876dfdd7b",
+                "revision": 1
+              }
+            },
+            "coverage": {
+              "A": {
+                "checks": [
+                  "A"
+                ],
+                "covered": true
+              }
+            },
+            "created_at": "2026-10-24T06:37:37.264038+00:00",
+            "created_by": "owner",
+            "current": true,
+            "id": "75335c41e2cd46fca026e63a1be30065",
+            "issues": [],
+            "policy_decision": {
+              "accepted": true,
+              "reasons": []
+            },
+            "sequence": 1,
+            "version": 1,
+            "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+          }
+        ],
+        "acceptance_issues": [],
+        "accepted": true,
+        "candidate": {
+          "candidate": {
+            "configuration": "config:nondefault",
+            "identity": "tree:measured-product"
+          },
+          "id": "629ea1aba09f48848d660bb4a67a9f58",
+          "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+          "selected_at": "2026-10-24T06:37:37.253478+00:00",
+          "selected_by": "owner",
+          "version": 1,
+          "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+        },
+        "contributions": [],
+        "coverage": {
+          "A": {
+            "checks": [
+              "A"
+            ],
+            "covered": true
+          }
+        },
+        "measurements": [
+          {
+            "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "candidate_revision": 1,
+            "check_id": "A",
+            "created_at": "2026-10-24T06:37:37.255898+00:00",
+            "created_by": "owner",
+            "fingerprint": "f0fc45f155f449cb8151842981c49ec52104e8d06d0d8da64f7106c2a93062d4",
+            "finished_at": "2026-10-24T06:37:37.260247+00:00",
+            "id": "20f6ff1dba901165d8b52a0e9a843609aac369049ec061ef32a878706a724ac7",
+            "operation_id": "9bd87f42b0473eca4501ae12bb7826bfea00ee1de76b4f50c18b6fc1f17d6d8b",
+            "provider_identity": null,
+            "raw_digest": "2e878e983e15e533174017958d34e4c300b931c6be4f10a72b8165f7297dc7ca",
+            "raw_response": {
+              "measurement": {
+                "bindings": {
+                  "artifact": {
+                    "name": "result.json",
+                    "sha256": "measured-artifact"
+                  },
+                  "native": {
+                    "incarnation": "incarnation-2",
+                    "session_id": "conversation"
+                  },
+                  "scope": "product"
+                },
+                "candidate": {
+                  "configuration": "config:nondefault",
+                  "identity": "tree:measured-product"
+                },
+                "check_id": "A",
+                "outcomes": {
+                  "A": true
+                },
+                "passed": true,
+                "requirement_revision": 1,
+                "requirements_identity": "8b7b4592e78f649bbdcd026c56bfe74833d83852dbb78966f31a476876dfdd7b",
+                "status": "completed",
+                "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+              }
+            },
+            "request_binding": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "candidate": {
+                "configuration": "config:nondefault",
+                "identity": "tree:measured-product"
+              },
+              "check_id": "A",
+              "outcomes": [
+                "A"
+              ],
+              "requirement_revision": 1,
+              "requirements_identity": "8b7b4592e78f649bbdcd026c56bfe74833d83852dbb78966f31a476876dfdd7b",
+              "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+            },
+            "requirement_revision": 1,
+            "requirements_identity": "8b7b4592e78f649bbdcd026c56bfe74833d83852dbb78966f31a476876dfdd7b",
+            "sequence": 1,
+            "status": "completed",
+            "version": 2,
+            "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+          }
+        ],
+        "requirements": {
+          "checks": {
+            "A": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "capability": "checks/measure",
+              "outcomes": [
+                "A"
+              ]
+            }
+          },
+          "id": "629ea1aba09f48848d660bb4a67a9f58",
+          "identity": "8b7b4592e78f649bbdcd026c56bfe74833d83852dbb78966f31a476876dfdd7b",
+          "objective": "Deliver the complete owner objective",
+          "outcomes": {
+            "A": "A"
+          },
+          "revised_at": "2026-10-24T06:37:37.251533+00:00",
+          "revised_by": "owner",
+          "version": 1,
+          "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+        }
+      },
+      "direct": {
+        "acceptance_history": [
+          {
+            "accepted": true,
+            "assessment_configuration_identity": null,
+            "assessment_id": null,
+            "assessment_version": null,
+            "binding": {
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "20f6ff1dba901165d8b52a0e9a843609aac369049ec061ef32a878706a724ac7",
+                  2,
+                  "2e878e983e15e533174017958d34e4c300b931c6be4f10a72b8165f7297dc7ca"
+                ]
+              ],
+              "operations": [
+                [
+                  "9bd87f42b0473eca4501ae12bb7826bfea00ee1de76b4f50c18b6fc1f17d6d8b",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:6368006b998b01787369840e420b9051bbb42f27132643710f7404552238af16",
+              "provider_configurations": {
+                "checks": null
+              },
+              "requirements": {
+                "identity": "8b7b4592e78f649bbdcd026c56bfe74833d83852dbb78966f31a476876dfdd7b",
+                "revision": 1
+              }
+            },
+            "coverage": {
+              "A": {
+                "checks": [
+                  "A"
+                ],
+                "covered": true
+              }
+            },
+            "created_at": "2026-10-24T06:37:37.264038+00:00",
+            "created_by": "owner",
+            "current": false,
+            "id": "75335c41e2cd46fca026e63a1be30065",
+            "issues": [],
+            "policy_decision": {
+              "accepted": true,
+              "reasons": []
+            },
+            "sequence": 1,
+            "version": 1,
+            "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+          }
+        ],
+        "acceptance_issues": [
+          {
+            "check_id": "A",
+            "code": "measurement_stale"
+          },
+          {
+            "check_id": "B",
+            "code": "measurement_missing"
+          },
+          {
+            "check_id": "C",
+            "code": "measurement_missing"
+          },
+          {
+            "code": "outcome_uncovered",
+            "outcome": "A"
+          },
+          {
+            "code": "outcome_uncovered",
+            "outcome": "B"
+          },
+          {
+            "code": "outcome_uncovered",
+            "outcome": "C"
+          }
+        ],
+        "accepted": false,
+        "candidate": {
+          "candidate": {
+            "configuration": "config:nondefault",
+            "identity": "tree:measured-product"
+          },
+          "id": "629ea1aba09f48848d660bb4a67a9f58",
+          "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+          "selected_at": "2026-10-24T06:37:37.253478+00:00",
+          "selected_by": "owner",
+          "version": 1,
+          "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+        },
+        "contributions": [],
+        "coverage": {
+          "A": {
+            "checks": [],
+            "covered": false
+          },
+          "B": {
+            "checks": [],
+            "covered": false
+          },
+          "C": {
+            "checks": [],
+            "covered": false
+          }
+        },
+        "measurements": [
+          {
+            "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "candidate_revision": 1,
+            "check_id": "A",
+            "created_at": "2026-10-24T06:37:37.255898+00:00",
+            "created_by": "owner",
+            "fingerprint": "f0fc45f155f449cb8151842981c49ec52104e8d06d0d8da64f7106c2a93062d4",
+            "finished_at": "2026-10-24T06:37:37.260247+00:00",
+            "id": "20f6ff1dba901165d8b52a0e9a843609aac369049ec061ef32a878706a724ac7",
+            "operation_id": "9bd87f42b0473eca4501ae12bb7826bfea00ee1de76b4f50c18b6fc1f17d6d8b",
+            "provider_identity": null,
+            "raw_digest": "2e878e983e15e533174017958d34e4c300b931c6be4f10a72b8165f7297dc7ca",
+            "raw_response": {
+              "measurement": {
+                "bindings": {
+                  "artifact": {
+                    "name": "result.json",
+                    "sha256": "measured-artifact"
+                  },
+                  "native": {
+                    "incarnation": "incarnation-2",
+                    "session_id": "conversation"
+                  },
+                  "scope": "product"
+                },
+                "candidate": {
+                  "configuration": "config:nondefault",
+                  "identity": "tree:measured-product"
+                },
+                "check_id": "A",
+                "outcomes": {
+                  "A": true
+                },
+                "passed": true,
+                "requirement_revision": 1,
+                "requirements_identity": "8b7b4592e78f649bbdcd026c56bfe74833d83852dbb78966f31a476876dfdd7b",
+                "status": "completed",
+                "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+              }
+            },
+            "request_binding": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "candidate": {
+                "configuration": "config:nondefault",
+                "identity": "tree:measured-product"
+              },
+              "check_id": "A",
+              "outcomes": [
+                "A"
+              ],
+              "requirement_revision": 1,
+              "requirements_identity": "8b7b4592e78f649bbdcd026c56bfe74833d83852dbb78966f31a476876dfdd7b",
+              "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+            },
+            "requirement_revision": 1,
+            "requirements_identity": "8b7b4592e78f649bbdcd026c56bfe74833d83852dbb78966f31a476876dfdd7b",
+            "sequence": 1,
+            "status": "completed",
+            "version": 2,
+            "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+          }
+        ],
+        "requirements": {
+          "checks": {
+            "A": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "capability": "checks/measure",
+              "outcomes": [
+                "A"
+              ]
+            },
+            "B": {
+              "capability": "checks/measure",
+              "outcomes": [
+                "B"
+              ]
+            },
+            "C": {
+              "capability": "checks/measure",
+              "outcomes": [
+                "C"
+              ]
+            }
+          },
+          "id": "629ea1aba09f48848d660bb4a67a9f58",
+          "identity": "36b860d6cc276b69eed54853c6e46df65ac66d76fb562a5bce8bcc17b149151a",
+          "objective": "Owner adds recovery after intermediate replay",
+          "outcomes": {
+            "A": "A",
+            "B": "B",
+            "C": "Recovery"
+          },
+          "revised_at": "2026-10-24T06:37:37.342155+00:00",
+          "revised_by": "owner",
+          "version": 3,
+          "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+        }
+      },
+      "fresh_adapter": {
+        "acceptance_history": [
+          {
+            "accepted": true,
+            "assessment_configuration_identity": null,
+            "assessment_id": null,
+            "assessment_version": null,
+            "binding": {
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "20f6ff1dba901165d8b52a0e9a843609aac369049ec061ef32a878706a724ac7",
+                  2,
+                  "2e878e983e15e533174017958d34e4c300b931c6be4f10a72b8165f7297dc7ca"
+                ]
+              ],
+              "operations": [
+                [
+                  "9bd87f42b0473eca4501ae12bb7826bfea00ee1de76b4f50c18b6fc1f17d6d8b",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:6368006b998b01787369840e420b9051bbb42f27132643710f7404552238af16",
+              "provider_configurations": {
+                "checks": null
+              },
+              "requirements": {
+                "identity": "8b7b4592e78f649bbdcd026c56bfe74833d83852dbb78966f31a476876dfdd7b",
+                "revision": 1
+              }
+            },
+            "coverage": {
+              "A": {
+                "checks": [
+                  "A"
+                ],
+                "covered": true
+              }
+            },
+            "created_at": "2026-10-24T06:37:37.264038+00:00",
+            "created_by": "owner",
+            "current": false,
+            "id": "75335c41e2cd46fca026e63a1be30065",
+            "issues": [],
+            "policy_decision": {
+              "accepted": true,
+              "reasons": []
+            },
+            "sequence": 1,
+            "version": 1,
+            "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+          }
+        ],
+        "acceptance_issues": [
+          {
+            "check_id": "A",
+            "code": "measurement_stale"
+          },
+          {
+            "check_id": "B",
+            "code": "measurement_missing"
+          },
+          {
+            "check_id": "C",
+            "code": "measurement_missing"
+          },
+          {
+            "code": "outcome_uncovered",
+            "outcome": "A"
+          },
+          {
+            "code": "outcome_uncovered",
+            "outcome": "B"
+          },
+          {
+            "code": "outcome_uncovered",
+            "outcome": "C"
+          }
+        ],
+        "accepted": false,
+        "candidate": {
+          "candidate": {
+            "configuration": "config:nondefault",
+            "identity": "tree:measured-product"
+          },
+          "id": "629ea1aba09f48848d660bb4a67a9f58",
+          "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+          "selected_at": "2026-10-24T06:37:37.253478+00:00",
+          "selected_by": "owner",
+          "version": 1,
+          "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+        },
+        "contributions": [],
+        "coverage": {
+          "A": {
+            "checks": [],
+            "covered": false
+          },
+          "B": {
+            "checks": [],
+            "covered": false
+          },
+          "C": {
+            "checks": [],
+            "covered": false
+          }
+        },
+        "measurements": [
+          {
+            "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "candidate_revision": 1,
+            "check_id": "A",
+            "created_at": "2026-10-24T06:37:37.255898+00:00",
+            "created_by": "owner",
+            "fingerprint": "f0fc45f155f449cb8151842981c49ec52104e8d06d0d8da64f7106c2a93062d4",
+            "finished_at": "2026-10-24T06:37:37.260247+00:00",
+            "id": "20f6ff1dba901165d8b52a0e9a843609aac369049ec061ef32a878706a724ac7",
+            "operation_id": "9bd87f42b0473eca4501ae12bb7826bfea00ee1de76b4f50c18b6fc1f17d6d8b",
+            "provider_identity": null,
+            "raw_digest": "2e878e983e15e533174017958d34e4c300b931c6be4f10a72b8165f7297dc7ca",
+            "raw_response": {
+              "measurement": {
+                "bindings": {
+                  "artifact": {
+                    "name": "result.json",
+                    "sha256": "measured-artifact"
+                  },
+                  "native": {
+                    "incarnation": "incarnation-2",
+                    "session_id": "conversation"
+                  },
+                  "scope": "product"
+                },
+                "candidate": {
+                  "configuration": "config:nondefault",
+                  "identity": "tree:measured-product"
+                },
+                "check_id": "A",
+                "outcomes": {
+                  "A": true
+                },
+                "passed": true,
+                "requirement_revision": 1,
+                "requirements_identity": "8b7b4592e78f649bbdcd026c56bfe74833d83852dbb78966f31a476876dfdd7b",
+                "status": "completed",
+                "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+              }
+            },
+            "request_binding": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "candidate": {
+                "configuration": "config:nondefault",
+                "identity": "tree:measured-product"
+              },
+              "check_id": "A",
+              "outcomes": [
+                "A"
+              ],
+              "requirement_revision": 1,
+              "requirements_identity": "8b7b4592e78f649bbdcd026c56bfe74833d83852dbb78966f31a476876dfdd7b",
+              "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+            },
+            "requirement_revision": 1,
+            "requirements_identity": "8b7b4592e78f649bbdcd026c56bfe74833d83852dbb78966f31a476876dfdd7b",
+            "sequence": 1,
+            "status": "completed",
+            "version": 2,
+            "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+          }
+        ],
+        "requirements": {
+          "checks": {
+            "A": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "capability": "checks/measure",
+              "outcomes": [
+                "A"
+              ]
+            },
+            "B": {
+              "capability": "checks/measure",
+              "outcomes": [
+                "B"
+              ]
+            },
+            "C": {
+              "capability": "checks/measure",
+              "outcomes": [
+                "C"
+              ]
+            }
+          },
+          "id": "629ea1aba09f48848d660bb4a67a9f58",
+          "identity": "36b860d6cc276b69eed54853c6e46df65ac66d76fb562a5bce8bcc17b149151a",
+          "objective": "Owner adds recovery after intermediate replay",
+          "outcomes": {
+            "A": "A",
+            "B": "B",
+            "C": "Recovery"
+          },
+          "revised_at": "2026-10-24T06:37:37.342155+00:00",
+          "revised_by": "owner",
+          "version": 3,
+          "work_id": "629ea1aba09f48848d660bb4a67a9f58"
+        }
+      },
+      "summary": {
+        "adapter_replay_accepted": true,
+        "adapter_replay_current_flags": [
+          true
+        ],
+        "adapter_replay_requirement_revision": 1,
+        "baseline_accepted": true,
+        "baseline_requirement_revision": 1,
+        "direct_current_accepted": false,
+        "direct_current_requirement_revision": 3,
+        "direct_invoke_native_replay_error": "stale_native_result",
+        "fresh_adapter_call_accepted": false,
+        "fresh_adapter_requirement_revision": 3,
+        "protocol": "codex"
+      }
+    },
+    "grok": {
+      "adapter_replay": {
+        "acceptance_history": [
+          {
+            "accepted": true,
+            "assessment_configuration_identity": null,
+            "assessment_id": null,
+            "assessment_version": null,
+            "binding": {
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "5ad830e4a20448cad158c34fe904ab6ac32236ace7b9ae8855bdca7cbc8659c8",
+                  2,
+                  "da70260eed87d3af7638900b92b59e245b659c5e0bfc182a17a218bb127c04e5"
+                ]
+              ],
+              "operations": [
+                [
+                  "42480bcc7942d4528cf9e4ef479da51c8543b79cd8e8f142de0c25dd7a6b48c5",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:6368006b998b01787369840e420b9051bbb42f27132643710f7404552238af16",
+              "provider_configurations": {
+                "checks": null
+              },
+              "requirements": {
+                "identity": "e194d07aa28c782f28328b623a9dc50d0b832771be8e8e00944b43fb7a21bfe2",
+                "revision": 1
+              }
+            },
+            "coverage": {
+              "A": {
+                "checks": [
+                  "A"
+                ],
+                "covered": true
+              }
+            },
+            "created_at": "2026-10-24T06:37:37.417668+00:00",
+            "created_by": "owner",
+            "current": true,
+            "id": "f7b65b2fa6d749b5a8e85d1fe92917ab",
+            "issues": [],
+            "policy_decision": {
+              "accepted": true,
+              "reasons": []
+            },
+            "sequence": 1,
+            "version": 1,
+            "work_id": "228c41d9ed9c415b88474320833b9fc5"
+          }
+        ],
+        "acceptance_issues": [],
+        "accepted": true,
+        "candidate": {
+          "candidate": {
+            "configuration": "config:nondefault",
+            "identity": "tree:measured-product"
+          },
+          "id": "228c41d9ed9c415b88474320833b9fc5",
+          "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+          "selected_at": "2026-10-24T06:37:37.409791+00:00",
+          "selected_by": "owner",
+          "version": 1,
+          "work_id": "228c41d9ed9c415b88474320833b9fc5"
+        },
+        "contributions": [],
+        "coverage": {
+          "A": {
+            "checks": [
+              "A"
+            ],
+            "covered": true
+          }
+        },
+        "measurements": [
+          {
+            "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "candidate_revision": 1,
+            "check_id": "A",
+            "created_at": "2026-10-24T06:37:37.411603+00:00",
+            "created_by": "owner",
+            "fingerprint": "fabcce03a78c67a47675fd8464fb7f9cc283f55606279a967892cb46375714f0",
+            "finished_at": "2026-10-24T06:37:37.415307+00:00",
+            "id": "5ad830e4a20448cad158c34fe904ab6ac32236ace7b9ae8855bdca7cbc8659c8",
+            "operation_id": "42480bcc7942d4528cf9e4ef479da51c8543b79cd8e8f142de0c25dd7a6b48c5",
+            "provider_identity": null,
+            "raw_digest": "da70260eed87d3af7638900b92b59e245b659c5e0bfc182a17a218bb127c04e5",
+            "raw_response": {
+              "measurement": {
+                "bindings": {
+                  "artifact": {
+                    "name": "result.json",
+                    "sha256": "measured-artifact"
+                  },
+                  "native": {
+                    "incarnation": "incarnation-2",
+                    "session_id": "conversation"
+                  },
+                  "scope": "product"
+                },
+                "candidate": {
+                  "configuration": "config:nondefault",
+                  "identity": "tree:measured-product"
+                },
+                "check_id": "A",
+                "outcomes": {
+                  "A": true
+                },
+                "passed": true,
+                "requirement_revision": 1,
+                "requirements_identity": "e194d07aa28c782f28328b623a9dc50d0b832771be8e8e00944b43fb7a21bfe2",
+                "status": "completed",
+                "work_id": "228c41d9ed9c415b88474320833b9fc5"
+              }
+            },
+            "request_binding": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "candidate": {
+                "configuration": "config:nondefault",
+                "identity": "tree:measured-product"
+              },
+              "check_id": "A",
+              "outcomes": [
+                "A"
+              ],
+              "requirement_revision": 1,
+              "requirements_identity": "e194d07aa28c782f28328b623a9dc50d0b832771be8e8e00944b43fb7a21bfe2",
+              "work_id": "228c41d9ed9c415b88474320833b9fc5"
+            },
+            "requirement_revision": 1,
+            "requirements_identity": "e194d07aa28c782f28328b623a9dc50d0b832771be8e8e00944b43fb7a21bfe2",
+            "sequence": 1,
+            "status": "completed",
+            "version": 2,
+            "work_id": "228c41d9ed9c415b88474320833b9fc5"
+          }
+        ],
+        "requirements": {
+          "checks": {
+            "A": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "capability": "checks/measure",
+              "outcomes": [
+                "A"
+              ]
+            }
+          },
+          "id": "228c41d9ed9c415b88474320833b9fc5",
+          "identity": "e194d07aa28c782f28328b623a9dc50d0b832771be8e8e00944b43fb7a21bfe2",
+          "objective": "Deliver the complete owner objective",
+          "outcomes": {
+            "A": "A"
+          },
+          "revised_at": "2026-10-24T06:37:37.407898+00:00",
+          "revised_by": "owner",
+          "version": 1,
+          "work_id": "228c41d9ed9c415b88474320833b9fc5"
+        }
+      },
+      "baseline": {
+        "acceptance_history": [
+          {
+            "accepted": true,
+            "assessment_configuration_identity": null,
+            "assessment_id": null,
+            "assessment_version": null,
+            "binding": {
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "5ad830e4a20448cad158c34fe904ab6ac32236ace7b9ae8855bdca7cbc8659c8",
+                  2,
+                  "da70260eed87d3af7638900b92b59e245b659c5e0bfc182a17a218bb127c04e5"
+                ]
+              ],
+              "operations": [
+                [
+                  "42480bcc7942d4528cf9e4ef479da51c8543b79cd8e8f142de0c25dd7a6b48c5",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:6368006b998b01787369840e420b9051bbb42f27132643710f7404552238af16",
+              "provider_configurations": {
+                "checks": null
+              },
+              "requirements": {
+                "identity": "e194d07aa28c782f28328b623a9dc50d0b832771be8e8e00944b43fb7a21bfe2",
+                "revision": 1
+              }
+            },
+            "coverage": {
+              "A": {
+                "checks": [
+                  "A"
+                ],
+                "covered": true
+              }
+            },
+            "created_at": "2026-10-24T06:37:37.417668+00:00",
+            "created_by": "owner",
+            "current": true,
+            "id": "f7b65b2fa6d749b5a8e85d1fe92917ab",
+            "issues": [],
+            "policy_decision": {
+              "accepted": true,
+              "reasons": []
+            },
+            "sequence": 1,
+            "version": 1,
+            "work_id": "228c41d9ed9c415b88474320833b9fc5"
+          }
+        ],
+        "acceptance_issues": [],
+        "accepted": true,
+        "candidate": {
+          "candidate": {
+            "configuration": "config:nondefault",
+            "identity": "tree:measured-product"
+          },
+          "id": "228c41d9ed9c415b88474320833b9fc5",
+          "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+          "selected_at": "2026-10-24T06:37:37.409791+00:00",
+          "selected_by": "owner",
+          "version": 1,
+          "work_id": "228c41d9ed9c415b88474320833b9fc5"
+        },
+        "contributions": [],
+        "coverage": {
+          "A": {
+            "checks": [
+              "A"
+            ],
+            "covered": true
+          }
+        },
+        "measurements": [
+          {
+            "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "candidate_revision": 1,
+            "check_id": "A",
+            "created_at": "2026-10-24T06:37:37.411603+00:00",
+            "created_by": "owner",
+            "fingerprint": "fabcce03a78c67a47675fd8464fb7f9cc283f55606279a967892cb46375714f0",
+            "finished_at": "2026-10-24T06:37:37.415307+00:00",
+            "id": "5ad830e4a20448cad158c34fe904ab6ac32236ace7b9ae8855bdca7cbc8659c8",
+            "operation_id": "42480bcc7942d4528cf9e4ef479da51c8543b79cd8e8f142de0c25dd7a6b48c5",
+            "provider_identity": null,
+            "raw_digest": "da70260eed87d3af7638900b92b59e245b659c5e0bfc182a17a218bb127c04e5",
+            "raw_response": {
+              "measurement": {
+                "bindings": {
+                  "artifact": {
+                    "name": "result.json",
+                    "sha256": "measured-artifact"
+                  },
+                  "native": {
+                    "incarnation": "incarnation-2",
+                    "session_id": "conversation"
+                  },
+                  "scope": "product"
+                },
+                "candidate": {
+                  "configuration": "config:nondefault",
+                  "identity": "tree:measured-product"
+                },
+                "check_id": "A",
+                "outcomes": {
+                  "A": true
+                },
+                "passed": true,
+                "requirement_revision": 1,
+                "requirements_identity": "e194d07aa28c782f28328b623a9dc50d0b832771be8e8e00944b43fb7a21bfe2",
+                "status": "completed",
+                "work_id": "228c41d9ed9c415b88474320833b9fc5"
+              }
+            },
+            "request_binding": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "candidate": {
+                "configuration": "config:nondefault",
+                "identity": "tree:measured-product"
+              },
+              "check_id": "A",
+              "outcomes": [
+                "A"
+              ],
+              "requirement_revision": 1,
+              "requirements_identity": "e194d07aa28c782f28328b623a9dc50d0b832771be8e8e00944b43fb7a21bfe2",
+              "work_id": "228c41d9ed9c415b88474320833b9fc5"
+            },
+            "requirement_revision": 1,
+            "requirements_identity": "e194d07aa28c782f28328b623a9dc50d0b832771be8e8e00944b43fb7a21bfe2",
+            "sequence": 1,
+            "status": "completed",
+            "version": 2,
+            "work_id": "228c41d9ed9c415b88474320833b9fc5"
+          }
+        ],
+        "requirements": {
+          "checks": {
+            "A": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "capability": "checks/measure",
+              "outcomes": [
+                "A"
+              ]
+            }
+          },
+          "id": "228c41d9ed9c415b88474320833b9fc5",
+          "identity": "e194d07aa28c782f28328b623a9dc50d0b832771be8e8e00944b43fb7a21bfe2",
+          "objective": "Deliver the complete owner objective",
+          "outcomes": {
+            "A": "A"
+          },
+          "revised_at": "2026-10-24T06:37:37.407898+00:00",
+          "revised_by": "owner",
+          "version": 1,
+          "work_id": "228c41d9ed9c415b88474320833b9fc5"
+        }
+      },
+      "direct": {
+        "acceptance_history": [
+          {
+            "accepted": true,
+            "assessment_configuration_identity": null,
+            "assessment_id": null,
+            "assessment_version": null,
+            "binding": {
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "5ad830e4a20448cad158c34fe904ab6ac32236ace7b9ae8855bdca7cbc8659c8",
+                  2,
+                  "da70260eed87d3af7638900b92b59e245b659c5e0bfc182a17a218bb127c04e5"
+                ]
+              ],
+              "operations": [
+                [
+                  "42480bcc7942d4528cf9e4ef479da51c8543b79cd8e8f142de0c25dd7a6b48c5",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:6368006b998b01787369840e420b9051bbb42f27132643710f7404552238af16",
+              "provider_configurations": {
+                "checks": null
+              },
+              "requirements": {
+                "identity": "e194d07aa28c782f28328b623a9dc50d0b832771be8e8e00944b43fb7a21bfe2",
+                "revision": 1
+              }
+            },
+            "coverage": {
+              "A": {
+                "checks": [
+                  "A"
+                ],
+                "covered": true
+              }
+            },
+            "created_at": "2026-10-24T06:37:37.417668+00:00",
+            "created_by": "owner",
+            "current": false,
+            "id": "f7b65b2fa6d749b5a8e85d1fe92917ab",
+            "issues": [],
+            "policy_decision": {
+              "accepted": true,
+              "reasons": []
+            },
+            "sequence": 1,
+            "version": 1,
+            "work_id": "228c41d9ed9c415b88474320833b9fc5"
+          }
+        ],
+        "acceptance_issues": [
+          {
+            "check_id": "A",
+            "code": "measurement_stale"
+          },
+          {
+            "check_id": "B",
+            "code": "measurement_missing"
+          },
+          {
+            "check_id": "C",
+            "code": "measurement_missing"
+          },
+          {
+            "code": "outcome_uncovered",
+            "outcome": "A"
+          },
+          {
+            "code": "outcome_uncovered",
+            "outcome": "B"
+          },
+          {
+            "code": "outcome_uncovered",
+            "outcome": "C"
+          }
+        ],
+        "accepted": false,
+        "candidate": {
+          "candidate": {
+            "configuration": "config:nondefault",
+            "identity": "tree:measured-product"
+          },
+          "id": "228c41d9ed9c415b88474320833b9fc5",
+          "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+          "selected_at": "2026-10-24T06:37:37.409791+00:00",
+          "selected_by": "owner",
+          "version": 1,
+          "work_id": "228c41d9ed9c415b88474320833b9fc5"
+        },
+        "contributions": [],
+        "coverage": {
+          "A": {
+            "checks": [],
+            "covered": false
+          },
+          "B": {
+            "checks": [],
+            "covered": false
+          },
+          "C": {
+            "checks": [],
+            "covered": false
+          }
+        },
+        "measurements": [
+          {
+            "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "candidate_revision": 1,
+            "check_id": "A",
+            "created_at": "2026-10-24T06:37:37.411603+00:00",
+            "created_by": "owner",
+            "fingerprint": "fabcce03a78c67a47675fd8464fb7f9cc283f55606279a967892cb46375714f0",
+            "finished_at": "2026-10-24T06:37:37.415307+00:00",
+            "id": "5ad830e4a20448cad158c34fe904ab6ac32236ace7b9ae8855bdca7cbc8659c8",
+            "operation_id": "42480bcc7942d4528cf9e4ef479da51c8543b79cd8e8f142de0c25dd7a6b48c5",
+            "provider_identity": null,
+            "raw_digest": "da70260eed87d3af7638900b92b59e245b659c5e0bfc182a17a218bb127c04e5",
+            "raw_response": {
+              "measurement": {
+                "bindings": {
+                  "artifact": {
+                    "name": "result.json",
+                    "sha256": "measured-artifact"
+                  },
+                  "native": {
+                    "incarnation": "incarnation-2",
+                    "session_id": "conversation"
+                  },
+                  "scope": "product"
+                },
+                "candidate": {
+                  "configuration": "config:nondefault",
+                  "identity": "tree:measured-product"
+                },
+                "check_id": "A",
+                "outcomes": {
+                  "A": true
+                },
+                "passed": true,
+                "requirement_revision": 1,
+                "requirements_identity": "e194d07aa28c782f28328b623a9dc50d0b832771be8e8e00944b43fb7a21bfe2",
+                "status": "completed",
+                "work_id": "228c41d9ed9c415b88474320833b9fc5"
+              }
+            },
+            "request_binding": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "candidate": {
+                "configuration": "config:nondefault",
+                "identity": "tree:measured-product"
+              },
+              "check_id": "A",
+              "outcomes": [
+                "A"
+              ],
+              "requirement_revision": 1,
+              "requirements_identity": "e194d07aa28c782f28328b623a9dc50d0b832771be8e8e00944b43fb7a21bfe2",
+              "work_id": "228c41d9ed9c415b88474320833b9fc5"
+            },
+            "requirement_revision": 1,
+            "requirements_identity": "e194d07aa28c782f28328b623a9dc50d0b832771be8e8e00944b43fb7a21bfe2",
+            "sequence": 1,
+            "status": "completed",
+            "version": 2,
+            "work_id": "228c41d9ed9c415b88474320833b9fc5"
+          }
+        ],
+        "requirements": {
+          "checks": {
+            "A": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "capability": "checks/measure",
+              "outcomes": [
+                "A"
+              ]
+            },
+            "B": {
+              "capability": "checks/measure",
+              "outcomes": [
+                "B"
+              ]
+            },
+            "C": {
+              "capability": "checks/measure",
+              "outcomes": [
+                "C"
+              ]
+            }
+          },
+          "id": "228c41d9ed9c415b88474320833b9fc5",
+          "identity": "ffdb68bde057a8989557ff00dc798410ba593b0aa385902336f3b6a1785d5574",
+          "objective": "Owner adds recovery after intermediate replay",
+          "outcomes": {
+            "A": "A",
+            "B": "B",
+            "C": "Recovery"
+          },
+          "revised_at": "2026-10-24T06:37:37.521545+00:00",
+          "revised_by": "owner",
+          "version": 3,
+          "work_id": "228c41d9ed9c415b88474320833b9fc5"
+        }
+      },
+      "fresh_adapter": {
+        "acceptance_history": [
+          {
+            "accepted": true,
+            "assessment_configuration_identity": null,
+            "assessment_id": null,
+            "assessment_version": null,
+            "binding": {
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "5ad830e4a20448cad158c34fe904ab6ac32236ace7b9ae8855bdca7cbc8659c8",
+                  2,
+                  "da70260eed87d3af7638900b92b59e245b659c5e0bfc182a17a218bb127c04e5"
+                ]
+              ],
+              "operations": [
+                [
+                  "42480bcc7942d4528cf9e4ef479da51c8543b79cd8e8f142de0c25dd7a6b48c5",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:6368006b998b01787369840e420b9051bbb42f27132643710f7404552238af16",
+              "provider_configurations": {
+                "checks": null
+              },
+              "requirements": {
+                "identity": "e194d07aa28c782f28328b623a9dc50d0b832771be8e8e00944b43fb7a21bfe2",
+                "revision": 1
+              }
+            },
+            "coverage": {
+              "A": {
+                "checks": [
+                  "A"
+                ],
+                "covered": true
+              }
+            },
+            "created_at": "2026-10-24T06:37:37.417668+00:00",
+            "created_by": "owner",
+            "current": false,
+            "id": "f7b65b2fa6d749b5a8e85d1fe92917ab",
+            "issues": [],
+            "policy_decision": {
+              "accepted": true,
+              "reasons": []
+            },
+            "sequence": 1,
+            "version": 1,
+            "work_id": "228c41d9ed9c415b88474320833b9fc5"
+          }
+        ],
+        "acceptance_issues": [
+          {
+            "check_id": "A",
+            "code": "measurement_stale"
+          },
+          {
+            "check_id": "B",
+            "code": "measurement_missing"
+          },
+          {
+            "check_id": "C",
+            "code": "measurement_missing"
+          },
+          {
+            "code": "outcome_uncovered",
+            "outcome": "A"
+          },
+          {
+            "code": "outcome_uncovered",
+            "outcome": "B"
+          },
+          {
+            "code": "outcome_uncovered",
+            "outcome": "C"
+          }
+        ],
+        "accepted": false,
+        "candidate": {
+          "candidate": {
+            "configuration": "config:nondefault",
+            "identity": "tree:measured-product"
+          },
+          "id": "228c41d9ed9c415b88474320833b9fc5",
+          "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+          "selected_at": "2026-10-24T06:37:37.409791+00:00",
+          "selected_by": "owner",
+          "version": 1,
+          "work_id": "228c41d9ed9c415b88474320833b9fc5"
+        },
+        "contributions": [],
+        "coverage": {
+          "A": {
+            "checks": [],
+            "covered": false
+          },
+          "B": {
+            "checks": [],
+            "covered": false
+          },
+          "C": {
+            "checks": [],
+            "covered": false
+          }
+        },
+        "measurements": [
+          {
+            "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "candidate_revision": 1,
+            "check_id": "A",
+            "created_at": "2026-10-24T06:37:37.411603+00:00",
+            "created_by": "owner",
+            "fingerprint": "fabcce03a78c67a47675fd8464fb7f9cc283f55606279a967892cb46375714f0",
+            "finished_at": "2026-10-24T06:37:37.415307+00:00",
+            "id": "5ad830e4a20448cad158c34fe904ab6ac32236ace7b9ae8855bdca7cbc8659c8",
+            "operation_id": "42480bcc7942d4528cf9e4ef479da51c8543b79cd8e8f142de0c25dd7a6b48c5",
+            "provider_identity": null,
+            "raw_digest": "da70260eed87d3af7638900b92b59e245b659c5e0bfc182a17a218bb127c04e5",
+            "raw_response": {
+              "measurement": {
+                "bindings": {
+                  "artifact": {
+                    "name": "result.json",
+                    "sha256": "measured-artifact"
+                  },
+                  "native": {
+                    "incarnation": "incarnation-2",
+                    "session_id": "conversation"
+                  },
+                  "scope": "product"
+                },
+                "candidate": {
+                  "configuration": "config:nondefault",
+                  "identity": "tree:measured-product"
+                },
+                "check_id": "A",
+                "outcomes": {
+                  "A": true
+                },
+                "passed": true,
+                "requirement_revision": 1,
+                "requirements_identity": "e194d07aa28c782f28328b623a9dc50d0b832771be8e8e00944b43fb7a21bfe2",
+                "status": "completed",
+                "work_id": "228c41d9ed9c415b88474320833b9fc5"
+              }
+            },
+            "request_binding": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "candidate": {
+                "configuration": "config:nondefault",
+                "identity": "tree:measured-product"
+              },
+              "check_id": "A",
+              "outcomes": [
+                "A"
+              ],
+              "requirement_revision": 1,
+              "requirements_identity": "e194d07aa28c782f28328b623a9dc50d0b832771be8e8e00944b43fb7a21bfe2",
+              "work_id": "228c41d9ed9c415b88474320833b9fc5"
+            },
+            "requirement_revision": 1,
+            "requirements_identity": "e194d07aa28c782f28328b623a9dc50d0b832771be8e8e00944b43fb7a21bfe2",
+            "sequence": 1,
+            "status": "completed",
+            "version": 2,
+            "work_id": "228c41d9ed9c415b88474320833b9fc5"
+          }
+        ],
+        "requirements": {
+          "checks": {
+            "A": {
+              "bindings": {
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "incarnation": "incarnation-2",
+                  "session_id": "conversation"
+                },
+                "scope": "product"
+              },
+              "capability": "checks/measure",
+              "outcomes": [
+                "A"
+              ]
+            },
+            "B": {
+              "capability": "checks/measure",
+              "outcomes": [
+                "B"
+              ]
+            },
+            "C": {
+              "capability": "checks/measure",
+              "outcomes": [
+                "C"
+              ]
+            }
+          },
+          "id": "228c41d9ed9c415b88474320833b9fc5",
+          "identity": "ffdb68bde057a8989557ff00dc798410ba593b0aa385902336f3b6a1785d5574",
+          "objective": "Owner adds recovery after intermediate replay",
+          "outcomes": {
+            "A": "A",
+            "B": "B",
+            "C": "Recovery"
+          },
+          "revised_at": "2026-10-24T06:37:37.521545+00:00",
+          "revised_by": "owner",
+          "version": 3,
+          "work_id": "228c41d9ed9c415b88474320833b9fc5"
+        }
+      },
+      "summary": {
+        "adapter_replay_accepted": true,
+        "adapter_replay_current_flags": [
+          true
+        ],
+        "adapter_replay_requirement_revision": 1,
+        "baseline_accepted": true,
+        "baseline_requirement_revision": 1,
+        "direct_current_accepted": false,
+        "direct_current_requirement_revision": 3,
+        "direct_invoke_native_replay_error": "stale_native_result",
+        "fresh_adapter_call_accepted": false,
+        "fresh_adapter_requirement_revision": 3,
+        "protocol": "grok"
+      }
+    }
+  }
+}

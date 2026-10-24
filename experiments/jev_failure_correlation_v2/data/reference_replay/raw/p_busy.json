@@ -1,0 +1,313 @@
+{
+  "boundary": "actual Claude adapter / subprocess hooks and MCP / controlled protocol peer",
+  "record": {
+    "after_a": {
+      "activity": "idle",
+      "connection_state": "connected",
+      "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+      "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+      "ownership": "owned",
+      "settings": {
+        "observed": {
+          "effort": null,
+          "model": "fixture-model"
+        },
+        "precedence": "trusted_configuration",
+        "requested": {},
+        "resolved": {}
+      }
+    },
+    "after_b_control": {
+      "activity": "idle",
+      "connection_state": "connected",
+      "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+      "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+      "ownership": "owned",
+      "settings": {
+        "observed": {
+          "effort": null,
+          "model": "fixture-model"
+        },
+        "precedence": "trusted_configuration",
+        "requested": {},
+        "resolved": {}
+      }
+    },
+    "b_still_held": true,
+    "before": {
+      "activity": "active",
+      "connection_state": "connected",
+      "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+      "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+      "ownership": "owned",
+      "settings": {
+        "observed": {
+          "effort": null,
+          "model": "fixture-model"
+        },
+        "precedence": "trusted_configuration",
+        "requested": {},
+        "resolved": {}
+      }
+    },
+    "case": "claude_overlapping_completion",
+    "cleanup": {
+      "driver_sessions_remaining": 0,
+      "gateway_threads_exited": 1,
+      "native_processes_exited": 1,
+      "owned_native_processes": 1
+    },
+    "completed_callbacks": [
+      "A"
+    ],
+    "defect_reproduced": true,
+    "observations": [
+      {
+        "at": "2026-10-24T06:34:11.254507+00:00",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "native_session",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/SessionStart"
+      },
+      {
+        "at": "2026-10-24T06:34:11.254536+00:00",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "settings",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "settings": {
+          "observed": {
+            "effort": null,
+            "model": "fixture-model"
+          },
+          "precedence": "trusted_configuration",
+          "requested": {},
+          "resolved": {}
+        },
+        "source": "claude/SessionStart"
+      },
+      {
+        "at": "2026-10-24T06:34:11.254561+00:00",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "activity",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/SessionStart",
+        "state": "idle"
+      },
+      {
+        "at": "2026-10-24T06:34:11.296751+00:00",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "native_session",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/mcp-environment"
+      },
+      {
+        "at": "2026-10-24T06:34:11.296781+00:00",
+        "channel": true,
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "mcp_initialized",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/mcp"
+      },
+      {
+        "at": "2026-10-24T06:34:11.301333+00:00",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "channel_ready",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "server": "xorchestrate",
+        "source": "claude/debug-log"
+      },
+      {
+        "at": "2026-10-24T06:34:11.301357+00:00",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "connected",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "ownership": "owned",
+        "source": "claude/driver"
+      },
+      {
+        "acceptance": "notification_written",
+        "at": "2026-10-24T06:34:11.302150+00:00",
+        "delivery_id": "04001124e64b480d8a13a49cd210679f",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "submitted",
+        "message": {
+          "hold": "A"
+        },
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/channel"
+      },
+      {
+        "at": "2026-10-24T06:34:11.335945+00:00",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "native_session",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/UserPromptSubmit"
+      },
+      {
+        "at": "2026-10-24T06:34:11.335974+00:00",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "turn_started",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/UserPromptSubmit",
+        "turn_id": "a984dc55a948423c93acd75753444920"
+      },
+      {
+        "at": "2026-10-24T06:34:11.335985+00:00",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "activity",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/UserPromptSubmit",
+        "state": "active"
+      },
+      {
+        "at": "2026-10-24T06:34:11.380179+00:00",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "native_session",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/PreToolUse"
+      },
+      {
+        "action": "hold",
+        "arguments": {
+          "nonce": "A"
+        },
+        "at": "2026-10-24T06:34:11.380232+00:00",
+        "call_id": "13ab1d14c1cb4f7daf90cac0c3f29d16",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "native_tool",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/PreToolUse",
+        "tool": "mcp__xorchestrate__hold",
+        "turn_id": "a984dc55a948423c93acd75753444920"
+      },
+      {
+        "at": "2026-10-24T06:34:11.380251+00:00",
+        "call_id": "13ab1d14c1cb4f7daf90cac0c3f29d16",
+        "decision": "defer",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "native_permission",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/PreToolUse",
+        "tool": "mcp__xorchestrate__hold"
+      },
+      {
+        "at": "2026-10-24T06:34:11.380262+00:00",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "activity",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/PreToolUse",
+        "state": "active"
+      },
+      {
+        "acceptance": "notification_written",
+        "at": "2026-10-24T06:34:11.388118+00:00",
+        "delivery_id": "86d17a5731af4083b4483e4d20e56ad5",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "submitted",
+        "message": {
+          "hold": "B"
+        },
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/channel"
+      },
+      {
+        "at": "2026-10-24T06:34:11.421865+00:00",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "native_session",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/UserPromptSubmit"
+      },
+      {
+        "at": "2026-10-24T06:34:11.421924+00:00",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "turn_started",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/UserPromptSubmit",
+        "turn_id": "3d168cd74e2a4d2eb72134fc74a29254"
+      },
+      {
+        "at": "2026-10-24T06:34:11.421935+00:00",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "activity",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/UserPromptSubmit",
+        "state": "active"
+      },
+      {
+        "at": "2026-10-24T06:34:11.463984+00:00",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "native_session",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/PreToolUse"
+      },
+      {
+        "action": "hold",
+        "arguments": {
+          "nonce": "B"
+        },
+        "at": "2026-10-24T06:34:11.464036+00:00",
+        "call_id": "cdb955ac14ae4b0698bb99bb85124c8a",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "native_tool",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/PreToolUse",
+        "tool": "mcp__xorchestrate__hold",
+        "turn_id": "3d168cd74e2a4d2eb72134fc74a29254"
+      },
+      {
+        "at": "2026-10-24T06:34:11.464052+00:00",
+        "call_id": "cdb955ac14ae4b0698bb99bb85124c8a",
+        "decision": "defer",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "native_permission",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/PreToolUse",
+        "tool": "mcp__xorchestrate__hold"
+      },
+      {
+        "at": "2026-10-24T06:34:11.464066+00:00",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "activity",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/PreToolUse",
+        "state": "active"
+      },
+      {
+        "action": "hold",
+        "arguments": {
+          "nonce": "A"
+        },
+        "at": "2026-10-24T06:34:11.470856+00:00",
+        "call_id": "13ab1d14c1cb4f7daf90cac0c3f29d16",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "tool_result",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/mcp"
+      },
+      {
+        "at": "2026-10-24T06:34:11.504150+00:00",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "native_session",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/Stop"
+      },
+      {
+        "at": "2026-10-24T06:34:11.504178+00:00",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "turn_completed",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/Stop",
+        "status": "completed",
+        "turn_id": "a984dc55a948423c93acd75753444920"
+      },
+      {
+        "at": "2026-10-24T06:34:11.504189+00:00",
+        "incarnation": "6b6c968a8f6d470eb4b61af0cd173a7d",
+        "kind": "activity",
+        "native_id": "80cc0111-6661-4993-afd1-0ffb1f5bfe33",
+        "source": "claude/Stop",
+        "state": "idle"
+      }
+    ]
+  }
+}

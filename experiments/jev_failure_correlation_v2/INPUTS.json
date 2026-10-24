@@ -1,0 +1,35 @@
+{
+  "starting_commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+  "starting_tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92",
+  "branch": "experiment/jev-failure-correlation-v2",
+  "pr_base": "experiment/jev-failure-correlation-v1",
+  "tracked_dirty_at_start": false,
+  "preserved_untracked": [
+    ".agents/"
+  ],
+  "repair_pr": {
+    "url": "https://github.com/xormania/xorchestrate/pull/6",
+    "state": "open",
+    "draft": true,
+    "head": "ef7567516520543970af55b6f19534cb66eda357",
+    "merged_at": null
+  },
+  "attachments": {
+    "Xorchestrate-Jev-v2-Codex-Cloud.md": {
+      "sha256": "13cbc174a8d5d300d7f5bb09a61d5cfe52b566e2101007b3f78d1f1368ba20cc",
+      "bytes": 57642
+    },
+    "Xorchestrate-Jev-v2-Package.zip": {
+      "sha256": "d32e159cf3bc1f13388b165fd7800caf75a871fa9b3ad044595c7a9cdcf0a48b",
+      "bytes": 18556555
+    }
+  },
+  "combined_document_matches_six_parts": true,
+  "package_manifest": "all entries verified",
+  "latest_user_overrides": [
+    "Direct runtime TYPESAFE_API_KEY route; HTTP secrets reconfiguration unnecessary",
+    "Do not merge",
+    "Jev spending is not an issue; cap remains ceiling; measure actual costs where available"
+  ],
+  "frozen_v1_retained": true
+}

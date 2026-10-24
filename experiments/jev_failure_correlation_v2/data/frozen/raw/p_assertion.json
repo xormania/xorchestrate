@@ -1,0 +1,90 @@
+{
+  "boundary": "real pytest subprocess and actual candidate calibration classifier; controlled fixture",
+  "records": [
+    {
+      "candidate_classifier": {
+        "classification": "escaped_fault",
+        "expected_diagnostic": "TARGET_REQUIREMENT",
+        "mutation_applied": true,
+        "target": "test_target::test_target",
+        "unaffected": []
+      },
+      "command": [
+        "/workspace/jev-venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "--tb=short",
+        "-p",
+        "no:cacheprovider",
+        "--rootdir=/workspace/xorchestrate-jev/experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/healthy",
+        "--junitxml=/workspace/xorchestrate-jev/experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/healthy/results.xml",
+        "test_target.py"
+      ],
+      "phase": {
+        "actual": 1,
+        "expected": 1,
+        "phase": "comparison"
+      },
+      "returncode": 0,
+      "source_sha256": "cbf109bf24b5886814c991cbb108ce01a71534e6d21bc9faafe318778a505461",
+      "variant": "healthy"
+    },
+    {
+      "candidate_classifier": {
+        "classification": "detected",
+        "expected_diagnostic": "TARGET_REQUIREMENT",
+        "mutation_applied": true,
+        "target": "test_target::test_target",
+        "unaffected": []
+      },
+      "command": [
+        "/workspace/jev-venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "--tb=short",
+        "-p",
+        "no:cacheprovider",
+        "--rootdir=/workspace/xorchestrate-jev/experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/wrong_return",
+        "--junitxml=/workspace/xorchestrate-jev/experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/wrong_return/results.xml",
+        "test_target.py"
+      ],
+      "phase": {
+        "actual": 2,
+        "expected": 1,
+        "phase": "comparison"
+      },
+      "returncode": 1,
+      "source_sha256": "cbf109bf24b5886814c991cbb108ce01a71534e6d21bc9faafe318778a505461",
+      "variant": "wrong_return"
+    },
+    {
+      "candidate_classifier": {
+        "classification": "detected",
+        "expected_diagnostic": "TARGET_REQUIREMENT",
+        "mutation_applied": true,
+        "target": "test_target::test_target",
+        "unaffected": []
+      },
+      "command": [
+        "/workspace/jev-venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "--tb=short",
+        "-p",
+        "no:cacheprovider",
+        "--rootdir=/workspace/xorchestrate-jev/experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/helper_error",
+        "--junitxml=/workspace/xorchestrate-jev/experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/helper_error/results.xml",
+        "test_target.py"
+      ],
+      "phase": {
+        "phase": "entered"
+      },
+      "returncode": 1,
+      "source_sha256": "cbf109bf24b5886814c991cbb108ce01a71534e6d21bc9faafe318778a505461",
+      "variant": "helper_error"
+    }
+  ]
+}

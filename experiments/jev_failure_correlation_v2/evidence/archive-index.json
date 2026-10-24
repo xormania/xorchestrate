@@ -1,0 +1,27 @@
+[
+  {
+    "file": "cloud-20261024-01.zip",
+    "sha256": "82c59fdbcdedaf38b1abc9db036327ca74aad5d683ff6882eac6e3530555b3f4",
+    "bytes": 4385279
+  },
+  {
+    "file": "independent-probe-preflight.zip",
+    "sha256": "01af535679630c8d15d320a9802c4ec1ed0c3405fa1d941fb87e3556677783c5",
+    "bytes": 115599
+  },
+  {
+    "file": "independent-probe-preflight-sockets.zip",
+    "sha256": "a876589d6f67acb30af362d1bae8f016341a3c3635a7d763724ccdd1ec1a805e",
+    "bytes": 99924
+  },
+  {
+    "file": "actions-40071712425.zip",
+    "sha256": "237c592593cb76f1695f9824fbe160cf53dfcbb4db5b4ffb33aa3e7e048a18df",
+    "bytes": 845583
+  },
+  {
+    "file": "supplement-20261024-02.zip",
+    "sha256": "2014e909bacdc20afbe3370a262b5767b55e18518a31d75790f7996eeb2585af",
+    "bytes": 184202
+  }
+]
