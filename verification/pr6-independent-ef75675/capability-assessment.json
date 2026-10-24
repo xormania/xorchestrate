@@ -1,0 +1,127 @@
+{
+  "all_final_fresh_passed": true,
+  "all_original_preserved": true,
+  "candidate": "ef7567516520543970af55b6f19534cb66eda357",
+  "final_distinct_selectors": 165,
+  "original_distinct_selectors": 89,
+  "passed_subtests": 164,
+  "primary_cases": 809,
+  "protocol_cases": 46,
+  "protocol_inventory": {
+    "busy_exchange": 3,
+    "completion": 3,
+    "directed_exchange": 6,
+    "lifecycle": 15,
+    "native_call_audit": 1,
+    "startup": 3,
+    "work": 9,
+    "work_exchange": 6
+  },
+  "requirements": [
+    {
+      "all_selectors": 19,
+      "assessment": "bounded deterministic preservation; installed vendor contexts pending",
+      "id": "H1",
+      "original_selectors": 5,
+      "passed": true
+    },
+    {
+      "all_selectors": 24,
+      "assessment": "partial: IV02 current activity",
+      "id": "H2",
+      "original_selectors": 6,
+      "passed": true
+    },
+    {
+      "all_selectors": 37,
+      "assessment": "partial: IV02 completion and IV03 evidence join",
+      "id": "H3",
+      "original_selectors": 6,
+      "passed": true
+    },
+    {
+      "all_selectors": 24,
+      "assessment": "bounded deterministic preservation; native endpoints pending",
+      "id": "H4",
+      "original_selectors": 8,
+      "passed": true
+    },
+    {
+      "all_selectors": 27,
+      "assessment": "partial: IV01 inspection confinement",
+      "id": "H5",
+      "original_selectors": 7,
+      "passed": true
+    },
+    {
+      "all_selectors": 13,
+      "assessment": "bounded deterministic routing/storage/policy preservation",
+      "id": "H6",
+      "original_selectors": 8,
+      "passed": true
+    },
+    {
+      "all_selectors": 43,
+      "assessment": "partial: replay/recovery pass; IV02 activity remains",
+      "id": "H7",
+      "original_selectors": 10,
+      "passed": true
+    },
+    {
+      "all_selectors": 39,
+      "assessment": "partial: active46inventory preserved; IV02-IV04 oracle gaps",
+      "id": "H8",
+      "original_selectors": 5,
+      "passed": true
+    },
+    {
+      "all_selectors": 13,
+      "assessment": "bounded deterministic owner-outcome and revision preservation",
+      "id": "B1",
+      "original_selectors": 5,
+      "passed": true
+    },
+    {
+      "all_selectors": 29,
+      "assessment": "bounded deterministic current mechanical/assessment evidence",
+      "id": "B2",
+      "original_selectors": 9,
+      "passed": true
+    },
+    {
+      "all_selectors": 9,
+      "assessment": "bounded deterministic settings/fallback preservation; vendor fidelity pending",
+      "id": "B3",
+      "original_selectors": 9,
+      "passed": true
+    },
+    {
+      "all_selectors": 73,
+      "assessment": "partial: valid original12 detections; IV04 general attribution gap",
+      "id": "B4",
+      "original_selectors": 5,
+      "passed": true
+    },
+    {
+      "all_selectors": 40,
+      "assessment": "partial: exact provenance/coverage; IV02-IV04 sufficiency gaps",
+      "id": "B5",
+      "original_selectors": 6,
+      "passed": true
+    },
+    {
+      "all_selectors": 17,
+      "assessment": "bounded configurable architecture preservation",
+      "id": "A1",
+      "original_selectors": 5,
+      "passed": true
+    },
+    {
+      "all_selectors": 66,
+      "assessment": "partial: IV01 scope and IV03 joins",
+      "id": "A2",
+      "original_selectors": 6,
+      "passed": true
+    }
+  ]
+}

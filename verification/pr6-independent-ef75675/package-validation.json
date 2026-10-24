@@ -1,0 +1,446 @@
+{
+  "status": "passed",
+  "validated_at": "2026-10-24T09:26:49.772222+00:00",
+  "archive_sha256": "d161f2318727b8b52aa5dd78fa91d6d5ebc1aa4c12103ec8e385b328715833dc",
+  "archive_bytes": 69357690,
+  "zip_crc": null,
+  "manifest_verification": {
+    "status": "passed",
+    "files_verified": 57328,
+    "unique_payloads_verified": 2485,
+    "restored": false,
+    "candidate": "ef7567516520543970af55b6f19534cb66eda357"
+  },
+  "full_fresh_restoration": {
+    "status": "passed",
+    "files_verified": 57328,
+    "unique_payloads_verified": 2485,
+    "restored": true,
+    "candidate": "ef7567516520543970af55b6f19534cb66eda357"
+  },
+  "replay_script_bundle_bytes_identical_across_restorations": {
+    "reviewer/delivery_authority/probe_historical_work.py": true,
+    "reviewer/checker/minimal_identity_witness.py": true,
+    "reviewer/checker/challenge_attribution-v2.py": true,
+    "reviewer/completion/reverse_overlap.py": true,
+    "reviewer/root/verified-source.bundle": true
+  },
+  "source_recovered_from_bundle": {
+    "command": "git fetch verified-source.bundle refs/reviewer/*:refs/reviewer/* then detached checkout candidate",
+    "exit_status": 0,
+    "commit": "ef7567516520543970af55b6f19534cb66eda357",
+    "tree": "a0813aae760e6e5bb6245693bd92b7e7c321348b",
+    "working_status": ""
+  },
+  "replayed_commands": {
+    "scope": {
+      "argv": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/package-qa/reviewer/delivery_authority/probe_historical_work.py",
+        "/workspace/work/pr6-review/package-qa/candidate",
+        "/workspace/work/pr6-review/package-qa/fresh/scope.json"
+      ],
+      "cwd": "/workspace/work/pr6-review/package-qa/candidate",
+      "started_at": "2026-10-24T09:24:58.182184+00:00",
+      "timeout_seconds": 300,
+      "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+      "explicit_environment": {
+        "PYTHONPATH": "/workspace/work/pr6-review/package-qa/candidate",
+        "PYTHONDONTWRITEBYTECODE": "1"
+      },
+      "exit_status": 0,
+      "duration_seconds": 0.2174431039998126,
+      "finished_at": "2026-10-24T09:24:58.401546+00:00",
+      "outputs": {
+        "stdout.log": "96d9bde781bbb9614d9a28a86279fd7fe0c1982dfb11e1ae35cbe8fb2c12221a",
+        "stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "identity": {
+      "argv": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/package-qa/reviewer/checker/minimal_identity_witness.py",
+        "--candidate",
+        "/workspace/work/pr6-review/package-qa/candidate",
+        "--baseline",
+        "/workspace/work/pr6-review/package-qa/reviewer/checker/minimal-identity/control",
+        "--out",
+        "/workspace/work/pr6-review/package-qa/fresh/identity"
+      ],
+      "cwd": "/workspace/work/pr6-review/package-qa/candidate",
+      "started_at": "2026-10-24T09:24:58.634130+00:00",
+      "timeout_seconds": 300,
+      "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+      "explicit_environment": {
+        "PYTHONPATH": "/workspace/work/pr6-review/package-qa/candidate",
+        "PYTHONDONTWRITEBYTECODE": "1"
+      },
+      "exit_status": 0,
+      "duration_seconds": 1.1727115589999357,
+      "finished_at": "2026-10-24T09:24:59.808455+00:00",
+      "outputs": {
+        "stdout.log": "a3550e4f1a172c75174a2d8598526d5ce35277eb68d8cb36c988a03a3736e6c4",
+        "stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "attribution": {
+      "argv": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/package-qa/reviewer/checker/challenge_attribution-v2.py",
+        "--candidate",
+        "/workspace/work/pr6-review/package-qa/candidate",
+        "--out",
+        "/workspace/work/pr6-review/package-qa/fresh/attribution"
+      ],
+      "cwd": "/workspace/work/pr6-review/package-qa/candidate",
+      "started_at": "2026-10-24T09:24:57.914704+00:00",
+      "timeout_seconds": 300,
+      "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+      "explicit_environment": {
+        "PYTHONPATH": "/workspace/work/pr6-review/package-qa/candidate",
+        "PYTHONDONTWRITEBYTECODE": "1"
+      },
+      "exit_status": 0,
+      "duration_seconds": 1.6741755760001524,
+      "finished_at": "2026-10-24T09:24:59.590511+00:00",
+      "outputs": {
+        "stdout.log": "500d9d4fa8dd8569269c5b08accac542caf06a25b2540fb7f59f8f8b268ff22a",
+        "stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    "completion": {
+      "argv": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/package-qa/reviewer/completion/reverse_overlap.py",
+        "--peers",
+        "codex",
+        "claude",
+        "grok",
+        "--out",
+        "/workspace/work/pr6-review/package-qa/fresh/completion"
+      ],
+      "cwd": "/workspace/work/pr6-review/package-qa/candidate",
+      "started_at": "2026-10-24T09:24:58.152839+00:00",
+      "timeout_seconds": 300,
+      "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.41",
+      "explicit_environment": {
+        "PYTHONPATH": "/workspace/work/pr6-review/package-qa/candidate",
+        "PYTHONDONTWRITEBYTECODE": "1"
+      },
+      "exit_status": 1,
+      "duration_seconds": 2.832373211999993,
+      "finished_at": "2026-10-24T09:25:00.987384+00:00",
+      "outputs": {
+        "stdout.log": "4e692c2bf05dad1aaeb24e8b118ef5c24bf050f69d1bd1ab351664fdb6dc505f",
+        "stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    }
+  },
+  "replayed_outcomes": {
+    "scope": [
+      {
+        "store": "memory",
+        "private_session_direct": "denied",
+        "current_delivery_sessions_contain_canary": false,
+        "historical_get_delivery_contains_canary": false,
+        "historical_get_work_contains_canary": true
+      },
+      {
+        "store": "sqlite",
+        "private_session_direct": "denied",
+        "current_delivery_sessions_contain_canary": false,
+        "historical_get_delivery_contains_canary": false,
+        "historical_get_work_contains_canary": true
+      }
+    ],
+    "identity": [
+      {
+        "name": "control",
+        "checker_status": "passed",
+        "passed": 46,
+        "production_verified": true
+      },
+      {
+        "name": "completed-wrong-native",
+        "checker_status": "passed",
+        "passed": 46,
+        "production_verified": false
+      },
+      {
+        "name": "completed-retired-incarnation",
+        "checker_status": "passed",
+        "passed": 46,
+        "production_verified": false
+      },
+      {
+        "name": "completed-null-native",
+        "checker_status": "passed",
+        "passed": 46,
+        "production_verified": false
+      }
+    ],
+    "attribution": [
+      {
+        "name": "same-line-raise",
+        "expected": "unrelated_failure",
+        "native": "detected",
+        "work": "detected",
+        "control_exit": 0,
+        "mutant_exit": 1
+      },
+      {
+        "name": "separate-line-raise",
+        "expected": "unrelated_failure",
+        "native": "unrelated_failure",
+        "work": "unrelated_failure",
+        "control_exit": 0,
+        "mutant_exit": 1
+      },
+      {
+        "name": "real-assertion",
+        "expected": "detected",
+        "native": "detected",
+        "work": "detected",
+        "control_exit": 0,
+        "mutant_exit": 1
+      }
+    ],
+    "completion": [
+      {
+        "protocol": "codex",
+        "finish_order": [
+          "A",
+          "B"
+        ],
+        "defect": false,
+        "stages": {
+          "before-stops": {
+            "activity": "active",
+            "checker": "incomplete",
+            "finished": [],
+            "held": [
+              "A",
+              "B"
+            ]
+          },
+          "after-first-stop": {
+            "activity": "active",
+            "checker": "incomplete",
+            "finished": [
+              "A"
+            ],
+            "held": [
+              "B"
+            ]
+          },
+          "after-both-stops": {
+            "activity": "idle",
+            "checker": "passed",
+            "finished": [
+              "A",
+              "B"
+            ],
+            "held": []
+          }
+        }
+      },
+      {
+        "protocol": "codex",
+        "finish_order": [
+          "B",
+          "A"
+        ],
+        "defect": true,
+        "stages": {
+          "before-stops": {
+            "activity": "active",
+            "checker": "incomplete",
+            "finished": [],
+            "held": [
+              "A",
+              "B"
+            ]
+          },
+          "after-first-stop": {
+            "activity": "idle",
+            "checker": "passed",
+            "finished": [
+              "B"
+            ],
+            "held": [
+              "A"
+            ]
+          },
+          "after-both-stops": {
+            "activity": "idle",
+            "checker": "passed",
+            "finished": [
+              "B",
+              "A"
+            ],
+            "held": []
+          }
+        }
+      },
+      {
+        "protocol": "claude",
+        "finish_order": [
+          "A",
+          "B"
+        ],
+        "defect": false,
+        "stages": {
+          "before-stops": {
+            "activity": "active",
+            "checker": "incomplete",
+            "finished": [],
+            "held": [
+              "A",
+              "B"
+            ]
+          },
+          "after-first-stop": {
+            "activity": "active",
+            "checker": "incomplete",
+            "finished": [
+              "A"
+            ],
+            "held": [
+              "B"
+            ]
+          },
+          "after-both-stops": {
+            "activity": "idle",
+            "checker": "passed",
+            "finished": [
+              "A",
+              "B"
+            ],
+            "held": []
+          }
+        }
+      },
+      {
+        "protocol": "claude",
+        "finish_order": [
+          "B",
+          "A"
+        ],
+        "defect": false,
+        "stages": {
+          "before-stops": {
+            "activity": "active",
+            "checker": "incomplete",
+            "finished": [],
+            "held": [
+              "A",
+              "B"
+            ]
+          },
+          "after-first-stop": {
+            "activity": "active",
+            "checker": "incomplete",
+            "finished": [
+              "B"
+            ],
+            "held": [
+              "A"
+            ]
+          },
+          "after-both-stops": {
+            "activity": "idle",
+            "checker": "passed",
+            "finished": [
+              "B",
+              "A"
+            ],
+            "held": []
+          }
+        }
+      },
+      {
+        "protocol": "grok",
+        "finish_order": [
+          "A",
+          "B"
+        ],
+        "defect": false,
+        "stages": {
+          "before-stops": {
+            "activity": "active",
+            "checker": "incomplete",
+            "finished": [],
+            "held": [
+              "A",
+              "B"
+            ]
+          },
+          "after-first-stop": {
+            "activity": "active",
+            "checker": "incomplete",
+            "finished": [
+              "A"
+            ],
+            "held": [
+              "B"
+            ]
+          },
+          "after-both-stops": {
+            "activity": "idle",
+            "checker": "passed",
+            "finished": [
+              "A",
+              "B"
+            ],
+            "held": []
+          }
+        }
+      },
+      {
+        "protocol": "grok",
+        "finish_order": [
+          "B",
+          "A"
+        ],
+        "defect": false,
+        "stages": {
+          "before-stops": {
+            "activity": "active",
+            "checker": "incomplete",
+            "finished": [],
+            "held": [
+              "A",
+              "B"
+            ]
+          },
+          "after-first-stop": {
+            "activity": "active",
+            "checker": "incomplete",
+            "finished": [
+              "B"
+            ],
+            "held": [
+              "A"
+            ]
+          },
+          "after-both-stops": {
+            "activity": "idle",
+            "checker": "passed",
+            "finished": [
+              "B",
+              "A"
+            ],
+            "held": []
+          }
+        }
+      }
+    ]
+  },
+  "raw_replay_results_in_archive": "reviewer/root/package-replay-qa",
+  "candidate_working_status_after_review": "",
+  "note": "Completion exit1 is expected counterexample with controls completed. Scope/identity/attribution exits0 mean observations produced, not product pass. Final archive was verified and fully restored after adding raw replay QA evidence; decisive scripts and source bundle bytes unchanged from the successfully replayed restoration."
+}

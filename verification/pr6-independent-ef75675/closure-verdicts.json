@@ -1,0 +1,96 @@
+{
+  "candidate": "ef7567516520543970af55b6f19534cb66eda357",
+  "native_acceptance": "pending xor local authenticated work; not automatic integration prerequisite",
+  "recommendation": "hold",
+  "rows": [
+    {
+      "basis": "Original cross-work leak repaired; same-work historical get_work still discloses explicitly denied session.",
+      "id": "F01",
+      "limit": "bounded deterministic verification; no authenticated vendor execution",
+      "new_finding": "IV01",
+      "report": "reviewer/delivery_authority/REPORT.md",
+      "verdict": "open"
+    },
+    {
+      "basis": "Observed callback keeps old authority through multiple replacements; missing/foreign identities reject; current callback succeeds.",
+      "id": "F02",
+      "limit": "bounded deterministic verification; no authenticated vendor execution",
+      "new_finding": null,
+      "report": "reviewer/delivery_authority/REPORT.md",
+      "verdict": "closed"
+    },
+    {
+      "basis": "Pre-effect rejects with zero effects; post-effect stays unknown/fenced across replacements, reconciliation and replay.",
+      "id": "F03",
+      "limit": "bounded deterministic verification; no authenticated vendor execution",
+      "new_finding": null,
+      "report": "reviewer/delivery_authority/REPORT.md",
+      "verdict": "closed"
+    },
+    {
+      "basis": "Direct/bridged caches enforce current authority/basis and durable row existence without repeated effects.",
+      "id": "F04",
+      "limit": "bounded deterministic verification; no authenticated vendor execution",
+      "new_finding": null,
+      "report": "reviewer/cache_assessment/REPORT.md",
+      "verdict": "closed"
+    },
+    {
+      "basis": "Consumed input changes/type/races reject; harmless configured unconsumed changes remain applicable.",
+      "id": "F05",
+      "limit": "bounded deterministic verification; no authenticated vendor execution",
+      "new_finding": null,
+      "report": "reviewer/cache_assessment/REPORT.md",
+      "verdict": "closed"
+    },
+    {
+      "basis": "Original Claude overlap repaired; AB/BA and duplicate/unmatched/anonymous/uncertain controls pass. Codex sibling is separate.",
+      "id": "F06",
+      "limit": "bounded deterministic verification; no authenticated vendor execution",
+      "new_finding": null,
+      "report": "reviewer/completion/REPORT.md",
+      "verdict": "closed"
+    },
+    {
+      "basis": "Original helper/source-marker errors fixed; same-line unrelated raise still earns assertion credit.",
+      "id": "F07",
+      "limit": "bounded deterministic verification; no authenticated vendor execution",
+      "new_finding": "IV04",
+      "report": "reviewer/checker/REPORT.md",
+      "verdict": "open"
+    },
+    {
+      "basis": "Original arguments/effect mismatch fixed; contradictory callback qualified identity still receives passing audit.",
+      "id": "F08",
+      "limit": "bounded deterministic verification; no authenticated vendor execution",
+      "new_finding": "IV03",
+      "report": "reviewer/checker/REPORT.md",
+      "verdict": "open"
+    },
+    {
+      "basis": "Later unknown/failed/incomplete attempts and ambiguous order reject; historical uncertainty remains.",
+      "id": "F09",
+      "limit": "bounded deterministic verification; no authenticated vendor execution",
+      "new_finding": null,
+      "report": "reviewer/checker/REPORT.md",
+      "verdict": "closed"
+    },
+    {
+      "basis": "Late/equal/missing actual instants reject; timezone-equivalent valid control passes.",
+      "id": "F10",
+      "limit": "bounded deterministic verification; no authenticated vendor execution",
+      "new_finding": null,
+      "report": "reviewer/checker/REPORT.md",
+      "verdict": "closed"
+    },
+    {
+      "basis": "Claude saved-state repair works; Codex BA falsely emits/checks idle while A callback and operation pending.",
+      "id": "aggregate-completion",
+      "limit": "bounded deterministic verification; no authenticated vendor execution",
+      "new_finding": "IV02",
+      "report": "reviewer/completion/REPORT.md",
+      "verdict": "open"
+    }
+  ],
+  "tree": "a0813aae760e6e5bb6245693bd92b7e7c321348b"
+}

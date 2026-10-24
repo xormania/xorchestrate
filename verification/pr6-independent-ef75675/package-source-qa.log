@@ -1,0 +1,8 @@
+From ../reviewer/root/verified-source.bundle
+ * [new ref]         refs/reviewer/integration -> refs/reviewer/integration
+ * [new ref]         refs/reviewer/publication -> refs/reviewer/publication
+ * [new ref]         refs/reviewer/candidate   -> refs/reviewer/candidate
+HEAD is now at ef75675 Bind saved completion checks to current aggregate native activity
+ef7567516520543970af55b6f19534cb66eda357
+a0813aae760e6e5bb6245693bd92b7e7c321348b
+d4bd82946bfb6e78f4ba533d7ed2e01c37ea601e

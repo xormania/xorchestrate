@@ -1,0 +1,9 @@
+{
+  "archive": "/workspace/work/pr6-review/deliverables/Xorchestrate-PR6-Independent-Verification-Evidence.zip",
+  "bytes": 69357690,
+  "sha256": "d161f2318727b8b52aa5dd78fa91d6d5ebc1aa4c12103ec8e385b328715833dc",
+  "files": 57328,
+  "unique_payloads": 2485,
+  "original_bytes": 990078393,
+  "excluded": 192
+}

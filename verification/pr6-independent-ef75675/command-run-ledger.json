@@ -1,0 +1,2348 @@
+{
+  "additional_ledgers": [
+    "reviewer/provenance_coverage/commands.jsonl",
+    "reviewer/execution/execution-summary.json",
+    "reviewer/checker/command-ledger.json",
+    "reviewer/cache_assessment/command-ledger.json"
+  ],
+  "failed_initial_setup": "reviewer/root/setup-attempts.json",
+  "note": "Exact original command metadata remains at each indexed path. Consolidated track ledgers and JSONL include additional nested commands; artifact hashes preserve all of them. Exit status alone is not correctness.",
+  "records": [
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/attribution-challenge/same-line-raise/mutant.xml"
+      ],
+      "record": "reviewer/checker/attribution-challenge/same-line-raise/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "ca974f2cba045a3dc20fc86fe4294cd25af1ca4d6770214bf08ed8da9bcb0a1f"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/attribution-challenge/same-line-raise/control.xml"
+      ],
+      "record": "reviewer/checker/attribution-challenge/same-line-raise/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "b7458ff71cda2946a3f440a9285d7a4e17e744e7f672a6381c70e3bd3a548078"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/attribution-challenge/real-assertion/mutant.xml"
+      ],
+      "record": "reviewer/checker/attribution-challenge/real-assertion/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "f13705297f03cfea8d8a1ec64a06872201427b1b84b454220af75f6138cd8ae3"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/attribution-challenge/real-assertion/control.xml"
+      ],
+      "record": "reviewer/checker/attribution-challenge/real-assertion/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "bd9755b00bb1748bd4d01c410c7ecbbfa9db4bf1d6764e42553d415b66b4fd1a"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/attribution-challenge/separate-line-raise/mutant.xml"
+      ],
+      "record": "reviewer/checker/attribution-challenge/separate-line-raise/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "34aaea55b3f17bc33d744c3309671f5d7a02c47a2e168d634a801ecdc0d47bc7"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/attribution-challenge/separate-line-raise/control.xml"
+      ],
+      "record": "reviewer/checker/attribution-challenge/separate-line-raise/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "2dbe904f4632237b7ba91e82cb06db4718af9f3de080333b43fe07843fafc3bc"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-final/unrelated-timeout/mutant.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-final/unrelated-timeout/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "363a6918169f7a92d6e2e22ec8406254c7e1271e7f8cbf14084964ee517a6316"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-final/unrelated-timeout/control.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-final/unrelated-timeout/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "15caaa0a676cfabc07196a84fb3c694749721ed9cc5f66a0bed16e229e11d60c"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-final/runtime-missing-dependency/mutant.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-final/runtime-missing-dependency/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "fcf5f1a9fe2fee26084d24d9f9d6299e30b6bac1bde070577f9cdc0773370a3d"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-final/runtime-missing-dependency/control.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-final/runtime-missing-dependency/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "8a58c2cf84c695469dd7cef1a4c5847685107b601bb48ea146fa6ad203e6aa74"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-final/skipped/mutant.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-final/skipped/mutant-run/command.json",
+      "recorded_status": 0,
+      "sha256": "5f8c1a8941291f602b37a88be8aad9a425fa474c425eb5e8d97d88be9a9da347"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-final/skipped/control.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-final/skipped/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "3d235ae6f549a6da9a970035997092078ebd4c95440439c1894eb3425537e5dd"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-final/collection-missing-dependency/mutant.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-final/collection-missing-dependency/mutant-run/command.json",
+      "recorded_status": 2,
+      "sha256": "eee407aba2aec91f578fa87b788253693b089e6657e74805dd56eaf21a7c0ad4"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-final/collection-missing-dependency/control.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-final/collection-missing-dependency/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "b8da425e82132dd67ecc903f4219e92c8bfceb1bd6c84a015754eb57029c6f62"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-final/intended-assertion/mutant.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-final/intended-assertion/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "4d711dd512b83516c56d183d6b32a70cabe4a2a5888732b11c0f2c0a86bdf973"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-final/intended-assertion/control.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-final/intended-assertion/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "864ceb05b135dc152171847fb72386acccac3cd1c3645856ae76b765b2826161"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-final/escaped/mutant.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-final/escaped/mutant-run/command.json",
+      "recorded_status": 0,
+      "sha256": "e7cd39c9d96371f0722cc8a979a2c3e98d7fc9c9cc1f651dec7a61de855ed3fc"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-final/escaped/control.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-final/escaped/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "925a6a070db83af6d1908dd06fed41a083d2f86f0f3e6a66d0939a51a8dcc51b"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/attribution-challenge-v2/same-line-raise/mutant.xml"
+      ],
+      "record": "reviewer/checker/attribution-challenge-v2/same-line-raise/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "4f3b1a90f993131494228bcc9da94a46d7edc6cb497776b5f0f991bbd1858060"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/attribution-challenge-v2/same-line-raise/control.xml"
+      ],
+      "record": "reviewer/checker/attribution-challenge-v2/same-line-raise/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "2bbc85b6681fae0aeb2c2723660aea32a9034b4ab009375241e7c435a66ef629"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/attribution-challenge-v2/real-assertion/mutant.xml"
+      ],
+      "record": "reviewer/checker/attribution-challenge-v2/real-assertion/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "e4059dd78231a6b68a67a93425b9d9e1e5a991ec9805334cbed3820be68537a5"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/attribution-challenge-v2/real-assertion/control.xml"
+      ],
+      "record": "reviewer/checker/attribution-challenge-v2/real-assertion/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "631293ec3e6afcfa1c999e67e3613b227c03195a5c578d4d8297972cc3087139"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/attribution-challenge-v2/separate-line-raise/mutant.xml"
+      ],
+      "record": "reviewer/checker/attribution-challenge-v2/separate-line-raise/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "6980def5a263565281eebdbb0c828db903dda083f8cb21b99a72aef4e7a1054d"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/attribution-challenge-v2/separate-line-raise/control.xml"
+      ],
+      "record": "reviewer/checker/attribution-challenge-v2/separate-line-raise/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "6b4bff9af73012072396792db0060b24dc020a1912c28d301d9c5cbade0dc650"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-base/unrelated-timeout/mutant.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-base/unrelated-timeout/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "bde7dcac22f6bb9ceb77d8d309bd29f6043777abbf165f0f431e0176cdeea0e4"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-base/unrelated-timeout/control.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-base/unrelated-timeout/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "b150f26f3fd6ee07f2654f4f14c5a98624990aaf2c5bab3691fbc9d614861b6e"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-base/runtime-missing-dependency/mutant.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-base/runtime-missing-dependency/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "61f7b88132d530409d396f46b94df0da4a3415b00ab14f1d4f16cacb5f451f4c"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-base/runtime-missing-dependency/control.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-base/runtime-missing-dependency/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "9fdc275eb5156d652d6cc787f17da685dc9e3e9fd0bbb71ca09c3c9607a61dbf"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-base/skipped/mutant.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-base/skipped/mutant-run/command.json",
+      "recorded_status": 0,
+      "sha256": "6c754437e65158572f4f8e4bc013dee6d697cf00200166701a96e71cfb21dae0"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-base/skipped/control.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-base/skipped/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "47df007ec19d58266954c7e71ac1ccd6c9cc6f6b661d1bac42575ad645aef656"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-base/collection-missing-dependency/mutant.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-base/collection-missing-dependency/mutant-run/command.json",
+      "recorded_status": 2,
+      "sha256": "e57c3b9cd4c9bc22caf7471e5e3ced1d992811876f1b6fe205d631b27377e166"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-base/collection-missing-dependency/control.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-base/collection-missing-dependency/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "e36c5df3745a2773e2c647372932236e63d95e6741ef5b50dd303297562cca2d"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-base/intended-assertion/mutant.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-base/intended-assertion/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "73c05ac60b8d805c38fd718b51a071f7679085ef8f301c417dee1137ac5dd1f4"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-base/intended-assertion/control.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-base/intended-assertion/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "35db4e3f333ca12feea4a9a3717e4f43b253c93470d1d9f98e77ed265ae8e261"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-base/escaped/mutant.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-base/escaped/mutant-run/command.json",
+      "recorded_status": 0,
+      "sha256": "86b71638f3a65d9cc05c24dbf7de5c8b726b547f7a402e52b20a47a1c40d5368"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/checker/original-calibrator-base/escaped/control.xml"
+      ],
+      "record": "reviewer/checker/original-calibrator-base/escaped/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "5e4bfeb282ef7233f5aa70bf7b861e6a1fed71d7e39bc5f067c7733f9c10abc7"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/reviewer/completion/reverse_overlap.py",
+        "--out",
+        "/workspace/work/pr6-review/reviewer/root/completion-recheck",
+        "--peers",
+        "codex",
+        "claude",
+        "grok"
+      ],
+      "record": "reviewer/root/completion-command/command.json",
+      "recorded_status": 1,
+      "sha256": "feb3d3f39405ec9601abc175a7100b52918997898777376da6bb5cc22dd8041a"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/package-qa/reviewer/completion/reverse_overlap.py",
+        "--peers",
+        "codex",
+        "claude",
+        "grok",
+        "--out",
+        "/workspace/work/pr6-review/package-qa/fresh/completion"
+      ],
+      "record": "reviewer/root/package-replay-qa/completion-command/command.json",
+      "recorded_status": 1,
+      "sha256": "9105ce6788140141eb9d38d55852a1a64cb83a7a276925fe534daa91261fac80"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/package-qa/reviewer/checker/challenge_attribution-v2.py",
+        "--candidate",
+        "/workspace/work/pr6-review/package-qa/candidate",
+        "--out",
+        "/workspace/work/pr6-review/package-qa/fresh/attribution"
+      ],
+      "record": "reviewer/root/package-replay-qa/attribution-command/command.json",
+      "recorded_status": 0,
+      "sha256": "47a962ace6de12c5ce3932551670c60cd254f27aa4c57c79745d999d94007624"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/package-qa/fresh/attribution/same-line-raise/mutant.xml"
+      ],
+      "record": "reviewer/root/package-replay-qa/attribution/same-line-raise/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "44a003e063f2eccd0c8bd9244b5903b13b187e1461121d82ebb35663ea8b55b3"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/package-qa/fresh/attribution/same-line-raise/control.xml"
+      ],
+      "record": "reviewer/root/package-replay-qa/attribution/same-line-raise/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "e1ab30bd511fdba4675cb6a826a81e587d4c0123e8cff5e101b87247d099d22d"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/package-qa/fresh/attribution/real-assertion/mutant.xml"
+      ],
+      "record": "reviewer/root/package-replay-qa/attribution/real-assertion/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "a43c6d6c9990fb3c666246bad4d1f6643551f65250e6f729a6a14e306282a9b4"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/package-qa/fresh/attribution/real-assertion/control.xml"
+      ],
+      "record": "reviewer/root/package-replay-qa/attribution/real-assertion/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "10e5af6d95fb09342326301bb0fdddc3bd72ad11204750f06543d4606da354d3"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/package-qa/fresh/attribution/separate-line-raise/mutant.xml"
+      ],
+      "record": "reviewer/root/package-replay-qa/attribution/separate-line-raise/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "2d439cb25ac784187d4a791b9c017fe0797e660f4cfdc47535c682be3da9928b"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/package-qa/fresh/attribution/separate-line-raise/control.xml"
+      ],
+      "record": "reviewer/root/package-replay-qa/attribution/separate-line-raise/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "69f16d21ad991ff352e6202dd4dc2e9399c31b7893f0bcef84be3b07a6fda015"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/package-qa/reviewer/checker/minimal_identity_witness.py",
+        "--candidate",
+        "/workspace/work/pr6-review/package-qa/candidate",
+        "--baseline",
+        "/workspace/work/pr6-review/package-qa/reviewer/checker/minimal-identity/control",
+        "--out",
+        "/workspace/work/pr6-review/package-qa/fresh/identity"
+      ],
+      "record": "reviewer/root/package-replay-qa/identity-command/command.json",
+      "recorded_status": 0,
+      "sha256": "4d9b45135dc10612a67ca2b9f291b396b07a03380b0e9e0c32ac6f737fd2950e"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/package-qa/reviewer/delivery_authority/probe_historical_work.py",
+        "/workspace/work/pr6-review/package-qa/candidate",
+        "/workspace/work/pr6-review/package-qa/fresh/scope.json"
+      ],
+      "record": "reviewer/root/package-replay-qa/scope-command/command.json",
+      "recorded_status": 0,
+      "sha256": "c2e63993f43138e1a40289b85abb1c968ef9d0c4f2bff34cc9e71688bf23be4f"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/root/attribution-recheck/same-line-raise/mutant.xml"
+      ],
+      "record": "reviewer/root/attribution-recheck/same-line-raise/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "008a22acac26039d3d86789eafa0e160fbe7e21844f0d5359f9a794cad43f981"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/root/attribution-recheck/same-line-raise/control.xml"
+      ],
+      "record": "reviewer/root/attribution-recheck/same-line-raise/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "da2f73da2db71851328f996526d89bbdf55d9bc9410c779eb23cbdf9f19fc96c"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/root/attribution-recheck/real-assertion/mutant.xml"
+      ],
+      "record": "reviewer/root/attribution-recheck/real-assertion/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "2418e6db4ae923eb480483cce45c0c6cc5873757e561e9ec45c6fd23d2a3235e"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/root/attribution-recheck/real-assertion/control.xml"
+      ],
+      "record": "reviewer/root/attribution-recheck/real-assertion/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "42d13c318dc9c82a3eb6fff6bafb0c0e28a68465fcb3acd0c3756f78f99abc03"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/root/attribution-recheck/separate-line-raise/mutant.xml"
+      ],
+      "record": "reviewer/root/attribution-recheck/separate-line-raise/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "b5572552a3a20b29bedbf8afac84eb3b96fa3110293fa4a7c6cd046b9d3c1f87"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/root/attribution-recheck/separate-line-raise/control.xml"
+      ],
+      "record": "reviewer/root/attribution-recheck/separate-line-raise/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "f3d00aecdf44ddc5bdcd858b13b030041d65259b98c58cd065bacfa1e064c64d"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/reviewer/checker/minimal_identity_witness.py",
+        "--candidate",
+        "/workspace/work/pr6-review/candidate",
+        "--baseline",
+        "/workspace/work/pr6-review/input/repair-evidence/final/protocol",
+        "--out",
+        "/workspace/work/pr6-review/reviewer/root/minimal-identity"
+      ],
+      "record": "reviewer/root/minimal-identity-command/command.json",
+      "recorded_status": 0,
+      "sha256": "daf2a40435f8c0752e50c161b6e18766120fb3b6937b95ed43198866fdb293bc"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/reviewer/delivery_authority/probe_historical_work.py",
+        "/workspace/work/pr6-review/candidate",
+        "/workspace/work/pr6-review/reviewer/root/historical-scope.json"
+      ],
+      "record": "reviewer/root/historical-scope-command/command.json",
+      "recorded_status": 0,
+      "sha256": "c2ce7875fa692d193a390e4ef38d326fd454c10756b58a54efcdd2f2c9be410a"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/reviewer/checker/challenge_attribution.py",
+        "--candidate",
+        "/workspace/work/pr6-review/candidate",
+        "--out",
+        "/workspace/work/pr6-review/reviewer/root/attribution-recheck"
+      ],
+      "record": "reviewer/root/attribution-command/command.json",
+      "recorded_status": 0,
+      "sha256": "b321964f0d8530e8c66efbce8abee3cbafdc882b00fa023f41d5f3aafc0aa172"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/reviewer/checker/challenge_checker.py",
+        "--candidate",
+        "/workspace/work/pr6-review/candidate",
+        "--out",
+        "/workspace/work/pr6-review/reviewer/root/callback-checker",
+        "--saved",
+        "/workspace/work/pr6-review/input/repair-evidence/final/protocol"
+      ],
+      "record": "reviewer/root/callback-checker-command/command.json",
+      "recorded_status": 0,
+      "sha256": "29ec4c690c00e69f9911f8869b49d9b8facfa36228002c5ea57ae60550b07252"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/reviewer/completion/reverse_overlap.py",
+        "--out",
+        "/workspace/work/pr6-review/reviewer/root/completion-recheck-network",
+        "--peers",
+        "codex",
+        "claude",
+        "grok"
+      ],
+      "record": "reviewer/root/completion-command-network/command.json",
+      "recorded_status": 1,
+      "sha256": "6d5d3d569c00bcaa9abe7dfbe2837fb66ec75606cb63b96729ca2620f6446c2e"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/reviewer/checker/challenge_attribution.py",
+        "--candidate",
+        "/workspace/work/pr6-review/candidate",
+        "--out",
+        "/workspace/work/pr6-review/reviewer/root/attribution-recheck-v2"
+      ],
+      "record": "reviewer/root/attribution-v2-command/command.json",
+      "recorded_status": 0,
+      "sha256": "d8a13fb1eb89d1c16769df22b2d89f5debf716c8a3421f0e17753632a3dfcd9f"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/root/attribution-recheck-v2/same-line-raise/mutant.xml"
+      ],
+      "record": "reviewer/root/attribution-recheck-v2/same-line-raise/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "1e22db80263c4501d671272bf4638956734435e085d488f81885a2ef46b4e5ea"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/root/attribution-recheck-v2/same-line-raise/control.xml"
+      ],
+      "record": "reviewer/root/attribution-recheck-v2/same-line-raise/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "f11783f17cbc45a7c27aaf6e88af965f5bb82c222944dfd124ef95d1d1e31fe0"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/root/attribution-recheck-v2/real-assertion/mutant.xml"
+      ],
+      "record": "reviewer/root/attribution-recheck-v2/real-assertion/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "1d6542ac82e221e96bfe68cc9201bf6e7b4512316d83ef7f547b4944a75ee225"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/root/attribution-recheck-v2/real-assertion/control.xml"
+      ],
+      "record": "reviewer/root/attribution-recheck-v2/real-assertion/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "0e8cfc1cf686f940314fc869dcbb6add5aefc5466e7d5dc6e23fa78384ff9462"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/root/attribution-recheck-v2/separate-line-raise/mutant.xml"
+      ],
+      "record": "reviewer/root/attribution-recheck-v2/separate-line-raise/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "13d8516ab593212204a98824bb7fadd747b2520a39ddc725d5a14256fd25c436"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "test_probe.py",
+        "--junitxml=/workspace/work/pr6-review/reviewer/root/attribution-recheck-v2/separate-line-raise/control.xml"
+      ],
+      "record": "reviewer/root/attribution-recheck-v2/separate-line-raise/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "ec447f087286cdbcbc7baf33617c1394ca1f88a1eedbefacb0ff9f78a90343f2"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/adapted-probes/composed_assessment_currentness.py",
+        "/workspace/work/pr6-review/candidate",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/adapted-candidate-composed-data"
+      ],
+      "record": "reviewer/cache_assessment/adapted-candidate-composed/command.json",
+      "recorded_status": 0,
+      "sha256": "54de2ca1a90efbeec04b9fac78137b00032a88eebc2034504a86946a7cdbc66f"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/test_independent_cache_assessment.py",
+        "-q",
+        "-rs",
+        "-p",
+        "no:cacheprovider",
+        "-k",
+        "cached_native_acceptance",
+        "--basetemp=/workspace/work/pr6-review/reviewer/cache_assessment/independent-composed-tmp",
+        "--junitxml=/workspace/work/pr6-review/reviewer/cache_assessment/independent-composed.xml"
+      ],
+      "record": "reviewer/cache_assessment/independent-composed/command.json",
+      "recorded_status": 1,
+      "sha256": "3435801371ee431c4052b4fe78613aac880702638cb263354f0c266936db240f"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/original-probes/assessment_currentness.py",
+        "/workspace/work/pr6-review/candidate",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/original-candidate-direct-data"
+      ],
+      "record": "reviewer/cache_assessment/original-candidate-direct/command.json",
+      "recorded_status": 1,
+      "sha256": "07fc6dfe85b399cae430e4d6d71ea18343daaba63b98423dc54999a355de05c7"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/original-base-native-data/probe.py",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/base"
+      ],
+      "record": "reviewer/cache_assessment/original-base-native/command.json",
+      "recorded_status": 0,
+      "sha256": "65e71e385250cdacd3119f9cbb895fd627834a87ef59d4ef449868a3579669dc"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/original-probes/assessment_currentness.py",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/base",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/original-base-direct-data"
+      ],
+      "record": "reviewer/cache_assessment/original-base-direct/command.json",
+      "recorded_status": 0,
+      "sha256": "d5382a1b9c5071016bd4df851accde51179f4f416a04c244f84599468dc63fb4"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/fault_witnesses.py",
+        "/workspace/work/pr6-review/candidate",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/fault-witness-data"
+      ],
+      "record": "reviewer/cache_assessment/independent-faults/command.json",
+      "recorded_status": 0,
+      "sha256": "fba10199f5a088240b362a2d717ca761b1457d0034a770d1e98503f372312161"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/test_independent_cache_assessment.py",
+        "-q",
+        "-rs",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=/workspace/work/pr6-review/reviewer/cache_assessment/independent-tmp",
+        "--junitxml=/workspace/work/pr6-review/reviewer/cache_assessment/independent.xml"
+      ],
+      "record": "reviewer/cache_assessment/independent/command.json",
+      "recorded_status": 0,
+      "sha256": "8ae50fdfd1a420fc3e51bde935ea4b6897e141be4bb5c976b101a1b8e3a2fd28"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/adapted-candidate-native-v2-data/probe.py",
+        "/workspace/work/pr6-review/candidate"
+      ],
+      "record": "reviewer/cache_assessment/adapted-candidate-native-v2/command.json",
+      "recorded_status": 0,
+      "sha256": "448d040343c0c53e6f2aec8a0d5f777617c266f184d7ee4154a161b2a1633ae1"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/original-candidate-native-data/probe.py",
+        "/workspace/work/pr6-review/candidate"
+      ],
+      "record": "reviewer/cache_assessment/original-candidate-native/command.json",
+      "recorded_status": 1,
+      "sha256": "257ced5b4cfb46620432c0cf54e3ebeec85f3e187b989073d57c93edd8c66f71"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/hexagonal/test_native_cache_currentness.py",
+        "tests/hexagonal/test_assessment_inputs.py",
+        "-q",
+        "-rs",
+        "-p",
+        "no:cacheprovider",
+        "--basetemp=/workspace/work/pr6-review/reviewer/cache_assessment/focused-tmp",
+        "--junitxml=/workspace/work/pr6-review/reviewer/cache_assessment/focused.xml"
+      ],
+      "record": "reviewer/cache_assessment/focused/command.json",
+      "recorded_status": 0,
+      "sha256": "de5d9fc664f95ee865aaf617810878028f8d20ed299dd3e186a8a95b015b6cac"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/adapted-probes/assessment_currentness.py",
+        "/workspace/work/pr6-review/candidate",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/adapted-candidate-direct-data"
+      ],
+      "record": "reviewer/cache_assessment/adapted-candidate-direct/command.json",
+      "recorded_status": 0,
+      "sha256": "55c7d2309e2468ac59bf367f8139c598098ab578fbc7946f5cd701ec888b22ef"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/original-probes/composed_assessment_currentness.py",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/base",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/original-base-composed-data"
+      ],
+      "record": "reviewer/cache_assessment/original-base-composed/command.json",
+      "recorded_status": 0,
+      "sha256": "5167fd0673f75b20bf6b4c58cff2e3beff8ee263c5e1ba221ceb1d89fb7b17eb"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/original-probes/composed_assessment_currentness.py",
+        "/workspace/work/pr6-review/candidate",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/original-candidate-composed-data"
+      ],
+      "record": "reviewer/cache_assessment/original-candidate-composed/command.json",
+      "recorded_status": 1,
+      "sha256": "2084c5af2568d82aec8dc5ac44648adba35b8b8b70310432cc7257c5c39f6470"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/adapted-candidate-native-data/probe.py",
+        "/workspace/work/pr6-review/candidate"
+      ],
+      "record": "reviewer/cache_assessment/adapted-candidate-native/command.json",
+      "recorded_status": 1,
+      "sha256": "27626b3d95056924f8d2ebdc52c3591ae26e44cd60368cafdc8ad998e8460153"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "/workspace/work/pr6-review/reviewer/cache_assessment/test_independent_cache_assessment.py",
+        "-q",
+        "-rs",
+        "-p",
+        "no:cacheprovider",
+        "-k",
+        "cached_native_acceptance",
+        "--basetemp=/workspace/work/pr6-review/reviewer/cache_assessment/independent-composed-unbound-tmp",
+        "--junitxml=/workspace/work/pr6-review/reviewer/cache_assessment/independent-composed-unbound.xml"
+      ],
+      "record": "reviewer/cache_assessment/independent-composed-unbound/command.json",
+      "recorded_status": 0,
+      "sha256": "96f4a4253d82eb3dfb4bbcb81d3eda28e15a088cb4e1353827eede583dff850b"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "--version"
+      ],
+      "record": "reviewer/execution/network-permitted/protocol/versions/grok/command.json",
+      "recorded_status": 0,
+      "sha256": "bb8331699d75b8c46f5ca91db9631803e1a5a3348760efdfc8bb5605d203e8f6"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "--version"
+      ],
+      "record": "reviewer/execution/network-permitted/protocol/versions/claude/command.json",
+      "recorded_status": 0,
+      "sha256": "d46fd26c4647747a0dfee40e7ac4cf96d3e2ba9ecf695842fe3e0c47508c51c9"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "--version"
+      ],
+      "record": "reviewer/execution/network-permitted/protocol/versions/codex/command.json",
+      "recorded_status": 0,
+      "sha256": "ed7b2b13ade822d715cb1fb8a0585cf2d173d4ff7d97e39eb18500f6a37e2b90"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_external_bridge.py::test_external_detach_does_not_terminate_host_and_reconnect_retains_context[codex]",
+        "tests/hexagonal/test_external_bridge.py::test_bridge_config_and_catalog_cannot_be_overridden_by_attachment",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/network-permitted/native-calibration/external-detach/mutant.xml"
+      ],
+      "record": "reviewer/execution/network-permitted/native-calibration/external-detach/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "1f5bb89ab7b189c85e61520c130109c235a1874603ca9fce18d34a32b9d84ce2"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_external_bridge.py::test_external_detach_does_not_terminate_host_and_reconnect_retains_context[codex]",
+        "tests/hexagonal/test_external_bridge.py::test_bridge_config_and_catalog_cannot_be_overridden_by_attachment",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/network-permitted/native-calibration/external-detach/control.xml"
+      ],
+      "record": "reviewer/execution/network-permitted/native-calibration/external-detach/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "0acc9d4c16f2de637d805158edf042bcf2c501796ebb4a99a3ee0aad96af636b"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_delivery.py::test_lost_submission_stays_unknown_across_reconstructed_application[memory]",
+        "tests/hexagonal/test_delivery.py::test_routing_queues_durable_attempt_and_submission_is_not_receipt[memory]",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/network-permitted/native-calibration/delivery-uncertainty/mutant.xml"
+      ],
+      "record": "reviewer/execution/network-permitted/native-calibration/delivery-uncertainty/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "2265aa9d7b8bc71a6f3b03ef37e935ed1d4965c27c2e4e2616fe5e50911f4c90"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_delivery.py::test_lost_submission_stays_unknown_across_reconstructed_application[memory]",
+        "tests/hexagonal/test_delivery.py::test_routing_queues_durable_attempt_and_submission_is_not_receipt[memory]",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/network-permitted/native-calibration/delivery-uncertainty/control.xml"
+      ],
+      "record": "reviewer/execution/network-permitted/native-calibration/delivery-uncertainty/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "b9dda8dfc9583d4a19fa50bf50e8b1a284fee8b4a4472bb85410166820c625cf"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_external_bridge.py::test_actual_host_crash_preserves_unknown_applied_effect_without_replay",
+        "tests/hexagonal/test_external_bridge.py::test_bridge_rejects_manufactured_receipts_and_changed_configuration",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/network-permitted/native-calibration/crash-uncertainty/mutant.xml"
+      ],
+      "record": "reviewer/execution/network-permitted/native-calibration/crash-uncertainty/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "cc79401a93196f52a0b96ff093b3a5dc3c3b439e67163e73ef246bba0fe8474a"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_external_bridge.py::test_actual_host_crash_preserves_unknown_applied_effect_without_replay",
+        "tests/hexagonal/test_external_bridge.py::test_bridge_rejects_manufactured_receipts_and_changed_configuration",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/network-permitted/native-calibration/crash-uncertainty/control.xml"
+      ],
+      "record": "reviewer/execution/network-permitted/native-calibration/crash-uncertainty/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "1588d73eb8c60412864ec24ff125eb43c621bb09e68a6177b2744d31cd87bfc3"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_transport_progress.py::test_callback_after_submission_ack_progresses_without_poll",
+        "tests/hexagonal/test_transport_progress.py::test_out_of_order_responses_remain_bound_to_their_request",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/network-permitted/native-calibration/autonomous-callback/mutant.xml"
+      ],
+      "record": "reviewer/execution/network-permitted/native-calibration/autonomous-callback/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "9228b65ec86a59bf8d48d8b1882a186d79c881893ca5955cb906d46ee628c1e8"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_transport_progress.py::test_callback_after_submission_ack_progresses_without_poll",
+        "tests/hexagonal/test_transport_progress.py::test_out_of_order_responses_remain_bound_to_their_request",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/network-permitted/native-calibration/autonomous-callback/control.xml"
+      ],
+      "record": "reviewer/execution/network-permitted/native-calibration/autonomous-callback/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "2c5d1f22953cf3bb9f636145ea8625a75798f82442473ed3a1b9a0604ac907a7"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_native_sessions.py::test_grok_requires_execution_observation_and_rejects_conflicting_call_ids",
+        "tests/hexagonal/test_native_sessions.py::test_grok_late_completion_cannot_clear_newer_activity",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/network-permitted/native-calibration/grok-native-observation/mutant.xml"
+      ],
+      "record": "reviewer/execution/network-permitted/native-calibration/grok-native-observation/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "a9025453c50edc50317014647abe0ba0c010c208de47e7ab0dd2318976e1bf55"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_native_sessions.py::test_grok_requires_execution_observation_and_rejects_conflicting_call_ids",
+        "tests/hexagonal/test_native_sessions.py::test_grok_late_completion_cannot_clear_newer_activity",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/network-permitted/native-calibration/grok-native-observation/control.xml"
+      ],
+      "record": "reviewer/execution/network-permitted/native-calibration/grok-native-observation/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "4afadd2bde434e6de36e9845912fd427b2a6cb2f57bf49786357283cc46c3b78"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_claude_sessions.py::test_claude_callback_requires_matching_native_hook",
+        "tests/hexagonal/test_claude_sessions.py::test_claude_retained_context_callbacks_progress_without_poll_and_native_identity",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/network-permitted/native-calibration/claude-native-hook/mutant.xml"
+      ],
+      "record": "reviewer/execution/network-permitted/native-calibration/claude-native-hook/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "6f1bbb58c3c826cb4a75bdac8572251a5897b69affb800612eb4cbf254390f5c"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_claude_sessions.py::test_claude_callback_requires_matching_native_hook",
+        "tests/hexagonal/test_claude_sessions.py::test_claude_retained_context_callbacks_progress_without_poll_and_native_identity",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/network-permitted/native-calibration/claude-native-hook/control.xml"
+      ],
+      "record": "reviewer/execution/network-permitted/native-calibration/claude-native-hook/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "a673d070349fa1a4b9dcee8c18db620802f1ce83f17802b758645bfef48f4b6c"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_native_sessions.py::test_settings_preserve_requested_resolved_observed_and_require_changed_config_policy[codex]",
+        "tests/hexagonal/test_native_sessions.py::test_private_native_marker_retained_across_exchanges_and_resume[codex]",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/network-permitted/native-calibration/requested-selection/mutant.xml"
+      ],
+      "record": "reviewer/execution/network-permitted/native-calibration/requested-selection/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "66f0ee65c9a332bbb3e60d27c1d6b237165ef9d68af338cf347b7d5291e9e3bf"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_native_sessions.py::test_settings_preserve_requested_resolved_observed_and_require_changed_config_policy[codex]",
+        "tests/hexagonal/test_native_sessions.py::test_private_native_marker_retained_across_exchanges_and_resume[codex]",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/network-permitted/native-calibration/requested-selection/control.xml"
+      ],
+      "record": "reviewer/execution/network-permitted/native-calibration/requested-selection/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "4374dd4b11a71fb97028d24cd17727a1f3d4895c00bc409c593887fbdbb8e883"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "scripts.verification",
+        "check",
+        "--run",
+        "/workspace/work/pr6-review/reviewer/execution/network-permitted/protocol/run.json",
+        "--criteria",
+        "/workspace/work/pr6-review/reviewer/execution/network-permitted/protocol/criteria.json",
+        "--bindings",
+        "/workspace/work/pr6-review/reviewer/execution/network-permitted/protocol/bindings.json",
+        "--fixture",
+        "/workspace/work/pr6-review/reviewer/execution/network-permitted/protocol/fixture.json",
+        "--out",
+        "/workspace/work/pr6-review/reviewer/execution/network-permitted/protocol-recomputed.json"
+      ],
+      "record": "reviewer/execution/network-permitted/commands/protocol-recompute/command.json",
+      "recorded_status": 0,
+      "sha256": "16c980206c3d450c7ac1cfbe344f79078ae2d4816f508c461867d30034dcaef6"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "scripts.verification.multi_harness",
+        "--candidate",
+        "/workspace/work/pr6-review/candidate",
+        "--mode",
+        "protocol-fixture",
+        "--brief",
+        "/workspace/work/pr6-review/input/owner-brief.md",
+        "--criteria",
+        "/workspace/work/pr6-review/reviewer/execution/network-permitted/criteria.json",
+        "--out",
+        "/workspace/work/pr6-review/reviewer/execution/network-permitted/protocol",
+        "--timeout",
+        "60"
+      ],
+      "record": "reviewer/execution/network-permitted/commands/protocol/command.json",
+      "recorded_status": 0,
+      "sha256": "98d8bd7ad1cc5f3db36a7f61fba2c051e059aba57933969ebffe824bcd1b4460"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/hexagonal",
+        "-q",
+        "-rs",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/network-permitted/application.xml"
+      ],
+      "record": "reviewer/execution/network-permitted/commands/application/command.json",
+      "recorded_status": 0,
+      "sha256": "8ee6a3652d5a4566b9f077fa594d9f3362f3ab7ec752a14f7be539ac3bba0b12"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "scripts.verification.calibrate_suite",
+        "--candidate",
+        "/workspace/work/pr6-review/candidate",
+        "--out",
+        "/workspace/work/pr6-review/reviewer/execution/network-permitted/native-calibration"
+      ],
+      "record": "reviewer/execution/network-permitted/commands/native-calibration/command.json",
+      "recorded_status": 0,
+      "sha256": "01d1d7d38e9d8253057a41e9025c73890e914f91be328f465be5d6040ee67ff8"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "scripts.verification",
+        "criteria",
+        "--brief",
+        "/workspace/work/pr6-review/input/owner-brief.md",
+        "--out",
+        "/workspace/work/pr6-review/reviewer/execution/network-permitted/criteria.json"
+      ],
+      "record": "reviewer/execution/network-permitted/commands/criteria/command.json",
+      "recorded_status": 0,
+      "sha256": "2166fabf4d5451f2778e86ad2fb3f5ed4fef4854735228f6e8a3b2aef90abf81"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/hexagonal/test_delivery_scope.py",
+        "tests/hexagonal/test_bridge_repair_calibration.py",
+        "tests/hexagonal/test_native_cache_currentness.py",
+        "tests/hexagonal/test_assessment_inputs.py",
+        "tests/hexagonal/test_claude_overlap.py",
+        "tests/hexagonal/test_calibration_attribution.py",
+        "tests/hexagonal/test_raw_evidence_calibration.py",
+        "tests/hexagonal/test_completion_evidence.py",
+        "tests/hexagonal/test_native_completion_state.py",
+        "-q",
+        "-rs",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/network-permitted/repairs.xml"
+      ],
+      "record": "reviewer/execution/network-permitted/commands/repairs/command.json",
+      "recorded_status": 0,
+      "sha256": "fad0905ab1d2ea4d2fcb7113b009ba0846b738f42220cd191cd36bc523a076ff"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "scripts.acceptance",
+        "--output",
+        "/workspace/work/pr6-review/reviewer/execution/final-with-tmux/tmux-live-fixture",
+        "--timeout",
+        "120"
+      ],
+      "record": "reviewer/execution/final-with-tmux/commands/tmux-live-fixture/command.json",
+      "recorded_status": 0,
+      "sha256": "dace3a22f61032f46a85dbe4bad8b78b81a8795021e3402b18ee9ba0c9c98e2e"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/hexagonal",
+        "-q",
+        "-rs",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/final-with-tmux/application.xml"
+      ],
+      "record": "reviewer/execution/final-with-tmux/commands/application/command.json",
+      "recorded_status": 0,
+      "sha256": "de59170d4d4af55e1b4c584863936003e7b57ace44211dd9be0883bfac822dba"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "--version"
+      ],
+      "record": "reviewer/execution/protocol/versions/grok/command.json",
+      "recorded_status": 0,
+      "sha256": "c9951c2a5a453f72918a504fe2f324f0d628e25c26b8ef1648895c12abf53bbb"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "--version"
+      ],
+      "record": "reviewer/execution/protocol/versions/claude/command.json",
+      "recorded_status": 0,
+      "sha256": "397b2d0b0c493322bfccd025f25d82ddc6474f4491e41916808f054c5eccf983"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "--version"
+      ],
+      "record": "reviewer/execution/protocol/versions/codex/command.json",
+      "recorded_status": 0,
+      "sha256": "89d13e7e43fc070a68a60264e4cfbfb03f8198df28d1d17aa040ef72e8c15d07"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "tests/hexagonal/test_work_acceptance.py::test_insufficient_or_misbound_measurement_cannot_pass[memory-candidate]",
+        "tests/hexagonal/test_work_acceptance.py::test_insufficient_or_misbound_measurement_cannot_pass[sqlite-candidate]",
+        "tests/hexagonal/test_work_acceptance.py::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+        "-q",
+        "--tb=short",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/work-calibration/B2-wrong-observed-candidate/fault/results.xml"
+      ],
+      "record": "reviewer/execution/work-calibration/B2-wrong-observed-candidate/fault/command.json",
+      "recorded_status": null,
+      "sha256": "b079330333c350c2a0e8d24e79d6c9fafe319f2a62998516ce833c12eb690778"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "tests/hexagonal/test_work_acceptance.py::test_insufficient_or_misbound_measurement_cannot_pass[memory-candidate]",
+        "tests/hexagonal/test_work_acceptance.py::test_insufficient_or_misbound_measurement_cannot_pass[sqlite-candidate]",
+        "tests/hexagonal/test_work_acceptance.py::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+        "-q",
+        "--tb=short",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/work-calibration/B2-wrong-observed-candidate/control/results.xml"
+      ],
+      "record": "reviewer/execution/work-calibration/B2-wrong-observed-candidate/control/command.json",
+      "recorded_status": null,
+      "sha256": "f6a8873d29bed8f8ea3cb4681cb7704dd720551378f95013e85533975224dbfb"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "tests/hexagonal/test_work_acceptance.py::test_assessment_threshold_change_invalidates_only_decisions_consuming_assessment",
+        "tests/hexagonal/test_work_acceptance.py::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+        "-q",
+        "--tb=short",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/work-calibration/B2-stale-assessment-configuration/fault/results.xml"
+      ],
+      "record": "reviewer/execution/work-calibration/B2-stale-assessment-configuration/fault/command.json",
+      "recorded_status": null,
+      "sha256": "76d986d8ac3ca46442cbd1432cdb8c3fd773603d78548ad41cee35686e8ae151"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "tests/hexagonal/test_work_acceptance.py::test_assessment_threshold_change_invalidates_only_decisions_consuming_assessment",
+        "tests/hexagonal/test_work_acceptance.py::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+        "-q",
+        "--tb=short",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/work-calibration/B2-stale-assessment-configuration/control/results.xml"
+      ],
+      "record": "reviewer/execution/work-calibration/B2-stale-assessment-configuration/control/command.json",
+      "recorded_status": null,
+      "sha256": "23d4d896dc7efeef60cb2036f1b799b8291a2b531cdef24fb984370491be2229"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "tests/hexagonal/test_work_acceptance.py::test_incomplete_observed_measurement_cannot_be_hidden_by_later_passing_transport",
+        "tests/hexagonal/test_work_acceptance.py::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+        "-q",
+        "--tb=short",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/work-calibration/B2-uncertain-measurement-hidden-by-later-pass/fault/results.xml"
+      ],
+      "record": "reviewer/execution/work-calibration/B2-uncertain-measurement-hidden-by-later-pass/fault/command.json",
+      "recorded_status": null,
+      "sha256": "b9d7e003b85b465fef48ab6d61453d99b18dc7c35723091acb9ff162cfe028be"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "tests/hexagonal/test_work_acceptance.py::test_incomplete_observed_measurement_cannot_be_hidden_by_later_passing_transport",
+        "tests/hexagonal/test_work_acceptance.py::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+        "-q",
+        "--tb=short",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/work-calibration/B2-uncertain-measurement-hidden-by-later-pass/control/results.xml"
+      ],
+      "record": "reviewer/execution/work-calibration/B2-uncertain-measurement-hidden-by-later-pass/control/command.json",
+      "recorded_status": null,
+      "sha256": "7ae721f083988ae5605f4fd1463a98758830e5e275828b41df62098f46ff66fa"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "tests/hexagonal/test_work_acceptance.py::test_full_owner_objective_survives_narrowing_and_cancellation",
+        "tests/hexagonal/test_work_acceptance.py::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+        "-q",
+        "--tb=short",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/work-calibration/B1-cancelled-contribution-erases-owner-outcome/fault/results.xml"
+      ],
+      "record": "reviewer/execution/work-calibration/B1-cancelled-contribution-erases-owner-outcome/fault/command.json",
+      "recorded_status": null,
+      "sha256": "69d55645c084eaa88d44beb7b5e4d9eead2ef552f7fd154c30d6c3dc7de40e78"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "tests/hexagonal/test_work_acceptance.py::test_full_owner_objective_survives_narrowing_and_cancellation",
+        "tests/hexagonal/test_work_acceptance.py::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+        "-q",
+        "--tb=short",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/work-calibration/B1-cancelled-contribution-erases-owner-outcome/control/results.xml"
+      ],
+      "record": "reviewer/execution/work-calibration/B1-cancelled-contribution-erases-owner-outcome/control/command.json",
+      "recorded_status": null,
+      "sha256": "9f5a7301dcf30af736e9c8ae1af22c8409c3bfdabce215dc05b558c9a424c8aa"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "tests/hexagonal/test_work_acceptance.py::test_observation_must_match_retained_adapter_operation",
+        "tests/hexagonal/test_work_acceptance.py::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+        "-q",
+        "--tb=short",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/work-calibration/B2-caller-origin-accepted-as-measurement/fault/results.xml"
+      ],
+      "record": "reviewer/execution/work-calibration/B2-caller-origin-accepted-as-measurement/fault/command.json",
+      "recorded_status": null,
+      "sha256": "e4c1a71fc60debb5f5edc7e5f50bbf0484d0ba3d56321d4697d5f55f19a126db"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "tests/hexagonal/test_work_acceptance.py::test_observation_must_match_retained_adapter_operation",
+        "tests/hexagonal/test_work_acceptance.py::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+        "-q",
+        "--tb=short",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/work-calibration/B2-caller-origin-accepted-as-measurement/control/results.xml"
+      ],
+      "record": "reviewer/execution/work-calibration/B2-caller-origin-accepted-as-measurement/control/command.json",
+      "recorded_status": null,
+      "sha256": "ed06eac68e811ce08f3453fd48ba9767edb62161a02eca42b649a1cbcbbb600c"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_external_bridge.py::test_external_detach_does_not_terminate_host_and_reconnect_retains_context[codex]",
+        "tests/hexagonal/test_external_bridge.py::test_bridge_config_and_catalog_cannot_be_overridden_by_attachment",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/native-calibration/external-detach/mutant.xml"
+      ],
+      "record": "reviewer/execution/native-calibration/external-detach/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "de35a15f30ec9ba30910d5194457640bb37796bc723c798b53dd7c0eb341c5d7"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_external_bridge.py::test_external_detach_does_not_terminate_host_and_reconnect_retains_context[codex]",
+        "tests/hexagonal/test_external_bridge.py::test_bridge_config_and_catalog_cannot_be_overridden_by_attachment",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/native-calibration/external-detach/control.xml"
+      ],
+      "record": "reviewer/execution/native-calibration/external-detach/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "d9d7a0cd5b2bedba47e010c8c772339fb61123827dc085a551f019822601020e"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_delivery.py::test_lost_submission_stays_unknown_across_reconstructed_application[memory]",
+        "tests/hexagonal/test_delivery.py::test_routing_queues_durable_attempt_and_submission_is_not_receipt[memory]",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/native-calibration/delivery-uncertainty/mutant.xml"
+      ],
+      "record": "reviewer/execution/native-calibration/delivery-uncertainty/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "16a8de461c9e5d2f5e5d5c08c0dc596042fd9d9538ed877706c4df9578709e2a"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_delivery.py::test_lost_submission_stays_unknown_across_reconstructed_application[memory]",
+        "tests/hexagonal/test_delivery.py::test_routing_queues_durable_attempt_and_submission_is_not_receipt[memory]",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/native-calibration/delivery-uncertainty/control.xml"
+      ],
+      "record": "reviewer/execution/native-calibration/delivery-uncertainty/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "8abc10f737062394e7c3c2616eefca6314cf7e4d749dc6b10c948f700632a966"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_external_bridge.py::test_actual_host_crash_preserves_unknown_applied_effect_without_replay",
+        "tests/hexagonal/test_external_bridge.py::test_bridge_rejects_manufactured_receipts_and_changed_configuration",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/native-calibration/crash-uncertainty/mutant.xml"
+      ],
+      "record": "reviewer/execution/native-calibration/crash-uncertainty/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "f85a929dd3f5fdc0863fd2103fe647b9b2a4dfd6790ef5bd9ef3578bcb1e4f68"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_external_bridge.py::test_actual_host_crash_preserves_unknown_applied_effect_without_replay",
+        "tests/hexagonal/test_external_bridge.py::test_bridge_rejects_manufactured_receipts_and_changed_configuration",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/native-calibration/crash-uncertainty/control.xml"
+      ],
+      "record": "reviewer/execution/native-calibration/crash-uncertainty/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "cf4756394cfaa0feb61a0f3dba06dba0188276b768bf8ad28a058864ffddd81a"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_transport_progress.py::test_callback_after_submission_ack_progresses_without_poll",
+        "tests/hexagonal/test_transport_progress.py::test_out_of_order_responses_remain_bound_to_their_request",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/native-calibration/autonomous-callback/mutant.xml"
+      ],
+      "record": "reviewer/execution/native-calibration/autonomous-callback/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "172bd200cd6373b2975f78d04471dd7554fec088b8a1048dbef335cea2efc428"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_transport_progress.py::test_callback_after_submission_ack_progresses_without_poll",
+        "tests/hexagonal/test_transport_progress.py::test_out_of_order_responses_remain_bound_to_their_request",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/native-calibration/autonomous-callback/control.xml"
+      ],
+      "record": "reviewer/execution/native-calibration/autonomous-callback/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "bdb21f0951042e35c26b025f5d3995dc885545832880f5549a4a1448156d9348"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_native_sessions.py::test_grok_requires_execution_observation_and_rejects_conflicting_call_ids",
+        "tests/hexagonal/test_native_sessions.py::test_grok_late_completion_cannot_clear_newer_activity",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/native-calibration/grok-native-observation/mutant.xml"
+      ],
+      "record": "reviewer/execution/native-calibration/grok-native-observation/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "7d2acf76441c15aa9fa17155cd8f955e806a7a6fc0fa43de5f6e64ce3fa71dde"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_native_sessions.py::test_grok_requires_execution_observation_and_rejects_conflicting_call_ids",
+        "tests/hexagonal/test_native_sessions.py::test_grok_late_completion_cannot_clear_newer_activity",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/native-calibration/grok-native-observation/control.xml"
+      ],
+      "record": "reviewer/execution/native-calibration/grok-native-observation/control-run/command.json",
+      "recorded_status": 1,
+      "sha256": "eb7b57c9ed3ba817fdd20768b9e97bf64a62b2670330ff32f83a127b65bdd286"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_claude_sessions.py::test_claude_callback_requires_matching_native_hook",
+        "tests/hexagonal/test_claude_sessions.py::test_claude_retained_context_callbacks_progress_without_poll_and_native_identity",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/native-calibration/claude-native-hook/mutant.xml"
+      ],
+      "record": "reviewer/execution/native-calibration/claude-native-hook/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "b15a3b4be5c0d6ce323938927d2cf872d6851d4a7d2215f94155b20633db0ad4"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_claude_sessions.py::test_claude_callback_requires_matching_native_hook",
+        "tests/hexagonal/test_claude_sessions.py::test_claude_retained_context_callbacks_progress_without_poll_and_native_identity",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/native-calibration/claude-native-hook/control.xml"
+      ],
+      "record": "reviewer/execution/native-calibration/claude-native-hook/control-run/command.json",
+      "recorded_status": 1,
+      "sha256": "ec12fbd5de02e0dd1cfd88f3b61e203b398aa8cbee4f58e83c773e8d97048a92"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_native_sessions.py::test_settings_preserve_requested_resolved_observed_and_require_changed_config_policy[codex]",
+        "tests/hexagonal/test_native_sessions.py::test_private_native_marker_retained_across_exchanges_and_resume[codex]",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/native-calibration/requested-selection/mutant.xml"
+      ],
+      "record": "reviewer/execution/native-calibration/requested-selection/mutant-run/command.json",
+      "recorded_status": 1,
+      "sha256": "5c36d7a03a0acd3dce9305e7e5ca78c11118d2e007927db04b8ed519c1bbbeb1"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "_xorchestrate_calibration_observer",
+        "-q",
+        "tests/hexagonal/test_native_sessions.py::test_settings_preserve_requested_resolved_observed_and_require_changed_config_policy[codex]",
+        "tests/hexagonal/test_native_sessions.py::test_private_native_marker_retained_across_exchanges_and_resume[codex]",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/native-calibration/requested-selection/control.xml"
+      ],
+      "record": "reviewer/execution/native-calibration/requested-selection/control-run/command.json",
+      "recorded_status": 0,
+      "sha256": "8d3f013114c99747a93d383689e5c1837a5683383c1ae38c81286edf868d02ce"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "ruff",
+        "check",
+        "xorchestrate",
+        "tests",
+        "devtools",
+        ".github",
+        "scripts"
+      ],
+      "record": "reviewer/execution/commands/ruff/command.json",
+      "recorded_status": 0,
+      "sha256": "deafa8b6debd7f6a2acfef7e12bf50f5011c7f6e44c24bd0416d108c48998b31"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "scripts.verification",
+        "check",
+        "--run",
+        "/workspace/work/pr6-review/reviewer/execution/protocol/run.json",
+        "--criteria",
+        "/workspace/work/pr6-review/reviewer/execution/protocol/criteria.json",
+        "--bindings",
+        "/workspace/work/pr6-review/reviewer/execution/protocol/bindings.json",
+        "--fixture",
+        "/workspace/work/pr6-review/reviewer/execution/protocol/fixture.json",
+        "--out",
+        "/workspace/work/pr6-review/reviewer/execution/protocol-recomputed.json"
+      ],
+      "record": "reviewer/execution/commands/protocol-recompute/command.json",
+      "recorded_status": 1,
+      "sha256": "a8ac264a02217d40a12c563bbfae822baf621e2ae4eafb438815a99b13c63c18"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "scripts.verification.multi_harness",
+        "--candidate",
+        "/workspace/work/pr6-review/candidate",
+        "--mode",
+        "protocol-fixture",
+        "--brief",
+        "/workspace/work/pr6-review/input/owner-brief.md",
+        "--criteria",
+        "/workspace/work/pr6-review/reviewer/execution/criteria.json",
+        "--out",
+        "/workspace/work/pr6-review/reviewer/execution/protocol",
+        "--timeout",
+        "60"
+      ],
+      "record": "reviewer/execution/commands/protocol/command.json",
+      "recorded_status": 1,
+      "sha256": "51094bcc30e01ee35354035843c4af56dd0c2f69229b1fdbca2828885104bd30"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "tests/hexagonal/calibrate_work_acceptance.py",
+        "--output",
+        "/workspace/work/pr6-review/reviewer/execution/work-calibration"
+      ],
+      "record": "reviewer/execution/commands/work-calibration/command.json",
+      "recorded_status": 0,
+      "sha256": "124f92eadbac2055743968ee09e7bfd2b69cffb5aa316c992b6600b9c1da3867"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/hexagonal",
+        "-q",
+        "-rs",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/application.xml"
+      ],
+      "record": "reviewer/execution/commands/application/command.json",
+      "recorded_status": 1,
+      "sha256": "75e812cd8986bb0aa43a60be3d10fc13517c4e257bc884431afb56d472a9d671"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "compileall",
+        "-q",
+        "xorchestrate",
+        "tests/hexagonal",
+        "scripts/acceptance"
+      ],
+      "record": "reviewer/execution/commands/compile/command.json",
+      "recorded_status": 0,
+      "sha256": "386c50f838bce2cda47ee0a1316e66bfefa38afb186caefd4e0c97435cc5fbca"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "scripts.verification.calibrate_suite",
+        "--candidate",
+        "/workspace/work/pr6-review/candidate",
+        "--out",
+        "/workspace/work/pr6-review/reviewer/execution/native-calibration"
+      ],
+      "record": "reviewer/execution/commands/native-calibration/command.json",
+      "recorded_status": 1,
+      "sha256": "edfd8e4ba1fe479ee2b346472f5dcf15519c38b82b1eb25f666ddedd5b6301be"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        ".github/tests",
+        "-v"
+      ],
+      "record": "reviewer/execution/commands/optional-toolchain/command.json",
+      "recorded_status": 0,
+      "sha256": "10e7b73fbf05a18fb37c6cfa839b0810d8975de0374e0b97df74abd7033ae401"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        ".github/lint_checks.py"
+      ],
+      "record": "reviewer/execution/commands/security-lint/command.json",
+      "recorded_status": 0,
+      "sha256": "a88470e714a610da1d1436917800af1c188ec43f521c91b31dbbc94bb3b67a47"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "scripts.verification",
+        "criteria",
+        "--brief",
+        "/workspace/work/pr6-review/input/owner-brief.md",
+        "--out",
+        "/workspace/work/pr6-review/reviewer/execution/criteria.json"
+      ],
+      "record": "reviewer/execution/commands/criteria/command.json",
+      "recorded_status": 0,
+      "sha256": "3ca89a4b5f6f24512402cb05c8af7c3926f97a325a8b7bc414cbb42c37c01e22"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/hexagonal/test_delivery_scope.py",
+        "tests/hexagonal/test_bridge_repair_calibration.py",
+        "tests/hexagonal/test_native_cache_currentness.py",
+        "tests/hexagonal/test_assessment_inputs.py",
+        "tests/hexagonal/test_claude_overlap.py",
+        "tests/hexagonal/test_calibration_attribution.py",
+        "tests/hexagonal/test_raw_evidence_calibration.py",
+        "tests/hexagonal/test_completion_evidence.py",
+        "tests/hexagonal/test_native_completion_state.py",
+        "-q",
+        "-rs",
+        "--junitxml=/workspace/work/pr6-review/reviewer/execution/repairs.xml"
+      ],
+      "record": "reviewer/execution/commands/repairs/command.json",
+      "recorded_status": 1,
+      "sha256": "99c0f4f6ec781ef735c9d98c61580463eaddecd3c262a9c72e3e2c3dde20d774"
+    },
+    {
+      "command": [
+        "venv/bin/python",
+        "reviewer/delivery_authority/original-candidate/composed_bridge_probe.py"
+      ],
+      "record": "reviewer/delivery_authority/original-f02-candidate.command.json",
+      "recorded_status": 0,
+      "sha256": "2d76bfaea9e4cecc167519562324da44d5c22e5a364e0f0c67795fad5413236e"
+    },
+    {
+      "command": [
+        "venv/bin/python",
+        "reviewer/delivery_authority/original-candidate/late_effect_probe.py"
+      ],
+      "record": "reviewer/delivery_authority/original-f03-candidate.command.json",
+      "recorded_status": 0,
+      "sha256": "c3cb0769add6f7e71c62c671d6ad404f8198cd8e2751627bd7db58e7c2706220"
+    },
+    {
+      "command": [
+        "venv/bin/python",
+        "reviewer/delivery_authority/probe_historical_work.py",
+        "candidate",
+        "reviewer/delivery_authority/historical_work.json"
+      ],
+      "record": "reviewer/delivery_authority/independent-historical-work.command.json",
+      "recorded_status": 1,
+      "sha256": "d747e9467363d2fc20a3e9eb3c84980efb888e32e43d9586eb0fb0972501c062"
+    },
+    {
+      "command": [
+        "venv/bin/python",
+        "reviewer/delivery_authority/original-candidate/reproduce_cross_work_leak.py",
+        "reviewer/delivery_authority/original-candidate/disclosure.json"
+      ],
+      "record": "reviewer/delivery_authority/original-f01-candidate.command.json",
+      "recorded_status": 1,
+      "sha256": "9666b40004f1b6a4fb0e6e13a897a506c028be098678295cfef49b58780cc39b"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_delivery_scope.py",
+        "tests/hexagonal/test_bridge_repair_calibration.py",
+        "tests/hexagonal/test_external_bridge.py",
+        "-q",
+        "--junitxml=/workspace/work/pr6-review/reviewer/delivery_authority/focused.xml"
+      ],
+      "record": "reviewer/delivery_authority/focused-f01-f03.command.json",
+      "recorded_status": 0,
+      "sha256": "181bc6f3fcef8cd08c562f9b671589edd67d1ddff27414f2118a7640df3ef1bb"
+    },
+    {
+      "command": [
+        "venv/bin/python",
+        "reviewer/delivery_authority/probe_historical_work.py",
+        "candidate",
+        "reviewer/delivery_authority/historical_work.json"
+      ],
+      "record": "reviewer/delivery_authority/independent-historical-work-v2.command.json",
+      "recorded_status": 0,
+      "sha256": "6221f800c35d41eac25f085b0baa7f7e8a073d3608a14c8f3fab4fe14b138969"
+    },
+    {
+      "command": [
+        "venv/bin/python",
+        "reviewer/delivery_authority/probe_historical_work.py",
+        "candidate",
+        "reviewer/delivery_authority/historical_work.json"
+      ],
+      "record": "reviewer/delivery_authority/independent-historical-work-v3.command.json",
+      "recorded_status": 0,
+      "sha256": "d127ef0d6367ca1f700de3bcf75d8889d85a48e4c651952e4dc09565f7144638"
+    },
+    {
+      "command": [
+        "venv/bin/python",
+        "reviewer/delivery_authority/original-base/reproduce_cross_work_leak.py",
+        "reviewer/delivery_authority/original-base/disclosure.json"
+      ],
+      "record": "reviewer/delivery_authority/original-f01-base.command.json",
+      "recorded_status": 0,
+      "sha256": "c31c43ddd1792de5c897d2c4e39874fb435bce7b1435b8cf8b9b6829f40fe4a1"
+    },
+    {
+      "command": [
+        "venv/bin/python",
+        "reviewer/delivery_authority/original-candidate/reproduce_cross_work_closed.py",
+        "reviewer/delivery_authority/original-candidate/disclosure.json"
+      ],
+      "record": "reviewer/delivery_authority/original-f01-candidate-observation.command.json",
+      "recorded_status": 0,
+      "sha256": "c6234748cfe0c8fd86cfcbe50fa1b254aa3b373173255515d246353e2adf3d78"
+    },
+    {
+      "command": [
+        "venv/bin/python",
+        "reviewer/delivery_authority/probe_bridge_variants.py",
+        "candidate",
+        "reviewer/delivery_authority/bridge_variants.json"
+      ],
+      "record": "reviewer/delivery_authority/independent-bridge-variants.command.json",
+      "recorded_status": 1,
+      "sha256": "ff081c14ee53ae1a199ba7d5c5bd72c4fcaba75a4256d5e94442d18f8386118e"
+    },
+    {
+      "command": [
+        "venv/bin/python",
+        "reviewer/delivery_authority/original-base/composed_bridge_probe.py"
+      ],
+      "record": "reviewer/delivery_authority/original-f02-base.command.json",
+      "recorded_status": 0,
+      "sha256": "b7b59931a45a812a555e0be8c0b8cce3549223db097e4d171159b9c6e5e7f42c"
+    },
+    {
+      "command": [
+        "venv/bin/python",
+        "reviewer/delivery_authority/probe_routing_snapshot.py",
+        "candidate",
+        "reviewer/delivery_authority/routing_snapshot.json"
+      ],
+      "record": "reviewer/delivery_authority/independent-routing-snapshot.command.json",
+      "recorded_status": 0,
+      "sha256": "9c7ee6d42bc8467d4fe462384b7b13dcf01c1a1f4a1763309d858f2ffbd59be9"
+    },
+    {
+      "command": [
+        "venv/bin/python",
+        "reviewer/delivery_authority/original-base/late_effect_probe.py"
+      ],
+      "record": "reviewer/delivery_authority/original-f03-base.command.json",
+      "recorded_status": 0,
+      "sha256": "adf25ae7efd4a1220e7d41770e74f77f93a2fa4178f5e9aa87ee6bbb994aada4"
+    },
+    {
+      "command": [
+        "venv/bin/python",
+        "reviewer/delivery_authority/probe_bridge_variants.py",
+        "candidate",
+        "reviewer/delivery_authority/bridge_variants.json"
+      ],
+      "record": "reviewer/delivery_authority/independent-bridge-variants-v2.command.json",
+      "recorded_status": 0,
+      "sha256": "b30c3446122db335215ec64758140269610b9b8a736efb8fff0d440b74eb532b"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/reviewer/completion/reverse_overlap.py",
+        "--out",
+        "/workspace/work/pr6-review/reviewer/completion/reverse-run-1"
+      ],
+      "record": "reviewer/completion/reverse-run-1-command.json",
+      "recorded_status": null,
+      "sha256": "d6fa117b78c7ada58dfe8c790938133cdc89dac3d47119d7e7809c4bedebbb77"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/reviewer/completion/reverse_overlap.py",
+        "--out",
+        "/workspace/work/pr6-review/reviewer/completion/reverse-run-2"
+      ],
+      "record": "reviewer/completion/reverse-run-2-command.json",
+      "recorded_status": null,
+      "sha256": "6f209f1b40261051fa0d8c976287b6883a58b4f7f08abf59def38fb0341e2a29"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/input/repair-evidence/completion-checker-repair/replay.py",
+        "--candidate",
+        "/workspace/work/pr6-review/candidate",
+        "--input",
+        "/workspace/work/pr6-review/input/repair-evidence/claude-completion-normalization-challenge",
+        "--out",
+        "/workspace/work/pr6-review/reviewer/completion/retained-claude-recomputed.json"
+      ],
+      "record": "reviewer/completion/retained-claude-command.json",
+      "recorded_status": null,
+      "sha256": "0cca8a05a60ffdff43080beb36b0147ab79c2e4a27af97f36256d0ea8c120cc7"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "-m",
+        "pytest",
+        "tests/hexagonal/test_claude_overlap.py",
+        "tests/hexagonal/test_completion_evidence.py",
+        "tests/hexagonal/test_native_completion_state.py",
+        "-q",
+        "-rs",
+        "--junitxml=/workspace/work/pr6-review/reviewer/completion/focused.xml",
+        "--basetemp=/workspace/work/pr6-review/reviewer/completion/focused-raw",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "record": "reviewer/completion/focused-command.json",
+      "recorded_status": null,
+      "sha256": "c7e38a78a05e7b44f26de55aa626ed6d4c360e7d51b6efb54a8ee5aebd4d14eb"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/reviewer/completion/original-final/probe.py"
+      ],
+      "record": "reviewer/completion/original-final/command.json",
+      "recorded_status": null,
+      "sha256": "e842cfa11a4d00bec3bb3c6ddbbd84aaedbc3d20cf82a373e3651d1987b4f6ae"
+    },
+    {
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/reviewer/completion/original-base/probe.py"
+      ],
+      "record": "reviewer/completion/original-base/command.json",
+      "recorded_status": null,
+      "sha256": "2f210ef1f279a2ddc3258e4c0e148619013a80e84f23c3198741dbe9a4f92d89"
+    }
+  ],
+  "root_v1_script_binding": {
+    "executed_script": "reviewer/checker/challenge_attribution-v1.py",
+    "record": "reviewer/root/attribution-command/command.json"
+  }
+}

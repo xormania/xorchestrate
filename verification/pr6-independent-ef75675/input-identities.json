@@ -1,0 +1,31 @@
+{
+  "candidate": "ef7567516520543970af55b6f19534cb66eda357",
+  "environment": {
+    "dependencies": "reviewer/root/dependencies.txt",
+    "network": "local AF_INET requires network-permitted tool execution; AF_UNIX works",
+    "platform": "Linux x86_64 glibc2.41",
+    "python": "3.12.14",
+    "raw_timestamps": "UTC",
+    "timezone_for_report": "America/Port-au-Prince",
+    "tmux": "isolated3.5a with live cleanup verified"
+  },
+  "evidence_publication": "663f0634f59c5d6f6c54910c8f995a6af9e6a490",
+  "execution_summary": "reviewer/execution/execution-summary.json",
+  "fresh_bindings": {
+    "candidate_sha256": "03e3b0e28cfaaa03e87f3a2e68906cc24ae9ea25f67169a1d2b42fd25e704693",
+    "checker_sha256": "63e1e86ce96c0349c64040258b557f48c55e2d1a3fca2de802d698ee6eebab82",
+    "configuration_sha256": "b63ee39f9a377ff0495207c8495008ae6f53963d0ac79a9f52f001d06c8e4a81",
+    "criteria_sha256": "75d44ff3e1c04ad0a82dcdeb3ebd08c2904cc654dd4e4e8b820a9e6dbd5abbf7",
+    "fixture_sha256": "d2e6b553a9b8995ab47097a07a97867504dfa06a1df631e6a479cc8056f5702d",
+    "owner_basis_sha256": "41545d3fab334e432f58f1f1b1367c70bed29bf2c39c1280c3eacd9cbdc783ad"
+  },
+  "handoff": "ad05291f8e59fbc2bde23c50375b79b1cb1e559b",
+  "input_recovery": "reviewer/root/recovery-verification.json",
+  "integration": "ca3f79ee6d04c55223fa0c907eeb26f9340d6439",
+  "original_base": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+  "owner_brief_sha256": "41545d3fab334e432f58f1f1b1367c70bed29bf2c39c1280c3eacd9cbdc783ad",
+  "repair_zip_sha256": "27db9e669dc136c866a37b2f4164471f8ce2bd581532225217711ac062df69fe",
+  "review_source_bundle_sha256": "80610339fc40da24d89d7db16f3c33051510e910d4ee30ea2a3bf9d97b5debe1",
+  "source_status": "",
+  "tree": "a0813aae760e6e5bb6245693bd92b7e7c321348b"
+}
