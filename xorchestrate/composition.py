@@ -214,7 +214,7 @@ def _wire_application_tools(name, driver, application):
         raise OrchestrationError("This session adapter cannot expose application tools.", "configuration_error")
     capabilities = {capability.name: capability for capability in application.describe()}
 
-    def handle(action, arguments, context, idempotency_key=None):
+    def handle(action, arguments, context, idempotency_key=None, *, replay_only=False):
         if not isinstance(action, str) or action not in capabilities:
             raise OrchestrationError("Unknown application tool.", "unknown_action")
         if not isinstance(arguments, dict) or not isinstance(context, dict):
@@ -235,10 +235,21 @@ def _wire_application_tools(name, driver, application):
         # The driver supplies the owned session's principal separately from tool arguments.
         observed = all(context.get(field) for field in ("session_id", "native_id", "incarnation", "call_id"))
         if observed:
-            return application.invoke_native(name, action, arguments, context)
+            for attempt in range(8):
+                try:
+                    return application.invoke_native(name, action, arguments, context, replay_only=replay_only)
+                except OrchestrationError as error:
+                    if not replay_only or error.code != "conflict" or not error.details.get("retry_safe") or attempt == 7:
+                        raise
+        if replay_only:
+            raise OrchestrationError("Replay requires its original native binding.", "native_evidence_missing")
         return application.call(action, arguments, actor=context.get("actor"))
 
     bind(deepcopy(list(capabilities.values())), handle)
+    replay = getattr(driver, "bind_application_replay", None)
+    if callable(replay):
+        replay(lambda action, arguments, context, key=None:
+               handle(action, arguments, context, key, replay_only=True))
 
 
 def describe(application):

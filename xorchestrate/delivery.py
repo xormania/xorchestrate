@@ -24,6 +24,12 @@ def action(description, properties, required=(), read=False):
 
 
 S = {"type": "string", "minLength": 1}
+_DELIVERY_RECORDS = {"message": "message", "deliveries": "delivery", "attempts": "delivery_attempt",
+    "evidence": "evidence", "sessions": "session", "messages": "message", "all_attempts": "delivery_attempt",
+    "observations": "native_observation", "receipts": "delivery_receipt"}
+_INSPECTION_RESULTS = {"get_delivery": _DELIVERY_RECORDS,
+    "native_observations": {"observations": "native_observation", "calls": "native_call"},
+    "inbox": {"messages": "message"}, "list_sessions": {"sessions": "session"}, "list_work": {"work": "work"}}
 DELIVERY_ACTIONS = {
     "dispatch_deliveries": action("Submit eligible durable deliveries; uncertain attempts are never automatically repeated.",
         {"message_id": S, "limit": {"type": "integer", "minimum": 1, "maximum": 1000}}),
@@ -66,7 +72,100 @@ class DeliveryMixin:
     def _get_delivery(self, args, actor, context):
         with self.store.transaction() as tx:
             self._verify_context(tx, context)
-            return self._delivery_snapshot(tx, args["message_id"])
+            snapshot = self._delivery_snapshot(tx, args["message_id"])
+        # Receipt evaluation needs the complete exchange graph, but a public
+        # inspection is not authorization to disclose that graph. Reevaluate
+        # the selected policy using each record's own resource bindings.
+        projected, contexts = self._inspection_records("get_delivery", actor,
+            {key: (kind, snapshot[key]) for key, kind in _DELIVERY_RECORDS.items() if key != "message"})
+        selected = self._inspection_context(actor, "message", snapshot["message"])
+        self._authorize("get_delivery", selected)
+        with self.store.transaction() as tx:
+            self._verify_context(tx, context)
+            self._verify_context(tx, selected)
+            self._verify_inspection_contexts(tx, contexts)
+            if digest(snapshot) != digest(self._delivery_snapshot(tx, args["message_id"])):
+                raise Conflict("Delivery inspection records changed during authorization.", retry_safe=True)
+        return {"message": snapshot["message"], **projected}
+
+    def _inspection_context(self, actor, kind, record, cache=None):
+        arguments = {key: record[key] for key in ("work_id", "session_id", "message_id") if record.get(key)}
+        if kind == "message":
+            arguments["message_id"] = record["id"]
+        elif kind == "work":
+            arguments["work_id"] = record["id"]
+        elif kind == "session":
+            arguments["session_id"] = record["id"]
+        elif kind == "native_call":
+            arguments["native_call_id"] = record["id"]
+        current = self._inspection_basis(actor, arguments, cache)
+        current["inspection"] = {"kind": kind, "id": record["id"]}
+        current["record"] = deepcopy(record)
+        return current
+
+    def _inspection_basis(self, actor, arguments, cache):
+        key = digest(arguments)
+        if cache is None:
+            return self._context(actor, arguments)
+        if key not in cache:
+            cache[key] = self._context(actor, arguments)
+        return dict(cache[key])
+
+    def _inspection_records(self, action_name, actor, sections, cache=None):
+        result, contexts = {}, []
+        cache = {} if cache is None else cache
+        for section, (kind, records) in sections.items():
+            result[section] = []
+            for record in records:
+                try:
+                    current = self._inspection_context(actor, kind, record, cache)
+                    self._authorize(action_name, current)
+                    payload = record if kind == "native_call" else record.get("observation", {}) if kind == "native_observation" else {}
+                    executed = None
+                    if payload.get("action") and isinstance(payload.get("arguments"), dict):
+                        # A callback's source session need not own the resource
+                        # selected by its actual arguments. Inspecting the
+                        # source must not lend its grant to a different target.
+                        executed = self._inspection_basis(actor, payload["arguments"], cache)
+                        executed["inspection"] = {**current["inspection"], "action": payload["action"],
+                            "binding": "executed_arguments"}
+                        executed["record"] = deepcopy(record)
+                        self._authorize(action_name, executed)
+                except OrchestrationError as error:
+                    if error.code not in {"denied", "review_required", "not_found"}:
+                        raise
+                    continue
+                visible = deepcopy(record)
+                payload = visible if kind == "native_call" else visible.get("observation", {}) if kind == "native_observation" else {}
+                nested = payload.get("result")
+                nested_kinds = _INSPECTION_RESULTS.get(payload.get("action"), {})
+                if isinstance(nested, dict) and nested_kinds:
+                    # Historical native read results may themselves contain
+                    # aggregates authorized before the current caller's grant.
+                    # Keep stored raw evidence intact; project its records too.
+                    sections = {key: (child_kind, values if isinstance(values, list) else [values])
+                        for key, child_kind in nested_kinds.items()
+                        if isinstance(values := nested.get(key), (dict, list))}
+                    children, child_contexts = self._inspection_records(action_name, actor, sections, cache)
+                    contexts.extend(child_contexts)
+                    for key, values in children.items():
+                        replacement = values if isinstance(nested[key], list) else values[0] if values else None
+                        if replacement != nested[key]:
+                            visible["inspection_redacted"] = True
+                        nested[key] = replacement
+                result[section].append(visible)
+                contexts.append(current)
+                if executed is not None:
+                    contexts.append(executed)
+        return result, contexts
+
+    def _verify_inspection_contexts(self, tx, contexts):
+        checked = set()
+        for current in contexts:
+            key = digest(current["arguments"])
+            if key not in checked:
+                self._verify_context(tx, current)
+                checked.add(key)
 
     def _dispatch_deliveries(self, args, actor, context):
         with self.store.transaction() as tx:
@@ -228,7 +327,7 @@ class DeliveryMixin:
             record = self._create(tx, "native_observation", context.get("actor", "native"), data, key)
             return view(record)
 
-    def invoke_native(self, driver_name, action_name, arguments, context):
+    def invoke_native(self, driver_name, action_name, arguments, context, *, replay_only=False):
         """Durably fence semantic native call IDs even for non-idempotent actions."""
         identity = digest([driver_name, context["native_id"], context["call_id"]])
         fingerprint = digest([action_name, arguments, context["session_id"], context["incarnation"], context["actor"]])
@@ -246,13 +345,15 @@ class DeliveryMixin:
                 else:
                     raise OrchestrationError("The native call has an unresolved effect and will not execute again.", "native_call_unresolved")
             else:
+                if replay_only:
+                    raise OrchestrationError("The native replay has no retained completed application call.", "native_call_unresolved")
                 self._create(tx, "native_call", context["actor"], {"fingerprint": fingerprint,
                 "status": "pending", "session_id": context["session_id"], "native_id": context["native_id"],
                 "incarnation": context["incarnation"], "call_id": context["call_id"],
                 "action": action_name, "arguments": deepcopy(arguments), "work_id": context.get("work_id")}, identity)
         if replay is not None:
             if "idempotency_key" in arguments:
-                return self.call(action_name, arguments, actor=context["actor"], native_context=context)
+                return self.call(action_name, arguments, actor=context["actor"], native_context=context, replay_only=replay_only)
             current = self._context(context["actor"], arguments)
             current["native_source"] = deepcopy(context)
             self._authorize(action_name, current)
@@ -301,7 +402,16 @@ class DeliveryMixin:
             self._verify_context(tx, context)
             records = [view(r) for r in tx.list("native_observation") if not args.get("session_id") or r.data["session_id"] == args["session_id"]]
             calls = [view(r) for r in tx.list("native_call") if not args.get("session_id") or r.data["session_id"] == args["session_id"]]
-            return {"observations": records[args.get("after", 0):], "calls": calls}
+        projected, contexts = self._inspection_records("native_observations", actor,
+            {"observations": ("native_observation", records[args.get("after", 0):]), "calls": ("native_call", calls)})
+        with self.store.transaction() as tx:
+            self._verify_context(tx, context)
+            self._verify_inspection_contexts(tx, contexts)
+            for kind, originals in (("native_observation", records), ("native_call", calls)):
+                for original in originals:
+                    if view(self._require(tx, kind, original["id"])) != original:
+                        raise Conflict("Native inspection record changed during authorization.", retry_safe=True)
+        return projected
 
     def _resolve_native_call(self, args, actor, context):
         with self.store.transaction() as tx:

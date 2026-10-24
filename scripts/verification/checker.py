@@ -9,6 +9,7 @@ when testing whether candidate changes preserved the owner requirements.
 from __future__ import annotations
 
 import itertools
+from datetime import datetime
 
 from .capture import canonical, digest
 
@@ -60,7 +61,7 @@ def default_criteria(brief_sha256):
 
 def signature(event):
     return canonical({key: event.get(key) for key in
-                      ("event", "tool", "arguments", "native_id", "incarnation", "session_id", "origin")})
+                      ("event", "tool", "arguments", "native_id", "incarnation", "session_id", "origin", "observation_work_id", "session_work_id")})
 
 
 def identity_matches(event, sessions):
@@ -71,10 +72,22 @@ def identity_matches(event, sessions):
             and event.get("incarnation") and event.get("incarnation") == session.get("incarnation"))
 
 
+def arguments_match(native, application):
+    """Allow only documented application enrichment, preserving native values.
+
+    Composition injects a missing work_id and replaces/removes idempotency_key
+    with its trusted session/call-derived key; it never trusts a native key.
+    """
+    return (isinstance(native, dict) and isinstance(application, dict)
+            and all(key in application and canonical(application[key]) == canonical(value) for key, value in native.items()
+                    if key != "idempotency_key")
+            and set(application) - set(native) <= {"work_id", "idempotency_key"})
+
+
 def native_call(events, peer, tool, arguments, sessions, call_id=None):
     for event in events:
         if not (event.get("event") == "native_tool" and event.get("peer") == peer
-                and event.get("tool") == tool and event.get("arguments") == arguments
+                and event.get("tool") == tool and arguments_match(event.get("arguments"), arguments)
                 and event.get("call_id") and event.get("origin") == ORIGINS.get(peer)
                 and identity_matches(event, sessions)
                 and (call_id is None or event["call_id"] == call_id)):
@@ -95,6 +108,28 @@ def match_callback(events, event, sessions):
     # The app side effect must be tied to this callback, not just have matching
     # free-form arguments somewhere in a transcript.
     require(event.get("call_id") == native["call_id"], "callback_call_binding")
+    if event.get("session_work_id") is not None:
+        require(event.get("observation_work_id") == event["session_work_id"], "callback_work_binding")
+    if native.get("observation_work_id") is not None or event.get("observation_work_id") is not None:
+        require(native.get("observation_work_id") == event.get("observation_work_id"),
+                "callback_work_binding")
+        if "work_id" in event.get("arguments", {}) and "work_id" not in native.get("arguments", {}):
+            require(event["arguments"]["work_id"] == event["observation_work_id"], "callback_work_binding")
+    if "persisted_evidence" in event:
+        persisted, arguments = event["persisted_evidence"], event["arguments"]
+        require(canonical(arguments.get("result")) == canonical(persisted.get("result"))
+                and arguments.get("work_id") == persisted.get("work_id"),
+                "application_effect_arguments_mismatch")
+        if "source" in persisted or "created_by" in persisted:
+            require(persisted.get("source") == {"type": "caller", "actor": event["peer"]}
+                    and persisted.get("created_by") == event["peer"], "persisted_evidence_actor_mismatch")
+    if "persisted_message" in event:
+        persisted, arguments = event["persisted_message"], event["arguments"]
+        require(canonical(arguments.get("body")) == canonical(persisted.get("body"))
+                and canonical(arguments.get("destination")) == canonical(persisted.get("destination"))
+                and arguments.get("work_id") == persisted.get("work_id")
+                and event.get("peer") == persisted.get("sender"),
+                "application_effect_arguments_mismatch")
     return native
 
 
@@ -116,15 +151,30 @@ def exchange_evidence(events, case, nonce, memory, sessions):
     require(challenge["seq"] < reply["seq"] < receipt["seq"], "exchange_event_order")
     submissions = []
     for message, recipient in ((challenge, target), (reply, source)):
-        submitted = next((e for e in events if e.get("event") == "submitted" and e.get("peer") == recipient
-                          and e.get("message_id") == message["message"]["id"] and e.get("attempt_id")
-                          and e.get("state") == "submitted" and identity_matches(e, sessions)), None)
-        require(submitted, "native_submission_missing_or_misbound")
+        attempts = [e for e in events if e.get("event") == "attempt"
+                    and e.get("message_id") == message["message"]["id"]]
+        require(attempts, "delivery_attempt_missing_or_misbound")
+        require(all(e.get("recipient") == recipient for e in attempts), "delivery_attempt_recipient_mismatch")
+        sequences = [e.get("attempt_sequence") for e in attempts]
+        require(all(type(value) is int and value > 0 for value in sequences)
+                and len(sequences) == len(set(sequences))
+                and len({e.get("attempt_id") for e in attempts}) == len(attempts),
+                "delivery_attempt_sequence_invalid")
+        latest = max(attempts, key=lambda e: e["attempt_sequence"])
+        require(latest.get("status") == "submitted" and latest.get("origin") == "adapter"
+                and isinstance(latest.get("submission"), dict)
+                and latest["submission"].get("submitted") is True,
+                "latest_delivery_attempt_not_submitted")
+        candidates = [e for e in events if e.get("event") == "submitted" and e.get("peer") == recipient
+                      and e.get("message_id") == message["message"]["id"] and e.get("attempt_id")
+                      and e.get("state") == "submitted" and identity_matches(e, sessions)]
+        require(candidates, "native_submission_missing_or_misbound")
+        submitted = next((e for e in candidates if e["attempt_id"] == latest["attempt_id"]), None)
+        require(submitted, "delivery_attempt_missing_or_misbound")
+        require(all(latest.get(k) == submitted.get(k) for k in
+                    ("message_id", "attempt_id", "peer", "session_id", "native_id", "incarnation")),
+                "delivery_attempt_missing_or_misbound")
         require(message["seq"] < submitted["seq"], "submission_before_message")
-        attempt = next((e for e in events if e.get("event") == "attempt" and
-                        all(e.get(k) == submitted.get(k) for k in
-                            ("message_id", "attempt_id", "peer", "session_id", "incarnation"))), None)
-        require(attempt, "delivery_attempt_missing_or_misbound")
         submissions.append(submitted)
     observed = [match_callback(events, event, sessions) for event in (challenge, reply, receipt)]
     timing = {"challenge_ack_after_reply": submissions[0]["seq"] > reply["seq"],
@@ -144,6 +194,11 @@ def exchange_evidence(events, case, nonce, memory, sessions):
         require(started and finished and started["seq"] < submissions[0]["seq"] < finished["seq"],
                 "submission_outside_unfinished_work")
         timing["reply_before_work_completed"] = reply["seq"] < finished["seq"]
+        if reply.get("at") is not None and finished.get("at") is not None:
+            # Equal timestamps do not prove "before"; normalized insertion order
+            # is not a replacement for an independently observed deadline.
+            timing["reply_before_work_completed"] = datetime.fromisoformat(reply["at"]) < datetime.fromisoformat(finished["at"])
+        require(timing["reply_before_work_completed"], "reply_after_work_completion")
     return {"event_seqs": [challenge["seq"], submissions[0]["seq"], reply["seq"], submissions[1]["seq"], receipt["seq"]],
             "native_seqs": [e["seq"] for e in observed], "timing": timing,
             "attempt_ids": [e["attempt_id"] for e in submissions]}
@@ -260,14 +315,16 @@ def check_case(case, run, fixture):
         require(result.get("answer") == expected_work(fixture["batches"][case["batch"]]), "incorrect_work")
         return {"event_seqs": [result["seq"]]}
     if kind == "completion":
-        completion = [e for e in own if e.get("event") == "activity" and e.get("state") == "idle"
-                      and e.get("basis") == "native" and identity_matches(e, sessions)]
+        activity = [e for e in own if e.get("event") == "activity"
+                    and e.get("basis") == "native" and identity_matches(e, sessions)]
+        latest = max(activity, key=lambda event: event["seq"]) if activity else None
         calls = [e["seq"] for e in own if e.get("event") == "tool_called"]
         # A transport acknowledgement may be observed after the model finished.
-        # Completion must follow the actual application callbacks, not the time
-        # the controller happened to receive the submission acknowledgement.
-        require(completion and calls and completion[-1]["seq"] > max(calls), "native_completion_missing")
-        return {"event_seqs": [completion[-1]["seq"]]}
+        # Completion must follow actual callbacks and remain the latest aggregate
+        # state. An old idle never masks later active or uncertain native work.
+        require(latest and latest.get("state") == "idle" and calls
+                and latest["seq"] > max(calls), "native_completion_missing")
+        return {"event_seqs": [latest["seq"]]}
     if kind == "lifecycle":
         lifecycle = next((e for e in own if e.get("event") == "lifecycle" and e.get("operation") == case["operation"]), None)
         require(lifecycle, "lifecycle_not_exercised")
@@ -280,9 +337,17 @@ def verify(run, criteria, expected_bindings, fixture):
     require(run.get("bindings") == expected_bindings, "measurement_binding_mismatch")
     require(expected_bindings.get("criteria_sha256") == digest(canonical(criteria)), "criteria_binding_mismatch")
     require(expected_bindings.get("fixture_sha256") == digest(canonical(fixture)), "fixture_binding_mismatch")
+    normalization_error = None
     if "raw_records" in run:
         from .normalize import normalize
-        run = {**run, "events": normalize(run["raw_records"], run["sessions"], run.get("provider_events", []), run.get("mode"))}
+        try:
+            run = {**run, "events": normalize(run["raw_records"], run["sessions"], run.get("provider_events", []), run.get("mode"))}
+        except VerificationFailure as error:
+            normalization_error = error.assertion
+            run = {**run, "events": []}
+        except (KeyError, TypeError, IndexError, ValueError, AttributeError):
+            normalization_error = "malformed_raw_evidence"
+            run = {**run, "events": []}
         for event in run.get("lifecycle_events", []):
             run["events"].append({**event, "seq": len(run["events"]) + 1})
     require(run.get("mode") != "native" or "raw_records" in run, "native_raw_records_missing")
@@ -296,7 +361,9 @@ def verify(run, criteria, expected_bindings, fixture):
     results = []
     for case in requested:
         result = {"id": case["id"], "status": "not_exercised"}
-        if case["id"] in executed:
+        if normalization_error is not None:
+            result.update(status="invalid_evidence", assertion=normalization_error)
+        elif case["id"] in executed:
             try:
                 result.update(evidence=check_case(case, run, fixture), status="passed")
             except VerificationFailure as exc:
@@ -305,7 +372,7 @@ def verify(run, criteria, expected_bindings, fixture):
                 result.update(status="invalid_evidence", error=type(exc).__name__)
         results.append(result)
     complete = bool(results) and all(r["status"] == "passed" for r in results)
-    diagnostics = []
+    diagnostics = [normalization_error] if normalization_error else []
     if "cleanup" in run and run["cleanup"].get("status") != "passed":
         complete = False
         diagnostics.append("cleanup_incomplete")

@@ -104,7 +104,12 @@
         },
         {
           "name": "Run application, boundary, and subprocess integration tests",
-          "run": "python3 -m pytest tests/hexagonal -q"
+          "run": "mkdir -p \"$RUNNER_TEMP/xor-checks\"\ngit show -s --format='%H%n%T%n%P' HEAD > \"$RUNNER_TEMP/xor-checks/identity.txt\"\npython3 -m pytest tests/hexagonal -q -rs --junitxml=\"$RUNNER_TEMP/xor-checks/application.xml\""
+        },
+        {
+          "name": "Retain original assertion fault calibrations",
+          "if": "matrix.python == '3.12'",
+          "run": "python3 -m scripts.verification.calibrate_suite --candidate . --out \"$RUNNER_TEMP/xor-checks/native-calibration\"\npython3 tests/hexagonal/calibrate_work_acceptance.py --output \"$RUNNER_TEMP/xor-checks/work-calibration\""
         },
         {
           "name": "Run composed three-harness protocol acceptance",
@@ -119,6 +124,16 @@
             "path": "${{ runner.temp }}/xor-verification/run/**",
             "if-no-files-found": "warn",
             "retention-days": 7
+          }
+        },
+        {
+          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "if": "always()",
+          "with": {
+            "name": "repair-checks-python-${{ matrix.python }}",
+            "path": "${{ runner.temp }}/xor-checks/**/*.json\n${{ runner.temp }}/xor-checks/**/*.xml\n${{ runner.temp }}/xor-checks/**/*.log\n${{ runner.temp }}/xor-checks/**/*.txt\n!${{ runner.temp }}/xor-checks/native-calibration/**/snapshot/**\n!${{ runner.temp }}/xor-checks/native-calibration/**/control/**\n!${{ runner.temp }}/xor-checks/native-calibration/**/mutant/**\n!${{ runner.temp }}/xor-checks/native-calibration/**/candidate/**\n!${{ runner.temp }}/xor-checks/work-calibration/**/snapshot/**\n!${{ runner.temp }}/xor-checks/work-calibration/**/candidate/**",
+            "if-no-files-found": "error",
+            "retention-days": 30
           }
         }
       ],

@@ -27,6 +27,13 @@ write_lock = threading.Lock()
 state_lock = threading.Lock()
 pending = {}
 thread_context = threading.local()
+result_lock = threading.Lock()
+
+def retain_result(value):
+    if os.environ.get("PEER_RESULTS"):
+        with result_lock:
+            with open(os.environ["PEER_RESULTS"], "a") as output:
+                output.write(json.dumps(value) + "\n")
 
 
 def hook(event, **data):
@@ -50,7 +57,7 @@ def write(packet):
 
 
 def call(method, params):
-    ident = uuid.uuid4().hex
+    ident = getattr(thread_context, "mcp_request_id", None) or uuid.uuid4().hex
     ready = threading.Event()
     with state_lock:
         pending[ident] = {"ready": ready}
@@ -60,6 +67,8 @@ def call(method, params):
     with state_lock:
         response = pending.pop(ident)["response"]
     if "error" in response:
+        retain_result({"label": getattr(thread_context, "label", None), "call_id": getattr(thread_context, "call_id", None),
+                       "result": response})
         raise RuntimeError("MCP call rejected")
     return response["result"]
 
@@ -67,8 +76,10 @@ def call(method, params):
 def tool(name, arguments):
     if fault != "missing_tool_hook":
         hook("PreToolUse", tool_name=f"mcp__{server_name}__{name}", tool_input=arguments,
-             tool_use_id=uuid.uuid4().hex, prompt_id=getattr(thread_context, "prompt_id", None))
-    return call("tools/call", {"name": name, "arguments": arguments})
+             tool_use_id=getattr(thread_context, "call_id", None) or uuid.uuid4().hex, prompt_id=getattr(thread_context, "prompt_id", None))
+    result = call("tools/call", {"name": name, "arguments": arguments})
+    retain_result({"label": getattr(thread_context, "label", None), "call_id": getattr(thread_context, "call_id", None), "result": result})
+    return result
 
 
 def verification(message):
@@ -125,6 +136,10 @@ def delivery(params):
     thread_context.prompt_id = uuid.uuid4().hex
     message = json.loads(params["content"])
     body = message.get("body", message)
+    replay = body.get("replay_fixture", {})
+    thread_context.call_id = replay.get("call_id")
+    thread_context.mcp_request_id = replay.get("mcp_request_id")
+    thread_context.label = replay.get("label")
     try:
         hook("UserPromptSubmit", prompt_id=getattr(thread_context, "prompt_id", None))
         if verification(message):
