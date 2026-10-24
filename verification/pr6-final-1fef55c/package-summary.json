@@ -1,0 +1,10 @@
+{
+  "file_count": 31508,
+  "unique_payloads": 3512,
+  "logical_bytes": 547944192,
+  "archive_bytes": 24810584,
+  "archive_sha256": "0638ac0b5c900fcbbf09de45c3905a3fdb27f696178fe8085a7b4698ae4e3020",
+  "symlinks_recorded": 333,
+  "special_files_recorded": 1,
+  "excluded": 934
+}

@@ -1,0 +1,86 @@
+Final bounded review: original calibrations and IV04 preservation
+
+Decision for this scope: PASS. No material blocker demonstrated.
+
+Product commit: 1fef55c0c0cadd5e1417c0e010f272f6447f8ea4
+Product tree: 75ecb3ef4edbc381012fe74e416a9abd3fb5c667
+Historical definition baseline: ef7567516520543970af55b6f19534cb66eda357
+Repair evidence publication: 09f801eab7eda6f7b07715c516f45b1a6a0a656b
+Interpreter: Python 3.12.14
+
+Executed exactly one fresh native calibration, work calibration, 32-case IV04
+challenge replay, 10-case position replay and the documented raw audits. No
+repeat was needed. run_calibration_review.py and each *-command.json retain the
+commands, environment subset, timestamps, output paths and statuses. The supplied
+scripts are immutable inputs under repair evidence's iv04-preservation directory.
+The pinned calibrators are in the product source. Source hashes before and after
+execution match; the dedicated disposable product worktree remains clean.
+
+The seven native faults and five work-acceptance faults were activated only in
+disposable snapshot copies. Raw source and XML audits verify that each mutant
+differs from its corresponding passing control only at its declared mutation.
+The native faults.json, native runner and complete work calibrator remain byte
+identical to the historical baseline; the work CASES values also compare equal.
+All assertion-observer copies match the pinned candidate.
+
+Observed raw outcomes:
+- 12 declared source faults; 36 passing control tests.
+- 19 intended assertion failures; 17 unaffected mutant passes.
+- Zero test errors or skips. Controls exited 0, faults exited 1.
+- All failed test identities, literal assertion markers, AST assertion spans and
+  raising instruction spans match the declared target source. This is not credit
+  derived merely from the calibrators' detected totals.
+
+Independent semantic inspection connects the planted defects to their decisive
+observations: fabricated native calls violate empty-call controls; lost requested
+settings lose the requested model; external detach incorrectly closes the native
+process; killed hosts lose unknown effects; dropped dispatch prevents the callback
+event; definitive delivery failure masks an unknown outcome. Work mutations lose
+required owner outcomes or admit misbound, caller-origin, unresolved or stale
+assessment evidence. The retained target assertion source in mutation-audit.json
+records these exact consequences.
+
+IV04: all 32 challenge cases match the source-declared execution trace. There are
+12 genuine assertion detections and 20 unrelated/ambiguous rejections, with 32
+passing control subprocesses and zero false detection credit. Both rewritten and
+plain Python assertion execution were exercised. The raw audit imports no product
+verifier, observer or classifier; it reads source definitions, raw XML, event
+traces and subprocess statuses independently.
+
+Concrete negative/positive inspection:
+- Helper condition failure records only condition; terminal helper frame cannot
+  claim the test's assertion, despite the identical EXPECTED_VIOLATION message.
+- Finally-adjacent failure records intended-true; its explicit raise receives no
+  assertion credit. Replacing an intended AssertionError with a new one likewise
+  receives no credit.
+- A same-line assertion for OTHER_REQUIREMENT is an assertion, but its wrong
+  marker is rejected.
+- Saved-reraise and context-propagation preserve the original intended assertion
+  traceback and remain valid detections, corroborated by their event traces.
+
+The 10 position/encoding cases retain four expected sensitivity misses: UTF-8 BOM
+and Latin-1 source, each in rewritten/plain mode, produce unrelated_failure for a
+genuine assertion. CPython compiles the retained source bytes, and fault XML
+confirms the actual intended assertion failed. This matches the explicitly
+deferred pre-existing encoding limitation; it is not false credit or a demonstrated
+regression. Missing debug positions remain fail-closed; optimized plain Python
+correctly produces escaped_fault because Python removes the assertion.
+
+No required check in this scope was blocked or omitted. The positions child exit
+1 is the preserved expected outcome for the four known encoding misses; the
+outer IV04 runner separately records that expected status. There were no other
+failed attempts. No product implementation was edited, repaired, merged or
+published by this sub-review.
+
+Decisive evidence:
+  source-before.json, source-after.json, source-integrity.json
+  original-definition-comparison.json
+  native-calibration/suite.json and each fault's control/mutant XML and source
+  work-calibration/calibration.json and each control/fault XML and source
+  iv04/commands.json, runner-summary.json, challenge/results.json
+  iv04/raw-challenge-audit.json, calibration-audit.json, mutation-audit.json
+  iv04/positions/results.json and underlying source/command/XML files
+
+The existing immutable archives should be referenced instead of duplicating
+their inputs. This directory holds fresh execution evidence; snapshot source
+copies are necessary to audit the actual planted mutations and assertion spans.

@@ -1,0 +1,19 @@
+{
+  "repository": "https://github.com/xormania/xorchestrate",
+  "pr": 6,
+  "product_commit": "1fef55c0c0cadd5e1417c0e010f272f6447f8ea4",
+  "product_tree": "75ecb3ef4edbc381012fe74e416a9abd3fb5c667",
+  "repair_evidence_commit": "09f801eab7eda6f7b07715c516f45b1a6a0a656b",
+  "repair_archive_sha256": "fcea4c755438f12f4d5d865d9b2bcf526bb3c532adf882e63ba38dc0895462c9",
+  "original_review_commit": "0f55a1a031a047b8730ef37bc6eda20e17e3cdb0",
+  "original_product_commit": "e565863ae72180571678c8f6118ee6e00b129e2e",
+  "original_product_tree": "474de55c5947890ab4092daeca7ff39f9bbbc400",
+  "original_archive_sha256": "8a5cfc2a8e3ac7ce50b4730d060974f1dc9c29f88430533e377178ac789d1916",
+  "baseline_commit": "ef7567516520543970af55b6f19534cb66eda357",
+  "hosted_integration_commit": "2894c5eb2d210656e6d29293a85836a846672c45",
+  "ci_run": 40141188920,
+  "publication_branch": "verification/pr6-final-1fef55c",
+  "publication_role": "Artifact-only child of product; not the measured candidate",
+  "initial_and_final_pr_head_match": true,
+  "merged": false
+}

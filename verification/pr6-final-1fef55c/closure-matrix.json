@@ -1,0 +1,57 @@
+{
+  "decision": "INTEGRATION RECOMMENDED",
+  "product_commit": "1fef55c0c0cadd5e1417c0e010f272f6447f8ea4",
+  "product_tree": "75ecb3ef4edbc381012fe74e416a9abd3fb5c667",
+  "material_blockers": [],
+  "checklist": [
+    {
+      "id": "ID",
+      "verdict": "resolved",
+      "fresh_evidence": "setup/repair-restore.log; setup/original-restore.log; setup/{initial,final}-pr.json"
+    },
+    {
+      "id": "IV01",
+      "verdict": "closed_in_tested_scope",
+      "fresh_evidence": "results/{original-defects,witnesses}/iv01; inspection-completion-results/run-1/inspection-*"
+    },
+    {
+      "id": "IV02",
+      "verdict": "closed_in_tested_scope",
+      "fresh_evidence": "results/{original-defects,witnesses}/iv02; inspection-completion-results/run-1/completion-*"
+    },
+    {
+      "id": "IV03",
+      "verdict": "closed_in_tested_scope",
+      "fresh_evidence": "results/{witnesses,composed,native-result-claims,requested-pair,product-receipt,identity-adversarial}; identity-results; ci-identity/nested-session-controls.json"
+    },
+    {
+      "id": "ARCH",
+      "verdict": "satisfied_in_changed_scope",
+      "fresh_evidence": "architecture-results; suite-results/focused.xml"
+    },
+    {
+      "id": "PRESERVATION",
+      "verdict": "preserved_in_tested_scope",
+      "fresh_evidence": "suite-results; results/composed; calibration-results; ci-identity"
+    },
+    {
+      "id": "IV04",
+      "verdict": "false_credit_closure_preserved",
+      "fresh_evidence": "calibration-results/iv04"
+    }
+  ],
+  "unexecuted_required_checks": [],
+  "deferred": [
+    "Four IV04 BOM/Latin-1 sensitivity misses",
+    "Previously reported test synchronization follow-up",
+    "Documented broader test/orchestration architecture migration"
+  ],
+  "limitations": [
+    "Authenticated vendor acceptance not executed; separate owner-local work",
+    "Historical hosted CI reused with exact tree identity",
+    "Discarded historical nested claim contributes no current credit; six missing-current-proof controls reject",
+    "Exchange subcase alone is weaker than full required native-call audit"
+  ],
+  "stop": "Bounded pass complete; no further independent review required by this handoff",
+  "merge_authority": "xor"
+}

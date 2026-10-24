@@ -1,0 +1,29 @@
+Independent existing-CI identity audit
+Product: 1fef55c0c0cadd5e1417c0e010f272f6447f8ea4
+Tree: 75ecb3ef4edbc381012fe74e416a9abd3fb5c667
+Run: https://github.com/xormania/xorchestrate/actions/runs/40141188920
+Attempt: 1. State completed; conclusion success.
+
+Identity method:
+1. Read the run through GitHub REST using the connected GitHub fetch tool. Its head_sha, pull request head SHA, and head_commit.id equal the pinned product; head_commit.tree_id equals the pinned tree.
+2. Inspect raw checkout logs for jobs 121013095612, 121013095844, 121013095846, and 121013095852. Each checks out refs/remotes/pull/6/merge, resolves HEAD to 2894c5eb2d210656e6d29293a85836a846672c45, and reports merging pinned product into b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a.
+3. Independently fetch Git commit objects for that merge and pinned product. Both tree SHA values equal 75ecb3ef4edbc381012fe74e416a9abd3fb5c667. Hosted execution therefore measures the exact product tree, though the checked-out commit is a synthetic merge.
+4. GitHub compare from original candidate e565863ae72180571678c8f6118ee6e00b129e2e to pinned product reports 30 changed files. None is under legacy/ or reference/. Existing historical source coverage is unchanged by this repair.
+
+Observed results from raw logs:
+- Imported runtime: 825 tests, OK (583.607 seconds), role package check passed; job 121013095612.
+- Recovered toolkit: six suites of 64, 138, 35, 6, 9, and 33 tests, all OK; sum 285; job 121013095844.
+- Static: ruff passed; security lint coverage check passed; 13 optional toolchain helper tests OK; compileall completed; job 121013095846.
+- Tmux protocol fixture: 22 acceptance/lifecycle tests passed; reusable fixture reports status passed; job 121013095852.
+
+Scope/limitations:
+These are existing hosted measurements, freshly identity-verified and inspected here; this agent did not rerun them. They do not establish authenticated vendor acceptance. The parent owns application contracts, full local hexagonal suite, original calibrations, and semantic IV01-IV04 replay; these are not claimed here.
+One local attempt to inspect the candidate with git cat-file failed because the parent repository had not yet fetched the object. The connected GitHub API supplied the identity evidence instead; this was an infrastructure/local-availability observation, not a product failure.
+
+Files and reproduction:
+- run.json: raw fetch result for GET /repos/xormania/xorchestrate/actions/runs/40141188920.
+- candidate-identity.json and merge-identity.json: raw fetch results for GET /repos/xormania/xorchestrate/git/commits/{SHA}.
+- commit-runs.json: commit-to-run connector query result.
+- historical-runtime.json, historical-toolkit.json, static.json, tmux.json: raw fetch_workflow_job_logs connector results for the four job IDs above; log content is structuredContent.content.
+- changed-files.json: raw compare_commits(base=e565863...,head=1fef55c...) result.
+All operations were read-only GitHub connector calls. No workflow was triggered or rerun.
