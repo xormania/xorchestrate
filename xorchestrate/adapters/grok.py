@@ -21,6 +21,13 @@ from .sessions import ACPSessionDriver, _identifier, _object
 class GrokSessionDriver(ACPSessionDriver):
     protocol = "grok"
 
+    def _activity(self, live):
+        state = getattr(live, "grok", {})
+        live.activity = ("active" if live.pending or live.active_callbacks or live.submissions
+                         or state.get("native_busy") or state.get("interjections") else
+                         "unknown" if live.activity_uncertain else "idle")
+        return live.activity
+
     def __init__(self, options, request_handler=None):
         super().__init__(options, request_handler)
         self._application_tools = {}
@@ -94,7 +101,8 @@ class GrokSessionDriver(ACPSessionDriver):
             completion = None
             if method == "_x.ai/session/prompt_complete" or kind == "turn_completed":
                 if not prompt:
-                    live.activity = "unknown"
+                    live.activity_uncertain = True
+                    self._activity(live)
                     self._observation(live, "native_completion_unknown", reason="missing_native_prompt_id", activity=live.activity)
                     self._observation(live, "activity", state=live.activity)
                     return
@@ -134,7 +142,7 @@ class GrokSessionDriver(ACPSessionDriver):
                             if args.get("attempt_id") == envelope.get("attempt_id") and envelope.get("attempt_id"):
                                 state["interjections"].pop(ident, None)
                 state["condition"].notify_all()
-            live.activity = "active" if live.pending or state["native_busy"] or state["interjections"] else "idle"
+            self._activity(live)
             if completion is not None:
                 self._observation(live, "native_completion", activity=live.activity, **completion)
             if completion is not None or kind in {"agent_message_chunk", "agent_thought_chunk", "tool_call", "tool_call_update"}:
@@ -158,6 +166,25 @@ class GrokSessionDriver(ACPSessionDriver):
         return result
 
     def _gateway(self, live, action, payload):
+        if action != "tools/call":
+            return self._gateway_call(live, action, payload)
+        token = uuid.uuid4().hex
+        completed = False
+        with live.lock:
+            live.active_callbacks.add(token)
+            self._observation(live, "activity", state=self._activity(live))
+        try:
+            result = self._gateway_call(live, action, payload)
+            completed = True
+            return result
+        finally:
+            with live.lock:
+                live.active_callbacks.discard(token)
+                if not completed:
+                    live.activity_uncertain = True
+                self._observation(live, "activity", state=self._activity(live))
+
+    def _gateway_call(self, live, action, payload):
         if action == "tools/list":
             return {"tools": [{"name": c.name, "description": c.description, "inputSchema": c.input_schema} for c in self._application_tools.values()]}
         if action == "initialized":
@@ -271,7 +298,9 @@ class GrokSessionDriver(ACPSessionDriver):
             live.grok["completed"].append(prompt_id)
             if live.grok["current"] == prompt_id:
                 live.grok["native_busy"] = False
-        live.activity = "unknown" if not completed else ("active" if live.pending or live.grok["native_busy"] or live.grok["interjections"] else "idle")
+        else:
+            live.activity_uncertain = True
+        self._activity(live)
 
     def send(self, session, message):
         return self.deliver(session, message)
@@ -280,7 +309,7 @@ class GrokSessionDriver(ACPSessionDriver):
         message = _object(message, "Delivery envelope")
         live = self._get(session)
         with live.lock:
-            busy = bool(live.pending or live.grok["native_busy"] or live.grok["interjections"])
+            busy = bool(live.pending or live.active_callbacks or live.grok["native_busy"] or live.grok["interjections"])
             if busy:
                 if len(live.grok["interjections"]) >= self.options.get("max_pending_messages", 1024):
                     raise OrchestrationError("Outstanding interjection capacity reached.", "session_capacity", {"outcome": "not_started"})

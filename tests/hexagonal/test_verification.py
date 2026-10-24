@@ -47,6 +47,7 @@ def proof_chain():
             origin={"codex": "codex/item/tool/call", "grok": "grok/session/update"}[peer])
         add("tool_called", peer, tool=tool, arguments=args, call_id=call_id)
         add(event, peer, tool=tool, arguments=args, call_id=call_id, **data)
+        add("tool_completed", peer, tool=tool, arguments=args, call_id=call_id)
     challenge = {"id": "challenge", "to": "grok", "kind": "challenge", "case_id": "case", "nonce": "nonce", "memory": ""}
     callback("codex", "send_message", challenge, "queued", message=challenge)
     add("attempt", "grok", message_id="challenge", attempt_id="attempt-1", recipient="grok",
@@ -382,10 +383,11 @@ def test_successful_transport_does_not_hide_wrong_work_missing_completion_or_uns
         check_case({"id": "work", "kind": "work", "peer": peer, "batch": 0}, run, fixture)
     with pytest.raises(VerificationFailure, match="native_completion_missing"):
         check_case({"id": "completion", "kind": "completion", "peer": peer}, run, fixture)
-    events.append({"seq": 23, "event": "activity", "peer": peer, **sessions[peer], "state": "idle", "basis": "native"})
+    events.append({"seq": 23, "event": "tool_completed", **common})
+    events.append({"seq": 24, "event": "activity", "peer": peer, **sessions[peer], "state": "idle", "basis": "native"})
     # A late submission acknowledgement cannot invalidate actual completion.
-    events.append({"seq": 24, "event": "submitted", "peer": peer, **sessions[peer]})
+    events.append({"seq": 25, "event": "submitted", "peer": peer, **sessions[peer]})
     assert check_case({"id": "completion", "kind": "completion", "peer": peer}, run, fixture)
-    events.append({"seq": 25, "event": "unsupported", "peer": peer})
+    events.append({"seq": 26, "event": "unsupported", "peer": peer})
     with pytest.raises(VerificationFailure, match="native_protocol_violation"):
         tool_audit(events, sessions)

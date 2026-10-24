@@ -25,6 +25,10 @@ def completion_input(peer="claude"):
         return record
     add("application_tool", phase="requested", action="invoke", arguments={}, call_id="A")
     add("application_tool", phase="requested", action="invoke", arguments={}, call_id="B")
+    # These tests isolate aggregate activity: both callbacks actually finished.
+    # Outstanding callback/effect contradictions have separate IV02 coverage.
+    add("application_tool", phase="completed", action="invoke", arguments={}, call_id="A")
+    add("application_tool", phase="completed", action="invoke", arguments={}, call_id="B")
     criteria = {"required_cases": [{"id": "completion-" + peer, "kind": "completion", "peer": peer}]}
     fixture = {"batches": []}
     bindings = {"criteria_sha256": digest(canonical(criteria)), "fixture_sha256": digest(canonical(fixture))}

@@ -321,6 +321,50 @@ def lifecycle_evidence(case, run, lifecycle):
             "callback_observation_id": callback["id"], "evidence_id": saved["id"]}
 
 
+def completion_evidence(own, run, peer):
+    """Native idle is necessary; independent callback/effect records can veto it."""
+    sessions = run["sessions"]
+    activity = [event for event in own if event.get("event") == "activity"
+                and event.get("basis") == "native" and identity_matches(event, sessions)]
+    latest = max(activity, key=lambda event: event["seq"]) if activity else None
+    calls = [event for event in own if event.get("event") == "tool_called"]
+    require(latest and latest.get("state") == "idle" and calls
+            and latest["seq"] > max(event["seq"] for event in calls), "native_completion_missing")
+    completed = [event for event in own if event.get("event") == "tool_completed"]
+    keys = ("call_id", "tool", "arguments", "session_id", "native_id", "incarnation", "callback_actor")
+    for call in calls:
+        require(identity_matches(call, sessions) and call.get("call_id"), "completion_callback_identity")
+        matches = [event for event in completed if all(canonical(event.get(key)) == canonical(call.get(key)) for key in keys)
+                   and call["seq"] < event["seq"] < latest["seq"]]
+        require(len(matches) == 1, "completion_callback_unresolved")
+
+    raw = run.get("raw_records", {})
+    session = sessions[peer]
+    for native in raw.get("native_calls", []):
+        if native.get("session_id") == session["session_id"] and native.get("incarnation") == session["incarnation"]:
+            require(native.get("native_id") == session["native_id"] and native.get("status") == "completed",
+                    "completion_native_call_unresolved")
+    if "operations" in raw:
+        operations = raw["operations"]
+        for call in calls:
+            key = call.get("arguments", {}).get("idempotency_key")
+            if key is None:
+                continue
+            matches = [op for op in operations if op.get("idempotency_key") == key and op.get("actor") == call.get("callback_actor")]
+            require(len(matches) == 1 and matches[0].get("status") == "completed"
+                    and matches[0].get("action") == call.get("tool")
+                    and canonical(matches[0].get("arguments")) == canonical({k: v for k, v in call["arguments"].items() if k != "idempotency_key"}),
+                    "completion_operation_unresolved")
+        for operation in operations:
+            if operation.get("session_id") != session["session_id"]:
+                continue
+            backend = operation.get("backend", {})
+            if backend and backend.get("incarnation") != session["incarnation"]:
+                continue
+            require(operation.get("status") in {"completed", "failed"}, "completion_operation_unresolved")
+    return {"event_seqs": [latest["seq"]]}
+
+
 def check_case(case, run, fixture):
     events, sessions = run["events"], run["sessions"]
     kind = case["kind"]
@@ -343,16 +387,7 @@ def check_case(case, run, fixture):
         require(result.get("answer") == expected_work(fixture["batches"][case["batch"]]), "incorrect_work")
         return {"event_seqs": [result["seq"]]}
     if kind == "completion":
-        activity = [e for e in own if e.get("event") == "activity"
-                    and e.get("basis") == "native" and identity_matches(e, sessions)]
-        latest = max(activity, key=lambda event: event["seq"]) if activity else None
-        calls = [e["seq"] for e in own if e.get("event") == "tool_called"]
-        # A transport acknowledgement may be observed after the model finished.
-        # Completion must follow actual callbacks and remain the latest aggregate
-        # state. An old idle never masks later active or uncertain native work.
-        require(latest and latest.get("state") == "idle" and calls
-                and latest["seq"] > max(calls), "native_completion_missing")
-        return {"event_seqs": [latest["seq"]]}
+        return completion_evidence(own, run, peer)
     if kind == "lifecycle":
         lifecycle = next((e for e in own if e.get("event") == "lifecycle" and e.get("operation") == case["operation"]), None)
         require(lifecycle, "lifecycle_not_exercised")

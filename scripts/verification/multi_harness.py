@@ -38,7 +38,8 @@ def snapshot(application):
             return [{**deepcopy(r.data), "id": r.key, "version": r.version} for r in tx.list(kind)]
         return {"sessions": records("session"), "messages": records("message"), "attempts": records("delivery_attempt"),
                 "observations": records("native_observation"), "evidence": records("evidence"),
-                "operations": records("operation"), "receipts": records("delivery_receipt")}
+                "operations": records("operation"), "receipts": records("delivery_receipt"),
+                "native_calls": records("native_call")}
 
 
 def protocol_config(root, state):
