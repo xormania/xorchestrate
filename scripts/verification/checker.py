@@ -302,9 +302,13 @@ def lifecycle_evidence(case, run, lifecycle):
     raw_native, raw_callback = native.get("observation", {}), callback.get("observation", {})
     for row in (native, callback):
         observation = row["observation"]
+        identity = {"peer": peer, "session_id": row.get("session_id"),
+                    **{key: observation.get(key) for key in ("native_id", "incarnation")}}
+        if "session_id" in observation:
+            identity["observation_session_id"] = observation["session_id"]
         require(row.get("origin") == "adapter" and row.get("stale") is False
-                and row.get("session_id") == after["session_id"] and observation.get("call_id") == retained.get("call_id")
-                and observation.get("native_id") == after["native_id"] and observation.get("incarnation") == after["incarnation"],
+                and identity_matches(identity, {peer: after})
+                and observation.get("call_id") == retained.get("call_id"),
                 "lifecycle_retained_observation_binding")
     require(raw_native.get("kind") in {"native_tool_call", "native_tool"} and raw_native.get("source")
             and raw_native.get("action") == "record_result" and raw_callback.get("phase") == "completed"

@@ -163,3 +163,70 @@ def test_unrelated_checker_failure_is_not_callback_detection(monkeypatch):
     monkeypatch.setattr(checker, "match_callback", unrelated)
     with pytest.raises(RuntimeError, match="unrelated checker setup failure"):
         assert_callback_rejected(inputs)
+
+
+def lifecycle_input(operation="resume"):
+    case = {"peer": "codex", "operation": operation, "id": "lifecycle-codex-" + operation}
+    before = {"session_id": "old-app", "native_id": "retained-native", "incarnation": "old", "ownership": "owned"}
+    after = {**before, "session_id": "new-app", "incarnation": "new"}
+    result = {"verification": {"run_id": "run", "phase": "lifecycle", "case_id": case["id"], "memory": "private"}}
+    raw = {"session": [{"id": view["session_id"], "backend": view} for view in (before, after)],
+           "operation": [{"id": "op", "status": "completed", "action": "start_session" if operation == "resume" else "reconnect_session",
+                          "result": {"session": {"id": after["session_id"]}}}],
+           "evidence": [{"id": "saved", "result": result}], "native_observation": []}
+    for side in ("native", "callback"):
+        observation = {"native_id": after["native_id"], "incarnation": after["incarnation"],
+                       "action": "record_result", "call_id": "retained-call", "arguments": {"result": result}}
+        observation.update({"kind": "native_tool_call", "source": "codex"} if side == "native" else
+                           {"phase": "completed", "result": {"evidence": {"id": "saved"}}})
+        raw["native_observation"].append({"id": side, "origin": "adapter", "stale": False,
+                                          "session_id": after["session_id"], "observation": observation})
+    lifecycle = {"before": before, "after": after, "operation_id": "op",
+                 "stale_errors": {side: {"code": "stale_connection"} for side in ("application", "adapter")},
+                 "retained_observation": {"call_id": "retained-call", "native_observation_id": "native",
+                                          "callback_observation_id": "callback", "evidence_id": "saved"}}
+    run = {"run_id": "run", "memories": {"codex": "private"},
+           "raw_records": {"sessions": raw["session"], "operations": raw["operation"],
+                           "observations": raw["native_observation"], "evidence": raw["evidence"]},
+           "lifecycle_records": [{"peer": "codex", "records": raw}]}
+    return (case, run, lifecycle), raw["native_observation"]
+
+
+def assert_lifecycle_rejected(inputs):
+    rejected = False
+    try:
+        checker.lifecycle_evidence(*inputs)
+    except checker.VerificationFailure as error:
+        rejected = error.assertion == "lifecycle_retained_observation_binding"
+    assert rejected, "IV03_LIFECYCLE_CALLBACK_IDENTITY_MUST_BE_BOUND"
+
+
+@pytest.mark.parametrize("operation", ["resume", "reconnect"])
+@pytest.mark.parametrize("side", [0, 1])
+@pytest.mark.parametrize("value", ["other-app", None, False])
+def test_lifecycle_nested_identity_contradiction_cannot_borrow_outer_session(operation, side, value):
+    inputs, rows = lifecycle_input(operation)
+    assert checker.lifecycle_evidence(*inputs)["operation_id"] == "op"
+    rows[side]["observation"]["session_id"] = "new-app"
+    assert checker.lifecycle_evidence(*inputs)["operation_id"] == "op"
+    rows[side]["observation"]["session_id"] = value
+    assert_lifecycle_rejected(inputs)
+
+
+def test_sustained_lifecycle_fault_cannot_erase_nested_identity(monkeypatch):
+    inputs, rows = lifecycle_input()
+    assert checker.lifecycle_evidence(*inputs)["operation_id"] == "op"
+    rows[1]["observation"]["session_id"] = "other-app"
+    assert_lifecycle_rejected(inputs)
+    match = checker.identity_matches
+    activated = []
+
+    def ignores_nested_identity(event, sessions):
+        activated.append(True)
+        return match({key: value for key, value in event.items() if key != "observation_session_id"}, sessions)
+
+    monkeypatch.setattr(checker, "identity_matches", ignores_nested_identity)
+    assert checker.lifecycle_evidence(*inputs)["operation_id"] == "op", "IV03_LIFECYCLE_FAULT_MUST_ACTIVATE"
+    with pytest.raises(AssertionError, match="^IV03_LIFECYCLE_CALLBACK_IDENTITY_MUST_BE_BOUND"):
+        assert_lifecycle_rejected(inputs)
+    assert activated
