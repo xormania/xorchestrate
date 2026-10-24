@@ -441,7 +441,7 @@ def test_known_bad_provider_binding_omission_is_detected(history, monkeypatch):
         return context
 
     monkeypatch.setattr(app, "_inspection_context", omit_binding)
-    monkeypatch.setattr(app, "_inspection_execution", lambda actor, payload, cache:
+    monkeypatch.setattr(app, "_inspection_execution", lambda actor, payload, cache, executing_actor:
         app._inspection_basis(actor, payload["arguments"], cache))
     with pytest.raises(AssertionError, match="^IV01_PROVIDER_SCOPE(?:\\n|$)"):
         assert_scope()
@@ -462,3 +462,22 @@ def test_unrelated_provider_scope_error_is_not_detection(history, monkeypatch):
     with pytest.raises(TimeoutError, match="unrelated provider scope dependency"):
         callbacks = [row["result"] for row in inspect(history)["calls"] if row["action"] == "invoke"]
         assert SECRET not in json.dumps(callbacks), "IV01_PROVIDER_SCOPE"
+
+
+@pytest.mark.parametrize("measured", [False, True], ids=["invocation", "measurement"])
+@pytest.mark.parametrize("inspector", ["limited", "owner"])
+def test_requested_native_phase_uses_original_executor_saved_descriptor(history, measured, inspector):
+    app, _, sessions, _ = history
+    provider_history(history, measured)
+    args = {"session_id": sessions["limited"]["id"]}
+    before = app.call("native_observations", args, actor=inspector)
+    app.guardrail = RuleGuardrail({"rules": [{"actors": [inspector], "actions": ["native_observations"],
+        "where": {"capability.annotations.visibility": SECRET}, "effect": "deny"}]})
+    visible = app.call("native_observations", args, actor=inspector)
+    action = "run_measurement" if measured else "invoke"
+    phases = [row["observation"] for row in visible["observations"] if row["observation"].get("action") == action]
+    assert {row["phase"] for row in phases} == {"requested", "completed"}
+    assert all(row["call_id"] == "public-" + action for row in phases), "IV01_REQUESTED_DESCRIPTOR_SCOPE"
+    assert all(row["call_id"] != "private-" + action for row in visible["calls"])
+    app.guardrail = RuleGuardrail()
+    assert app.call("native_observations", args, actor=inspector) == before

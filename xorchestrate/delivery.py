@@ -169,7 +169,7 @@ class DeliveryMixin:
                         # A callback's source session need not own the resource
                         # selected by its actual arguments. Inspecting the
                         # source must not lend its grant to a different target.
-                        executed = self._inspection_execution(actor, payload, cache)
+                        executed = self._inspection_execution(actor, payload, cache, record["created_by"])
                         executed["inspection"] = {**current["inspection"], "action": payload["action"],
                             "binding": "executed_arguments"}
                         executed["record"] = deepcopy(record)
@@ -203,7 +203,7 @@ class DeliveryMixin:
                     contexts.append(executed)
         return result, contexts
 
-    def _inspection_execution(self, actor, payload, cache):
+    def _inspection_execution(self, actor, payload, cache, executing_actor):
         """Retain the provider/capability scope of a recorded invocation."""
         arguments = payload["arguments"]
         scope_arguments = dict(arguments)
@@ -214,6 +214,18 @@ class DeliveryMixin:
                 operation_id = result.get("operation_id") or (resource.get("operation_id") if isinstance(resource, dict) else None)
                 if operation_id:
                     scope_arguments["operation_id"] = operation_id
+            if "operation_id" not in scope_arguments:
+                # Requested/uncertain observations can precede the result, but
+                # still refer to an already reserved operation. Its key belongs
+                # to the original executor, never the inspecting caller.
+                key = arguments.get("idempotency_key") if payload["action"] == "invoke" else None
+                if payload["action"] == "run_measurement" and isinstance(arguments.get("measurement_key"), str):
+                    key = "measurement:" + digest([executing_actor, "measurement", arguments["measurement_key"]])
+                if isinstance(key, str):
+                    with self.store.transaction() as tx:
+                        operation = tx.get("operation", digest([executing_actor, key]))
+                    if operation:
+                        scope_arguments["operation_id"] = operation.key
         current = self._inspection_basis(actor, scope_arguments, cache)
         # A requested native invoke can precede its durable result. Its typed
         # capability address already identifies the provider/name. Completed
