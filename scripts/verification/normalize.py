@@ -27,6 +27,8 @@ def normalize(raw, peer_sessions, provider_events, mode):
             continue
         identity = {k: item.get(k) for k in ("native_id", "incarnation")}
         identity["session_id"] = record["session_id"]
+        if "session_id" in item:
+            identity["observation_session_id"] = item["session_id"]
         identity["session_work_id"] = session_records.get(record["session_id"], {}).get("work_id")
         kind, source = item.get("kind"), item.get("source", "")
         at = item.get("at", record["created_at"])
@@ -55,12 +57,20 @@ def normalize(raw, peer_sessions, provider_events, mode):
 
     def call_data(record):
         item = record["observation"]
+        session = session_records.get(record["session_id"])
+        recorded_identity = None if session is None else {
+            "session_id": session["id"], "actor_id": session.get("actor_id"),
+            **{key: session.get("backend", {}).get(key) for key in ("native_id", "incarnation")}}
         # Keep executed application arguments independent from native input.
         # The checker compares the two; normalization must never reconcile them.
         return {"call_id": item.get("call_id"), "tool": item.get("action"), "arguments": item.get("arguments"),
                 "native_id": item.get("native_id"), "incarnation": item.get("incarnation"),
                 "session_id": record["session_id"], "observation_work_id": record.get("work_id"),
                 "session_work_id": session_records.get(record["session_id"], {}).get("work_id"),
+                "recorded_session_identity": recorded_identity,
+                "callback_actor": record.get("created_by", (session or {}).get("actor_id")),
+                "callback_actor_basis": "observation" if "created_by" in record else "session",
+                **({"observation_session_id": item["session_id"]} if "session_id" in item else {}),
                 "callback_observation_id": record["id"]}
 
     messages = {m["id"]: m for m in raw["messages"]}
@@ -68,7 +78,16 @@ def normalize(raw, peer_sessions, provider_events, mode):
     provider_calls = []
     for record in observations:
         item = record["observation"]
-        peer = by_session.get(record["session_id"])
+        peer = by_session.get(record.get("session_id"))
+        if peer is None:
+            # Keep a callback that contradicts its recorded application session
+            # visible when its native connection identifies a measured peer.
+            # This projection does not grant authority: match_callback checks the
+            # original session_id and will reject the disagreement.
+            matches = [candidate for candidate, identity in peer_sessions.items()
+                       if item.get("native_id") == identity.get("native_id")
+                       and item.get("incarnation") == identity.get("incarnation")]
+            peer = matches[0] if len(matches) == 1 else None
         if not peer or record.get("origin") != "adapter" or record.get("stale"):
             continue
         if item.get("phase") == "requested":
@@ -77,6 +96,7 @@ def normalize(raw, peer_sessions, provider_events, mode):
                 provider_calls.append(record)
         if item.get("phase") != "completed":
             continue
+        add("tool_completed", peer, record["created_at"], **call_data(record))
         result, args = item.get("result", {}), item.get("arguments", {})
         if item.get("action") == "send_message":
             message = messages.get(result.get("message", {}).get("id"))
