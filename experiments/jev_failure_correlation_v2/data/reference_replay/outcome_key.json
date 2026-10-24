@@ -1,0 +1,253 @@
+{
+  "cases": {
+    "c06e2dd37f2ab": {
+      "action": "reject",
+      "applicability": "applicable",
+      "judgment": "contradicts",
+      "relationship": "insufficient",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": [
+        "current_evidence"
+      ]
+    },
+    "c0fb9a45eb2da": {
+      "action": "accept",
+      "applicability": "applicable",
+      "judgment": "supports",
+      "relationship": "insufficient",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": []
+    },
+    "c19acb40f8797": {
+      "action": "reject",
+      "applicability": "applicable",
+      "judgment": "contradicts",
+      "relationship": "insufficient",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": [
+        "concurrent_activity"
+      ]
+    },
+    "c1c062765510d": {
+      "action": "reject",
+      "applicability": "applicable",
+      "judgment": "contradicts",
+      "relationship": "insufficient",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": [
+        "argument_integrity",
+        "effect_uncertainty"
+      ]
+    },
+    "c3e667a1b7532": {
+      "action": "reject",
+      "applicability": "applicable",
+      "judgment": "contradicts",
+      "relationship": "insufficient",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": [
+        "concurrent_activity"
+      ]
+    },
+    "c4ac02ef39bfc": {
+      "action": "accept",
+      "applicability": "applicable",
+      "judgment": "supports",
+      "relationship": "insufficient",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": []
+    },
+    "c51eabfc2dae5": {
+      "action": "reject",
+      "applicability": "applicable",
+      "judgment": "contradicts",
+      "relationship": "insufficient",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": [
+        "authority_binding"
+      ]
+    },
+    "c593af9fb49a0": {
+      "action": "reject",
+      "applicability": "applicable",
+      "judgment": "contradicts",
+      "relationship": "insufficient",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": [
+        "current_evidence"
+      ]
+    },
+    "c5999881a21d8": {
+      "action": "reject",
+      "applicability": "applicable",
+      "judgment": "contradicts",
+      "relationship": "insufficient",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": [
+        "assertion_execution"
+      ]
+    },
+    "c5af5e427a2f3": {
+      "action": "accept",
+      "applicability": "applicable",
+      "judgment": "supports",
+      "relationship": "similar_behavior",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": []
+    },
+    "c5dd2167f348a": {
+      "action": "accept",
+      "applicability": "applicable",
+      "judgment": "supports",
+      "relationship": "insufficient",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": []
+    },
+    "c756d2780a92a": {
+      "action": "reject",
+      "applicability": "applicable",
+      "judgment": "contradicts",
+      "relationship": "shared_invariant",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": [
+        "current_evidence"
+      ]
+    },
+    "c85b37db76aaa": {
+      "action": "accept",
+      "applicability": "applicable",
+      "judgment": "supports",
+      "relationship": "insufficient",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": []
+    },
+    "c8b932080dc3e": {
+      "action": "accept",
+      "applicability": "applicable",
+      "judgment": "supports",
+      "relationship": "insufficient",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": []
+    },
+    "c94d0a24d43b5": {
+      "action": "reject",
+      "applicability": "applicable",
+      "judgment": "contradicts",
+      "relationship": "insufficient",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": [
+        "effect_uncertainty"
+      ]
+    },
+    "c9de3dd808cb8": {
+      "action": "reject",
+      "applicability": "applicable",
+      "judgment": "contradicts",
+      "relationship": "insufficient",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": [
+        "effect_uncertainty"
+      ]
+    },
+    "cabe25ecf8ef4": {
+      "action": "accept",
+      "applicability": "applicable",
+      "judgment": "supports",
+      "relationship": "insufficient",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": []
+    },
+    "caeff6c6c4681": {
+      "action": "accept",
+      "applicability": "applicable",
+      "judgment": "supports",
+      "relationship": "insufficient",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": []
+    },
+    "cb482dcc4a0c1": {
+      "action": "investigate",
+      "applicability": "applicable",
+      "judgment": "unresolved",
+      "relationship": "insufficient",
+      "sufficiency": "missing",
+      "uncertainty": "missing_observation",
+      "violations": []
+    },
+    "cbc761dc81aa1": {
+      "action": "reject",
+      "applicability": "applicable",
+      "judgment": "contradicts",
+      "relationship": "insufficient",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": [
+        "effect_uncertainty"
+      ]
+    },
+    "cbfa1b0cc1f0f": {
+      "action": "reject",
+      "applicability": "applicable",
+      "judgment": "contradicts",
+      "relationship": "shared_invariant",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": [
+        "current_evidence"
+      ]
+    },
+    "cc191a8053cc3": {
+      "action": "reject",
+      "applicability": "applicable",
+      "judgment": "contradicts",
+      "relationship": "insufficient",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": [
+        "argument_integrity",
+        "effect_uncertainty"
+      ]
+    },
+    "cef7128badec1": {
+      "action": "reject",
+      "applicability": "applicable",
+      "judgment": "contradicts",
+      "relationship": "insufficient",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": [
+        "authority_binding"
+      ]
+    },
+    "cf22aab3d75cf": {
+      "action": "reject",
+      "applicability": "applicable",
+      "judgment": "contradicts",
+      "relationship": "insufficient",
+      "sufficiency": "decisive",
+      "uncertainty": "none",
+      "violations": [
+        "effect_uncertainty"
+      ]
+    }
+  },
+  "version": "2.0.0"
+}

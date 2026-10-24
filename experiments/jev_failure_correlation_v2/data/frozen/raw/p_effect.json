@@ -1,0 +1,413 @@
+{
+  "boundary": "active Application / SQLite / real FIFO bridge / controlled counter native port",
+  "records": [
+    {
+      "cleanup": {
+        "client_sessions_remaining": 0,
+        "endpoint_exists": false,
+        "host_closed": true,
+        "open_host_peers": 0
+      },
+      "config": {
+        "sessions": {
+          "external": {
+            "adapter": "bridge",
+            "options": {
+              "endpoint": "/tmp/review-late-effect-dfwotjhx/host",
+              "timeout": 4,
+              "transport": "fifo"
+            }
+          }
+        },
+        "store": {
+          "adapter": "sqlite",
+          "options": {
+            "path": "/tmp/review-late-effect-dfwotjhx/store.db"
+          }
+        }
+      },
+      "defect_reproduced": false,
+      "final_effect_count": 2,
+      "first_effect_count": 1,
+      "first_outcome": {
+        "result": {
+          "operation_id": "dd83f1957a2770f6b863dfe619f0f60813c8af8f30b2e1dd46e4a8350dfc816d",
+          "output": {
+            "applied_count": 1
+          },
+          "session": {
+            "actor_id": "owner",
+            "backend": {
+              "bridge_endpoint": "/tmp/review-late-effect-dfwotjhx/host",
+              "bridge_transport": "fifo",
+              "catalog_identity": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "configuration_id": "counter-v1",
+              "connection_state": "connected",
+              "handle": "2ccdade1465d4f628b78bc7e48ccb548",
+              "host_id": "79da3270d95a4eceb6b92fd9ead48690",
+              "incarnation": "aaab8d8295f641c09d409e6d5ebc12f2",
+              "instance": "6eee1e44ae224a358f46cac7f641a9bd",
+              "native_id": "counter-conversation",
+              "native_incarnation": "counter-native-incarnation",
+              "native_protocol": null,
+              "ownership": "external",
+              "protocol": "bridge",
+              "resumable": true,
+              "resume_token": "b10d3c38c3cd412155c0d0ad1c421384e438e8419d432bab0f3e6b366164b16f",
+              "settings": {
+                "observed": {},
+                "requested": {},
+                "resolved": {}
+              }
+            },
+            "created_at": "2026-10-24T06:37:38.398165+00:00",
+            "created_by": "owner",
+            "driver": "external",
+            "id": "24d3702cf73a4b2eac3a7d6c518e731f",
+            "pending_operation": null,
+            "selection": {
+              "fallback_reason": null,
+              "requested": "external",
+              "resolved": "external"
+            },
+            "specification": {},
+            "start_operation_id": "fcda76537fd0e93aa5026d18aaaa04ede7ec274c6d6263da29f11779fe05f9f7",
+            "status": "active",
+            "unresolved_effects": [],
+            "updated_at": "2026-10-24T06:37:38.403562+00:00",
+            "version": 4,
+            "work_id": null
+          }
+        }
+      },
+      "host_state": {
+        "effects": {
+          "dbb5046f37be4ea7ad25c58a19fdf0ef": {
+            "identity": "67477be2425cf8eefb164783ace101aa10ae1c3524babb584ce35cd0062147bd",
+            "incarnation": "aaab8d8295f641c09d409e6d5ebc12f2",
+            "result": {
+              "applied_count": 1
+            },
+            "status": "completed"
+          },
+          "dce30454ec6c4af89dbb8e1a38fe9e7c": {
+            "identity": "2eff668748c0d724674d78d979f2f8df16c9114051c79641d35a3c2c30957a3b",
+            "incarnation": "aaab8d8295f641c09d409e6d5ebc12f2",
+            "result": {
+              "applied_count": 2
+            },
+            "status": "completed"
+          }
+        },
+        "receipt": {
+          "catalog_identity": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "configuration_id": "counter-v1",
+          "connection_state": "connected",
+          "host_id": "79da3270d95a4eceb6b92fd9ead48690",
+          "incarnation": "aaab8d8295f641c09d409e6d5ebc12f2",
+          "native_id": "counter-conversation",
+          "native_incarnation": "counter-native-incarnation",
+          "native_protocol": null,
+          "ownership": "external",
+          "protocol": "bridge",
+          "resumable": true,
+          "resume_token": "b10d3c38c3cd412155c0d0ad1c421384e438e8419d432bab0f3e6b366164b16f",
+          "settings": {
+            "observed": {},
+            "requested": {},
+            "resolved": {}
+          }
+        }
+      },
+      "new_session": {
+        "actor_id": "owner",
+        "backend": {
+          "bridge_endpoint": "/tmp/review-late-effect-dfwotjhx/host",
+          "bridge_transport": "fifo",
+          "catalog_identity": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "configuration_id": "counter-v1",
+          "connection_state": "connected",
+          "handle": "2ccdade1465d4f628b78bc7e48ccb548",
+          "host_id": "79da3270d95a4eceb6b92fd9ead48690",
+          "incarnation": "aaab8d8295f641c09d409e6d5ebc12f2",
+          "instance": "6eee1e44ae224a358f46cac7f641a9bd",
+          "native_id": "counter-conversation",
+          "native_incarnation": "counter-native-incarnation",
+          "native_protocol": null,
+          "ownership": "external",
+          "protocol": "bridge",
+          "resumable": true,
+          "resume_token": "b10d3c38c3cd412155c0d0ad1c421384e438e8419d432bab0f3e6b366164b16f",
+          "settings": {
+            "observed": {},
+            "requested": {},
+            "resolved": {}
+          }
+        },
+        "created_at": "2026-10-24T06:37:38.398165+00:00",
+        "created_by": "owner",
+        "driver": "external",
+        "id": "24d3702cf73a4b2eac3a7d6c518e731f",
+        "pending_operation": null,
+        "selection": {
+          "fallback_reason": null,
+          "requested": "external",
+          "resolved": "external"
+        },
+        "specification": {},
+        "start_operation_id": "fcda76537fd0e93aa5026d18aaaa04ede7ec274c6d6263da29f11779fe05f9f7",
+        "status": "active",
+        "unresolved_effects": [],
+        "updated_at": "2026-10-24T06:37:38.400122+00:00",
+        "version": 2,
+        "work_id": null
+      },
+      "next_effect_outcome": {
+        "result": {
+          "operation_id": "c00534cab837ea3ef95480ee28a9ba5c17386855958110b164836f18aa5d3c4a",
+          "output": {
+            "applied_count": 2
+          },
+          "session": {
+            "actor_id": "owner",
+            "backend": {
+              "bridge_endpoint": "/tmp/review-late-effect-dfwotjhx/host",
+              "bridge_transport": "fifo",
+              "catalog_identity": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "configuration_id": "counter-v1",
+              "connection_state": "connected",
+              "handle": "2ccdade1465d4f628b78bc7e48ccb548",
+              "host_id": "79da3270d95a4eceb6b92fd9ead48690",
+              "incarnation": "aaab8d8295f641c09d409e6d5ebc12f2",
+              "instance": "6eee1e44ae224a358f46cac7f641a9bd",
+              "native_id": "counter-conversation",
+              "native_incarnation": "counter-native-incarnation",
+              "native_protocol": null,
+              "ownership": "external",
+              "protocol": "bridge",
+              "resumable": true,
+              "resume_token": "b10d3c38c3cd412155c0d0ad1c421384e438e8419d432bab0f3e6b366164b16f",
+              "settings": {
+                "observed": {},
+                "requested": {},
+                "resolved": {}
+              }
+            },
+            "created_at": "2026-10-24T06:37:38.398165+00:00",
+            "created_by": "owner",
+            "driver": "external",
+            "id": "24d3702cf73a4b2eac3a7d6c518e731f",
+            "pending_operation": null,
+            "selection": {
+              "fallback_reason": null,
+              "requested": "external",
+              "resolved": "external"
+            },
+            "specification": {},
+            "start_operation_id": "fcda76537fd0e93aa5026d18aaaa04ede7ec274c6d6263da29f11779fe05f9f7",
+            "status": "active",
+            "unresolved_effects": [],
+            "updated_at": "2026-10-24T06:37:38.405528+00:00",
+            "version": 6,
+            "work_id": null
+          }
+        }
+      },
+      "pending_control": {
+        "code": "conflict",
+        "details": {}
+      },
+      "replacement": false
+    },
+    {
+      "cleanup": {
+        "client_sessions_remaining": 0,
+        "endpoint_exists": false,
+        "host_closed": true,
+        "open_host_peers": 0
+      },
+      "config": {
+        "sessions": {
+          "external": {
+            "adapter": "bridge",
+            "options": {
+              "endpoint": "/tmp/review-late-effect-a9ysy26q/host",
+              "timeout": 4,
+              "transport": "fifo"
+            }
+          }
+        },
+        "store": {
+          "adapter": "sqlite",
+          "options": {
+            "path": "/tmp/review-late-effect-a9ysy26q/store.db"
+          }
+        }
+      },
+      "defect_reproduced": true,
+      "final_effect_count": 2,
+      "first_effect_count": 1,
+      "first_outcome": {
+        "code": "operation_failed",
+        "details": {
+          "cause": "stale_connection",
+          "operation_id": "dd83f1957a2770f6b863dfe619f0f60813c8af8f30b2e1dd46e4a8350dfc816d",
+          "outcome": "failed",
+          "recording_error": null
+        }
+      },
+      "host_state": {
+        "effects": {
+          "860d426d3a644044b7d8ad1f538a7a87": {
+            "identity": "a71dc0db3bb655f16aa2635f8bfc76b17030879613fa45420c03aa638c4d721b",
+            "incarnation": "e8c3d29552f64b60961dbc4a88673c7b",
+            "result": {
+              "applied_count": 2
+            },
+            "status": "completed"
+          },
+          "b72e304d0f3f45b6821fd2dcfff51292": {
+            "identity": "fb6f5b6ed218b5cf9adab1803d207ccc46d5cf47178104b31231a2cdb403721d",
+            "incarnation": "b45d22c798184277b5b70d23332d190e",
+            "result": {
+              "applied_count": 1
+            },
+            "status": "completed"
+          }
+        },
+        "receipt": {
+          "catalog_identity": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "configuration_id": "counter-v1",
+          "connection_state": "connected",
+          "host_id": "86b069b7d43345f6814eaff282fb87af",
+          "incarnation": "e8c3d29552f64b60961dbc4a88673c7b",
+          "native_id": "counter-conversation",
+          "native_incarnation": "counter-native-incarnation",
+          "native_protocol": null,
+          "ownership": "external",
+          "protocol": "bridge",
+          "resumable": true,
+          "resume_token": "933542b10d619cf1b8ef53741955c890beddb634866cf34d2010232a0110187c",
+          "settings": {
+            "observed": {},
+            "requested": {},
+            "resolved": {}
+          }
+        }
+      },
+      "new_session": {
+        "actor_id": "owner",
+        "backend": {
+          "bridge_endpoint": "/tmp/review-late-effect-a9ysy26q/host",
+          "bridge_transport": "fifo",
+          "catalog_identity": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "configuration_id": "counter-v1",
+          "connection_state": "connected",
+          "handle": "6ab456d81fd24ceba000400b869b74c5",
+          "host_id": "86b069b7d43345f6814eaff282fb87af",
+          "incarnation": "e8c3d29552f64b60961dbc4a88673c7b",
+          "instance": "a54fa0b7e6f24031bdaf224771f0959c",
+          "native_id": "counter-conversation",
+          "native_incarnation": "counter-native-incarnation",
+          "native_protocol": null,
+          "ownership": "external",
+          "protocol": "bridge",
+          "resumable": true,
+          "resume_token": "933542b10d619cf1b8ef53741955c890beddb634866cf34d2010232a0110187c",
+          "settings": {
+            "observed": {},
+            "requested": {},
+            "resolved": {}
+          }
+        },
+        "created_at": "2026-10-24T06:37:38.419849+00:00",
+        "created_by": "owner",
+        "driver": "external",
+        "id": "c9af8a466caf4896889a28d464b9cccd",
+        "pending_operation": null,
+        "resume_source": {
+          "session_id": "1e7b6c50ed72436f8d360ae1bfa9a17d",
+          "start_operation_id": "37ef12f898087c9ef837a763747b1d8c7f45505b03382b02f69dc9fefe4ba7ab",
+          "version": 2
+        },
+        "selection": {
+          "fallback_reason": null,
+          "requested": "external",
+          "resolved": "external"
+        },
+        "specification": {},
+        "start_operation_id": "0e3713bf976d7ab6ae0a5df9c23e8d9edb495c072bb2fd2f66ec67da43495ce9",
+        "status": "active",
+        "unresolved_effects": [
+          "dd83f1957a2770f6b863dfe619f0f60813c8af8f30b2e1dd46e4a8350dfc816d"
+        ],
+        "updated_at": "2026-10-24T06:37:38.421417+00:00",
+        "version": 2,
+        "work_id": null
+      },
+      "next_effect_outcome": {
+        "result": {
+          "operation_id": "c00534cab837ea3ef95480ee28a9ba5c17386855958110b164836f18aa5d3c4a",
+          "output": {
+            "applied_count": 2
+          },
+          "session": {
+            "actor_id": "owner",
+            "backend": {
+              "bridge_endpoint": "/tmp/review-late-effect-a9ysy26q/host",
+              "bridge_transport": "fifo",
+              "catalog_identity": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+              "configuration_id": "counter-v1",
+              "connection_state": "connected",
+              "handle": "6ab456d81fd24ceba000400b869b74c5",
+              "host_id": "86b069b7d43345f6814eaff282fb87af",
+              "incarnation": "e8c3d29552f64b60961dbc4a88673c7b",
+              "instance": "a54fa0b7e6f24031bdaf224771f0959c",
+              "native_id": "counter-conversation",
+              "native_incarnation": "counter-native-incarnation",
+              "native_protocol": null,
+              "ownership": "external",
+              "protocol": "bridge",
+              "resumable": true,
+              "resume_token": "933542b10d619cf1b8ef53741955c890beddb634866cf34d2010232a0110187c",
+              "settings": {
+                "observed": {},
+                "requested": {},
+                "resolved": {}
+              }
+            },
+            "created_at": "2026-10-24T06:37:38.419849+00:00",
+            "created_by": "owner",
+            "driver": "external",
+            "id": "c9af8a466caf4896889a28d464b9cccd",
+            "pending_operation": null,
+            "resume_source": {
+              "session_id": "1e7b6c50ed72436f8d360ae1bfa9a17d",
+              "start_operation_id": "37ef12f898087c9ef837a763747b1d8c7f45505b03382b02f69dc9fefe4ba7ab",
+              "version": 2
+            },
+            "selection": {
+              "fallback_reason": null,
+              "requested": "external",
+              "resolved": "external"
+            },
+            "specification": {},
+            "start_operation_id": "0e3713bf976d7ab6ae0a5df9c23e8d9edb495c072bb2fd2f66ec67da43495ce9",
+            "status": "active",
+            "unresolved_effects": [
+              "dd83f1957a2770f6b863dfe619f0f60813c8af8f30b2e1dd46e4a8350dfc816d"
+            ],
+            "updated_at": "2026-10-24T06:37:38.424957+00:00",
+            "version": 4,
+            "work_id": null
+          }
+        }
+      },
+      "pending_control": {
+        "code": "conflict",
+        "details": {}
+      },
+      "replacement": true
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "source_archive_member": "review/tracks/architecture_acceptance/protocol_replay/probe.py",
+    "file": "adapter_replay.py.txt",
+    "sha256": "b89be55b04e34dbc826dc61962d9d8f39b36c8d11da7603217bb21dae4676135",
+    "use": "Retained controlled reproduction source; runtime path adaptation only; protocol peers not vendor behavior."
+  },
+  {
+    "source_archive_member": "review/tracks/concurrency_lifecycle/late_effect_probe.py",
+    "file": "late_effect.py.txt",
+    "sha256": "52b3256f177d9539b99b3b0d151170d7c0752bd58ab878b06ae7507b1668ec27",
+    "use": "Retained controlled reproduction source; runtime path adaptation only; protocol peers not vendor behavior."
+  },
+  {
+    "source_archive_member": "review/tracks/concurrency_lifecycle/probes.py",
+    "file": "lifecycle.py.txt",
+    "sha256": "ffd9035934612a61dc7268e119fd0985136e482cd3c32dfb21c63214497a65fa",
+    "use": "Retained controlled reproduction source; runtime path adaptation only; protocol peers not vendor behavior."
+  }
+]

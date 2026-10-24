@@ -1,0 +1,63 @@
+{
+  "cases": 24,
+  "causal_limit": "Probes execute each boundary; reject/accept decisions and valuation are static policy replay, not production downstream state changes.",
+  "clusters": 8,
+  "prior_exposure": "Known historical F02\u2013F09 reproductions informed all schedules. Fresh execution and new packets do not imply new mechanisms.",
+  "sources": {
+    "p_arguments": {
+      "boundary": "production receipt and normalizer; controlled durable-record substitution, not live misdelivery",
+      "elapsed_seconds": 0.0053177599999116865,
+      "path": "raw/p_arguments.json",
+      "sha256": "9b8376c2a81862dded43a255d8bf9a71b3cc54baf8ee5851435dc24758d68a2f"
+    },
+    "p_assertion": {
+      "boundary": "real pytest subprocess and target assertion; controlled fixture",
+      "elapsed_seconds": 0.54100301699998,
+      "path": "raw/p_assertion.json",
+      "sha256": "c2be25cb159c3fe32554f063bb00bf11a2f72d5ce3d68136d97d768d4a84798c"
+    },
+    "p_attempts": {
+      "boundary": "production receipt and normalizer; controlled durable-record substitution, not live misdelivery",
+      "elapsed_seconds": 0.001356945999987147,
+      "path": "raw/p_attempts.json",
+      "sha256": "df1e515c3f282b68c5432112a115ed16244ebbca95e544b6ee75123bffa33431"
+    },
+    "p_authority": {
+      "boundary": "real FIFO bridge / native callback observation / controlled native port",
+      "elapsed_seconds": 0.011586978999957864,
+      "path": "raw/p_authority.json",
+      "sha256": "9af35c406eaf8d3f7b64b3074c51e104d152cde771c1bff06898ec0efb6af0f1"
+    },
+    "p_busy": {
+      "boundary": "actual Claude adapter / subprocess hooks and MCP / controlled protocol peer",
+      "elapsed_seconds": 0.6013802529998884,
+      "path": "raw/p_busy.json",
+      "sha256": "5d5379e4bccff6d70f39eb3bbb04827de2e10e96cae91893088ab2d5b2a0ccdb"
+    },
+    "p_context": {
+      "boundary": "active Application / SQLite / configured evaluator",
+      "elapsed_seconds": 0.16622121800003242,
+      "path": "raw/p_context.json",
+      "sha256": "239ae51c7279ce622bc22540216a7c69a9d9b3eb4b3b2f75a93f55f29a106428"
+    },
+    "p_effect": {
+      "boundary": "active Application / SQLite / real FIFO bridge / controlled counter native port",
+      "elapsed_seconds": 0.040083894000076725,
+      "path": "raw/p_effect.json",
+      "sha256": "b2c5406dac0891ed572055160d46eb2eee109f1dfc1f1a41c3f48238bb8415f8"
+    },
+    "p_replay": {
+      "boundary": "actual three adapter implementations with controlled native protocol subprocess peers; no installed vendor",
+      "elapsed_seconds": 1.2168920939999452,
+      "path": "raw/p_replay.json",
+      "sha256": "fdc5a5071a745ae3a2082ceadac8f5f3006d84293da06ac7b1fa4a76cf80a2b3"
+    }
+  },
+  "subject": {
+    "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+    "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+  },
+  "v1_role": "development/reference only; no v1 packet reused as holdout",
+  "vendor_behavior": "not tested; subprocess protocol peers establish adapter behavior only",
+  "version": "2.0.0"
+}
