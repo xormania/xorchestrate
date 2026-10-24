@@ -1,0 +1,941 @@
+{
+  "schema": "xorchestrate-repair-evidence-v1",
+  "created_at": "2026-10-24T05:42:02.174581+00:00",
+  "repository": "xormania/xorchestrate",
+  "pr": "https://github.com/xormania/xorchestrate/pull/6",
+  "branch": "repair/independent-findings",
+  "base": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+  "candidate": {
+    "commit": "ef7567516520543970af55b6f19534cb66eda357",
+    "tree": "a0813aae760e6e5bb6245693bd92b7e7c321348b",
+    "content_sha256": "03e3b0e28cfaaa03e87f3a2e68906cc24ae9ea25f67169a1d2b42fd25e704693",
+    "tracked_and_untracked_inputs": 1313,
+    "working_status": "",
+    "input_inventory": "repair-evidence/final/protocol/candidate.json"
+  },
+  "checker": {
+    "commit": "ef7567516520543970af55b6f19534cb66eda357",
+    "separate_checkout": "checker-final",
+    "content_sha256": "63e1e86ce96c0349c64040258b557f48c55e2d1a3fca2de802d698ee6eebab82",
+    "files": "repair-evidence/final/protocol/checker.json"
+  },
+  "bindings": {
+    "candidate_sha256": "03e3b0e28cfaaa03e87f3a2e68906cc24ae9ea25f67169a1d2b42fd25e704693",
+    "checker_sha256": "63e1e86ce96c0349c64040258b557f48c55e2d1a3fca2de802d698ee6eebab82",
+    "configuration_sha256": "d5f6f7a23b1f3260f29a5463415df0b839c58564bcc78bde35e911a110fc90cc",
+    "criteria_sha256": "75d44ff3e1c04ad0a82dcdeb3ebd08c2904cc654dd4e4e8b820a9e6dbd5abbf7",
+    "fixture_sha256": "d2e6b553a9b8995ab47097a07a97867504dfa06a1df631e6a479cc8056f5702d",
+    "owner_basis_sha256": "41545d3fab334e432f58f1f1b1367c70bed29bf2c39c1280c3eacd9cbdc783ad"
+  },
+  "hosted_bindings": {
+    "candidate_sha256": "03e3b0e28cfaaa03e87f3a2e68906cc24ae9ea25f67169a1d2b42fd25e704693",
+    "checker_sha256": "63e1e86ce96c0349c64040258b557f48c55e2d1a3fca2de802d698ee6eebab82",
+    "configuration_sha256": "619a3034290275e054219243c25c848729783c37ea2a4dc92740593b58f3d6bd",
+    "criteria_sha256": "75d44ff3e1c04ad0a82dcdeb3ebd08c2904cc654dd4e4e8b820a9e6dbd5abbf7",
+    "fixture_sha256": "d2e6b553a9b8995ab47097a07a97867504dfa06a1df631e6a479cc8056f5702d",
+    "owner_basis_sha256": "41545d3fab334e432f58f1f1b1367c70bed29bf2c39c1280c3eacd9cbdc783ad"
+  },
+  "integration": {
+    "commit": "ca3f79ee6d04c55223fa0c907eeb26f9340d6439",
+    "tree": "a0813aae760e6e5bb6245693bd92b7e7c321348b",
+    "parents": [
+      "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "ef7567516520543970af55b6f19534cb66eda357"
+    ],
+    "tree_equals_candidate": true,
+    "proof": "repair-evidence/final/integration-tree-proof.txt"
+  },
+  "results": {
+    "local_application": {
+      "passed": 799,
+      "skipped": 10,
+      "failures": 0,
+      "errors": 0,
+      "primary_cases": 809,
+      "subtests_passed": 164,
+      "junit": "repair-evidence/final/application.xml",
+      "skipped_cases": [
+        {
+          "class": "tests.hexagonal.test_acceptance_lifecycle",
+          "name": "test_unrelated_descendant_remains_excluded_after_its_parent_exits[initial-descendant]",
+          "reason": "host exposes /proc outside the subprocess PID namespace"
+        },
+        {
+          "class": "tests.hexagonal.test_acceptance_lifecycle",
+          "name": "test_unrelated_descendant_remains_excluded_after_its_parent_exits[later-observed-descendant]",
+          "reason": "host exposes /proc outside the subprocess PID namespace"
+        },
+        {
+          "class": "tests.hexagonal.test_acceptance_lifecycle",
+          "name": "test_pass_requires_worker_exit_and_scenario_receipt[True-0-passed]",
+          "reason": "tmux is installed by the acceptance CI job"
+        },
+        {
+          "class": "tests.hexagonal.test_acceptance_lifecycle",
+          "name": "test_pass_requires_worker_exit_and_scenario_receipt[False-0-failed]",
+          "reason": "tmux is installed by the acceptance CI job"
+        },
+        {
+          "class": "tests.hexagonal.test_acceptance_lifecycle",
+          "name": "test_pass_requires_worker_exit_and_scenario_receipt[True-7-failed]",
+          "reason": "tmux is installed by the acceptance CI job"
+        },
+        {
+          "class": "tests.hexagonal.test_acceptance_lifecycle",
+          "name": "test_terminal_eof_waits_for_the_actual_worker_exit[0]",
+          "reason": "tmux is installed by the acceptance CI job"
+        },
+        {
+          "class": "tests.hexagonal.test_acceptance_lifecycle",
+          "name": "test_terminal_eof_waits_for_the_actual_worker_exit[7]",
+          "reason": "tmux is installed by the acceptance CI job"
+        },
+        {
+          "class": "tests.hexagonal.test_acceptance_lifecycle",
+          "name": "test_worker_signal_is_a_final_failed_exit",
+          "reason": "tmux is installed by the acceptance CI job"
+        },
+        {
+          "class": "tests.hexagonal.test_acceptance_lifecycle",
+          "name": "test_timeout_reaps_detached_descendant_without_touching_unrelated_process",
+          "reason": "tmux is installed by the acceptance CI job"
+        },
+        {
+          "class": "tests.hexagonal.test_acceptance_lifecycle",
+          "name": "test_fast_orphan_cannot_escape_cleanup",
+          "reason": "tmux is installed by the acceptance CI job"
+        }
+      ]
+    },
+    "hosted_application": {
+      "3.11": {
+        "passed": 809,
+        "skipped": 0,
+        "failures": 0,
+        "errors": 0,
+        "primary_cases": 809,
+        "subtests_passed": 164,
+        "junit": "repair-evidence/final/ci/repair-checks-python-3.11/application.xml",
+        "skipped_cases": []
+      },
+      "3.12": {
+        "passed": 809,
+        "skipped": 0,
+        "failures": 0,
+        "errors": 0,
+        "primary_cases": 809,
+        "subtests_passed": 164,
+        "junit": "repair-evidence/final/ci/repair-checks-python-3.12/application.xml",
+        "skipped_cases": []
+      }
+    },
+    "original_primary_cases": 598,
+    "original_assertion_selectors": 89,
+    "new_repair_cases": 211,
+    "dedicated_repair_case_census": {
+      "test_delivery_scope": 18,
+      "test_bridge_repair_calibration": 17,
+      "test_native_cache_currentness": 28,
+      "test_assessment_inputs": 59,
+      "test_claude_overlap": 6,
+      "test_calibration_attribution": 18,
+      "test_raw_evidence_calibration": 47,
+      "test_completion_evidence": 13,
+      "test_native_completion_state": 5
+    },
+    "dedicated_repair_cases": 211,
+    "protocol": {
+      "local": 46,
+      "hosted": 46,
+      "saved_reports_recomputed_exactly": true
+    },
+    "source_calibrations": {
+      "detected": 12,
+      "control_cases": 36,
+      "target_assertion_failures": 19,
+      "errors": 0,
+      "skips": 0
+    },
+    "tmux": {
+      "tests": 22,
+      "fixture": "passed",
+      "cleanup": {
+        "verified": true,
+        "forced": false,
+        "remaining_processes": 0,
+        "observed_processes": 7,
+        "errors": []
+      },
+      "report": "repair-evidence/final/ci/tmux-acceptance-evidence/20261024T053322Z-f0ccae24646e/report.json",
+      "log": "repair-evidence/final/ci/job-120791300397.log"
+    },
+    "historical_preservation": {
+      "recovered_toolkit": 285,
+      "toolkit_log": "repair-evidence/final/ci/job-120791300438.log",
+      "imported_runtime": 825,
+      "skips": 0
+    },
+    "static": {
+      "status": "passed",
+      "optional_toolchain_tests": 13,
+      "checks": [
+        "Ruff",
+        "security lint coverage",
+        "optional toolchain",
+        "compile",
+        "dependency boundaries"
+      ]
+    },
+    "all_requirement_selectors": {
+      "distinct": 165,
+      "local": "repair-evidence/final/all-selector-coverage.json",
+      "hosted": "repair-evidence/final/ci/hosted-all-selector-coverage.json",
+      "passed": true
+    }
+  },
+  "commands": [
+    {
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "tests/hexagonal",
+        "-q",
+        "-rs",
+        "--junitxml=../repair-evidence/exact-ef75675/application.xml"
+      ],
+      "cwd": "/workspace/scratch/7be67c7fec75/xorchestrate",
+      "environment": {},
+      "exit_status": 0,
+      "finished_at": "2026-10-24T05:36:14.424714+00:00",
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+      "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+      "started_at": "2026-10-24T05:34:53.236682+00:00",
+      "status": "passed",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "1f12986d28e7c0262b3d44cff5a1dee13c3bc3b42ea43e39221fd44b16b52462",
+      "timeout_seconds": 300.0
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "compileall",
+        "-q",
+        "xorchestrate",
+        "tests/hexagonal",
+        "scripts/acceptance"
+      ],
+      "cwd": "/workspace/scratch/7be67c7fec75/xorchestrate",
+      "environment": {},
+      "exit_status": 0,
+      "finished_at": "2026-10-24T05:34:53.282274+00:00",
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+      "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+      "started_at": "2026-10-24T05:34:53.237643+00:00",
+      "status": "passed",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "timeout_seconds": 120.0
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "scripts.verification.calibrate_suite",
+        "--candidate",
+        ".",
+        "--out",
+        "../repair-evidence/exact-ef75675/native-calibration"
+      ],
+      "cwd": "/workspace/scratch/7be67c7fec75/xorchestrate",
+      "environment": {},
+      "exit_status": 0,
+      "finished_at": "2026-10-24T05:35:11.898978+00:00",
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+      "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+      "started_at": "2026-10-24T05:34:53.237719+00:00",
+      "status": "passed",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "cec7f9f0346aa9862dd4af49307f9b4fc76b69816532e29157e33c5b2dc5ad11",
+      "timeout_seconds": 300.0
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "scripts.verification.multi_harness",
+        "--candidate",
+        "../xorchestrate",
+        "--mode",
+        "protocol-fixture",
+        "--brief",
+        "../review-original/review/owner-brief.md",
+        "--criteria",
+        "../repair-evidence/criteria.json",
+        "--out",
+        "../repair-evidence/exact-ef75675/protocol",
+        "--timeout",
+        "60"
+      ],
+      "cwd": "/workspace/scratch/7be67c7fec75/checker-final",
+      "environment": {},
+      "exit_status": 0,
+      "finished_at": "2026-10-24T05:35:10.313066+00:00",
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+      "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+      "started_at": "2026-10-24T05:34:53.238177+00:00",
+      "status": "passed",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "81f2b992a2645f6d2d60c3312865dbd6c7eb8716f1724ab8ead39ef73bf8d5e1",
+      "timeout_seconds": 240.0
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "ruff",
+        "check",
+        "xorchestrate",
+        "tests",
+        "devtools",
+        ".github",
+        "scripts"
+      ],
+      "cwd": "/workspace/scratch/7be67c7fec75/xorchestrate",
+      "environment": {},
+      "exit_status": 0,
+      "finished_at": "2026-10-24T05:34:53.290251+00:00",
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+      "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+      "started_at": "2026-10-24T05:34:53.240251+00:00",
+      "status": "passed",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18",
+      "timeout_seconds": 120.0
+    },
+    {
+      "command": [
+        "python",
+        ".github/lint_checks.py"
+      ],
+      "cwd": "/workspace/scratch/7be67c7fec75/xorchestrate",
+      "environment": {},
+      "exit_status": 0,
+      "finished_at": "2026-10-24T05:34:53.383893+00:00",
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+      "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+      "started_at": "2026-10-24T05:34:53.241071+00:00",
+      "status": "passed",
+      "stderr_sha256": "b0154200542b2405ae1d34c0a53099dc209af96b36332bc87b5d32b330c856ea",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "timeout_seconds": 120.0
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        ".github/tests",
+        "-v"
+      ],
+      "cwd": "/workspace/scratch/7be67c7fec75/xorchestrate",
+      "environment": {},
+      "exit_status": 0,
+      "finished_at": "2026-10-24T05:34:53.516229+00:00",
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+      "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+      "started_at": "2026-10-24T05:34:53.241682+00:00",
+      "status": "passed",
+      "stderr_sha256": "dc0e0fa026b94859d2d8fe1a5af6c475e370468832825c72fadb58e11bde2675",
+      "stdout_sha256": "112f07f152b72c0e06f70285aafdb07c7a327402a92b2ff5aed11c3363996d0b",
+      "timeout_seconds": 120.0
+    },
+    {
+      "command": [
+        "python",
+        "tests/hexagonal/calibrate_work_acceptance.py",
+        "--output",
+        "../repair-evidence/exact-ef75675/work-calibration"
+      ],
+      "cwd": "/workspace/scratch/7be67c7fec75/xorchestrate",
+      "environment": {},
+      "exit_status": 0,
+      "finished_at": "2026-10-24T05:34:58.018272+00:00",
+      "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+      "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+      "started_at": "2026-10-24T05:34:53.241763+00:00",
+      "status": "passed",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stdout_sha256": "1a29c16f5d4820e6d7effe24bb603fd0395a7a99b08f13f4e62329f6f3769007",
+      "timeout_seconds": 180.0
+    }
+  ],
+  "ci": {
+    "run_id": 40066679349,
+    "url": "https://github.com/xormania/xorchestrate/actions/runs/40066679349",
+    "candidate": "ef7567516520543970af55b6f19534cb66eda357",
+    "integration_commit": "ca3f79ee6d04c55223fa0c907eeb26f9340d6439",
+    "jobs": [
+      {
+        "id": 120791300225,
+        "name": "Application and adapter tests (Python 3.12)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40066679349,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Install application dependencies",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Run application, boundary, and subprocess integration tests",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Retain original assertion fault calibrations",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Run composed three-harness protocol acceptance",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Run actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          },
+          {
+            "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 18
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 19
+          }
+        ]
+      },
+      {
+        "id": 120791300394,
+        "name": "Static checks",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40066679349,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Install pinned linter",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Lint runtime and CI",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Check security lint coverage",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Check optional toolchain helpers",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Compile application and fixtures",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          }
+        ]
+      },
+      {
+        "id": 120791300397,
+        "name": "Tmux live acceptance (protocol fixture)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40066679349,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Install application and tmux",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Verify acceptance scenarios and lifecycle regressions",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Run reusable tmux acceptance fixture",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Run actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 13
+          },
+          {
+            "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 14
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          }
+        ]
+      },
+      {
+        "id": 120791300401,
+        "name": "Application and adapter tests (Python 3.11)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40066679349,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Install application dependencies",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Run application, boundary, and subprocess integration tests",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Retain original assertion fault calibrations",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 6
+          },
+          {
+            "name": "Run composed three-harness protocol acceptance",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 7
+          },
+          {
+            "name": "Run actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 8
+          },
+          {
+            "name": "Run actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          },
+          {
+            "name": "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          },
+          {
+            "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 18
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 19
+          }
+        ]
+      },
+      {
+        "id": 120791300410,
+        "name": "Imported runtime regression (historical source)",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40066679349,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Stage historical skill assets for source regression",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Run cue-lang/setup-cue@b0e30e540a2dae47304ebf16586a5b2db023b61c",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Install tmux",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Run imported source regression suite",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Run actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 15
+          },
+          {
+            "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 16
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 17
+          }
+        ]
+      },
+      {
+        "id": 120791300438,
+        "name": "Recovered toolkit tests",
+        "status": "completed",
+        "conclusion": "success",
+        "run_id": 40066679349,
+        "logs_url": null,
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Check recovered testkit and coordination",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          }
+        ]
+      }
+    ],
+    "artifacts": [
+      {
+        "id": 12549886746,
+        "name": "runtime-evidence",
+        "size_in_bytes": 411643,
+        "url": "https://api.github.com/repos/xormania/xorchestrate/actions/artifacts/12549886746",
+        "archive_download_url": "https://api.github.com/repos/xormania/xorchestrate/actions/artifacts/12549886746/zip",
+        "expired": false,
+        "created_at": "2026-10-24T05:41:11Z",
+        "expires_at": "2027-01-22T05:32:52Z",
+        "updated_at": "2026-10-24T05:41:11Z",
+        "digest": "sha256:591ee39000fa93b39590a5a020dbad95f276fa0d4f3cbd7964963019dfd4d7a7",
+        "workflow_run": {
+          "id": 40066679349,
+          "repository_id": 1430398736,
+          "head_repository_id": 1430398736,
+          "head_branch": "repair/independent-findings",
+          "head_sha": "ef7567516520543970af55b6f19534cb66eda357"
+        }
+      },
+      {
+        "id": 12549861217,
+        "name": "repair-checks-python-3.12",
+        "size_in_bytes": 157994,
+        "url": "https://api.github.com/repos/xormania/xorchestrate/actions/artifacts/12549861217",
+        "archive_download_url": "https://api.github.com/repos/xormania/xorchestrate/actions/artifacts/12549861217/zip",
+        "expired": false,
+        "created_at": "2026-10-24T05:35:43Z",
+        "expires_at": "2026-11-23T05:35:42Z",
+        "updated_at": "2026-10-24T05:35:43Z",
+        "digest": "sha256:2bf1b0a114e47990791e4e3f00d3d2def8a1f3dbe9e564d4aeaa4f85cfba5e19",
+        "workflow_run": {
+          "id": 40066679349,
+          "repository_id": 1430398736,
+          "head_repository_id": 1430398736,
+          "head_branch": "repair/independent-findings",
+          "head_sha": "ef7567516520543970af55b6f19534cb66eda357"
+        }
+      },
+      {
+        "id": 12549526898,
+        "name": "repair-checks-python-3.11",
+        "size_in_bytes": 15179,
+        "url": "https://api.github.com/repos/xormania/xorchestrate/actions/artifacts/12549526898",
+        "archive_download_url": "https://api.github.com/repos/xormania/xorchestrate/actions/artifacts/12549526898/zip",
+        "expired": false,
+        "created_at": "2026-10-24T05:34:26Z",
+        "expires_at": "2026-11-23T05:34:25Z",
+        "updated_at": "2026-10-24T05:34:26Z",
+        "digest": "sha256:aac6e3661e934554b7f771daae31de01c8020eb7147785deec27f782ea44172c",
+        "workflow_run": {
+          "id": 40066679349,
+          "repository_id": 1430398736,
+          "head_repository_id": 1430398736,
+          "head_branch": "repair/independent-findings",
+          "head_sha": "ef7567516520543970af55b6f19534cb66eda357"
+        }
+      },
+      {
+        "id": 12549369074,
+        "name": "composed-protocol-evidence",
+        "size_in_bytes": 1097436,
+        "url": "https://api.github.com/repos/xormania/xorchestrate/actions/artifacts/12549369074",
+        "archive_download_url": "https://api.github.com/repos/xormania/xorchestrate/actions/artifacts/12549369074/zip",
+        "expired": false,
+        "created_at": "2026-10-24T05:35:38Z",
+        "expires_at": "2026-10-31T05:35:37Z",
+        "updated_at": "2026-10-24T05:35:38Z",
+        "digest": "sha256:1e4d9f39170d49cfbbfaf1862e0177381aee253db3368109f630d9f783f209c7",
+        "workflow_run": {
+          "id": 40066679349,
+          "repository_id": 1430398736,
+          "head_repository_id": 1430398736,
+          "head_branch": "repair/independent-findings",
+          "head_sha": "ef7567516520543970af55b6f19534cb66eda357"
+        }
+      },
+      {
+        "id": 12549134817,
+        "name": "tmux-acceptance-evidence",
+        "size_in_bytes": 1015,
+        "url": "https://api.github.com/repos/xormania/xorchestrate/actions/artifacts/12549134817",
+        "archive_download_url": "https://api.github.com/repos/xormania/xorchestrate/actions/artifacts/12549134817/zip",
+        "expired": false,
+        "created_at": "2026-10-24T05:33:24Z",
+        "expires_at": "2026-10-31T05:33:24Z",
+        "updated_at": "2026-10-24T05:33:24Z",
+        "digest": "sha256:0adc80fe4228bc13076c89c7c49daca2bcc8fffa65d2a8a9ca55cb2ad5357961",
+        "workflow_run": {
+          "id": 40066679349,
+          "repository_id": 1430398736,
+          "head_repository_id": 1430398736,
+          "head_branch": "repair/independent-findings",
+          "head_sha": "ef7567516520543970af55b6f19534cb66eda357"
+        }
+      }
+    ],
+    "origin": "GitHub-hosted; exact integration tree equals final candidate"
+  },
+  "superseded_candidate": {
+    "candidate": "d4bd82946bfb6e78f4ba533d7ed2e01c37ea601e",
+    "tree": "da8c2d706c8897c63d17a0ffc72cad6dcf50ed1f",
+    "ci_url": "https://github.com/xormania/xorchestrate/actions/runs/40065991185",
+    "ci_jobs_passed": 6,
+    "evidence": "repair-evidence/superseded-d4bd829",
+    "disposition": "Superseded after independent saved-completion false-pass challenge; no final repair credit.",
+    "challenge": "repair-evidence/claude-completion-normalization-challenge",
+    "historical_raw_recheck": "Original and d4 saved raw yield 44 passed and two incomplete Codex/Grok completion cases under corrected checker; missing aggregate observations cannot be invented.",
+    "recheck_evidence": "repair-evidence/completion-checker-repair"
+  },
+  "native_acceptance": "pending xor local authenticated run; original 46 cases plus focused repair schedules",
+  "fresh_session_verification": "pending; in-session challenges and retained-evidence audit are separate",
+  "original_archive_sha256": "67218f0e6a1e180d3368ea25ed8f766a03dc921e96b085b9ee287c1c82b40086",
+  "original_archive_manifest_verified_entries": 1831,
+  "jev": "No writes to parallel experiment/evidence branches or historical corpus; original refs in repair-evidence/initial-state.json",
+  "evidence_publication": {
+    "branch": "evidence/independent-findings-ef75675",
+    "parent": "ef7567516520543970af55b6f19534cb66eda357",
+    "purpose": "Documentation/measurement publication only; exact later commit and diff proof in publication.json."
+  }
+}
