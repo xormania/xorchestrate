@@ -163,6 +163,53 @@ def test_native_inventory_preserves_complete_requested_counts():
         "work": 9, "completion": 3, "lifecycle": 15, "audit": 1}
 
 
+def test_composed_runner_reauthorizes_after_callback_without_duplicating_submission():
+    from scripts.verification.multi_harness import ComposedSuite
+    from tests.hexagonal.test_application import Sessions, application
+    from xorchestrate.model import Verdict
+
+    class CallbackDuringAuthorization:
+        calls = 0
+
+        def evaluate(self, action, context):
+            if action == "send_session":
+                self.calls += 1
+                if self.calls == 1:
+                    app.call("record_result", {"work_id": work["id"], "result": {"callback": "arrived"}})
+            return Verdict(True)
+
+    guardrail, driver = CallbackDuringAuthorization(), Sessions()
+    app = application(driver=driver, guardrail=guardrail)
+    work = app.call("create_work", {"goal": "Retain concurrent callback progress"})["work"]
+    session = app.call("start_session", {"driver": "agent", "specification": {},
+        "work_id": work["id"], "idempotency_key": "start"})["session"]
+    suite = ComposedSuite.__new__(ComposedSuite)
+    suite.application = app
+    result = suite.call("send_session", {"session_id": session["id"],
+        "message": {"text": "once"}, "idempotency_key": "send-once"})
+    assert result["output"] and guardrail.calls == 2
+    assert len(driver.calls) == 1, "PRE_EFFECT_RETRY_MUST_NOT_DUPLICATE_NATIVE_SUBMISSION"
+
+
+@pytest.mark.parametrize("safe,expected", [(False, 1), (True, 8)])
+def test_composed_runner_preserves_unqualified_conflict_and_bounds_safe_retries(safe, expected):
+    from scripts.verification.multi_harness import ComposedSuite
+    from xorchestrate.model import Conflict
+
+    class Conflicted:
+        calls = 0
+
+        def call(self, action, arguments, actor):
+            self.calls += 1
+            raise Conflict("still unresolved", retry_safe=safe)
+
+    suite = ComposedSuite.__new__(ComposedSuite)
+    suite.application = Conflicted()
+    with pytest.raises(Conflict, match="still unresolved"):
+        suite.call("send_session", {"idempotency_key": "same"})
+    assert suite.application.calls == expected
+
+
 @pytest.mark.parametrize(("status", "diagnostic", "exit_status", "expected"), [
     ("failed", "intended_assertion", 1, "detected"),
     ("failed", "unrelated_timeout", 1, "unrelated_failure"),

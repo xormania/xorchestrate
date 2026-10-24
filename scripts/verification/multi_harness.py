@@ -104,7 +104,20 @@ class ComposedSuite:
         self.product_modules = {}
 
     def call(self, action, arguments):
-        return self.application.call(action, arguments, actor="owner")
+        from xorchestrate.model import Conflict
+        # Autonomous callbacks may change the authorization snapshot between
+        # reading and reserving an effect. Retry only the application's explicit
+        # pre-effect signal, with the same request and idempotency key. Unknown
+        # effects and unqualified conflicts must remain visible to the operator.
+        retryable = {"create_work", "add_actor", "start_session", "send_session",
+                     "dispatch_deliveries", "verify_exchange"}
+        for attempt in range(8):
+            try:
+                return self.application.call(action, arguments, actor="owner")
+            except Conflict as error:
+                if action not in retryable or not error.details.get("retry_safe") or attempt == 7:
+                    raise
+                time.sleep(.01)
 
     def raw_run(self):
         raw = snapshot(self.application)

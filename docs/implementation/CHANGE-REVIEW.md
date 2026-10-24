@@ -66,6 +66,14 @@ forced native tool restrictions and fixture-specific policies were not imported.
 
 ## Verification interpretation
 
+The first frozen composed run exposed a controller authorization-snapshot race
+when a startup callback arrived before the next session send reservation. The
+runner now retries only explicitly `retry_safe` pre-effect conflicts for its
+known controller actions, at most eight times with the same request/key. A real
+application regression forces that callback race and verifies one native send;
+unqualified conflicts and exhausted retries still fail. No acceptance predicate
+or required case was removed. The failed run is retained in the evidence package.
+
 The full composed communication inventory is 46 cases, including 15 lifecycle
 cases. That report is not B1/B2 acceptance coverage: those requirements map to the
 work-acceptance tests and their targeted source mutations. The independent checker
