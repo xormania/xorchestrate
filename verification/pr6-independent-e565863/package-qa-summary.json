@@ -1,0 +1,111 @@
+{
+  "archive_sha256": "8a5cfc2a8e3ac7ce50b4730d060974f1dc9c29f88430533e377178ac789d1916",
+  "restored_files_independently_verified": 30893,
+  "identities": {
+    "candidate": {
+      "commit": "e565863ae72180571678c8f6118ee6e00b129e2e",
+      "tree": "474de55c5947890ab4092daeca7ff39f9bbbc400",
+      "status": ""
+    },
+    "checker": {
+      "commit": "e565863ae72180571678c8f6118ee6e00b129e2e",
+      "tree": "474de55c5947890ab4092daeca7ff39f9bbbc400",
+      "status": ""
+    }
+  },
+  "commands": [
+    {
+      "name": "iv01",
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/package-qa-final/restored/results/iv01/probe_assessment_binding_v2.py",
+        "--candidate",
+        "/workspace/work/pr6-review/package-qa-final/candidate",
+        "--out",
+        "/workspace/work/pr6-review/package-qa-final/iv01"
+      ],
+      "cwd": "/workspace/work/pr6-review/package-qa-final/candidate",
+      "expected_exit": 0,
+      "exit": 0,
+      "elapsed_seconds": 0.22767376899719238
+    },
+    {
+      "name": "iv02",
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/package-qa-final/restored/results/iv02/scripts/submission_gap_v2.py",
+        "--candidate",
+        "/workspace/work/pr6-review/package-qa-final/candidate",
+        "--out",
+        "/workspace/work/pr6-review/package-qa-final/iv02"
+      ],
+      "cwd": "/workspace/work/pr6-review/package-qa-final/candidate",
+      "expected_exit": 0,
+      "exit": 0,
+      "elapsed_seconds": 0.7472305297851562
+    },
+    {
+      "name": "iv03",
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/package-qa-final/restored/results/iv03/minimal_counterexamples.py",
+        "--candidate",
+        "/workspace/work/pr6-review/package-qa-final/checker",
+        "--input",
+        "/workspace/work/pr6-review/package-qa-final/restored/results/execution/protocol",
+        "--out",
+        "/workspace/work/pr6-review/package-qa-final/iv03"
+      ],
+      "cwd": "/workspace/work/pr6-review/package-qa-final/candidate",
+      "expected_exit": 1,
+      "exit": 1,
+      "elapsed_seconds": 3.355781316757202
+    },
+    {
+      "name": "iv04",
+      "command": [
+        "/workspace/work/pr6-review/venv/bin/python",
+        "/workspace/work/pr6-review/package-qa-final/restored/inputs/original-witnesses/iv04.py",
+        "--candidate",
+        "/workspace/work/pr6-review/package-qa-final/candidate",
+        "--out",
+        "/workspace/work/pr6-review/package-qa-final/iv04"
+      ],
+      "cwd": "/workspace/work/pr6-review/package-qa-final/candidate",
+      "expected_exit": 0,
+      "exit": 0,
+      "elapsed_seconds": 1.3502256870269775
+    }
+  ],
+  "iv01": "disclosure_and_all_controls_reproduced",
+  "iv02": "accepted_interjection_gap_and_valid_controls_reproduced",
+  "iv03_false_acceptances": 15,
+  "iv04_results": [
+    {
+      "name": "same-line-raise",
+      "expected": "unrelated_failure",
+      "native": "unrelated_failure",
+      "work": "unrelated_failure",
+      "control_exit": 0,
+      "mutant_exit": 1
+    },
+    {
+      "name": "separate-line-raise",
+      "expected": "unrelated_failure",
+      "native": "unrelated_failure",
+      "work": "unrelated_failure",
+      "control_exit": 0,
+      "mutant_exit": 1
+    },
+    {
+      "name": "real-assertion",
+      "expected": "detected",
+      "native": "detected",
+      "work": "detected",
+      "control_exit": 0,
+      "mutant_exit": 1
+    }
+  ],
+  "iv04_semantic_audit_passed": true,
+  "prior_package_note": "The first package was successfully replayed, then superseded only to correct IV01 count labels and add editorial QA metadata. Both QA attempts are retained."
+}

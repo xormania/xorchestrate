@@ -1,0 +1,233 @@
+{
+  "repository": "https://github.com/xormania/xorchestrate",
+  "candidate": "e565863ae72180571678c8f6118ee6e00b129e2e",
+  "tree": "474de55c5947890ab4092daeca7ff39f9bbbc400",
+  "baseline": "ef7567516520543970af55b6f19534cb66eda357",
+  "repair_publication": "37547a138758fe70e6cc471b491aaab01bfc3a05",
+  "original_publication": "3ac2342b6655f1a30652380c85ceb55262b7ad0c",
+  "repair_archive_sha256": "0ed0b6eccb4e15f381865e191b95e4b3e949431dd6c09989b2a38786a00200f0",
+  "original_archive_sha256": "d161f2318727b8b52aa5dd78fa91d6d5ebc1aa4c12103ec8e385b328715833dc",
+  "method": "Fresh GitHub clone; exact detached worktrees; complete publication archive checksum verification and restoration. No preexisting local repository used as input. Large original archives remain directly retrievable at immutable publications.",
+  "files": {
+    "source.bundle": {
+      "bytes": 4028568,
+      "sha256": "342823a1aa4faa698039da6371333e8a279289b94da6da84a2e1a1d098c114be"
+    },
+    "retained-inputs.json": {
+      "bytes": 2289,
+      "sha256": "99563e1767270d5c1070bb7c90fdf66630e928673fc413856b1d56a7537b9800"
+    },
+    "requirements-replay.txt": {
+      "bytes": 224,
+      "sha256": "edcfdc3b84e7c61b33b2c4e45ad272f5696249a54085fcf65a96298e47982eea"
+    },
+    "retained-ef-protocol/fixture.json": {
+      "bytes": 8642,
+      "sha256": "c597c57bae7059e8ca1788a2d3bc7d744c7e65ee7c8f15f8d2073342bc396ebc"
+    },
+    "retained-ef-protocol/bindings.json": {
+      "bytes": 544,
+      "sha256": "c9b7f06f83f4ce0cf5ba2625e6bdbb891f816a3befdf2b9cece4ad5f3cbc33ec"
+    },
+    "retained-ef-protocol/criteria.json": {
+      "bytes": 5713,
+      "sha256": "a450adee77989ea01c3474597e77488bc7b2dd88f000f5a7a2cace4d993d333f"
+    },
+    "retained-ef-protocol/run.json": {
+      "bytes": 6483214,
+      "sha256": "b1f9795808f31a79a04774d1ad34700eb0f859baa697f509624b7f975ec1727f"
+    },
+    "original-witnesses/iv02.py": {
+      "bytes": 7074,
+      "sha256": "387f44fb51520e80ec71d4c303ba1001b8d393dce8df7f01e9fd384a1bf851d3"
+    },
+    "original-witnesses/iv01.py": {
+      "bytes": 3957,
+      "sha256": "e792fe1f242a8b908f5502dd92c088a7cda5964c3b40c03a47afd936bdd5c6e5"
+    },
+    "original-witnesses/iv03.py": {
+      "bytes": 2967,
+      "sha256": "f3972830d83d1e3a5af0a88b33585c16f1207075a898b91b5cc702e131e54932"
+    },
+    "original-witnesses/iv04.py": {
+      "bytes": 2622,
+      "sha256": "8d7ece0f4bb7af50ab253cad0b5ce2a20dfa6f36152d28477767131d092ed719"
+    },
+    "tooling/manifest.json": {
+      "bytes": 2138,
+      "sha256": "b176eb8979d7b65fbe5630a204f9cbe51be9f3d4e72ba5d925caba40e37fdff1"
+    },
+    "tooling/tmux_3.5a-3_amd64.deb": {
+      "bytes": 490296,
+      "sha256": "e6b6aa51780044e2c4a0e618c33f832b70ec80caa30303e6c254a0c851b5af78"
+    },
+    "original-publication/package-verify.json": {
+      "bytes": 168,
+      "sha256": "797312bb4a082d97d049738b0dd405afab825ea0b162d43f1cf11e042cb83324"
+    },
+    "original-publication/package-source-qa.log": {
+      "bytes": 483,
+      "sha256": "1aad0b61945763515affa0f3a26e893a7d3bbda362346d6354d209bdafbe3a47"
+    },
+    "original-publication/PUBLICATION-SHA256SUMS": {
+      "bytes": 1435,
+      "sha256": "ee5273670fb79ca170a87a0af9f60fd72b4272c6fb151ef447483639276920a7"
+    },
+    "original-publication/command-run-ledger.json": {
+      "bytes": 96766,
+      "sha256": "e4facd347bdc18edd66fb1b23cdbe75b317981118d5dd20f0861e4516e0d5460"
+    },
+    "original-publication/package-build.json": {
+      "bytes": 310,
+      "sha256": "ae5c2a52954de7b2a6042a94bdc1eaa8273e09d6ef837895f28146b90aed2742"
+    },
+    "original-publication/package-restore.json": {
+      "bytes": 167,
+      "sha256": "29500a5b43ebc23d3a9e40907392b584eb12a04454c7ec7f0edd6bf4f33c4a40"
+    },
+    "original-publication/package-validation.json": {
+      "bytes": 13137,
+      "sha256": "7efbaaf906820d17eb00120eed68b6290e707343312d7d839954547a9cc09d35"
+    },
+    "original-publication/REPLAY.md": {
+      "bytes": 8628,
+      "sha256": "3c020f547f447ba97a7232ab2676b18fcf6365fcd727c4afc5584a3d09003d67"
+    },
+    "original-publication/capability-assessment.json": {
+      "bytes": 3335,
+      "sha256": "6b0dde066964b8fcf71dae037f4458fe59055e274d4020064b826e627e0f3ece"
+    },
+    "original-publication/Xorchestrate-PR6-Independent-Verification-Report.md": {
+      "bytes": 24299,
+      "sha256": "c88ccf80937474d4d17810f9725687b58d5fa4ed2359fd1eaf02cde227501da9"
+    },
+    "original-publication/closure-verdicts.json": {
+      "bytes": 4142,
+      "sha256": "33a2bdc343dd445ac32c279b9601e2d34bfa9cd8f044edc88e7191acadd97218"
+    },
+    "original-publication/README.md": {
+      "bytes": 3969,
+      "sha256": "fd457ab7638e5d4799d4ef34adaa8cfe8879eade9eab22d36a43cb22dae26077"
+    },
+    "original-publication/SHA256SUMS": {
+      "bytes": 936,
+      "sha256": "f66e541bb25a33c30dce15b1f32f1247325a7b9ea65f150d1d633c4a769dd3cc"
+    },
+    "original-publication/restore_review.py": {
+      "bytes": 3257,
+      "sha256": "ec4a610b39ff2aa1994d0d372383760c07f54f59b554f82ac69d8c1ffdaa2fec"
+    },
+    "repair-publication/restore_evidence.py": {
+      "bytes": 3257,
+      "sha256": "ec4a610b39ff2aa1994d0d372383760c07f54f59b554f82ac69d8c1ffdaa2fec"
+    },
+    "repair-publication/Independent-Verification-Handoff.md": {
+      "bytes": 4503,
+      "sha256": "a5ce556547560b72ccde7f9619deb92d76dcd51731319216f18052c49b985286"
+    },
+    "repair-publication/ARCHIVE.sha256": {
+      "bytes": 106,
+      "sha256": "a5a08aef2c98ae1408a2442b73f48ae1cad79e0b5aeb5f3aa4fee0802ea80cac"
+    },
+    "repair-publication/closure-matrix.json": {
+      "bytes": 4920,
+      "sha256": "5ba6910f14d830722d9f3746ec3fd9f8b0d426dbd0be5d96e5712f9b21192d6f"
+    },
+    "repair-publication/command-run-ledger.json": {
+      "bytes": 241604,
+      "sha256": "bacbb9bac70ae2fbb8cd4df39d1f899ac88c4a5fc825c62ada938e0d42de66b8"
+    },
+    "repair-publication/archive-build.json": {
+      "bytes": 280,
+      "sha256": "e92035be9ff9c00ee339f3598089a9796e0504d0bb709ae23b16b9dca1b33c42"
+    },
+    "repair-publication/package-qa-summary.json": {
+      "bytes": 2687,
+      "sha256": "026a027f1dee4bb78a2c4dd1f2b679f716982d07b785d2507cb135cc5eb10d7a"
+    },
+    "repair-publication/publication-validation.json": {
+      "bytes": 1483,
+      "sha256": "765ec9054fc49a1e94727763b00b73d46eebfe522dbb81b36b6a0b07be4e848d"
+    },
+    "repair-publication/requirement-selectors.json": {
+      "bytes": 78758,
+      "sha256": "aadf414928601e9494e2a4019a92f9e35436eb947bf7066e2f545c51be748457"
+    },
+    "repair-publication/requirement-summary.json": {
+      "bytes": 2208,
+      "sha256": "9e6cba36618e732be4c2187e798726fc43211505ee6c0f1b36741b708fab62d7"
+    },
+    "repair-publication/Repair-Report.md": {
+      "bytes": 15287,
+      "sha256": "342b586e95c3c39572cca40424d12a85ae465b6fe12ba8d8d7045f76199420e7"
+    },
+    "repair-publication/REPLAY.md": {
+      "bytes": 8916,
+      "sha256": "8b47a8cdf4780538c565020daeef32e65250567fe8e639f7ea35ba6222ba3f96"
+    },
+    "repair-publication/PROVENANCE-REPORT.md": {
+      "bytes": 11477,
+      "sha256": "56202f08b10fc61120fd54bc9967fe2427a23cb4f5743b4c8b025628716bf43a"
+    },
+    "repair-publication/CI-REPORT.md": {
+      "bytes": 5440,
+      "sha256": "8404dcd4fbfb8e76cc4d7a0acdf1931551308df027be0dc6370a035d23b014a7"
+    },
+    "repair-publication/EXECUTION-REPORT.md": {
+      "bytes": 6983,
+      "sha256": "4125b0dc1bbbbd546540fe050d14aeabde5a867d66436d25c1150fb1aac9ae9e"
+    },
+    "repair-publication/README.md": {
+      "bytes": 4204,
+      "sha256": "b6ec42e30a6e870ddfe70d673918a0df1bcc0e722fd59149642811fb6834afc5"
+    },
+    "repair-publication/SHA256SUMS": {
+      "bytes": 1757,
+      "sha256": "159a786de5a221e2bd5957aa8ec36c9c150bf38d49e5f105d61216f24a5a89e9"
+    },
+    "tooling/unpacked/usr/bin/tmux": {
+      "bytes": 1094216,
+      "sha256": "2967b531cb415b19afbc153bc19eff1c2e461726781a36c27c855a166bb36d4b"
+    },
+    "tooling/unpacked/usr/lib/tmpfiles.d/tmux.conf": {
+      "bytes": 14,
+      "sha256": "487851edcd733dd3113f3953f0bab604b32f140b127682970d2cc5c24aa61c03"
+    },
+    "tooling/unpacked/usr/share/debianutils/shells.d/tmux": {
+      "bytes": 14,
+      "sha256": "91378c0c5883baed1657496131794e6ff9b769d4a7a3feaf16b0c16a61e54cc5"
+    },
+    "tooling/unpacked/usr/share/lintian/overrides/tmux": {
+      "bytes": 14,
+      "sha256": "c3adac39101ffa2dc33b449b000c612ab30776ebcb6f2ddea8c5724a2fb6176b"
+    },
+    "tooling/unpacked/usr/share/man/man1/tmux.1.gz": {
+      "bytes": 50067,
+      "sha256": "5804a9ae1799e8c4f55c19c88ab196e411d5d19de9bafd6bb5a6cf0c0b223d26"
+    },
+    "tooling/unpacked/usr/share/doc/tmux/changelog.Debian.gz": {
+      "bytes": 4266,
+      "sha256": "9780496b91aedffcd93a98186f2ce94078515e763ffec10f91833b1869ec2129"
+    },
+    "tooling/unpacked/usr/share/doc/tmux/changelog.gz": {
+      "bytes": 51351,
+      "sha256": "908f117739aa76a8a85f632fa72734460f0138236b0b13750b22fb4a65a36e9b"
+    },
+    "tooling/unpacked/usr/share/doc/tmux/example_tmux.conf": {
+      "bytes": 1819,
+      "sha256": "0ab7c28342180d485434c3d8e286508a1e1c87ac9a2c8f2dc78bcf477a2de437"
+    },
+    "tooling/unpacked/usr/share/doc/tmux/README": {
+      "bytes": 2193,
+      "sha256": "3c2cc8170bf586d62e67db7a01fff8540ae6b5461f421afe9f0edf0ad466b572"
+    },
+    "tooling/unpacked/usr/share/doc/tmux/copyright": {
+      "bytes": 9452,
+      "sha256": "9c587ac09a351692c23a910e4e59008d4a5ce66125c7aad1279065f3a272a3e1"
+    },
+    "tooling/unpacked/usr/share/doc/tmux/NEWS.Debian.gz": {
+      "bytes": 312,
+      "sha256": "e503d186f29958777d66db0fb41d83b4b8f2d95b150f19eea5c78d561ec5d22b"
+    }
+  }
+}

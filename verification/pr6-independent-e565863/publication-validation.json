@@ -1,0 +1,14 @@
+{
+  "local_links_valid": true,
+  "both_zips_crc_pass": true,
+  "json_parse_valid": true,
+  "failed_attempts": [
+    {
+      "attempt": 1,
+      "command": "validate local Markdown links before writing SHA256SUMS, then sha256sum -c SHA256SUMS",
+      "exit": 1,
+      "error": "AssertionError: README.md link SHA256SUMS did not exist yet; subsequent sha256sum file missing",
+      "adaptation": "Create checksum placeholder before link validation, then generate actual hashes after all artifact files are finalized. No source/test/evidence result changed."
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "files": 30893,
+  "unique_payloads": 3208,
+  "logical_bytes": 499607329,
+  "archive_bytes": 27641890,
+  "archive_sha256": "8a5cfc2a8e3ac7ce50b4730d060974f1dc9c29f88430533e377178ac789d1916",
+  "excluded_entries": 1409
+}

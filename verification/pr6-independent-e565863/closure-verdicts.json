@@ -1,0 +1,96 @@
+{
+  "candidate": "e565863ae72180571678c8f6118ee6e00b129e2e",
+  "tree": "474de55c5947890ab4092daeca7ff39f9bbbc400",
+  "reviewed_baseline": "ef7567516520543970af55b6f19534cb66eda357",
+  "repair_publication": "37547a138758fe70e6cc471b491aaab01bfc3a05",
+  "original_publication": "3ac2342b6655f1a30652380c85ceb55262b7ad0c",
+  "recommendation": "hold_integration",
+  "native_acceptance": "user_planned_local_work_not_a_review_prerequisite",
+  "product_modified": false,
+  "jev_changed": false,
+  "rows": [
+    {
+      "finding": "IV01",
+      "verdict": "open",
+      "original_witness": "repaired",
+      "severity": "P1",
+      "boundary": "product_inspection",
+      "blocker": "Application-owned assessment input actor snapshot bypasses current denied actor inspection policy.",
+      "decisive_script": "results/iv01/probe_assessment_binding_v2.py",
+      "evidence": "results/root-rechecks/iv01-assessment",
+      "valid_controls": "Both stores; fourteen checks each (eleven controls and three disclosure assertions) including authorized catalog, opaque payloads, trusted raw identity and grant restoration."
+    },
+    {
+      "finding": "IV02",
+      "verdict": "open",
+      "original_witness": "repaired_in_executed_product_schedules",
+      "severity": "P2",
+      "boundary": "completion_verifier",
+      "blocker": "Accepted Grok interjection before first native start is omitted from independent pending-submission veto.",
+      "decisive_script": "results/iv02/scripts/submission_gap_v2.py",
+      "evidence": "results/root-rechecks/iv02-submission-gap-v2",
+      "valid_controls": "Product remains active; Codex forged-idle rejection; final legitimate idle both peers; mixed held/tail schedules."
+    },
+    {
+      "finding": "IV03",
+      "verdict": "open",
+      "original_witness": "repaired",
+      "severity": "P2",
+      "boundary": "identity_verifier",
+      "blocker": "Native explicit actor claims disappear and lifecycle explicit work/effect contradictions retain acceptance.",
+      "decisive_script": "results/iv03/minimal_counterexamples.py",
+      "evidence": "results/root-rechecks/iv03-minimal",
+      "valid_controls": "30 all-peer cases:15 false accepts,0 false rejects; pristine, absent optional actor and coherent alternate work controls; wrong callback actor rejects."
+    },
+    {
+      "finding": "IV04",
+      "verdict": "closed_false_credit_in_executed_scope",
+      "original_witness": "repaired",
+      "boundary": "calibration_attribution",
+      "evidence": "results/iv04",
+      "valid_controls": "32fresh cases;12original source faults valid with36control passes19intended assertion failures17unaffected mutant passes.",
+      "limitations": "Four valid BOM/Latin1 positive-control misses; no false credit and no retained-corpus regression."
+    }
+  ],
+  "previously_closed_preserved": [
+    "F02",
+    "F03",
+    "F04",
+    "F05",
+    "F06",
+    "F09",
+    "F10"
+  ],
+  "optional_improvements": [
+    {
+      "id": "O1",
+      "issue": "Python source-encoding-aware decoding for UTF8BOM/Latin1 intended assertion detection",
+      "evidence": "results/iv04/positions-v2"
+    },
+    {
+      "id": "O2",
+      "issue": "Synchronize deliberate-idle calibration raw snapshot and status to the same stage",
+      "evidence": "results/execution/commands/repairs/stdout.log"
+    }
+  ],
+  "fresh_execution": {
+    "full_primary_passed": 1127,
+    "subtests": 164,
+    "full_failures": 0,
+    "full_skips": 0,
+    "protocol_cases": 46,
+    "protocol_exact_recomputation": true,
+    "focused_initial": {
+      "passed": 593,
+      "failed": 1
+    },
+    "focused_isolated_selector": {
+      "passed": 1
+    },
+    "focused_replay": {
+      "passed": 594
+    },
+    "original_faults_detected": 12
+  },
+  "scope": "Bounded deterministic actual-subprocess execution plus raw evidence perturbation; isolation is not an independent oracle; no live wrong-principal dispatch claimed for verifier findings."
+}
