@@ -131,7 +131,7 @@
           "if": "always()",
           "with": {
             "name": "repair-checks-python-${{ matrix.python }}",
-            "path": "${{ runner.temp }}/xor-checks/**/*.json\n${{ runner.temp }}/xor-checks/**/*.xml\n${{ runner.temp }}/xor-checks/**/*.log\n${{ runner.temp }}/xor-checks/identity.txt\n!${{ runner.temp }}/xor-checks/**/snapshot/**\n!${{ runner.temp }}/xor-checks/**/control/**\n!${{ runner.temp }}/xor-checks/**/mutant/**\n!${{ runner.temp }}/xor-checks/**/candidate/**",
+            "path": "${{ runner.temp }}/xor-checks/**/*.json\n${{ runner.temp }}/xor-checks/**/*.xml\n${{ runner.temp }}/xor-checks/**/*.log\n${{ runner.temp }}/xor-checks/**/*.txt\n!${{ runner.temp }}/xor-checks/native-calibration/**/snapshot/**\n!${{ runner.temp }}/xor-checks/native-calibration/**/control/**\n!${{ runner.temp }}/xor-checks/native-calibration/**/mutant/**\n!${{ runner.temp }}/xor-checks/native-calibration/**/candidate/**\n!${{ runner.temp }}/xor-checks/work-calibration/**/snapshot/**\n!${{ runner.temp }}/xor-checks/work-calibration/**/candidate/**",
             "if-no-files-found": "error",
             "retention-days": 30
           }

@@ -38,8 +38,20 @@ def normalize(raw, peer_sessions, provider_events, mode):
             add("native_discovery" if kind == "native_discovery" else "native_tool", peer, at,
                 **identity, call_id=item.get("call_id"), tool=item.get("action"), arguments=item.get("arguments"),
                 origin=ORIGINS[peer], observation_work_id=record.get("work_id"), raw_observation_id=record["id"])
-        if kind in {"native_completion", "turn_completed"} and not item.get("stale", False):
-            add("activity", peer, at, **identity, state=item.get("activity", "idle"), basis="native", raw_observation_id=record["id"])
+        activity_source_valid = ((mode == "fixture" and source == "fixture") or
+                                 (peer in {"codex", "grok"} and source.startswith(peer)) or
+                                 (peer == "claude" and source.startswith("claude/")))
+        if (kind in {"activity", "native_completion", "native_completion_unknown", "turn_completed", "turn_failed"}
+                and activity_source_valid and not item.get("stale", False)):
+            # A completed turn does not establish that every overlapping turn
+            # completed. Only the adapter's aggregate post-transition state can
+            # establish idle. Retain missing/invalid state as uncertainty so a
+            # later ambiguous completion cannot resurrect a historical idle.
+            state = item.get("state") if kind == "activity" else item.get("activity")
+            if state not in {"idle", "active", "unknown"}:
+                state = "unknown"
+            add("activity", peer, at, **identity, state=state, basis="native",
+                activity_kind=kind, raw_observation_id=record["id"])
 
     def call_data(record):
         item = record["observation"]

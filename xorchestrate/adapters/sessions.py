@@ -562,6 +562,7 @@ class CodexSessionDriver(_NativeSessions):
                     live.seen_turns.append(turn_id)
                 live.activity = "active"
                 live.pending["turn"] = turn_id
+                self._observation(live, "activity", state=live.activity, turn_id=turn_id)
             elif method == "turn/completed":
                 if turn_id is not None:
                     live.completed.append(turn_id)
@@ -569,7 +570,8 @@ class CodexSessionDriver(_NativeSessions):
                 if not stale:
                     live.activity = "idle"
                     live.pending.pop("turn", None)
-                self._observation(live, "native_completion", turn_id=turn_id, stale=stale, result=turn)
+                self._observation(live, "native_completion", turn_id=turn_id, stale=stale, result=turn, activity=live.activity)
+                self._observation(live, "activity", state=live.activity, turn_id=turn_id)
             elif method == "thread/configuration/updated":
                 live.settings["observed"].update({key: params[key] for key in ("model", "modelProvider", "reasoningEffort") if key in params})
 
@@ -696,13 +698,15 @@ class ACPSessionDriver(_NativeSessions):
                 value = _object(result.result(), "ACP prompt result", "provider_protocol")
                 if not isinstance(value.get("stopReason"), str) or not value["stopReason"]:
                     raise OrchestrationError("ACP prompt did not return a stop reason.", "provider_protocol", {"outcome": "unknown"})
-                event = self._observation(live, "native_completion", prompt_id=prompt_id, result=value)
+                kind, fields = "native_completion", {"result": value}
             except Exception as exc:
-                event = self._observation(live, "native_completion_unknown", prompt_id=prompt_id,
-                                          error=exc.code if isinstance(exc, OrchestrationError) else type(exc).__name__, outcome="unknown")
+                kind, fields = "native_completion_unknown", {
+                    "error": exc.code if isinstance(exc, OrchestrationError) else type(exc).__name__, "outcome": "unknown"}
             with live.lock:
                 live.pending.pop(prompt_id, None)
-                self._prompt_finished(live, prompt_id, event["kind"] == "native_completion")
+                self._prompt_finished(live, prompt_id, kind == "native_completion")
+                event = self._observation(live, kind, prompt_id=prompt_id, activity=live.activity, **fields)
+                self._observation(live, "activity", state=live.activity, prompt_id=prompt_id)
                 if len(live.events) >= self.options.get("max_pending_messages", 1024):
                     live.process.close()
                     return

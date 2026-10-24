@@ -91,16 +91,19 @@ class GrokSessionDriver(ACPSessionDriver):
         prompt = params.get("promptId", update.get("prompt_id", params.get("_meta", {}).get("promptId")))
         state = live.grok
         with live.lock:
+            completion = None
             if method == "_x.ai/session/prompt_complete" or kind == "turn_completed":
                 if not prompt:
-                    self._observation(live, "native_completion_unknown", reason="missing_native_prompt_id")
+                    live.activity = "unknown"
+                    self._observation(live, "native_completion_unknown", reason="missing_native_prompt_id", activity=live.activity)
+                    self._observation(live, "activity", state=live.activity)
                     return
                 stale = prompt != state["current"]
                 state["completed"].append(prompt)
                 if not stale:
                     state["native_busy"] = False
                 state["interjections"].pop(prompt, None)
-                self._observation(live, "native_completion", prompt_id=prompt, stale=stale, result=params)
+                completion = {"prompt_id": prompt, "stale": stale, "result": params}
             elif kind in {"agent_message_chunk", "agent_thought_chunk", "tool_call", "tool_call_update"}:
                 if prompt and (prompt in state["completed"] or prompt != state["current"] and prompt in state["seen"]):
                     self._observation(live, "stale_native_activity", prompt_id=prompt, payload=params)
@@ -132,6 +135,10 @@ class GrokSessionDriver(ACPSessionDriver):
                                 state["interjections"].pop(ident, None)
                 state["condition"].notify_all()
             live.activity = "active" if live.pending or state["native_busy"] or state["interjections"] else "idle"
+            if completion is not None:
+                self._observation(live, "native_completion", activity=live.activity, **completion)
+            if completion is not None or kind in {"agent_message_chunk", "agent_thought_chunk", "tool_call", "tool_call_update"}:
+                self._observation(live, "activity", state=live.activity, prompt_id=prompt)
 
     def _request(self, live, method, params):
         if method != "session/request_permission":

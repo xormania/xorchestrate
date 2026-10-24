@@ -156,6 +156,12 @@ class ClaudeSessionDriver:
             raise live.failure
 
     def _hook(self, live, packet):
+        # State transitions and their timestamped observations are ordered
+        # together; another hook cannot publish a later state in between them.
+        with live.lock:
+            return self._hook_locked(live, packet)
+
+    def _hook_locked(self, live, packet):
         packet = _object(packet, "Native hook")
         self._verify_native(live, packet.get("session_id"))
         name = packet.get("hook_event_name")
@@ -227,7 +233,8 @@ class ClaudeSessionDriver:
                     live.activity_uncertain = True
                 self._activity(live)
             self._emit(live, "turn_completed" if name == "Stop" else "turn_failed", source,
-                       turn_id=packet.get("prompt_id"), status="completed" if name == "Stop" else "failed")
+                       turn_id=packet.get("prompt_id"), status="completed" if name == "Stop" else "failed",
+                       activity=live.activity)
         elif name == "UserPromptSubmit":
             with live.lock:
                 if len(live.active_turns) + len(live.completed_turns) + live.anonymous_turns >= self.max_calls:

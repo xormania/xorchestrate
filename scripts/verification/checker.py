@@ -315,14 +315,16 @@ def check_case(case, run, fixture):
         require(result.get("answer") == expected_work(fixture["batches"][case["batch"]]), "incorrect_work")
         return {"event_seqs": [result["seq"]]}
     if kind == "completion":
-        completion = [e for e in own if e.get("event") == "activity" and e.get("state") == "idle"
-                      and e.get("basis") == "native" and identity_matches(e, sessions)]
+        activity = [e for e in own if e.get("event") == "activity"
+                    and e.get("basis") == "native" and identity_matches(e, sessions)]
+        latest = max(activity, key=lambda event: event["seq"]) if activity else None
         calls = [e["seq"] for e in own if e.get("event") == "tool_called"]
         # A transport acknowledgement may be observed after the model finished.
-        # Completion must follow the actual application callbacks, not the time
-        # the controller happened to receive the submission acknowledgement.
-        require(completion and calls and completion[-1]["seq"] > max(calls), "native_completion_missing")
-        return {"event_seqs": [completion[-1]["seq"]]}
+        # Completion must follow actual callbacks and remain the latest aggregate
+        # state. An old idle never masks later active or uncertain native work.
+        require(latest and latest.get("state") == "idle" and calls
+                and latest["seq"] > max(calls), "native_completion_missing")
+        return {"event_seqs": [latest["seq"]]}
     if kind == "lifecycle":
         lifecycle = next((e for e in own if e.get("event") == "lifecycle" and e.get("operation") == case["operation"]), None)
         require(lifecycle, "lifecycle_not_exercised")
