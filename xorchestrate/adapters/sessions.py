@@ -74,6 +74,7 @@ class _ProcessSessions:
         self._lock = threading.RLock()
         self._closed = False
         self._observer = None
+        self._application_replay = None
         self.configuration_snapshot_id = hashlib.sha256(encode_json(self.options, sort_keys=True)).hexdigest()
         operational = {"timeout", "turn_timeout", "callback_timeout", "callback_workers", "shutdown_timeout",
                        "gateway_timeout", "gateway_workers", "observation_timeout", "allow_configuration_change_on_resume"}
@@ -88,6 +89,15 @@ class _ProcessSessions:
             if self._sessions or self._starting:
                 raise OrchestrationError("Bind observers before starting sessions.", "conflict")
             self._observer = observer
+
+    def bind_application_replay(self, callback: ApplicationToolCallback) -> None:
+        """Bind a read-only replay validator, separate from effectful dispatch."""
+        if not callable(callback):
+            raise OrchestrationError("Application replay validator must be callable.", "invalid_configuration")
+        with self._lock:
+            if self._sessions or self._starting:
+                raise OrchestrationError("Bind replay validation before starting sessions.", "conflict")
+            self._application_replay = callback
 
     def _observation(self, live: _LiveSession, kind: str, **fields) -> JSON:
         event = {"kind": kind, "source": self.protocol, "native_id": live.native_id,
@@ -475,6 +485,7 @@ class CodexSessionDriver(_NativeSessions):
             action = params.get("tool")
             call_id = params.get("callId")
             fingerprint = hashlib.sha256(encode_json([action, params.get("arguments", {})], sort_keys=True)).hexdigest()
+            replay = None
             if call_id is not None:
                 _identifier(call_id, "tool call ID")
                 with live.lock:
@@ -484,11 +495,22 @@ class CodexSessionDriver(_NativeSessions):
                             raise OrchestrationError("Native call ID was reused with different arguments.", "call_id_conflict")
                         if prior[1] is None:
                             raise OrchestrationError("The native call is already in progress.", "call_in_progress")
-                        return deepcopy(prior[1])
-                    if len(live.calls) >= self.max_native_calls:
-                        raise OrchestrationError("Native call replay ledger is full.", "session_capacity")
-                    live.calls[call_id] = (fingerprint, None)
-                    claimed = True
+                        replay = deepcopy(prior[1])
+                    else:
+                        if len(live.calls) >= self.max_native_calls:
+                            raise OrchestrationError("Native call replay ledger is full.", "session_capacity")
+                        live.calls[call_id] = (fingerprint, None)
+                        claimed = True
+            if replay is not None:
+                if replay.get("success") and action in self._application_tools and self._application_replay:
+                    arguments = params.get("arguments", {})
+                    if isinstance(arguments, str):
+                        arguments = decode_json(arguments.encode("utf-8"))
+                    result = self._application_replay(action, _object(arguments, "Tool arguments"),
+                        self._callback_context(live, action, call_id),
+                        "codex:" + encode_json([live.native_id, call_id]).decode("utf-8"))
+                    return {"contentItems": [{"type": "inputText", "text": encode_json(result).decode("utf-8")}], "success": True}
+                return replay
             if self._application_callback is not None and isinstance(action, str) and action in self._application_tools:
                 result = self._application_request(live, params)
             else:

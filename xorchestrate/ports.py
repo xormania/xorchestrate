@@ -82,6 +82,19 @@ class ApplicationToolSessionDriver(SessionDriver, Protocol):
         ...
 
 
+class ApplicationReplaySessionDriver(SessionDriver, Protocol):
+    def bind_application_replay(self, callback: ApplicationToolCallback) -> None:
+        """Validate a completed cache hit without invoking a new effect.
+
+        This optional boundary retains the original native call identity and
+        lets composition recheck current authorization and result applicability.
+        The callback must reject a missing/unresolved durable call; it cannot
+        turn an adapter cache hit into a fresh application invocation. Drivers
+        with custom callbacks may keep their own cache-only replay contract.
+        """
+        ...
+
+
 class Evaluator(Protocol):
     def assess(self, question: str, context: JSON) -> Assessment: ...
     def close(self) -> None: ...

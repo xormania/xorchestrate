@@ -18,6 +18,14 @@ callbacks = {}
 responses = {}
 mcp = None
 counter = 0
+thread_context = threading.local()
+result_lock = threading.Lock()
+
+def retain_result(value):
+    if os.environ.get("PEER_RESULTS"):
+        with result_lock:
+            with open(os.environ["PEER_RESULTS"], "a") as output:
+                output.write(json.dumps(value) + "\n")
 params_start = {}
 memories = {}
 state_path = Path(os.environ["PEER_STATE_FILE"]) if os.environ.get("PEER_STATE_FILE") else None
@@ -31,19 +39,24 @@ def write(packet):
 
 
 def call(name, args, prompt=None, observed=True):
-    call_id = uuid.uuid4().hex
+    call_id = getattr(thread_context, "call_id", None) or uuid.uuid4().hex
     if protocol == 'codex':
         event = threading.Event()
-        callbacks[call_id] = event
-        write({'id': call_id, 'method': 'item/tool/call', 'params': {
+        rpc_id = uuid.uuid4().hex
+        callbacks[rpc_id] = event
+        write({'id': rpc_id, 'method': 'item/tool/call', 'params': {
             'threadId': native_id, 'callId': call_id, 'tool': name, 'arguments': args}})
         assert event.wait(10), 'native callback did not complete'
-        return responses[call_id].get('result')
+        result = responses[rpc_id].get('result')
+        retain_result({'label': getattr(thread_context, 'label', None), 'call_id': call_id, 'rpc_id': rpc_id, 'result': result})
+        return result
     if observed:
         write({'method': 'session/update', 'params': {'sessionId': native_id, 'promptId': prompt,
             'update': {'sessionUpdate': 'tool_call', 'toolCallId': call_id, 'title': 'xorchestrate__' + name,
                        'rawInput': args, '_meta': {'x.ai/tool': {'version': 1, 'namespace': 'mcp', 'name': 'xorchestrate__' + name}}}}})
-    return mcp.request('tools/call', {'name': name, 'arguments': args})
+    result = mcp.request('tools/call', {'name': name, 'arguments': args})
+    retain_result({'label': getattr(thread_context, 'label', None), 'call_id': call_id, 'result': result})
+    return result
 
 
 class MCP:
@@ -73,7 +86,7 @@ class MCP:
     def request(self, method, params):
         with self.lock:
             self.seq += 1
-            ident = self.seq
+            ident = getattr(thread_context, "mcp_request_id", None) or self.seq
             event = self.waiting[ident] = threading.Event()
             self.process.stdin.write(json.dumps({'jsonrpc': '2.0', 'id': ident, 'method': method, 'params': params}) + '\n')
             self.process.stdin.flush()
@@ -169,6 +182,10 @@ def execute(packet):
         except (ValueError, TypeError):
             message = {'text': text}
         body = message.get('body', message)
+        replay = body.get('replay_fixture', {}) if isinstance(body, dict) else {}
+        thread_context.call_id = replay.get('call_id')
+        thread_context.mcp_request_id = replay.get('mcp_request_id')
+        thread_context.label = replay.get('label')
         if isinstance(body, str):
             try:
                 body = json.loads(body)

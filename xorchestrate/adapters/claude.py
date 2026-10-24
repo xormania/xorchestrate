@@ -62,6 +62,11 @@ class _ClaudeLive:
     failure: object = None
     channel_ready: bool = False
     diagnostics: dict = field(default_factory=dict)
+    active_turns: set = field(default_factory=set)
+    completed_turns: set = field(default_factory=set)
+    anonymous_turns: int = 0
+    active_tools: set = field(default_factory=set)
+    activity_uncertain: bool = False
 
 
 class ClaudeSessionDriver:
@@ -102,6 +107,7 @@ class ClaudeSessionDriver:
         self._closed = False
         self._observer = None
         self._callback = None
+        self._application_replay = None
         self._capabilities = {}
 
     def bind_observer(self, observer):
@@ -116,6 +122,20 @@ class ClaudeSessionDriver:
                 raise OrchestrationError("Bind application tools before launching sessions.", "conflict")
             self._capabilities = {item.name: deepcopy(item) for item in capabilities}
             self._callback = callback
+
+    def bind_application_replay(self, callback):
+        if not callable(callback):
+            raise OrchestrationError("Application replay validator must be callable.", "invalid_configuration")
+        with self._lock:
+            if self._sessions or self._starting:
+                raise OrchestrationError("Bind replay validation before starting sessions.", "conflict")
+            self._application_replay = callback
+
+    def _activity(self, live):
+        """Called under live.lock; a completion only retires its own work."""
+        live.activity = ("active" if live.active_turns or live.anonymous_turns or live.active_tools else
+                         "unknown" if live.activity_uncertain else "idle")
+        return live.activity
 
     def _emit(self, live, kind, source, **fields):
         event = {"kind": kind, "at": datetime.now(timezone.utc).isoformat(), "source": source,
@@ -145,7 +165,7 @@ class ClaudeSessionDriver:
             with live.lock:
                 if isinstance(packet.get("model"), str):
                     live.settings["observed"]["model"] = packet["model"]
-                live.activity = "idle"
+                self._activity(live)
             self._emit(live, "settings", source, settings=live.settings)
             live.hook_ready.set()
         elif name == "PreToolUse":
@@ -173,6 +193,11 @@ class ClaudeSessionDriver:
                     live.calls[call_id] = {"fingerprint": fingerprint, "action": action, "arguments": deepcopy(arguments), "used": False, "decision": decision}
                     if action in self._capabilities:
                         live.pending_calls.append(call_id)
+                        if decision != "deny":
+                            live.active_tools.add(call_id)
+                    prompt = packet.get("prompt_id")
+                    if isinstance(prompt, str) and prompt:
+                        live.active_turns.add(prompt)
                 live.activity = "active"
             self._emit(live, "native_tool", source, call_id=call_id, action=action, tool=tool,
                        arguments=arguments, turn_id=packet.get("prompt_id"))
@@ -181,11 +206,39 @@ class ClaudeSessionDriver:
                 return {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": decision,
                                               "permissionDecisionReason": "Configured Xorchestrate native tool policy"}}
         elif name in {"Stop", "StopFailure"}:
-            live.activity = "idle" if name == "Stop" else "unknown"
+            with live.lock:
+                prompt = packet.get("prompt_id")
+                if isinstance(prompt, str) and prompt:
+                    if prompt in live.active_turns:
+                        live.active_turns.remove(prompt)
+                        live.completed_turns.add(prompt)
+                    elif prompt not in live.completed_turns:
+                        live.activity_uncertain = True
+                elif live.anonymous_turns:
+                    # Concurrent anonymous completions cannot be deduplicated.
+                    # Retire at most one, retaining uncertainty if identity was
+                    # insufficient to prove that all observed work completed.
+                    if live.anonymous_turns > 1:
+                        live.activity_uncertain = True
+                    live.anonymous_turns -= 1
+                else:
+                    live.activity_uncertain = True
+                if name == "StopFailure":
+                    live.activity_uncertain = True
+                self._activity(live)
             self._emit(live, "turn_completed" if name == "Stop" else "turn_failed", source,
                        turn_id=packet.get("prompt_id"), status="completed" if name == "Stop" else "failed")
         elif name == "UserPromptSubmit":
-            live.activity = "active"
+            with live.lock:
+                if len(live.active_turns) + len(live.completed_turns) + live.anonymous_turns >= self.max_calls:
+                    raise OrchestrationError("Claude turn observation bound reached.", "observation_overflow")
+                prompt = packet.get("prompt_id")
+                if isinstance(prompt, str) and prompt:
+                    if prompt not in live.completed_turns:
+                        live.active_turns.add(prompt)
+                else:
+                    live.anonymous_turns += 1
+                self._activity(live)
             self._emit(live, "turn_started", source, turn_id=packet.get("prompt_id"))
         self._emit(live, "activity", source, state=live.activity)
         return {}
@@ -201,6 +254,7 @@ class ClaudeSessionDriver:
             raise OrchestrationError("MCP invocation requires a request ID.", "native_evidence_missing")
         mcp_key = json.dumps([payload.get("mcp_connection_id", "direct-gateway"), mcp_id])
         fingerprint = _digest([name, arguments])
+        replay = None
         with live.lock:
             previous = live.mcp_calls.get(mcp_key)
             if previous:
@@ -208,22 +262,37 @@ class ClaudeSessionDriver:
                     raise OrchestrationError("MCP request ID reused with different arguments.", "native_call_conflict")
                 if "result" not in previous:
                     raise OrchestrationError("Native callback outcome is unresolved.", "operation_unresolved")
-                return deepcopy(previous["result"])
-            matched = next((key for key in live.pending_calls if not live.calls[key]["used"]
+                replay = deepcopy(previous)
+            matched = previous["call_id"] if previous else next((key for key in live.pending_calls if not live.calls[key]["used"]
                             and live.calls[key]["action"] == name and live.calls[key]["arguments"] == arguments), None)
             if matched is None:
                 raise OrchestrationError("Application call has no matching native hook.", "native_evidence_missing")
             if live.calls[matched].get("decision") == "deny":
                 raise OrchestrationError("Configured native tool policy denied this call.", "denied")
-            live.calls[matched]["used"] = True
-            live.pending_calls.remove(matched)
-            live.mcp_calls[mcp_key] = {"fingerprint": fingerprint, "call_id": matched}
+            if not previous:
+                live.calls[matched]["used"] = True
+                live.pending_calls.remove(matched)
+                live.mcp_calls[mcp_key] = {"fingerprint": fingerprint, "call_id": matched}
         trusted = {**deepcopy(live.context), "native_id": live.native_id, "incarnation": live.incarnation,
                    "call_id": matched, "action": name, "native_observation": "claude/PreToolUse"}
-        result = self._callback(name, deepcopy(arguments), trusted, json.dumps([live.native_id, live.incarnation, matched]))
+        if replay is not None:
+            if self._application_replay:
+                return self._application_replay(name, deepcopy(arguments), trusted,
+                    json.dumps([live.native_id, live.incarnation, matched]))
+            return replay["result"]
+        try:
+            result = self._callback(name, deepcopy(arguments), trusted, json.dumps([live.native_id, live.incarnation, matched]))
+        except Exception:
+            with live.lock:
+                live.active_tools.discard(matched)
+                live.activity_uncertain = True
+                self._activity(live)
+            raise
         self._emit(live, "tool_result", "claude/mcp", call_id=matched, action=name, arguments=arguments)
         with live.lock:
             live.mcp_calls[mcp_key]["result"] = deepcopy(result)
+            live.active_tools.discard(matched)
+            self._activity(live)
         return result
 
     def _gateway(self, live, action, payload):

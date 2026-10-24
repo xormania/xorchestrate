@@ -49,11 +49,13 @@ def proof_chain():
         add(event, peer, tool=tool, arguments=args, call_id=call_id, **data)
     challenge = {"id": "challenge", "to": "grok", "kind": "challenge", "case_id": "case", "nonce": "nonce", "memory": ""}
     callback("codex", "send_message", challenge, "queued", message=challenge)
-    add("attempt", "grok", message_id="challenge", attempt_id="attempt-1")
+    add("attempt", "grok", message_id="challenge", attempt_id="attempt-1", recipient="grok",
+        attempt_sequence=1, status="submitted", origin="adapter", submission={"submitted": True})
     add("submitted", "grok", message_id="challenge", attempt_id="attempt-1", state="submitted")
     reply = {"id": "reply", "to": "codex", "kind": "reply", "case_id": "case", "nonce": "nonce", "memory": "private"}
     callback("grok", "send_message", reply, "queued", message=reply)
-    add("attempt", "codex", message_id="reply", attempt_id="attempt-2")
+    add("attempt", "codex", message_id="reply", attempt_id="attempt-2", recipient="codex",
+        attempt_sequence=1, status="submitted", origin="adapter", submission={"submitted": True})
     add("submitted", "codex", message_id="reply", attempt_id="attempt-2", state="submitted")
     receipt = {"phase": "received", "case_id": "case", "nonce": "nonce", "memory": "private", "peer": "grok"}
     callback("codex", "record_result", receipt, "report", report=receipt)
@@ -220,7 +222,9 @@ def test_composed_runner_preserves_unqualified_conflict_and_bounds_safe_retries(
 ])
 def test_calibrator_distinguishes_target_detection_from_environment_failure(status, diagnostic, exit_status, expected):
     control = {"target": {"status": "passed"}, "control": {"status": "passed"}}
-    mutant = {"target": {"status": status, "diagnostic": diagnostic}, "control": {"status": "passed"}}
+    mutant = {"target": {"status": status, "diagnostic": diagnostic,
+                         "failure_message": "AssertionError: " + diagnostic,
+                         "attribution": {"phase": "call", "exception_type": "AssertionError", "target_assertion": True}}, "control": {"status": "passed"}}
     assert classify(control, mutant, "target", "intended_assertion", ["control"], mutant_exit=exit_status)["classification"] == expected
 
 

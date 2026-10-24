@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
 TEST = "tests/hexagonal/test_work_acceptance.py"
 CONTROL = "test_measurement_replay_is_bound_to_request_and_does_not_reexecute"
 CASES = [
@@ -67,17 +68,24 @@ CASES = [
 
 def classify(exit_code, xml_path, target, assertion):
     """A nonzero exit alone never receives detection credit."""
+    from scripts.verification.calibration import assertion_attribution, assertion_detected, exception_type
+
     if not xml_path.exists():
         return {"classification": "setup_error", "reason": "missing_test_results"}
     try:
         cases = list(ET.parse(xml_path).getroot().iter("testcase"))
     except ET.ParseError:
         return {"classification": "setup_error", "reason": "invalid_test_results"}
-    errors = [case for case in cases if case.find("error") is not None]
+    identities = [(case.get("classname"), case.get("name")) for case in cases]
+    if len(identities) != len(set(identities)):
+        return {"classification": "setup_error", "reason": "duplicate_test_identity"}
+    errors = [case for case in cases if case.find("error") is not None or
+              (case.find("failure") is not None and
+               exception_type(case.find("failure").get("message", "")) in {"ImportError", "ModuleNotFoundError"})]
     skips = [case for case in cases if case.find("skipped") is not None]
     failures = [case for case in cases if case.find("failure") is not None]
-    controls = [case for case in cases if case.attrib.get("name", "").startswith(CONTROL)]
-    targets = [case for case in cases if case.attrib.get("name", "").startswith(target)]
+    controls = [case for case in cases if (case.get("name") == CONTROL or case.get("name", "").startswith(CONTROL + "["))]
+    targets = [case for case in cases if (case.get("name") == target or case.get("name", "").startswith(target + "["))]
     if errors:
         state = "setup_error"
     elif skips:
@@ -87,7 +95,7 @@ def classify(exit_code, xml_path, target, assertion):
     elif not failures and exit_code == 0:
         state = "escaped_fault"
     elif (exit_code == 1 and len(failures) == len(targets)
-          and all(case in targets and assertion in (case.find("failure").text or "") for case in failures)
+          and all(case in targets and assertion_detected(case.find("failure").get("message", ""), assertion, assertion_attribution(case)) for case in failures)
           and all(case.find("failure") is None for case in controls)):
         state = "detected"
     else:
@@ -98,10 +106,14 @@ def classify(exit_code, xml_path, target, assertion):
 
 def execute(root, output, selectors):
     xml_path, log_path = output / "results.xml", output / "output.txt"
-    command = [sys.executable, "-m", "pytest", *selectors, "-q", "--tb=short", "--junitxml=" + str(xml_path)]
+    command = [sys.executable, "-m", "pytest", "-p", "_xorchestrate_calibration_observer", *selectors, "-q", "--tb=short", "--junitxml=" + str(xml_path)]
     started = datetime.now(timezone.utc).isoformat()
     environment = dict(os.environ)
-    environment["PYTHONPATH"] = str(root)
+    checker = output / "checker"
+    checker.mkdir(parents=True, exist_ok=True)
+    observer = checker / "_xorchestrate_calibration_observer.py"
+    observer.write_bytes((ROOT / "scripts/verification/pytest_calibration.py").read_bytes())
+    environment["PYTHONPATH"] = str(checker) + os.pathsep + str(root)
     environment["PYTHONDONTWRITEBYTECODE"] = "1"
     output.mkdir(parents=True, exist_ok=True)
     timed_out = False
@@ -114,7 +126,8 @@ def execute(root, output, selectors):
     record = {"command": command, "cwd": str(root), "started": started,
         "finished": datetime.now(timezone.utc).isoformat(), "exit_code": code, "timed_out": timed_out,
         "environment": {key: environment[key] for key in ("PYTHONPATH", "PYTHONDONTWRITEBYTECODE")},
-        "xml": str(xml_path), "log": str(log_path)}
+        "xml": str(xml_path), "log": str(log_path),
+        "assertion_observer_sha256": hashlib.sha256(observer.read_bytes()).hexdigest()}
     (output / "command.json").write_text(json.dumps(record, indent=2) + "\n")
     return record
 
@@ -132,6 +145,9 @@ def main():
     shutil.copyfile(ROOT / TEST, baseline / TEST)
     shutil.copyfile(Path(__file__), baseline / "tests/hexagonal/calibrate_work_acceptance.py")
     shutil.copyfile(ROOT / "pyproject.toml", baseline / "pyproject.toml")
+    (baseline / "scripts/verification").mkdir(parents=True)
+    shutil.copyfile(ROOT / "scripts/verification/calibration.py", baseline / "scripts/verification/calibration.py")
+    shutil.copyfile(ROOT / "scripts/verification/pytest_calibration.py", baseline / "scripts/verification/pytest_calibration.py")
     inputs = {str(path.relative_to(baseline)): hashlib.sha256(path.read_bytes()).hexdigest()
         for path in sorted(baseline.rglob("*")) if path.is_file()}
     (output / "inputs.json").write_text(json.dumps(inputs, indent=2) + "\n")

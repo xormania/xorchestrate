@@ -166,17 +166,24 @@ class GrokSessionDriver(ACPSessionDriver):
         if not payload.get("mcp_connection_id") or payload.get("mcp_request_id") is None:
             raise OrchestrationError("MCP request lacks a connection-scoped identity.", "missing_call_identity")
         fingerprint = hashlib.sha256(encode_json([name, arguments], sort_keys=True)).hexdigest()
+        replay = None
         with live.lock:
             prior = live.grok["mcp_requests"].get(request_key)
             if prior:
                 if prior["fingerprint"] != fingerprint:
                     raise OrchestrationError("MCP request ID was reused with different arguments.", "call_id_conflict")
                 if prior["state"] == "completed":
-                    return deepcopy(prior["result"])
-                raise OrchestrationError("MCP request already has an unresolved invocation.", "call_in_progress")
-            if len(live.grok["mcp_requests"]) >= self.max_native_calls:
-                raise OrchestrationError("MCP replay ledger is full.", "session_capacity")
-            live.grok["mcp_requests"][request_key] = {"fingerprint": fingerprint, "state": "pending"}
+                    replay = deepcopy(prior)
+                else:
+                    raise OrchestrationError("MCP request already has an unresolved invocation.", "call_in_progress")
+            else:
+                if len(live.grok["mcp_requests"]) >= self.max_native_calls:
+                    raise OrchestrationError("MCP replay ledger is full.", "session_capacity")
+                live.grok["mcp_requests"][request_key] = {"fingerprint": fingerprint, "state": "pending"}
+        if replay is not None:
+            if self._application_replay:
+                return self._application_replay(name, deepcopy(arguments), deepcopy(replay["context"]), replay["key"])
+            return replay["result"]
         deadline = time.monotonic() + self.options.get("observation_timeout", 10)
         with live.grok["condition"]:
             while True:
@@ -203,7 +210,8 @@ class GrokSessionDriver(ACPSessionDriver):
         result = self._application_callback(name, arguments, trusted, "grok:" + encode_json([live.native_id, call_id]).decode())
         self._observation(live, "native_tool_result", action=name, arguments=arguments, call_id=call_id, result=result)
         with live.lock:
-            live.grok["mcp_requests"][request_key] = {"fingerprint": fingerprint, "state": "completed", "result": deepcopy(result)}
+            live.grok["mcp_requests"][request_key] = {"fingerprint": fingerprint, "state": "completed", "result": deepcopy(result),
+                "context": deepcopy(trusted), "key": "grok:" + encode_json([live.native_id, call_id]).decode()}
         return result
 
     def _launch(self, specification, resume):

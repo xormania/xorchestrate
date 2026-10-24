@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -34,17 +35,23 @@ def calibrate(root, output, mutation, selectors, target, diagnostic, unaffected)
     if not mutation.get("old") or original.count(mutation["old"]) != 1:
         raise ValueError("Mutation must replace exactly one known source occurrence")
     write_json(output / "mutation.json", mutation)
+    checker = output / "checker"
+    checker.mkdir()
+    observer = checker / "_xorchestrate_calibration_observer.py"
+    observer.write_bytes(Path(__file__).with_name("pytest_calibration.py").read_bytes())
     records, cases = {}, {}
     for name, directory in (("control", control), ("mutant", mutant)):
         if name == "mutant":
             source.write_text(original.replace(mutation["old"], mutation["new"], 1))
         junit = output / (name + ".xml")
-        command = [sys.executable, "-m", "pytest", "-q", *selectors, "--junitxml=" + str(junit)]
-        records[name] = run_command(command, directory, output / (name + "-run"), timeout=120)
+        command = [sys.executable, "-m", "pytest", "-p", "_xorchestrate_calibration_observer", "-q", *selectors, "--junitxml=" + str(junit)]
+        records[name] = run_command(command, directory, output / (name + "-run"), timeout=120,
+                                    environment={"PYTHONPATH": str(checker) + os.pathsep + str(directory)})
         cases[name] = junit_cases(junit) if junit.exists() else {}
     result = classify(cases["control"], cases["mutant"], target, diagnostic, unaffected,
                       control_exit=records["control"]["exit_status"], mutant_exit=records["mutant"]["exit_status"])
     result.update(candidate_sha256=identity["content_sha256"], mutation_sha256=digest(canonical(mutation)),
+                  assertion_observer_sha256=digest(observer.read_bytes()),
                   commands=records, finished_at=now())
     write_json(output / "calibration.json", result)
     return result
