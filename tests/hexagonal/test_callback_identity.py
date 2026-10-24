@@ -230,3 +230,25 @@ def test_sustained_lifecycle_fault_cannot_erase_nested_identity(monkeypatch):
     with pytest.raises(AssertionError, match="^IV03_LIFECYCLE_CALLBACK_IDENTITY_MUST_BE_BOUND"):
         assert_lifecycle_rejected(inputs)
     assert activated
+
+
+@pytest.mark.parametrize("operation", ["resume", "reconnect"])
+@pytest.mark.parametrize("side", ["native", "callback", "session", "evidence", "evidence-source"])
+@pytest.mark.parametrize("value", ["other-actor", None, False])
+def test_lifecycle_explicit_actor_cannot_disagree_with_qualified_callback(operation, side, value):
+    inputs, rows = lifecycle_input(operation)
+    # Absence remains acceptable where the retained schema does not claim an
+    # independent actor; an explicit contradictory actor cannot be ignored.
+    assert checker.lifecycle_evidence(*inputs)["operation_id"] == "op"
+    raw = inputs[1]["raw_records"]
+    if side in {"native", "callback"}:
+        record, field = rows[0 if side == "native" else 1], "created_by"
+    elif side == "session":
+        record, field = raw["sessions"][1], "actor_id"
+    else:
+        record, field = raw["evidence"][0], "source" if side == "evidence-source" else "created_by"
+    record[field] = {"type": "caller", "actor": "codex"} if field == "source" else "codex"
+    assert checker.lifecycle_evidence(*inputs)["operation_id"] == "op"
+    record[field] = {"type": "caller", "actor": value} if field == "source" else value
+    with pytest.raises(checker.VerificationFailure, match="^lifecycle_actor_binding$"):
+        checker.lifecycle_evidence(*inputs)

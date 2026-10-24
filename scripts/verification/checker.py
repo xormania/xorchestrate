@@ -276,6 +276,7 @@ def lifecycle_evidence(case, run, lifecycle):
     for view, actual in ((before, actual_before), (after, actual_after)):
         require(all(view.get(k) == actual.get("backend", {}).get(k) for k in ("native_id", "incarnation", "ownership")),
                 "lifecycle_session_binding")
+        require("actor_id" not in actual or actual["actor_id"] == peer, "lifecycle_actor_binding")
     require(before.get("native_id") and before["native_id"] == after.get("native_id"), "lifecycle_native_identity")
     require(measured.get("result", {}).get("session", {}).get("id") == after["session_id"], "lifecycle_result_binding")
     if operation == "detach":
@@ -299,8 +300,12 @@ def lifecycle_evidence(case, run, lifecycle):
     callback = by_id("native_observation", retained.get("callback_observation_id"))
     saved = by_id("evidence", retained.get("evidence_id"))
     require(native and callback and saved, "lifecycle_retained_observation_binding")
+    require("created_by" not in saved or saved["created_by"] == peer, "lifecycle_actor_binding")
+    require("source" not in saved or saved["source"] == {"type": "caller", "actor": peer},
+            "lifecycle_actor_binding")
     raw_native, raw_callback = native.get("observation", {}), callback.get("observation", {})
     for row in (native, callback):
+        require("created_by" not in row or row["created_by"] == peer, "lifecycle_actor_binding")
         observation = row["observation"]
         identity = {"peer": peer, "session_id": row.get("session_id"),
                     **{key: observation.get(key) for key in ("native_id", "incarnation")}}
