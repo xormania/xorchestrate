@@ -67,9 +67,11 @@ def signature(event):
 def identity_matches(event, sessions):
     peer = event.get("peer")
     session = sessions.get(peer, {})
-    return (event.get("native_id") and event.get("native_id") == session.get("native_id")
-            and event.get("session_id") == session.get("session_id")
-            and event.get("incarnation") and event.get("incarnation") == session.get("incarnation"))
+    return (all(isinstance(event.get(key), str) and bool(event[key])
+                and event[key] == session.get(key)
+                for key in ("native_id", "session_id", "incarnation"))
+            and ("observation_session_id" not in event
+                 or event["observation_session_id"] == event["session_id"]))
 
 
 def arguments_match(native, application):
@@ -88,7 +90,8 @@ def native_call(events, peer, tool, arguments, sessions, call_id=None):
     for event in events:
         if not (event.get("event") == "native_tool" and event.get("peer") == peer
                 and event.get("tool") == tool and arguments_match(event.get("arguments"), arguments)
-                and event.get("call_id") and event.get("origin") == ORIGINS.get(peer)
+                and isinstance(event.get("call_id"), str) and event["call_id"]
+                and event.get("origin") == ORIGINS.get(peer)
                 and identity_matches(event, sessions)
                 and (call_id is None or event["call_id"] == call_id)):
             continue
@@ -102,12 +105,31 @@ def native_call(events, peer, tool, arguments, sessions, call_id=None):
 
 
 def match_callback(events, event, sessions):
+    # Native proof cannot lend its identity to a contradictory application
+    # callback. Validate both sides against the applicable session before joining.
+    require(identity_matches(event, sessions), "callback_identity_mismatch")
+    require(isinstance(event.get("call_id"), str) and event["call_id"], "callback_call_binding")
+    if "recorded_session_identity" in event:
+        recorded = event["recorded_session_identity"]
+        require(isinstance(recorded, dict)
+                and identity_matches({**recorded, "peer": event["peer"]}, sessions)
+                and recorded.get("actor_id") == event["peer"], "callback_session_binding")
+    if "callback_actor" in event:
+        require(event["callback_actor"] == event["peer"], "callback_actor_binding")
     native = native_call(events, event["peer"], event.get("tool"), event.get("arguments"),
                          sessions, event.get("call_id"))
     require(native, "native_call_missing_or_misbound")
     # The app side effect must be tied to this callback, not just have matching
     # free-form arguments somewhere in a transcript.
     require(event.get("call_id") == native["call_id"], "callback_call_binding")
+    if event.get("event") != "tool_called":
+        require(any(request.get("event") == "tool_called"
+                    and request.get("peer") == event["peer"]
+                    and request.get("call_id") == event["call_id"]
+                    and request.get("tool") == event.get("tool")
+                    and identity_matches(request, sessions)
+                    and canonical(request.get("arguments")) == canonical(event.get("arguments"))
+                    for request in events), "callback_request_missing_or_misbound")
     if event.get("session_work_id") is not None:
         require(event.get("observation_work_id") == event["session_work_id"], "callback_work_binding")
     if native.get("observation_work_id") is not None or event.get("observation_work_id") is not None:
@@ -209,11 +231,13 @@ def tool_audit(events, sessions):
     require(actual, "native_calls_not_exercised")
     unique_actual = set()
     for event in actual:
+        match_callback(events, event, sessions)
         key = (event.get("peer"), event.get("incarnation"), event.get("call_id"))
         require(key not in unique_actual, "duplicate_application_invocation")
         unique_actual.add(key)
-        match_callback(events, event, sessions)
     for event in events:
+        if event.get("event") == "tool_completed":
+            match_callback(events, event, sessions)
         if event.get("event") in {"native_tool", "native_discovery", "native_session"}:
             require(identity_matches(event, sessions), "native_session_drift")
         require(event.get("event") not in {"native_identity_error", "tool_violation", "unsupported"},
