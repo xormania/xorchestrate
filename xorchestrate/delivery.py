@@ -218,14 +218,20 @@ class DeliveryMixin:
                 # Requested/uncertain observations can precede the result, but
                 # still refer to an already reserved operation. Its key belongs
                 # to the original executor, never the inspecting caller.
-                key = arguments.get("idempotency_key") if payload["action"] == "invoke" else None
-                if payload["action"] == "run_measurement" and isinstance(arguments.get("measurement_key"), str):
-                    key = "measurement:" + digest([executing_actor, "measurement", arguments["measurement_key"]])
-                if isinstance(key, str):
-                    with self.store.transaction() as tx:
-                        operation = tx.get("operation", digest([executing_actor, key]))
-                    if operation:
-                        scope_arguments["operation_id"] = operation.key
+                operation = None
+                with self.store.transaction() as tx:
+                    if payload["action"] == "invoke" and isinstance(arguments.get("idempotency_key"), str):
+                        operation = tx.get("operation", digest([executing_actor, arguments["idempotency_key"]]))
+                        fingerprint = digest({"action": "invoke", "arguments": {
+                            key: value for key, value in arguments.items() if key != "idempotency_key"}})
+                        if operation and operation.data["fingerprint"] != fingerprint:
+                            operation = None
+                    elif payload["action"] == "run_measurement" and isinstance(arguments.get("measurement_key"), str):
+                        measurement = tx.get("measurement", digest([executing_actor, "measurement", arguments["measurement_key"]]))
+                        if measurement and measurement.data["fingerprint"] == digest(arguments):
+                            operation = tx.get("operation", measurement.data["operation_id"])
+                if operation:
+                    scope_arguments["operation_id"] = operation.key
         current = self._inspection_basis(actor, scope_arguments, cache)
         # A requested native invoke can precede its durable result. Its typed
         # capability address already identifies the provider/name. Completed

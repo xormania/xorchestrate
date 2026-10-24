@@ -481,3 +481,27 @@ def test_requested_native_phase_uses_original_executor_saved_descriptor(history,
     assert all(row["call_id"] != "private-" + action for row in visible["calls"])
     app.guardrail = RuleGuardrail()
     assert app.call("native_observations", args, actor=inspector) == before
+
+
+@pytest.mark.parametrize("measured", [False, True], ids=["invocation", "measurement"])
+@pytest.mark.parametrize("selector", ["provider", "capability"])
+def test_conflicting_operation_key_cannot_supply_another_requests_inspection_scope(history, measured, selector):
+    app, work, sessions, _ = history
+    provider_history(history, measured)
+    action = "run_measurement" if measured else "invoke"
+    args = ({"work_id": work, "check_id": "private", "measurement_key": "public"} if measured else
+        {"work_id": work, "capability": "private/change", "arguments": {}, "idempotency_key": "public-invoke"})
+    with pytest.raises(Conflict):
+        record_history(history, action, args, "conflicting-private")
+    before = inspect(history)
+    assert any(row["call_id"] == "conflicting-private" and row["status"] == "unknown" for row in before["calls"])
+    selected = {"providers": ["private"]} if selector == "provider" else {
+        "capabilities": ["private/measure" if measured else "private/change"]}
+    app.guardrail = RuleGuardrail({"rules": [{"actors": ["owner"], "actions": ["native_observations"],
+        **selected, "effect": "deny"}]})
+    visible = app.call("native_observations", {"session_id": sessions["limited"]["id"]}, actor="owner")
+    assert all(row["call_id"] != "conflicting-private" for row in visible["calls"]), "IV01_CONFLICTING_KEY_SCOPE"
+    assert all(row["observation"].get("call_id") != "conflicting-private" for row in visible["observations"])
+    assert any(row["call_id"] == "public-" + action for row in visible["calls"])
+    app.guardrail = RuleGuardrail()
+    assert inspect(history) == before
