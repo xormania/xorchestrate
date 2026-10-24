@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import threading
+import time
 import uuid
 from pathlib import Path
 
@@ -220,6 +221,14 @@ def execute(packet):
             assert event.wait(10)
         elif body.get('action') == 'tool':
             call(body.get('name', 'echo'), body.get('arguments', {}), prompt, body.get('observed', True))
+        if body.get('tail_gate'):
+            # A callback can finish before native reasoning/turn completion.
+            Path(body['tail_entered']).write_text('callback returned; native turn held')
+            deadline = time.monotonic() + 15
+            while not Path(body['tail_gate']).exists():
+                if time.monotonic() >= deadline:
+                    raise AssertionError('test must release its native turn')
+                time.sleep(.01)
         if protocol == 'codex':
             write({'method': 'turn/completed', 'params': {'threadId': native_id, 'turn': {'id': prompt, 'status': 'completed'}}})
         else:

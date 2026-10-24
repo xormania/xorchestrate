@@ -326,6 +326,82 @@ def lifecycle_evidence(case, run, lifecycle):
             "callback_observation_id": callback["id"], "evidence_id": saved["id"]}
 
 
+def completed_native_turns(raw, sessions, peer, latest):
+    """Reconcile observed native starts/ends without using aggregate idle fields."""
+    session = sessions[peer]
+    transitions, submitted = [], set()
+    for record in raw.get("observations", []):
+        item = record.get("observation", {})
+        if (record.get("session_id") != session["session_id"] or record.get("origin") != "adapter"
+                or record.get("stale") or item.get("stale")
+                or item.get("native_id") != session["native_id"] or item.get("incarnation") != session["incarnation"]):
+            continue
+        source, kind = item.get("source", ""), item.get("kind")
+        if peer in {"codex", "grok"} and source.startswith(peer) and kind == "native_submission":
+            result = item.get("result", {})
+            turn = result.get("turn", {}).get("id") if peer == "codex" else item.get("prompt_id", result.get("promptId"))
+            if isinstance(turn, str) and turn:
+                submitted.add(turn)
+        phase = turn = None
+        if peer == "claude" and source.startswith("claude/"):
+            if kind in {"turn_started", "turn_completed", "turn_failed"}:
+                phase = "start" if kind == "turn_started" else "end"
+                turn = item.get("turn_id")
+            elif kind == "native_tool" and isinstance(item.get("turn_id"), str) and item["turn_id"]:
+                phase, turn = "start", item["turn_id"]
+        elif peer in {"codex", "grok"} and source.startswith(peer) and kind == "native_completion":
+            phase = "end"
+            turn = item.get("turn_id" if peer == "codex" else "prompt_id")
+        elif peer in {"codex", "grok"} and source.startswith(peer) and kind == "native_notification":
+            method, packet = item.get("method"), item.get("payload", {})
+            if peer == "codex" and method in {"turn/started", "turn/completed"}:
+                phase = "start" if method == "turn/started" else "end"
+                turn = packet.get("turn", {}).get("id", packet.get("turnId"))
+            elif peer == "grok":
+                update = packet.get("update", {})
+                if method == "_x.ai/session/prompt_complete" or update.get("sessionUpdate") == "turn_completed":
+                    phase = "end"
+                elif update.get("sessionUpdate") in {"agent_message_chunk", "agent_thought_chunk", "tool_call", "tool_call_update"}:
+                    phase = "start"
+                turn = packet.get("promptId", update.get("prompt_id", packet.get("_meta", {}).get("promptId")))
+        if phase is None:
+            continue
+        if peer == "claude" and turn in (None, ""):
+            turn = None
+        else:
+            require(isinstance(turn, str) and turn, "completion_turn_identity_missing")
+        at = datetime.fromisoformat(item.get("at", record["created_at"]))
+        require(at.tzinfo is not None and at.utcoffset() is not None, "invalid_observation_timestamp")
+        transitions.append((at, phase, turn))
+    if not transitions and not submitted:
+        return
+    cutoff = datetime.fromisoformat(latest["at"])
+    active, finished, seen = set(), set(), {}
+    anonymous, uncertain = 0, False
+    for at, phase, turn in sorted(transitions, key=lambda row: (row[0], row[1], row[2] or "")):
+        previous = seen.setdefault((at, turn), phase)
+        require(previous == phase, "completion_turn_order_ambiguous")
+        if turn is None:
+            if phase == "start":
+                anonymous += 1
+                uncertain = uncertain or anonymous > 1
+            elif anonymous:
+                anonymous -= 1
+                require(at <= cutoff, "completion_before_turn_finished")
+            else:
+                uncertain = True
+            continue
+        if phase == "start" and turn not in finished:
+            active.add(turn)
+        elif phase == "end":
+            require(turn in active or turn in finished or turn in submitted, "completion_turn_unbound")
+            if turn not in finished:
+                require(at <= cutoff, "completion_before_turn_finished")
+            active.discard(turn)
+            finished.add(turn)
+    require(not active and submitted <= finished and not anonymous and not uncertain, "completion_native_turn_unresolved")
+
+
 def completion_evidence(own, run, peer):
     """Native idle is necessary; independent callback/effect records can veto it."""
     sessions = run["sessions"]
@@ -344,6 +420,7 @@ def completion_evidence(own, run, peer):
         require(len(matches) == 1, "completion_callback_unresolved")
 
     raw = run.get("raw_records", {})
+    completed_native_turns(raw, sessions, peer, latest)
     session = sessions[peer]
     for native in raw.get("native_calls", []):
         if native.get("session_id") == session["session_id"] and native.get("incarnation") == session["incarnation"]:

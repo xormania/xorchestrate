@@ -4,11 +4,13 @@ import sys
 import threading
 import time
 from copy import deepcopy
+from datetime import datetime, timezone
 from itertools import permutations
+from pathlib import Path
 
 import pytest
 
-from scripts.verification.checker import VerificationFailure, check_case
+from scripts.verification.checker import VerificationFailure, check_case, completed_native_turns, verify
 from scripts.verification.multi_harness import snapshot
 from scripts.verification.normalize import normalize
 from tests.hexagonal.test_native_cache_currentness import native_runtime, retry
@@ -141,19 +143,30 @@ def test_unrelated_callback_failure_is_not_pending_activity_detection():
 
 
 @pytest.mark.parametrize("bad_id", [None, "", 1, "unobserved"])
-def test_unmatched_completion_never_retires_known_turns_and_preserves_uncertainty(bad_id):
-    adapter = CodexSessionDriver({"command": [sys.executable, "unused"]})
+@pytest.mark.parametrize("protocol", ["codex", "grok"])
+def test_unmatched_completion_never_retires_known_turns_and_preserves_uncertainty(bad_id, protocol):
+    adapter = {"codex": CodexSessionDriver, "grok": GrokSessionDriver}[protocol]({"command": [sys.executable, "unused"]})
     live = _LiveSession({}, native_id="native")
+    if protocol == "grok":
+        live.grok = {"current": None, "native_busy": False, "active_prompts": set(), "seen": [], "completed": [], "interjections": {}}
     def notify(method, ident):
-        adapter._notification(live, method, {"threadId": "native", "turn": {"id": ident}})
+        if protocol == "codex":
+            adapter._notification(live, method, {"threadId": "native", "turn": {"id": ident}})
+        elif method == "turn/started":
+            adapter._notification(live, "session/update", {"sessionId": "native", "promptId": ident,
+                "update": {"sessionUpdate": "agent_message_chunk"}})
+        else:
+            adapter._notification(live, "_x.ai/session/prompt_complete", {"sessionId": "native", "promptId": ident})
+    def pending():
+        return set(live.pending) if protocol == "codex" else live.grok["active_prompts"]
     for label in "ABC":
         notify("turn/started", label)
     notify("turn/completed", "B")
     notify("turn/completed", "B")
     notify("turn/started", "B")
-    assert set(live.pending) == {"A", "C"} and live.activity == "active"
+    assert pending() == {"A", "C"} and live.activity == "active"
     notify("turn/completed", bad_id)
-    assert set(live.pending) == {"A", "C"} and live.activity == "active"
+    assert pending() == {"A", "C"} and live.activity == "active"
     notify("turn/completed", "C")
     notify("turn/completed", "A")
     assert live.activity == "unknown"
@@ -164,16 +177,28 @@ def test_unmatched_completion_never_retires_known_turns_and_preserves_uncertaint
 def test_completion_before_submission_response_must_bind_to_returned_turn(completed_id, expected):
     adapter = CodexSessionDriver({"command": [sys.executable, "unused"]})
     live = _LiveSession({}, native_id="native")
+    observations = []
+    adapter.bind_observer(lambda context, event: observations.append(event))
     class Process:
         def request(self, method, parameters):
             adapter._notification(live, "turn/completed", {"threadId": "native", "turn": {"id": completed_id}})
             assert live.activity == "active", "submission is still awaiting its response"
             return {"turn": {"id": "B"}}
     live.process = Process()
-    adapter._submit(live, {})
+    result = adapter._submit(live, {})
+    adapter._observation(live, "native_submission", result=result)
     if completed_id != "B":
         adapter._notification(live, "turn/completed", {"threadId": "native", "turn": {"id": "B"}})
     assert not live.pending and not live.submissions and live.activity == expected
+    peers = {"codex": {"session_id": "app", "native_id": live.native_id, "incarnation": live.incarnation}}
+    raw = {"observations": [{"id": str(i), "session_id": "app", "origin": "adapter", "stale": False,
+        "created_at": event["at"], "observation": event} for i, event in enumerate(observations)]}
+    latest = {"at": observations[-1]["at"]}
+    if expected == "idle":
+        completed_native_turns(raw, peers, "codex", latest)
+    else:
+        with pytest.raises(VerificationFailure, match="^completion_turn_unbound$"):
+            completed_native_turns(raw, peers, "codex", latest)
     adapter.close()
 
 
@@ -193,7 +218,7 @@ def test_native_completion_before_callback_return_keeps_running_callback_visible
     if protocol in {"codex", "grok"}:
         adapter.bind_application_tools([Capability("hold", "Hold")], handler)
     if protocol == "grok":
-        live.grok = {"current": "A", "native_busy": True, "seen": ["A"], "completed": [],
+        live.grok = {"current": "A", "native_busy": True, "active_prompts": {"A"}, "seen": ["A"], "completed": [],
                      "interjections": {}, "mcp_requests": {}, "condition": threading.Condition(live.lock),
                      "calls": {"call": {"action": "hold", "arguments": {}, "used": False}}}
     errors = []
@@ -261,3 +286,122 @@ def test_checker_independently_rejects_pending_operation_despite_false_terminal_
     with pytest.raises(VerificationFailure, match="^completion_native_call_unresolved$"):
         check()
     (tmp_path / "corrupt-operation-and-native-call.json").write_text(json.dumps(final, indent=2))
+
+
+@pytest.mark.parametrize("protocol", ["codex", "grok"])
+@pytest.mark.parametrize("order", list(permutations("ABC")))
+def test_finished_callbacks_do_not_hide_unfinished_native_turns(protocol, order, tmp_path):
+    fixture = Path(__file__).parent / "fixtures" / "native_progress_peer.py"
+    driver = {"codex": CodexSessionDriver, "grok": GrokSessionDriver}[protocol](
+        {"command": [sys.executable, str(fixture), protocol], "timeout": 5})
+    observations, called = [], []
+    def observe(context, event):
+        observations.append(event)
+    def callback(action, arguments, context, key):
+        for phase in ("requested", "completed"):
+            observe(context, {"kind": "application_tool", "phase": phase, "action": action,
+                "arguments": arguments, "call_id": context["call_id"], "native_id": context["native_id"],
+                "incarnation": context["incarnation"], "at": datetime.now(timezone.utc).isoformat()})
+        called.append(arguments["attempt_id"])
+        return {"ok": True}
+    driver.bind_observer(observe)
+    driver.bind_application_tools([Capability("echo", "Echo")], callback)
+    try:
+        session = driver.start({"context": {"session_id": "app", "actor": "owner"}})
+        peers = {protocol: {"session_id": "app", "native_id": session["native_id"], "incarnation": session["incarnation"]}}
+        case = {"kind": "completion", "peer": protocol}
+        def measure(label, remaining):
+            with driver._get(session).lock:
+                captured = deepcopy(observations)
+                status = driver.status(session)
+            raw = {"observations": [{"id": str(i), "session_id": "app", "origin": "adapter", "stale": False,
+                    "created_at": event["at"], "observation": event} for i, event in enumerate(captured)],
+                   "messages": [], "attempts": [], "evidence": []}
+            events = normalize(raw, peers, [], "protocol-fixture")
+            run = {"raw_records": raw, "events": events, "sessions": peers}
+            if remaining:
+                assert_active(status)
+                with pytest.raises(VerificationFailure):
+                    check_case(case, run, {})
+                # Sustained false producer state: retain all actual starts/ends
+                # and successful callbacks, append a plausible native idle.
+                bad = deepcopy(raw)
+                at = datetime.now(timezone.utc).isoformat()
+                bad["observations"].append({"id": "false-idle", "session_id": "app", "origin": "adapter", "stale": False,
+                    "created_at": at, "observation": {**peers[protocol], "kind": "activity", "source": protocol, "at": at, "state": "idle"}})
+                with pytest.raises(VerificationFailure, match="^completion_native_turn_unresolved$"):
+                    check_case(case, {"raw_records": bad, "events": normalize(bad, peers, [], "protocol-fixture"), "sessions": peers}, {})
+                (tmp_path / (label + "-false-idle.json")).write_text(json.dumps(bad, indent=2))
+            else:
+                assert status["activity"] == "idle"
+                assert check_case(case, run, {})
+            (tmp_path / (label + ".json")).write_text(json.dumps({"raw_records": raw, "status": status, "held_tails": remaining}, indent=2))
+        for label in "ABC":
+            driver.deliver(session, {"attempt_id": label, "body": {"action": "tool", "name": "echo",
+                "arguments": {"attempt_id": label}, "tail_gate": str(tmp_path / (label + ".release")),
+                "tail_entered": str(tmp_path / (label + ".entered"))}})
+            wait(lambda: (tmp_path / (label + ".entered")).exists())
+        assert sorted(called) == list("ABC") and not driver._get(session).active_callbacks
+        measure("before", list(order))
+        for index, label in enumerate(order):
+            old = len([event for event in observations if event["kind"] == "native_completion"])
+            (tmp_path / (label + ".release")).touch()
+            wait(lambda: len([event for event in observations if event["kind"] == "native_completion"]) > old)
+            if protocol == "grok" and label == "A":
+                wait(lambda: not driver._get(session).pending)
+            if index == len(order) - 1:
+                wait(lambda: driver.status(session)["activity"] == "idle")
+            measure("after-" + label, list(order[index + 1:]))
+    finally:
+        for label in "ABC":
+            (tmp_path / (label + ".release")).touch()
+        driver.close()
+
+
+@pytest.mark.parametrize("peer", ["codex", "claude", "grok"])
+def test_unbound_native_completion_cannot_borrow_forged_idle(peer):
+    from tests.hexagonal.test_completion_evidence import completion_input
+    inputs, add = completion_input(peer)
+    add("native_completion", activity="idle")
+    assert verify(*inputs)["status"] == "passed"
+    if peer == "claude":
+        add("turn_completed", turn_id="unobserved", activity="idle")
+    else:
+        add("native_completion", activity="idle", **{"turn_id" if peer == "codex" else "prompt_id": "unobserved"})
+    report = verify(*inputs)
+    assert report["status"] == "incomplete"
+    assert report["cases"][0]["assertion"] == "completion_turn_unbound"
+
+
+@pytest.mark.parametrize("starts,ends,expected", [(1, 1, "passed"), (2, 2, "incomplete"), (1, 2, "incomplete")])
+def test_single_anonymous_claude_turn_control_and_ambiguous_overlap(starts, ends, expected):
+    from tests.hexagonal.test_completion_evidence import completion_input
+    inputs, add = completion_input("claude")
+    for _ in range(starts):
+        add("turn_started")
+    for _ in range(ends):
+        add("turn_completed", activity="idle")
+    report = verify(*inputs)
+    assert report["status"] == expected
+    if expected == "incomplete":
+        assert report["cases"][0]["assertion"] == "completion_native_turn_unresolved"
+
+
+@pytest.mark.parametrize("peer", ["codex", "grok"])
+def test_submission_bound_completion_must_precede_idle_even_without_start(peer):
+    from tests.hexagonal.test_completion_evidence import completion_input
+    inputs, add = completion_input(peer)
+    if peer == "codex":
+        add("native_submission", result={"turn": {"id": "C"}})
+    else:
+        add("native_submission", prompt_id="C", result={})
+    add("activity", state="idle")
+    if peer == "codex":
+        add("native_notification", method="turn/completed", payload={"turn": {"id": "C"}})
+    else:
+        add("native_notification", method="_x.ai/session/prompt_complete", payload={"promptId": "C"})
+    report = verify(*inputs)
+    assert report["status"] == "incomplete"
+    assert report["cases"][0]["assertion"] == "completion_before_turn_finished"
+    add("activity", state="idle")
+    assert verify(*inputs)["status"] == "passed"

@@ -28,6 +28,35 @@ class GrokSessionDriver(ACPSessionDriver):
                          "unknown" if live.activity_uncertain else "idle")
         return live.activity
 
+    def _native_prompt_started(self, live, prompt):
+        state = live.grok
+        if not isinstance(prompt, str) or not prompt:
+            live.activity_uncertain = True
+        elif prompt not in state["completed"]:
+            if len(state["active_prompts"]) >= self.max_pending_messages and prompt not in state["active_prompts"]:
+                live.activity_uncertain = True
+                raise OrchestrationError("Native prompt observation bound reached.", "observation_overflow")
+            state["active_prompts"].add(prompt)
+            if prompt not in state["seen"]:
+                state["seen"].append(prompt)
+                state["current"] = prompt
+        state["native_busy"] = bool(state["active_prompts"])
+
+    def _native_prompt_finished(self, live, prompt, completed):
+        state = live.grok
+        identified = isinstance(prompt, str) and bool(prompt)
+        duplicate = identified and prompt in state["completed"]
+        if not identified or (prompt not in state["active_prompts"] and not duplicate):
+            live.activity_uncertain = True
+        if identified:
+            state["active_prompts"].discard(prompt)
+            if not duplicate:
+                state["completed"].append(prompt)
+        if not completed:
+            live.activity_uncertain = True
+        state["native_busy"] = bool(state["active_prompts"])
+        return duplicate
+
     def __init__(self, options, request_handler=None):
         super().__init__(options, request_handler)
         self._application_tools = {}
@@ -100,26 +129,20 @@ class GrokSessionDriver(ACPSessionDriver):
         with live.lock:
             completion = None
             if method == "_x.ai/session/prompt_complete" or kind == "turn_completed":
-                if not prompt:
+                if not isinstance(prompt, str) or not prompt:
                     live.activity_uncertain = True
                     self._activity(live)
                     self._observation(live, "native_completion_unknown", reason="missing_native_prompt_id", activity=live.activity)
                     self._observation(live, "activity", state=live.activity)
                     return
-                stale = prompt != state["current"]
-                state["completed"].append(prompt)
-                if not stale:
-                    state["native_busy"] = False
+                stale = self._native_prompt_finished(live, prompt, True)
                 state["interjections"].pop(prompt, None)
                 completion = {"prompt_id": prompt, "stale": stale, "result": params}
             elif kind in {"agent_message_chunk", "agent_thought_chunk", "tool_call", "tool_call_update"}:
-                if prompt and (prompt in state["completed"] or prompt != state["current"] and prompt in state["seen"]):
+                if isinstance(prompt, str) and prompt in state["completed"]:
                     self._observation(live, "stale_native_activity", prompt_id=prompt, payload=params)
                     return
-                if prompt and prompt not in state["seen"]:
-                    state["seen"].append(prompt)
-                    state["current"] = prompt
-                state["native_busy"] = True
+                self._native_prompt_started(live, prompt)
             if kind in {"config_option_update", "current_mode_update", "available_commands_update"}:
                 live.settings["observed"][kind] = deepcopy(update)
             if kind == "tool_call":
@@ -251,7 +274,8 @@ class GrokSessionDriver(ACPSessionDriver):
     def _launch(self, specification, resume):
         specification, requested = self._prepare_start(specification, ("sessionId",))
         def handshake(live, spec):
-            live.grok = {"current": None, "native_busy": False, "seen": deque(maxlen=1024), "completed": deque(maxlen=1024),
+            live.grok = {"current": None, "native_busy": False, "active_prompts": set(),
+                         "seen": deque(maxlen=1024), "completed": deque(maxlen=1024),
                          "calls": {}, "mcp_requests": {}, "interjections": {}, "condition": threading.Condition(live.lock)}
             params = {**requested, **deepcopy(self.session)}
             if self._application_callback:
@@ -289,17 +313,10 @@ class GrokSessionDriver(ACPSessionDriver):
         return self._start(specification, handshake)
 
     def _prompt_started(self, live, prompt_id):
-        live.grok["current"] = prompt_id
-        live.grok["seen"].append(prompt_id)
-        live.grok["native_busy"] = True
+        self._native_prompt_started(live, prompt_id)
 
     def _prompt_finished(self, live, prompt_id, completed):
-        if completed:
-            live.grok["completed"].append(prompt_id)
-            if live.grok["current"] == prompt_id:
-                live.grok["native_busy"] = False
-        else:
-            live.activity_uncertain = True
+        self._native_prompt_finished(live, prompt_id, completed)
         self._activity(live)
 
     def send(self, session, message):
