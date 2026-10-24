@@ -1,0 +1,26 @@
+{
+  "store": {
+    "adapter": "sqlite",
+    "options": {
+      "path": "/workspace/xorchestrate-jev/experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/codex/state.sqlite"
+    }
+  },
+  "sessions": {
+    "native": {
+      "adapter": "codex",
+      "options": {
+        "command": [
+          "/workspace/jev-venv/bin/python",
+          "/workspace/xorchestrate-jev/experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/native_peer.py",
+          "codex"
+        ],
+        "env": {
+          "REVIEW_RESULTS": "/workspace/xorchestrate-jev/experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/codex/wire-results.jsonl",
+          "CLAUDE_STATE_DIR": "/workspace/xorchestrate-jev/experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/codex/claude-state"
+        },
+        "timeout": 5,
+        "application_tools": true
+      }
+    }
+  }
+}

@@ -1,0 +1,164 @@
+name: Jev failure correlation v2
+
+on:
+  push:
+    branches: [experiment/jev-failure-correlation-v2]
+    paths:
+      - 'experiments/jev_failure_correlation_v2/*.py'
+      - 'experiments/jev_failure_correlation_v2/data/**'
+      - 'experiments/jev_failure_correlation_v2/tests/**'
+      - '.github/workflows/jev-failure-correlation-v2.yml'
+  workflow_dispatch:
+    inputs:
+      live:
+        description: 'Run a new bounded Jev measurement using the repository secret'
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jev-v2-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.repository == 'xormania/xorchestrate' && github.ref == 'refs/heads/experiment/jev-failure-correlation-v2'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # The frozen product subject must be available for identity checks.
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Record exact hosted execution identity
+        run: |
+          mkdir -p experiment-results
+          python - <<'PY'
+          import json, os, platform, subprocess
+          from pathlib import Path
+          keys = ['GITHUB_SHA', 'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_REPOSITORY', 'GITHUB_WORKFLOW', 'GITHUB_EVENT_NAME']
+          context = {key: os.environ.get(key) for key in keys}
+          context.update(python=platform.python_version(), platform=platform.platform(),
+                         source_tree=subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip(),
+                         execution_route='github_hosted_offline',
+                         run_url=f"https://github.com/{context['GITHUB_REPOSITORY']}/actions/runs/{context['GITHUB_RUN_ID']}")
+          Path('experiment-results/actions-context.json').write_text(json.dumps(context, indent=2) + '\n')
+          PY
+      - name: Install declared dependencies and existing validator catalog
+        run: |
+          python -m pip install --disable-pip-version-check -e '.[test]'
+          mkdir -p .agents
+          cp -R reference/imported-agent-skills .agents/skills
+      - name: Validate v2 and frozen v1 experiment behavior
+        run: >-
+          python -m pytest experiments/jev_failure_correlation_v2/tests
+          experiments/jev_failure_correlation/tests experiments/jev_failure_correlation/test_corpus.py
+          -q --junitxml=experiment-results/experiment-tests.xml
+      - name: Verify established application behavior
+        run: python -m pytest tests/hexagonal -q --junitxml=experiment-results/hexagonal-tests.xml
+      - name: Execute independent deterministic corpus and boundary controls
+        run: python -m experiments.jev_failure_correlation_v2.corpus --out experiment-results/reproduced-corpus
+      - name: Prepare frozen manifest and execute offline policies
+        run: |
+          python -m experiments.jev_failure_correlation_v2.runner prepare --out experiment-results/offline
+          python -m experiments.jev_failure_correlation_v2.runner run --out experiment-results/offline
+          python -m experiments.jev_failure_correlation_v2.runner score --out experiment-results/offline
+      - name: Retain evidence even after an incomplete check
+        if: always()
+        id: artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: jev-v2-offline-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: experiment-results/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Record artifact identity
+        if: always()
+        env:
+          ARTIFACT_ID: ${{ steps.artifact.outputs.artifact-id }}
+          ARTIFACT_URL: ${{ steps.artifact.outputs.artifact-url }}
+          ARTIFACT_DIGEST: ${{ steps.artifact.outputs.artifact-digest }}
+        run: |
+          python - <<'PY'
+          import os
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
+              out.write('Offline validation only. Pending live arms are not passes.\n\n')
+              for key in ['ARTIFACT_ID', 'ARTIFACT_URL', 'ARTIFACT_DIGEST']:
+                  out.write(key + ': ' + os.environ.get(key, '') + '\n\n')
+          PY
+
+  hosted-live:
+    needs: validate
+    # Explicit marker supplies a pre-merge route when dispatch is not registered.
+    # Ordinary scoped source pushes validate without exposing the provider secret.
+    if: github.repository == 'xormania/xorchestrate' && github.ref == 'refs/heads/experiment/jev-failure-correlation-v2' && ((github.event_name == 'workflow_dispatch' && inputs.live) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[jev-v2-live]')))
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # The frozen product subject must be available for identity checks.
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Prepare hosted fallback
+        run: |
+          mkdir -p experiment-results
+          python -m pip install --disable-pip-version-check -e '.[test]'
+          mkdir -p .agents
+          cp -R reference/imported-agent-skills .agents/skills
+          python - <<'PY'
+          import json, os, platform, subprocess
+          from pathlib import Path
+          keys = ['GITHUB_SHA', 'GITHUB_RUN_ID', 'GITHUB_RUN_ATTEMPT', 'GITHUB_REPOSITORY']
+          context = {key: os.environ.get(key) for key in keys}
+          context.update(python=platform.python_version(), execution_route='github_hosted_api',
+                         source_tree=subprocess.check_output(['git', 'rev-parse', 'HEAD^{tree}'], text=True).strip(),
+                         run_url=f"https://github.com/{context['GITHUB_REPOSITORY']}/actions/runs/{context['GITHUB_RUN_ID']}")
+          Path('experiment-results/actions-context.json').write_text(json.dumps(context, indent=2) + '\n')
+          PY
+          python -m experiments.jev_failure_correlation_v2.runner prepare --out experiment-results/live
+      - name: Authenticated pinned-model smoke and bounded fresh Jev measurement
+        env:
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+        run: >-
+          python -m experiments.jev_failure_correlation_v2.runner run
+          --out experiment-results/live --live --ledger experiment-results/hosted-budget.json
+          --label-review experiments/jev_failure_correlation_v2/reviews/label-review.json
+      - name: Export pending native reasoning packets and replay available results
+        if: always()
+        run: |
+          if test -f experiment-results/live/manifest.json; then
+            python -m experiments.jev_failure_correlation_v2.runner export-reasoning --out experiment-results/live
+            python -m experiments.jev_failure_correlation_v2.runner score --out experiment-results/live
+          fi
+      - name: Retain all hosted measurement evidence
+        if: always()
+        id: artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: jev-v2-live-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: experiment-results/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Record hosted evidence identity
+        if: always()
+        env:
+          ARTIFACT_ID: ${{ steps.artifact.outputs.artifact-id }}
+          ARTIFACT_URL: ${{ steps.artifact.outputs.artifact-url }}
+          ARTIFACT_DIGEST: ${{ steps.artifact.outputs.artifact-digest }}
+        run: |
+          python - <<'PY'
+          import os
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
+              out.write('Fresh hosted Jev measurement. Native reasoning imports remain separate.\n\n')
+              for key in ['ARTIFACT_ID', 'ARTIFACT_URL', 'ARTIFACT_DIGEST']:
+                  out.write(key + ': ' + os.environ.get(key, '') + '\n\n')
+          PY

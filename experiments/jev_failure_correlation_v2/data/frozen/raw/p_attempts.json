@@ -1,0 +1,978 @@
+{
+  "boundary": "production receipt and normalizer; controlled durable-record substitution, not live misdelivery",
+  "records": [
+    {
+      "expectation": {
+        "case_id": "case",
+        "memory": "secret",
+        "nonce": "nonce",
+        "recipient": "grok",
+        "run_id": "run",
+        "sender": "codex"
+      },
+      "normalized": null,
+      "receipt": {
+        "claims": {
+          "received": true,
+          "responded": true,
+          "submitted": true,
+          "task_accepted": "not_measured",
+          "turn_completed": "not_measured"
+        },
+        "diagnostics": [],
+        "message_id": "m1",
+        "native_calls": [
+          {
+            "call_id": "0",
+            "completed": "obs-0-completed",
+            "incarnation": "codex-epoch",
+            "native": "obs-0-native",
+            "native_id": "codex-native",
+            "requested": "obs-0-requested",
+            "session_id": "codex-app"
+          },
+          {
+            "call_id": "1",
+            "completed": "obs-1-completed",
+            "incarnation": "grok-epoch",
+            "native": "obs-1-native",
+            "native_id": "grok-native",
+            "requested": "obs-1-requested",
+            "session_id": "grok-app"
+          },
+          {
+            "call_id": "2",
+            "completed": "obs-2-completed",
+            "incarnation": "codex-epoch",
+            "native": "obs-2-native",
+            "native_id": "codex-native",
+            "requested": "obs-2-requested",
+            "session_id": "codex-app"
+          }
+        ],
+        "receipt_evidence_id": "e1",
+        "reply_id": "m2",
+        "submissions": [
+          {
+            "attempt_id": "a0",
+            "incarnation": "grok-epoch",
+            "native_id": "grok-native",
+            "session_id": "grok-app"
+          },
+          {
+            "attempt_id": "a1",
+            "incarnation": "codex-epoch",
+            "native_id": "codex-native",
+            "session_id": "codex-app"
+          }
+        ],
+        "verified": true
+      },
+      "snapshot": {
+        "all_attempts": [
+          {
+            "id": "a0",
+            "incarnation": "grok-epoch",
+            "message_id": "m1",
+            "native_id": "grok-native",
+            "origin": "adapter",
+            "recipient": "grok",
+            "sequence": 1,
+            "session_id": "grok-app",
+            "status": "submitted",
+            "submission": {
+              "submitted": true
+            }
+          },
+          {
+            "id": "a1",
+            "incarnation": "codex-epoch",
+            "message_id": "m2",
+            "native_id": "codex-native",
+            "origin": "adapter",
+            "recipient": "codex",
+            "sequence": 1,
+            "session_id": "codex-app",
+            "status": "submitted",
+            "submission": {
+              "submitted": true
+            }
+          }
+        ],
+        "attempts": [
+          {
+            "id": "a0",
+            "incarnation": "grok-epoch",
+            "message_id": "m1",
+            "native_id": "grok-native",
+            "origin": "adapter",
+            "recipient": "grok",
+            "sequence": 1,
+            "session_id": "grok-app",
+            "status": "submitted",
+            "submission": {
+              "submitted": true
+            }
+          }
+        ],
+        "evidence": [
+          {
+            "created_at": "3",
+            "id": "e1",
+            "result": {
+              "verification": {
+                "case_id": "case",
+                "memory": "secret",
+                "nonce": "nonce",
+                "peer": "grok",
+                "phase": "received",
+                "run_id": "run"
+              }
+            },
+            "source": {
+              "actor": "codex",
+              "type": "caller"
+            },
+            "work_id": "w"
+          }
+        ],
+        "message": {
+          "body": {
+            "verification": {
+              "case_id": "case",
+              "kind": "challenge",
+              "memory": "",
+              "nonce": "nonce",
+              "run_id": "run"
+            }
+          },
+          "created_at": "1",
+          "id": "m1",
+          "recipients": [
+            "grok"
+          ],
+          "sender": "codex",
+          "work_id": "w"
+        },
+        "messages": [
+          {
+            "body": {
+              "verification": {
+                "case_id": "case",
+                "kind": "challenge",
+                "memory": "",
+                "nonce": "nonce",
+                "run_id": "run"
+              }
+            },
+            "created_at": "1",
+            "id": "m1",
+            "recipients": [
+              "grok"
+            ],
+            "sender": "codex",
+            "work_id": "w"
+          },
+          {
+            "body": {
+              "verification": {
+                "case_id": "case",
+                "kind": "reply",
+                "memory": "secret",
+                "nonce": "nonce",
+                "run_id": "run"
+              }
+            },
+            "created_at": "2",
+            "id": "m2",
+            "recipients": [
+              "codex"
+            ],
+            "sender": "grok",
+            "work_id": "w"
+          }
+        ],
+        "observations": [
+          {
+            "id": "obs-0-native",
+            "observation": {
+              "action": "send_message",
+              "arguments": {
+                "body": {
+                  "verification": {
+                    "case_id": "case",
+                    "kind": "challenge",
+                    "memory": "",
+                    "nonce": "nonce",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "call_id": "0",
+              "incarnation": "codex-epoch",
+              "kind": "native_tool_call",
+              "native_id": "codex-native",
+              "source": "codex"
+            },
+            "origin": "adapter",
+            "session_id": "codex-app",
+            "stale": false
+          },
+          {
+            "id": "obs-0-requested",
+            "observation": {
+              "action": "send_message",
+              "arguments": {
+                "body": {
+                  "verification": {
+                    "case_id": "case",
+                    "kind": "challenge",
+                    "memory": "",
+                    "nonce": "nonce",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "call_id": "0",
+              "incarnation": "codex-epoch",
+              "native_id": "codex-native",
+              "phase": "requested"
+            },
+            "origin": "adapter",
+            "session_id": "codex-app",
+            "stale": false
+          },
+          {
+            "id": "obs-0-completed",
+            "observation": {
+              "action": "send_message",
+              "arguments": {
+                "body": {
+                  "verification": {
+                    "case_id": "case",
+                    "kind": "challenge",
+                    "memory": "",
+                    "nonce": "nonce",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "call_id": "0",
+              "incarnation": "codex-epoch",
+              "native_id": "codex-native",
+              "phase": "completed",
+              "result": {
+                "message": {
+                  "body": {
+                    "verification": {
+                      "case_id": "case",
+                      "kind": "challenge",
+                      "memory": "",
+                      "nonce": "nonce",
+                      "run_id": "run"
+                    }
+                  },
+                  "created_at": "1",
+                  "id": "m1",
+                  "recipients": [
+                    "grok"
+                  ],
+                  "sender": "codex",
+                  "work_id": "w"
+                }
+              }
+            },
+            "origin": "adapter",
+            "session_id": "codex-app",
+            "stale": false
+          },
+          {
+            "id": "obs-1-native",
+            "observation": {
+              "action": "send_message",
+              "arguments": {
+                "body": {
+                  "verification": {
+                    "case_id": "case",
+                    "kind": "reply",
+                    "memory": "secret",
+                    "nonce": "nonce",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "call_id": "1",
+              "incarnation": "grok-epoch",
+              "kind": "native_tool_call",
+              "native_id": "grok-native",
+              "source": "grok"
+            },
+            "origin": "adapter",
+            "session_id": "grok-app",
+            "stale": false
+          },
+          {
+            "id": "obs-1-requested",
+            "observation": {
+              "action": "send_message",
+              "arguments": {
+                "body": {
+                  "verification": {
+                    "case_id": "case",
+                    "kind": "reply",
+                    "memory": "secret",
+                    "nonce": "nonce",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "call_id": "1",
+              "incarnation": "grok-epoch",
+              "native_id": "grok-native",
+              "phase": "requested"
+            },
+            "origin": "adapter",
+            "session_id": "grok-app",
+            "stale": false
+          },
+          {
+            "id": "obs-1-completed",
+            "observation": {
+              "action": "send_message",
+              "arguments": {
+                "body": {
+                  "verification": {
+                    "case_id": "case",
+                    "kind": "reply",
+                    "memory": "secret",
+                    "nonce": "nonce",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "call_id": "1",
+              "incarnation": "grok-epoch",
+              "native_id": "grok-native",
+              "phase": "completed",
+              "result": {
+                "message": {
+                  "body": {
+                    "verification": {
+                      "case_id": "case",
+                      "kind": "reply",
+                      "memory": "secret",
+                      "nonce": "nonce",
+                      "run_id": "run"
+                    }
+                  },
+                  "created_at": "2",
+                  "id": "m2",
+                  "recipients": [
+                    "codex"
+                  ],
+                  "sender": "grok",
+                  "work_id": "w"
+                }
+              }
+            },
+            "origin": "adapter",
+            "session_id": "grok-app",
+            "stale": false
+          },
+          {
+            "id": "obs-2-native",
+            "observation": {
+              "action": "record_result",
+              "arguments": {
+                "result": {
+                  "verification": {
+                    "case_id": "case",
+                    "memory": "secret",
+                    "nonce": "nonce",
+                    "peer": "grok",
+                    "phase": "received",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "call_id": "2",
+              "incarnation": "codex-epoch",
+              "kind": "native_tool_call",
+              "native_id": "codex-native",
+              "source": "codex"
+            },
+            "origin": "adapter",
+            "session_id": "codex-app",
+            "stale": false
+          },
+          {
+            "id": "obs-2-requested",
+            "observation": {
+              "action": "record_result",
+              "arguments": {
+                "result": {
+                  "verification": {
+                    "case_id": "case",
+                    "memory": "secret",
+                    "nonce": "nonce",
+                    "peer": "grok",
+                    "phase": "received",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "call_id": "2",
+              "incarnation": "codex-epoch",
+              "native_id": "codex-native",
+              "phase": "requested"
+            },
+            "origin": "adapter",
+            "session_id": "codex-app",
+            "stale": false
+          },
+          {
+            "id": "obs-2-completed",
+            "observation": {
+              "action": "record_result",
+              "arguments": {
+                "result": {
+                  "verification": {
+                    "case_id": "case",
+                    "memory": "secret",
+                    "nonce": "nonce",
+                    "peer": "grok",
+                    "phase": "received",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "call_id": "2",
+              "incarnation": "codex-epoch",
+              "native_id": "codex-native",
+              "phase": "completed",
+              "result": {
+                "evidence": {
+                  "created_at": "3",
+                  "id": "e1",
+                  "result": {
+                    "verification": {
+                      "case_id": "case",
+                      "memory": "secret",
+                      "nonce": "nonce",
+                      "peer": "grok",
+                      "phase": "received",
+                      "run_id": "run"
+                    }
+                  },
+                  "source": {
+                    "actor": "codex",
+                    "type": "caller"
+                  },
+                  "work_id": "w"
+                }
+              }
+            },
+            "origin": "adapter",
+            "session_id": "codex-app",
+            "stale": false
+          }
+        ],
+        "sessions": [
+          {
+            "actor_id": "codex",
+            "backend": {
+              "incarnation": "codex-epoch",
+              "native_id": "codex-native"
+            },
+            "id": "codex-app"
+          },
+          {
+            "actor_id": "grok",
+            "backend": {
+              "incarnation": "grok-epoch",
+              "native_id": "grok-native"
+            },
+            "id": "grok-app"
+          }
+        ]
+      }
+    },
+    {
+      "expectation": {
+        "case_id": "case",
+        "memory": "secret",
+        "nonce": "nonce",
+        "recipient": "grok",
+        "run_id": "run",
+        "sender": "codex"
+      },
+      "normalized": null,
+      "receipt": {
+        "diagnostics": [
+          "native_submission_missing"
+        ],
+        "verified": false
+      },
+      "snapshot": {
+        "all_attempts": [
+          {
+            "id": "a0",
+            "incarnation": "grok-epoch",
+            "message_id": "m1",
+            "native_id": "grok-native",
+            "origin": "adapter",
+            "recipient": "grok",
+            "sequence": 1,
+            "session_id": "grok-app",
+            "status": "submitted",
+            "submission": {
+              "submitted": true
+            }
+          },
+          {
+            "id": "a1",
+            "incarnation": "codex-epoch",
+            "message_id": "m2",
+            "native_id": "codex-native",
+            "origin": "adapter",
+            "recipient": "codex",
+            "sequence": 1,
+            "session_id": "codex-app",
+            "status": "submitted",
+            "submission": {
+              "submitted": true
+            }
+          },
+          {
+            "id": "later-attempt",
+            "incarnation": "grok-epoch",
+            "message_id": "m1",
+            "native_id": "grok-native",
+            "origin": "adapter",
+            "recipient": "grok",
+            "sequence": 2,
+            "session_id": "grok-app",
+            "status": "unknown",
+            "submission": {
+              "submitted": true
+            }
+          }
+        ],
+        "attempts": [
+          {
+            "id": "a0",
+            "incarnation": "grok-epoch",
+            "message_id": "m1",
+            "native_id": "grok-native",
+            "origin": "adapter",
+            "recipient": "grok",
+            "sequence": 1,
+            "session_id": "grok-app",
+            "status": "submitted",
+            "submission": {
+              "submitted": true
+            }
+          }
+        ],
+        "evidence": [
+          {
+            "created_at": "3",
+            "id": "e1",
+            "result": {
+              "verification": {
+                "case_id": "case",
+                "memory": "secret",
+                "nonce": "nonce",
+                "peer": "grok",
+                "phase": "received",
+                "run_id": "run"
+              }
+            },
+            "source": {
+              "actor": "codex",
+              "type": "caller"
+            },
+            "work_id": "w"
+          }
+        ],
+        "message": {
+          "body": {
+            "verification": {
+              "case_id": "case",
+              "kind": "challenge",
+              "memory": "",
+              "nonce": "nonce",
+              "run_id": "run"
+            }
+          },
+          "created_at": "1",
+          "id": "m1",
+          "recipients": [
+            "grok"
+          ],
+          "sender": "codex",
+          "work_id": "w"
+        },
+        "messages": [
+          {
+            "body": {
+              "verification": {
+                "case_id": "case",
+                "kind": "challenge",
+                "memory": "",
+                "nonce": "nonce",
+                "run_id": "run"
+              }
+            },
+            "created_at": "1",
+            "id": "m1",
+            "recipients": [
+              "grok"
+            ],
+            "sender": "codex",
+            "work_id": "w"
+          },
+          {
+            "body": {
+              "verification": {
+                "case_id": "case",
+                "kind": "reply",
+                "memory": "secret",
+                "nonce": "nonce",
+                "run_id": "run"
+              }
+            },
+            "created_at": "2",
+            "id": "m2",
+            "recipients": [
+              "codex"
+            ],
+            "sender": "grok",
+            "work_id": "w"
+          }
+        ],
+        "observations": [
+          {
+            "id": "obs-0-native",
+            "observation": {
+              "action": "send_message",
+              "arguments": {
+                "body": {
+                  "verification": {
+                    "case_id": "case",
+                    "kind": "challenge",
+                    "memory": "",
+                    "nonce": "nonce",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "call_id": "0",
+              "incarnation": "codex-epoch",
+              "kind": "native_tool_call",
+              "native_id": "codex-native",
+              "source": "codex"
+            },
+            "origin": "adapter",
+            "session_id": "codex-app",
+            "stale": false
+          },
+          {
+            "id": "obs-0-requested",
+            "observation": {
+              "action": "send_message",
+              "arguments": {
+                "body": {
+                  "verification": {
+                    "case_id": "case",
+                    "kind": "challenge",
+                    "memory": "",
+                    "nonce": "nonce",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "call_id": "0",
+              "incarnation": "codex-epoch",
+              "native_id": "codex-native",
+              "phase": "requested"
+            },
+            "origin": "adapter",
+            "session_id": "codex-app",
+            "stale": false
+          },
+          {
+            "id": "obs-0-completed",
+            "observation": {
+              "action": "send_message",
+              "arguments": {
+                "body": {
+                  "verification": {
+                    "case_id": "case",
+                    "kind": "challenge",
+                    "memory": "",
+                    "nonce": "nonce",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "call_id": "0",
+              "incarnation": "codex-epoch",
+              "native_id": "codex-native",
+              "phase": "completed",
+              "result": {
+                "message": {
+                  "body": {
+                    "verification": {
+                      "case_id": "case",
+                      "kind": "challenge",
+                      "memory": "",
+                      "nonce": "nonce",
+                      "run_id": "run"
+                    }
+                  },
+                  "created_at": "1",
+                  "id": "m1",
+                  "recipients": [
+                    "grok"
+                  ],
+                  "sender": "codex",
+                  "work_id": "w"
+                }
+              }
+            },
+            "origin": "adapter",
+            "session_id": "codex-app",
+            "stale": false
+          },
+          {
+            "id": "obs-1-native",
+            "observation": {
+              "action": "send_message",
+              "arguments": {
+                "body": {
+                  "verification": {
+                    "case_id": "case",
+                    "kind": "reply",
+                    "memory": "secret",
+                    "nonce": "nonce",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "call_id": "1",
+              "incarnation": "grok-epoch",
+              "kind": "native_tool_call",
+              "native_id": "grok-native",
+              "source": "grok"
+            },
+            "origin": "adapter",
+            "session_id": "grok-app",
+            "stale": false
+          },
+          {
+            "id": "obs-1-requested",
+            "observation": {
+              "action": "send_message",
+              "arguments": {
+                "body": {
+                  "verification": {
+                    "case_id": "case",
+                    "kind": "reply",
+                    "memory": "secret",
+                    "nonce": "nonce",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "call_id": "1",
+              "incarnation": "grok-epoch",
+              "native_id": "grok-native",
+              "phase": "requested"
+            },
+            "origin": "adapter",
+            "session_id": "grok-app",
+            "stale": false
+          },
+          {
+            "id": "obs-1-completed",
+            "observation": {
+              "action": "send_message",
+              "arguments": {
+                "body": {
+                  "verification": {
+                    "case_id": "case",
+                    "kind": "reply",
+                    "memory": "secret",
+                    "nonce": "nonce",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "call_id": "1",
+              "incarnation": "grok-epoch",
+              "native_id": "grok-native",
+              "phase": "completed",
+              "result": {
+                "message": {
+                  "body": {
+                    "verification": {
+                      "case_id": "case",
+                      "kind": "reply",
+                      "memory": "secret",
+                      "nonce": "nonce",
+                      "run_id": "run"
+                    }
+                  },
+                  "created_at": "2",
+                  "id": "m2",
+                  "recipients": [
+                    "codex"
+                  ],
+                  "sender": "grok",
+                  "work_id": "w"
+                }
+              }
+            },
+            "origin": "adapter",
+            "session_id": "grok-app",
+            "stale": false
+          },
+          {
+            "id": "obs-2-native",
+            "observation": {
+              "action": "record_result",
+              "arguments": {
+                "result": {
+                  "verification": {
+                    "case_id": "case",
+                    "memory": "secret",
+                    "nonce": "nonce",
+                    "peer": "grok",
+                    "phase": "received",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "call_id": "2",
+              "incarnation": "codex-epoch",
+              "kind": "native_tool_call",
+              "native_id": "codex-native",
+              "source": "codex"
+            },
+            "origin": "adapter",
+            "session_id": "codex-app",
+            "stale": false
+          },
+          {
+            "id": "obs-2-requested",
+            "observation": {
+              "action": "record_result",
+              "arguments": {
+                "result": {
+                  "verification": {
+                    "case_id": "case",
+                    "memory": "secret",
+                    "nonce": "nonce",
+                    "peer": "grok",
+                    "phase": "received",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "call_id": "2",
+              "incarnation": "codex-epoch",
+              "native_id": "codex-native",
+              "phase": "requested"
+            },
+            "origin": "adapter",
+            "session_id": "codex-app",
+            "stale": false
+          },
+          {
+            "id": "obs-2-completed",
+            "observation": {
+              "action": "record_result",
+              "arguments": {
+                "result": {
+                  "verification": {
+                    "case_id": "case",
+                    "memory": "secret",
+                    "nonce": "nonce",
+                    "peer": "grok",
+                    "phase": "received",
+                    "run_id": "run"
+                  }
+                },
+                "work_id": "w"
+              },
+              "call_id": "2",
+              "incarnation": "codex-epoch",
+              "native_id": "codex-native",
+              "phase": "completed",
+              "result": {
+                "evidence": {
+                  "created_at": "3",
+                  "id": "e1",
+                  "result": {
+                    "verification": {
+                      "case_id": "case",
+                      "memory": "secret",
+                      "nonce": "nonce",
+                      "peer": "grok",
+                      "phase": "received",
+                      "run_id": "run"
+                    }
+                  },
+                  "source": {
+                    "actor": "codex",
+                    "type": "caller"
+                  },
+                  "work_id": "w"
+                }
+              }
+            },
+            "origin": "adapter",
+            "session_id": "codex-app",
+            "stale": false
+          }
+        ],
+        "sessions": [
+          {
+            "actor_id": "codex",
+            "backend": {
+              "incarnation": "codex-epoch",
+              "native_id": "codex-native"
+            },
+            "id": "codex-app"
+          },
+          {
+            "actor_id": "grok",
+            "backend": {
+              "incarnation": "grok-epoch",
+              "native_id": "grok-native"
+            },
+            "id": "grok-app"
+          }
+        ]
+      }
+    }
+  ]
+}

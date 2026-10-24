@@ -1,0 +1,12 @@
+{
+  "native_exact_raw_bindings": 22,
+  "conditions": {
+    "reasoning_only": 11,
+    "fallback": 11
+  },
+  "distinct_invocations": 22,
+  "observed_configuration_unknown": true,
+  "e2e_raw_bindings": 23,
+  "e2e_all_correct": true,
+  "e2e_groups": 1
+}

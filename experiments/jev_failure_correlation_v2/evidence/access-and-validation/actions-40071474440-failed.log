@@ -1,0 +1,238 @@
+validate	Validate v2 and frozen v1 experiment behavior	﻿2026-10-24T06:45:52.4446175Z ##[group]Run python -m pytest experiments/jev_failure_correlation_v2/tests experiments/jev_failure_correlation/tests experiments/jev_failure_correlation/test_corpus.py -q --junitxml=experiment-results/experiment-tests.xml
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:52.4447828Z [36;1mpython -m pytest experiments/jev_failure_correlation_v2/tests experiments/jev_failure_correlation/tests experiments/jev_failure_correlation/test_corpus.py -q --junitxml=experiment-results/experiment-tests.xml[0m
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:52.4512474Z shell: /usr/bin/bash -e {0}
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:52.4512733Z env:
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:52.4512997Z   pythonLocation: /opt/hostedtoolcache/Python/3.12.15/x64
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:52.4513443Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.12.15/x64/lib/pkgconfig
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:52.4513875Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:52.4514262Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:52.4514638Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.12.15/x64
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:52.4515070Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.12.15/x64/lib
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:52.4515392Z ##[endgroup]
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:54.6046526Z .....FFFFFFFF.........................F................................. [ 71%]
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0807629Z .............................                                    [100%]
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0808480Z =================================== FAILURES ===================================
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0809732Z _ test_selected_boundary_executes_both_healthy_and_intended_fault[p_arguments] _
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0810372Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0810560Z probe_id = 'p_arguments'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0811281Z tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_selected_boundary_execute0')
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0811914Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0812202Z     @pytest.mark.parametrize("probe_id", sorted(PROBES))
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0813508Z     def test_selected_boundary_executes_both_healthy_and_intended_fault(probe_id, tmp_path):
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0814344Z         cases = load_corpus()
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0814829Z         for variant in ("healthy", "fault"):
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0815576Z             case = next(c for c in cases if c["probe_id"] == probe_id and c["scenario"] == variant)
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0816454Z             result = execute_probe(case, probe_id, tmp_path / variant)
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0817071Z >           assert result["status"] == "executed", result
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0818012Z E           AssertionError: {'probe_id': 'p_arguments', 'case_id': 'c5dd2167f348a', 'status': 'not_exercised', 'exercised': False, ...}
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0818897Z E           assert 'not_exercised' == 'executed'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0819585Z E             
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0819911Z E             - executed
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0820259Z E             + not_exercised
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0820519Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0820916Z experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py:87: AssertionError
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0821817Z _ test_selected_boundary_executes_both_healthy_and_intended_fault[p_assertion] _
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0822360Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0822501Z probe_id = 'p_assertion'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0823111Z tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_selected_boundary_execute1')
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0823659Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0823883Z     @pytest.mark.parametrize("probe_id", sorted(PROBES))
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0824638Z     def test_selected_boundary_executes_both_healthy_and_intended_fault(probe_id, tmp_path):
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0825343Z         cases = load_corpus()
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0825732Z         for variant in ("healthy", "fault"):
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0826388Z             case = next(c for c in cases if c["probe_id"] == probe_id and c["scenario"] == variant)
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0827139Z             result = execute_probe(case, probe_id, tmp_path / variant)
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0827725Z >           assert result["status"] == "executed", result
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0828621Z E           AssertionError: {'probe_id': 'p_assertion', 'case_id': 'c4ac02ef39bfc', 'status': 'not_exercised', 'exercised': False, ...}
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0830133Z E           assert 'not_exercised' == 'executed'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0830545Z E             
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0830832Z E             - executed
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0831159Z E             + not_exercised
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0831389Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0831766Z experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py:87: AssertionError
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0832624Z _ test_selected_boundary_executes_both_healthy_and_intended_fault[p_attempts] __
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0833110Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0833238Z probe_id = 'p_attempts'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0833799Z tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_selected_boundary_execute2')
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0834310Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0834527Z     @pytest.mark.parametrize("probe_id", sorted(PROBES))
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0835260Z     def test_selected_boundary_executes_both_healthy_and_intended_fault(probe_id, tmp_path):
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0835936Z         cases = load_corpus()
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0836311Z         for variant in ("healthy", "fault"):
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0836949Z             case = next(c for c in cases if c["probe_id"] == probe_id and c["scenario"] == variant)
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0837694Z             result = execute_probe(case, probe_id, tmp_path / variant)
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0838278Z >           assert result["status"] == "executed", result
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0839153Z E           AssertionError: {'probe_id': 'p_attempts', 'case_id': 'caeff6c6c4681', 'status': 'not_exercised', 'exercised': False, ...}
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0840192Z E           assert 'not_exercised' == 'executed'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0840609Z E             
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0840902Z E             - executed
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0841248Z E             + not_exercised
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0841812Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0842183Z experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py:87: AssertionError
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0843052Z _ test_selected_boundary_executes_both_healthy_and_intended_fault[p_authority] _
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0843569Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0843709Z probe_id = 'p_authority'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0844296Z tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_selected_boundary_execute3')
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0844797Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0845018Z     @pytest.mark.parametrize("probe_id", sorted(PROBES))
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0845743Z     def test_selected_boundary_executes_both_healthy_and_intended_fault(probe_id, tmp_path):
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0846429Z         cases = load_corpus()
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0846812Z         for variant in ("healthy", "fault"):
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0847426Z             case = next(c for c in cases if c["probe_id"] == probe_id and c["scenario"] == variant)
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0848161Z             result = execute_probe(case, probe_id, tmp_path / variant)
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0848745Z >           assert result["status"] == "executed", result
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0849814Z E           AssertionError: {'probe_id': 'p_authority', 'case_id': 'c85b37db76aaa', 'status': 'not_exercised', 'exercised': False, ...}
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0850676Z E           assert 'not_exercised' == 'executed'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0851092Z E             
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0851387Z E             - executed
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0851719Z E             + not_exercised
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0851966Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0852329Z experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py:87: AssertionError
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0853239Z ___ test_selected_boundary_executes_both_healthy_and_intended_fault[p_busy] ____
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0853726Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0853862Z probe_id = 'p_busy'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0854413Z tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_selected_boundary_execute4')
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0854916Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0855133Z     @pytest.mark.parametrize("probe_id", sorted(PROBES))
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0855874Z     def test_selected_boundary_executes_both_healthy_and_intended_fault(probe_id, tmp_path):
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0856758Z         cases = load_corpus()
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0857142Z         for variant in ("healthy", "fault"):
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0857769Z             case = next(c for c in cases if c["probe_id"] == probe_id and c["scenario"] == variant)
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0858500Z             result = execute_probe(case, probe_id, tmp_path / variant)
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0859076Z >           assert result["status"] == "executed", result
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0860147Z E           AssertionError: {'probe_id': 'p_busy', 'case_id': 'cabe25ecf8ef4', 'status': 'not_exercised', 'exercised': False, ...}
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0860973Z E           assert 'not_exercised' == 'executed'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0861374Z E             
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0861669Z E             - executed
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0862090Z E             + not_exercised
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0862332Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0862701Z experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py:87: AssertionError
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0863554Z __ test_selected_boundary_executes_both_healthy_and_intended_fault[p_context] __
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0864033Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0864170Z probe_id = 'p_context'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0864734Z tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_selected_boundary_execute5')
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0865236Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0865463Z     @pytest.mark.parametrize("probe_id", sorted(PROBES))
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0866213Z     def test_selected_boundary_executes_both_healthy_and_intended_fault(probe_id, tmp_path):
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0866892Z         cases = load_corpus()
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0867284Z         for variant in ("healthy", "fault"):
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0867905Z             case = next(c for c in cases if c["probe_id"] == probe_id and c["scenario"] == variant)
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0868638Z             result = execute_probe(case, probe_id, tmp_path / variant)
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0869614Z >           assert result["status"] == "executed", result
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0870478Z E           AssertionError: {'probe_id': 'p_context', 'case_id': 'c8b932080dc3e', 'status': 'not_exercised', 'exercised': False, ...}
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0871331Z E           assert 'not_exercised' == 'executed'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0871746Z E             
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0872035Z E             - executed
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0872358Z E             + not_exercised
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0872584Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0872944Z experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py:87: AssertionError
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0873782Z __ test_selected_boundary_executes_both_healthy_and_intended_fault[p_effect] ___
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0874270Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0874399Z probe_id = 'p_effect'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0874951Z tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_selected_boundary_execute6')
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0875460Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0875678Z     @pytest.mark.parametrize("probe_id", sorted(PROBES))
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0876398Z     def test_selected_boundary_executes_both_healthy_and_intended_fault(probe_id, tmp_path):
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0877071Z         cases = load_corpus()
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0877452Z         for variant in ("healthy", "fault"):
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0878066Z             case = next(c for c in cases if c["probe_id"] == probe_id and c["scenario"] == variant)
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0878802Z             result = execute_probe(case, probe_id, tmp_path / variant)
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0879562Z >           assert result["status"] == "executed", result
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0880407Z E           AssertionError: {'probe_id': 'p_effect', 'case_id': 'c0fb9a45eb2da', 'status': 'not_exercised', 'exercised': False, ...}
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0881245Z E           assert 'not_exercised' == 'executed'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0881662Z E             
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0881960Z E             - executed
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0882305Z E             + not_exercised
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0882551Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0882938Z experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py:87: AssertionError
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0883847Z __ test_selected_boundary_executes_both_healthy_and_intended_fault[p_replay] ___
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0884542Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0884692Z probe_id = 'p_replay'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0885271Z tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_selected_boundary_execute7')
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0885810Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0886044Z     @pytest.mark.parametrize("probe_id", sorted(PROBES))
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0886797Z     def test_selected_boundary_executes_both_healthy_and_intended_fault(probe_id, tmp_path):
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0887479Z         cases = load_corpus()
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0887862Z         for variant in ("healthy", "fault"):
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0888495Z             case = next(c for c in cases if c["probe_id"] == probe_id and c["scenario"] == variant)
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0889427Z             result = execute_probe(case, probe_id, tmp_path / variant)
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0890026Z >           assert result["status"] == "executed", result
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0890889Z E           AssertionError: {'probe_id': 'p_replay', 'case_id': 'c5af5e427a2f3', 'status': 'not_exercised', 'exercised': False, ...}
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0891760Z E           assert 'not_exercised' == 'executed'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0892172Z E             
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0892466Z E             - executed
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0892796Z E             + not_exercised
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0893023Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0893394Z experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py:87: AssertionError
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0894249Z ____ test_end_to_end_action_changes_real_acceptance_and_has_healthy_control ____
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0894729Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0895091Z tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_end_to_end_action_changes0')
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.0895599Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1007466Z     def test_end_to_end_action_changes_real_acceptance_and_has_healthy_control(tmp_path):
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1008736Z         from experiments.jev_failure_correlation_v2.probes import execute_action
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1009625Z         cases = load_corpus()
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1010280Z         fault = next(c for c in cases if c["probe_id"] == "p_context" and c["scenario"] == "fault")
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1011199Z         healthy = next(c for c in cases if c["probe_id"] == "p_context" and c["scenario"] == "healthy")
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1012004Z >       a = execute_action(fault, "accept", tmp_path / "false_accept")
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1012620Z             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1012996Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1013362Z experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py:118: 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1014132Z _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1014907Z experiments/jev_failure_correlation_v2/probes.py:406: in execute_action
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1015605Z     assert_subject_identity()
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1016122Z _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1016543Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1016728Z     def assert_subject_identity():
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1017399Z         """Refuse to attribute changed application/test dependencies to frozen d2."""
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1018222Z         paths = ["xorchestrate", "tests", "scripts", "devtools"]
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1019054Z         result = subprocess.run(["git", "diff", "--quiet", PRODUCT_COMMIT, "--", *paths],
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1020098Z                                 cwd=ROOT, capture_output=True, timeout=10)
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1020698Z         if result.returncode != 0:
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1021888Z >           raise RuntimeError("Frozen product subject differs or identity check failed; use an explicitly pinned checkout instead of attributing changed code to d2.")
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1023755Z E           RuntimeError: Frozen product subject differs or identity check failed; use an explicitly pinned checkout instead of attributing changed code to d2.
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1024741Z 
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1025075Z experiments/jev_failure_correlation_v2/probes.py:245: RuntimeError
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1026036Z =========================== short test summary info ============================
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1028094Z FAILED experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py::test_selected_boundary_executes_both_healthy_and_intended_fault[p_arguments] - AssertionError: {'probe_id': 'p_arguments', 'case_id': 'c5dd2167f348a', 'status': 'not_exercised', 'exercised': False, ...}
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1030151Z assert 'not_exercised' == 'executed'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1030600Z   
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1030893Z   - executed
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1031218Z   + not_exercised
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1032972Z FAILED experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py::test_selected_boundary_executes_both_healthy_and_intended_fault[p_assertion] - AssertionError: {'probe_id': 'p_assertion', 'case_id': 'c4ac02ef39bfc', 'status': 'not_exercised', 'exercised': False, ...}
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1034854Z assert 'not_exercised' == 'executed'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1035294Z   
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1035585Z   - executed
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1035905Z   + not_exercised
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1037650Z FAILED experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py::test_selected_boundary_executes_both_healthy_and_intended_fault[p_attempts] - AssertionError: {'probe_id': 'p_attempts', 'case_id': 'caeff6c6c4681', 'status': 'not_exercised', 'exercised': False, ...}
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1039715Z assert 'not_exercised' == 'executed'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1040147Z   
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1040434Z   - executed
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1065304Z   + not_exercised
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1067097Z FAILED experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py::test_selected_boundary_executes_both_healthy_and_intended_fault[p_authority] - AssertionError: {'probe_id': 'p_authority', 'case_id': 'c85b37db76aaa', 'status': 'not_exercised', 'exercised': False, ...}
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1069092Z assert 'not_exercised' == 'executed'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1069703Z   
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1069960Z   - executed
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1070234Z   + not_exercised
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1071638Z FAILED experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py::test_selected_boundary_executes_both_healthy_and_intended_fault[p_busy] - AssertionError: {'probe_id': 'p_busy', 'case_id': 'cabe25ecf8ef4', 'status': 'not_exercised', 'exercised': False, ...}
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1073097Z assert 'not_exercised' == 'executed'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1073445Z   
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1073679Z   - executed
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1073937Z   + not_exercised
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1075487Z FAILED experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py::test_selected_boundary_executes_both_healthy_and_intended_fault[p_context] - AssertionError: {'probe_id': 'p_context', 'case_id': 'c8b932080dc3e', 'status': 'not_exercised', 'exercised': False, ...}
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1077275Z assert 'not_exercised' == 'executed'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1077683Z   
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1077948Z   - executed
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1078242Z   + not_exercised
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1080004Z FAILED experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py::test_selected_boundary_executes_both_healthy_and_intended_fault[p_effect] - AssertionError: {'probe_id': 'p_effect', 'case_id': 'c0fb9a45eb2da', 'status': 'not_exercised', 'exercised': False, ...}
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1081660Z assert 'not_exercised' == 'executed'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1082033Z   
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1082318Z   - executed
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1082634Z   + not_exercised
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1084357Z FAILED experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py::test_selected_boundary_executes_both_healthy_and_intended_fault[p_replay] - AssertionError: {'probe_id': 'p_replay', 'case_id': 'c5af5e427a2f3', 'status': 'not_exercised', 'exercised': False, ...}
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1086186Z assert 'not_exercised' == 'executed'
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1086617Z   
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1086910Z   - executed
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1087259Z   + not_exercised
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1089544Z FAILED experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py::test_end_to_end_action_changes_real_acceptance_and_has_healthy_control - RuntimeError: Frozen product subject differs or identity check failed; use an explicitly pinned checkout instead of attributing changed code to d2.
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1091641Z 9 failed, 92 passed, 8 subtests passed in 4.37s
+validate	Validate v2 and frozen v1 experiment behavior	2026-10-24T06:45:57.1386090Z ##[error]Process completed with exit code 1.

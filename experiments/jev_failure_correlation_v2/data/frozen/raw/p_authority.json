@@ -1,0 +1,112 @@
+{
+  "boundary": "real FIFO bridge / native callback observation / controlled native port",
+  "records": [
+    {
+      "callbacks": [
+        {
+          "arguments": {
+            "value": "old-work"
+          },
+          "client": "first",
+          "context": {
+            "action": "echo",
+            "actor": "old-actor",
+            "call_id": "observed-old-call",
+            "host_id": "46e15ae8970b46c4b6d515dd09f27159",
+            "incarnation": "272d0498a1c8423bb70eeb4aa060eb2d",
+            "native_id": "controlled-conversation",
+            "native_incarnation": "native-incarnation",
+            "session_id": "old-session",
+            "work_id": "old-work"
+          }
+        }
+      ],
+      "case": "bridge_callback_control",
+      "cleanup": {
+        "client_sessions_remaining": 0,
+        "endpoint_exists": false,
+        "host_closed": true,
+        "native_closed": true,
+        "open_host_peers": 0
+      },
+      "defect_reproduced": false,
+      "new_incarnation": null,
+      "old_incarnation": "272d0498a1c8423bb70eeb4aa060eb2d",
+      "old_observation": {
+        "action": "echo",
+        "arguments": {
+          "value": "old-work"
+        },
+        "at": "2026-10-24T06:37:39.100447+00:00",
+        "bridge_bound": true,
+        "bridge_identity_conflict": false,
+        "call_id": "observed-old-call",
+        "host_id": "46e15ae8970b46c4b6d515dd09f27159",
+        "incarnation": "272d0498a1c8423bb70eeb4aa060eb2d",
+        "kind": "native_tool_call",
+        "native_id": "controlled-conversation",
+        "native_incarnation": "native-incarnation",
+        "sequence": 1
+      },
+      "send_outcome": {
+        "result": {
+          "effect": "first"
+        }
+      }
+    },
+    {
+      "callbacks": [
+        {
+          "arguments": {
+            "value": "old-work"
+          },
+          "client": "second",
+          "context": {
+            "action": "echo",
+            "actor": "final-actor",
+            "call_id": "observed-old-call",
+            "host_id": "b8473ce7835a482aa7e5e8a36ae9abe1",
+            "incarnation": "cd9023e443034329b95c0360f16a6a96",
+            "native_id": "controlled-conversation",
+            "native_incarnation": "native-incarnation",
+            "session_id": "final-session",
+            "work_id": "final-work"
+          }
+        }
+      ],
+      "case": "bridge_callback_after_replacement",
+      "cleanup": {
+        "client_sessions_remaining": 0,
+        "endpoint_exists": false,
+        "host_closed": true,
+        "native_closed": true,
+        "open_host_peers": 0
+      },
+      "defect_reproduced": true,
+      "new_incarnation": "cd9023e443034329b95c0360f16a6a96",
+      "old_incarnation": "0d11cb7212f84ea1a6d9982bf1311a36",
+      "old_observation": {
+        "action": "echo",
+        "arguments": {
+          "value": "old-work"
+        },
+        "at": "2026-10-24T06:37:39.104091+00:00",
+        "bridge_bound": true,
+        "bridge_identity_conflict": false,
+        "call_id": "observed-old-call",
+        "host_id": "b8473ce7835a482aa7e5e8a36ae9abe1",
+        "incarnation": "0d11cb7212f84ea1a6d9982bf1311a36",
+        "kind": "native_tool_call",
+        "native_id": "controlled-conversation",
+        "native_incarnation": "native-incarnation",
+        "sequence": 1
+      },
+      "send_outcome": {
+        "details": {
+          "outcome": "not_started"
+        },
+        "error": "stale_connection"
+      }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+import json
+from pathlib import Path
+from module import compute
+
+def test_target():
+    Path('phase.json').write_text(json.dumps({'phase':'entered'}))
+    value = compute()
+    Path('phase.json').write_text(json.dumps({'phase':'comparison', 'actual':value, 'expected':1}))
+    assert value == 1, 'TARGET_REQUIREMENT'

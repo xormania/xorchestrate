@@ -1,0 +1,50 @@
+{
+  "candidate": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+  "results": [
+    {
+      "protocol": "codex",
+      "baseline_accepted": true,
+      "baseline_requirement_revision": 1,
+      "direct_current_accepted": false,
+      "direct_current_requirement_revision": 2,
+      "adapter_replay_accepted": true,
+      "adapter_replay_requirement_revision": 1,
+      "adapter_replay_current_flags": [
+        true
+      ],
+      "fresh_adapter_call_accepted": false,
+      "fresh_adapter_requirement_revision": 2,
+      "direct_invoke_native_replay_error": "stale_native_result"
+    },
+    {
+      "protocol": "grok",
+      "baseline_accepted": true,
+      "baseline_requirement_revision": 1,
+      "direct_current_accepted": false,
+      "direct_current_requirement_revision": 2,
+      "adapter_replay_accepted": true,
+      "adapter_replay_requirement_revision": 1,
+      "adapter_replay_current_flags": [
+        true
+      ],
+      "fresh_adapter_call_accepted": false,
+      "fresh_adapter_requirement_revision": 2,
+      "direct_invoke_native_replay_error": "stale_native_result"
+    },
+    {
+      "protocol": "claude",
+      "baseline_accepted": true,
+      "baseline_requirement_revision": 1,
+      "direct_current_accepted": false,
+      "direct_current_requirement_revision": 2,
+      "adapter_replay_accepted": true,
+      "adapter_replay_requirement_revision": 1,
+      "adapter_replay_current_flags": [
+        true
+      ],
+      "fresh_adapter_call_accepted": false,
+      "fresh_adapter_requirement_revision": 2,
+      "direct_invoke_native_replay_error": "stale_native_result"
+    }
+  ]
+}

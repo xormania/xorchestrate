@@ -1,0 +1,8 @@
+Source: https://docs.typesafe.ai/models
+Retrieved: 2026-10-24 UTC
+Model: jev-1.14.0
+Price per million input tokens: USD 0.042
+Output tokens: free
+Default context: 64k per request / 32k per question
+Public list price, not evidence of invoiced charges.
+Source HTML SHA-256: ea492c3cbeb5125e58297f83ec88ef74d71ad897c9d369e495d8cf2526f939fc

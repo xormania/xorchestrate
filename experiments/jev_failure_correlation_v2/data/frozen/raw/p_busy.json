@@ -1,0 +1,387 @@
+{
+  "boundary": "actual Claude adapter / subprocess hooks and MCP / controlled protocol peer",
+  "record": {
+    "after_a": {
+      "activity": "idle",
+      "connection_state": "connected",
+      "incarnation": "86d097e25dec45709b71e05290111794",
+      "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+      "ownership": "owned",
+      "settings": {
+        "observed": {
+          "effort": null,
+          "model": "fixture-model"
+        },
+        "precedence": "trusted_configuration",
+        "requested": {},
+        "resolved": {}
+      }
+    },
+    "after_b_control": {
+      "activity": "idle",
+      "connection_state": "connected",
+      "incarnation": "86d097e25dec45709b71e05290111794",
+      "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+      "ownership": "owned",
+      "settings": {
+        "observed": {
+          "effort": null,
+          "model": "fixture-model"
+        },
+        "precedence": "trusted_configuration",
+        "requested": {},
+        "resolved": {}
+      }
+    },
+    "b_still_held": true,
+    "before": {
+      "activity": "active",
+      "connection_state": "connected",
+      "incarnation": "86d097e25dec45709b71e05290111794",
+      "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+      "ownership": "owned",
+      "settings": {
+        "observed": {
+          "effort": null,
+          "model": "fixture-model"
+        },
+        "precedence": "trusted_configuration",
+        "requested": {},
+        "resolved": {}
+      }
+    },
+    "case": "claude_overlapping_completion",
+    "cleanup": {
+      "driver_sessions_remaining": 0,
+      "gateway_threads_exited": 1,
+      "native_processes_exited": 1,
+      "owned_native_processes": 1
+    },
+    "completed_callbacks": [
+      "B"
+    ],
+    "defect_reproduced": true,
+    "observations": [
+      {
+        "at": "2026-10-24T06:37:38.490792+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "native_session",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/SessionStart"
+      },
+      {
+        "at": "2026-10-24T06:37:38.490820+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "settings",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "settings": {
+          "observed": {
+            "effort": null,
+            "model": "fixture-model"
+          },
+          "precedence": "trusted_configuration",
+          "requested": {},
+          "resolved": {}
+        },
+        "source": "claude/SessionStart"
+      },
+      {
+        "at": "2026-10-24T06:37:38.490844+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "activity",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/SessionStart",
+        "state": "idle"
+      },
+      {
+        "at": "2026-10-24T06:37:38.532915+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "native_session",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/mcp-environment"
+      },
+      {
+        "at": "2026-10-24T06:37:38.532940+00:00",
+        "channel": true,
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "mcp_initialized",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/mcp"
+      },
+      {
+        "at": "2026-10-24T06:37:38.536077+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "channel_ready",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "server": "xorchestrate",
+        "source": "claude/debug-log"
+      },
+      {
+        "at": "2026-10-24T06:37:38.536096+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "connected",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "ownership": "owned",
+        "source": "claude/driver"
+      },
+      {
+        "acceptance": "notification_written",
+        "at": "2026-10-24T06:37:38.536950+00:00",
+        "delivery_id": "c5c4464a5e684bf6bcc870122ad5babc",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "submitted",
+        "message": {
+          "hold": "A"
+        },
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/channel"
+      },
+      {
+        "at": "2026-10-24T06:37:38.569744+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "native_session",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/UserPromptSubmit"
+      },
+      {
+        "at": "2026-10-24T06:37:38.569768+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "turn_started",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/UserPromptSubmit",
+        "turn_id": "ba7165d1f9c647d4999b7db7a7ff459d"
+      },
+      {
+        "at": "2026-10-24T06:37:38.569778+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "activity",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/UserPromptSubmit",
+        "state": "active"
+      },
+      {
+        "at": "2026-10-24T06:37:38.607244+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "native_session",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/PreToolUse"
+      },
+      {
+        "action": "hold",
+        "arguments": {
+          "nonce": "A"
+        },
+        "at": "2026-10-24T06:37:38.607291+00:00",
+        "call_id": "94f85cead5ed4befa7c35e86aa9a8320",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "native_tool",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/PreToolUse",
+        "tool": "mcp__xorchestrate__hold",
+        "turn_id": "ba7165d1f9c647d4999b7db7a7ff459d"
+      },
+      {
+        "at": "2026-10-24T06:37:38.607307+00:00",
+        "call_id": "94f85cead5ed4befa7c35e86aa9a8320",
+        "decision": "defer",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "native_permission",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/PreToolUse",
+        "tool": "mcp__xorchestrate__hold"
+      },
+      {
+        "at": "2026-10-24T06:37:38.607317+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "activity",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/PreToolUse",
+        "state": "active"
+      },
+      {
+        "acceptance": "notification_written",
+        "at": "2026-10-24T06:37:38.614529+00:00",
+        "delivery_id": "8b6bb7bfad1d4adaa2cb855c6d68e854",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "submitted",
+        "message": {
+          "hold": "B"
+        },
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/channel"
+      },
+      {
+        "at": "2026-10-24T06:37:38.645974+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "native_session",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/UserPromptSubmit"
+      },
+      {
+        "at": "2026-10-24T06:37:38.645998+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "turn_started",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/UserPromptSubmit",
+        "turn_id": "9a8909642a6c4e4086d21834278dc042"
+      },
+      {
+        "at": "2026-10-24T06:37:38.646009+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "activity",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/UserPromptSubmit",
+        "state": "active"
+      },
+      {
+        "at": "2026-10-24T06:37:38.684131+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "native_session",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/PreToolUse"
+      },
+      {
+        "action": "hold",
+        "arguments": {
+          "nonce": "B"
+        },
+        "at": "2026-10-24T06:37:38.684180+00:00",
+        "call_id": "9833390f1fa041448258b23f6cf777e0",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "native_tool",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/PreToolUse",
+        "tool": "mcp__xorchestrate__hold",
+        "turn_id": "9a8909642a6c4e4086d21834278dc042"
+      },
+      {
+        "at": "2026-10-24T06:37:38.684196+00:00",
+        "call_id": "9833390f1fa041448258b23f6cf777e0",
+        "decision": "defer",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "native_permission",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/PreToolUse",
+        "tool": "mcp__xorchestrate__hold"
+      },
+      {
+        "at": "2026-10-24T06:37:38.684207+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "activity",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/PreToolUse",
+        "state": "active"
+      },
+      {
+        "acceptance": "notification_written",
+        "at": "2026-10-24T06:37:38.691643+00:00",
+        "delivery_id": "26fd56113f2445d7ade159a22494cf6e",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "submitted",
+        "message": {
+          "hold": "C"
+        },
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/channel"
+      },
+      {
+        "at": "2026-10-24T06:37:38.724183+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "native_session",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/UserPromptSubmit"
+      },
+      {
+        "at": "2026-10-24T06:37:38.724208+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "turn_started",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/UserPromptSubmit",
+        "turn_id": "ee44284a12354f53895bb8213470f703"
+      },
+      {
+        "at": "2026-10-24T06:37:38.724219+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "activity",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/UserPromptSubmit",
+        "state": "active"
+      },
+      {
+        "at": "2026-10-24T06:37:38.761779+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "native_session",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/PreToolUse"
+      },
+      {
+        "action": "hold",
+        "arguments": {
+          "nonce": "C"
+        },
+        "at": "2026-10-24T06:37:38.761824+00:00",
+        "call_id": "caeb471248914e45807871fd7b36968b",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "native_tool",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/PreToolUse",
+        "tool": "mcp__xorchestrate__hold",
+        "turn_id": "ee44284a12354f53895bb8213470f703"
+      },
+      {
+        "at": "2026-10-24T06:37:38.761841+00:00",
+        "call_id": "caeb471248914e45807871fd7b36968b",
+        "decision": "defer",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "native_permission",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/PreToolUse",
+        "tool": "mcp__xorchestrate__hold"
+      },
+      {
+        "at": "2026-10-24T06:37:38.761851+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "activity",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/PreToolUse",
+        "state": "active"
+      },
+      {
+        "action": "hold",
+        "arguments": {
+          "nonce": "B"
+        },
+        "at": "2026-10-24T06:37:38.768031+00:00",
+        "call_id": "9833390f1fa041448258b23f6cf777e0",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "tool_result",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/mcp"
+      },
+      {
+        "at": "2026-10-24T06:37:38.799755+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "native_session",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/Stop"
+      },
+      {
+        "at": "2026-10-24T06:37:38.799781+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "turn_completed",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/Stop",
+        "status": "completed",
+        "turn_id": "9a8909642a6c4e4086d21834278dc042"
+      },
+      {
+        "at": "2026-10-24T06:37:38.799792+00:00",
+        "incarnation": "86d097e25dec45709b71e05290111794",
+        "kind": "activity",
+        "native_id": "c8fb781e-77cc-4414-8a7a-22a9930a2772",
+        "source": "claude/Stop",
+        "state": "idle"
+      }
+    ]
+  }
+}

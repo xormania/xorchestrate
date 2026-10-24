@@ -1,0 +1,5 @@
+{
+  "adapted_sha256": "bef8bb3b7d2ba3ddbb9ba59aa3272b8f411dceb94484f931031104aac262a3db",
+  "changes": "Two owner requirement revisions with an intervening semantic replay; original only one revision.",
+  "source_sha256": "b89be55b04e34dbc826dc61962d9d8f39b36c8d11da7603217bb21dae4676135"
+}
