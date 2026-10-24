@@ -1,0 +1,1504 @@
+{
+  "cases": [
+    {
+      "id": "c10772a98b7",
+      "packet": {
+        "observations": [
+          {
+            "adapter": "codex",
+            "event": "configuration"
+          },
+          {
+            "accepted": true,
+            "event": "initial_read",
+            "requirement_revision": 1
+          },
+          {
+            "event": "owner_revision",
+            "requirement_revision": 2
+          },
+          {
+            "accepted": false,
+            "event": "fresh_read",
+            "requirement_revision": 2
+          },
+          {
+            "code": "stale_native_result",
+            "event": "direct_replay"
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "c132396d093",
+      "packet": {
+        "observations": [
+          {
+            "actor": "limited",
+            "authorized_work": "probe-1",
+            "denied_work": "probe-2",
+            "event": "configuration",
+            "store": "sqlite"
+          },
+          {
+            "action": "get_work",
+            "code": "denied",
+            "work_id": "probe-2"
+          },
+          {
+            "action": "get_delivery",
+            "code": "denied",
+            "work_id": "probe-2"
+          },
+          {
+            "action": "get_delivery",
+            "returned_evidence": [
+              {
+                "result": {
+                  "value": "marker-A"
+                },
+                "work_id": "probe-2"
+              }
+            ],
+            "returned_messages": [
+              {
+                "body": {
+                  "public": true
+                },
+                "work_id": "probe-1"
+              },
+              {
+                "body": {
+                  "value": "marker-A"
+                },
+                "work_id": "probe-2"
+              }
+            ],
+            "work_id": "probe-1"
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "c2b576d8713",
+      "packet": {
+        "observations": [
+          {
+            "action": "send_message",
+            "call_id": "call-A",
+            "destination_actor": "claude",
+            "event": "native_call"
+          },
+          {
+            "action": "send_message",
+            "call_id": "call-A",
+            "destination_actor": "claude",
+            "event": "executed_callback"
+          },
+          {
+            "event": "checker_run",
+            "failed_cases": 0,
+            "passed_cases": 46
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "c2f397006d9",
+      "packet": {
+        "observations": [
+          {
+            "adapter": "claude",
+            "event": "configuration",
+            "installed_vendor_ordering": "unverified",
+            "peer": "protocol_fixture"
+          },
+          {
+            "activity": "active",
+            "event": "callbacks_held",
+            "ids": [
+              "A",
+              "B"
+            ]
+          },
+          {
+            "activity": "idle",
+            "completed": [
+              "A"
+            ],
+            "event": "callback_released",
+            "id": "A",
+            "pending": [
+              "B"
+            ]
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "c4568de1c87",
+      "packet": {
+        "observations": [
+          {
+            "adapter": "codex",
+            "event": "configuration"
+          },
+          {
+            "accepted": true,
+            "event": "initial_read",
+            "requirement_revision": 1
+          },
+          {
+            "event": "owner_revision",
+            "requirement_revision": 2
+          },
+          {
+            "accepted": true,
+            "current": true,
+            "event": "replay_read",
+            "requirement_revision": 1
+          },
+          {
+            "accepted": false,
+            "event": "fresh_read",
+            "requirement_revision": 2
+          },
+          {
+            "code": "stale_native_result",
+            "event": "direct_replay"
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "c5b16f544f4",
+      "packet": {
+        "observations": [
+          {
+            "event": "control_run",
+            "exit": 0
+          },
+          {
+            "assertion_expression": "assert compute() == 1",
+            "errors": 0,
+            "event": "target_run",
+            "exception_type": "ModuleNotFoundError",
+            "exit": 1,
+            "failures": 1,
+            "helper_source": "def compute():\n    import dependency_A\n",
+            "skips": 0,
+            "target_cases": 1
+          },
+          {
+            "event": "calibrator_result",
+            "native": "detected",
+            "work": "detected"
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "c5b2286615d",
+      "packet": {
+        "observations": [
+          {
+            "event": "control_run",
+            "exit": 0
+          },
+          {
+            "assertion_expression": "assert compute() == 1",
+            "errors": 0,
+            "event": "target_run",
+            "exception_type": null,
+            "exit": 0,
+            "failures": 0,
+            "helper_source": "def compute():\n    import pytest\n    pytest.skip(\"unavailable\")\n",
+            "skips": 1,
+            "target_cases": 1
+          },
+          {
+            "event": "calibrator_result",
+            "native": "skipped",
+            "work": "skipped"
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "c6b464d0d2d",
+      "packet": {
+        "observations": [
+          {
+            "event": "attempt",
+            "message_id": "e8671f0412744f92aedc090bf7ca8bb3",
+            "recipient": "claude",
+            "sequence": 1,
+            "status": "submitted"
+          },
+          {
+            "event": "attempt",
+            "message_id": "e8671f0412744f92aedc090bf7ca8bb3",
+            "recipient": "claude",
+            "sequence": 101,
+            "status": "unknown"
+          },
+          {
+            "event": "checker_run",
+            "failed_cases": 0,
+            "passed_cases": 46
+          },
+          {
+            "diagnostics": [
+              "native_submission_missing"
+            ],
+            "event": "receipt_policy",
+            "verified": false
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "c6c5a633d2e",
+      "packet": {
+        "observations": [
+          {
+            "event": "requirement",
+            "reply_must_precede_work_completion": true
+          },
+          {
+            "actor": "codex",
+            "at": "2026-10-24T03:15:32.631098+00:00",
+            "case": "exchange-A",
+            "event": "challenge"
+          },
+          {
+            "actor": "claude",
+            "at": "2026-10-24T03:15:32.791668+00:00",
+            "event": "work_completed"
+          },
+          {
+            "actor": "claude",
+            "at": "2026-10-24T03:15:32.834775+00:00",
+            "case": "exchange-A",
+            "event": "reply"
+          },
+          {
+            "after": "2026-10-24T03:15:32.791668+00:00",
+            "before": "2026-10-24T03:15:34.689298+00:00",
+            "event": "time_shift",
+            "subject": "work_completed"
+          },
+          {
+            "case": "exchange-A",
+            "challenge_ack_after_reply": false,
+            "event": "timing_observation",
+            "reply_ack_after_receipt": false,
+            "reply_before_work_completed": false
+          },
+          {
+            "event": "checker_run",
+            "failed_cases": 0,
+            "passed_cases": 46
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "c7a8d59bac1",
+      "packet": {
+        "observations": [
+          {
+            "event": "attempt",
+            "message_id": "e8671f0412744f92aedc090bf7ca8bb3",
+            "recipient": "claude",
+            "sequence": 1,
+            "status": "submitted"
+          },
+          {
+            "event": "checker_run",
+            "failed_cases": 0,
+            "passed_cases": 46
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "c81fa84c395",
+      "packet": {
+        "observations": [
+          {
+            "event": "control_run",
+            "exit": 0
+          },
+          {
+            "assertion_expression": "assert compute() == 1",
+            "errors": 0,
+            "event": "target_run",
+            "exception_type": null,
+            "exit": 0,
+            "failures": 0,
+            "helper_source": "def compute():\n    return 1 + 0\n",
+            "skips": 0,
+            "target_cases": 1
+          },
+          {
+            "event": "calibrator_result",
+            "native": "escaped_fault",
+            "work": "escaped_fault"
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "c8a1cd71143",
+      "packet": {
+        "observations": [
+          {
+            "acceptance_requires_assessment": true,
+            "event": "configuration",
+            "schedule": "after_assessment",
+            "store": "memory"
+          },
+          {
+            "conclusion": "pass",
+            "context": {},
+            "event": "assessment",
+            "work_version": 1
+          },
+          {
+            "context": {
+              "condition-A": true
+            },
+            "event": "context_update",
+            "requirements_revision": 1,
+            "work_version": 2
+          },
+          {
+            "accepted": true,
+            "event": "reuse_assessment",
+            "issues": []
+          },
+          {
+            "accepted": false,
+            "conclusion": "reject",
+            "event": "fresh_assessment"
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "c8c360ddd51",
+      "packet": {
+        "observations": [
+          {
+            "event": "control_run",
+            "exit": 0
+          },
+          {
+            "assertion_expression": "assert compute() == 1",
+            "errors": 0,
+            "event": "target_run",
+            "exception_type": "AssertionError",
+            "exit": 1,
+            "failures": 1,
+            "helper_source": "def compute():\n    return 2\n",
+            "skips": 0,
+            "target_cases": 1
+          },
+          {
+            "event": "calibrator_result",
+            "native": "detected",
+            "work": "detected"
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "c965c818495",
+      "packet": {
+        "observations": [
+          {
+            "acceptance_requires_assessment": true,
+            "composition": [
+              "CLIProvider",
+              "ToolEvaluator",
+              "SQLiteStore"
+            ],
+            "event": "configuration"
+          },
+          {
+            "accepted": true,
+            "conclusion": "pass",
+            "event": "assessment"
+          },
+          {
+            "changes": {
+              "title": "Routine display title"
+            },
+            "context_after": {},
+            "context_before": {},
+            "event": "title_update"
+          },
+          {
+            "accepted": true,
+            "event": "reuse_assessment"
+          },
+          {
+            "accepted": true,
+            "conclusion": "pass",
+            "event": "fresh_assessment"
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "c9c28a79619",
+      "packet": {
+        "observations": [
+          {
+            "count": 1,
+            "event": "effect_applied"
+          },
+          {
+            "additional_send": {
+              "code": "conflict",
+              "details": {}
+            },
+            "connection_replaced": true,
+            "event": "response_held"
+          },
+          {
+            "code": "operation_failed",
+            "details": {
+              "cause": "stale_connection",
+              "operation_id": "dd83f1957a2770f6b863dfe619f0f60813c8af8f30b2e1dd46e4a8350dfc816d",
+              "outcome": "failed",
+              "recording_error": null
+            },
+            "event": "response_released"
+          },
+          {
+            "effects": [
+              {
+                "result": {
+                  "applied_count": 1
+                },
+                "status": "completed"
+              },
+              {
+                "result": {
+                  "applied_count": 2
+                },
+                "status": "completed"
+              }
+            ],
+            "event": "host_retained_results",
+            "snapshot_time": "after_next_send"
+          },
+          {
+            "count": 2,
+            "event": "next_send",
+            "output": {
+              "applied_count": 2
+            }
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "ca4ab47c946",
+      "packet": {
+        "observations": [
+          {
+            "adapter": "grok",
+            "event": "configuration"
+          },
+          {
+            "accepted": true,
+            "event": "initial_read",
+            "requirement_revision": 1
+          },
+          {
+            "event": "owner_revision",
+            "requirement_revision": 2
+          },
+          {
+            "accepted": true,
+            "current": true,
+            "event": "replay_read",
+            "requirement_revision": 1
+          },
+          {
+            "accepted": false,
+            "event": "fresh_read",
+            "requirement_revision": 2
+          },
+          {
+            "code": "stale_native_result",
+            "event": "direct_replay"
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "ca4f1ba6d30",
+      "packet": {
+        "observations": [
+          {
+            "event": "requirement",
+            "reply_must_precede_work_completion": true
+          },
+          {
+            "case": "exchange-A",
+            "challenge_ack_after_reply": false,
+            "event": "timing_observation",
+            "reply_ack_after_receipt": false,
+            "reply_before_work_completed": true
+          },
+          {
+            "event": "checker_run",
+            "failed_cases": 0,
+            "passed_cases": 46
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "ca8a9086479",
+      "packet": {
+        "observations": [
+          {
+            "actor": "limited",
+            "authorized_work": "probe-1",
+            "denied_work": "probe-2",
+            "event": "configuration",
+            "store": "memory"
+          },
+          {
+            "action": "get_work",
+            "code": "denied",
+            "work_id": "probe-2"
+          },
+          {
+            "action": "get_delivery",
+            "code": "denied",
+            "work_id": "probe-2"
+          },
+          {
+            "action": "get_delivery",
+            "returned_evidence": [
+              {
+                "result": {
+                  "value": "marker-A"
+                },
+                "work_id": "probe-2"
+              }
+            ],
+            "returned_messages": [
+              {
+                "body": {
+                  "public": true
+                },
+                "work_id": "probe-1"
+              },
+              {
+                "body": {
+                  "value": "marker-A"
+                },
+                "work_id": "probe-2"
+              }
+            ],
+            "work_id": "probe-1"
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "cb501d6169f",
+      "packet": {
+        "observations": [
+          {
+            "event": "coverage",
+            "executed_cases": 45,
+            "requested_cases": 46
+          },
+          {
+            "event": "checker_run",
+            "missing_case_status": "not_exercised",
+            "passed_cases": 45
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "cb9080f7f96",
+      "packet": {
+        "observations": [
+          {
+            "adapter": "claude",
+            "event": "configuration",
+            "installed_vendor_ordering": "unverified",
+            "peer": "protocol_fixture"
+          },
+          {
+            "activity": "idle",
+            "event": "callbacks_released",
+            "ids": [
+              "A",
+              "B"
+            ],
+            "pending": []
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "cc65f638301",
+      "packet": {
+        "observations": [
+          {
+            "event": "control_run",
+            "exit": 0
+          },
+          {
+            "assertion_expression": "assert compute() == 1",
+            "errors": 1,
+            "event": "target_run",
+            "exception_type": "ModuleNotFoundError",
+            "exit": 2,
+            "failures": 0,
+            "helper_source": "import dependency_A\ndef compute():\n    return 1\n",
+            "skips": 0,
+            "target_cases": 0
+          },
+          {
+            "event": "calibrator_result",
+            "native": "not_exercised",
+            "work": "setup_error"
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "cc6c0d5103e",
+      "packet": {
+        "observations": [
+          {
+            "acceptance_requires_assessment": true,
+            "event": "configuration",
+            "schedule": "during_assessment",
+            "store": "sqlite"
+          },
+          {
+            "context": {},
+            "event": "assessment_inputs_captured",
+            "work_version": 1
+          },
+          {
+            "context": {
+              "condition-A": true
+            },
+            "event": "context_update",
+            "requirements_revision": 1,
+            "work_version": 2
+          },
+          {
+            "conclusion": "pass",
+            "context": {},
+            "event": "assessment",
+            "work_version": 1
+          },
+          {
+            "accepted": true,
+            "event": "reuse_assessment",
+            "issues": []
+          },
+          {
+            "accepted": false,
+            "conclusion": "reject",
+            "event": "fresh_assessment"
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "ccb6546cc17",
+      "packet": {
+        "observations": [
+          {
+            "actor": "limited",
+            "authorized_work": "probe-1",
+            "denied_work": "probe-2",
+            "event": "configuration",
+            "store": "memory"
+          },
+          {
+            "action": "get_work",
+            "code": "denied",
+            "work_id": "probe-2"
+          },
+          {
+            "action": "get_delivery",
+            "code": "denied",
+            "work_id": "probe-2"
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "cd58718f440",
+      "packet": {
+        "observations": [
+          {
+            "event": "control_run",
+            "exit": 0
+          },
+          {
+            "assertion_expression": "assert compute() == 1",
+            "errors": 0,
+            "event": "target_run",
+            "exception_type": "TimeoutError",
+            "exit": 1,
+            "failures": 1,
+            "helper_source": "def compute():\n    raise TimeoutError(\"unrelated timeout\")\n",
+            "skips": 0,
+            "target_cases": 1
+          },
+          {
+            "event": "calibrator_result",
+            "native": "detected",
+            "work": "detected"
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "cd9a464e21e",
+      "packet": {
+        "observations": [
+          {
+            "adapter": "claude",
+            "event": "configuration"
+          },
+          {
+            "accepted": true,
+            "event": "initial_read",
+            "requirement_revision": 1
+          },
+          {
+            "event": "owner_revision",
+            "requirement_revision": 2
+          },
+          {
+            "accepted": true,
+            "current": true,
+            "event": "replay_read",
+            "requirement_revision": 1
+          },
+          {
+            "accepted": false,
+            "event": "fresh_read",
+            "requirement_revision": 2
+          },
+          {
+            "code": "stale_native_result",
+            "event": "direct_replay"
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "cdb9ded1cc2",
+      "packet": {
+        "observations": [
+          {
+            "action": "send_message",
+            "call_id": "call-A",
+            "destination_actor": "actor-B",
+            "event": "native_call"
+          },
+          {
+            "action": "send_message",
+            "call_id": "call-A",
+            "destination_actor": "claude",
+            "event": "executed_callback"
+          },
+          {
+            "event": "checker_run",
+            "failed_cases": 0,
+            "passed_cases": 46
+          },
+          {
+            "diagnostics": [
+              "independent_native_arguments_mismatch"
+            ],
+            "event": "receipt_policy",
+            "verified": false
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "cde0dfa2876",
+      "packet": {
+        "observations": [
+          {
+            "call_native_id": "native-B",
+            "event": "native_binding",
+            "session_native_id": "native-A"
+          },
+          {
+            "diagnostics": [
+              "native_call_missing_or_misbound",
+              "native_call_missing_or_misbound"
+            ],
+            "event": "checker_run",
+            "failed_cases": 2,
+            "passed_cases": 44
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "cde81233c34",
+      "packet": {
+        "observations": [
+          {
+            "count": 1,
+            "event": "effect_applied"
+          },
+          {
+            "additional_send": {
+              "code": "conflict",
+              "details": {}
+            },
+            "connection_replaced": false,
+            "event": "response_held"
+          },
+          {
+            "event": "response_released",
+            "output": {
+              "applied_count": 1
+            }
+          },
+          {
+            "effects": [
+              {
+                "result": {
+                  "applied_count": 1
+                },
+                "status": "completed"
+              },
+              {
+                "result": {
+                  "applied_count": 2
+                },
+                "status": "completed"
+              }
+            ],
+            "event": "host_retained_results",
+            "snapshot_time": "after_next_send"
+          },
+          {
+            "count": 2,
+            "event": "next_send",
+            "output": {
+              "applied_count": 2
+            }
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "ce010ff9ebd",
+      "packet": {
+        "observations": [
+          {
+            "actor_permissions": {
+              "new-actor": {
+                "record_result": true
+              },
+              "old-actor": {
+                "record_result": false
+              }
+            },
+            "event": "configuration",
+            "store": "sqlite"
+          },
+          {
+            "action": "record_result",
+            "actor": "old-actor",
+            "at": "2026-10-24T03:20:02.527914+00:00",
+            "call_id": "old-call",
+            "event": "call_observed",
+            "incarnation": "d48bc76008854eb8aed1a8563c334a49",
+            "work_id": "056c6cc57286451798fcfe6e40cf6986"
+          },
+          {
+            "actor": "new-actor",
+            "event": "connection_replacement",
+            "incarnation": "04c54d728dd74a8e87df784e5dfdeb90",
+            "replaced": true,
+            "work_id": "c8e2572a1a9e4a5998a90c25fc77e133"
+          },
+          {
+            "event": "callback_released",
+            "outcome": {
+              "code": "operation_failed",
+              "details": {
+                "cause": "stale_connection",
+                "operation_id": "3977b6e7578ff9ec0ac22b62d780ab15abd4af6d44ab5ab5351d8535808de073",
+                "outcome": "failed",
+                "recording_error": null
+              }
+            }
+          },
+          {
+            "event": "persisted_results",
+            "records": [
+              {
+                "actor": "new-actor",
+                "at": "2026-10-24T03:20:02.551063+00:00",
+                "work_id": "c8e2572a1a9e4a5998a90c25fc77e133"
+              }
+            ]
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "ced6478d6f9",
+      "packet": {
+        "observations": [
+          {
+            "actor_permissions": {
+              "new-actor": {
+                "record_result": true
+              },
+              "old-actor": {
+                "record_result": false
+              }
+            },
+            "event": "configuration",
+            "store": "sqlite"
+          },
+          {
+            "action": "record_result",
+            "actor": "old-actor",
+            "at": "2026-10-24T03:20:02.494969+00:00",
+            "call_id": "old-call",
+            "event": "call_observed",
+            "incarnation": "24791b97b6664b34a16c0876bbdf6096",
+            "work_id": "8a5d1449cb0746bc8f387718fee4a31b"
+          },
+          {
+            "actor": "old-actor",
+            "event": "connection_replacement",
+            "incarnation": "24791b97b6664b34a16c0876bbdf6096",
+            "replaced": false,
+            "work_id": "8a5d1449cb0746bc8f387718fee4a31b"
+          },
+          {
+            "event": "callback_released",
+            "outcome": {
+              "code": "operation_unknown",
+              "details": {
+                "cause": "denied",
+                "operation_id": "3977b6e7578ff9ec0ac22b62d780ab15abd4af6d44ab5ab5351d8535808de073",
+                "outcome": "unknown",
+                "recording_error": null
+              }
+            }
+          },
+          {
+            "event": "persisted_results",
+            "records": []
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "v01",
+      "packet": {
+        "observations": [
+          {
+            "classifier_outputs": {
+              "native": "detected",
+              "work": "detected"
+            },
+            "configuration": {
+              "comparison": "returned number equals 1",
+              "entry": "pytest \u2192 test function \u2192 compute \u2192 dependency function",
+              "test_control": "separate unrelated test"
+            },
+            "control_exit": 0,
+            "mutated_execution_exit": 1,
+            "source": {
+              "dependency": "def read_value():\n    raise ValueError('malformed response')\n",
+              "entry": "from dependency import read_value\ndef compute():\n    return read_value()\n"
+            },
+            "source_behavior": "The helper imports read_value; read_value raises ValueError before returning to the comparison.",
+            "target_status": "failed",
+            "terminal_exception": "ValueError: malformed response"
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "v02",
+      "packet": {
+        "observations": [
+          {
+            "classifier_outputs": {
+              "native": "detected",
+              "work": "detected"
+            },
+            "configuration": {
+              "comparison": "returned number equals 1",
+              "entry": "pytest \u2192 test function \u2192 compute \u2192 dependency function",
+              "test_control": "separate unrelated test"
+            },
+            "control_exit": 0,
+            "mutated_execution_exit": 1,
+            "source": {
+              "dependency": "def read_value():\n    assert False, 'dependency invariant'\n",
+              "entry": "from dependency import read_value\ndef compute():\n    return read_value()\n"
+            },
+            "source_behavior": "The helper imports read_value; read_value raises its own AssertionError before returning to the comparison.",
+            "target_status": "failed",
+            "terminal_exception": "AssertionError: dependency invariant"
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "v03",
+      "packet": {
+        "observations": [
+          {
+            "classifier_outputs": {
+              "native": "escaped_fault",
+              "work": "escaped_fault"
+            },
+            "configuration": {
+              "comparison": "returned number equals 1",
+              "entry": "pytest \u2192 test function \u2192 compute \u2192 dependency function",
+              "test_control": "separate unrelated test"
+            },
+            "control_exit": 0,
+            "mutated_execution_exit": 0,
+            "source": {
+              "dependency": "def read_value():\n    return 1\n",
+              "entry": "from dependency import read_value\ndef compute():\n    return read_value()\n"
+            },
+            "source_behavior": "The helper imports read_value; read_value returns 1 and the comparison passes.",
+            "target_status": "passed",
+            "terminal_exception": null
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    },
+    {
+      "id": "v04",
+      "packet": {
+        "observations": [
+          {
+            "classifier_outputs": {
+              "native": "not_exercised",
+              "work": "setup_error"
+            },
+            "configuration": {
+              "comparison": "returned number equals 1",
+              "entry": "pytest \u2192 test function \u2192 compute \u2192 dependency function",
+              "test_control": "separate unrelated test"
+            },
+            "control_exit": 0,
+            "mutated_execution_exit": 2,
+            "source": {
+              "dependency": "",
+              "entry": "import missing_probe_dependency_jev_v1\ndef compute():\n    return 1\n"
+            },
+            "source_behavior": "Importing the module raises ModuleNotFoundError before any test function executes.",
+            "target_status": "not observed",
+            "terminal_exception": "ModuleNotFoundError"
+          }
+        ],
+        "probe_options": {
+          "insufficient": "Collect the missing observations before choosing a discriminating probe.",
+          "none": "No useful additional discriminating probe is supported by this packet.",
+          "p1": "Compare an identical replay with a fresh read before and after owner requirement revision.",
+          "p2": "Hold the response after an effect or callback is observed; replace the connection, release it, and inspect identities, effects, and recovery.",
+          "p3": "Compare original native arguments, executed callback arguments, and ordered attempt/reply records against the checker result.",
+          "p4": "Run the target assertion in isolation with a passing control, an intended assertion failure, and a helper exception; inspect the actual exception origin.",
+          "p5": "Compare authorized and denied work reads with delivery inspection using distinct synthetic work data.",
+          "p6": "Hold two distinct callbacks, release one, inspect activity and pending work, then release the other.",
+          "p7": "Change an evaluator-consumed dependency and a cosmetic title separately; compare reused and fresh assessments."
+        }
+      }
+    }
+  ],
+  "version": "1.1.0"
+}

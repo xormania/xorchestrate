@@ -1,0 +1,57 @@
+{
+  "experiment_version": "1.0.0",
+  "repository": "xormania/xorchestrate",
+  "branch": "experiment/jev-failure-correlation-v1",
+  "base_commit": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+  "base_tree": "0f4034870f40fb5a1d022c9f35ad0b866236455f",
+  "base_selection": "Current repair/behavioral-preservation and PR5 head equal reviewed candidate; master is initial README. Separate architecture proposal branch ca8a497 shares initial commit and is not a later repair. No repair branch changed.",
+  "original_checkout": "/workspace/xorchestrate",
+  "experiment_checkout": "/workspace/xorchestrate-jev",
+  "archive_sha256": "67218f0e6a1e180d3368ea25ed8f766a03dc921e96b085b9ee287c1c82b40086",
+  "evidence_publication": "57f01ab3c18ecfa0e062ab3e2a1fc567068dff88",
+  "python": "3.12.14",
+  "external_references": {
+    "agentscient-jev.py": "06f5cfeee090f1ecc5bb75a22a25c477e91b237a338e08e090f12e100846f085",
+    "uxor-jev-diagnosis.mjs": "e39a0dc8a803d6f5316a7bd7a17aa8cb6f0bf1d321b879b8e77333dbbdd7ce90",
+    "uxor-jev-ci.json": "2962e4b5d22ad60b520e7f6357b4e403c4f699f73e8faaa6eff61dfafc1529e6"
+  },
+  "evaluation_seam": "xorchestrate/adapters/evaluation.py:TypeSafeEvaluator; experiment reuses devtools.jev strict typed validators, leaves both production implementations unchanged",
+  "network": [
+    {
+      "operation": "gh api repos/xormania/xorchestrate",
+      "result": "Forbidden"
+    },
+    {
+      "operation": "gh api repos/xormania/xorchestrate/actions/secrets",
+      "result": "Forbidden; secret availability unverified"
+    },
+    {
+      "operation": "curl HTTPS CONNECT api.github.com",
+      "result": "403 from envoy proxy before GitHub response"
+    },
+    {
+      "operation": "current TypeSafe docs GET",
+      "result": "proxy tunnel 403; current model availability unverified"
+    },
+    {
+      "operation": "git push --dry-run origin HEAD:refs/heads/experiment/jev-failure-correlation-v1",
+      "result": "exit 0; new branch permitted in dry run, not a real push"
+    }
+  ],
+  "configuration_draft": {
+    "status": "saved",
+    "custom_allowed_domains": [
+      "api.github.com",
+      "docs.typesafe.ai"
+    ],
+    "runtime_applied": false,
+    "requires_publish": true
+  },
+  "transport_validation": {
+    "initial": "2 collection errors: missing installed role skills",
+    "correction": "mkdir -p .agents; cp -R reference/imported-agent-skills .agents/skills (existing CI preparation)",
+    "rerun": "11 passed, 21 subtests passed",
+    "command": "/workspace/jev-venv/bin/python -m pytest devtools/tests/test_jev_structured.py devtools/tests/test_jev_transport.py -q"
+  },
+  "credential_policy": "TYPESAFE_API_KEY only repository Actions live step; no secret values inspected or copied"
+}

@@ -1,0 +1,223 @@
+{
+  "version": "1",
+  "cases": [
+    {
+      "id": "v01",
+      "packet": {
+        "observations": [
+          {
+            "configuration": {
+              "entry": "pytest \u2192 test function \u2192 compute \u2192 dependency function",
+              "comparison": "returned number equals 1",
+              "test_control": "separate unrelated test"
+            },
+            "source_behavior": "The helper imports read_value; read_value raises ValueError before returning to the comparison.",
+            "source": {
+              "entry": "from dependency import read_value\ndef compute():\n    return read_value()\n",
+              "dependency": "def read_value():\n    raise ValueError('malformed response')\n"
+            },
+            "control_exit": 0,
+            "mutated_execution_exit": 1,
+            "target_status": "failed",
+            "terminal_exception": "ValueError: malformed response",
+            "classifier_outputs": {
+              "native": "detected",
+              "work": "detected"
+            }
+          }
+        ]
+      },
+      "answer": {
+        "family": "F07",
+        "split": "development",
+        "kind": "checker_defect",
+        "mechanism": [
+          "assertion_proxy"
+        ],
+        "probe": [
+          "p4"
+        ],
+        "rationale": "The helper imports read_value; read_value raises ValueError before returning to the comparison. Compare executed outcome with both recorded classifier decisions.",
+        "scope": "independent dependency/exception transfer within known F07 family, not unseen-family evaluation"
+      },
+      "source": {
+        "raw_path": "evidence/independent_generation/p4/observations.json",
+        "raw_sha256": "01bc5c97d6cc204fefd8669db608c70e96e566ea992c5fb3c4c0f1d35b6555c2",
+        "variant": "q03",
+        "fixture": "probe_fixtures/calibration.json"
+      },
+      "extraction": {
+        "method": "select recorded exit/status/classifier decisions; first exception line; source_behavior derived from retained fixture source",
+        "omitted": [
+          "full traceback assertion marker and source filenames",
+          "absolute execution paths",
+          "precomputed expected/reproduced/credit fields"
+        ]
+      }
+    },
+    {
+      "id": "v02",
+      "packet": {
+        "observations": [
+          {
+            "configuration": {
+              "entry": "pytest \u2192 test function \u2192 compute \u2192 dependency function",
+              "comparison": "returned number equals 1",
+              "test_control": "separate unrelated test"
+            },
+            "source_behavior": "The helper imports read_value; read_value raises its own AssertionError before returning to the comparison.",
+            "source": {
+              "entry": "from dependency import read_value\ndef compute():\n    return read_value()\n",
+              "dependency": "def read_value():\n    assert False, 'dependency invariant'\n"
+            },
+            "control_exit": 0,
+            "mutated_execution_exit": 1,
+            "target_status": "failed",
+            "terminal_exception": "AssertionError: dependency invariant",
+            "classifier_outputs": {
+              "native": "detected",
+              "work": "detected"
+            }
+          }
+        ]
+      },
+      "answer": {
+        "family": "F07",
+        "split": "development",
+        "kind": "checker_defect",
+        "mechanism": [
+          "assertion_proxy"
+        ],
+        "probe": [
+          "p4"
+        ],
+        "rationale": "The helper imports read_value; read_value raises its own AssertionError before returning to the comparison. Compare executed outcome with both recorded classifier decisions.",
+        "scope": "independent dependency/exception transfer within known F07 family, not unseen-family evaluation"
+      },
+      "source": {
+        "raw_path": "evidence/independent_generation/p4/observations.json",
+        "raw_sha256": "01bc5c97d6cc204fefd8669db608c70e96e566ea992c5fb3c4c0f1d35b6555c2",
+        "variant": "q04",
+        "fixture": "probe_fixtures/calibration.json"
+      },
+      "extraction": {
+        "method": "select recorded exit/status/classifier decisions; first exception line; source_behavior derived from retained fixture source",
+        "omitted": [
+          "full traceback assertion marker and source filenames",
+          "absolute execution paths",
+          "precomputed expected/reproduced/credit fields"
+        ]
+      }
+    },
+    {
+      "id": "v03",
+      "packet": {
+        "observations": [
+          {
+            "configuration": {
+              "entry": "pytest \u2192 test function \u2192 compute \u2192 dependency function",
+              "comparison": "returned number equals 1",
+              "test_control": "separate unrelated test"
+            },
+            "source_behavior": "The helper imports read_value; read_value returns 1 and the comparison passes.",
+            "source": {
+              "entry": "from dependency import read_value\ndef compute():\n    return read_value()\n",
+              "dependency": "def read_value():\n    return 1\n"
+            },
+            "control_exit": 0,
+            "mutated_execution_exit": 0,
+            "target_status": "passed",
+            "terminal_exception": null,
+            "classifier_outputs": {
+              "native": "escaped_fault",
+              "work": "escaped_fault"
+            }
+          }
+        ]
+      },
+      "answer": {
+        "family": "F07",
+        "split": "development",
+        "kind": "valid",
+        "mechanism": [
+          "legitimate"
+        ],
+        "probe": [
+          "none",
+          "p4"
+        ],
+        "rationale": "The helper imports read_value; read_value returns 1 and the comparison passes. Compare executed outcome with both recorded classifier decisions.",
+        "scope": "independent dependency/exception transfer within known F07 family, not unseen-family evaluation"
+      },
+      "source": {
+        "raw_path": "evidence/independent_generation/p4/observations.json",
+        "raw_sha256": "01bc5c97d6cc204fefd8669db608c70e96e566ea992c5fb3c4c0f1d35b6555c2",
+        "variant": "q05",
+        "fixture": "probe_fixtures/calibration.json"
+      },
+      "extraction": {
+        "method": "select recorded exit/status/classifier decisions; first exception line; source_behavior derived from retained fixture source",
+        "omitted": [
+          "full traceback assertion marker and source filenames",
+          "absolute execution paths",
+          "precomputed expected/reproduced/credit fields"
+        ]
+      }
+    },
+    {
+      "id": "v04",
+      "packet": {
+        "observations": [
+          {
+            "configuration": {
+              "entry": "pytest \u2192 test function \u2192 compute \u2192 dependency function",
+              "comparison": "returned number equals 1",
+              "test_control": "separate unrelated test"
+            },
+            "source_behavior": "Importing the module raises ModuleNotFoundError before any test function executes.",
+            "source": {
+              "entry": "import missing_probe_dependency_jev_v1\ndef compute():\n    return 1\n",
+              "dependency": ""
+            },
+            "control_exit": 0,
+            "mutated_execution_exit": 2,
+            "target_status": "not observed",
+            "terminal_exception": "ModuleNotFoundError",
+            "classifier_outputs": {
+              "native": "not_exercised",
+              "work": "setup_error"
+            }
+          }
+        ]
+      },
+      "answer": {
+        "family": "F07",
+        "split": "development",
+        "kind": "environment",
+        "mechanism": [
+          "infrastructure"
+        ],
+        "probe": [
+          "none",
+          "p4"
+        ],
+        "rationale": "Importing the module raises ModuleNotFoundError before any test function executes. Compare executed outcome with both recorded classifier decisions.",
+        "scope": "independent dependency/exception transfer within known F07 family, not unseen-family evaluation"
+      },
+      "source": {
+        "raw_path": "evidence/independent_generation/p4/observations.json",
+        "raw_sha256": "01bc5c97d6cc204fefd8669db608c70e96e566ea992c5fb3c4c0f1d35b6555c2",
+        "variant": "q06",
+        "fixture": "probe_fixtures/calibration.json"
+      },
+      "extraction": {
+        "method": "select recorded exit/status/classifier decisions; first exception line; source_behavior derived from retained fixture source",
+        "omitted": [
+          "full traceback assertion marker and source filenames",
+          "absolute execution paths",
+          "precomputed expected/reproduced/credit fields"
+        ]
+      }
+    }
+  ]
+}

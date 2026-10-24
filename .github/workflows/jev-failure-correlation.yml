@@ -1,0 +1,134 @@
+name: Jev failure correlation v1
+on:
+  push:
+    branches: [experiment/jev-failure-correlation-v1]
+    paths:
+      - 'experiments/jev_failure_correlation/*.py'
+      - 'experiments/jev_failure_correlation/rubric.json'
+      - 'experiments/jev_failure_correlation/additional_cases.json'
+      - 'experiments/jev_failure_correlation/data/**'
+      - 'experiments/jev_failure_correlation/tests/**'
+      - 'experiments/jev_failure_correlation/probe_fixtures/**'
+      - '.github/workflows/jev-failure-correlation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: jev-experiment-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  evaluate:
+    if: github.repository == 'xormania/xorchestrate' && github.ref == 'refs/heads/experiment/jev-failure-correlation-v1'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: write # Publish only sanitized experiment evidence on its own branch.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.12'
+      - name: Prepare dependencies and existing validator configuration
+        run: |
+          python -m pip install --disable-pip-version-check -e '.[test]'
+          mkdir -p .agents
+          cp -R reference/imported-agent-skills .agents/skills
+          mkdir -p experiment-results
+          python - <<'PY'
+          import json, os, platform
+          from pathlib import Path
+          keys = ['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_REPOSITORY','GITHUB_WORKFLOW']
+          context = {k: os.environ.get(k) for k in keys}
+          context['python'] = platform.python_version()
+          context['run_url'] = f"https://github.com/{context['GITHUB_REPOSITORY']}/actions/runs/{context['GITHUB_RUN_ID']}"
+          Path('experiment-results/actions-context.json').write_text(json.dumps(context, indent=2))
+          PY
+      - name: Validate experiment
+        run: python -m pytest experiments/jev_failure_correlation/tests experiments/jev_failure_correlation/test_corpus.py -q
+      - name: Prepare frozen request matrix and deterministic baseline
+        run: python -m experiments.jev_failure_correlation.runner prepare --out experiment-results/evaluation
+      - name: Execute baseline-selected safe probes
+        run: python -m experiments.jev_failure_correlation.probes --predictions experiment-results/evaluation/baseline.json --selector baseline --out experiment-results/baseline-probes
+      - name: Authenticated smoke and bounded live Jev batch
+        env:
+          TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+        run: python -m experiments.jev_failure_correlation.runner live --out experiment-results/evaluation
+      - name: Execute Jev-selected safe probes
+        if: always()
+        run: |
+          if test -f experiment-results/evaluation/predictions.json; then
+            python -m experiments.jev_failure_correlation.probes --predictions experiment-results/evaluation/predictions.json --selector jev --out experiment-results/jev-probes
+          fi
+      - name: Replay scoring from retained outputs without credentials
+        if: always()
+        run: |
+          if test -f experiment-results/evaluation/matrix.json; then
+            python -m experiments.jev_failure_correlation.runner score --out experiment-results/evaluation
+          fi
+      - name: Retain all results even after incomplete evaluation
+        if: always()
+        id: artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: jev-failure-correlation-v1-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            experiment-results/
+            experiments/jev_failure_correlation/data/
+            experiments/jev_failure_correlation/rubric.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Record artifact identity
+        if: always()
+        env:
+          ARTIFACT_ID: ${{ steps.artifact.outputs.artifact-id }}
+          ARTIFACT_URL: ${{ steps.artifact.outputs.artifact-url }}
+          ARTIFACT_DIGEST: ${{ steps.artifact.outputs.artifact-digest }}
+        run: |
+          python - <<'PY'
+          import os
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+              for key in ['ARTIFACT_ID','ARTIFACT_URL','ARTIFACT_DIGEST']:
+                  f.write(key + ': ' + os.environ.get(key, '') + '\n\n')
+          PY
+      - name: Publish sanitized evidence for Git-based retrieval
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_ID: ${{ steps.artifact.outputs.artifact-id }}
+          ARTIFACT_URL: ${{ steps.artifact.outputs.artifact-url }}
+          ARTIFACT_DIGEST: ${{ steps.artifact.outputs.artifact-digest }}
+        run: |
+          python - <<'PYCODE'
+          import base64, json, os, shutil, subprocess, tempfile
+          from pathlib import Path
+          target = Path(tempfile.mkdtemp(prefix='jev-publication-', dir=os.environ['RUNNER_TEMP']))
+          source = Path('experiment-results')
+          if source.exists():
+              shutil.copytree(source, target / 'experiment-results')
+          else:
+              (target / 'experiment-results').mkdir()
+          data = Path('experiments/jev_failure_correlation/data')
+          if data.exists():
+              shutil.copytree(data, target / 'data')
+          branch = 'evidence/jev-failure-correlation-' + os.environ['GITHUB_RUN_ID'] + '-' + os.environ['GITHUB_RUN_ATTEMPT']
+          metadata = {k: os.environ.get(k) for k in ['GITHUB_SHA','GITHUB_RUN_ID','GITHUB_RUN_ATTEMPT','GITHUB_REPOSITORY','ARTIFACT_ID','ARTIFACT_URL','ARTIFACT_DIGEST']}
+          metadata['run_url'] = f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+          metadata['branch'] = branch
+          (target / 'publication.json').write_text(json.dumps(metadata, indent=2) + '\n')
+          def git(*args, env=None):
+              subprocess.run(['git', *args], cwd=target, env=env, check=True)
+          git('init', '-b', branch)
+          git('config', 'user.name', 'xormania')
+          git('config', 'user.email', 'xormania@users.noreply.github.com')
+          git('add', '.')
+          git('commit', '-m', 'Retain Jev experiment results ' + os.environ['GITHUB_RUN_ID'])
+          # Authentication exists only in this child process environment, never repository files or command arguments.
+          token = os.environ['GH_TOKEN']
+          auth = base64.b64encode(('x-access-token:' + token).encode()).decode()
+          push_env = dict(os.environ, GIT_CONFIG_COUNT='1', GIT_CONFIG_KEY_0='http.https://github.com/.extraheader', GIT_CONFIG_VALUE_0='AUTHORIZATION: basic ' + auth)
+          git('push', 'https://github.com/' + os.environ['GITHUB_REPOSITORY'] + '.git', 'HEAD:refs/heads/' + branch, env=push_env)
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as f:
+              f.write('Evidence branch: `' + branch + '`\n')
+          PYCODE

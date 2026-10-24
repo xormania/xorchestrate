@@ -1,0 +1,15 @@
+{
+  "version": "1",
+  "marker": "TARGET_REQUIREMENT",
+  "target": "test_target",
+  "variants": [
+    {"id":"q01","module":"def compute():\n    return 2\n","dependency":"","expected":"intended_assertion","independent":false},
+    {"id":"q02","module":"def compute():\n    raise TimeoutError('clock did not respond')\n","dependency":"","expected":"unrelated_failure","independent":false},
+    {"id":"q03","module":"from dependency import read_value\ndef compute():\n    return read_value()\n","dependency":"def read_value():\n    raise ValueError('malformed response')\n","expected":"unrelated_failure","independent":true},
+    {"id":"q04","module":"from dependency import read_value\ndef compute():\n    return read_value()\n","dependency":"def read_value():\n    assert False, 'dependency invariant'\n","expected":"unrelated_assertion","independent":true},
+    {"id":"q05","module":"from dependency import read_value\ndef compute():\n    return read_value()\n","dependency":"def read_value():\n    return 1\n","expected":"valid","independent":true},
+    {"id":"q06","module":"import missing_probe_dependency_jev_v1\ndef compute():\n    return 1\n","dependency":"","expected":"setup_error","independent":true},
+    {"id":"q07","module":"def compute():\n    import pytest\n    pytest.skip('capability unavailable')\n","dependency":"","expected":"skipped","independent":false},
+    {"id":"q08","module":"def compute():\n    return 2\n","dependency":"","expected":"missing_coverage","independent":false,"omit_target":true}
+  ]
+}

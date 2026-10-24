@@ -1,0 +1,24 @@
+{
+  "command": [
+    "/workspace/jev-venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "--tb=short",
+    "-p",
+    "no:cacheprovider",
+    "test_probe.py",
+    "--junitxml=/workspace/jev-probe-generation-v1/p4/q05/output/results.xml"
+  ],
+  "cwd": "/workspace/jev-probe-generation-v1/p4/q05/input",
+  "elapsed_seconds": 0.23690293700002485,
+  "exit_code": 0,
+  "source_sha256": {
+    "dependency.py": "ea9db0579d73c39296a93c75e78f700fb36fc90823cc2d691e5d94c4feef3481",
+    "module.py": "e45780aadd605e722c2f7767b1e33393cbf8ff62702b9c34075b5132e370d935",
+    "test_probe.py": "dc8d804669fcb3bb0eb37153ed4266d21da7aadfe49f2f107641b7386a47a67a"
+  },
+  "started": "2026-10-24T05:01:39.495823+00:00",
+  "status": "completed",
+  "xml_sha256": "9994ea33aff8ab6a7b3eaf1ab72f41eac685d7808594579a2f805673cd39e2a7"
+}

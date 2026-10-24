@@ -1,0 +1,113 @@
+{
+  "reason": "Retain exact fixture bytes as text so repository test discovery does not execute deliberate faults. Actual historical command paths remain unchanged.",
+  "renamed": [
+    {
+      "execution_path_suffix": "p4/control/input/dependency.py",
+      "retained_path": "p4/control/input/dependency.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/control/input/module.py",
+      "retained_path": "p4/control/input/module.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/control/input/test_probe.py",
+      "retained_path": "p4/control/input/test_probe.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q01/input/dependency.py",
+      "retained_path": "p4/q01/input/dependency.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q01/input/module.py",
+      "retained_path": "p4/q01/input/module.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q01/input/test_probe.py",
+      "retained_path": "p4/q01/input/test_probe.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q02/input/dependency.py",
+      "retained_path": "p4/q02/input/dependency.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q02/input/module.py",
+      "retained_path": "p4/q02/input/module.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q02/input/test_probe.py",
+      "retained_path": "p4/q02/input/test_probe.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q03/input/dependency.py",
+      "retained_path": "p4/q03/input/dependency.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q03/input/module.py",
+      "retained_path": "p4/q03/input/module.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q03/input/test_probe.py",
+      "retained_path": "p4/q03/input/test_probe.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q04/input/dependency.py",
+      "retained_path": "p4/q04/input/dependency.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q04/input/module.py",
+      "retained_path": "p4/q04/input/module.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q04/input/test_probe.py",
+      "retained_path": "p4/q04/input/test_probe.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q05/input/dependency.py",
+      "retained_path": "p4/q05/input/dependency.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q05/input/module.py",
+      "retained_path": "p4/q05/input/module.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q05/input/test_probe.py",
+      "retained_path": "p4/q05/input/test_probe.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q06/input/dependency.py",
+      "retained_path": "p4/q06/input/dependency.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q06/input/module.py",
+      "retained_path": "p4/q06/input/module.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q06/input/test_probe.py",
+      "retained_path": "p4/q06/input/test_probe.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q07/input/dependency.py",
+      "retained_path": "p4/q07/input/dependency.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q07/input/module.py",
+      "retained_path": "p4/q07/input/module.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q07/input/test_probe.py",
+      "retained_path": "p4/q07/input/test_probe.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q08/input/dependency.py",
+      "retained_path": "p4/q08/input/dependency.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q08/input/module.py",
+      "retained_path": "p4/q08/input/module.py.txt"
+    },
+    {
+      "execution_path_suffix": "p4/q08/input/test_probe.py",
+      "retained_path": "p4/q08/input/test_probe.py.txt"
+    }
+  ]
+}

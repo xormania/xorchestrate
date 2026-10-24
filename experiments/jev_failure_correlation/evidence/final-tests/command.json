@@ -1,0 +1,16 @@
+{
+  "command": [
+    "/workspace/jev-venv/bin/python",
+    "-m",
+    "pytest",
+    "experiments/jev_failure_correlation/tests",
+    "devtools/tests/test_jev_structured.py",
+    "devtools/tests/test_jev_transport.py",
+    "-q",
+    "--junitxml=/workspace/xorchestrate-jev/experiments/jev_failure_correlation/evidence/final-tests/results.xml"
+  ],
+  "cwd": "/workspace/xorchestrate-jev",
+  "started": "2026-10-24T05:05:57.860068+00:00",
+  "seconds": 6.120111755000039,
+  "exit": 0
+}

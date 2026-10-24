@@ -1,0 +1,10 @@
+{
+  "predictions": {
+    "cases": {
+      "generation": {
+        "probe": "p4"
+      }
+    }
+  },
+  "selector": "independent-generation"
+}
