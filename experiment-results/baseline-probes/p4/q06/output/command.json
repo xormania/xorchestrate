@@ -1,0 +1,24 @@
+{
+  "command": [
+    "/opt/hostedtoolcache/Python/3.12.15/x64/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "--tb=short",
+    "-p",
+    "no:cacheprovider",
+    "test_probe.py",
+    "--junitxml=/home/runner/work/xorchestrate/xorchestrate/experiment-results/baseline-probes/p4/q06/output/results.xml"
+  ],
+  "cwd": "/home/runner/work/xorchestrate/xorchestrate/experiment-results/baseline-probes/p4/q06/input",
+  "elapsed_seconds": 0.3100991459999989,
+  "exit_code": 2,
+  "source_sha256": {
+    "dependency.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "module.py": "6d6927e7c8f81757a8234d0a9f78fbadf14384b434ffa1977a1f86a255bb18b4",
+    "test_probe.py": "dc8d804669fcb3bb0eb37153ed4266d21da7aadfe49f2f107641b7386a47a67a"
+  },
+  "started": "2026-10-24T05:08:05.220612+00:00",
+  "status": "completed",
+  "xml_sha256": "497c0edaceb23db07e4cbd6c1e88ec5cb8bb32054f711d6b65141e8cc6dfdf7a"
+}

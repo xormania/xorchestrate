@@ -1,0 +1,261 @@
+{
+  "version": "1.1.0",
+  "corpus_binding": "7ed4ec43c30855a03117d1a9f8624833bc6322ca29d1a0663cc3a1be89042e72",
+  "endpoint": "https://api.typesafe.ai/v1/systemone",
+  "requested_model": "jev-1.13.0",
+  "model_sha256": "3b144d5e6bb7bf4cafa48404341aafa9ada977d2f3425ee65a4a0e800d2cc00c",
+  "rubric_sha256": "597a03287ea90ef7a13164b3d5eb908423e634b1e755eae6ebaaa7f0b9ef0519",
+  "source_hashes": {
+    "experiments/jev_failure_correlation/additional_cases.json": "2261a79e1539a9236b02a4bcb10a7286086d964bd647b020a7c5ae044200c31d",
+    "experiments/jev_failure_correlation/corpus.py": "055c5448b2c89cd29079e25274b7e712dc665454b0d0852cd75b26a204d9ef57",
+    "experiments/jev_failure_correlation/data/answer_key.json": "43f9148816b6dfbbcab41770f80637cd229805fc2972f1b8316abee4fe2a6a80",
+    "experiments/jev_failure_correlation/data/cases.json": "6cbdbe715cf990174605881ca5704782324c9263931beb69106079de09d45a4a",
+    "experiments/jev_failure_correlation/data/freeze.json": "7a41f268c537f8e48ca2e53ec44aef7845eaf6466b56fd70190aba3ef6fe958f",
+    "experiments/jev_failure_correlation/data/pairs.json": "4ad717fb016074695cf311ff2783491201659419ed243b7b97eb798a46f9a5c5",
+    "experiments/jev_failure_correlation/data/provenance.json": "e0404c975d709ceea4c03b8eeef7266156710a27224caf299d8620dd2aa08e1d",
+    "experiments/jev_failure_correlation/data/raw_observations.json": "8db08875bd1cce75c9f61110638c3ec6cf2813d48ca0090aea148bf657506501",
+    "experiments/jev_failure_correlation/data/splits.json": "bff11dcacd9f80f48379d23548ae0c3b840061e99004a6357dbe1086132700e0",
+    "experiments/jev_failure_correlation/probe_fixtures/calibration.json": "b54660edc637d4266cc0a5ea58a067ee0fe20dc671d107226ba9708aa2f89574",
+    "experiments/jev_failure_correlation/probe_fixtures/export_additional.py": "38e105480a426f87fc5482451019a11d5e09ed79c0397a96bc117d920a64412c",
+    "experiments/jev_failure_correlation/probes.py": "ddde016c20f99b64094fb6666e72180f5fa125aa98588cab5f3c92d3c69dd77d",
+    "experiments/jev_failure_correlation/rubric.json": "419047e1ff17932e99ea92dbd03a1f18ef856a13fc240e3b34e9b9cfedb38969",
+    "experiments/jev_failure_correlation/runner.py": "9738feb8b59baff6dbc7f7ded5bbecfd8f8325d790c19cdee09d88399c576eff",
+    "experiments/jev_failure_correlation/test_corpus.py": "7385d7ca2556c1bb2bf0cbbd7eb80e804d358c80f00d7a4d4e9f88c1a8572be7",
+    "experiments/jev_failure_correlation/tests/test_probes.py": "a3176fd97d2fc0152e253778c018f2cefff1fafba6e6f192a7adb150cb9a7efa",
+    "experiments/jev_failure_correlation/tests/test_runner.py": "252950d1298d2463945b1c4b30c7864ddfb5112c9798a644e116a7763d1d8112",
+    "devtools/jev.py": "06f5cfeee090f1ecc5bb75a22a25c477e91b237a338e08e090f12e100846f085",
+    "devtools/jev_config.py": "943dd200f54c650f040c4c011c97fc832b197ae66b3c1715f56e7ce32fc75509",
+    "devtools/github_http.py": "fd2bd8e6e4b7fba45530cdab1e4b89792b9cc3c74f123d96a0a13492576dfcaa",
+    "devtools/configuration.json": "22916b2f738002b24eff1221fa5728595fdf58f9302d4a5192eee6ee700dcb09",
+    ".github/workflows/jev-failure-correlation.yml": "ecc346fb08f382324202bf56af9f83fbfb15ef1045c2f32f6f8b8b4e05dd80c5"
+  },
+  "client": "xorchestrate-jev-failure-correlation/1.1.0",
+  "python": "3.12.15",
+  "max_attempts_per_request": 2,
+  "timeout_seconds": 20,
+  "maximum_calls": 86,
+  "minimum_calls_if_success": 43,
+  "maximum_request_bytes": 28000,
+  "maximum_response_bytes": 131072,
+  "estimated_cost_usd": null,
+  "cost_note": "No verified current provider pricing; no inferred cost. Actual usage is retained.",
+  "repeats": [],
+  "requests": [
+    {
+      "id": "smoke",
+      "kind": "smoke",
+      "assessment_id": "2421767568dda8841b20d08830b868e869e3dd367bdc4bb37a78c584340a4ad0"
+    },
+    {
+      "id": "c10772a98b7",
+      "kind": "case",
+      "assessment_id": "f47aa5b8258233f30cdefa68df9d1b0291f39305ac2f71562bc139166dec122e"
+    },
+    {
+      "id": "c132396d093",
+      "kind": "case",
+      "assessment_id": "4870088ce90bcfa16240a44601e891022cac443660f8e1e64cbc08d46f5a9019"
+    },
+    {
+      "id": "c2b576d8713",
+      "kind": "case",
+      "assessment_id": "40fc3f5659f2864dc0e4266c815d820769e8305226dcfb8aabbe2369d3bd08b1"
+    },
+    {
+      "id": "c2f397006d9",
+      "kind": "case",
+      "assessment_id": "b32ae8ce646dd0a6341aa956acc5e0750d5b6dcdebcbb1281228db890b4dd9e9"
+    },
+    {
+      "id": "c4568de1c87",
+      "kind": "case",
+      "assessment_id": "63fe362061383a0f330779d14968405816de9fe9209b21fece03779f2eb84167"
+    },
+    {
+      "id": "c5b16f544f4",
+      "kind": "case",
+      "assessment_id": "7cb0201d6301fb3193bbdf156bfd309055b3c140dad0b3ac5313b3807c46bc25"
+    },
+    {
+      "id": "c5b2286615d",
+      "kind": "case",
+      "assessment_id": "57212a850ed9df561ea51b59bfd9e7be3033109bb92016ca34b8ca3c7b37547e"
+    },
+    {
+      "id": "c6b464d0d2d",
+      "kind": "case",
+      "assessment_id": "e63f1ee256b9bcb34ffe0fb38cc1999b751582e301034087aa85e7745f5a1d82"
+    },
+    {
+      "id": "c6c5a633d2e",
+      "kind": "case",
+      "assessment_id": "2196b2b0fda08d1eca7fa7b5b23cae04d8121529a4a7f49a02e00662530afa47"
+    },
+    {
+      "id": "c7a8d59bac1",
+      "kind": "case",
+      "assessment_id": "ef0ff03b4cb33ee65c5666f7175cb5a9099a3aba3b94e2de1b7f7a831c50bb3b"
+    },
+    {
+      "id": "c81fa84c395",
+      "kind": "case",
+      "assessment_id": "5f1adb126db83219dabf12b396b67295405c7c811bc0b3d3597fb422b501f74f"
+    },
+    {
+      "id": "c8a1cd71143",
+      "kind": "case",
+      "assessment_id": "81fe3fdb1bdff41f96d0b8418b3bccbf61c979fb7742dc09486513a5f4bb4b61"
+    },
+    {
+      "id": "c8c360ddd51",
+      "kind": "case",
+      "assessment_id": "404d653ba46d7c04e153a47eaa9fd83a968cf70ce141659e2cee896bf10e9f52"
+    },
+    {
+      "id": "c965c818495",
+      "kind": "case",
+      "assessment_id": "8d3375319bf76550f02b0c35f2b457ce6075e24dcb1abdb8c471fb27b9702c2c"
+    },
+    {
+      "id": "c9c28a79619",
+      "kind": "case",
+      "assessment_id": "e1459e1082df24b4b2ac1e26631e7d5a793fea24c11f8ba08bb42732da0d8ee7"
+    },
+    {
+      "id": "ca4ab47c946",
+      "kind": "case",
+      "assessment_id": "485980f488227ddff79fba0d7f3bbb4c565055579b50d9011398431b113b72a0"
+    },
+    {
+      "id": "ca4f1ba6d30",
+      "kind": "case",
+      "assessment_id": "0ab1a78a8b799d3c5a6ec23156b1cb985049e502097201832e6908f74e94f774"
+    },
+    {
+      "id": "ca8a9086479",
+      "kind": "case",
+      "assessment_id": "82baf84b05840e6d6e27088a046b49b4176a8e2d881ccec5ec3b8db56b0d1b24"
+    },
+    {
+      "id": "cb501d6169f",
+      "kind": "case",
+      "assessment_id": "34afb63bb991fcfa058fbe30d21d5c6af7632eb99e74b6ca30f667edcd89c96b"
+    },
+    {
+      "id": "cb9080f7f96",
+      "kind": "case",
+      "assessment_id": "8078095b2b037d5ce7b37f2f682e3904e2ef1ca906495d3b8f53cee919a31754"
+    },
+    {
+      "id": "cc65f638301",
+      "kind": "case",
+      "assessment_id": "a2b1f97698bc87c209719214bb70ffe037ca009f5aa92f90e12e6a59333f90bf"
+    },
+    {
+      "id": "cc6c0d5103e",
+      "kind": "case",
+      "assessment_id": "f23cfdbd718e91950762e3bc7cb5df8868f8410617aa848737d997783f81899e"
+    },
+    {
+      "id": "ccb6546cc17",
+      "kind": "case",
+      "assessment_id": "679f39b0445dafb9fe7dae643a8f842ecba4ae3e731f24e074ccb5ed28538e19"
+    },
+    {
+      "id": "cd58718f440",
+      "kind": "case",
+      "assessment_id": "aa25836af8b60a9929c965633ccee7dab711ce5bd0322af0cd23bc64e9be0653"
+    },
+    {
+      "id": "cd9a464e21e",
+      "kind": "case",
+      "assessment_id": "40c244adab667deb60561124ed725c1a15622f8deb6d556ac9617909d361d146"
+    },
+    {
+      "id": "cdb9ded1cc2",
+      "kind": "case",
+      "assessment_id": "60a5548620e561ed6131d629b1d1fc653a7154aaf989e2844f9d4e88d7b83b1c"
+    },
+    {
+      "id": "cde0dfa2876",
+      "kind": "case",
+      "assessment_id": "47ab472f29c8017617e1fa093fcb85b619f6fcb0d5b393b810616e1413efcb67"
+    },
+    {
+      "id": "cde81233c34",
+      "kind": "case",
+      "assessment_id": "6ec9df85647f1ee9ef516addad9d65fe1b6904004d8ed26218a6ccbfee1e10a3"
+    },
+    {
+      "id": "ce010ff9ebd",
+      "kind": "case",
+      "assessment_id": "2c5fb0e34029134c2916f67447b8d581a512514a40c209aa233a18def5d7aa4c"
+    },
+    {
+      "id": "ced6478d6f9",
+      "kind": "case",
+      "assessment_id": "55b49a3a209a4aef80777a9868e0be0988087e1aa4aa938a2731dae4ce02c302"
+    },
+    {
+      "id": "v01",
+      "kind": "case",
+      "assessment_id": "5b93869725e92b5b3b294430241dfcabee84ac0f8829d7dcdb7daa7bc69110c5"
+    },
+    {
+      "id": "v02",
+      "kind": "case",
+      "assessment_id": "8e87631a0f702a038cf91de2140850b11eec21ed2c3c83f260ef323a8da57ee4"
+    },
+    {
+      "id": "v03",
+      "kind": "case",
+      "assessment_id": "12e4879026ddc845202b2bccc3cc01c7ba156b4e2d0a9c2366cdb42b7a440941"
+    },
+    {
+      "id": "v04",
+      "kind": "case",
+      "assessment_id": "d75450289095483c61ecd9492e9a6304f587b07dd1aa1cc00b9a4f2c260ac70a"
+    },
+    {
+      "id": "r6eb0b370b8",
+      "kind": "pair",
+      "assessment_id": "7d74132845923eb2a9a8dae0e094a4128cbd2cd89e0d9fad51065f0accfa014f"
+    },
+    {
+      "id": "r22042f213a",
+      "kind": "pair",
+      "assessment_id": "40f804d2f7d4f2db0f558f3f165c3c4cd3e6f13c85fe945c608e05959337bfdf"
+    },
+    {
+      "id": "r409c21d44a",
+      "kind": "pair",
+      "assessment_id": "31a2f062d451ca4a5bae735580871e64780943c87cf0abaeb2770d277a79a74e"
+    },
+    {
+      "id": "r6a4360d930",
+      "kind": "pair",
+      "assessment_id": "c91645dac0fe03936d823a32d61251240f317ff632ad5e2234ec6ff57922c57b"
+    },
+    {
+      "id": "rc938b1f250",
+      "kind": "pair",
+      "assessment_id": "4d47a9df0779093c979e6d59c159306b5af92523776110b06d044bcc70db1fc3"
+    },
+    {
+      "id": "r65a51875a7",
+      "kind": "pair",
+      "assessment_id": "40fa3a8d6c454031243115dc84df57369097fe803ec8dd1b75953818fa9b447e"
+    },
+    {
+      "id": "r4c2d64b23b",
+      "kind": "pair",
+      "assessment_id": "4057e138480f121bef14c301077880cc5212f115c30ef918d619793f920ec2cb"
+    },
+    {
+      "id": "r3876eaf5b3",
+      "kind": "pair",
+      "assessment_id": "5dd01abcffd41e195c2b1e68a88f5e9c0451471b1c518b12d2f5e4e8eaf65f76"
+    }
+  ],
+  "git_head": "454f6f25cb01d0aca793e21c72a032f8428535a9"
+}

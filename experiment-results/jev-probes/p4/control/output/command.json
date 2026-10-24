@@ -1,0 +1,24 @@
+{
+  "command": [
+    "/opt/hostedtoolcache/Python/3.12.15/x64/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "--tb=short",
+    "-p",
+    "no:cacheprovider",
+    "test_probe.py",
+    "--junitxml=/home/runner/work/xorchestrate/xorchestrate/experiment-results/jev-probes/p4/control/output/results.xml"
+  ],
+  "cwd": "/home/runner/work/xorchestrate/xorchestrate/experiment-results/jev-probes/p4/control/input",
+  "elapsed_seconds": 0.22668326200000166,
+  "exit_code": 0,
+  "source_sha256": {
+    "dependency.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "module.py": "a97a67e61663bbbb86a609a7c528fee96df7472e7512061711027a0081ae696a",
+    "test_probe.py": "dc8d804669fcb3bb0eb37153ed4266d21da7aadfe49f2f107641b7386a47a67a"
+  },
+  "started": "2026-10-24T05:08:09.715372+00:00",
+  "status": "completed",
+  "xml_sha256": "ac2284630e08ab8115cbccdcbf85e78dcbea322bbc0968f6f69ff62e6159cf6d"
+}

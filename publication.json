@@ -1,0 +1,11 @@
+{
+  "GITHUB_SHA": "454f6f25cb01d0aca793e21c72a032f8428535a9",
+  "GITHUB_RUN_ID": "40065048378",
+  "GITHUB_RUN_ATTEMPT": "1",
+  "GITHUB_REPOSITORY": "xormania/xorchestrate",
+  "ARTIFACT_ID": "12549096846",
+  "ARTIFACT_URL": "https://github.com/xormania/xorchestrate/actions/runs/40065048378/artifacts/12549096846",
+  "ARTIFACT_DIGEST": "a2ced473eaaabaf3c0c004ee8272a6067af6c18e5bfb66c15350349d7c0d000b",
+  "run_url": "https://github.com/xormania/xorchestrate/actions/runs/40065048378",
+  "branch": "evidence/jev-failure-correlation-40065048378-1"
+}

@@ -1,0 +1,20 @@
+{
+  "model": "jev-1.13.0",
+  "state": {
+    "observations": [
+      {
+        "value": "alpha"
+      }
+    ]
+  },
+  "questions": {
+    "transport": {
+      "type": "choice",
+      "instructions": "Select the literal value observed.",
+      "criteria": {
+        "alpha": "The observation value is alpha.",
+        "beta": "The observation value is beta."
+      }
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "pairs": [
+    {
+      "id": "r6eb0b370b8",
+      "left": "c4568de1c87",
+      "right": "ca4ab47c946"
+    },
+    {
+      "id": "r22042f213a",
+      "left": "c4568de1c87",
+      "right": "c8a1cd71143"
+    },
+    {
+      "id": "r409c21d44a",
+      "left": "ce010ff9ebd",
+      "right": "c9c28a79619"
+    },
+    {
+      "id": "r6a4360d930",
+      "left": "cdb9ded1cc2",
+      "right": "c6b464d0d2d"
+    },
+    {
+      "id": "rc938b1f250",
+      "left": "ca8a9086479",
+      "right": "c132396d093"
+    },
+    {
+      "id": "r65a51875a7",
+      "left": "ca8a9086479",
+      "right": "c2f397006d9"
+    },
+    {
+      "id": "r4c2d64b23b",
+      "left": "cd58718f440",
+      "right": "c5b16f544f4"
+    },
+    {
+      "id": "r3876eaf5b3",
+      "left": "cb501d6169f",
+      "right": "cdb9ded1cc2"
+    }
+  ],
+  "version": "1.1.0"
+}

@@ -1,0 +1,13 @@
+{
+  "case_count": 34,
+  "files": {
+    "answer_key.json": "43f9148816b6dfbbcab41770f80637cd229805fc2972f1b8316abee4fe2a6a80",
+    "cases.json": "6cbdbe715cf990174605881ca5704782324c9263931beb69106079de09d45a4a",
+    "pairs.json": "4ad717fb016074695cf311ff2783491201659419ed243b7b97eb798a46f9a5c5",
+    "provenance.json": "e0404c975d709ceea4c03b8eeef7266156710a27224caf299d8620dd2aa08e1d",
+    "raw_observations.json": "8db08875bd1cce75c9f61110638c3ec6cf2813d48ca0090aea148bf657506501",
+    "splits.json": "bff11dcacd9f80f48379d23548ae0c3b840061e99004a6357dbe1086132700e0"
+  },
+  "relationship_count": 8,
+  "version": "1.1.0"
+}

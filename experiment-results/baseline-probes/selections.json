@@ -1,0 +1,171 @@
+{
+  "predictions": {
+    "cases": {
+      "c10772a98b7": {
+        "mechanism": "obsolete_result",
+        "probe": "p1"
+      },
+      "c132396d093": {
+        "mechanism": "insufficient",
+        "probe": "insufficient"
+      },
+      "c2b576d8713": {
+        "mechanism": "evidence_contradiction",
+        "probe": "p3"
+      },
+      "c2f397006d9": {
+        "mechanism": "concurrent_activity",
+        "probe": "p6"
+      },
+      "c4568de1c87": {
+        "mechanism": "obsolete_result",
+        "probe": "p1"
+      },
+      "c5b16f544f4": {
+        "mechanism": "assertion_proxy",
+        "probe": "p4"
+      },
+      "c5b2286615d": {
+        "mechanism": "assertion_proxy",
+        "probe": "p4"
+      },
+      "c6b464d0d2d": {
+        "mechanism": "post_effect_uncertainty",
+        "probe": "p3"
+      },
+      "c6c5a633d2e": {
+        "mechanism": "assertion_proxy",
+        "probe": "p3"
+      },
+      "c7a8d59bac1": {
+        "mechanism": "insufficient",
+        "probe": "insufficient"
+      },
+      "c81fa84c395": {
+        "mechanism": "insufficient",
+        "probe": "insufficient"
+      },
+      "c8a1cd71143": {
+        "mechanism": "insufficient",
+        "probe": "insufficient"
+      },
+      "c8c360ddd51": {
+        "mechanism": "insufficient",
+        "probe": "insufficient"
+      },
+      "c965c818495": {
+        "mechanism": "insufficient",
+        "probe": "insufficient"
+      },
+      "c9c28a79619": {
+        "mechanism": "insufficient",
+        "probe": "insufficient"
+      },
+      "ca4ab47c946": {
+        "mechanism": "obsolete_result",
+        "probe": "p1"
+      },
+      "ca4f1ba6d30": {
+        "mechanism": "assertion_proxy",
+        "probe": "p3"
+      },
+      "ca8a9086479": {
+        "mechanism": "insufficient",
+        "probe": "insufficient"
+      },
+      "cb501d6169f": {
+        "mechanism": "insufficient",
+        "probe": "insufficient"
+      },
+      "cb9080f7f96": {
+        "mechanism": "concurrent_activity",
+        "probe": "p6"
+      },
+      "cc65f638301": {
+        "mechanism": "assertion_proxy",
+        "probe": "p4"
+      },
+      "cc6c0d5103e": {
+        "mechanism": "insufficient",
+        "probe": "insufficient"
+      },
+      "ccb6546cc17": {
+        "mechanism": "insufficient",
+        "probe": "insufficient"
+      },
+      "cd58718f440": {
+        "mechanism": "assertion_proxy",
+        "probe": "p4"
+      },
+      "cd9a464e21e": {
+        "mechanism": "obsolete_result",
+        "probe": "p1"
+      },
+      "cdb9ded1cc2": {
+        "mechanism": "evidence_contradiction",
+        "probe": "p3"
+      },
+      "cde0dfa2876": {
+        "mechanism": "insufficient",
+        "probe": "insufficient"
+      },
+      "cde81233c34": {
+        "mechanism": "insufficient",
+        "probe": "insufficient"
+      },
+      "ce010ff9ebd": {
+        "mechanism": "insufficient",
+        "probe": "insufficient"
+      },
+      "ced6478d6f9": {
+        "mechanism": "insufficient",
+        "probe": "insufficient"
+      },
+      "v01": {
+        "mechanism": "insufficient",
+        "probe": "insufficient"
+      },
+      "v02": {
+        "mechanism": "insufficient",
+        "probe": "insufficient"
+      },
+      "v03": {
+        "mechanism": "insufficient",
+        "probe": "insufficient"
+      },
+      "v04": {
+        "mechanism": "infrastructure",
+        "probe": "p4"
+      }
+    },
+    "corpus_binding": "7ed4ec43c30855a03117d1a9f8624833bc6322ca29d1a0663cc3a1be89042e72",
+    "pairs": {
+      "r22042f213a": {
+        "relationship": "insufficient"
+      },
+      "r3876eaf5b3": {
+        "relationship": "insufficient"
+      },
+      "r409c21d44a": {
+        "relationship": "insufficient"
+      },
+      "r4c2d64b23b": {
+        "relationship": "same_mechanism"
+      },
+      "r65a51875a7": {
+        "relationship": "insufficient"
+      },
+      "r6a4360d930": {
+        "relationship": "no_relationship"
+      },
+      "r6eb0b370b8": {
+        "relationship": "same_mechanism"
+      },
+      "rc938b1f250": {
+        "relationship": "insufficient"
+      }
+    },
+    "selector": "baseline"
+  },
+  "selector": "baseline"
+}

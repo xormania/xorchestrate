@@ -1,0 +1,539 @@
+{
+  "archive_integrity": {
+    "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+    "errors": [],
+    "files_checked": 1831,
+    "manifest_sha256": "70d663dfb35eb1fd631401ee769342a2c409ba025b7ab665aee57b5c58b1c761",
+    "owner_brief_sha256": "41545d3fab334e432f58f1f1b1367c70bed29bf2c39c1280c3eacd9cbdc783ad"
+  },
+  "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+  "cases": {
+    "c10772a98b7": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F04-fresh",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "62cd46ddcd1e29b641c02482b40dc70f77c3b4d51c48c7c38de9d6aabdfc36dd",
+      "raw_refs": [
+        "s85c4724e94f528"
+      ]
+    },
+    "c132396d093": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F01-sqlite",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "4c3cce74890c0b2ee07ba40a4c4e4f7294c6d18a6725b31c796349ec96de77bf",
+      "raw_refs": [
+        "se278a2da6f1b47"
+      ]
+    },
+    "c2b576d8713": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F08-agreement",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "77862a21db6a743dd9a492701e9b888bcb903b5afe5c0486b9101a9a75a603bd",
+      "raw_refs": [
+        "s25660f92e53293",
+        "s6e04fa8b889860",
+        "sb78a51cfd15254",
+        "s3ee57e3c2fb81f"
+      ]
+    },
+    "c2f397006d9": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F06-overlap",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "0132ba7973a0cb7ad87403ccf3b1be1929ec2baacbfc1ebcba05ac939bcb687b",
+      "raw_refs": [
+        "sf1e096559d7cba"
+      ]
+    },
+    "c4568de1c87": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F04-codex",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "fcef04e4ffab88facf04c507b3778e1234e0932cc2dd8bf2e9d05b4b4dfe2eef",
+      "raw_refs": [
+        "s85c4724e94f528"
+      ]
+    },
+    "c5b16f544f4": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F07-runtime-missing-dependency",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "81362a70d8cd5073c96d2cccae96d46a8cbdacf99f5b70db1f649f0ed0704afd",
+      "raw_refs": [
+        "s531c0d30821a17",
+        "sb40bd6619a3e21",
+        "sabaf155093469e"
+      ]
+    },
+    "c5b2286615d": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F07-skipped",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "0964b1650aac882721b1c8bb258111c6f17061f24961d0e1726488087ee051d1",
+      "raw_refs": [
+        "se21ce64ff83ced",
+        "s0cd9ae1bbfb0da",
+        "s530f04af05b194"
+      ]
+    },
+    "c6b464d0d2d": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F09-attempts",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "7a9f0d6f3aedb9d4ae36e25e2a0222b1b048a201bc380237e4acc58368bbe400",
+      "raw_refs": [
+        "s3a871de1172766",
+        "sdfee2b635ab645"
+      ]
+    },
+    "c6c5a633d2e": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F10-timing",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "55caaad3bfbac749f77337f16b1a2d65c80465fc4711381af54b787f8c2fc72a",
+      "raw_refs": [
+        "s1412718a11cc94",
+        "s45c1850a3192e3",
+        "s99a8b010ff34a9",
+        "s116a64193d6490"
+      ]
+    },
+    "c7a8d59bac1": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F09-original-attempt",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "6e0bb8cf3037375254bbf0138fec36d992f67ac047965d96f73759ba11009237",
+      "raw_refs": [
+        "s66251363a66084"
+      ]
+    },
+    "c81fa84c395": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F07-escaped",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "6de61d3cf52786ce66f5ddcf529f2bc35e509274df45e604d59a8d090667f370",
+      "raw_refs": [
+        "s319a52e40125a2",
+        "s13377ea9410076",
+        "s5f96fb72e41d1d"
+      ]
+    },
+    "c8a1cd71143": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F05-0",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "a88d9a3106ef80de3f081421a6022601bff9cf68922109d498d3d2a4534738c7",
+      "raw_refs": [
+        "s3f721320694cc3"
+      ]
+    },
+    "c8c360ddd51": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F07-intended-assertion",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "39e825994f986cd372763760061460ea523a198ffd20486868048a3efc0f85d3",
+      "raw_refs": [
+        "se18d077a359f47",
+        "sdf2b01412f5c1d",
+        "s76488e903fdf60"
+      ]
+    },
+    "c965c818495": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F05-title",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "3872aca8de111461efc4269bb756b35a0e207e36d9c06e68fbad30c90457bdbd",
+      "raw_refs": [
+        "s6485db52de30e5",
+        "s3e098c18543e13"
+      ]
+    },
+    "c9c28a79619": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F03-1",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "1efb45fbc3400cd91af6469a330db233d2ebb006e3799e87215e3522a82dded4",
+      "raw_refs": [
+        "s365536d5dedc02"
+      ]
+    },
+    "ca4ab47c946": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F04-grok",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "9fe69043ed798abe85516d4f1ff5cc9dfd6f9a50778d306c2d6dcb78cfe874d2",
+      "raw_refs": [
+        "sb9b2fe896d6783"
+      ]
+    },
+    "ca4f1ba6d30": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F10-timing-control",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "56247966f40f9edcb859c67dcd1e91b55e4cf9c3efbf9cb07e6911a9516cf3a3",
+      "raw_refs": [
+        "sf22076931503b8"
+      ]
+    },
+    "ca8a9086479": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F01-memory",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "2d4f5d20b579c48f1296476b04764343e8c7bc396f6c843646af3d69620a5bfe",
+      "raw_refs": [
+        "s0a215f9fdb52a4"
+      ]
+    },
+    "cb501d6169f": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F08-missing-observation",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "b29018b0806b348d4bcf2ba9c04f5eba25c8e4d0f568d799aee98f53e5f3fe63",
+      "raw_refs": [
+        "sc0d95e5f4918c9"
+      ]
+    },
+    "cb9080f7f96": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F06-all-complete",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "8c54af56c6115d04df4095bca6cf9fe46808ed710aa01c57756f79b8df5dda0b",
+      "raw_refs": [
+        "sf1e096559d7cba"
+      ]
+    },
+    "cc65f638301": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F07-collection-missing-dependency",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "4ae708bb6e33fafbfd45e6fe6656be059f14d4cac79e78af242c338c6e6aeeb0",
+      "raw_refs": [
+        "s87ae4c53ac72b0",
+        "s134b1cf21edc3c",
+        "sdd2f3cb6a820f7"
+      ]
+    },
+    "cc6c0d5103e": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F05-4",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "d48b6f8822e4d960b587cc2af4c63ba403d8cce50f8852cb8c0e4eecf57e2c3f",
+      "raw_refs": [
+        "seb33a3e114d7f0"
+      ]
+    },
+    "ccb6546cc17": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F01-denied-read",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "941e675c4c7db1f09cb189d81917230786d12a4567eb85fa83c6344666082372",
+      "raw_refs": [
+        "s0a215f9fdb52a4"
+      ]
+    },
+    "cd58718f440": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F07-unrelated-timeout",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "12c4bdb7a1a78d155242ae98fdff606d95cabe28ce291651b93e994436657c5f",
+      "raw_refs": [
+        "saf83b68fc25318",
+        "s57f4d666b51d9b",
+        "s4eda5a5454fe2d"
+      ]
+    },
+    "cd9a464e21e": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F04-claude",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "4a1171d6edbcb0adabadaf9325b76dd092ec5fa47560945c2ba51490770bb302",
+      "raw_refs": [
+        "s46178fe18a7413"
+      ]
+    },
+    "cdb9ded1cc2": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F08-arguments",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "314acd5590206baba19c23014f971861232fda0058e50e00a8a846a373d60b24",
+      "raw_refs": [
+        "s7b19b9ea0253e4",
+        "s0a1cc56575025c",
+        "s81e538d31fd993",
+        "s4b383503cc1421",
+        "s25aeab0751d1f7"
+      ]
+    },
+    "cde0dfa2876": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F08-identity-control",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "ba674c2b277a2c3b1166e7d304ffa2a1000264c8cbfe8f4338a5ba022db90de3",
+      "raw_refs": [
+        "se0f3b3f846d73a"
+      ]
+    },
+    "cde81233c34": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F03-0",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "783e805605704bfc539bdfacf4e9e6b56262b034053ac5d809c10d944ab19061",
+      "raw_refs": [
+        "s5b50d62dffd0e9"
+      ]
+    },
+    "ce010ff9ebd": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F02-1",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "b908f12e918424039c11576cf00ebc9ed933fecfc7e13fd147e6affa2ee001d5",
+      "raw_refs": [
+        "s7467d8e81daa9a"
+      ]
+    },
+    "ced6478d6f9": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "extraction": "Explicit field selection and event framing in corpus.py. Observed numbers, booleans, codes and chronological relations are unchanged. Reviewer labels removed; neutral identity replacements are recorded below.",
+      "historical_name": "F02-0",
+      "omitted": "Unselected configuration, unrelated events, cleanup, random transport metadata, reviewer labels and summary flags.",
+      "packet_sha256": "05f10a1a2fb565b3d2963d69c2d75fe6a415657532dc4bcfd0126db900e2ed03",
+      "raw_refs": [
+        "s40bcd333b112b3"
+      ]
+    },
+    "v01": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "definition_source": "additional_cases.json",
+      "extraction": {
+        "method": "select recorded exit/status/classifier decisions; first exception line; source_behavior derived from retained fixture source",
+        "omitted": [
+          "full traceback assertion marker and source filenames",
+          "absolute execution paths",
+          "precomputed expected/reproduced/credit fields"
+        ]
+      },
+      "independent_variant": true,
+      "packet_sha256": "c0d519abde2d6d26fc081cfbcff2bd81a01d0753a2f39f36834e6749bc707183",
+      "source": {
+        "fixture": "probe_fixtures/calibration.json",
+        "raw_path": "evidence/independent_generation/p4/observations.json",
+        "raw_sha256": "01bc5c97d6cc204fefd8669db608c70e96e566ea992c5fb3c4c0f1d35b6555c2",
+        "variant": "q03"
+      }
+    },
+    "v02": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "definition_source": "additional_cases.json",
+      "extraction": {
+        "method": "select recorded exit/status/classifier decisions; first exception line; source_behavior derived from retained fixture source",
+        "omitted": [
+          "full traceback assertion marker and source filenames",
+          "absolute execution paths",
+          "precomputed expected/reproduced/credit fields"
+        ]
+      },
+      "independent_variant": true,
+      "packet_sha256": "df17bb6578e217085a3c4768da4a5fb2df8981626921d8f2e500919da237f623",
+      "source": {
+        "fixture": "probe_fixtures/calibration.json",
+        "raw_path": "evidence/independent_generation/p4/observations.json",
+        "raw_sha256": "01bc5c97d6cc204fefd8669db608c70e96e566ea992c5fb3c4c0f1d35b6555c2",
+        "variant": "q04"
+      }
+    },
+    "v03": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "definition_source": "additional_cases.json",
+      "extraction": {
+        "method": "select recorded exit/status/classifier decisions; first exception line; source_behavior derived from retained fixture source",
+        "omitted": [
+          "full traceback assertion marker and source filenames",
+          "absolute execution paths",
+          "precomputed expected/reproduced/credit fields"
+        ]
+      },
+      "independent_variant": true,
+      "packet_sha256": "a86891156cae0675eb36f8706d4f920dd096f36ef92bd7797e7a4bced5285230",
+      "source": {
+        "fixture": "probe_fixtures/calibration.json",
+        "raw_path": "evidence/independent_generation/p4/observations.json",
+        "raw_sha256": "01bc5c97d6cc204fefd8669db608c70e96e566ea992c5fb3c4c0f1d35b6555c2",
+        "variant": "q05"
+      }
+    },
+    "v04": {
+      "candidate": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+      "definition_source": "additional_cases.json",
+      "extraction": {
+        "method": "select recorded exit/status/classifier decisions; first exception line; source_behavior derived from retained fixture source",
+        "omitted": [
+          "full traceback assertion marker and source filenames",
+          "absolute execution paths",
+          "precomputed expected/reproduced/credit fields"
+        ]
+      },
+      "independent_variant": true,
+      "packet_sha256": "b2edc3f06e16602927732265bf4d418a283ea53840f462e3d9b844eba73b5181",
+      "source": {
+        "fixture": "probe_fixtures/calibration.json",
+        "raw_path": "evidence/independent_generation/p4/observations.json",
+        "raw_sha256": "01bc5c97d6cc204fefd8669db608c70e96e566ea992c5fb3c4c0f1d35b6555c2",
+        "variant": "q06"
+      }
+    }
+  },
+  "limits": [
+    "Selected packets are compact human-designed extracts, not a blind automated discovery benchmark.",
+    "Control cases and adapter/schedule reruns are clustered by family; case counts are not independent families.",
+    "F06 installed-vendor reachability is unverified.",
+    "F08-F10 are evidence-substitution checker experiments, not live wrong delivery claims."
+  ],
+  "neutral_value_replacements": {
+    "REVIEW_SYNTHETIC_SECRET_81c6df": "marker-A",
+    "deliberately_missing_calibration_dependency": "dependency_A",
+    "known_defect": "condition-A",
+    "wrong-recipient-canary": "actor-B"
+  },
+  "sources": {
+    "review/tracks/architecture_acceptance/assessment_currentness.json": {
+      "bytes": 4088,
+      "sha256": "eed02a1a885cf1b0aebde245fc1b6d479589ddd133a7f49d1a67f1ad41a8213b"
+    },
+    "review/tracks/architecture_acceptance/composed_assessment_currentness.json": {
+      "bytes": 19563,
+      "sha256": "459d51a9981466972486fab4e1928e460862295dc68873ea3b641cd63a42818e"
+    },
+    "review/tracks/architecture_acceptance/composed_assessment_currentness.py": {
+      "bytes": 3943,
+      "sha256": "8a11290c02701585a17ec6065810fd7d90b4883ed498151cfa0b10af572068cc"
+    },
+    "review/tracks/architecture_acceptance/protocol_replay/results.json": {
+      "bytes": 1605,
+      "sha256": "668819959402e29500ff5303b27c2194872501e37d1137e6361a7523f094aa3d"
+    },
+    "review/tracks/checker_calibration/calibrator-adversary/collection-missing-dependency/mutant.xml": {
+      "bytes": 1103,
+      "sha256": "c0556e659733a3524e3be08d421ead59fbcc03891db27087c45066bd8ff18dd4"
+    },
+    "review/tracks/checker_calibration/calibrator-adversary/collection-missing-dependency/mutant/module.py": {
+      "bytes": 79,
+      "sha256": "6cc564121ec8a5aace6230130643bbcbbb178c7fd0038ff984fd6b47034fc2cd"
+    },
+    "review/tracks/checker_calibration/calibrator-adversary/escaped/mutant.xml": {
+      "bytes": 437,
+      "sha256": "146d51d256bac98fbecca0e03a584e6dd24b0c3f3af5f7ae821b9ff62a3c38d9"
+    },
+    "review/tracks/checker_calibration/calibrator-adversary/escaped/mutant/module.py": {
+      "bytes": 32,
+      "sha256": "7d96d7727b4f519f9e9ccd4aaed47b1e43ea30ac9430b63d5b2ffd4e5299adb3"
+    },
+    "review/tracks/checker_calibration/calibrator-adversary/intended-assertion/mutant.xml": {
+      "bytes": 759,
+      "sha256": "2242edf6028ba0c612565f4788d2dad804009a2eb34cda637ae5dd71a0d273f2"
+    },
+    "review/tracks/checker_calibration/calibrator-adversary/intended-assertion/mutant/module.py": {
+      "bytes": 28,
+      "sha256": "996d348e9d72467d16b5111c896594e8b1c6c5cb6866d35cc53c298285be6200"
+    },
+    "review/tracks/checker_calibration/calibrator-adversary/results.json": {
+      "bytes": 2808,
+      "sha256": "075850a79e5af48940eddbc3c727cec9c6a49f31cf0f2ef815699b35772a7cc7"
+    },
+    "review/tracks/checker_calibration/calibrator-adversary/runtime-missing-dependency/mutant.xml": {
+      "bytes": 963,
+      "sha256": "4790826163899a0f50a71a524040aca57d495acf6582817e846a4bd9f2d1246a"
+    },
+    "review/tracks/checker_calibration/calibrator-adversary/runtime-missing-dependency/mutant/module.py": {
+      "bytes": 70,
+      "sha256": "f4dc954f6983b333d44b45b85679e6706cb6cd86251a333007f226137bb0c2aa"
+    },
+    "review/tracks/checker_calibration/calibrator-adversary/skipped/mutant.xml": {
+      "bytes": 632,
+      "sha256": "f75fe383f0a1a024c86ca1c4ad85376c9e8c45b1bab88c429674268888fbe267"
+    },
+    "review/tracks/checker_calibration/calibrator-adversary/skipped/mutant/module.py": {
+      "bytes": 64,
+      "sha256": "2353f52e63195ffd73074f098356386df38c1cfc9509501749b5c707eb82a14e"
+    },
+    "review/tracks/checker_calibration/calibrator-adversary/unrelated-timeout/mutant.xml": {
+      "bytes": 843,
+      "sha256": "c7b99c4378026b89f057ec256cf1c20cfc0ef751b13d209f461d0d3c35238ef3"
+    },
+    "review/tracks/checker_calibration/calibrator-adversary/unrelated-timeout/mutant/module.py": {
+      "bytes": 59,
+      "sha256": "0b031756b8ca625bbcc248ad2099fdba8b468f04688e656331d3e972e3174a36"
+    },
+    "review/tracks/checker_calibration/evidence-faults/control.json": {
+      "bytes": 21837,
+      "sha256": "514690ed1496ca08152f14ed6dac0095d1a85c89eceb8cdbc0a74b28d95acb5b"
+    },
+    "review/tracks/checker_calibration/evidence-faults/later-unknown-attempt-input.json": {
+      "bytes": 6124373,
+      "sha256": "646350e0a5bf50d41e01173d3ee20f57cf9d3fe77025f4174c70164fdb297d71"
+    },
+    "review/tracks/checker_calibration/evidence-faults/native-arguments-mismatch-input.json": {
+      "bytes": 6123240,
+      "sha256": "1d3c3f9aef85faa4a550a434a66534856d8ba8b1909346fe9285ff920ac1996e"
+    },
+    "review/tracks/checker_calibration/evidence-faults/reply-after-work-completion-input.json": {
+      "bytes": 6123224,
+      "sha256": "c6e8d3a545455fdf19866481984f8237acc8d2c3eedc0842a6f6cd4f0d0c3f73"
+    },
+    "review/tracks/checker_calibration/evidence-faults/results.json": {
+      "bytes": 5392,
+      "sha256": "740b16cb8a694dc76aa31c636e14c39d55d05d39367752426217bab7e3fc16f3"
+    },
+    "review/tracks/checker_calibration/protocol-control/run.json": {
+      "bytes": 6123224,
+      "sha256": "e8e4ec9cfb0e7f51e876d29a0e3a9707aa4fca2eda898e4093ed115201514934"
+    },
+    "review/tracks/concurrency_lifecycle/composed-bridge-results.json": {
+      "bytes": 27345,
+      "sha256": "bd6436ec37c42fb46c44c73c152ebadaccaf143d2a0a39ccf162568bdad2af09"
+    },
+    "review/tracks/concurrency_lifecycle/late-effect-results.json": {
+      "bytes": 14504,
+      "sha256": "b4018671d230b0ce53375d833a37495f7c5e8cf18663a420516fe319420b2859"
+    },
+    "review/tracks/concurrency_lifecycle/probe-results.json": {
+      "bytes": 13615,
+      "sha256": "c3b5ad6897f15c9d1d6ee2ccfc2e12a75977b977c67eabef33268f69ec18205e"
+    },
+    "review/tracks/delivery_configuration/cross-work-leak.json": {
+      "bytes": 10091,
+      "sha256": "2f995e18ceabb07e05e2b2379a11b76b9cbd7884c21f51c824257327405b8e09"
+    }
+  },
+  "version": "1.1.0"
+}
