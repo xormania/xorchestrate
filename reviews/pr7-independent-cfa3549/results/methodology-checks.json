@@ -1,0 +1,157 @@
+{
+  "scope": "Post-hoc independent offline review of retained bytes; no new model calls or operational sampling.",
+  "initial_key_agreement": 24,
+  "outcome_key_agreement": 24,
+  "initial_judgments": {
+    "supports": 8,
+    "contradicts": 8,
+    "unresolved": 8
+  },
+  "missing_case_outcomes": {
+    "contradicts": 8
+  },
+  "groups_by_split": {
+    "calibration": 1,
+    "development": 2,
+    "holdout": 4
+  },
+  "groups_crossing_splits": [],
+  "staged_request_initial_packet_match": 72,
+  "payload_forbidden_field_occurrences": 0,
+  "payload_scan_limit": "Field-name/identity checks do not prove absence of semantic leakage; explicit invariant/operator operands intentionally simplify this contract.",
+  "postprobe_requests_with_executed_observation": 42,
+  "stale_missing_declarations": [
+    {
+      "case_id": "c593af9fb49a0",
+      "merged_available_has_declaration": true,
+      "merged_checks_all_observed": true,
+      "p3_action": "reject"
+    },
+    {
+      "case_id": "cb482dcc4a0c1",
+      "merged_available_has_declaration": true,
+      "merged_checks_all_observed": true,
+      "p3_action": "reject"
+    },
+    {
+      "case_id": "c1c062765510d",
+      "merged_available_has_declaration": true,
+      "merged_checks_all_observed": true,
+      "p3_action": "reject"
+    },
+    {
+      "case_id": "cf22aab3d75cf",
+      "merged_available_has_declaration": true,
+      "merged_checks_all_observed": true,
+      "p3_action": "investigate"
+    },
+    {
+      "case_id": "cbfa1b0cc1f0f",
+      "merged_available_has_declaration": true,
+      "merged_checks_all_observed": true,
+      "p3_action": "reject"
+    },
+    {
+      "case_id": "c9de3dd808cb8",
+      "merged_available_has_declaration": true,
+      "merged_checks_all_observed": true,
+      "p3_action": "reject"
+    },
+    {
+      "case_id": "c19acb40f8797",
+      "merged_available_has_declaration": true,
+      "merged_checks_all_observed": true,
+      "p3_action": "reject"
+    },
+    {
+      "case_id": "c51eabfc2dae5",
+      "merged_available_has_declaration": true,
+      "merged_checks_all_observed": true,
+      "p3_action": "accept"
+    }
+  ],
+  "raw_only_ablation": [
+    {
+      "case_id": "c85b37db76aaa",
+      "true_local_judgment": "supports",
+      "original_action": "accept",
+      "reversed_check_order_control_action": "accept",
+      "raw_only_action": "investigate",
+      "observations_preserved": true
+    },
+    {
+      "case_id": "cef7128badec1",
+      "true_local_judgment": "contradicts",
+      "original_action": "reject",
+      "reversed_check_order_control_action": "reject",
+      "raw_only_action": "investigate",
+      "observations_preserved": true
+    }
+  ],
+  "robustness": {
+    "equivalent_wording": {
+      "n": 6,
+      "judgment_correct": 5,
+      "same_as_original_p1": 5
+    },
+    "irrelevant_context": {
+      "n": 6,
+      "judgment_correct": 4,
+      "same_as_original_p1": 6
+    },
+    "remove_decisive": {
+      "n": 6,
+      "judgment_correct": 6,
+      "same_as_original_p1": 1
+    },
+    "reverse_options": {
+      "n": 6,
+      "judgment_correct": 4,
+      "same_as_original_p1": 6
+    },
+    "wrong_subject": {
+      "n": 6,
+      "judgment_correct": 6,
+      "same_as_original_p1": 1
+    }
+  },
+  "robustness_groups": [
+    "g4a9c459ebf73",
+    "g7a518fc6a0bc",
+    "gd9c5d60efb17"
+  ],
+  "robustness_probe_families": [
+    "p_arguments",
+    "p_context",
+    "p_replay"
+  ],
+  "false_clears": [
+    {
+      "case_id": "cef7128badec1",
+      "group": "gbc4c9743d8e9",
+      "native_judgment_confidence": 0.95,
+      "selected_for_audit": false,
+      "initial_declared_missing": false
+    },
+    {
+      "case_id": "c51eabfc2dae5",
+      "group": "gbc4c9743d8e9",
+      "native_judgment_confidence": 0.85,
+      "selected_for_audit": false,
+      "initial_declared_missing": true
+    }
+  ],
+  "audit_conditional_probability_miss_both_known_errors": {
+    "value": 0.16666666666666666,
+    "strata": [
+      {
+        "stratum": "accept:none:high",
+        "population": 4,
+        "sample": 2,
+        "known_errors": 2,
+        "probability_miss_all": 0.16666666666666666
+      }
+    ],
+    "interpretation": "Exact probability under frozen stratified SRS design and known controlled outcome population, not a production error probability or CI."
+  }
+}

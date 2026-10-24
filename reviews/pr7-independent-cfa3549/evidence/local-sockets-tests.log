@@ -1,0 +1,17 @@
+........................................................................ [ 10%]
+.....................................ssssssss................... [ 19%]
+........................................................................ [ 29%]
+........................................................................ [ 40%]
+........................................................................................ [ 52%]
+................................................................ [ 61%]
+.................................................................................................................... [ 78%]
+........................................................................ [ 88%]
+........................................................................ [ 98%]
+.......                                                                  [100%]
+=========================== short test summary info ============================
+SKIPPED [3] tests/hexagonal/test_acceptance_lifecycle.py:163: tmux is installed by the acceptance CI job
+SKIPPED [2] tests/hexagonal/test_acceptance_lifecycle.py:177: tmux is installed by the acceptance CI job
+SKIPPED [1] tests/hexagonal/test_acceptance_lifecycle.py:193: tmux is installed by the acceptance CI job
+SKIPPED [1] tests/hexagonal/test_acceptance_lifecycle.py:205: tmux is installed by the acceptance CI job
+SKIPPED [1] tests/hexagonal/test_acceptance_lifecycle.py:227: tmux is installed by the acceptance CI job
+691 passed, 8 skipped, 172 subtests passed in 48.12s

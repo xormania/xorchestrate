@@ -1,0 +1,19 @@
+{
+  "python": "3.12.14",
+  "candidate": "cfa3549490ee9db1c3e6cad918523cd854902e51",
+  "review_workflow_commit": "d5af81334d5742968a138665d738d3b20084b72a",
+  "local_socket_restricted": {
+    "failed": 25,
+    "passed": 666,
+    "skipped": 8,
+    "subtests_passed": 172
+  },
+  "local_sockets_permitted": {
+    "failed": 0,
+    "passed": 691,
+    "skipped": 8,
+    "subtests_passed": 172,
+    "skipped_reason": "tmux absent"
+  },
+  "new_paid_model_calls": 0
+}

@@ -1,0 +1,32 @@
+{
+  "output": "/workspace/work/pr7-review/economics/economics-recomputed.json",
+  "collection": {
+    "jev_calls": 103,
+    "jev_input_tokens": 540670,
+    "jev_output_tokens": 89137,
+    "jev_list_price_usd": 0.02270814,
+    "native_calls": 22,
+    "native_actual_cost_usd": null,
+    "actual_total_usd": null
+  },
+  "P4_same_check_lists_before_after": {
+    "executed": 10,
+    "same": 10
+  },
+  "ablation_correct": 24,
+  "supplement_net": {
+    "P4": {
+      "low_stakes": 0.472908199850001,
+      "consequential": 3.972908199850001
+    },
+    "random_probe": {
+      "low_stakes": 2.242236828620007,
+      "consequential": 101.99223682862001
+    },
+    "simple_probe": {
+      "low_stakes": 2.2482437900099965,
+      "consequential": 101.99824379001
+    }
+  },
+  "e2e_all_correct": true
+}

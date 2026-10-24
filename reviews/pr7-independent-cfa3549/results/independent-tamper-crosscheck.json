@@ -1,0 +1,44 @@
+[
+  {
+    "case": "untouched-control",
+    "exit_code": 0,
+    "stdout": "{\n  \"output\": \"/workspace/work/pr7-review/adversarial/independent-check-untouched-control.json\",\n  \"joins\": {\n    \"jev_wire_raw_response_usage\": 103,\n    \"native_request_response_invocation\": 22,\n    \"probe_raw_hash_and_operand_assertions\": 52,\n    \"structured_action_from_operands\": 58,\n    \"model_action_from_raw_answers\": 141,\n    \"p4_route_from_raw_signals\": 24,\n    \"e2e_raw_action_and_decision_binding\": 23\n  },\n  \"main_list_price_usd\": \"0.022708140\"\n}\n",
+    "stderr": ""
+  },
+  {
+    "case": "action_summary",
+    "exit_code": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/workspace/work/pr7-review/recompute/recompute_raw.py\", line 360, in <module>\n    result = main(args.main_run)\n             ^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/work/pr7-review/recompute/recompute_raw.py\", line 340, in main\n    assert e2e == read(run / \"end-to-end.json\")[\"by_policy\"]\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+  },
+  {
+    "case": "action_binding",
+    "exit_code": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/workspace/work/pr7-review/recompute/recompute_raw.py\", line 360, in <module>\n    result = main(args.main_run)\n             ^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/work/pr7-review/recompute/recompute_raw.py\", line 331, in main\n    assert row[\"decision_sha256\"] == canonical_sha(d)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+  },
+  {
+    "case": "native_raw",
+    "exit_code": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/workspace/work/pr7-review/recompute/recompute_raw.py\", line 360, in <module>\n    result = main(args.main_run)\n             ^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/work/pr7-review/recompute/recompute_raw.py\", line 160, in main\n    assert sha(folder / \"response.json\") == invocation[\"raw_response_sha256\"]\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+  },
+  {
+    "case": "native_invocation",
+    "exit_code": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/workspace/work/pr7-review/recompute/recompute_raw.py\", line 360, in <module>\n    result = main(args.main_run)\n             ^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/work/pr7-review/recompute/recompute_raw.py\", line 165, in main\n    assert invocation[\"invocation_id\"] == responses[rid][\"invocation_id\"]\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+  },
+  {
+    "case": "audit_result",
+    "exit_code": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/workspace/work/pr7-review/recompute/recompute_raw.py\", line 360, in <module>\n    result = main(args.main_run)\n             ^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/work/pr7-review/recompute/recompute_raw.py\", line 256, in main\n    assert miss == a[\"independent_miss\"]\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+  },
+  {
+    "case": "route_record",
+    "exit_code": 1,
+    "stdout": "",
+    "stderr": "Traceback (most recent call last):\n  File \"/workspace/work/pr7-review/recompute/recompute_raw.py\", line 360, in <module>\n    result = main(args.main_run)\n             ^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/work/pr7-review/recompute/recompute_raw.py\", line 235, in main\n    assert expected_route == d[\"route\"] == decision[\"P4\", cid][\"route\"]\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError\n"
+  }
+]

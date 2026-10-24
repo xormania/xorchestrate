@@ -1,0 +1,10 @@
+{
+  "plan_sha256": "197bd8547da565db8284bccee821864cb3307e50f9a28350f92098302a53e6ca",
+  "policies": [
+    "P3",
+    "P4",
+    "random_probe",
+    "simple_probe"
+  ],
+  "verified": true
+}

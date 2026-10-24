@@ -1,0 +1,9 @@
+{"probe_variants": 40, "passed": 36, "not_exercised_ordinary_variants": [{"probe": "p_replay", "variant": "healthy", "reason": "Adapter reproduction failed; inspect retained stderr (returncode 1)"}, {"probe": "p_replay", "variant": "fault", "reason": "Adapter reproduction failed; inspect retained stderr (returncode 1)"}, {"probe": "p_busy", "variant": "healthy", "reason": "[Errno 1] Operation not permitted"}, {"probe": "p_busy", "variant": "fault", "reason": "[Errno 1] Operation not permitted"}]}
+Traceback (most recent call last):
+  File "/workspace/work/pr7-review/adversarial/reproduce_controls.py", line 44, in <module>
+    if __name__=='__main__': main()
+                             ^^^^^^
+  File "/workspace/work/pr7-review/adversarial/reproduce_controls.py", line 42, in main
+    assert not summary['totals']['not_exercised_ordinary_variants'], 'Some ordinary controls were not exercised; preserve as blocked, not successful detection.'
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: Some ordinary controls were not exercised; preserve as blocked, not successful detection.

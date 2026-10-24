@@ -1,0 +1,1435 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="25" skipped="8" tests="871" time="32.578" timestamp="2026-10-24T20:50:54.807501+00:00" hostname="b0714c4b33cf"><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_initial_missing_evidence_is_not_hidden_outcome_truth" time="0.002" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_packets_do_not_leak_splits_or_oracle_metadata" time="0.003" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_concurrent_violations_and_defensive_receipt_preserved" time="0.001" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_calibration_oracle_requires_reached_comparison_not_marker" time="0.001" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_prespecified_transformations_preserve_or_change_evidence_as_declared" time="0.004" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_selected_boundary_executes_both_healthy_and_intended_fault[p_arguments]" time="0.021" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_selected_boundary_executes_both_healthy_and_intended_fault[p_assertion]" time="1.155" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_selected_boundary_executes_both_healthy_and_intended_fault[p_attempts]" time="0.011" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_selected_boundary_executes_both_healthy_and_intended_fault[p_authority]" time="0.046" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_selected_boundary_executes_both_healthy_and_intended_fault[p_busy]" time="0.009"><failure message="AssertionError: {'probe_id': 'p_busy', 'case_id': 'cabe25ecf8ef4', 'status': 'not_exercised', 'exercised': False, ...}&#10;assert 'not_exercised' == 'executed'&#10;  &#10;  - executed&#10;  + not_exercised">probe_id = 'p_busy'
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-0/test_selected_boundary_execute4')
+
+    @pytest.mark.parametrize("probe_id", sorted(PROBES))
+    def test_selected_boundary_executes_both_healthy_and_intended_fault(probe_id, tmp_path):
+        cases = load_corpus()
+        for variant in ("healthy", "fault"):
+            case = next(c for c in cases if c["probe_id"] == probe_id and c["scenario"] == variant)
+            result = execute_probe(case, probe_id, tmp_path / variant)
+&gt;           assert result["status"] == "executed", result
+E           AssertionError: {'probe_id': 'p_busy', 'case_id': 'cabe25ecf8ef4', 'status': 'not_exercised', 'exercised': False, ...}
+E           assert 'not_exercised' == 'executed'
+E             
+E             - executed
+E             + not_exercised
+
+experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py:87: AssertionError</failure></testcase><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_selected_boundary_executes_both_healthy_and_intended_fault[p_context]" time="0.156" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_selected_boundary_executes_both_healthy_and_intended_fault[p_effect]" time="0.097" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_selected_boundary_executes_both_healthy_and_intended_fault[p_replay]" time="0.425"><failure message="AssertionError: {'probe_id': 'p_replay', 'case_id': 'c5af5e427a2f3', 'status': 'not_exercised', 'exercised': False, ...}&#10;assert 'not_exercised' == 'executed'&#10;  &#10;  - executed&#10;  + not_exercised">probe_id = 'p_replay'
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-0/test_selected_boundary_execute7')
+
+    @pytest.mark.parametrize("probe_id", sorted(PROBES))
+    def test_selected_boundary_executes_both_healthy_and_intended_fault(probe_id, tmp_path):
+        cases = load_corpus()
+        for variant in ("healthy", "fault"):
+            case = next(c for c in cases if c["probe_id"] == probe_id and c["scenario"] == variant)
+            result = execute_probe(case, probe_id, tmp_path / variant)
+&gt;           assert result["status"] == "executed", result
+E           AssertionError: {'probe_id': 'p_replay', 'case_id': 'c5af5e427a2f3', 'status': 'not_exercised', 'exercised': False, ...}
+E           assert 'not_exercised' == 'executed'
+E             
+E             - executed
+E             + not_exercised
+
+experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py:87: AssertionError</failure></testcase><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[setup-p_arguments]" time="0.002" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[setup-p_assertion]" time="0.002" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[setup-p_attempts]" time="0.002" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[setup-p_authority]" time="0.002" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[setup-p_busy]" time="0.003" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[setup-p_context]" time="0.003" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[setup-p_effect]" time="0.002" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[setup-p_replay]" time="0.002" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[helper-p_arguments]" time="0.002" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[helper-p_assertion]" time="0.003" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[helper-p_attempts]" time="0.002" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[helper-p_authority]" time="0.002" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[helper-p_busy]" time="0.002" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[helper-p_context]" time="0.002" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[helper-p_effect]" time="0.002" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[helper-p_replay]" time="0.002" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[timeout-p_arguments]" time="0.023" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[timeout-p_assertion]" time="0.024" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[timeout-p_attempts]" time="0.023" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[timeout-p_authority]" time="0.023" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[timeout-p_busy]" time="0.023" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[timeout-p_context]" time="0.023" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[timeout-p_effect]" time="0.023" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_unrelated_failure_never_earns_detection_credit[timeout-p_replay]" time="0.023" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_probe_mismatch_and_unsupported_keep_terminal_unknown" time="0.002" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_end_to_end_action_changes_real_acceptance_and_has_healthy_control" time="0.120" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_corpus_probes" name="test_changed_subject_cannot_be_attributed_to_frozen_revision" time="0.000" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_evaluation" name="test_initial_uncertainty_can_be_epistemically_correct_with_hidden_fault" time="0.000" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_evaluation" name="test_provider_failure_cannot_be_a_correct_clear_or_a_wrong_model_answer" time="0.000" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_evaluation" name="test_same_action_label_correction_has_zero_operational_benefit" time="0.000" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_evaluation" name="test_escalation_damage_is_in_outcome_loss_not_an_extra_penalty" time="0.001" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_evaluation" name="test_accounting_includes_failed_retries_but_not_cache_references" time="0.000" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_evaluation" name="test_unknown_probe_duration_and_missing_artifact_are_visible" time="0.000" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_evaluation" name="test_grounded_price_scenario_preserves_known_jev_list_price" time="0.000" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_evaluation" name="test_missing_required_arm_and_unknown_outcomes_never_report_passed" time="0.001" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_evaluation" name="test_transitions_keep_unresolved_and_missing_separate_from_errors" time="0.000" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_evaluation" name="test_audit_estimate_uses_inclusion_probabilities_and_independent_evidence" time="0.000" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_evaluation" name="test_confidence_reports_confident_error_and_undefined_auc" time="0.000" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_evaluation" name="test_native_confidence_is_scored_against_raw_answer_before_composition" time="0.001" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_evaluation" name="test_grouped_variants_and_multi_mechanism_exact_match" time="0.001" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_evaluation" name="test_outcome_key_requires_applicable_decisive_probe_evidence" time="0.001" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_evaluation" name="test_replay_requires_frozen_case_evidence_and_rejects_duplicate_decisions" time="0.001" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_evaluation" name="test_shared_native_invocation_is_one_unknown_charge_unit" time="0.000" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_evaluation" name="test_declared_paired_population_is_not_expanded_to_entire_corpus" time="0.001" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_evaluation" name="test_reusable_guard_transfer_is_scoped_and_unknown_without_measurement" time="0.000" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_policies" name="test_complete_identity_binds_option_order_policy_and_new_observation" time="0.002" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_policies" name="test_baseline_reads_operands_not_success_summary_or_case_name" time="0.000" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_policies" name="test_missing_and_wrong_subject_not_correct_failure_or_clear" time="0.000" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_policies" name="test_inconsistent_assessment_not_decisive[supports]" time="0.000" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_policies" name="test_inconsistent_assessment_not_decisive[contradicts]" time="0.000" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_policies" name="test_confidence_alone_cannot_trigger_reasoning_or_prevent_audit" time="0.000" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_policies" name="test_hidden_keys_rejected_at_model_boundary" time="0.000" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_policies" name="test_raw_replay_detects_changed_prediction" time="0.096" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_policies" name="test_raw_replay_detects_changed_distribution" time="0.077" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_policies" name="test_raw_replay_detects_changed_request_model" time="0.080" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_policies" name="test_replay_survives_moved_run_directory" time="0.077" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_policies" name="test_audit_inclusion_probability_tampering_rejected" time="0.076" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_policies" name="test_unbound_native_result_cannot_fill_required_arm" time="0.067" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_transport" name="test_exact_model_gates_batch_and_retains_failed_usage" time="0.001" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_transport" name="test_global_reservations_survive_process_instances" time="0.001" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_transport" name="test_invalid_probabilities_cannot_clear" time="0.001" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_transport" name="test_reopening_attempt_log_refused" time="0.012" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_transport" name="test_credentials_in_packet_refused_before_persistence" time="0.001" /><testcase classname="experiments.jev_failure_correlation_v2.tests.test_transport" name="test_option_order_is_both_sent_and_bound" time="0.002" /><testcase classname="experiments.jev_failure_correlation.tests.test_probes" name="test_real_pytest_classification_boundaries" time="1.769" /><testcase classname="experiments.jev_failure_correlation.tests.test_probes" name="test_material_and_cosmetic_changes_are_distinguished" time="0.201" /><testcase classname="experiments.jev_failure_correlation.tests.test_probes" name="test_unsupported_selected_probe_not_silently_replaced" time="0.003" /><testcase classname="experiments.jev_failure_correlation.tests.test_probes" name="test_unrelated_exception_never_earns_target_credit" time="0.000" /><testcase classname="experiments.jev_failure_correlation.tests.test_runner.RunnerTests" name="test_baseline_only_sees_visible_packet" time="0.001" /><testcase classname="experiments.jev_failure_correlation.tests.test_runner.RunnerTests" name="test_identity_changes_with_material_input_model_rubric_source" time="0.001" /><testcase classname="experiments.jev_failure_correlation.tests.test_runner.RunnerTests" name="test_leakage_rejected" time="0.001" /><testcase classname="experiments.jev_failure_correlation.tests.test_runner.RunnerTests" name="test_missing_credentials_retains_unrun_and_nonzero_status" time="0.002" /><testcase classname="experiments.jev_failure_correlation.tests.test_runner.RunnerTests" name="test_missing_distinct_from_abstention" time="0.000" /><testcase classname="experiments.jev_failure_correlation.tests.test_runner.RunnerTests" name="test_no_unrelated_failure_detection_credit" time="0.000" /><testcase classname="experiments.jev_failure_correlation.tests.test_runner.RunnerTests" name="test_redaction_preserves_usage_and_removes_credentials" time="0.001" /><testcase classname="experiments.jev_failure_correlation.tests.test_runner.RunnerTests" name="test_replay_checks_exact_inputs_and_typed_response" time="0.003" /><testcase classname="experiments.jev_failure_correlation.tests.test_runner.RunnerTests" name="test_response_validation_rejects_wrong_model_unknown_choice_nan_missing" time="0.001" /><testcase classname="experiments.jev_failure_correlation.tests.test_runner.RunnerTests" name="test_sources_ignore_generated_results" time="0.005" /><testcase classname="experiments.jev_failure_correlation.tests.test_runner.RunnerTests" name="test_valid_control_false_alarm_denominator" time="0.001" /><testcase classname="experiments.jev_failure_correlation.test_corpus" name="test_frozen_bytes_and_material_identity" time="0.010" /><testcase classname="experiments.jev_failure_correlation.test_corpus" name="test_answer_key_separate_and_no_reviewer_leakage" time="0.003" /><testcase classname="experiments.jev_failure_correlation.test_corpus" name="test_family_splits_and_independent_variants" time="0.001" /><testcase classname="experiments.jev_failure_correlation.test_corpus" name="test_arguments_preserve_disagreement_and_control_agreement" time="0.003" /><testcase classname="experiments.jev_failure_correlation.test_corpus" name="test_attempt_order_retained" time="0.002" /><testcase classname="experiments.jev_failure_correlation.test_corpus" name="test_timing_has_raw_chronology" time="0.001" /><testcase classname="experiments.jev_failure_correlation.test_corpus" name="test_unrelated_errors_are_not_intended_credit" time="0.027" /><testcase classname="experiments.jev_failure_correlation.test_corpus" name="test_pair_binding_and_ambiguity" time="0.001" /><testcase classname="experiments.jev_failure_correlation.test_corpus" name="test_archive_integrity_result" time="0.000" /><testcase classname="tests.hexagonal.test_acceptance_lifecycle" name="test_missing_tmux_fails_with_a_retained_receipt" time="0.001" /><testcase classname="tests.hexagonal.test_acceptance_lifecycle" name="test_fixture_environment_does_not_inherit_authentication" time="0.001" /><testcase classname="tests.hexagonal.test_acceptance_lifecycle" name="test_reused_pid_is_never_signaled" time="0.000" /><testcase classname="tests.hexagonal.test_acceptance_lifecycle" name="test_unrelated_descendant_remains_excluded_after_its_parent_exits[initial-descendant]" time="0.088" /><testcase classname="tests.hexagonal.test_acceptance_lifecycle" name="test_unrelated_descendant_remains_excluded_after_its_parent_exits[later-observed-descendant]" time="0.078" /><testcase classname="tests.hexagonal.test_acceptance_lifecycle" name="test_exclusion_follows_the_complete_tree_across_reparenting[initial-tree]" time="0.000" /><testcase classname="tests.hexagonal.test_acceptance_lifecycle" name="test_exclusion_follows_the_complete_tree_across_reparenting[later-observed-tree]" time="0.000" /><testcase classname="tests.hexagonal.test_acceptance_lifecycle" name="test_excluded_pid_reuse_does_not_exclude_a_new_owned_process" time="0.000" /><testcase classname="tests.hexagonal.test_acceptance_lifecycle" name="test_pass_requires_worker_exit_and_scenario_receipt[True-0-passed]" time="0.000"><skipped type="pytest.skip" message="tmux is installed by the acceptance CI job">/workspace/work/pr7-review/repo/tests/hexagonal/test_acceptance_lifecycle.py:163: tmux is installed by the acceptance CI job</skipped></testcase><testcase classname="tests.hexagonal.test_acceptance_lifecycle" name="test_pass_requires_worker_exit_and_scenario_receipt[False-0-failed]" time="0.000"><skipped type="pytest.skip" message="tmux is installed by the acceptance CI job">/workspace/work/pr7-review/repo/tests/hexagonal/test_acceptance_lifecycle.py:163: tmux is installed by the acceptance CI job</skipped></testcase><testcase classname="tests.hexagonal.test_acceptance_lifecycle" name="test_pass_requires_worker_exit_and_scenario_receipt[True-7-failed]" time="0.000"><skipped type="pytest.skip" message="tmux is installed by the acceptance CI job">/workspace/work/pr7-review/repo/tests/hexagonal/test_acceptance_lifecycle.py:163: tmux is installed by the acceptance CI job</skipped></testcase><testcase classname="tests.hexagonal.test_acceptance_lifecycle" name="test_terminal_eof_waits_for_the_actual_worker_exit[0]" time="0.000"><skipped type="pytest.skip" message="tmux is installed by the acceptance CI job">/workspace/work/pr7-review/repo/tests/hexagonal/test_acceptance_lifecycle.py:177: tmux is installed by the acceptance CI job</skipped></testcase><testcase classname="tests.hexagonal.test_acceptance_lifecycle" name="test_terminal_eof_waits_for_the_actual_worker_exit[7]" time="0.000"><skipped type="pytest.skip" message="tmux is installed by the acceptance CI job">/workspace/work/pr7-review/repo/tests/hexagonal/test_acceptance_lifecycle.py:177: tmux is installed by the acceptance CI job</skipped></testcase><testcase classname="tests.hexagonal.test_acceptance_lifecycle" name="test_worker_signal_is_a_final_failed_exit" time="0.000"><skipped type="pytest.skip" message="tmux is installed by the acceptance CI job">/workspace/work/pr7-review/repo/tests/hexagonal/test_acceptance_lifecycle.py:193: tmux is installed by the acceptance CI job</skipped></testcase><testcase classname="tests.hexagonal.test_acceptance_lifecycle" name="test_timeout_reaps_detached_descendant_without_touching_unrelated_process" time="0.000"><skipped type="pytest.skip" message="tmux is installed by the acceptance CI job">/workspace/work/pr7-review/repo/tests/hexagonal/test_acceptance_lifecycle.py:205: tmux is installed by the acceptance CI job</skipped></testcase><testcase classname="tests.hexagonal.test_acceptance_lifecycle" name="test_fast_orphan_cannot_escape_cleanup" time="0.000"><skipped type="pytest.skip" message="tmux is installed by the acceptance CI job">/workspace/work/pr7-review/repo/tests/hexagonal/test_acceptance_lifecycle.py:227: tmux is installed by the acceptance CI job</skipped></testcase><testcase classname="tests.hexagonal.test_acceptance_scenario" name="test_fixture_scenario_crosses_processes_and_preserves_effect_counts" time="0.651" /><testcase classname="tests.hexagonal.test_acceptance_scenario" name="test_native_configuration_preserves_relative_paths_and_original_source" time="0.001" /><testcase classname="tests.hexagonal.test_acceptance_scenario" name="test_native_scenario_requires_persisted_callback_using_protocol_peer" time="0.295" /><testcase classname="tests.hexagonal.test_acceptance_scenario" name="test_native_driver_without_application_tools_is_explicit_failure" time="0.001" /><testcase classname="tests.hexagonal.test_acceptance_scenario" name="test_native_session_completion_text_without_callback_does_not_pass" time="1.208" /><testcase classname="tests.hexagonal.test_acceptance_scenario" name="test_worker_without_tmux_records_failure_without_false_acceptance" time="0.001" /><testcase classname="tests.hexagonal.test_application" name="test_work_lifecycle_has_free_form_roles_context_and_optimistic_updates[memory]" time="0.017" /><testcase classname="tests.hexagonal.test_application" name="test_work_lifecycle_has_free_form_roles_context_and_optimistic_updates[sqlite]" time="0.018" /><testcase classname="tests.hexagonal.test_application" name="test_stale_removal_cannot_delete_recreated_assignment_or_relation[memory-assignment-assign]" time="0.015" /><testcase classname="tests.hexagonal.test_application" name="test_stale_removal_cannot_delete_recreated_assignment_or_relation[memory-relation-relate]" time="0.014" /><testcase classname="tests.hexagonal.test_application" name="test_stale_removal_cannot_delete_recreated_assignment_or_relation[sqlite-assignment-assign]" time="0.017" /><testcase classname="tests.hexagonal.test_application" name="test_stale_removal_cannot_delete_recreated_assignment_or_relation[sqlite-relation-relate]" time="0.017" /><testcase classname="tests.hexagonal.test_application" name="test_messages_route_over_declared_relationship_and_acknowledge_per_recipient[memory]" time="0.017" /><testcase classname="tests.hexagonal.test_application" name="test_messages_route_over_declared_relationship_and_acknowledge_per_recipient[sqlite]" time="0.016" /><testcase classname="tests.hexagonal.test_application" name="test_discovery_namespaces_capabilities_without_core_switches" time="0.005" /><testcase classname="tests.hexagonal.test_application" name="test_guardrail_denies_provider_before_discovery_and_external_effect" time="0.003" /><testcase classname="tests.hexagonal.test_application" name="test_invocation_denial_prevents_effect_after_authorized_discovery" time="0.004" /><testcase classname="tests.hexagonal.test_application" name="test_metadata_can_authorize_invocation_under_default_deny" time="0.007" /><testcase classname="tests.hexagonal.test_application" name="test_capability_listing_authorizes_each_provider_with_its_name" time="0.004" /><testcase classname="tests.hexagonal.test_application" name="test_capability_schema_is_checked_before_invocation" time="0.004" /><testcase classname="tests.hexagonal.test_application" name="test_results_supply_evidence_without_becoming_authority[memory]" time="0.011" /><testcase classname="tests.hexagonal.test_application" name="test_results_supply_evidence_without_becoming_authority[sqlite]" time="0.011" /><testcase classname="tests.hexagonal.test_application" name="test_completed_operation_replays_offline_and_rejects_rebound_keys[memory]" time="0.010" /><testcase classname="tests.hexagonal.test_application" name="test_completed_operation_replays_offline_and_rejects_rebound_keys[sqlite]" time="0.014" /><testcase classname="tests.hexagonal.test_application" name="test_failed_or_unknown_effects_do_not_repeat[failure0-unknown]" time="0.009" /><testcase classname="tests.hexagonal.test_application" name="test_failed_or_unknown_effects_do_not_repeat[failure1-failed]" time="0.009" /><testcase classname="tests.hexagonal.test_application" name="test_failed_or_unknown_effects_do_not_repeat[failure2-unknown]" time="0.015" /><testcase classname="tests.hexagonal.test_application" name="test_interrupted_call_remains_unresolved_until_verified_reconciliation" time="0.010" /><testcase classname="tests.hexagonal.test_application" name="test_concurrent_duplicate_is_not_executed_and_provider_does_not_hold_transaction[memory]" time="0.009" /><testcase classname="tests.hexagonal.test_application" name="test_concurrent_duplicate_is_not_executed_and_provider_does_not_hold_transaction[sqlite]" time="0.014" /><testcase classname="tests.hexagonal.test_application" name="test_completed_effect_survives_local_commit_failure_and_can_be_applied_once" time="0.009" /><testcase classname="tests.hexagonal.test_application" name="test_recording_failure_still_returns_external_outcome_and_operation_identity" time="0.005" /><testcase classname="tests.hexagonal.test_application" name="test_session_lifecycle_retains_handles_context_and_output[memory]" time="0.014" /><testcase classname="tests.hexagonal.test_application" name="test_session_lifecycle_retains_handles_context_and_output[sqlite]" time="0.018" /><testcase classname="tests.hexagonal.test_application" name="test_unknown_session_effect_blocks_overlapping_effect_and_reconciles" time="0.011" /><testcase classname="tests.hexagonal.test_application" name="test_session_output_cannot_redirect_the_driver_handle" time="0.005" /><testcase classname="tests.hexagonal.test_application" name="test_resume_requires_source_control_and_destination_creation[memory-send_session]" time="0.016" /><testcase classname="tests.hexagonal.test_application" name="test_resume_requires_source_control_and_destination_creation[memory-start_session]" time="0.013" /><testcase classname="tests.hexagonal.test_application" name="test_resume_requires_source_control_and_destination_creation[sqlite-send_session]" time="0.013" /><testcase classname="tests.hexagonal.test_application" name="test_resume_requires_source_control_and_destination_creation[sqlite-start_session]" time="0.013" /><testcase classname="tests.hexagonal.test_application" name="test_authorized_resume_preserves_source_provenance_and_uses_opaque_backend[memory-False]" time="0.014" /><testcase classname="tests.hexagonal.test_application" name="test_authorized_resume_preserves_source_provenance_and_uses_opaque_backend[memory-True]" time="0.013" /><testcase classname="tests.hexagonal.test_application" name="test_authorized_resume_preserves_source_provenance_and_uses_opaque_backend[sqlite-False]" time="0.015" /><testcase classname="tests.hexagonal.test_application" name="test_authorized_resume_preserves_source_provenance_and_uses_opaque_backend[sqlite-True]" time="0.017" /><testcase classname="tests.hexagonal.test_application" name="test_start_rejects_raw_resume_identity_in_specification[memory-None]" time="0.004" /><testcase classname="tests.hexagonal.test_application" name="test_start_rejects_raw_resume_identity_in_specification[memory-native-conversation]" time="0.004" /><testcase classname="tests.hexagonal.test_application" name="test_start_rejects_raw_resume_identity_in_specification[memory-raw_resume2]" time="0.004" /><testcase classname="tests.hexagonal.test_application" name="test_start_rejects_raw_resume_identity_in_specification[sqlite-None]" time="0.004" /><testcase classname="tests.hexagonal.test_application" name="test_start_rejects_raw_resume_identity_in_specification[sqlite-native-conversation]" time="0.004" /><testcase classname="tests.hexagonal.test_application" name="test_start_rejects_raw_resume_identity_in_specification[sqlite-raw_resume2]" time="0.004" /><testcase classname="tests.hexagonal.test_application" name="test_invalid_resume_source_or_driver_fails_before_effect[memory-missing-not_found]" time="0.012" /><testcase classname="tests.hexagonal.test_application" name="test_invalid_resume_source_or_driver_fails_before_effect[memory-driver-driver_mismatch]" time="0.012" /><testcase classname="tests.hexagonal.test_application" name="test_invalid_resume_source_or_driver_fails_before_effect[memory-unsupported-unsupported_operation]" time="0.013" /><testcase classname="tests.hexagonal.test_application" name="test_invalid_resume_source_or_driver_fails_before_effect[sqlite-missing-not_found]" time="0.013" /><testcase classname="tests.hexagonal.test_application" name="test_invalid_resume_source_or_driver_fails_before_effect[sqlite-driver-driver_mismatch]" time="0.013" /><testcase classname="tests.hexagonal.test_application" name="test_invalid_resume_source_or_driver_fails_before_effect[sqlite-unsupported-unsupported_operation]" time="0.014" /><testcase classname="tests.hexagonal.test_application" name="test_resume_treats_a_verified_empty_backend_as_opaque_driver_data[memory]" time="0.013" /><testcase classname="tests.hexagonal.test_application" name="test_resume_treats_a_verified_empty_backend_as_opaque_driver_data[sqlite]" time="0.014" /><testcase classname="tests.hexagonal.test_application" name="test_resume_requires_verified_adapter_receipt[memory-unmarked]" time="0.012" /><testcase classname="tests.hexagonal.test_application" name="test_resume_requires_verified_adapter_receipt[memory-no_start_id]" time="0.012" /><testcase classname="tests.hexagonal.test_application" name="test_resume_requires_verified_adapter_receipt[memory-empty_backend]" time="0.013" /><testcase classname="tests.hexagonal.test_application" name="test_resume_requires_verified_adapter_receipt[sqlite-unmarked]" time="0.015" /><testcase classname="tests.hexagonal.test_application" name="test_resume_requires_verified_adapter_receipt[sqlite-no_start_id]" time="0.014" /><testcase classname="tests.hexagonal.test_application" name="test_resume_requires_verified_adapter_receipt[sqlite-empty_backend]" time="0.016" /><testcase classname="tests.hexagonal.test_application" name="test_resume_cannot_bypass_source_pending_or_unknown_operation[memory-False]" time="0.016" /><testcase classname="tests.hexagonal.test_application" name="test_resume_cannot_bypass_source_pending_or_unknown_operation[memory-True]" time="0.018" /><testcase classname="tests.hexagonal.test_application" name="test_resume_cannot_bypass_source_pending_or_unknown_operation[sqlite-False]" time="0.020" /><testcase classname="tests.hexagonal.test_application" name="test_resume_cannot_bypass_source_pending_or_unknown_operation[sqlite-True]" time="0.021" /><testcase classname="tests.hexagonal.test_application" name="test_resume_replay_reauthorizes_source_and_destination[memory-send_session]" time="0.018" /><testcase classname="tests.hexagonal.test_application" name="test_resume_replay_reauthorizes_source_and_destination[memory-start_session]" time="0.026" /><testcase classname="tests.hexagonal.test_application" name="test_resume_replay_reauthorizes_source_and_destination[sqlite-send_session]" time="0.022" /><testcase classname="tests.hexagonal.test_application" name="test_resume_replay_reauthorizes_source_and_destination[sqlite-start_session]" time="0.023" /><testcase classname="tests.hexagonal.test_application" name="test_resume_verifies_source_and_destination_snapshots_before_effect_or_replay[memory-session-False]" time="0.014" /><testcase classname="tests.hexagonal.test_application" name="test_resume_verifies_source_and_destination_snapshots_before_effect_or_replay[memory-session-True]" time="0.018" /><testcase classname="tests.hexagonal.test_application" name="test_resume_verifies_source_and_destination_snapshots_before_effect_or_replay[memory-source_work-False]" time="0.017" /><testcase classname="tests.hexagonal.test_application" name="test_resume_verifies_source_and_destination_snapshots_before_effect_or_replay[memory-source_work-True]" time="0.015" /><testcase classname="tests.hexagonal.test_application" name="test_resume_verifies_source_and_destination_snapshots_before_effect_or_replay[memory-source_evidence-False]" time="0.012" /><testcase classname="tests.hexagonal.test_application" name="test_resume_verifies_source_and_destination_snapshots_before_effect_or_replay[memory-source_evidence-True]" time="0.017" /><testcase classname="tests.hexagonal.test_application" name="test_resume_verifies_source_and_destination_snapshots_before_effect_or_replay[memory-destination_work-False]" time="0.016" /><testcase classname="tests.hexagonal.test_application" name="test_resume_verifies_source_and_destination_snapshots_before_effect_or_replay[memory-destination_work-True]" time="0.018" /><testcase classname="tests.hexagonal.test_application" name="test_resume_verifies_source_and_destination_snapshots_before_effect_or_replay[memory-receipt-False]" time="0.017" /><testcase classname="tests.hexagonal.test_application" name="test_resume_verifies_source_and_destination_snapshots_before_effect_or_replay[memory-receipt-True]" time="0.019" /><testcase classname="tests.hexagonal.test_application" name="test_resume_verifies_source_and_destination_snapshots_before_effect_or_replay[sqlite-session-False]" time="0.017" /><testcase classname="tests.hexagonal.test_application" name="test_resume_verifies_source_and_destination_snapshots_before_effect_or_replay[sqlite-session-True]" time="0.018" /><testcase classname="tests.hexagonal.test_application" name="test_resume_verifies_source_and_destination_snapshots_before_effect_or_replay[sqlite-source_work-False]" time="0.018" /><testcase classname="tests.hexagonal.test_application" name="test_resume_verifies_source_and_destination_snapshots_before_effect_or_replay[sqlite-source_work-True]" time="0.019" /><testcase classname="tests.hexagonal.test_application" name="test_resume_verifies_source_and_destination_snapshots_before_effect_or_replay[sqlite-source_evidence-False]" time="0.014" /><testcase classname="tests.hexagonal.test_application" name="test_resume_verifies_source_and_destination_snapshots_before_effect_or_replay[sqlite-source_evidence-True]" time="0.028" /><testcase classname="tests.hexagonal.test_application" name="test_resume_verifies_source_and_destination_snapshots_before_effect_or_replay[sqlite-destination_work-False]" time="0.019" /><testcase classname="tests.hexagonal.test_application" name="test_resume_verifies_source_and_destination_snapshots_before_effect_or_replay[sqlite-destination_work-True]" time="0.021" /><testcase classname="tests.hexagonal.test_application" name="test_resume_verifies_source_and_destination_snapshots_before_effect_or_replay[sqlite-receipt-False]" time="0.014" /><testcase classname="tests.hexagonal.test_application" name="test_resume_verifies_source_and_destination_snapshots_before_effect_or_replay[sqlite-receipt-True]" time="0.017" /><testcase classname="tests.hexagonal.test_application" name="test_unknown_start_cannot_be_bound_using_caller_reconciliation_result[memory-False]" time="0.009" /><testcase classname="tests.hexagonal.test_application" name="test_unknown_start_cannot_be_bound_using_caller_reconciliation_result[memory-True]" time="0.010" /><testcase classname="tests.hexagonal.test_application" name="test_unknown_start_cannot_be_bound_using_caller_reconciliation_result[sqlite-False]" time="0.011" /><testcase classname="tests.hexagonal.test_application" name="test_unknown_start_cannot_be_bound_using_caller_reconciliation_result[sqlite-True]" time="0.011" /><testcase classname="tests.hexagonal.test_application" name="test_retained_start_receipt_can_reconcile_without_caller_backend_override[memory]" time="0.020" /><testcase classname="tests.hexagonal.test_application" name="test_retained_start_receipt_can_reconcile_without_caller_backend_override[sqlite]" time="0.020" /><testcase classname="tests.hexagonal.test_application" name="test_resume_reconciliation_cannot_bypass_revoked_source_permission[memory]" time="0.016" /><testcase classname="tests.hexagonal.test_application" name="test_resume_reconciliation_cannot_bypass_revoked_source_permission[sqlite]" time="0.017" /><testcase classname="tests.hexagonal.test_application" name="test_reconciliation_policy_receives_original_work_and_capability_context" time="0.009" /><testcase classname="tests.hexagonal.test_application" name="test_changed_authorization_context_prevents_effect_but_unrelated_actor_does_not" time="0.009" /><testcase classname="tests.hexagonal.test_application" name="test_changed_evidence_invalidates_authorization_before_external_effect[memory-add]" time="0.007" /><testcase classname="tests.hexagonal.test_application" name="test_changed_evidence_invalidates_authorization_before_external_effect[memory-update]" time="0.007" /><testcase classname="tests.hexagonal.test_application" name="test_changed_evidence_invalidates_authorization_before_external_effect[memory-delete]" time="0.007" /><testcase classname="tests.hexagonal.test_application" name="test_changed_evidence_invalidates_authorization_before_external_effect[sqlite-add]" time="0.009" /><testcase classname="tests.hexagonal.test_application" name="test_changed_evidence_invalidates_authorization_before_external_effect[sqlite-update]" time="0.008" /><testcase classname="tests.hexagonal.test_application" name="test_changed_evidence_invalidates_authorization_before_external_effect[sqlite-delete]" time="0.008" /><testcase classname="tests.hexagonal.test_application" name="test_other_work_evidence_does_not_invalidate_authorization[memory]" time="0.009" /><testcase classname="tests.hexagonal.test_application" name="test_other_work_evidence_does_not_invalidate_authorization[sqlite]" time="0.009" /><testcase classname="tests.hexagonal.test_application" name="test_contextual_read_cannot_return_a_newly_private_revision[memory-work]" time="0.004" /><testcase classname="tests.hexagonal.test_application" name="test_contextual_read_cannot_return_a_newly_private_revision[memory-operation]" time="0.007" /><testcase classname="tests.hexagonal.test_application" name="test_contextual_read_cannot_return_a_newly_private_revision[memory-session]" time="0.006" /><testcase classname="tests.hexagonal.test_application" name="test_contextual_read_cannot_return_a_newly_private_revision[sqlite-work]" time="0.005" /><testcase classname="tests.hexagonal.test_application" name="test_contextual_read_cannot_return_a_newly_private_revision[sqlite-operation]" time="0.008" /><testcase classname="tests.hexagonal.test_application" name="test_contextual_read_cannot_return_a_newly_private_revision[sqlite-session]" time="0.008" /><testcase classname="tests.hexagonal.test_application" name="test_completed_replay_verifies_the_work_snapshot_authorized_for_read[memory]" time="0.008" /><testcase classname="tests.hexagonal.test_application" name="test_completed_replay_verifies_the_work_snapshot_authorized_for_read[sqlite]" time="0.010" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[memory-roles-list_work]" time="0.009" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[memory-roles-list_actors]" time="0.006" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[memory-roles-events]" time="0.007" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[memory-roles-get_work]" time="0.007" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[memory-roles-inbox]" time="0.009" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[memory-roles-list_sessions]" time="0.009" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[memory-roles-get_operation]" time="0.010" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[memory-roles-capabilities]" time="0.008" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[memory-metadata-list_work]" time="0.007" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[memory-metadata-list_actors]" time="0.006" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[memory-metadata-events]" time="0.007" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[memory-metadata-get_work]" time="0.007" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[memory-metadata-inbox]" time="0.010" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[memory-metadata-list_sessions]" time="0.009" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[memory-metadata-get_operation]" time="0.010" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[memory-metadata-capabilities]" time="0.007" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[sqlite-roles-list_work]" time="0.008" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[sqlite-roles-list_actors]" time="0.007" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[sqlite-roles-events]" time="0.008" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[sqlite-roles-get_work]" time="0.007" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[sqlite-roles-inbox]" time="0.010" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[sqlite-roles-list_sessions]" time="0.010" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[sqlite-roles-get_operation]" time="0.011" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[sqlite-roles-capabilities]" time="0.008" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[sqlite-metadata-list_work]" time="0.008" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[sqlite-metadata-list_actors]" time="0.007" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[sqlite-metadata-events]" time="0.008" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[sqlite-metadata-get_work]" time="0.008" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[sqlite-metadata-inbox]" time="0.010" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[sqlite-metadata-list_sessions]" time="0.010" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[sqlite-metadata-get_operation]" time="0.011" /><testcase classname="tests.hexagonal.test_application" name="test_reads_reject_permission_revocation_after_authorization[sqlite-metadata-capabilities]" time="0.008" /><testcase classname="tests.hexagonal.test_application" name="test_capability_inventory_checks_permission_again_after_discovery[memory]" time="0.005" /><testcase classname="tests.hexagonal.test_application" name="test_capability_inventory_checks_permission_again_after_discovery[sqlite]" time="0.005" /><testcase classname="tests.hexagonal.test_application" name="test_triage_escalates_uncertainty_and_remains_evidence[memory-0.95-proceed-False]" time="0.008" /><testcase classname="tests.hexagonal.test_application" name="test_triage_escalates_uncertainty_and_remains_evidence[memory-None-proceed-True]" time="0.008" /><testcase classname="tests.hexagonal.test_application" name="test_triage_escalates_uncertainty_and_remains_evidence[memory-0.6-proceed-True]" time="0.007" /><testcase classname="tests.hexagonal.test_application" name="test_triage_escalates_uncertainty_and_remains_evidence[memory-0.99-borderline-True]" time="0.010" /><testcase classname="tests.hexagonal.test_application" name="test_triage_escalates_uncertainty_and_remains_evidence[sqlite-0.95-proceed-False]" time="0.009" /><testcase classname="tests.hexagonal.test_application" name="test_triage_escalates_uncertainty_and_remains_evidence[sqlite-None-proceed-True]" time="0.008" /><testcase classname="tests.hexagonal.test_application" name="test_triage_escalates_uncertainty_and_remains_evidence[sqlite-0.6-proceed-True]" time="0.008" /><testcase classname="tests.hexagonal.test_application" name="test_triage_escalates_uncertainty_and_remains_evidence[sqlite-0.99-borderline-True]" time="0.009" /><testcase classname="tests.hexagonal.test_application" name="test_unavailable_heavier_evaluator_preserves_uncertainty_instead_of_authorizing" time="0.006" /><testcase classname="tests.hexagonal.test_application" name="test_every_advertised_action_has_a_schema_and_dispatch_target" time="0.004" /><testcase classname="tests.hexagonal.test_application" name="test_invalid_assessment_configuration_is_rejected_before_use[False]" time="0.002" /><testcase classname="tests.hexagonal.test_application" name="test_invalid_assessment_configuration_is_rejected_before_use[configuration1]" time="0.002" /><testcase classname="tests.hexagonal.test_application" name="test_invalid_assessment_configuration_is_rejected_before_use[disabled]" time="0.002" /><testcase classname="tests.hexagonal.test_application" name="test_invalid_assessment_configuration_is_rejected_before_use[configuration3]" time="0.002" /><testcase classname="tests.hexagonal.test_application" name="test_invalid_assessment_configuration_is_rejected_before_use[configuration4]" time="0.002" /><testcase classname="tests.hexagonal.test_application" name="test_invalid_assessment_configuration_is_rejected_before_use[configuration5]" time="0.002" /><testcase classname="tests.hexagonal.test_application" name="test_invalid_assessment_configuration_is_rejected_before_use[configuration6]" time="0.002" /><testcase classname="tests.hexagonal.test_application" name="test_invalid_assessment_configuration_is_rejected_before_use[configuration7]" time="0.002" /><testcase classname="tests.hexagonal.test_application" name="test_invalid_assessment_configuration_is_rejected_before_use[configuration8]" time="0.002" /><testcase classname="tests.hexagonal.test_application" name="test_invalid_assessment_configuration_is_rejected_before_use[configuration9]" time="0.002" /><testcase classname="tests.hexagonal.test_application" name="test_invalid_assessment_configuration_is_rejected_before_use[configuration10]" time="0.002" /><testcase classname="tests.hexagonal.test_application" name="test_assessment_configuration_is_detached_from_callers" time="0.003" /><testcase classname="tests.hexagonal.test_boundaries.DependencyBoundaryTests" name="test_active_package_does_not_import_the_historical_runtime" time="0.096" /><testcase classname="tests.hexagonal.test_boundaries.DependencyBoundaryTests" name="test_application_and_its_helpers_do_not_depend_on_infrastructure" time="0.065" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_blocked_stdin_is_subject_to_the_deadline" time="0.404" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_catalog_changing_during_pagination_cannot_authorize_execution" time="0.042" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_changed_other_tool_is_not_authorized_by_refresh_for_unchanged_tool" time="0.050" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_changed_requested_mcp_descriptor_requires_explicit_discovery" time="0.041" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_cli_keeps_authorized_schema_until_explicit_discovery" time="0.096" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_cli_manifest_and_dynamic_discovery_share_call_contract" time="0.168" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_cli_rejects_nonobjects_duplicate_properties_and_failure_exit" time="0.118" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_close_reaps_mcp_process_and_is_idempotent" time="0.034" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_command_arguments_remain_literal_and_environment_is_explicit" time="0.069" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_configured_bounds_and_argv_are_validated" time="0.001" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_deadlines_and_output_bounds_terminate_real_processes" time="2.868" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_discovery_and_notifications_have_aggregate_output_bounds" time="0.073" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_discovery_return_does_not_mutate_cached_schema" time="0.044" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_empty_discovery_is_a_snapshot_not_permission_to_discover_again" time="0.062" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_explicit_environment_forwarding_and_override" time="0.058" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_invalid_arguments_never_reach_executable" time="0.036" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_invalid_definitions_and_duplicate_names_are_rejected" time="0.185" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_mcp_error_result_is_distinct_from_protocol_error" time="0.072" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_mcp_malformed_protocol_and_negotiation_are_rejected" time="0.164" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_mcp_negotiation_pagination_and_dynamic_new_tool" time="0.034" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_mcp_reconnect_compares_against_previous_authorized_descriptor" time="0.068" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_mcp_server_requests_and_notifications_do_not_grant_authority" time="0.035" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_observed_descriptor_and_output_schema_distinguish_json_types" time="0.119" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_output_schema_is_verified" time="0.094" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_oversized_callback_reply_retains_unknown_operation_and_one_effect" time="0.036" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_oversized_original_request_is_not_started" time="0.033" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_partial_side_effect_before_error_remains_unknown_with_evidence" time="0.041" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_per_invocation_descriptor_detects_another_callers_discovery" time="0.096" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_per_invocation_descriptor_distinguishes_json_booleans_and_numbers" time="0.194" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_stderr_logging_does_not_block_or_invalidate_result" time="0.065" /><testcase classname="tests.hexagonal.test_capabilities.CapabilityTests" name="test_unrelated_catalog_change_does_not_invalidate_requested_tool" time="0.041" /><testcase classname="tests.hexagonal.test_claude_sessions" name="test_wait_for_retries_safe_observation_conflict" time="0.011" /><testcase classname="tests.hexagonal.test_claude_sessions" name="test_wait_for_propagates_unsafe_errors[error0]" time="0.000" /><testcase classname="tests.hexagonal.test_claude_sessions" name="test_wait_for_propagates_unsafe_errors[error1]" time="0.000" /><testcase classname="tests.hexagonal.test_claude_sessions" name="test_wait_for_safe_conflict_keeps_original_deadline" time="0.000" /><testcase classname="tests.hexagonal.test_claude_sessions" name="test_claude_retained_context_callbacks_progress_without_poll_and_native_identity" time="0.002"><failure message="PermissionError: [Errno 1] Operation not permitted">make_driver = &lt;function make_driver.&lt;locals&gt;.make at 0x7f3924716ca0&gt;
+
+    def test_claude_retained_context_callbacks_progress_without_poll_and_native_identity(make_driver):
+        driver, observations, calls = make_driver()
+&gt;       session = driver.start({"context": {"actor": "worker", "session_id": "app-session"}})
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_claude_sessions.py:91: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError</failure></testcase><testcase classname="tests.hexagonal.test_claude_sessions" name="test_claude_channel_delivery_during_outstanding_callback_and_unrelated_session" time="0.002"><failure message="PermissionError: [Errno 1] Operation not permitted">make_driver = &lt;function make_driver.&lt;locals&gt;.make at 0x7f392454d8a0&gt;
+
+    def test_claude_channel_delivery_during_outstanding_callback_and_unrelated_session(make_driver):
+        driver, observations, calls = make_driver()
+        entered, release = threading.Event(), threading.Event()
+    
+        def callback(action, args, context, key):
+            calls.append((action, args, context, key))
+            if action == "hold":
+                entered.set()
+                assert release.wait(5)
+            return {"accepted": True}
+    
+        driver.bind_application_tools(list(driver._capabilities.values()), callback)
+&gt;       first = driver.start({})
+                ^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_claude_sessions.py:119: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError</failure></testcase><testcase classname="tests.hexagonal.test_claude_sessions" name="test_claude_requested_resolved_and_observed_settings_and_resume" time="0.006"><failure message="PermissionError: [Errno 1] Operation not permitted">make_driver = &lt;function make_driver.&lt;locals&gt;.make at 0x7f3924715f80&gt;
+
+    def test_claude_requested_resolved_and_observed_settings_and_resume(make_driver):
+        driver, _, calls = make_driver(launch={"model": "trusted-model", "effort": "high"}, request_parameters={"type": "object", "properties": {"model": {"type": "string"}}, "additionalProperties": False})
+        spec = {"parameters": {"model": "requested-model"}}
+&gt;       session = driver.start(spec)
+                  ^^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_claude_sessions.py:139: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError</failure></testcase><testcase classname="tests.hexagonal.test_claude_sessions" name="test_claude_changed_configuration_requires_explicit_policy" time="0.002"><failure message="PermissionError: [Errno 1] Operation not permitted">make_driver = &lt;function make_driver.&lt;locals&gt;.make at 0x7f3924715440&gt;
+
+    def test_claude_changed_configuration_requires_explicit_policy(make_driver):
+        original, _, _ = make_driver(launch={"model": "one"})
+&gt;       source = original.start({})
+                 ^^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_claude_sessions.py:159: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError</failure></testcase><testcase classname="tests.hexagonal.test_claude_sessions" name="test_claude_native_permissions_independent_of_application_tools" time="0.002"><failure message="PermissionError: [Errno 1] Operation not permitted">make_driver = &lt;function make_driver.&lt;locals&gt;.make at 0x7f3924716160&gt;
+
+    def test_claude_native_permissions_independent_of_application_tools(make_driver):
+        driver, observations, calls = make_driver(permissions={"Bash": "deny", "Read": "allow", "application_tools": "allow"})
+&gt;       session = driver.start({})
+                  ^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_claude_sessions.py:172: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError</failure></testcase><testcase classname="tests.hexagonal.test_claude_sessions" name="test_claude_callback_requires_matching_native_hook" time="0.004"><failure message="PermissionError: [Errno 1] Operation not permitted">make_driver = &lt;function make_driver.&lt;locals&gt;.make at 0x7f3924715f80&gt;
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-0/test_claude_callback_requires_0')
+
+    def test_claude_callback_requires_matching_native_hook(make_driver, tmp_path):
+        driver, observations, calls = make_driver(env={"CLAUDE_STATE_DIR": str(tmp_path), "CLAUDE_FAULT": "missing_tool_hook"})
+&gt;       session = driver.start({})
+                  ^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_claude_sessions.py:182: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError</failure></testcase><testcase classname="tests.hexagonal.test_claude_sessions" name="test_claude_start_requires_observed_identity_and_channel_registration[wrong_identity-session_identity]" time="0.002"><failure message="PermissionError: [Errno 1] Operation not permitted">make_driver = &lt;function make_driver.&lt;locals&gt;.make at 0x7f3924716200&gt;
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-0/test_claude_start_requires_obs0')
+fault = 'wrong_identity', code = 'session_identity'
+
+    @pytest.mark.parametrize("fault,code", [("wrong_identity", "session_identity"), ("missing_registration", "session_start_timeout"), ("forged_registration", "session_start_timeout")])
+    def test_claude_start_requires_observed_identity_and_channel_registration(make_driver, tmp_path, fault, code):
+        driver, _, _ = make_driver(env={"CLAUDE_STATE_DIR": str(tmp_path), "CLAUDE_FAULT": fault}, startup_timeout=0.7)
+        with pytest.raises(OrchestrationError) as error:
+&gt;           driver.start({})
+
+tests/hexagonal/test_claude_sessions.py:193: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError</failure></testcase><testcase classname="tests.hexagonal.test_claude_sessions" name="test_claude_start_requires_observed_identity_and_channel_registration[missing_registration-session_start_timeout]" time="0.002"><failure message="PermissionError: [Errno 1] Operation not permitted">make_driver = &lt;function make_driver.&lt;locals&gt;.make at 0x7f392454dee0&gt;
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-0/test_claude_start_requires_obs1')
+fault = 'missing_registration', code = 'session_start_timeout'
+
+    @pytest.mark.parametrize("fault,code", [("wrong_identity", "session_identity"), ("missing_registration", "session_start_timeout"), ("forged_registration", "session_start_timeout")])
+    def test_claude_start_requires_observed_identity_and_channel_registration(make_driver, tmp_path, fault, code):
+        driver, _, _ = make_driver(env={"CLAUDE_STATE_DIR": str(tmp_path), "CLAUDE_FAULT": fault}, startup_timeout=0.7)
+        with pytest.raises(OrchestrationError) as error:
+&gt;           driver.start({})
+
+tests/hexagonal/test_claude_sessions.py:193: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError</failure></testcase><testcase classname="tests.hexagonal.test_claude_sessions" name="test_claude_start_requires_observed_identity_and_channel_registration[forged_registration-session_start_timeout]" time="0.002"><failure message="PermissionError: [Errno 1] Operation not permitted">make_driver = &lt;function make_driver.&lt;locals&gt;.make at 0x7f392454e5c0&gt;
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-0/test_claude_start_requires_obs2')
+fault = 'forged_registration', code = 'session_start_timeout'
+
+    @pytest.mark.parametrize("fault,code", [("wrong_identity", "session_identity"), ("missing_registration", "session_start_timeout"), ("forged_registration", "session_start_timeout")])
+    def test_claude_start_requires_observed_identity_and_channel_registration(make_driver, tmp_path, fault, code):
+        driver, _, _ = make_driver(env={"CLAUDE_STATE_DIR": str(tmp_path), "CLAUDE_FAULT": fault}, startup_timeout=0.7)
+        with pytest.raises(OrchestrationError) as error:
+&gt;           driver.start({})
+
+tests/hexagonal/test_claude_sessions.py:193: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError</failure></testcase><testcase classname="tests.hexagonal.test_claude_sessions" name="test_claude_conflicting_native_call_id_and_missing_hook_rejected" time="0.002"><failure message="PermissionError: [Errno 1] Operation not permitted">make_driver = &lt;function make_driver.&lt;locals&gt;.make at 0x7f392454e2a0&gt;
+
+    def test_claude_conflicting_native_call_id_and_missing_hook_rejected(make_driver):
+        driver, _, calls = make_driver()
+&gt;       session = driver.start({})
+                  ^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_claude_sessions.py:200: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError</failure></testcase><testcase classname="tests.hexagonal.test_claude_sessions" name="test_claude_denied_application_tool_cannot_execute_via_gateway" time="0.002"><failure message="PermissionError: [Errno 1] Operation not permitted">make_driver = &lt;function make_driver.&lt;locals&gt;.make at 0x7f392454ff60&gt;
+
+    def test_claude_denied_application_tool_cannot_execute_via_gateway(make_driver):
+        driver, _, calls = make_driver(permissions={"application_tools": "deny"})
+&gt;       session = driver.start({})
+                  ^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_claude_sessions.py:217: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError</failure></testcase><testcase classname="tests.hexagonal.test_claude_sessions" name="test_claude_raw_native_debug_retention_is_explicit_and_private" time="0.003"><failure message="PermissionError: [Errno 1] Operation not permitted">make_driver = &lt;function make_driver.&lt;locals&gt;.make at 0x7f392410e700&gt;
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-0/test_claude_raw_native_debug_r0')
+
+    def test_claude_raw_native_debug_retention_is_explicit_and_private(make_driver, tmp_path):
+        driver, _, _ = make_driver(evidence_directory=str(tmp_path / "private-native"))
+&gt;       session = driver.start({})
+                  ^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_claude_sessions.py:230: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError</failure></testcase><testcase classname="tests.hexagonal.test_claude_sessions" name="test_claude_resume_replaces_same_instance_connection_after_verified_launch" time="0.003"><failure message="PermissionError: [Errno 1] Operation not permitted">make_driver = &lt;function make_driver.&lt;locals&gt;.make at 0x7f392454fba0&gt;
+
+    def test_claude_resume_replaces_same_instance_connection_after_verified_launch(make_driver):
+        driver, _, _ = make_driver()
+&gt;       source = driver.start({})
+                 ^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_claude_sessions.py:240: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError</failure></testcase><testcase classname="tests.hexagonal.test_claude_sessions" name="test_claude_application_callback_through_active_composition_and_sqlite" time="0.013"><failure message="xorchestrate.model.OrchestrationError: External operation did not return a verified result (PermissionError).">self = &lt;xorchestrate.application.Application object at 0x7f39240fa600&gt;
+action = 'start_session'
+args = {'driver': 'worker', 'specification': {}, 'work_id': '6cc7bdcbc2c44afdbdd4efb7b1205bbc', 'idempotency_key': 'launch'}
+actor = 'owner'
+context = {'actor': 'owner', 'actor_record': None, 'arguments': {'driver': 'worker', 'specification': {}, 'work_id': '6cc7bdcbc2...n native callback provenance', 'title': 'Retain native callback provenance', 'status': 'open', 'inputs': {}, ...}, ...}
+perform = &lt;function Application._create_session.&lt;locals&gt;.perform at 0x7f392454d8a0&gt;
+
+    def _effect(self, action: str, args: JSON, actor: str, context: JSON, perform: Callable[[Record], Any]) -&gt; JSON:
+        key = _digest([actor, args["idempotency_key"]])
+        request = {k: deepcopy(v) for k, v in args.items() if k != "idempotency_key"}
+        fingerprint = _digest({"action": action, "arguments": request})
+        with self.store.transaction() as tx:
+            self._verify_context(tx, context)
+            existing = tx.get("operation", key)
+            if existing:
+                if existing.data["fingerprint"] != fingerprint:
+                    raise Conflict("The idempotency key is already bound to a different request.")
+                return self._replay(existing)
+            data = {"action": action, "arguments": request, "fingerprint": fingerprint, "actor": actor,
+                    "idempotency_key": args["idempotency_key"], "status": "pending", "work_id": context["work"]["id"] if context.get("work") else None}
+            if action in {"start_session", "attach_session", "reconnect_session"}:
+                if args.get("actor_id"):
+                    self._require(tx, "actor", args["actor_id"])
+                provenance = {}
+                if context.get("resume_source"):
+                    source = context["resume_source"]
+                    if source["session"].get("pending_operation") and action != "reconnect_session":
+                        raise Conflict("The resume source has a pending or unresolved operation; reconcile it before another effect.")
+                    provenance["resume_source"] = {"session_id": source["session"]["id"], "version": source["session"]["version"],
+                        "start_operation_id": source["resume_receipt"]["id"]}
+                    data.update(deepcopy(provenance))
+                    data["unresolved_effects"] = list(dict.fromkeys([
+                        *source["session"].get("unresolved_effects", []),
+                        *([source["session"]["pending_operation"]] if source["session"].get("pending_operation") else []),
+                    ]))
+                session = self._create(tx, "session", actor, {
+                    "driver": context.get("resolved_driver", args["driver"]),
+                    "selection": {"requested": args["driver"], "resolved": context.get("resolved_driver", args["driver"]),
+                        "fallback_reason": "requested_driver_unavailable" if context.get("resolved_driver", args["driver"]) != args["driver"] else None}, "specification": args["specification"], "work_id": data["work_id"],
+                    "actor_id": args.get("actor_id", actor), "status": "starting", "backend": {}, "pending_operation": key,
+                    "start_operation_id": key, "unresolved_effects": data.get("unresolved_effects", []), **provenance,
+                })
+                data["session_id"] = session.key
+            elif action.endswith("_session"):
+                session = self._require(tx, "session", args["session_id"])
+                independent = action in {"poll_session", "stop_session", "detach_session"}
+                if not independent:
+                    self._check_recovered_effects(tx, session)
+                if session.data.get("pending_operation") and not independent:
+                    raise Conflict("A session operation is pending or unresolved; inspect it before another effect.")
+                if session.data["status"] not in ({"active", "unknown"} if independent else {"active"}):
+                    raise OrchestrationError("The session is not active.", "invalid_state")
+                if session.version != context["session"]["version"]:
+                    raise Conflict("The session changed after authorization.")
+                data.update({"session_id": session.key, "backend": deepcopy(session.data["backend"]), "independent": independent})
+                if not independent:
+                    tx.put("session", session.key, {**session.data, "pending_operation": key}, session.version)
+            elif action == "invoke":
+                data["capability"] = deepcopy(context["capability"])
+                self._create(tx, "invocation", actor, {
+                    "capability": args["capability"], "arguments": args["arguments"], "work_id": data["work_id"],
+                    "operation_id": key, "status": "pending",
+                }, key)
+            operation = self._create(tx, "operation", actor, data, key)
+        try:
+&gt;           raw = perform(operation)
+                  ^^^^^^^^^^^^^^^^^^
+
+xorchestrate/application.py:688: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/application.py:580: in perform
+    return invoke(deepcopy(source["session"]["backend"]), specification) if source else invoke(specification)
+                                                                                        ^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+
+The above exception was the direct cause of the following exception:
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-0/test_claude_application_callba0')
+
+    def test_claude_application_callback_through_active_composition_and_sqlite(tmp_path):
+        from xorchestrate.composition import build
+        config = {"store": {"adapter": "sqlite", "options": {"path": str(tmp_path / "state.sqlite3")}},
+                  "sessions": {"worker": {"adapter": "claude", "options": {
+                      "command": [sys.executable, str(FIXTURE)], "env": {"CLAUDE_STATE_DIR": str(tmp_path / "native")},
+                      "application_tools": True, "terminal": "discard", "startup_timeout": 5, "timeout": 3}}}}
+        with build(config) as runtime:
+            app = runtime.application
+            work = app.call("create_work", {"goal": "Retain native callback provenance"})["work"]
+&gt;           session = app.call("start_session", {"driver": "worker", "specification": {}, "work_id": work["id"], "idempotency_key": "launch"})["session"]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_claude_sessions.py:261: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/application.py:237: in call
+    return getattr(self, f"_{action}")(arguments, actor, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/application.py:542: in _start_session
+    return self._create_session("start_session", args, actor, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/application.py:581: in _create_session
+    result = self._effect(action, args, actor, context, perform)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;xorchestrate.application.Application object at 0x7f39240fa600&gt;
+action = 'start_session'
+args = {'driver': 'worker', 'specification': {}, 'work_id': '6cc7bdcbc2c44afdbdd4efb7b1205bbc', 'idempotency_key': 'launch'}
+actor = 'owner'
+context = {'actor': 'owner', 'actor_record': None, 'arguments': {'driver': 'worker', 'specification': {}, 'work_id': '6cc7bdcbc2...n native callback provenance', 'title': 'Retain native callback provenance', 'status': 'open', 'inputs': {}, ...}, ...}
+perform = &lt;function Application._create_session.&lt;locals&gt;.perform at 0x7f392454d8a0&gt;
+
+    def _effect(self, action: str, args: JSON, actor: str, context: JSON, perform: Callable[[Record], Any]) -&gt; JSON:
+        key = _digest([actor, args["idempotency_key"]])
+        request = {k: deepcopy(v) for k, v in args.items() if k != "idempotency_key"}
+        fingerprint = _digest({"action": action, "arguments": request})
+        with self.store.transaction() as tx:
+            self._verify_context(tx, context)
+            existing = tx.get("operation", key)
+            if existing:
+                if existing.data["fingerprint"] != fingerprint:
+                    raise Conflict("The idempotency key is already bound to a different request.")
+                return self._replay(existing)
+            data = {"action": action, "arguments": request, "fingerprint": fingerprint, "actor": actor,
+                    "idempotency_key": args["idempotency_key"], "status": "pending", "work_id": context["work"]["id"] if context.get("work") else None}
+            if action in {"start_session", "attach_session", "reconnect_session"}:
+                if args.get("actor_id"):
+                    self._require(tx, "actor", args["actor_id"])
+                provenance = {}
+                if context.get("resume_source"):
+                    source = context["resume_source"]
+                    if source["session"].get("pending_operation") and action != "reconnect_session":
+                        raise Conflict("The resume source has a pending or unresolved operation; reconcile it before another effect.")
+                    provenance["resume_source"] = {"session_id": source["session"]["id"], "version": source["session"]["version"],
+                        "start_operation_id": source["resume_receipt"]["id"]}
+                    data.update(deepcopy(provenance))
+                    data["unresolved_effects"] = list(dict.fromkeys([
+                        *source["session"].get("unresolved_effects", []),
+                        *([source["session"]["pending_operation"]] if source["session"].get("pending_operation") else []),
+                    ]))
+                session = self._create(tx, "session", actor, {
+                    "driver": context.get("resolved_driver", args["driver"]),
+                    "selection": {"requested": args["driver"], "resolved": context.get("resolved_driver", args["driver"]),
+                        "fallback_reason": "requested_driver_unavailable" if context.get("resolved_driver", args["driver"]) != args["driver"] else None}, "specification": args["specification"], "work_id": data["work_id"],
+                    "actor_id": args.get("actor_id", actor), "status": "starting", "backend": {}, "pending_operation": key,
+                    "start_operation_id": key, "unresolved_effects": data.get("unresolved_effects", []), **provenance,
+                })
+                data["session_id"] = session.key
+            elif action.endswith("_session"):
+                session = self._require(tx, "session", args["session_id"])
+                independent = action in {"poll_session", "stop_session", "detach_session"}
+                if not independent:
+                    self._check_recovered_effects(tx, session)
+                if session.data.get("pending_operation") and not independent:
+                    raise Conflict("A session operation is pending or unresolved; inspect it before another effect.")
+                if session.data["status"] not in ({"active", "unknown"} if independent else {"active"}):
+                    raise OrchestrationError("The session is not active.", "invalid_state")
+                if session.version != context["session"]["version"]:
+                    raise Conflict("The session changed after authorization.")
+                data.update({"session_id": session.key, "backend": deepcopy(session.data["backend"]), "independent": independent})
+                if not independent:
+                    tx.put("session", session.key, {**session.data, "pending_operation": key}, session.version)
+            elif action == "invoke":
+                data["capability"] = deepcopy(context["capability"])
+                self._create(tx, "invocation", actor, {
+                    "capability": args["capability"], "arguments": args["arguments"], "work_id": data["work_id"],
+                    "operation_id": key, "status": "pending",
+                }, key)
+            operation = self._create(tx, "operation", actor, data, key)
+        try:
+            raw = perform(operation)
+        except Exception as error:
+            unknown = not isinstance(error, OrchestrationError) or error.details.get("outcome") not in {"failed", "not_started"}
+            status = "unknown" if unknown else "failed"
+            recording_error = None
+            try:
+                self._fail_effect(key, error, status)
+            except Exception as storage_error:
+                recording_error = _error_message(storage_error)
+&gt;           raise OrchestrationError(_error_message(error), "operation_unknown" if unknown else "operation_failed", {
+                "operation_id": key, "outcome": status, "cause": getattr(error, "code", type(error).__name__),
+                "recording_error": recording_error,
+            }) from error
+E           xorchestrate.model.OrchestrationError: External operation did not return a verified result (PermissionError).
+
+xorchestrate/application.py:697: OrchestrationError</failure></testcase><testcase classname="tests.hexagonal.test_composition.CompositionTests" name="test_application_tool_key_requirement_comes_from_descriptor_and_binding_is_detached" time="0.001" /><testcase classname="tests.hexagonal.test_composition.CompositionTests" name="test_application_tool_keys_are_scoped_by_configured_driver_without_delimiter_collisions" time="0.019" /><testcase classname="tests.hexagonal.test_composition.CompositionTests" name="test_cleanup_continues_after_close_failure_and_is_idempotent" time="0.003" /><testcase classname="tests.hexagonal.test_composition.CompositionTests" name="test_cleanup_failure_does_not_replace_original_construction_failure" time="0.001" /><testcase classname="tests.hexagonal.test_composition.CompositionTests" name="test_config_is_a_deep_snapshot_and_runtime_instances_are_independent" time="0.010" /><testcase classname="tests.hexagonal.test_composition.CompositionTests" name="test_configured_tool_triage_escalates_through_real_cli_processes" time="0.054" /><testcase classname="tests.hexagonal.test_composition.CompositionTests" name="test_custom_session_tools_use_neutral_callbacks_and_bound_principals" time="0.010" /><testcase classname="tests.hexagonal.test_composition.CompositionTests" name="test_disabled_adapters_do_not_load_or_validate_unused_options" time="0.003" /><testcase classname="tests.hexagonal.test_composition.CompositionTests" name="test_failed_construction_closes_all_previously_created_resources_in_reverse_order" time="0.001" /><testcase classname="tests.hexagonal.test_composition.CompositionTests" name="test_falsey_nonobject_config_is_rejected_without_creating_state" time="0.001" /><testcase classname="tests.hexagonal.test_composition.CompositionTests" name="test_installed_factory_extends_capabilities_without_source_changes" time="0.005" /><testcase classname="tests.hexagonal.test_composition.CompositionTests" name="test_invalid_assessment_configuration_closes_its_store" time="0.018" /><testcase classname="tests.hexagonal.test_composition.CompositionTests" name="test_json_reader_rejects_duplicates_nonfinite_and_overflowing_numbers" time="0.001" /><testcase classname="tests.hexagonal.test_composition.CompositionTests" name="test_load_config_rejects_nonobjects_and_unreadable_paths" time="0.001" /><testcase classname="tests.hexagonal.test_composition.CompositionTests" name="test_malformed_paths_raise_configuration_errors" time="0.002" /><testcase classname="tests.hexagonal.test_composition.CompositionTests" name="test_memory_build_runs_use_cases_without_files" time="0.007" /><testcase classname="tests.hexagonal.test_composition.CompositionTests" name="test_relative_config_paths_select_storage_and_actual_cli_working_directory" time="0.046" /><testcase classname="tests.hexagonal.test_composition.CompositionTests" name="test_sqlite_build_persists_across_runtime_restarts" time="0.008" /><testcase classname="tests.hexagonal.test_composition.CompositionTests" name="test_sqlite_memory_path_remains_ephemeral" time="0.007" /><testcase classname="tests.hexagonal.test_delivery" name="test_routing_queues_durable_attempt_and_submission_is_not_receipt[memory]" time="0.011" /><testcase classname="tests.hexagonal.test_delivery" name="test_routing_queues_durable_attempt_and_submission_is_not_receipt[sqlite]" time="0.014" /><testcase classname="tests.hexagonal.test_delivery" name="test_lost_submission_stays_unknown_across_reconstructed_application[memory]" time="0.013" /><testcase classname="tests.hexagonal.test_delivery" name="test_lost_submission_stays_unknown_across_reconstructed_application[sqlite]" time="0.014" /><testcase classname="tests.hexagonal.test_delivery" name="test_explicit_resolution_preserves_uncertainty_and_retry_policy[memory]" time="0.014" /><testcase classname="tests.hexagonal.test_delivery" name="test_explicit_resolution_preserves_uncertainty_and_retry_policy[sqlite]" time="0.015" /><testcase classname="tests.hexagonal.test_delivery" name="test_concurrent_dispatch_cannot_duplicate_native_effect[memory]" time="0.011" /><testcase classname="tests.hexagonal.test_delivery" name="test_concurrent_dispatch_cannot_duplicate_native_effect[sqlite]" time="0.010" /><testcase classname="tests.hexagonal.test_delivery" name="test_late_submission_after_detach_does_not_reactivate_or_verify[memory]" time="0.011" /><testcase classname="tests.hexagonal.test_delivery" name="test_late_submission_after_detach_does_not_reactivate_or_verify[sqlite]" time="0.012" /><testcase classname="tests.hexagonal.test_delivery" name="test_policy_substitution_scheduling_selection_and_authorization[memory]" time="0.011" /><testcase classname="tests.hexagonal.test_delivery" name="test_policy_substitution_scheduling_selection_and_authorization[sqlite]" time="0.011" /><testcase classname="tests.hexagonal.test_delivery" name="test_observation_provenance_duplicate_conflict_and_stale_incarnation[memory]" time="0.009" /><testcase classname="tests.hexagonal.test_delivery" name="test_observation_provenance_duplicate_conflict_and_stale_incarnation[sqlite]" time="0.008" /><testcase classname="tests.hexagonal.test_delivery" name="test_observation_and_control_available_without_resolving_unknown_effect" time="0.009" /><testcase classname="tests.hexagonal.test_delivery" name="test_explicit_fallback_records_requested_and_resolved_driver" time="0.005" /><testcase classname="tests.hexagonal.test_delivery" name="test_reconnect_preserves_unknown_source_effect_while_enabling_observation" time="0.014" /><testcase classname="tests.hexagonal.test_delivery" name="test_latest_session_policy_is_independent_of_store_key_order" time="0.000" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_effective_fallback_driver_must_be_authorized_before_launch" time="0.004" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_stale_native_callback_cannot_create_application_effect[stop_session]" time="0.007" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_stale_native_callback_cannot_create_application_effect[detach_session]" time="0.007" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_late_send_failure_never_reopens_closed_session[not_started-stop_session-stopped]" time="0.009" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_late_send_failure_never_reopens_closed_session[not_started-detach_session-detached]" time="0.009" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_late_send_failure_never_reopens_closed_session[unknown-stop_session-stopped]" time="0.009" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_late_send_failure_never_reopens_closed_session[unknown-detach_session-detached]" time="0.013" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_receipt_commit_rechecks_authorization_context_after_policy_evaluation" time="0.014" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_callback_source_closed_during_authorization_cannot_commit_effect" time="0.009" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_superseded_source_cannot_be_reactivated_by_late_send_result" time="0.009" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_delivery_selection_is_revalidated_before_native_effect" time="0.009" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_native_call_replay_cannot_repeat_non_idempotent_application_action" time="0.008" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_conflicting_adapter_submission_identity_cannot_become_submitted[native_id-another-conversation]" time="0.009" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_conflicting_adapter_submission_identity_cannot_become_submitted[incarnation-replaced-generation]" time="0.008" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_completed_native_call_replay_requires_current_authorization" time="0.012" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_fallback_replay_rechecks_effective_driver_authorization" time="0.005" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_native_call_retries_only_pre_effect_evidence_conflict_once" time="0.012" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_native_retry_reauthorizes_changed_guardrail_and_stays_denied" time="0.015" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_post_enqueue_dispatch_conflict_never_repeats_committed_message" time="0.014" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_native_resolution_authorization_is_bound_to_target_session" time="0.011" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_native_resolution_requires_retained_adapter_result_and_never_reexecutes" time="0.010" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_native_resolution_rejects_misbound_completion[caller_origin]" time="0.010" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_native_resolution_rejects_misbound_completion[wrong_incarnation]" time="0.010" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_native_resolution_rejects_misbound_completion[stale]" time="0.010" /><testcase classname="tests.hexagonal.test_delivery_adversarial" name="test_native_resolution_cannot_take_a_caller_supplied_result" time="0.008" /><testcase classname="tests.hexagonal.test_evaluation.ToolEvaluatorTests" name="test_direct_and_mcp_assessments_preserve_missing_confidence_and_evidence" time="0.001" /><testcase classname="tests.hexagonal.test_evaluation.ToolEvaluatorTests" name="test_errors_remain_distinct_without_exposing_provider_message" time="0.001" /><testcase classname="tests.hexagonal.test_evaluation.ToolEvaluatorTests" name="test_evidence_is_a_detached_json_snapshot" time="0.000" /><testcase classname="tests.hexagonal.test_evaluation.TypeSafeTests" name="test_credentials_never_become_inputs_outputs_or_error_messages" time="0.000"><failure message="PermissionError: [Errno 1] Operation not permitted">self = &lt;test_evaluation.TypeSafeTests testMethod=test_credentials_never_become_inputs_outputs_or_error_messages&gt;
+
+    def setUp(self):
+        self.requests = []
+        self.response = {"model": "operator-selected-model", "answers": {"assessment": {
+            "type": "choice", "choice": "uncertain", "confidence": 0.6,
+            "probabilities": {"ready": 0.4, "uncertain": 0.6}}}, "usage": {"input_tokens": 3, "output_tokens": 2}}
+        self.status, self.extra_headers = 200, {}
+        test = self
+    
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                test.requests.append((dict(self.headers), json.loads(self.rfile.read(int(self.headers["Content-Length"])))))
+                self.send_response(test.status)
+                for name, value in test.extra_headers.items():
+                    self.send_header(name, value)
+                self.end_headers()
+                self.wfile.write(test.response if isinstance(test.response, bytes) else json.dumps(test.response).encode())
+    
+            def log_message(self, *args):
+                pass
+    
+&gt;       self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_evaluation.py:91: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError</failure></testcase><testcase classname="tests.hexagonal.test_evaluation.TypeSafeTests" name="test_real_http_wire_and_configured_model_rubric" time="0.000"><failure message="PermissionError: [Errno 1] Operation not permitted">self = &lt;test_evaluation.TypeSafeTests testMethod=test_real_http_wire_and_configured_model_rubric&gt;
+
+    def setUp(self):
+        self.requests = []
+        self.response = {"model": "operator-selected-model", "answers": {"assessment": {
+            "type": "choice", "choice": "uncertain", "confidence": 0.6,
+            "probabilities": {"ready": 0.4, "uncertain": 0.6}}}, "usage": {"input_tokens": 3, "output_tokens": 2}}
+        self.status, self.extra_headers = 200, {}
+        test = self
+    
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                test.requests.append((dict(self.headers), json.loads(self.rfile.read(int(self.headers["Content-Length"])))))
+                self.send_response(test.status)
+                for name, value in test.extra_headers.items():
+                    self.send_header(name, value)
+                self.end_headers()
+                self.wfile.write(test.response if isinstance(test.response, bytes) else json.dumps(test.response).encode())
+    
+            def log_message(self, *args):
+                pass
+    
+&gt;       self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_evaluation.py:91: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError</failure></testcase><testcase classname="tests.hexagonal.test_evaluation.TypeSafeTests" name="test_redirect_http_error_and_malformed_response_are_distinct" time="0.000"><failure message="PermissionError: [Errno 1] Operation not permitted">self = &lt;test_evaluation.TypeSafeTests testMethod=test_redirect_http_error_and_malformed_response_are_distinct&gt;
+
+    def setUp(self):
+        self.requests = []
+        self.response = {"model": "operator-selected-model", "answers": {"assessment": {
+            "type": "choice", "choice": "uncertain", "confidence": 0.6,
+            "probabilities": {"ready": 0.4, "uncertain": 0.6}}}, "usage": {"input_tokens": 3, "output_tokens": 2}}
+        self.status, self.extra_headers = 200, {}
+        test = self
+    
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                test.requests.append((dict(self.headers), json.loads(self.rfile.read(int(self.headers["Content-Length"])))))
+                self.send_response(test.status)
+                for name, value in test.extra_headers.items():
+                    self.send_header(name, value)
+                self.end_headers()
+                self.wfile.write(test.response if isinstance(test.response, bytes) else json.dumps(test.response).encode())
+    
+            def log_message(self, *args):
+                pass
+    
+&gt;       self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_evaluation.py:91: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError</failure></testcase><testcase classname="tests.hexagonal.test_evaluation.TypeSafeTests" name="test_unknown_outcome_and_budgets_reject_without_recommendation" time="0.000"><failure message="PermissionError: [Errno 1] Operation not permitted">self = &lt;test_evaluation.TypeSafeTests testMethod=test_unknown_outcome_and_budgets_reject_without_recommendation&gt;
+
+    def setUp(self):
+        self.requests = []
+        self.response = {"model": "operator-selected-model", "answers": {"assessment": {
+            "type": "choice", "choice": "uncertain", "confidence": 0.6,
+            "probabilities": {"ready": 0.4, "uncertain": 0.6}}}, "usage": {"input_tokens": 3, "output_tokens": 2}}
+        self.status, self.extra_headers = 200, {}
+        test = self
+    
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                test.requests.append((dict(self.headers), json.loads(self.rfile.read(int(self.headers["Content-Length"])))))
+                self.send_response(test.status)
+                for name, value in test.extra_headers.items():
+                    self.send_header(name, value)
+                self.end_headers()
+                self.wfile.write(test.response if isinstance(test.response, bytes) else json.dumps(test.response).encode())
+    
+            def log_message(self, *args):
+                pass
+    
+&gt;       self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_evaluation.py:91: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError</failure></testcase><testcase classname="tests.hexagonal.test_external_bridge" name="test_external_detach_does_not_terminate_host_and_reconnect_retains_context[codex]" time="0.010" /><testcase classname="tests.hexagonal.test_external_bridge" name="test_external_detach_does_not_terminate_host_and_reconnect_retains_context[claude]" time="0.009" /><testcase classname="tests.hexagonal.test_external_bridge" name="test_external_detach_does_not_terminate_host_and_reconnect_retains_context[grok]" time="0.009" /><testcase classname="tests.hexagonal.test_external_bridge" name="test_replaced_connection_cannot_send_or_apply_late_completion" time="0.007" /><testcase classname="tests.hexagonal.test_external_bridge" name="test_lost_response_preserves_host_effect_and_control_progress" time="0.110" /><testcase classname="tests.hexagonal.test_external_bridge" name="test_native_callbacks_and_observations_use_attached_context_and_progress_without_poll" time="0.007" /><testcase classname="tests.hexagonal.test_external_bridge" name="test_bridge_rejects_manufactured_receipts_and_changed_configuration" time="0.008" /><testcase classname="tests.hexagonal.test_external_bridge" name="test_bridge_config_and_catalog_cannot_be_overridden_by_attachment" time="0.003" /><testcase classname="tests.hexagonal.test_external_bridge" name="test_late_old_lease_observations_remain_historical" time="0.005" /><testcase classname="tests.hexagonal.test_external_bridge" name="test_cli_host_is_an_independent_process_and_survives_client_close" time="0.158" /><testcase classname="tests.hexagonal.test_external_bridge" name="test_durable_host_recovery_preserves_uncertain_effect_and_native_identity" time="0.109" /><testcase classname="tests.hexagonal.test_external_bridge" name="test_real_codex_adapter_callback_crosses_external_bridge" time="0.034" /><testcase classname="tests.hexagonal.test_external_bridge" name="test_actual_host_crash_preserves_unknown_applied_effect_without_replay" time="0.328" /><testcase classname="tests.hexagonal.test_jsonrpc" name="test_cli_result_requires_complete_request_delivery" time="0.192" /><testcase classname="tests.hexagonal.test_jsonrpc" name="test_early_stdout_close_can_precede_successful_input_delivery" time="0.190" /><testcase classname="tests.hexagonal.test_jsonrpc" name="test_blocked_input_uses_the_remaining_execution_deadline" time="2.020" /><testcase classname="tests.hexagonal.test_jsonrpc" name="test_output_failure_is_not_replaced_by_a_blocked_writer_timeout" time="0.065" /><testcase classname="tests.hexagonal.test_jsonrpc" name="test_incomplete_cli_delivery_stays_unknown_and_is_never_reexecuted" time="0.321" /><testcase classname="tests.hexagonal.test_jsonrpc" name="test_callback_failure_closes_and_reaps_the_owned_connection[RuntimeError-request_callback]" time="0.066" /><testcase classname="tests.hexagonal.test_jsonrpc" name="test_callback_failure_closes_and_reaps_the_owned_connection[RuntimeError-poll_callback]" time="0.033" /><testcase classname="tests.hexagonal.test_jsonrpc" name="test_callback_failure_closes_and_reaps_the_owned_connection[KeyboardInterrupt-request_callback]" time="0.034" /><testcase classname="tests.hexagonal.test_jsonrpc" name="test_callback_failure_closes_and_reaps_the_owned_connection[KeyboardInterrupt-poll_callback]" time="0.032" /><testcase classname="tests.hexagonal.test_jsonrpc" name="test_callback_failure_closes_and_reaps_the_owned_connection[SystemExit-request_callback]" time="0.036" /><testcase classname="tests.hexagonal.test_jsonrpc" name="test_callback_failure_closes_and_reaps_the_owned_connection[SystemExit-poll_callback]" time="0.033" /><testcase classname="tests.hexagonal.test_lifecycle_runner" name="test_all_lifecycle_cases_use_real_application_and_external_processes" time="1.207" /><testcase classname="tests.hexagonal.test_native_sessions" name="test_submission_then_callback_busy_delivery_and_unrelated_progress[codex]" time="0.084" /><testcase classname="tests.hexagonal.test_native_sessions" name="test_submission_then_callback_busy_delivery_and_unrelated_progress[grok]" time="0.035"><failure message="PermissionError: [Errno 1] Operation not permitted">protocol = 'grok'
+
+    @pytest.mark.parametrize('protocol', ['codex', 'grok'])
+    def test_submission_then_callback_busy_delivery_and_unrelated_progress(protocol):
+        adapter = driver(protocol)
+        held = threading.Event()
+        release = threading.Event()
+        callbacks = []
+        observations = []
+        adapter.bind_observer(lambda context, event: observations.append((context, event)))
+        def callback(action, args, context, key):
+            callbacks.append((action, args, context, key))
+            if args.get('hold'):
+                held.set()
+                assert release.wait(5), 'test must release its native hold'
+            return {'received': args}
+        adapter.bind_application_tools([Capability('echo', 'echo', {'type': 'object'})], callback)
+        try:
+&gt;           first = adapter.start({'context': {'session_id': 'app-first', 'actor': 'worker'}})
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_native_sessions.py:48: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/sessions.py:348: in start
+    return self._launch(specification, None)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/grok.py:247: in _launch
+    return self._start(specification, handshake)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/sessions.py:183: in _start
+    handshake(live, specification)
+xorchestrate/adapters/grok.py:217: in handshake
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError</failure></testcase><testcase classname="tests.hexagonal.test_native_sessions" name="test_grok_requires_execution_observation_and_rejects_conflicting_call_ids" time="0.034"><failure message="PermissionError: [Errno 1] Operation not permitted">def test_grok_requires_execution_observation_and_rejects_conflicting_call_ids():
+        adapter = driver('grok', observation_timeout=.15)
+        called = []
+        adapter.bind_application_tools([Capability('echo', 'echo')], lambda *args: called.append(args) or {})
+        try:
+&gt;           session = adapter.start({})
+                      ^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_native_sessions.py:75: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/sessions.py:348: in start
+    return self._launch(specification, None)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/grok.py:247: in _launch
+    return self._start(specification, handshake)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/sessions.py:183: in _start
+    handshake(live, specification)
+xorchestrate/adapters/grok.py:217: in handshake
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError</failure></testcase><testcase classname="tests.hexagonal.test_native_sessions" name="test_grok_late_completion_cannot_clear_newer_activity" time="0.036" /><testcase classname="tests.hexagonal.test_native_sessions" name="test_settings_preserve_requested_resolved_observed_and_require_changed_config_policy[codex]" time="0.106" /><testcase classname="tests.hexagonal.test_native_sessions" name="test_settings_preserve_requested_resolved_observed_and_require_changed_config_policy[grok]" time="0.111" /><testcase classname="tests.hexagonal.test_native_sessions" name="test_grok_native_permissions_separate_from_application_callback[True]" time="0.050" /><testcase classname="tests.hexagonal.test_native_sessions" name="test_grok_native_permissions_separate_from_application_callback[False]" time="0.045" /><testcase classname="tests.hexagonal.test_native_sessions" name="test_native_callback_persists_trusted_evidence_through_active_composition[codex]" time="0.086" /><testcase classname="tests.hexagonal.test_native_sessions" name="test_native_callback_persists_trusted_evidence_through_active_composition[grok]" time="0.042"><failure message="xorchestrate.model.OrchestrationError: External operation did not return a verified result (PermissionError).">self = &lt;xorchestrate.application.Application object at 0x7f3923e4bd70&gt;
+action = 'start_session'
+args = {'driver': 'native', 'specification': {}, 'work_id': '6de9c4af890b44528c2adc2ce2e7f062', 'idempotency_key': 'start'}
+actor = 'owner'
+context = {'actor': 'owner', 'actor_record': None, 'arguments': {'driver': 'native', 'specification': {}, 'work_id': '6de9c4af89...work': {'goal': 'Retain native evidence', 'title': 'Retain native evidence', 'status': 'open', 'inputs': {}, ...}, ...}
+perform = &lt;function Application._create_session.&lt;locals&gt;.perform at 0x7f3923ccb600&gt;
+
+    def _effect(self, action: str, args: JSON, actor: str, context: JSON, perform: Callable[[Record], Any]) -&gt; JSON:
+        key = _digest([actor, args["idempotency_key"]])
+        request = {k: deepcopy(v) for k, v in args.items() if k != "idempotency_key"}
+        fingerprint = _digest({"action": action, "arguments": request})
+        with self.store.transaction() as tx:
+            self._verify_context(tx, context)
+            existing = tx.get("operation", key)
+            if existing:
+                if existing.data["fingerprint"] != fingerprint:
+                    raise Conflict("The idempotency key is already bound to a different request.")
+                return self._replay(existing)
+            data = {"action": action, "arguments": request, "fingerprint": fingerprint, "actor": actor,
+                    "idempotency_key": args["idempotency_key"], "status": "pending", "work_id": context["work"]["id"] if context.get("work") else None}
+            if action in {"start_session", "attach_session", "reconnect_session"}:
+                if args.get("actor_id"):
+                    self._require(tx, "actor", args["actor_id"])
+                provenance = {}
+                if context.get("resume_source"):
+                    source = context["resume_source"]
+                    if source["session"].get("pending_operation") and action != "reconnect_session":
+                        raise Conflict("The resume source has a pending or unresolved operation; reconcile it before another effect.")
+                    provenance["resume_source"] = {"session_id": source["session"]["id"], "version": source["session"]["version"],
+                        "start_operation_id": source["resume_receipt"]["id"]}
+                    data.update(deepcopy(provenance))
+                    data["unresolved_effects"] = list(dict.fromkeys([
+                        *source["session"].get("unresolved_effects", []),
+                        *([source["session"]["pending_operation"]] if source["session"].get("pending_operation") else []),
+                    ]))
+                session = self._create(tx, "session", actor, {
+                    "driver": context.get("resolved_driver", args["driver"]),
+                    "selection": {"requested": args["driver"], "resolved": context.get("resolved_driver", args["driver"]),
+                        "fallback_reason": "requested_driver_unavailable" if context.get("resolved_driver", args["driver"]) != args["driver"] else None}, "specification": args["specification"], "work_id": data["work_id"],
+                    "actor_id": args.get("actor_id", actor), "status": "starting", "backend": {}, "pending_operation": key,
+                    "start_operation_id": key, "unresolved_effects": data.get("unresolved_effects", []), **provenance,
+                })
+                data["session_id"] = session.key
+            elif action.endswith("_session"):
+                session = self._require(tx, "session", args["session_id"])
+                independent = action in {"poll_session", "stop_session", "detach_session"}
+                if not independent:
+                    self._check_recovered_effects(tx, session)
+                if session.data.get("pending_operation") and not independent:
+                    raise Conflict("A session operation is pending or unresolved; inspect it before another effect.")
+                if session.data["status"] not in ({"active", "unknown"} if independent else {"active"}):
+                    raise OrchestrationError("The session is not active.", "invalid_state")
+                if session.version != context["session"]["version"]:
+                    raise Conflict("The session changed after authorization.")
+                data.update({"session_id": session.key, "backend": deepcopy(session.data["backend"]), "independent": independent})
+                if not independent:
+                    tx.put("session", session.key, {**session.data, "pending_operation": key}, session.version)
+            elif action == "invoke":
+                data["capability"] = deepcopy(context["capability"])
+                self._create(tx, "invocation", actor, {
+                    "capability": args["capability"], "arguments": args["arguments"], "work_id": data["work_id"],
+                    "operation_id": key, "status": "pending",
+                }, key)
+            operation = self._create(tx, "operation", actor, data, key)
+        try:
+&gt;           raw = perform(operation)
+                  ^^^^^^^^^^^^^^^^^^
+
+xorchestrate/application.py:688: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/application.py:580: in perform
+    return invoke(deepcopy(source["session"]["backend"]), specification) if source else invoke(specification)
+                                                                                        ^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/sessions.py:348: in start
+    return self._launch(specification, None)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/grok.py:247: in _launch
+    return self._start(specification, handshake)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/sessions.py:183: in _start
+    handshake(live, specification)
+xorchestrate/adapters/grok.py:217: in handshake
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+
+The above exception was the direct cause of the following exception:
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-0/test_native_callback_persists_1')
+protocol = 'grok'
+
+    @pytest.mark.parametrize('protocol', ['codex', 'grok'])
+    def test_native_callback_persists_trusted_evidence_through_active_composition(tmp_path, protocol):
+        from xorchestrate.composition import build
+        config = {'store': {'adapter': 'sqlite', 'options': {'path': str(tmp_path / 'state.sqlite')}},
+                  'sessions': {'native': {'adapter': protocol, 'options': {
+                      'command': [sys.executable, str(PEER), protocol], 'timeout': 5,
+                      'application_tools': True, 'resume_supported': True}}}}
+        with build(config) as runtime:
+            app = runtime.application
+            work = app.call('create_work', {'goal': 'Retain native evidence'})['work']
+&gt;           session = app.call('start_session', {'driver': 'native', 'specification': {}, 'work_id': work['id'],
+                                                'idempotency_key': 'start'})['session']
+
+tests/hexagonal/test_native_sessions.py:166: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/application.py:237: in call
+    return getattr(self, f"_{action}")(arguments, actor, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/application.py:542: in _start_session
+    return self._create_session("start_session", args, actor, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/application.py:581: in _create_session
+    result = self._effect(action, args, actor, context, perform)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;xorchestrate.application.Application object at 0x7f3923e4bd70&gt;
+action = 'start_session'
+args = {'driver': 'native', 'specification': {}, 'work_id': '6de9c4af890b44528c2adc2ce2e7f062', 'idempotency_key': 'start'}
+actor = 'owner'
+context = {'actor': 'owner', 'actor_record': None, 'arguments': {'driver': 'native', 'specification': {}, 'work_id': '6de9c4af89...work': {'goal': 'Retain native evidence', 'title': 'Retain native evidence', 'status': 'open', 'inputs': {}, ...}, ...}
+perform = &lt;function Application._create_session.&lt;locals&gt;.perform at 0x7f3923ccb600&gt;
+
+    def _effect(self, action: str, args: JSON, actor: str, context: JSON, perform: Callable[[Record], Any]) -&gt; JSON:
+        key = _digest([actor, args["idempotency_key"]])
+        request = {k: deepcopy(v) for k, v in args.items() if k != "idempotency_key"}
+        fingerprint = _digest({"action": action, "arguments": request})
+        with self.store.transaction() as tx:
+            self._verify_context(tx, context)
+            existing = tx.get("operation", key)
+            if existing:
+                if existing.data["fingerprint"] != fingerprint:
+                    raise Conflict("The idempotency key is already bound to a different request.")
+                return self._replay(existing)
+            data = {"action": action, "arguments": request, "fingerprint": fingerprint, "actor": actor,
+                    "idempotency_key": args["idempotency_key"], "status": "pending", "work_id": context["work"]["id"] if context.get("work") else None}
+            if action in {"start_session", "attach_session", "reconnect_session"}:
+                if args.get("actor_id"):
+                    self._require(tx, "actor", args["actor_id"])
+                provenance = {}
+                if context.get("resume_source"):
+                    source = context["resume_source"]
+                    if source["session"].get("pending_operation") and action != "reconnect_session":
+                        raise Conflict("The resume source has a pending or unresolved operation; reconcile it before another effect.")
+                    provenance["resume_source"] = {"session_id": source["session"]["id"], "version": source["session"]["version"],
+                        "start_operation_id": source["resume_receipt"]["id"]}
+                    data.update(deepcopy(provenance))
+                    data["unresolved_effects"] = list(dict.fromkeys([
+                        *source["session"].get("unresolved_effects", []),
+                        *([source["session"]["pending_operation"]] if source["session"].get("pending_operation") else []),
+                    ]))
+                session = self._create(tx, "session", actor, {
+                    "driver": context.get("resolved_driver", args["driver"]),
+                    "selection": {"requested": args["driver"], "resolved": context.get("resolved_driver", args["driver"]),
+                        "fallback_reason": "requested_driver_unavailable" if context.get("resolved_driver", args["driver"]) != args["driver"] else None}, "specification": args["specification"], "work_id": data["work_id"],
+                    "actor_id": args.get("actor_id", actor), "status": "starting", "backend": {}, "pending_operation": key,
+                    "start_operation_id": key, "unresolved_effects": data.get("unresolved_effects", []), **provenance,
+                })
+                data["session_id"] = session.key
+            elif action.endswith("_session"):
+                session = self._require(tx, "session", args["session_id"])
+                independent = action in {"poll_session", "stop_session", "detach_session"}
+                if not independent:
+                    self._check_recovered_effects(tx, session)
+                if session.data.get("pending_operation") and not independent:
+                    raise Conflict("A session operation is pending or unresolved; inspect it before another effect.")
+                if session.data["status"] not in ({"active", "unknown"} if independent else {"active"}):
+                    raise OrchestrationError("The session is not active.", "invalid_state")
+                if session.version != context["session"]["version"]:
+                    raise Conflict("The session changed after authorization.")
+                data.update({"session_id": session.key, "backend": deepcopy(session.data["backend"]), "independent": independent})
+                if not independent:
+                    tx.put("session", session.key, {**session.data, "pending_operation": key}, session.version)
+            elif action == "invoke":
+                data["capability"] = deepcopy(context["capability"])
+                self._create(tx, "invocation", actor, {
+                    "capability": args["capability"], "arguments": args["arguments"], "work_id": data["work_id"],
+                    "operation_id": key, "status": "pending",
+                }, key)
+            operation = self._create(tx, "operation", actor, data, key)
+        try:
+            raw = perform(operation)
+        except Exception as error:
+            unknown = not isinstance(error, OrchestrationError) or error.details.get("outcome") not in {"failed", "not_started"}
+            status = "unknown" if unknown else "failed"
+            recording_error = None
+            try:
+                self._fail_effect(key, error, status)
+            except Exception as storage_error:
+                recording_error = _error_message(storage_error)
+&gt;           raise OrchestrationError(_error_message(error), "operation_unknown" if unknown else "operation_failed", {
+                "operation_id": key, "outcome": status, "cause": getattr(error, "code", type(error).__name__),
+                "recording_error": recording_error,
+            }) from error
+E           xorchestrate.model.OrchestrationError: External operation did not return a verified result (PermissionError).
+
+xorchestrate/application.py:697: OrchestrationError</failure></testcase><testcase classname="tests.hexagonal.test_native_sessions" name="test_reconnect_releases_old_owned_process_and_rejects_old_handle[codex]" time="0.072" /><testcase classname="tests.hexagonal.test_native_sessions" name="test_reconnect_releases_old_owned_process_and_rejects_old_handle[grok]" time="0.068" /><testcase classname="tests.hexagonal.test_native_sessions" name="test_private_native_marker_retained_across_exchanges_and_resume[codex]" time="0.115" /><testcase classname="tests.hexagonal.test_native_sessions" name="test_private_native_marker_retained_across_exchanges_and_resume[grok]" time="0.035"><failure message="PermissionError: [Errno 1] Operation not permitted">tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-0/test_private_native_marker_ret1')
+protocol = 'grok'
+
+    @pytest.mark.parametrize('protocol', ['codex', 'grok'])
+    def test_private_native_marker_retained_across_exchanges_and_resume(tmp_path, protocol):
+        options = {'env': {'PEER_STATE_FILE': str(tmp_path / 'peer-state.json')}, 'resume_supported': True}
+        calls = []
+        observations = []
+        adapter = driver(protocol, **options)
+        adapter.bind_application_tools([Capability('echo', 'echo')], lambda action, args, context, key: calls.append((args, context)) or {})
+        adapter.bind_observer(lambda context, event: observations.append(event))
+        try:
+&gt;           source = adapter.start({})
+                     ^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_native_sessions.py:211: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/sessions.py:348: in start
+    return self._launch(specification, None)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/grok.py:247: in _launch
+    return self._start(specification, handshake)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/sessions.py:183: in _start
+    handshake(live, specification)
+xorchestrate/adapters/grok.py:217: in handshake
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError</failure></testcase><testcase classname="tests.hexagonal.test_native_sessions" name="test_codex_native_permission_response_is_explicit_and_independent[accept]" time="0.045" /><testcase classname="tests.hexagonal.test_native_sessions" name="test_codex_native_permission_response_is_explicit_and_independent[decline]" time="0.051" /><testcase classname="tests.hexagonal.test_native_sessions" name="test_codex_late_start_cannot_replace_current_turn_or_reactivate_completed_turn" time="0.035" /><testcase classname="tests.hexagonal.test_native_sessions" name="test_codex_application_callback_requires_actual_native_call_and_thread_ids" time="0.035" /><testcase classname="tests.hexagonal.test_native_sessions" name="test_operational_limits_do_not_change_material_selection_identity[codex]" time="0.070" /><testcase classname="tests.hexagonal.test_native_sessions" name="test_operational_limits_do_not_change_material_selection_identity[grok]" time="0.078" /><testcase classname="tests.hexagonal.test_native_sessions" name="test_grok_mcp_request_replay_and_identical_input_observations_remain_one_to_one" time="0.034"><failure message="PermissionError: [Errno 1] Operation not permitted">def test_grok_mcp_request_replay_and_identical_input_observations_remain_one_to_one():
+        adapter = driver('grok')
+        called = []
+        adapter.bind_application_tools([Capability('echo', 'echo')], lambda action, args, context, key: called.append(context['call_id']) or {'ok': True})
+        try:
+&gt;           session = adapter.start({})
+                      ^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_native_sessions.py:302: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/sessions.py:348: in start
+    return self._launch(specification, None)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/grok.py:247: in _launch
+    return self._start(specification, handshake)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/sessions.py:183: in _start
+    handshake(live, specification)
+xorchestrate/adapters/grok.py:217: in handshake
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = &lt;socket.socket fd=-1, family=0, type=0, proto=0&gt;
+family = &lt;AddressFamily.AF_INET: 2&gt;, type = &lt;SocketKind.SOCK_STREAM: 1&gt;
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+&gt;       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError</failure></testcase><testcase classname="tests.hexagonal.test_native_sessions" name="test_unknown_prompt_completion_is_not_idle_and_interjections_are_bounded" time="0.036" /><testcase classname="tests.hexagonal.test_native_sessions" name="test_material_configuration_identity_includes_protocol_contract" time="0.001" /><testcase classname="tests.hexagonal.test_policies.GuardrailTests" name="test_default_freedom_and_explicit_review_are_separate_from_assessment" time="0.001" /><testcase classname="tests.hexagonal.test_policies.GuardrailTests" name="test_deny_cannot_be_masked_by_broad_allow_rule" time="0.000" /><testcase classname="tests.hexagonal.test_policies.GuardrailTests" name="test_numeric_spelling_cannot_bypass_a_denied_provider_effect" time="0.011" /><testcase classname="tests.hexagonal.test_policies.GuardrailTests" name="test_rejects_misspelled_policy_and_copies_configuration" time="0.001" /><testcase classname="tests.hexagonal.test_policies.GuardrailTests" name="test_where_matches_equivalent_numbers_inside_mixed_json_values" time="0.001" /><testcase classname="tests.hexagonal.test_policies.GuardrailTests" name="test_where_missing_and_boolean_number_are_not_equal" time="0.000" /><testcase classname="tests.hexagonal.test_policies.GuardrailTests" name="test_where_preserves_json_types_structure_and_numeric_precision" time="0.002" /><testcase classname="tests.hexagonal.test_policies.RoutingTests" name="test_broadcast_is_explicit_and_configurable" time="0.000" /><testcase classname="tests.hexagonal.test_policies.RoutingTests" name="test_direct_and_free_form_roles_union_deduplicates_stably" time="0.000" /><testcase classname="tests.hexagonal.test_policies.RoutingTests" name="test_invalid_destination_does_not_silently_become_broadcast" time="0.001" /><testcase classname="tests.hexagonal.test_policies.RoutingTests" name="test_relationships_have_no_privileged_role_names" time="0.001" /><testcase classname="tests.hexagonal.test_schema.SchemaTests" name="test_boolean_schemas_and_invalid_schema_are_distinct" time="0.002" /><testcase classname="tests.hexagonal.test_schema.SchemaTests" name="test_external_references_cannot_fetch_http_or_local_files" time="0.002" /><testcase classname="tests.hexagonal.test_schema.SchemaTests" name="test_local_references_and_composition_validate_without_network" time="0.005" /><testcase classname="tests.hexagonal.test_schema.SchemaTests" name="test_missing_local_reference_is_a_schema_error" time="0.001" /><testcase classname="tests.hexagonal.test_schema.SchemaTests" name="test_nonfinite_and_non_json_inputs_are_rejected_even_by_open_schema" time="0.001" /><testcase classname="tests.hexagonal.test_schema.SchemaTests" name="test_required_and_additional_fields_are_checked_without_echoing_values" time="0.002" /><testcase classname="tests.hexagonal.test_session_resume" name="test_native_resume_cannot_bypass_denied_source_control[memory-codex]" time="0.039" /><testcase classname="tests.hexagonal.test_session_resume" name="test_native_resume_cannot_bypass_denied_source_control[memory-acp]" time="0.038" /><testcase classname="tests.hexagonal.test_session_resume" name="test_native_resume_cannot_bypass_denied_source_control[sqlite-codex]" time="0.040" /><testcase classname="tests.hexagonal.test_session_resume" name="test_native_resume_cannot_bypass_denied_source_control[sqlite-acp]" time="0.041" /><testcase classname="tests.hexagonal.test_session_resume" name="test_authorized_resume_after_restart_binds_callbacks_to_destination[codex]" time="0.071" /><testcase classname="tests.hexagonal.test_session_resume" name="test_authorized_resume_after_restart_binds_callbacks_to_destination[acp]" time="0.070" /><testcase classname="tests.hexagonal.test_sessions.SessionTests" name="test_acp_session_authentication_prompt_and_explicit_resume" time="0.083" /><testcase classname="tests.hexagonal.test_sessions.SessionTests" name="test_codex_application_invocation_keys_use_verified_identity_without_delimiter_collisions" time="0.001" /><testcase classname="tests.hexagonal.test_sessions.SessionTests" name="test_codex_application_tool_names_cannot_replace_configured_tools" time="0.001" /><testcase classname="tests.hexagonal.test_sessions.SessionTests" name="test_codex_application_tools_coexist_with_configured_tools_and_raw_handlers" time="0.032" /><testcase classname="tests.hexagonal.test_sessions.SessionTests" name="test_codex_application_tools_translate_descriptors_and_arguments_with_bound_context" time="0.028" /><testcase classname="tests.hexagonal.test_sessions.SessionTests" name="test_codex_can_explicitly_resume_a_native_thread_after_driver_restart" time="0.082" /><testcase classname="tests.hexagonal.test_sessions.SessionTests" name="test_codex_identity_mismatch_notifications_close_connection" time="0.027" /><testcase classname="tests.hexagonal.test_sessions.SessionTests" name="test_codex_missing_handler_and_identity_mismatch_never_invoke_a_tool" time="0.052" /><testcase classname="tests.hexagonal.test_sessions.SessionTests" name="test_codex_native_policy_and_tool_configuration_stay_explicit" time="0.028" /><testcase classname="tests.hexagonal.test_sessions.SessionTests" name="test_generic_protocol_method_selection_is_configuration" time="0.029" /><testcase classname="tests.hexagonal.test_sessions.SessionTests" name="test_generic_session_executes_messages_polls_and_stops_real_process" time="0.027" /><testcase classname="tests.hexagonal.test_sessions.SessionTests" name="test_invalid_protocol_start_cleans_up_and_releases_capacity" time="0.057" /><testcase classname="tests.hexagonal.test_sessions.SessionTests" name="test_native_identity_and_tool_binding_remain_owned_under_broad_delegation" time="0.003" /><testcase classname="tests.hexagonal.test_sessions.SessionTests" name="test_native_parameter_delegation_is_bounded_and_configuration_wins" time="0.027" /><testcase classname="tests.hexagonal.test_sessions.SessionTests" name="test_native_request_parameters_cannot_supply_policy_or_executables_by_default" time="0.006" /><testcase classname="tests.hexagonal.test_sessions.SessionTests" name="test_native_resume_identity_cannot_come_from_a_start_specification" time="0.002" /><testcase classname="tests.hexagonal.test_sessions.SessionTests" name="test_output_limit_cleans_up_failed_start" time="0.223" /><testcase classname="tests.hexagonal.test_sessions.SessionTests" name="test_resume_source_requires_a_matching_protocol_and_native_identity" time="0.003" /><testcase classname="tests.hexagonal.test_sessions.SessionTests" name="test_session_limit_is_configurable_and_released_when_stopped" time="0.057" /><testcase classname="tests.hexagonal.test_sessions.SessionTests" name="test_sessions_are_isolated_and_saved_handles_do_not_own_other_processes" time="0.060" /><testcase classname="tests.hexagonal.test_sessions.SessionTests" name="test_timeout_does_not_replay_and_reaps_the_owned_process" time="0.325" /><testcase classname="tests.hexagonal.test_storage.MemoryStoreTests" name="test_close_is_idempotent_and_prevents_reuse" time="0.000" /><testcase classname="tests.hexagonal.test_storage.MemoryStoreTests" name="test_concurrent_stale_snapshots_allow_exactly_one_winner" time="0.001" /><testcase classname="tests.hexagonal.test_storage.MemoryStoreTests" name="test_concurrent_transactional_updates_keep_events_consistent" time="0.003" /><testcase classname="tests.hexagonal.test_storage.MemoryStoreTests" name="test_create_replace_delete_and_stale_versions" time="0.001" /><testcase classname="tests.hexagonal.test_storage.MemoryStoreTests" name="test_events_are_detached_ordered_and_pageable" time="0.000" /><testcase classname="tests.hexagonal.test_storage.MemoryStoreTests" name="test_exception_rolls_back_record_and_event_bundle" time="0.000" /><testcase classname="tests.hexagonal.test_storage.MemoryStoreTests" name="test_inputs_and_returned_records_are_detached" time="0.000" /><testcase classname="tests.hexagonal.test_storage.MemoryStoreTests" name="test_invalid_identifiers_versions_and_pagination" time="0.000" /><testcase classname="tests.hexagonal.test_storage.MemoryStoreTests" name="test_invalid_json_rejected_without_partial_writes" time="0.001" /><testcase classname="tests.hexagonal.test_storage.MemoryStoreTests" name="test_lists_are_sorted_and_scoped_to_kind" time="0.000" /><testcase classname="tests.hexagonal.test_storage.MemoryStoreTests" name="test_transaction_lifetime_thread_ownership_and_nested_context" time="0.001" /><testcase classname="tests.hexagonal.test_storage.SQLiteStoreTests" name="test_close_is_idempotent_and_prevents_reuse" time="0.001" /><testcase classname="tests.hexagonal.test_storage.SQLiteStoreTests" name="test_concurrent_stale_snapshots_allow_exactly_one_winner" time="0.002" /><testcase classname="tests.hexagonal.test_storage.SQLiteStoreTests" name="test_concurrent_transactional_updates_keep_events_consistent" time="0.005" /><testcase classname="tests.hexagonal.test_storage.SQLiteStoreTests" name="test_create_replace_delete_and_stale_versions" time="0.001" /><testcase classname="tests.hexagonal.test_storage.SQLiteStoreTests" name="test_events_are_detached_ordered_and_pageable" time="0.001" /><testcase classname="tests.hexagonal.test_storage.SQLiteStoreTests" name="test_exception_rolls_back_record_and_event_bundle" time="0.001" /><testcase classname="tests.hexagonal.test_storage.SQLiteStoreTests" name="test_inputs_and_returned_records_are_detached" time="0.001" /><testcase classname="tests.hexagonal.test_storage.SQLiteStoreTests" name="test_invalid_configuration" time="0.001" /><testcase classname="tests.hexagonal.test_storage.SQLiteStoreTests" name="test_invalid_identifiers_versions_and_pagination" time="0.001" /><testcase classname="tests.hexagonal.test_storage.SQLiteStoreTests" name="test_invalid_json_rejected_without_partial_writes" time="0.002" /><testcase classname="tests.hexagonal.test_storage.SQLiteStoreTests" name="test_lists_are_sorted_and_scoped_to_kind" time="0.001" /><testcase classname="tests.hexagonal.test_storage.SQLiteStoreTests" name="test_memory_database_lives_until_its_store_closes" time="0.001" /><testcase classname="tests.hexagonal.test_storage.SQLiteStoreTests" name="test_multiple_processes_commit_atomic_counter_and_event_updates" time="0.156" /><testcase classname="tests.hexagonal.test_storage.SQLiteStoreTests" name="test_new_state_files_and_directories_are_private" time="0.001" /><testcase classname="tests.hexagonal.test_storage.SQLiteStoreTests" name="test_restart_keeps_records_versions_and_event_sequence" time="0.001" /><testcase classname="tests.hexagonal.test_storage.SQLiteStoreTests" name="test_separate_connections_see_only_committed_bundles" time="0.027" /><testcase classname="tests.hexagonal.test_storage.SQLiteStoreTests" name="test_transaction_lifetime_thread_ownership_and_nested_context" time="0.001" /><testcase classname="tests.hexagonal.test_storage.SQLiteStoreTests" name="test_unreadable_database_has_transport_independent_error" time="0.001" /><testcase classname="tests.hexagonal.test_transport_progress" name="test_callback_after_submission_ack_progresses_without_poll" time="0.035" /><testcase classname="tests.hexagonal.test_transport_progress" name="test_pending_native_response_does_not_block_control_or_submission" time="0.045" /><testcase classname="tests.hexagonal.test_transport_progress" name="test_held_callback_allows_native_control_and_nested_request" time="0.030" /><testcase classname="tests.hexagonal.test_transport_progress" name="test_out_of_order_responses_remain_bound_to_their_request" time="0.029" /><testcase classname="tests.hexagonal.test_transport_progress" name="test_duplicate_native_call_never_reexecutes_callback" time="0.031" /><testcase classname="tests.hexagonal.test_transport_progress" name="test_conflicting_call_or_unmatched_response_closes_with_unknown_outcome[conflict]" time="0.030" /><testcase classname="tests.hexagonal.test_transport_progress" name="test_conflicting_call_or_unmatched_response_closes_with_unknown_outcome[bad_response]" time="0.031" /><testcase classname="tests.hexagonal.test_transport_progress" name="test_callback_queue_overload_is_bounded_and_uncertain" time="0.027" /><testcase classname="tests.hexagonal.test_transport_progress" name="test_pending_request_admission_does_not_invalidate_existing_effect" time="0.033" /><testcase classname="tests.hexagonal.test_transport_progress" name="test_mcp_held_calls_leave_control_and_unrelated_requests_responsive" time="0.002" /><testcase classname="tests.hexagonal.test_transport_progress" name="test_idle_callback_timeout_closes_owned_process_without_controller_poll" time="0.128" /><testcase classname="tests.hexagonal.test_transport_progress" name="test_notification_observer_failure_retains_unknown_and_sanitizes_exception" time="0.027" /><testcase classname="tests.hexagonal.test_transport_progress" name="test_mcp_invalid_tool_names_do_not_break_concurrent_dispatch" time="0.001" /><testcase classname="tests.hexagonal.test_transport_progress" name="test_one_write_slot_keeps_immediate_native_callback_progress" time="0.133" /><testcase classname="tests.hexagonal.test_transports.TransportTests" name="test_cli_input_file_and_failures_do_not_print_traceback_or_argument_secrets" time="0.319" /><testcase classname="tests.hexagonal.test_transports.TransportTests" name="test_deep_json_cannot_terminate_a_persistent_connection" time="0.211" /><testcase classname="tests.hexagonal.test_transports.TransportTests" name="test_describe_and_default_cli_setup_need_no_evaluator" time="0.216" /><testcase classname="tests.hexagonal.test_transports.TransportTests" name="test_external_capability_execution_and_replay_work_across_cli_and_mcp" time="0.515" /><testcase classname="tests.hexagonal.test_transports.TransportTests" name="test_fixed_process_actor_cannot_be_replaced_by_tool_arguments" time="0.217" /><testcase classname="tests.hexagonal.test_transports.TransportTests" name="test_mcp_serve_recovers_from_bad_frames_and_requires_initialization" time="0.113" /><testcase classname="tests.hexagonal.test_transports.TransportTests" name="test_run_recovers_after_bad_frames_and_keeps_clean_json_stdout" time="0.107" /><testcase classname="tests.hexagonal.test_transports.TransportTests" name="test_run_retains_live_session_but_new_process_does_not_reuse_stale_handle" time="0.244" /><testcase classname="tests.hexagonal.test_transports.TransportTests" name="test_same_persisted_work_is_created_and_read_through_both_transports" time="0.320" /><testcase classname="tests.hexagonal.test_transports.MCPProtocolTests" name="test_server_sanitizes_unexpected_adapter_errors" time="0.000" /><testcase classname="tests.hexagonal.test_transports.MCPProtocolTests" name="test_server_validates_envelopes_without_executing_notifications" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_candidate_capture_includes_dirty_and_untracked_inputs" time="0.077" /><testcase classname="tests.hexagonal.test_verification" name="test_command_capture_retains_setup_errors_as_setup_errors" time="0.003" /><testcase classname="tests.hexagonal.test_verification" name="test_complete_exchange_control_has_correlated_native_and_durable_evidence" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_exchange_faults_fail_the_intended_assertion[queue_only-native_submission_missing_or_misbound]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_exchange_faults_fail_the_intended_assertion[rpc_only-retained_context_reply_missing]" time="0.001" /><testcase classname="tests.hexagonal.test_verification" name="test_exchange_faults_fail_the_intended_assertion[wrong_memory-retained_context_reply_missing]" time="0.001" /><testcase classname="tests.hexagonal.test_verification" name="test_exchange_faults_fail_the_intended_assertion[stale_nonce-retained_context_reply_missing]" time="0.001" /><testcase classname="tests.hexagonal.test_verification" name="test_exchange_faults_fail_the_intended_assertion[missing_observation-native_call_missing_or_misbound]" time="0.001" /><testcase classname="tests.hexagonal.test_verification" name="test_exchange_faults_fail_the_intended_assertion[session_drift-native_call_missing_or_misbound]" time="0.001" /><testcase classname="tests.hexagonal.test_verification" name="test_exchange_faults_fail_the_intended_assertion[conflicting_call_id-native_call_missing_or_misbound]" time="0.001" /><testcase classname="tests.hexagonal.test_verification" name="test_exchange_faults_fail_the_intended_assertion[discovery_only-native_call_missing_or_misbound]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_exchange_faults_fail_the_intended_assertion[wrong_dispatch-native_call_missing_or_misbound]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_exchange_faults_fail_the_intended_assertion[wrong_attempt-delivery_attempt_missing_or_misbound]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_exchange_faults_fail_the_intended_assertion[stale_incarnation-native_submission_missing_or_misbound]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_exchange_faults_fail_the_intended_assertion[missing_receipt-sender_receipt_missing]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_requested_coverage_and_exact_bindings_override_fabricated_summary" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_native_inventory_preserves_complete_requested_counts" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_composed_runner_reauthorizes_after_callback_without_duplicating_submission" time="0.028" /><testcase classname="tests.hexagonal.test_verification" name="test_composed_runner_preserves_unqualified_conflict_and_bounds_safe_retries[False-1]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_composed_runner_preserves_unqualified_conflict_and_bounds_safe_retries[True-8]" time="0.071" /><testcase classname="tests.hexagonal.test_verification" name="test_calibrator_distinguishes_target_detection_from_environment_failure[failed-intended_assertion-1-detected]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_calibrator_distinguishes_target_detection_from_environment_failure[failed-unrelated_timeout-1-unrelated_failure]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_calibrator_distinguishes_target_detection_from_environment_failure[failed-intended_assertion-2-unrelated_failure]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_calibrator_distinguishes_target_detection_from_environment_failure[error-ModuleNotFoundError-1-setup_error]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_calibrator_distinguishes_target_detection_from_environment_failure[skipped-missing dependency-0-skipped]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_calibrator_distinguishes_target_detection_from_environment_failure[passed--0-escaped_fault]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_calibration_runs_isolated_real_control_and_mutation" time="0.493" /><testcase classname="tests.hexagonal.test_verification" name="test_production_receipt_requires_durable_native_callback_chain" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_production_receipt_faults_have_specific_diagnostics[caller_proof-native_callback_missing_or_misbound]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_production_receipt_faults_have_specific_diagnostics[queue_only-native_submission_missing]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_production_receipt_faults_have_specific_diagnostics[wrong_memory-retained_context_reply_missing_or_duplicate]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_production_receipt_faults_have_specific_diagnostics[missing_receipt-sender_receipt_missing_or_duplicate]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_production_receipt_faults_have_specific_diagnostics[wrong_record_id-native_callback_missing_or_misbound]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_production_receipt_faults_have_specific_diagnostics[stale_observation-native_callback_missing_or_misbound]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_production_receipt_faults_have_specific_diagnostics[stale_attempt-stale_delivery_incarnation]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_production_receipt_faults_have_specific_diagnostics[request_missing-native_request_observation_missing]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_production_receipt_faults_have_specific_diagnostics[native_missing-independent_native_observation_missing]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_production_receipt_faults_have_specific_diagnostics[call_conflict-native_call_id_conflict]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_production_receipt_faults_have_specific_diagnostics[uncertain_retry-native_submission_missing]" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_checker_loads_selected_candidate_instead_of_its_own_checkout" time="0.154" /><testcase classname="tests.hexagonal.test_verification" name="test_lifecycle_summary_without_raw_records_cannot_manufacture_a_pass" time="0.000" /><testcase classname="tests.hexagonal.test_verification" name="test_successful_transport_does_not_hide_wrong_work_missing_completion_or_unsupported_interjection" time="0.001" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_full_owner_objective_survives_narrowing_and_cancellation[memory]" time="0.031" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_full_owner_objective_survives_narrowing_and_cancellation[sqlite]" time="0.027" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_explicit_owner_revision_changes_current_basis_without_erasing_history[memory]" time="0.047" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_explicit_owner_revision_changes_current_basis_without_erasing_history[sqlite]" time="0.043" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_claim_and_done_status_do_not_create_acceptance[memory]" time="0.013" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_claim_and_done_status_do_not_create_acceptance[sqlite]" time="0.013" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[memory-failed]" time="0.015" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[memory-numeric-success]" time="0.015" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[memory-running]" time="0.015" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[memory-uncertain]" time="0.016" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[memory-candidate]" time="0.014" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[memory-work]" time="0.015" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[memory-check]" time="0.014" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[memory-criteria]" time="0.015" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[memory-revision-type]" time="0.015" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[memory-scope]" time="0.015" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[memory-artifact]" time="0.017" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[memory-native-session]" time="0.017" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[memory-incarnation]" time="0.017" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[memory-outcome-failed]" time="0.016" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[memory-outcome-unrelated]" time="0.016" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[memory-candidate-missing]" time="0.016" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[sqlite-failed]" time="0.017" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[sqlite-numeric-success]" time="0.016" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[sqlite-running]" time="0.016" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[sqlite-uncertain]" time="0.016" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[sqlite-candidate]" time="0.018" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[sqlite-work]" time="0.029" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[sqlite-check]" time="0.027" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[sqlite-criteria]" time="0.018" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[sqlite-revision-type]" time="0.016" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[sqlite-scope]" time="0.016" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[sqlite-artifact]" time="0.018" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[sqlite-native-session]" time="0.016" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[sqlite-incarnation]" time="0.016" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[sqlite-outcome-failed]" time="0.017" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[sqlite-outcome-unrelated]" time="0.016" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_insufficient_or_misbound_measurement_cannot_pass[sqlite-candidate-missing]" time="0.016" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_required_failure_cannot_be_erased_by_unrelated_success_or_high_assessment[memory]" time="0.037" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_required_failure_cannot_be_erased_by_unrelated_success_or_high_assessment[sqlite]" time="0.041" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_measurement_replay_is_bound_to_request_and_does_not_reexecute[memory]" time="0.016" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_measurement_replay_is_bound_to_request_and_does_not_reexecute[sqlite]" time="0.018" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_running_measurement_blocks_earlier_pass_and_observation_progresses[memory]" time="0.025" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_running_measurement_blocks_earlier_pass_and_observation_progresses[sqlite]" time="0.027" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_uncertain_measurement_cannot_be_masked_by_new_pass[memory]" time="0.021" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_uncertain_measurement_cannot_be_masked_by_new_pass[sqlite]" time="0.023" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_incomplete_observed_measurement_cannot_be_hidden_by_later_passing_transport[memory-running]" time="0.020" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_incomplete_observed_measurement_cannot_be_hidden_by_later_passing_transport[memory-uncertain]" time="0.020" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_incomplete_observed_measurement_cannot_be_hidden_by_later_passing_transport[sqlite-running]" time="0.023" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_incomplete_observed_measurement_cannot_be_hidden_by_later_passing_transport[sqlite-uncertain]" time="0.023" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_caller_reconciliation_cannot_manufacture_measurement_truth[memory]" time="0.022" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_caller_reconciliation_cannot_manufacture_measurement_truth[sqlite]" time="0.023" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_observation_must_match_retained_adapter_operation[memory]" time="0.015" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_observation_must_match_retained_adapter_operation[sqlite]" time="0.015" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_required_outcomes_without_check_remain_uncovered[memory]" time="0.009" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_required_outcomes_without_check_remain_uncovered[sqlite]" time="0.010" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_duplicate_measurement_json_fields_cannot_supply_a_passing_summary[memory]" time="0.016" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_duplicate_measurement_json_fields_cannot_supply_a_passing_summary[sqlite]" time="0.016" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_candidate_change_invalidates_existing_acceptance_and_old_evidence[memory]" time="0.028" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_candidate_change_invalidates_existing_acceptance_and_old_evidence[sqlite]" time="0.038" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_same_name_provider_configuration_change_invalidates_measurements_and_decisions[memory]" time="0.041" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_same_name_provider_configuration_change_invalidates_measurements_and_decisions[sqlite]" time="0.027" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_unrelated_provider_change_does_not_invalidate_current_measurements[memory]" time="0.016" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_unrelated_provider_change_does_not_invalidate_current_measurements[sqlite]" time="0.019" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_later_rejection_does_not_leave_earlier_decision_as_current_acceptance[memory]" time="0.019" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_later_rejection_does_not_leave_earlier_decision_as_current_acceptance[sqlite]" time="0.024" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_requirements_changed_during_assessment_make_it_historical[memory]" time="0.035" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_requirements_changed_during_assessment_make_it_historical[sqlite]" time="0.031" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_assessment_threshold_change_invalidates_only_decisions_consuming_assessment[memory]" time="0.030" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_assessment_threshold_change_invalidates_only_decisions_consuming_assessment[sqlite]" time="0.052" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_assessment_configuration_change_during_inference_is_retained_as_historical[memory]" time="0.024" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_assessment_configuration_change_during_inference_is_retained_as_historical[sqlite]" time="0.019" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_unrelated_evaluator_change_does_not_invalidate_selected_assessment[memory]" time="0.021" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_unrelated_evaluator_change_does_not_invalidate_selected_assessment[sqlite]" time="0.022" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_persisted_assessment_rejects_same_name_evaluator_reconfiguration_after_rebuild" time="0.044" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_tool_evaluator_binds_its_provider_configuration_across_composed_rebuild[review-source]" time="0.061" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_tool_evaluator_binds_its_provider_configuration_across_composed_rebuild[unrelated-source]" time="0.050" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_assessment_configuration_change_during_acceptance_is_fenced[memory]" time="0.021" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_assessment_configuration_change_during_acceptance_is_fenced[sqlite]" time="0.021" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_native_replay_cannot_present_historical_acceptance_as_current[memory-accept_work-acceptance_stale]" time="0.024" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_native_replay_cannot_present_historical_acceptance_as_current[memory-get_acceptance-stale_native_result]" time="0.026" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_native_replay_cannot_present_historical_acceptance_as_current[sqlite-accept_work-acceptance_stale]" time="0.024" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_native_replay_cannot_present_historical_acceptance_as_current[sqlite-get_acceptance-stale_native_result]" time="0.027" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_changed_basis_during_policy_evaluation_cannot_commit_acceptance[memory]" time="0.019" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_changed_basis_during_policy_evaluation_cannot_commit_acceptance[sqlite]" time="0.021" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_acceptance_policy_substitutes_without_weakening_required_proof[memory]" time="0.026" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_acceptance_policy_substitutes_without_weakening_required_proof[sqlite]" time="0.036" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_required_assessment_policy_and_authorization_remain_independent[memory]" time="0.027" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_required_assessment_policy_and_authorization_remain_independent[sqlite]" time="0.035" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_scope_mismatch_and_stale_requirement_revisions_are_rejected[memory]" time="0.026" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_scope_mismatch_and_stale_requirement_revisions_are_rejected[sqlite]" time="0.029" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_composed_cli_measurement_observes_file_identity_instead_of_echoing_request" time="0.086" /><testcase classname="tests.hexagonal.test_work_acceptance" name="test_no_requirements_or_acceptance_policy_required_for_simple_messaging" time="0.009" /><testcase classname="tests.hexagonal.test_work_calibration" name="test_calibrator_requires_exact_assertion_and_passing_controls[assert False, &quot;EXPECTED_VIOLATION&quot;-pass-detected]" time="0.203" /><testcase classname="tests.hexagonal.test_work_calibration" name="test_calibrator_requires_exact_assertion_and_passing_controls[raise TimeoutError(&quot;unrelated timeout&quot;)-pass-unrelated_failure]" time="0.226" /><testcase classname="tests.hexagonal.test_work_calibration" name="test_calibrator_requires_exact_assertion_and_passing_controls[pytest.skip(&quot;unavailable&quot;)-pass-skipped]" time="0.208" /><testcase classname="tests.hexagonal.test_work_calibration" name="test_calibrator_requires_exact_assertion_and_passing_controls[pass-pass-escaped_fault]" time="0.209" /><testcase classname="tests.hexagonal.test_work_calibration" name="test_calibrator_requires_exact_assertion_and_passing_controls[assert False, &quot;EXPECTED_VIOLATION&quot;-assert False, &quot;broken control&quot;-unrelated_failure]" time="0.244" /><testcase classname="tests.hexagonal.test_work_calibration" name="test_missing_dependency_is_setup_error_and_never_fault_detection" time="0.303" /><testcase classname="tests.hexagonal.test_work_calibration" name="test_absent_requested_assertion_is_missing_coverage" time="0.202" /></testsuite></testsuites>

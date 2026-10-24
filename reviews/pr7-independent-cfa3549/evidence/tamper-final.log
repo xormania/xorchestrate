@@ -1,0 +1,12 @@
+{"mutation": "decision", "changed_before_score": ["decisions.json"], "full_seal_rejects": true, "semantic_score_accepted": false, "error": "ValueError: Derived action/judgment differs from deterministic composition"}
+{"mutation": "wire", "changed_before_score": ["transport/requests/1da47e0ab1361e41a55e02f683935b917ad35f0e64edafa8194666dd8aca2c9d.body.json"], "full_seal_rejects": true, "semantic_score_accepted": false, "error": "ValueError: Wire body differs from retained request"}
+{"mutation": "raw_response", "changed_before_score": ["assessments/e51ba0ffdaea11273d34071a8f6099e38f2768e8431f0c6743d46ee940140fb6.json", "transport/attempts.jsonl", "transport/results/1da47e0ab1361e41a55e02f683935b917ad35f0e64edafa8194666dd8aca2c9d.json"], "full_seal_rejects": true, "semantic_score_accepted": false, "error": "Failure: Jev returned an unexpected model version."}
+{"mutation": "probe_raw", "changed_before_score": ["probe-executions/c8b932080dc3e-P2/raw.json"], "full_seal_rejects": true, "semantic_score_accepted": false, "error": "ValueError: Probe raw artifact hash mismatch"}
+{"mutation": "action_raw", "changed_before_score": ["action-executions/c8b932080dc3e-P0/action.json"], "full_seal_rejects": true, "semantic_score_accepted": false, "error": "ValueError: End-to-end raw artifact changed"}
+{"mutation": "action_summary", "changed_before_score": ["end-to-end.json"], "full_seal_rejects": true, "semantic_score_accepted": true, "error": null}
+{"mutation": "action_binding", "changed_before_score": ["end-to-end.json"], "full_seal_rejects": true, "semantic_score_accepted": true, "error": null}
+{"mutation": "native_raw", "changed_before_score": ["native-evaluations/001/response.json"], "full_seal_rejects": true, "semantic_score_accepted": true, "error": null}
+{"mutation": "native_invocation", "changed_before_score": ["native-evaluations/001/invocation.json"], "full_seal_rejects": true, "semantic_score_accepted": true, "error": null}
+{"mutation": "audit_result", "changed_before_score": ["audits.json"], "full_seal_rejects": true, "semantic_score_accepted": true, "error": null}
+{"mutation": "audit_probability", "changed_before_score": ["audits.json"], "full_seal_rejects": true, "semantic_score_accepted": false, "error": "ValueError: Independent sampling design changed"}
+{"mutation": "route_record", "changed_before_score": ["decisions.json"], "full_seal_rejects": true, "semantic_score_accepted": true, "error": null}

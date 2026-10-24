@@ -1,0 +1,2111 @@
+[
+  {
+    "mutation": "untouched-control",
+    "semantic_score_accepted": true,
+    "seal_matches_after_score": true,
+    "raw_replay": {
+      "verified_requests": 124,
+      "verified_probes": 54,
+      "source": {
+        "commit": "9c6d7612e31bb78eb07868b5ac2a046629c5876c",
+        "tree": "5313e3a176515e7b160315a56da430fcde63b189",
+        "source_hashes": {
+          "devtools/jev.py": "06f5cfeee090f1ecc5bb75a22a25c477e91b237a338e08e090f12e100846f085",
+          "devtools/jev_config.py": "943dd200f54c650f040c4c011c97fc832b197ae66b3c1715f56e7ce32fc75509",
+          "experiments/jev_failure_correlation_v2/INPUTS.json": "c0b179dacdb6ebb881e1285b52dcff17fe91bf53c17c13b979e54aeac3cdbfa5",
+          "experiments/jev_failure_correlation_v2/__init__.py": "71c9e21108cc0ac31f0bda8a22493289abc79dafe5585d8d45d24238ac33c83b",
+          "experiments/jev_failure_correlation_v2/artifacts.py": "1b81377941256fc40fc73460903d99b112cdf91c14ce6537abe2a20b660994a3",
+          "experiments/jev_failure_correlation_v2/contracts.py": "a008cd6f596090d49b04c66bf71e6a066f5d4401acbce19cc64b630242795f96",
+          "experiments/jev_failure_correlation_v2/corpus.py": "b8c2ca383fed095b3b7a95b9fc7220b49b239bf3382f8d85f03a39517a3547e2",
+          "experiments/jev_failure_correlation_v2/data/frozen/cases.json": "70e3e7c948d46f6453cb424bc96b543aa73b93a06aba50f636b514fe286cedb5",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/healthy/module.py.txt": "a97a67e61663bbbb86a609a7c528fee96df7472e7512061711027a0081ae696a",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/healthy/phase.json": "b90e4bac923231b12f1d8e9f7d1ccf2d1516aa828aaadce38954f583779c7a3d",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/healthy/test_target.py.txt": "cbf109bf24b5886814c991cbb108ce01a71534e6d21bc9faafe318778a505461",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/helper_error/module.py.txt": "4c79f9bf87273cc53be1c19faffa8b975bf5138f76c9cd3e199f7241a78eeb72",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/helper_error/phase.json": "815b68741e0f45e8dcb6a667ded36f9fcd3c191b56e198e914313927b54e9cc8",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/helper_error/test_target.py.txt": "cbf109bf24b5886814c991cbb108ce01a71534e6d21bc9faafe318778a505461",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/wrong_return/module.py.txt": "996d348e9d72467d16b5111c896594e8b1c6c5cb6866d35cc53c298285be6200",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/wrong_return/phase.json": "e2ccbe06c6f214079cf2cd5b51b45b80f1c5f58ca496c04fb049661c9a9631e8",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/wrong_return/test_target.py.txt": "cbf109bf24b5886814c991cbb108ce01a71534e6d21bc9faafe318778a505461",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_authority/adaptation.json": "2151353c6d28bc084f9200ef58e877fac928517a468475e6d6fb5e6712bbdbe2",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_authority/lifecycle.py": "a2f4b371cf3edc63edfbbbc7401cf8c710f51cd2bbfa4066316b5542ef4149ad",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_busy/adaptation.json": "2151353c6d28bc084f9200ef58e877fac928517a468475e6d6fb5e6712bbdbe2",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_busy/lifecycle.py": "a2f4b371cf3edc63edfbbbc7401cf8c710f51cd2bbfa4066316b5542ef4149ad",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_effect/adaptation.json": "4cd48f45c97139732f88049f24b7071710f01c6f5ac30930fa158e76bc107129",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_effect/late_effect.py": "2f1c2af7bb026bfad2828a7b535986870b1cf043c14abc2c4e5500183e7dd093",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/adaptation.json": "3b3ee87187041d2bbfdf54c3e3d5a99426d2f3e89023fcb6a26cc28611ae7bd3",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/claude/configuration.json": "3bcf1a519f1ed9d258a6359a106a4e8bcbd268083fb75e937e4257397ef2700f",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/claude/observed.json": "5da7cad89ba9fbf481496bbabc91de15a832fb5e771cc244f862d461dc1a3d71",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/claude_peer.py": "5aebabaa6fa0453137c76ebb17e7eaa5c8e67bc167e08d7a61057ae0bf6f9136",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/codex/configuration.json": "74b637da87663ec95e80c716817d8760e08c88591b3857c8c5bfaa1834b434b4",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/codex/observed.json": "084036f274bb15738dcd17bc76988e43633d27331baaacab2b7f4e91c25c4c64",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/grok/configuration.json": "144c1bb9547b03994eac8f024d239d4d9bd2baa200a20963b96a9ed8e14a0296",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/grok/observed.json": "857038cb12b53347a0d477152412f8a4a8aab6d5a754c4459b0593218ed5acf1",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/native_peer.py": "63dd6c3db50108787ad2878b8ffd41fef2d39b492942520c2934932ed144889c",
+          "experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/probe.py": "bef8bb3b7d2ba3ddbb9ba59aa3272b8f411dceb94484f931031104aac262a3db",
+          "experiments/jev_failure_correlation_v2/data/frozen/freeze.json": "e8205a8810c11b39e47d94845ed43b6747273d69b6dfcf919e7e84f8a470cce7",
+          "experiments/jev_failure_correlation_v2/data/frozen/initial_key.json": "09466c0c32fd5cbf2796e82f0da7d966b5d2979b9e2199e942699ce30173929a",
+          "experiments/jev_failure_correlation_v2/data/frozen/initial_packets.json": "162037ddd32be14ed6025996cdb90d68dea5b3f8e1ea1eaf29d52ac1f4ca7060",
+          "experiments/jev_failure_correlation_v2/data/frozen/outcome_key.json": "10e5be2d15ad639db12ff7da4da054e7cef1c8e67d86eff5c55679e860c24086",
+          "experiments/jev_failure_correlation_v2/data/frozen/provenance.json": "bf189435953efe23330d7ff88642ea092d072addafba684a885427c0a9702028",
+          "experiments/jev_failure_correlation_v2/data/frozen/raw/p_arguments.json": "9b8376c2a81862dded43a255d8bf9a71b3cc54baf8ee5851435dc24758d68a2f",
+          "experiments/jev_failure_correlation_v2/data/frozen/raw/p_assertion.json": "699ea0da03d1af3ebedbacf428313795b7db4a81a49d0c8d83a59d5c2c72dd00",
+          "experiments/jev_failure_correlation_v2/data/frozen/raw/p_attempts.json": "df1e515c3f282b68c5432112a115ed16244ebbca95e544b6ee75123bffa33431",
+          "experiments/jev_failure_correlation_v2/data/frozen/raw/p_authority.json": "9401aed85cc560c199d75a0086c9a7e8d50b27efbffb65607eb08e27bf77c99f",
+          "experiments/jev_failure_correlation_v2/data/frozen/raw/p_busy.json": "566d32f073b5a3ac881090e9c5bf959a1f82726192410d0dbb608630f7c64ce7",
+          "experiments/jev_failure_correlation_v2/data/frozen/raw/p_context.json": "15c36206e955678d951aaf4f231c8cfb9e473ce49c672ac50dcf4a553533835e",
+          "experiments/jev_failure_correlation_v2/data/frozen/raw/p_effect.json": "dbe288296cfe8e2ab0663d919c550e7176012508a5b05ba3eec62d990cd00904",
+          "experiments/jev_failure_correlation_v2/data/frozen/raw/p_replay.json": "53ee56dd3ef8160ade18f43692d14b81824ef1d46f72e7c26d5e3af766e1eb91",
+          "experiments/jev_failure_correlation_v2/data/frozen/transformation_packets.json": "9e58e227127e87eb21377db92a7a089fa3dd9714718e771294670c0624499b54",
+          "experiments/jev_failure_correlation_v2/data/frozen/transformations.json": "589931aa36804a5f006c2d692c2a2869c090e54beb90edd4975221a8a409ca36",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/cases.json": "e73a96b01c5b51b3d0386ae8810b78a3b0bef36dd8fc99acc5cf6641748957b0",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_assertion/healthy/module.py.txt": "a97a67e61663bbbb86a609a7c528fee96df7472e7512061711027a0081ae696a",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_assertion/healthy/phase.json": "b90e4bac923231b12f1d8e9f7d1ccf2d1516aa828aaadce38954f583779c7a3d",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_assertion/healthy/test_target.py.txt": "cbf109bf24b5886814c991cbb108ce01a71534e6d21bc9faafe318778a505461",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_assertion/helper_error/module.py.txt": "4c79f9bf87273cc53be1c19faffa8b975bf5138f76c9cd3e199f7241a78eeb72",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_assertion/helper_error/phase.json": "815b68741e0f45e8dcb6a667ded36f9fcd3c191b56e198e914313927b54e9cc8",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_assertion/helper_error/test_target.py.txt": "cbf109bf24b5886814c991cbb108ce01a71534e6d21bc9faafe318778a505461",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_assertion/wrong_return/module.py.txt": "996d348e9d72467d16b5111c896594e8b1c6c5cb6866d35cc53c298285be6200",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_assertion/wrong_return/phase.json": "e2ccbe06c6f214079cf2cd5b51b45b80f1c5f58ca496c04fb049661c9a9631e8",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_assertion/wrong_return/test_target.py.txt": "cbf109bf24b5886814c991cbb108ce01a71534e6d21bc9faafe318778a505461",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_authority/lifecycle.py": "c9a233735d2c6ad7d56299e511104b5a441bc5fe7b9babd01daca16e0b6f557c",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_busy/lifecycle.py": "c9a233735d2c6ad7d56299e511104b5a441bc5fe7b9babd01daca16e0b6f557c",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_effect/late_effect.py": "2d420b2acb4fdf2171cc219a746e7f8d5e1e9b19f50455d361c9d7074d0bce64",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_replay/claude/configuration.json": "3bcf1a519f1ed9d258a6359a106a4e8bcbd268083fb75e937e4257397ef2700f",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_replay/claude/observed.json": "6d1f18fd8e01ba889723c04cce37bdfc7282d2fe47c5b7fb1a6c82547c15a81c",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_replay/claude_peer.py": "5aebabaa6fa0453137c76ebb17e7eaa5c8e67bc167e08d7a61057ae0bf6f9136",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_replay/codex/configuration.json": "74b637da87663ec95e80c716817d8760e08c88591b3857c8c5bfaa1834b434b4",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_replay/codex/observed.json": "b3fcfa0c67a820af98143ecb22cb941c3695edb5b17f246b88c47904e3c83a06",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_replay/grok/configuration.json": "144c1bb9547b03994eac8f024d239d4d9bd2baa200a20963b96a9ed8e14a0296",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_replay/grok/observed.json": "3f1d19cfd99f47b93dfff83ac0494da931ecada3509934035f0df8c174e81678",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_replay/native_peer.py": "63dd6c3db50108787ad2878b8ffd41fef2d39b492942520c2934932ed144889c",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_replay/probe.py": "b89be55b04e34dbc826dc61962d9d8f39b36c8d11da7603217bb21dae4676135",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/freeze.json": "149c0b78f597e9a69112578ee180253001432f7ef92a48bee555cda6694f915d",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/initial_key.json": "c96964bcc5d8faefe1d8bc9dd2c5182b37e277886a11b94eb6fa9b1820db1de1",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/initial_packets.json": "3b80e579cd3a6177b99554ee1c2b1fdac04a5df5c4616ef68ee9a7038e8a8725",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/outcome_key.json": "b086dce341149b5f7d07c01b64a5106ef9eec802a9d656abd5645e333c87c265",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/provenance.json": "56e1452ed1914d4c86562ecd026da60452a636c2483d3fb1a259fda374b29f5a",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/raw/p_arguments.json": "9b8376c2a81862dded43a255d8bf9a71b3cc54baf8ee5851435dc24758d68a2f",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/raw/p_assertion.json": "c2be25cb159c3fe32554f063bb00bf11a2f72d5ce3d68136d97d768d4a84798c",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/raw/p_attempts.json": "df1e515c3f282b68c5432112a115ed16244ebbca95e544b6ee75123bffa33431",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/raw/p_authority.json": "9af35c406eaf8d3f7b64b3074c51e104d152cde771c1bff06898ec0efb6af0f1",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/raw/p_busy.json": "5d5379e4bccff6d70f39eb3bbb04827de2e10e96cae91893088ab2d5b2a0ccdb",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/raw/p_context.json": "239ae51c7279ce622bc22540216a7c69a9d9b3eb4b3b2f75a93f55f29a106428",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/raw/p_effect.json": "b2c5406dac0891ed572055160d46eb2eee109f1dfc1f1a41c3f48238bb8415f8",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/raw/p_replay.json": "fdc5a5071a745ae3a2082ceadac8f5f3006d84293da06ac7b1fa4a76cf80a2b3",
+          "experiments/jev_failure_correlation_v2/data/reference_replay/transformations.json": "2eaa3213b37bad5514574bb48cbde64187b3425da1e68e1c0bd5a8c7807fef41",
+          "experiments/jev_failure_correlation_v2/data/reproduction_sources/adapter_replay.py.txt": "b89be55b04e34dbc826dc61962d9d8f39b36c8d11da7603217bb21dae4676135",
+          "experiments/jev_failure_correlation_v2/data/reproduction_sources/late_effect.py.txt": "52b3256f177d9539b99b3b0d151170d7c0752bd58ab878b06ae7507b1668ec27",
+          "experiments/jev_failure_correlation_v2/data/reproduction_sources/lifecycle.py.txt": "ffd9035934612a61dc7268e119fd0985136e482cd3c32dfb21c63214497a65fa",
+          "experiments/jev_failure_correlation_v2/data/reproduction_sources/provenance.json": "85d00d0120ffba5087c5f83aaaf5d22d08b2e85062527f6c93cf96c10118f322",
+          "experiments/jev_failure_correlation_v2/economics.py": "687647aa63eebaca4128f957ce7d1c387d38ece8b168e5ae2a9dbefaf2b37a39",
+          "experiments/jev_failure_correlation_v2/evaluation.py": "4572f77d7a77d2345d57def7396a349977c923c1062534525c8dd538c507f244",
+          "experiments/jev_failure_correlation_v2/policies.py": "14c3b61aaaefb79eee75cfd6417e828f16477ca719fc3e43797719703ad6ece4",
+          "experiments/jev_failure_correlation_v2/probes.py": "a9e81e1358d09f1a0f0a016331aa55952718eb90200b050b0cd71e718d83f1a9",
+          "experiments/jev_failure_correlation_v2/runner.py": "343e1c99c9f79d2bd7490fb1a75cff78a041bdcb9a15e6cafaa848503864a8e8",
+          "experiments/jev_failure_correlation_v2/tests/__init__.py": "587eeae4edab745887632c95c4666fc0b35e1df2b87e216b63306adc8072caee",
+          "experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py": "54b8b442aa9d72b8f6189682c218e4858185f727cba10521923e73ce88e9bd09",
+          "experiments/jev_failure_correlation_v2/tests/test_evaluation.py": "f8a874c906fd86277fa2451142136aa89ed9673e116b1d9a846e67fa13f7a8d6",
+          "experiments/jev_failure_correlation_v2/tests/test_policies.py": "1a45a80f408c76537b3df413ea87e328b2f6f08a9bc2a0596f4db981e9fdfd10",
+          "experiments/jev_failure_correlation_v2/tests/test_transport.py": "6a3d7f725e48a9b6c9948ad2675420b702f2002a3cdce18ea60c0f1cf2878d0e",
+          "experiments/jev_failure_correlation_v2/transport.py": "22c62c1abce8996951e8a321fcbf63f01b13018c483a997cab141ca0d214c263"
+        },
+        "python": "3.12.14"
+      }
+    }
+  },
+  {
+    "mutation": "decision",
+    "changed_before_score": [
+      "decisions.json"
+    ],
+    "full_seal_rejects": true,
+    "semantic_score_accepted": false,
+    "error": "ValueError: Derived action/judgment differs from deterministic composition"
+  },
+  {
+    "mutation": "wire",
+    "changed_before_score": [
+      "transport/requests/1da47e0ab1361e41a55e02f683935b917ad35f0e64edafa8194666dd8aca2c9d.body.json"
+    ],
+    "full_seal_rejects": true,
+    "semantic_score_accepted": false,
+    "error": "ValueError: Wire body differs from retained request"
+  },
+  {
+    "mutation": "raw_response",
+    "changed_before_score": [
+      "assessments/e51ba0ffdaea11273d34071a8f6099e38f2768e8431f0c6743d46ee940140fb6.json",
+      "transport/attempts.jsonl",
+      "transport/results/1da47e0ab1361e41a55e02f683935b917ad35f0e64edafa8194666dd8aca2c9d.json"
+    ],
+    "full_seal_rejects": true,
+    "semantic_score_accepted": false,
+    "error": "Failure: Jev returned an unexpected model version."
+  },
+  {
+    "mutation": "probe_raw",
+    "changed_before_score": [
+      "probe-executions/c8b932080dc3e-P2/raw.json"
+    ],
+    "full_seal_rejects": true,
+    "semantic_score_accepted": false,
+    "error": "ValueError: Probe raw artifact hash mismatch"
+  },
+  {
+    "mutation": "action_raw",
+    "changed_before_score": [
+      "action-executions/c8b932080dc3e-P0/action.json"
+    ],
+    "full_seal_rejects": true,
+    "semantic_score_accepted": false,
+    "error": "ValueError: End-to-end raw artifact changed"
+  },
+  {
+    "mutation": "action_summary",
+    "changed_before_score": [
+      "end-to-end.json"
+    ],
+    "full_seal_rejects": true,
+    "semantic_score_accepted": true,
+    "error": null,
+    "selected_output": {
+      "end_to_end_by_policy": {
+        "P0": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.17676964399993267
+        },
+        "P0_probe": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09280409899974984
+        },
+        "P1": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09576794300005531
+        },
+        "P2": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09269471499987958
+        },
+        "P3": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09335287099997913
+        },
+        "P4": {
+          "executed": 3,
+          "correct_actual_acceptance": 999,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09173242199995002
+        },
+        "never": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.029616429000043354
+        },
+        "always": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.02972785599990857
+        },
+        "random": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.030436418000135745
+        },
+        "risk": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.029532023000001573
+        },
+        "reasoning_only": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.029533063000144466
+        }
+      },
+      "audit": {
+        "streams": {
+          "independent_random_audit": 24
+        },
+        "random": {
+          "P4": {
+            "population_n": 24,
+            "selected_n": 13,
+            "pending_independent_adjudication": [],
+            "inclusion_probabilities": [
+              0.5,
+              0.5714285714285714,
+              0.6
+            ],
+            "estimated_total_misses_ht": 0.0,
+            "estimated_miss_rate_ht": 0.0,
+            "interval": null,
+            "interval_reason": "Small stratified pilot; no unsupported iid interval on the weighted rate."
+          }
+        }
+      },
+      "routing": {
+        "by_proposed_route": {
+          "none": {
+            "population": 13,
+            "paired_observed": 6,
+            "could_correct_or_resolve": 2,
+            "could_damage": 0
+          },
+          "probe": {
+            "population": 11,
+            "paired_observed": 5,
+            "could_correct_or_resolve": 2,
+            "could_damage": 0
+          }
+        },
+        "records": [
+          {
+            "case_id": "c8b932080dc3e",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c06e2dd37f2ab",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c593af9fb49a0",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c4ac02ef39bfc",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          },
+          {
+            "case_id": "c5999881a21d8",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cb482dcc4a0c1",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c5dd2167f348a",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cc191a8053cc3",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c1c062765510d",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "caeff6c6c4681",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cbc761dc81aa1",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cf22aab3d75cf",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c5af5e427a2f3",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          },
+          {
+            "case_id": "c756d2780a92a",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "cbfa1b0cc1f0f",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c0fb9a45eb2da",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          },
+          {
+            "case_id": "c94d0a24d43b5",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c9de3dd808cb8",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cabe25ecf8ef4",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c3e667a1b7532",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c19acb40f8797",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c85b37db76aaa",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "cef7128badec1",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c51eabfc2dae5",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          }
+        ],
+        "interpretation": "Hypothetical paired fallback on compatible evidence. Missing fallback remains unknown; probe/state-changing trajectories need controlled causal runs."
+      }
+    }
+  },
+  {
+    "mutation": "action_binding",
+    "changed_before_score": [
+      "end-to-end.json"
+    ],
+    "full_seal_rejects": true,
+    "semantic_score_accepted": true,
+    "error": null,
+    "selected_output": {
+      "end_to_end_by_policy": {
+        "P0": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.17676964399993267
+        },
+        "P0_probe": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09280409899974984
+        },
+        "P1": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09576794300005531
+        },
+        "P2": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09269471499987958
+        },
+        "P3": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09335287099997913
+        },
+        "P4": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09173242199995002
+        },
+        "never": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.029616429000043354
+        },
+        "always": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.02972785599990857
+        },
+        "random": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.030436418000135745
+        },
+        "risk": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.029532023000001573
+        },
+        "reasoning_only": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.029533063000144466
+        }
+      },
+      "audit": {
+        "streams": {
+          "independent_random_audit": 24
+        },
+        "random": {
+          "P4": {
+            "population_n": 24,
+            "selected_n": 13,
+            "pending_independent_adjudication": [],
+            "inclusion_probabilities": [
+              0.5,
+              0.5714285714285714,
+              0.6
+            ],
+            "estimated_total_misses_ht": 0.0,
+            "estimated_miss_rate_ht": 0.0,
+            "interval": null,
+            "interval_reason": "Small stratified pilot; no unsupported iid interval on the weighted rate."
+          }
+        }
+      },
+      "routing": {
+        "by_proposed_route": {
+          "none": {
+            "population": 13,
+            "paired_observed": 6,
+            "could_correct_or_resolve": 2,
+            "could_damage": 0
+          },
+          "probe": {
+            "population": 11,
+            "paired_observed": 5,
+            "could_correct_or_resolve": 2,
+            "could_damage": 0
+          }
+        },
+        "records": [
+          {
+            "case_id": "c8b932080dc3e",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c06e2dd37f2ab",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c593af9fb49a0",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c4ac02ef39bfc",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          },
+          {
+            "case_id": "c5999881a21d8",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cb482dcc4a0c1",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c5dd2167f348a",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cc191a8053cc3",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c1c062765510d",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "caeff6c6c4681",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cbc761dc81aa1",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cf22aab3d75cf",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c5af5e427a2f3",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          },
+          {
+            "case_id": "c756d2780a92a",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "cbfa1b0cc1f0f",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c0fb9a45eb2da",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          },
+          {
+            "case_id": "c94d0a24d43b5",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c9de3dd808cb8",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cabe25ecf8ef4",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c3e667a1b7532",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c19acb40f8797",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c85b37db76aaa",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "cef7128badec1",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c51eabfc2dae5",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          }
+        ],
+        "interpretation": "Hypothetical paired fallback on compatible evidence. Missing fallback remains unknown; probe/state-changing trajectories need controlled causal runs."
+      }
+    }
+  },
+  {
+    "mutation": "native_raw",
+    "changed_before_score": [
+      "native-evaluations/001/response.json"
+    ],
+    "full_seal_rejects": true,
+    "semantic_score_accepted": true,
+    "error": null,
+    "selected_output": {
+      "end_to_end_by_policy": {
+        "P0": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.17676964399993267
+        },
+        "P0_probe": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09280409899974984
+        },
+        "P1": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09576794300005531
+        },
+        "P2": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09269471499987958
+        },
+        "P3": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09335287099997913
+        },
+        "P4": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09173242199995002
+        },
+        "never": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.029616429000043354
+        },
+        "always": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.02972785599990857
+        },
+        "random": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.030436418000135745
+        },
+        "risk": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.029532023000001573
+        },
+        "reasoning_only": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.029533063000144466
+        }
+      },
+      "audit": {
+        "streams": {
+          "independent_random_audit": 24
+        },
+        "random": {
+          "P4": {
+            "population_n": 24,
+            "selected_n": 13,
+            "pending_independent_adjudication": [],
+            "inclusion_probabilities": [
+              0.5,
+              0.5714285714285714,
+              0.6
+            ],
+            "estimated_total_misses_ht": 0.0,
+            "estimated_miss_rate_ht": 0.0,
+            "interval": null,
+            "interval_reason": "Small stratified pilot; no unsupported iid interval on the weighted rate."
+          }
+        }
+      },
+      "routing": {
+        "by_proposed_route": {
+          "none": {
+            "population": 13,
+            "paired_observed": 6,
+            "could_correct_or_resolve": 2,
+            "could_damage": 0
+          },
+          "probe": {
+            "population": 11,
+            "paired_observed": 5,
+            "could_correct_or_resolve": 2,
+            "could_damage": 0
+          }
+        },
+        "records": [
+          {
+            "case_id": "c8b932080dc3e",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c06e2dd37f2ab",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c593af9fb49a0",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c4ac02ef39bfc",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          },
+          {
+            "case_id": "c5999881a21d8",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cb482dcc4a0c1",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c5dd2167f348a",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cc191a8053cc3",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c1c062765510d",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "caeff6c6c4681",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cbc761dc81aa1",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cf22aab3d75cf",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c5af5e427a2f3",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          },
+          {
+            "case_id": "c756d2780a92a",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "cbfa1b0cc1f0f",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c0fb9a45eb2da",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          },
+          {
+            "case_id": "c94d0a24d43b5",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c9de3dd808cb8",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cabe25ecf8ef4",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c3e667a1b7532",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c19acb40f8797",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c85b37db76aaa",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "cef7128badec1",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c51eabfc2dae5",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          }
+        ],
+        "interpretation": "Hypothetical paired fallback on compatible evidence. Missing fallback remains unknown; probe/state-changing trajectories need controlled causal runs."
+      }
+    }
+  },
+  {
+    "mutation": "native_invocation",
+    "changed_before_score": [
+      "native-evaluations/001/invocation.json"
+    ],
+    "full_seal_rejects": true,
+    "semantic_score_accepted": true,
+    "error": null,
+    "selected_output": {
+      "end_to_end_by_policy": {
+        "P0": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.17676964399993267
+        },
+        "P0_probe": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09280409899974984
+        },
+        "P1": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09576794300005531
+        },
+        "P2": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09269471499987958
+        },
+        "P3": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09335287099997913
+        },
+        "P4": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09173242199995002
+        },
+        "never": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.029616429000043354
+        },
+        "always": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.02972785599990857
+        },
+        "random": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.030436418000135745
+        },
+        "risk": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.029532023000001573
+        },
+        "reasoning_only": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.029533063000144466
+        }
+      },
+      "audit": {
+        "streams": {
+          "independent_random_audit": 24
+        },
+        "random": {
+          "P4": {
+            "population_n": 24,
+            "selected_n": 13,
+            "pending_independent_adjudication": [],
+            "inclusion_probabilities": [
+              0.5,
+              0.5714285714285714,
+              0.6
+            ],
+            "estimated_total_misses_ht": 0.0,
+            "estimated_miss_rate_ht": 0.0,
+            "interval": null,
+            "interval_reason": "Small stratified pilot; no unsupported iid interval on the weighted rate."
+          }
+        }
+      },
+      "routing": {
+        "by_proposed_route": {
+          "none": {
+            "population": 13,
+            "paired_observed": 6,
+            "could_correct_or_resolve": 2,
+            "could_damage": 0
+          },
+          "probe": {
+            "population": 11,
+            "paired_observed": 5,
+            "could_correct_or_resolve": 2,
+            "could_damage": 0
+          }
+        },
+        "records": [
+          {
+            "case_id": "c8b932080dc3e",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c06e2dd37f2ab",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c593af9fb49a0",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c4ac02ef39bfc",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          },
+          {
+            "case_id": "c5999881a21d8",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cb482dcc4a0c1",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c5dd2167f348a",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cc191a8053cc3",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c1c062765510d",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "caeff6c6c4681",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cbc761dc81aa1",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cf22aab3d75cf",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c5af5e427a2f3",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          },
+          {
+            "case_id": "c756d2780a92a",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "cbfa1b0cc1f0f",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c0fb9a45eb2da",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          },
+          {
+            "case_id": "c94d0a24d43b5",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c9de3dd808cb8",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cabe25ecf8ef4",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c3e667a1b7532",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c19acb40f8797",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c85b37db76aaa",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "cef7128badec1",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c51eabfc2dae5",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          }
+        ],
+        "interpretation": "Hypothetical paired fallback on compatible evidence. Missing fallback remains unknown; probe/state-changing trajectories need controlled causal runs."
+      }
+    }
+  },
+  {
+    "mutation": "audit_result",
+    "changed_before_score": [
+      "audits.json"
+    ],
+    "full_seal_rejects": true,
+    "semantic_score_accepted": true,
+    "error": null,
+    "selected_output": {
+      "end_to_end_by_policy": {
+        "P0": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.17676964399993267
+        },
+        "P0_probe": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09280409899974984
+        },
+        "P1": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09576794300005531
+        },
+        "P2": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09269471499987958
+        },
+        "P3": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09335287099997913
+        },
+        "P4": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09173242199995002
+        },
+        "never": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.029616429000043354
+        },
+        "always": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.02972785599990857
+        },
+        "random": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.030436418000135745
+        },
+        "risk": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.029532023000001573
+        },
+        "reasoning_only": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.029533063000144466
+        }
+      },
+      "audit": {
+        "streams": {
+          "independent_random_audit": 24
+        },
+        "random": {
+          "P4": {
+            "population_n": 24,
+            "selected_n": 13,
+            "pending_independent_adjudication": [],
+            "inclusion_probabilities": [
+              0.5,
+              0.5714285714285714,
+              0.6
+            ],
+            "estimated_total_misses_ht": 2.0,
+            "estimated_miss_rate_ht": 0.08333333333333333,
+            "interval": null,
+            "interval_reason": "Small stratified pilot; no unsupported iid interval on the weighted rate."
+          }
+        }
+      },
+      "routing": {
+        "by_proposed_route": {
+          "none": {
+            "population": 13,
+            "paired_observed": 6,
+            "could_correct_or_resolve": 2,
+            "could_damage": 0
+          },
+          "probe": {
+            "population": 11,
+            "paired_observed": 5,
+            "could_correct_or_resolve": 2,
+            "could_damage": 0
+          }
+        },
+        "records": [
+          {
+            "case_id": "c8b932080dc3e",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c06e2dd37f2ab",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c593af9fb49a0",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c4ac02ef39bfc",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          },
+          {
+            "case_id": "c5999881a21d8",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cb482dcc4a0c1",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c5dd2167f348a",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cc191a8053cc3",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c1c062765510d",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "caeff6c6c4681",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cbc761dc81aa1",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cf22aab3d75cf",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c5af5e427a2f3",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          },
+          {
+            "case_id": "c756d2780a92a",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "cbfa1b0cc1f0f",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c0fb9a45eb2da",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          },
+          {
+            "case_id": "c94d0a24d43b5",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c9de3dd808cb8",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cabe25ecf8ef4",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c3e667a1b7532",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c19acb40f8797",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c85b37db76aaa",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "cef7128badec1",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c51eabfc2dae5",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          }
+        ],
+        "interpretation": "Hypothetical paired fallback on compatible evidence. Missing fallback remains unknown; probe/state-changing trajectories need controlled causal runs."
+      }
+    }
+  },
+  {
+    "mutation": "audit_probability",
+    "changed_before_score": [
+      "audits.json"
+    ],
+    "full_seal_rejects": true,
+    "semantic_score_accepted": false,
+    "error": "ValueError: Independent sampling design changed"
+  },
+  {
+    "mutation": "route_record",
+    "changed_before_score": [
+      "decisions.json"
+    ],
+    "full_seal_rejects": true,
+    "semantic_score_accepted": true,
+    "error": null,
+    "selected_output": {
+      "end_to_end_by_policy": {
+        "P0": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.17676964399993267
+        },
+        "P0_probe": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09280409899974984
+        },
+        "P1": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09576794300005531
+        },
+        "P2": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09269471499987958
+        },
+        "P3": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09335287099997913
+        },
+        "P4": {
+          "executed": 3,
+          "correct_actual_acceptance": 3,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.09173242199995002
+        },
+        "never": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.029616429000043354
+        },
+        "always": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.02972785599990857
+        },
+        "random": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.030436418000135745
+        },
+        "risk": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.029532023000001573
+        },
+        "reasoning_only": {
+          "executed": 1,
+          "correct_actual_acceptance": 1,
+          "consequential_false_accept": 0,
+          "unnecessary_withholding": 0,
+          "elapsed_seconds": 0.029533063000144466
+        }
+      },
+      "audit": {
+        "streams": {
+          "independent_random_audit": 24
+        },
+        "random": {
+          "P4": {
+            "population_n": 24,
+            "selected_n": 13,
+            "pending_independent_adjudication": [],
+            "inclusion_probabilities": [
+              0.5,
+              0.5714285714285714,
+              0.6
+            ],
+            "estimated_total_misses_ht": 0.0,
+            "estimated_miss_rate_ht": 0.0,
+            "interval": null,
+            "interval_reason": "Small stratified pilot; no unsupported iid interval on the weighted rate."
+          }
+        }
+      },
+      "routing": {
+        "by_proposed_route": {
+          "reasoning": {
+            "population": 1,
+            "paired_observed": 0,
+            "could_correct_or_resolve": 0,
+            "could_damage": 0
+          },
+          "none": {
+            "population": 12,
+            "paired_observed": 6,
+            "could_correct_or_resolve": 2,
+            "could_damage": 0
+          },
+          "probe": {
+            "population": 11,
+            "paired_observed": 5,
+            "could_correct_or_resolve": 2,
+            "could_damage": 0
+          }
+        },
+        "records": [
+          {
+            "case_id": "c8b932080dc3e",
+            "route": "reasoning",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c06e2dd37f2ab",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c593af9fb49a0",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c4ac02ef39bfc",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          },
+          {
+            "case_id": "c5999881a21d8",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cb482dcc4a0c1",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c5dd2167f348a",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cc191a8053cc3",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c1c062765510d",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "caeff6c6c4681",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cbc761dc81aa1",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cf22aab3d75cf",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c5af5e427a2f3",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          },
+          {
+            "case_id": "c756d2780a92a",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "cbfa1b0cc1f0f",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c0fb9a45eb2da",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          },
+          {
+            "case_id": "c94d0a24d43b5",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c9de3dd808cb8",
+            "route": "probe",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "cabe25ecf8ef4",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c3e667a1b7532",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c19acb40f8797",
+            "route": "probe",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "c85b37db76aaa",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": false,
+            "could_damage": false,
+            "missed_reasoning_opportunity": false
+          },
+          {
+            "case_id": "cef7128badec1",
+            "route": "none",
+            "paired_observed": false,
+            "could_correct_or_resolve": null,
+            "could_damage": null,
+            "missed_reasoning_opportunity": null
+          },
+          {
+            "case_id": "c51eabfc2dae5",
+            "route": "none",
+            "paired_observed": true,
+            "could_correct_or_resolve": true,
+            "could_damage": false,
+            "missed_reasoning_opportunity": true
+          }
+        ],
+        "interpretation": "Hypothetical paired fallback on compatible evidence. Missing fallback remains unknown; probe/state-changing trajectories need controlled causal runs."
+      }
+    }
+  }
+]

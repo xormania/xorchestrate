@@ -1,0 +1,23 @@
+{
+  "artifacts": [
+    {
+      "id": 12574744485,
+      "name": "pr7-independent-40131762088-1",
+      "size_in_bytes": 4888748,
+      "url": "https://api.github.com/repos/xormania/xorchestrate/actions/artifacts/12574744485",
+      "archive_download_url": "https://api.github.com/repos/xormania/xorchestrate/actions/artifacts/12574744485/zip",
+      "expired": false,
+      "created_at": "2026-10-24T20:54:27Z",
+      "expires_at": "2026-11-23T20:54:25Z",
+      "updated_at": "2026-10-24T20:54:27Z",
+      "digest": "sha256:fce0ef1e9ee1fcc3d23b6c006301d78427ad5ad3f998304b602bcb8ed54b2820",
+      "workflow_run": {
+        "id": 40131762088,
+        "repository_id": 1430398736,
+        "head_repository_id": 1430398736,
+        "head_branch": "verification/pr7-independent-cfa3549",
+        "head_sha": "d5af81334d5742968a138665d738d3b20084b72a"
+      }
+    }
+  ]
+}

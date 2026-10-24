@@ -1,0 +1,1547 @@
+.........F..F........................................................... [ 10%]
+.....................................ssssssss................... [ 19%]
+........................................................................ [ 29%]
+........................................................................ [ 40%]
+................................................FFFFFFFFFFFFFF.......................... [ 52%]
+.......................................FFFF..................... [ 61%]
+.....FF......F...F......F........................................................................................... [ 78%]
+........................................................................ [ 88%]
+........................................................................ [ 98%]
+.......                                                                  [100%]
+=================================== FAILURES ===================================
+___ test_selected_boundary_executes_both_healthy_and_intended_fault[p_busy] ____
+
+probe_id = 'p_busy'
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-0/test_selected_boundary_execute4')
+
+    @pytest.mark.parametrize("probe_id", sorted(PROBES))
+    def test_selected_boundary_executes_both_healthy_and_intended_fault(probe_id, tmp_path):
+        cases = load_corpus()
+        for variant in ("healthy", "fault"):
+            case = next(c for c in cases if c["probe_id"] == probe_id and c["scenario"] == variant)
+            result = execute_probe(case, probe_id, tmp_path / variant)
+>           assert result["status"] == "executed", result
+E           AssertionError: {'probe_id': 'p_busy', 'case_id': 'cabe25ecf8ef4', 'status': 'not_exercised', 'exercised': False, ...}
+E           assert 'not_exercised' == 'executed'
+E             
+E             - executed
+E             + not_exercised
+
+experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py:87: AssertionError
+__ test_selected_boundary_executes_both_healthy_and_intended_fault[p_replay] ___
+
+probe_id = 'p_replay'
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-0/test_selected_boundary_execute7')
+
+    @pytest.mark.parametrize("probe_id", sorted(PROBES))
+    def test_selected_boundary_executes_both_healthy_and_intended_fault(probe_id, tmp_path):
+        cases = load_corpus()
+        for variant in ("healthy", "fault"):
+            case = next(c for c in cases if c["probe_id"] == probe_id and c["scenario"] == variant)
+            result = execute_probe(case, probe_id, tmp_path / variant)
+>           assert result["status"] == "executed", result
+E           AssertionError: {'probe_id': 'p_replay', 'case_id': 'c5af5e427a2f3', 'status': 'not_exercised', 'exercised': False, ...}
+E           assert 'not_exercised' == 'executed'
+E             
+E             - executed
+E             + not_exercised
+
+experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py:87: AssertionError
+_ test_claude_retained_context_callbacks_progress_without_poll_and_native_identity _
+
+make_driver = <function make_driver.<locals>.make at 0x7f3924716ca0>
+
+    def test_claude_retained_context_callbacks_progress_without_poll_and_native_identity(make_driver):
+        driver, observations, calls = make_driver()
+>       session = driver.start({"context": {"actor": "worker", "session_id": "app-session"}})
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_claude_sessions.py:91: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+_ test_claude_channel_delivery_during_outstanding_callback_and_unrelated_session _
+
+make_driver = <function make_driver.<locals>.make at 0x7f392454d8a0>
+
+    def test_claude_channel_delivery_during_outstanding_callback_and_unrelated_session(make_driver):
+        driver, observations, calls = make_driver()
+        entered, release = threading.Event(), threading.Event()
+    
+        def callback(action, args, context, key):
+            calls.append((action, args, context, key))
+            if action == "hold":
+                entered.set()
+                assert release.wait(5)
+            return {"accepted": True}
+    
+        driver.bind_application_tools(list(driver._capabilities.values()), callback)
+>       first = driver.start({})
+                ^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_claude_sessions.py:119: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+_______ test_claude_requested_resolved_and_observed_settings_and_resume ________
+
+make_driver = <function make_driver.<locals>.make at 0x7f3924715f80>
+
+    def test_claude_requested_resolved_and_observed_settings_and_resume(make_driver):
+        driver, _, calls = make_driver(launch={"model": "trusted-model", "effort": "high"}, request_parameters={"type": "object", "properties": {"model": {"type": "string"}}, "additionalProperties": False})
+        spec = {"parameters": {"model": "requested-model"}}
+>       session = driver.start(spec)
+                  ^^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_claude_sessions.py:139: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+__________ test_claude_changed_configuration_requires_explicit_policy __________
+
+make_driver = <function make_driver.<locals>.make at 0x7f3924715440>
+
+    def test_claude_changed_configuration_requires_explicit_policy(make_driver):
+        original, _, _ = make_driver(launch={"model": "one"})
+>       source = original.start({})
+                 ^^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_claude_sessions.py:159: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+_______ test_claude_native_permissions_independent_of_application_tools ________
+
+make_driver = <function make_driver.<locals>.make at 0x7f3924716160>
+
+    def test_claude_native_permissions_independent_of_application_tools(make_driver):
+        driver, observations, calls = make_driver(permissions={"Bash": "deny", "Read": "allow", "application_tools": "allow"})
+>       session = driver.start({})
+                  ^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_claude_sessions.py:172: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+______________ test_claude_callback_requires_matching_native_hook ______________
+
+make_driver = <function make_driver.<locals>.make at 0x7f3924715f80>
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-0/test_claude_callback_requires_0')
+
+    def test_claude_callback_requires_matching_native_hook(make_driver, tmp_path):
+        driver, observations, calls = make_driver(env={"CLAUDE_STATE_DIR": str(tmp_path), "CLAUDE_FAULT": "missing_tool_hook"})
+>       session = driver.start({})
+                  ^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_claude_sessions.py:182: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+_ test_claude_start_requires_observed_identity_and_channel_registration[wrong_identity-session_identity] _
+
+make_driver = <function make_driver.<locals>.make at 0x7f3924716200>
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-0/test_claude_start_requires_obs0')
+fault = 'wrong_identity', code = 'session_identity'
+
+    @pytest.mark.parametrize("fault,code", [("wrong_identity", "session_identity"), ("missing_registration", "session_start_timeout"), ("forged_registration", "session_start_timeout")])
+    def test_claude_start_requires_observed_identity_and_channel_registration(make_driver, tmp_path, fault, code):
+        driver, _, _ = make_driver(env={"CLAUDE_STATE_DIR": str(tmp_path), "CLAUDE_FAULT": fault}, startup_timeout=0.7)
+        with pytest.raises(OrchestrationError) as error:
+>           driver.start({})
+
+tests/hexagonal/test_claude_sessions.py:193: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+_ test_claude_start_requires_observed_identity_and_channel_registration[missing_registration-session_start_timeout] _
+
+make_driver = <function make_driver.<locals>.make at 0x7f392454dee0>
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-0/test_claude_start_requires_obs1')
+fault = 'missing_registration', code = 'session_start_timeout'
+
+    @pytest.mark.parametrize("fault,code", [("wrong_identity", "session_identity"), ("missing_registration", "session_start_timeout"), ("forged_registration", "session_start_timeout")])
+    def test_claude_start_requires_observed_identity_and_channel_registration(make_driver, tmp_path, fault, code):
+        driver, _, _ = make_driver(env={"CLAUDE_STATE_DIR": str(tmp_path), "CLAUDE_FAULT": fault}, startup_timeout=0.7)
+        with pytest.raises(OrchestrationError) as error:
+>           driver.start({})
+
+tests/hexagonal/test_claude_sessions.py:193: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+_ test_claude_start_requires_observed_identity_and_channel_registration[forged_registration-session_start_timeout] _
+
+make_driver = <function make_driver.<locals>.make at 0x7f392454e5c0>
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-0/test_claude_start_requires_obs2')
+fault = 'forged_registration', code = 'session_start_timeout'
+
+    @pytest.mark.parametrize("fault,code", [("wrong_identity", "session_identity"), ("missing_registration", "session_start_timeout"), ("forged_registration", "session_start_timeout")])
+    def test_claude_start_requires_observed_identity_and_channel_registration(make_driver, tmp_path, fault, code):
+        driver, _, _ = make_driver(env={"CLAUDE_STATE_DIR": str(tmp_path), "CLAUDE_FAULT": fault}, startup_timeout=0.7)
+        with pytest.raises(OrchestrationError) as error:
+>           driver.start({})
+
+tests/hexagonal/test_claude_sessions.py:193: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+_______ test_claude_conflicting_native_call_id_and_missing_hook_rejected _______
+
+make_driver = <function make_driver.<locals>.make at 0x7f392454e2a0>
+
+    def test_claude_conflicting_native_call_id_and_missing_hook_rejected(make_driver):
+        driver, _, calls = make_driver()
+>       session = driver.start({})
+                  ^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_claude_sessions.py:200: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+________ test_claude_denied_application_tool_cannot_execute_via_gateway ________
+
+make_driver = <function make_driver.<locals>.make at 0x7f392454ff60>
+
+    def test_claude_denied_application_tool_cannot_execute_via_gateway(make_driver):
+        driver, _, calls = make_driver(permissions={"application_tools": "deny"})
+>       session = driver.start({})
+                  ^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_claude_sessions.py:217: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+________ test_claude_raw_native_debug_retention_is_explicit_and_private ________
+
+make_driver = <function make_driver.<locals>.make at 0x7f392410e700>
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-0/test_claude_raw_native_debug_r0')
+
+    def test_claude_raw_native_debug_retention_is_explicit_and_private(make_driver, tmp_path):
+        driver, _, _ = make_driver(evidence_directory=str(tmp_path / "private-native"))
+>       session = driver.start({})
+                  ^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_claude_sessions.py:230: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+__ test_claude_resume_replaces_same_instance_connection_after_verified_launch __
+
+make_driver = <function make_driver.<locals>.make at 0x7f392454fba0>
+
+    def test_claude_resume_replaces_same_instance_connection_after_verified_launch(make_driver):
+        driver, _, _ = make_driver()
+>       source = driver.start({})
+                 ^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_claude_sessions.py:240: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+____ test_claude_application_callback_through_active_composition_and_sqlite ____
+
+self = <xorchestrate.application.Application object at 0x7f39240fa600>
+action = 'start_session'
+args = {'driver': 'worker', 'specification': {}, 'work_id': '6cc7bdcbc2c44afdbdd4efb7b1205bbc', 'idempotency_key': 'launch'}
+actor = 'owner'
+context = {'actor': 'owner', 'actor_record': None, 'arguments': {'driver': 'worker', 'specification': {}, 'work_id': '6cc7bdcbc2...n native callback provenance', 'title': 'Retain native callback provenance', 'status': 'open', 'inputs': {}, ...}, ...}
+perform = <function Application._create_session.<locals>.perform at 0x7f392454d8a0>
+
+    def _effect(self, action: str, args: JSON, actor: str, context: JSON, perform: Callable[[Record], Any]) -> JSON:
+        key = _digest([actor, args["idempotency_key"]])
+        request = {k: deepcopy(v) for k, v in args.items() if k != "idempotency_key"}
+        fingerprint = _digest({"action": action, "arguments": request})
+        with self.store.transaction() as tx:
+            self._verify_context(tx, context)
+            existing = tx.get("operation", key)
+            if existing:
+                if existing.data["fingerprint"] != fingerprint:
+                    raise Conflict("The idempotency key is already bound to a different request.")
+                return self._replay(existing)
+            data = {"action": action, "arguments": request, "fingerprint": fingerprint, "actor": actor,
+                    "idempotency_key": args["idempotency_key"], "status": "pending", "work_id": context["work"]["id"] if context.get("work") else None}
+            if action in {"start_session", "attach_session", "reconnect_session"}:
+                if args.get("actor_id"):
+                    self._require(tx, "actor", args["actor_id"])
+                provenance = {}
+                if context.get("resume_source"):
+                    source = context["resume_source"]
+                    if source["session"].get("pending_operation") and action != "reconnect_session":
+                        raise Conflict("The resume source has a pending or unresolved operation; reconcile it before another effect.")
+                    provenance["resume_source"] = {"session_id": source["session"]["id"], "version": source["session"]["version"],
+                        "start_operation_id": source["resume_receipt"]["id"]}
+                    data.update(deepcopy(provenance))
+                    data["unresolved_effects"] = list(dict.fromkeys([
+                        *source["session"].get("unresolved_effects", []),
+                        *([source["session"]["pending_operation"]] if source["session"].get("pending_operation") else []),
+                    ]))
+                session = self._create(tx, "session", actor, {
+                    "driver": context.get("resolved_driver", args["driver"]),
+                    "selection": {"requested": args["driver"], "resolved": context.get("resolved_driver", args["driver"]),
+                        "fallback_reason": "requested_driver_unavailable" if context.get("resolved_driver", args["driver"]) != args["driver"] else None}, "specification": args["specification"], "work_id": data["work_id"],
+                    "actor_id": args.get("actor_id", actor), "status": "starting", "backend": {}, "pending_operation": key,
+                    "start_operation_id": key, "unresolved_effects": data.get("unresolved_effects", []), **provenance,
+                })
+                data["session_id"] = session.key
+            elif action.endswith("_session"):
+                session = self._require(tx, "session", args["session_id"])
+                independent = action in {"poll_session", "stop_session", "detach_session"}
+                if not independent:
+                    self._check_recovered_effects(tx, session)
+                if session.data.get("pending_operation") and not independent:
+                    raise Conflict("A session operation is pending or unresolved; inspect it before another effect.")
+                if session.data["status"] not in ({"active", "unknown"} if independent else {"active"}):
+                    raise OrchestrationError("The session is not active.", "invalid_state")
+                if session.version != context["session"]["version"]:
+                    raise Conflict("The session changed after authorization.")
+                data.update({"session_id": session.key, "backend": deepcopy(session.data["backend"]), "independent": independent})
+                if not independent:
+                    tx.put("session", session.key, {**session.data, "pending_operation": key}, session.version)
+            elif action == "invoke":
+                data["capability"] = deepcopy(context["capability"])
+                self._create(tx, "invocation", actor, {
+                    "capability": args["capability"], "arguments": args["arguments"], "work_id": data["work_id"],
+                    "operation_id": key, "status": "pending",
+                }, key)
+            operation = self._create(tx, "operation", actor, data, key)
+        try:
+>           raw = perform(operation)
+                  ^^^^^^^^^^^^^^^^^^
+
+xorchestrate/application.py:688: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/application.py:580: in perform
+    return invoke(deepcopy(source["session"]["backend"]), specification) if source else invoke(specification)
+                                                                                        ^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:371: in start
+    return self._launch(specification)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/claude.py:298: in _launch
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+
+The above exception was the direct cause of the following exception:
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-0/test_claude_application_callba0')
+
+    def test_claude_application_callback_through_active_composition_and_sqlite(tmp_path):
+        from xorchestrate.composition import build
+        config = {"store": {"adapter": "sqlite", "options": {"path": str(tmp_path / "state.sqlite3")}},
+                  "sessions": {"worker": {"adapter": "claude", "options": {
+                      "command": [sys.executable, str(FIXTURE)], "env": {"CLAUDE_STATE_DIR": str(tmp_path / "native")},
+                      "application_tools": True, "terminal": "discard", "startup_timeout": 5, "timeout": 3}}}}
+        with build(config) as runtime:
+            app = runtime.application
+            work = app.call("create_work", {"goal": "Retain native callback provenance"})["work"]
+>           session = app.call("start_session", {"driver": "worker", "specification": {}, "work_id": work["id"], "idempotency_key": "launch"})["session"]
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_claude_sessions.py:261: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/application.py:237: in call
+    return getattr(self, f"_{action}")(arguments, actor, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/application.py:542: in _start_session
+    return self._create_session("start_session", args, actor, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/application.py:581: in _create_session
+    result = self._effect(action, args, actor, context, perform)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <xorchestrate.application.Application object at 0x7f39240fa600>
+action = 'start_session'
+args = {'driver': 'worker', 'specification': {}, 'work_id': '6cc7bdcbc2c44afdbdd4efb7b1205bbc', 'idempotency_key': 'launch'}
+actor = 'owner'
+context = {'actor': 'owner', 'actor_record': None, 'arguments': {'driver': 'worker', 'specification': {}, 'work_id': '6cc7bdcbc2...n native callback provenance', 'title': 'Retain native callback provenance', 'status': 'open', 'inputs': {}, ...}, ...}
+perform = <function Application._create_session.<locals>.perform at 0x7f392454d8a0>
+
+    def _effect(self, action: str, args: JSON, actor: str, context: JSON, perform: Callable[[Record], Any]) -> JSON:
+        key = _digest([actor, args["idempotency_key"]])
+        request = {k: deepcopy(v) for k, v in args.items() if k != "idempotency_key"}
+        fingerprint = _digest({"action": action, "arguments": request})
+        with self.store.transaction() as tx:
+            self._verify_context(tx, context)
+            existing = tx.get("operation", key)
+            if existing:
+                if existing.data["fingerprint"] != fingerprint:
+                    raise Conflict("The idempotency key is already bound to a different request.")
+                return self._replay(existing)
+            data = {"action": action, "arguments": request, "fingerprint": fingerprint, "actor": actor,
+                    "idempotency_key": args["idempotency_key"], "status": "pending", "work_id": context["work"]["id"] if context.get("work") else None}
+            if action in {"start_session", "attach_session", "reconnect_session"}:
+                if args.get("actor_id"):
+                    self._require(tx, "actor", args["actor_id"])
+                provenance = {}
+                if context.get("resume_source"):
+                    source = context["resume_source"]
+                    if source["session"].get("pending_operation") and action != "reconnect_session":
+                        raise Conflict("The resume source has a pending or unresolved operation; reconcile it before another effect.")
+                    provenance["resume_source"] = {"session_id": source["session"]["id"], "version": source["session"]["version"],
+                        "start_operation_id": source["resume_receipt"]["id"]}
+                    data.update(deepcopy(provenance))
+                    data["unresolved_effects"] = list(dict.fromkeys([
+                        *source["session"].get("unresolved_effects", []),
+                        *([source["session"]["pending_operation"]] if source["session"].get("pending_operation") else []),
+                    ]))
+                session = self._create(tx, "session", actor, {
+                    "driver": context.get("resolved_driver", args["driver"]),
+                    "selection": {"requested": args["driver"], "resolved": context.get("resolved_driver", args["driver"]),
+                        "fallback_reason": "requested_driver_unavailable" if context.get("resolved_driver", args["driver"]) != args["driver"] else None}, "specification": args["specification"], "work_id": data["work_id"],
+                    "actor_id": args.get("actor_id", actor), "status": "starting", "backend": {}, "pending_operation": key,
+                    "start_operation_id": key, "unresolved_effects": data.get("unresolved_effects", []), **provenance,
+                })
+                data["session_id"] = session.key
+            elif action.endswith("_session"):
+                session = self._require(tx, "session", args["session_id"])
+                independent = action in {"poll_session", "stop_session", "detach_session"}
+                if not independent:
+                    self._check_recovered_effects(tx, session)
+                if session.data.get("pending_operation") and not independent:
+                    raise Conflict("A session operation is pending or unresolved; inspect it before another effect.")
+                if session.data["status"] not in ({"active", "unknown"} if independent else {"active"}):
+                    raise OrchestrationError("The session is not active.", "invalid_state")
+                if session.version != context["session"]["version"]:
+                    raise Conflict("The session changed after authorization.")
+                data.update({"session_id": session.key, "backend": deepcopy(session.data["backend"]), "independent": independent})
+                if not independent:
+                    tx.put("session", session.key, {**session.data, "pending_operation": key}, session.version)
+            elif action == "invoke":
+                data["capability"] = deepcopy(context["capability"])
+                self._create(tx, "invocation", actor, {
+                    "capability": args["capability"], "arguments": args["arguments"], "work_id": data["work_id"],
+                    "operation_id": key, "status": "pending",
+                }, key)
+            operation = self._create(tx, "operation", actor, data, key)
+        try:
+            raw = perform(operation)
+        except Exception as error:
+            unknown = not isinstance(error, OrchestrationError) or error.details.get("outcome") not in {"failed", "not_started"}
+            status = "unknown" if unknown else "failed"
+            recording_error = None
+            try:
+                self._fail_effect(key, error, status)
+            except Exception as storage_error:
+                recording_error = _error_message(storage_error)
+>           raise OrchestrationError(_error_message(error), "operation_unknown" if unknown else "operation_failed", {
+                "operation_id": key, "outcome": status, "cause": getattr(error, "code", type(error).__name__),
+                "recording_error": recording_error,
+            }) from error
+E           xorchestrate.model.OrchestrationError: External operation did not return a verified result (PermissionError).
+
+xorchestrate/application.py:697: OrchestrationError
+_ TypeSafeTests.test_credentials_never_become_inputs_outputs_or_error_messages _
+
+self = <test_evaluation.TypeSafeTests testMethod=test_credentials_never_become_inputs_outputs_or_error_messages>
+
+    def setUp(self):
+        self.requests = []
+        self.response = {"model": "operator-selected-model", "answers": {"assessment": {
+            "type": "choice", "choice": "uncertain", "confidence": 0.6,
+            "probabilities": {"ready": 0.4, "uncertain": 0.6}}}, "usage": {"input_tokens": 3, "output_tokens": 2}}
+        self.status, self.extra_headers = 200, {}
+        test = self
+    
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                test.requests.append((dict(self.headers), json.loads(self.rfile.read(int(self.headers["Content-Length"])))))
+                self.send_response(test.status)
+                for name, value in test.extra_headers.items():
+                    self.send_header(name, value)
+                self.end_headers()
+                self.wfile.write(test.response if isinstance(test.response, bytes) else json.dumps(test.response).encode())
+    
+            def log_message(self, *args):
+                pass
+    
+>       self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_evaluation.py:91: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+________ TypeSafeTests.test_real_http_wire_and_configured_model_rubric _________
+
+self = <test_evaluation.TypeSafeTests testMethod=test_real_http_wire_and_configured_model_rubric>
+
+    def setUp(self):
+        self.requests = []
+        self.response = {"model": "operator-selected-model", "answers": {"assessment": {
+            "type": "choice", "choice": "uncertain", "confidence": 0.6,
+            "probabilities": {"ready": 0.4, "uncertain": 0.6}}}, "usage": {"input_tokens": 3, "output_tokens": 2}}
+        self.status, self.extra_headers = 200, {}
+        test = self
+    
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                test.requests.append((dict(self.headers), json.loads(self.rfile.read(int(self.headers["Content-Length"])))))
+                self.send_response(test.status)
+                for name, value in test.extra_headers.items():
+                    self.send_header(name, value)
+                self.end_headers()
+                self.wfile.write(test.response if isinstance(test.response, bytes) else json.dumps(test.response).encode())
+    
+            def log_message(self, *args):
+                pass
+    
+>       self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_evaluation.py:91: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+__ TypeSafeTests.test_redirect_http_error_and_malformed_response_are_distinct __
+
+self = <test_evaluation.TypeSafeTests testMethod=test_redirect_http_error_and_malformed_response_are_distinct>
+
+    def setUp(self):
+        self.requests = []
+        self.response = {"model": "operator-selected-model", "answers": {"assessment": {
+            "type": "choice", "choice": "uncertain", "confidence": 0.6,
+            "probabilities": {"ready": 0.4, "uncertain": 0.6}}}, "usage": {"input_tokens": 3, "output_tokens": 2}}
+        self.status, self.extra_headers = 200, {}
+        test = self
+    
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                test.requests.append((dict(self.headers), json.loads(self.rfile.read(int(self.headers["Content-Length"])))))
+                self.send_response(test.status)
+                for name, value in test.extra_headers.items():
+                    self.send_header(name, value)
+                self.end_headers()
+                self.wfile.write(test.response if isinstance(test.response, bytes) else json.dumps(test.response).encode())
+    
+            def log_message(self, *args):
+                pass
+    
+>       self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_evaluation.py:91: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+_ TypeSafeTests.test_unknown_outcome_and_budgets_reject_without_recommendation _
+
+self = <test_evaluation.TypeSafeTests testMethod=test_unknown_outcome_and_budgets_reject_without_recommendation>
+
+    def setUp(self):
+        self.requests = []
+        self.response = {"model": "operator-selected-model", "answers": {"assessment": {
+            "type": "choice", "choice": "uncertain", "confidence": 0.6,
+            "probabilities": {"ready": 0.4, "uncertain": 0.6}}}, "usage": {"input_tokens": 3, "output_tokens": 2}}
+        self.status, self.extra_headers = 200, {}
+        test = self
+    
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                test.requests.append((dict(self.headers), json.loads(self.rfile.read(int(self.headers["Content-Length"])))))
+                self.send_response(test.status)
+                for name, value in test.extra_headers.items():
+                    self.send_header(name, value)
+                self.end_headers()
+                self.wfile.write(test.response if isinstance(test.response, bytes) else json.dumps(test.response).encode())
+    
+            def log_message(self, *args):
+                pass
+    
+>       self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_evaluation.py:91: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+___ test_submission_then_callback_busy_delivery_and_unrelated_progress[grok] ___
+
+protocol = 'grok'
+
+    @pytest.mark.parametrize('protocol', ['codex', 'grok'])
+    def test_submission_then_callback_busy_delivery_and_unrelated_progress(protocol):
+        adapter = driver(protocol)
+        held = threading.Event()
+        release = threading.Event()
+        callbacks = []
+        observations = []
+        adapter.bind_observer(lambda context, event: observations.append((context, event)))
+        def callback(action, args, context, key):
+            callbacks.append((action, args, context, key))
+            if args.get('hold'):
+                held.set()
+                assert release.wait(5), 'test must release its native hold'
+            return {'received': args}
+        adapter.bind_application_tools([Capability('echo', 'echo', {'type': 'object'})], callback)
+        try:
+>           first = adapter.start({'context': {'session_id': 'app-first', 'actor': 'worker'}})
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_native_sessions.py:48: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/sessions.py:348: in start
+    return self._launch(specification, None)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/grok.py:247: in _launch
+    return self._start(specification, handshake)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/sessions.py:183: in _start
+    handshake(live, specification)
+xorchestrate/adapters/grok.py:217: in handshake
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+__ test_grok_requires_execution_observation_and_rejects_conflicting_call_ids ___
+
+    def test_grok_requires_execution_observation_and_rejects_conflicting_call_ids():
+        adapter = driver('grok', observation_timeout=.15)
+        called = []
+        adapter.bind_application_tools([Capability('echo', 'echo')], lambda *args: called.append(args) or {})
+        try:
+>           session = adapter.start({})
+                      ^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_native_sessions.py:75: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/sessions.py:348: in start
+    return self._launch(specification, None)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/grok.py:247: in _launch
+    return self._start(specification, handshake)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/sessions.py:183: in _start
+    handshake(live, specification)
+xorchestrate/adapters/grok.py:217: in handshake
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+_ test_native_callback_persists_trusted_evidence_through_active_composition[grok] _
+
+self = <xorchestrate.application.Application object at 0x7f3923e4bd70>
+action = 'start_session'
+args = {'driver': 'native', 'specification': {}, 'work_id': '6de9c4af890b44528c2adc2ce2e7f062', 'idempotency_key': 'start'}
+actor = 'owner'
+context = {'actor': 'owner', 'actor_record': None, 'arguments': {'driver': 'native', 'specification': {}, 'work_id': '6de9c4af89...work': {'goal': 'Retain native evidence', 'title': 'Retain native evidence', 'status': 'open', 'inputs': {}, ...}, ...}
+perform = <function Application._create_session.<locals>.perform at 0x7f3923ccb600>
+
+    def _effect(self, action: str, args: JSON, actor: str, context: JSON, perform: Callable[[Record], Any]) -> JSON:
+        key = _digest([actor, args["idempotency_key"]])
+        request = {k: deepcopy(v) for k, v in args.items() if k != "idempotency_key"}
+        fingerprint = _digest({"action": action, "arguments": request})
+        with self.store.transaction() as tx:
+            self._verify_context(tx, context)
+            existing = tx.get("operation", key)
+            if existing:
+                if existing.data["fingerprint"] != fingerprint:
+                    raise Conflict("The idempotency key is already bound to a different request.")
+                return self._replay(existing)
+            data = {"action": action, "arguments": request, "fingerprint": fingerprint, "actor": actor,
+                    "idempotency_key": args["idempotency_key"], "status": "pending", "work_id": context["work"]["id"] if context.get("work") else None}
+            if action in {"start_session", "attach_session", "reconnect_session"}:
+                if args.get("actor_id"):
+                    self._require(tx, "actor", args["actor_id"])
+                provenance = {}
+                if context.get("resume_source"):
+                    source = context["resume_source"]
+                    if source["session"].get("pending_operation") and action != "reconnect_session":
+                        raise Conflict("The resume source has a pending or unresolved operation; reconcile it before another effect.")
+                    provenance["resume_source"] = {"session_id": source["session"]["id"], "version": source["session"]["version"],
+                        "start_operation_id": source["resume_receipt"]["id"]}
+                    data.update(deepcopy(provenance))
+                    data["unresolved_effects"] = list(dict.fromkeys([
+                        *source["session"].get("unresolved_effects", []),
+                        *([source["session"]["pending_operation"]] if source["session"].get("pending_operation") else []),
+                    ]))
+                session = self._create(tx, "session", actor, {
+                    "driver": context.get("resolved_driver", args["driver"]),
+                    "selection": {"requested": args["driver"], "resolved": context.get("resolved_driver", args["driver"]),
+                        "fallback_reason": "requested_driver_unavailable" if context.get("resolved_driver", args["driver"]) != args["driver"] else None}, "specification": args["specification"], "work_id": data["work_id"],
+                    "actor_id": args.get("actor_id", actor), "status": "starting", "backend": {}, "pending_operation": key,
+                    "start_operation_id": key, "unresolved_effects": data.get("unresolved_effects", []), **provenance,
+                })
+                data["session_id"] = session.key
+            elif action.endswith("_session"):
+                session = self._require(tx, "session", args["session_id"])
+                independent = action in {"poll_session", "stop_session", "detach_session"}
+                if not independent:
+                    self._check_recovered_effects(tx, session)
+                if session.data.get("pending_operation") and not independent:
+                    raise Conflict("A session operation is pending or unresolved; inspect it before another effect.")
+                if session.data["status"] not in ({"active", "unknown"} if independent else {"active"}):
+                    raise OrchestrationError("The session is not active.", "invalid_state")
+                if session.version != context["session"]["version"]:
+                    raise Conflict("The session changed after authorization.")
+                data.update({"session_id": session.key, "backend": deepcopy(session.data["backend"]), "independent": independent})
+                if not independent:
+                    tx.put("session", session.key, {**session.data, "pending_operation": key}, session.version)
+            elif action == "invoke":
+                data["capability"] = deepcopy(context["capability"])
+                self._create(tx, "invocation", actor, {
+                    "capability": args["capability"], "arguments": args["arguments"], "work_id": data["work_id"],
+                    "operation_id": key, "status": "pending",
+                }, key)
+            operation = self._create(tx, "operation", actor, data, key)
+        try:
+>           raw = perform(operation)
+                  ^^^^^^^^^^^^^^^^^^
+
+xorchestrate/application.py:688: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/application.py:580: in perform
+    return invoke(deepcopy(source["session"]["backend"]), specification) if source else invoke(specification)
+                                                                                        ^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/sessions.py:348: in start
+    return self._launch(specification, None)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/grok.py:247: in _launch
+    return self._start(specification, handshake)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/sessions.py:183: in _start
+    handshake(live, specification)
+xorchestrate/adapters/grok.py:217: in handshake
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+
+The above exception was the direct cause of the following exception:
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-0/test_native_callback_persists_1')
+protocol = 'grok'
+
+    @pytest.mark.parametrize('protocol', ['codex', 'grok'])
+    def test_native_callback_persists_trusted_evidence_through_active_composition(tmp_path, protocol):
+        from xorchestrate.composition import build
+        config = {'store': {'adapter': 'sqlite', 'options': {'path': str(tmp_path / 'state.sqlite')}},
+                  'sessions': {'native': {'adapter': protocol, 'options': {
+                      'command': [sys.executable, str(PEER), protocol], 'timeout': 5,
+                      'application_tools': True, 'resume_supported': True}}}}
+        with build(config) as runtime:
+            app = runtime.application
+            work = app.call('create_work', {'goal': 'Retain native evidence'})['work']
+>           session = app.call('start_session', {'driver': 'native', 'specification': {}, 'work_id': work['id'],
+                                                'idempotency_key': 'start'})['session']
+
+tests/hexagonal/test_native_sessions.py:166: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/application.py:237: in call
+    return getattr(self, f"_{action}")(arguments, actor, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/application.py:542: in _start_session
+    return self._create_session("start_session", args, actor, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/application.py:581: in _create_session
+    result = self._effect(action, args, actor, context, perform)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <xorchestrate.application.Application object at 0x7f3923e4bd70>
+action = 'start_session'
+args = {'driver': 'native', 'specification': {}, 'work_id': '6de9c4af890b44528c2adc2ce2e7f062', 'idempotency_key': 'start'}
+actor = 'owner'
+context = {'actor': 'owner', 'actor_record': None, 'arguments': {'driver': 'native', 'specification': {}, 'work_id': '6de9c4af89...work': {'goal': 'Retain native evidence', 'title': 'Retain native evidence', 'status': 'open', 'inputs': {}, ...}, ...}
+perform = <function Application._create_session.<locals>.perform at 0x7f3923ccb600>
+
+    def _effect(self, action: str, args: JSON, actor: str, context: JSON, perform: Callable[[Record], Any]) -> JSON:
+        key = _digest([actor, args["idempotency_key"]])
+        request = {k: deepcopy(v) for k, v in args.items() if k != "idempotency_key"}
+        fingerprint = _digest({"action": action, "arguments": request})
+        with self.store.transaction() as tx:
+            self._verify_context(tx, context)
+            existing = tx.get("operation", key)
+            if existing:
+                if existing.data["fingerprint"] != fingerprint:
+                    raise Conflict("The idempotency key is already bound to a different request.")
+                return self._replay(existing)
+            data = {"action": action, "arguments": request, "fingerprint": fingerprint, "actor": actor,
+                    "idempotency_key": args["idempotency_key"], "status": "pending", "work_id": context["work"]["id"] if context.get("work") else None}
+            if action in {"start_session", "attach_session", "reconnect_session"}:
+                if args.get("actor_id"):
+                    self._require(tx, "actor", args["actor_id"])
+                provenance = {}
+                if context.get("resume_source"):
+                    source = context["resume_source"]
+                    if source["session"].get("pending_operation") and action != "reconnect_session":
+                        raise Conflict("The resume source has a pending or unresolved operation; reconcile it before another effect.")
+                    provenance["resume_source"] = {"session_id": source["session"]["id"], "version": source["session"]["version"],
+                        "start_operation_id": source["resume_receipt"]["id"]}
+                    data.update(deepcopy(provenance))
+                    data["unresolved_effects"] = list(dict.fromkeys([
+                        *source["session"].get("unresolved_effects", []),
+                        *([source["session"]["pending_operation"]] if source["session"].get("pending_operation") else []),
+                    ]))
+                session = self._create(tx, "session", actor, {
+                    "driver": context.get("resolved_driver", args["driver"]),
+                    "selection": {"requested": args["driver"], "resolved": context.get("resolved_driver", args["driver"]),
+                        "fallback_reason": "requested_driver_unavailable" if context.get("resolved_driver", args["driver"]) != args["driver"] else None}, "specification": args["specification"], "work_id": data["work_id"],
+                    "actor_id": args.get("actor_id", actor), "status": "starting", "backend": {}, "pending_operation": key,
+                    "start_operation_id": key, "unresolved_effects": data.get("unresolved_effects", []), **provenance,
+                })
+                data["session_id"] = session.key
+            elif action.endswith("_session"):
+                session = self._require(tx, "session", args["session_id"])
+                independent = action in {"poll_session", "stop_session", "detach_session"}
+                if not independent:
+                    self._check_recovered_effects(tx, session)
+                if session.data.get("pending_operation") and not independent:
+                    raise Conflict("A session operation is pending or unresolved; inspect it before another effect.")
+                if session.data["status"] not in ({"active", "unknown"} if independent else {"active"}):
+                    raise OrchestrationError("The session is not active.", "invalid_state")
+                if session.version != context["session"]["version"]:
+                    raise Conflict("The session changed after authorization.")
+                data.update({"session_id": session.key, "backend": deepcopy(session.data["backend"]), "independent": independent})
+                if not independent:
+                    tx.put("session", session.key, {**session.data, "pending_operation": key}, session.version)
+            elif action == "invoke":
+                data["capability"] = deepcopy(context["capability"])
+                self._create(tx, "invocation", actor, {
+                    "capability": args["capability"], "arguments": args["arguments"], "work_id": data["work_id"],
+                    "operation_id": key, "status": "pending",
+                }, key)
+            operation = self._create(tx, "operation", actor, data, key)
+        try:
+            raw = perform(operation)
+        except Exception as error:
+            unknown = not isinstance(error, OrchestrationError) or error.details.get("outcome") not in {"failed", "not_started"}
+            status = "unknown" if unknown else "failed"
+            recording_error = None
+            try:
+                self._fail_effect(key, error, status)
+            except Exception as storage_error:
+                recording_error = _error_message(storage_error)
+>           raise OrchestrationError(_error_message(error), "operation_unknown" if unknown else "operation_failed", {
+                "operation_id": key, "outcome": status, "cause": getattr(error, "code", type(error).__name__),
+                "recording_error": recording_error,
+            }) from error
+E           xorchestrate.model.OrchestrationError: External operation did not return a verified result (PermissionError).
+
+xorchestrate/application.py:697: OrchestrationError
+____ test_private_native_marker_retained_across_exchanges_and_resume[grok] _____
+
+tmp_path = PosixPath('/tmp/pytest-of-agent/pytest-0/test_private_native_marker_ret1')
+protocol = 'grok'
+
+    @pytest.mark.parametrize('protocol', ['codex', 'grok'])
+    def test_private_native_marker_retained_across_exchanges_and_resume(tmp_path, protocol):
+        options = {'env': {'PEER_STATE_FILE': str(tmp_path / 'peer-state.json')}, 'resume_supported': True}
+        calls = []
+        observations = []
+        adapter = driver(protocol, **options)
+        adapter.bind_application_tools([Capability('echo', 'echo')], lambda action, args, context, key: calls.append((args, context)) or {})
+        adapter.bind_observer(lambda context, event: observations.append(event))
+        try:
+>           source = adapter.start({})
+                     ^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_native_sessions.py:211: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/sessions.py:348: in start
+    return self._launch(specification, None)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/grok.py:247: in _launch
+    return self._start(specification, handshake)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/sessions.py:183: in _start
+    handshake(live, specification)
+xorchestrate/adapters/grok.py:217: in handshake
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+_ test_grok_mcp_request_replay_and_identical_input_observations_remain_one_to_one _
+
+    def test_grok_mcp_request_replay_and_identical_input_observations_remain_one_to_one():
+        adapter = driver('grok')
+        called = []
+        adapter.bind_application_tools([Capability('echo', 'echo')], lambda action, args, context, key: called.append(context['call_id']) or {'ok': True})
+        try:
+>           session = adapter.start({})
+                      ^^^^^^^^^^^^^^^^^
+
+tests/hexagonal/test_native_sessions.py:302: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+xorchestrate/adapters/sessions.py:348: in start
+    return self._launch(specification, None)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/grok.py:247: in _launch
+    return self._start(specification, handshake)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/sessions.py:183: in _start
+    handshake(live, specification)
+xorchestrate/adapters/grok.py:217: in handshake
+    live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+xorchestrate/adapters/native_gateway.py:111: in __init__
+    else _Server(("127.0.0.1", 0), Request))
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socketserver.py:453: in __init__
+    self.socket = socket.socket(self.address_family,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <socket.socket fd=-1, family=0, type=0, proto=0>
+family = <AddressFamily.AF_INET: 2>, type = <SocketKind.SOCK_STREAM: 1>
+proto = 0, fileno = None
+
+    def __init__(self, family=-1, type=-1, proto=-1, fileno=None):
+        # For user code address family and type values are IntEnum members, but
+        # for the underlying _socket.socket they're just integers. The
+        # constructor of _socket.socket converts the given argument to an
+        # integer automatically.
+        if fileno is None:
+            if family == -1:
+                family = AF_INET
+            if type == -1:
+                type = SOCK_STREAM
+            if proto == -1:
+                proto = 0
+>       _socket.socket.__init__(self, family, type, proto, fileno)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/socket.py:233: PermissionError
+=========================== short test summary info ============================
+FAILED experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py::test_selected_boundary_executes_both_healthy_and_intended_fault[p_busy]
+FAILED experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py::test_selected_boundary_executes_both_healthy_and_intended_fault[p_replay]
+FAILED tests/hexagonal/test_claude_sessions.py::test_claude_retained_context_callbacks_progress_without_poll_and_native_identity
+FAILED tests/hexagonal/test_claude_sessions.py::test_claude_channel_delivery_during_outstanding_callback_and_unrelated_session
+FAILED tests/hexagonal/test_claude_sessions.py::test_claude_requested_resolved_and_observed_settings_and_resume
+FAILED tests/hexagonal/test_claude_sessions.py::test_claude_changed_configuration_requires_explicit_policy
+FAILED tests/hexagonal/test_claude_sessions.py::test_claude_native_permissions_independent_of_application_tools
+FAILED tests/hexagonal/test_claude_sessions.py::test_claude_callback_requires_matching_native_hook
+FAILED tests/hexagonal/test_claude_sessions.py::test_claude_start_requires_observed_identity_and_channel_registration[wrong_identity-session_identity]
+FAILED tests/hexagonal/test_claude_sessions.py::test_claude_start_requires_observed_identity_and_channel_registration[missing_registration-session_start_timeout]
+FAILED tests/hexagonal/test_claude_sessions.py::test_claude_start_requires_observed_identity_and_channel_registration[forged_registration-session_start_timeout]
+FAILED tests/hexagonal/test_claude_sessions.py::test_claude_conflicting_native_call_id_and_missing_hook_rejected
+FAILED tests/hexagonal/test_claude_sessions.py::test_claude_denied_application_tool_cannot_execute_via_gateway
+FAILED tests/hexagonal/test_claude_sessions.py::test_claude_raw_native_debug_retention_is_explicit_and_private
+FAILED tests/hexagonal/test_claude_sessions.py::test_claude_resume_replaces_same_instance_connection_after_verified_launch
+FAILED tests/hexagonal/test_claude_sessions.py::test_claude_application_callback_through_active_composition_and_sqlite
+FAILED tests/hexagonal/test_evaluation.py::TypeSafeTests::test_credentials_never_become_inputs_outputs_or_error_messages
+FAILED tests/hexagonal/test_evaluation.py::TypeSafeTests::test_real_http_wire_and_configured_model_rubric
+FAILED tests/hexagonal/test_evaluation.py::TypeSafeTests::test_redirect_http_error_and_malformed_response_are_distinct
+FAILED tests/hexagonal/test_evaluation.py::TypeSafeTests::test_unknown_outcome_and_budgets_reject_without_recommendation
+FAILED tests/hexagonal/test_native_sessions.py::test_submission_then_callback_busy_delivery_and_unrelated_progress[grok]
+FAILED tests/hexagonal/test_native_sessions.py::test_grok_requires_execution_observation_and_rejects_conflicting_call_ids
+FAILED tests/hexagonal/test_native_sessions.py::test_native_callback_persists_trusted_evidence_through_active_composition[grok]
+FAILED tests/hexagonal/test_native_sessions.py::test_private_native_marker_retained_across_exchanges_and_resume[grok]
+FAILED tests/hexagonal/test_native_sessions.py::test_grok_mcp_request_replay_and_identical_input_observations_remain_one_to_one
+25 failed, 666 passed, 8 skipped, 172 subtests passed in 32.60s

@@ -1,0 +1,2490 @@
+{
+  "P4_same_check_lists_before_after": {
+    "executed": 10,
+    "same": 10
+  },
+  "actual_acceptance_outcomes": {
+    "all_correct": true,
+    "cases": 3,
+    "executions": 23,
+    "groups": 1,
+    "rows": [
+      {
+        "accepted_after": true,
+        "action": "accept",
+        "case_id": "c8b932080dc3e",
+        "correct": true,
+        "independent_should_accept": true,
+        "policy": "P0"
+      },
+      {
+        "accepted_after": true,
+        "action": "accept",
+        "case_id": "c8b932080dc3e",
+        "correct": true,
+        "independent_should_accept": true,
+        "policy": "P0_probe"
+      },
+      {
+        "accepted_after": true,
+        "action": "accept",
+        "case_id": "c8b932080dc3e",
+        "correct": true,
+        "independent_should_accept": true,
+        "policy": "P1"
+      },
+      {
+        "accepted_after": true,
+        "action": "accept",
+        "case_id": "c8b932080dc3e",
+        "correct": true,
+        "independent_should_accept": true,
+        "policy": "P2"
+      },
+      {
+        "accepted_after": true,
+        "action": "accept",
+        "case_id": "c8b932080dc3e",
+        "correct": true,
+        "independent_should_accept": true,
+        "policy": "P3"
+      },
+      {
+        "accepted_after": true,
+        "action": "accept",
+        "case_id": "c8b932080dc3e",
+        "correct": true,
+        "independent_should_accept": true,
+        "policy": "P4"
+      },
+      {
+        "accepted_after": false,
+        "action": "reject",
+        "case_id": "c06e2dd37f2ab",
+        "correct": true,
+        "independent_should_accept": false,
+        "policy": "P0"
+      },
+      {
+        "accepted_after": false,
+        "action": "reject",
+        "case_id": "c06e2dd37f2ab",
+        "correct": true,
+        "independent_should_accept": false,
+        "policy": "P0_probe"
+      },
+      {
+        "accepted_after": false,
+        "action": "reject",
+        "case_id": "c06e2dd37f2ab",
+        "correct": true,
+        "independent_should_accept": false,
+        "policy": "P1"
+      },
+      {
+        "accepted_after": false,
+        "action": "reject",
+        "case_id": "c06e2dd37f2ab",
+        "correct": true,
+        "independent_should_accept": false,
+        "policy": "P2"
+      },
+      {
+        "accepted_after": false,
+        "action": "reject",
+        "case_id": "c06e2dd37f2ab",
+        "correct": true,
+        "independent_should_accept": false,
+        "policy": "P3"
+      },
+      {
+        "accepted_after": false,
+        "action": "reject",
+        "case_id": "c06e2dd37f2ab",
+        "correct": true,
+        "independent_should_accept": false,
+        "policy": "P4"
+      },
+      {
+        "accepted_after": false,
+        "action": "investigate",
+        "case_id": "c593af9fb49a0",
+        "correct": true,
+        "independent_should_accept": false,
+        "policy": "P0"
+      },
+      {
+        "accepted_after": false,
+        "action": "reject",
+        "case_id": "c593af9fb49a0",
+        "correct": true,
+        "independent_should_accept": false,
+        "policy": "P0_probe"
+      },
+      {
+        "accepted_after": false,
+        "action": "investigate",
+        "case_id": "c593af9fb49a0",
+        "correct": true,
+        "independent_should_accept": false,
+        "policy": "P1"
+      },
+      {
+        "accepted_after": false,
+        "action": "reject",
+        "case_id": "c593af9fb49a0",
+        "correct": true,
+        "independent_should_accept": false,
+        "policy": "P2"
+      },
+      {
+        "accepted_after": false,
+        "action": "reject",
+        "case_id": "c593af9fb49a0",
+        "correct": true,
+        "independent_should_accept": false,
+        "policy": "P3"
+      },
+      {
+        "accepted_after": false,
+        "action": "reject",
+        "case_id": "c593af9fb49a0",
+        "correct": true,
+        "independent_should_accept": false,
+        "policy": "P4"
+      },
+      {
+        "accepted_after": false,
+        "action": "reject",
+        "case_id": "c06e2dd37f2ab",
+        "correct": true,
+        "independent_should_accept": false,
+        "policy": "never"
+      },
+      {
+        "accepted_after": false,
+        "action": "reject",
+        "case_id": "c06e2dd37f2ab",
+        "correct": true,
+        "independent_should_accept": false,
+        "policy": "always"
+      },
+      {
+        "accepted_after": false,
+        "action": "reject",
+        "case_id": "c06e2dd37f2ab",
+        "correct": true,
+        "independent_should_accept": false,
+        "policy": "random"
+      },
+      {
+        "accepted_after": false,
+        "action": "reject",
+        "case_id": "c06e2dd37f2ab",
+        "correct": true,
+        "independent_should_accept": false,
+        "policy": "risk"
+      },
+      {
+        "accepted_after": false,
+        "action": "reject",
+        "case_id": "c06e2dd37f2ab",
+        "correct": true,
+        "independent_should_accept": false,
+        "policy": "reasoning_only"
+      }
+    ]
+  },
+  "collection": {
+    "actual_total_usd": null,
+    "jev_calls": 103,
+    "jev_input_tokens": 540670,
+    "jev_list_price_usd": 0.02270814,
+    "jev_output_tokens": 89137,
+    "native_actual_cost_usd": null,
+    "native_calls": 22
+  },
+  "comparisons": {
+    "P0->P0_probe": {
+      "all_known_actions": {
+        "action_changes": [
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c19acb40f8797"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c1c062765510d"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c51eabfc2dae5"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c593af9fb49a0"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c9de3dd808cb8"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "cb482dcc4a0c1"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "cbfa1b0cc1f0f"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "cf22aab3d75cf"
+          }
+        ],
+        "gross_loss_reduction_assumed_usd": {
+          "consequential": 16.0,
+          "low_stakes": 2.0
+        },
+        "n": 24,
+        "transitions": {
+          "right->right": 16,
+          "unresolved->right": 8
+        }
+      },
+      "published_status_ok_denominator": {
+        "action_changes": [
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c19acb40f8797"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c1c062765510d"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c51eabfc2dae5"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c593af9fb49a0"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c9de3dd808cb8"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "cb482dcc4a0c1"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "cbfa1b0cc1f0f"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "cf22aab3d75cf"
+          }
+        ],
+        "gross_loss_reduction_assumed_usd": {
+          "consequential": 16.0,
+          "low_stakes": 2.0
+        },
+        "n": 24,
+        "transitions": {
+          "right->right": 16,
+          "unresolved->right": 8
+        }
+      }
+    },
+    "P0->P1": {
+      "all_known_actions": {
+        "action_changes": [
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "c0fb9a45eb2da"
+          },
+          {
+            "after": "reject",
+            "before": "accept",
+            "case_id": "c5af5e427a2f3"
+          },
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "c5dd2167f348a"
+          },
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "caeff6c6c4681"
+          },
+          {
+            "after": "accept",
+            "before": "reject",
+            "case_id": "cef7128badec1"
+          }
+        ],
+        "gross_loss_reduction_assumed_usd": {
+          "consequential": -126.0,
+          "low_stakes": -3.25
+        },
+        "n": 24,
+        "transitions": {
+          "right->right": 11,
+          "right->unresolved": 3,
+          "right->wrong": 2,
+          "unresolved->unresolved": 8
+        }
+      },
+      "published_status_ok_denominator": {
+        "action_changes": [
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "c0fb9a45eb2da"
+          },
+          {
+            "after": "reject",
+            "before": "accept",
+            "case_id": "c5af5e427a2f3"
+          },
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "c5dd2167f348a"
+          },
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "caeff6c6c4681"
+          },
+          {
+            "after": "accept",
+            "before": "reject",
+            "case_id": "cef7128badec1"
+          }
+        ],
+        "gross_loss_reduction_assumed_usd": {
+          "consequential": -126.0,
+          "low_stakes": -3.25
+        },
+        "n": 24,
+        "transitions": {
+          "right->right": 11,
+          "right->unresolved": 3,
+          "right->wrong": 2,
+          "unresolved->unresolved": 8
+        }
+      }
+    },
+    "P0->P4": {
+      "all_known_actions": {
+        "action_changes": [
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c19acb40f8797"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c1c062765510d"
+          },
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "c4ac02ef39bfc"
+          },
+          {
+            "after": "accept",
+            "before": "investigate",
+            "case_id": "c51eabfc2dae5"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c593af9fb49a0"
+          },
+          {
+            "after": "defer",
+            "before": "accept",
+            "case_id": "c5dd2167f348a"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c9de3dd808cb8"
+          },
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "cabe25ecf8ef4"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "cb482dcc4a0c1"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "cbfa1b0cc1f0f"
+          },
+          {
+            "after": "accept",
+            "before": "reject",
+            "case_id": "cef7128badec1"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "cf22aab3d75cf"
+          }
+        ],
+        "gross_loss_reduction_assumed_usd": {
+          "consequential": -193.0,
+          "low_stakes": -2.6
+        },
+        "n": 24,
+        "transitions": {
+          "right->right": 12,
+          "right->unresolved": 3,
+          "right->wrong": 1,
+          "unresolved->right": 7,
+          "unresolved->wrong": 1
+        }
+      },
+      "published_status_ok_denominator": {
+        "action_changes": [
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c19acb40f8797"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c1c062765510d"
+          },
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "c4ac02ef39bfc"
+          },
+          {
+            "after": "accept",
+            "before": "investigate",
+            "case_id": "c51eabfc2dae5"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c593af9fb49a0"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c9de3dd808cb8"
+          },
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "cabe25ecf8ef4"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "cb482dcc4a0c1"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "cbfa1b0cc1f0f"
+          },
+          {
+            "after": "accept",
+            "before": "reject",
+            "case_id": "cef7128badec1"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "cf22aab3d75cf"
+          }
+        ],
+        "gross_loss_reduction_assumed_usd": {
+          "consequential": -188.0,
+          "low_stakes": -2.5
+        },
+        "n": 23,
+        "transitions": {
+          "right->right": 12,
+          "right->unresolved": 2,
+          "right->wrong": 1,
+          "unresolved->right": 7,
+          "unresolved->wrong": 1
+        }
+      }
+    },
+    "P0_probe->P2": {
+      "all_known_actions": {
+        "action_changes": [
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "c0fb9a45eb2da"
+          },
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "c4ac02ef39bfc"
+          },
+          {
+            "after": "accept",
+            "before": "reject",
+            "case_id": "c51eabfc2dae5"
+          },
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "c5af5e427a2f3"
+          },
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "c5dd2167f348a"
+          },
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "caeff6c6c4681"
+          },
+          {
+            "after": "accept",
+            "before": "reject",
+            "case_id": "cef7128badec1"
+          },
+          {
+            "after": "investigate",
+            "before": "reject",
+            "case_id": "cf22aab3d75cf"
+          }
+        ],
+        "gross_loss_reduction_assumed_usd": {
+          "consequential": -212.0,
+          "low_stakes": -5.5
+        },
+        "n": 24,
+        "transitions": {
+          "right->right": 16,
+          "right->unresolved": 6,
+          "right->wrong": 2
+        }
+      },
+      "published_status_ok_denominator": {
+        "action_changes": [
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "c0fb9a45eb2da"
+          },
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "c4ac02ef39bfc"
+          },
+          {
+            "after": "accept",
+            "before": "reject",
+            "case_id": "c51eabfc2dae5"
+          },
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "c5af5e427a2f3"
+          },
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "c5dd2167f348a"
+          },
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "caeff6c6c4681"
+          },
+          {
+            "after": "accept",
+            "before": "reject",
+            "case_id": "cef7128badec1"
+          },
+          {
+            "after": "investigate",
+            "before": "reject",
+            "case_id": "cf22aab3d75cf"
+          }
+        ],
+        "gross_loss_reduction_assumed_usd": {
+          "consequential": -212.0,
+          "low_stakes": -5.5
+        },
+        "n": 24,
+        "transitions": {
+          "right->right": 16,
+          "right->unresolved": 6,
+          "right->wrong": 2
+        }
+      }
+    },
+    "P1->P2": {
+      "all_known_actions": {
+        "action_changes": [
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c19acb40f8797"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c1c062765510d"
+          },
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "c4ac02ef39bfc"
+          },
+          {
+            "after": "accept",
+            "before": "investigate",
+            "case_id": "c51eabfc2dae5"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c593af9fb49a0"
+          },
+          {
+            "after": "investigate",
+            "before": "reject",
+            "case_id": "c5af5e427a2f3"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c9de3dd808cb8"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "cb482dcc4a0c1"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "cbfa1b0cc1f0f"
+          }
+        ],
+        "gross_loss_reduction_assumed_usd": {
+          "consequential": -70.0,
+          "low_stakes": -0.25
+        },
+        "n": 24,
+        "transitions": {
+          "right->right": 10,
+          "right->unresolved": 1,
+          "unresolved->right": 6,
+          "unresolved->unresolved": 4,
+          "unresolved->wrong": 1,
+          "wrong->unresolved": 1,
+          "wrong->wrong": 1
+        }
+      },
+      "published_status_ok_denominator": {
+        "action_changes": [
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c19acb40f8797"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c1c062765510d"
+          },
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "c4ac02ef39bfc"
+          },
+          {
+            "after": "accept",
+            "before": "investigate",
+            "case_id": "c51eabfc2dae5"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c593af9fb49a0"
+          },
+          {
+            "after": "investigate",
+            "before": "reject",
+            "case_id": "c5af5e427a2f3"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c9de3dd808cb8"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "cb482dcc4a0c1"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "cbfa1b0cc1f0f"
+          }
+        ],
+        "gross_loss_reduction_assumed_usd": {
+          "consequential": -70.0,
+          "low_stakes": -0.25
+        },
+        "n": 24,
+        "transitions": {
+          "right->right": 10,
+          "right->unresolved": 1,
+          "unresolved->right": 6,
+          "unresolved->unresolved": 4,
+          "unresolved->wrong": 1,
+          "wrong->unresolved": 1,
+          "wrong->wrong": 1
+        }
+      }
+    },
+    "P2->P3": {
+      "all_known_actions": {
+        "action_changes": [
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "cabe25ecf8ef4"
+          }
+        ],
+        "gross_loss_reduction_assumed_usd": {
+          "consequential": -2.0,
+          "low_stakes": -0.25
+        },
+        "n": 24,
+        "transitions": {
+          "right->right": 15,
+          "right->unresolved": 1,
+          "unresolved->unresolved": 6,
+          "wrong->wrong": 2
+        }
+      },
+      "published_status_ok_denominator": {
+        "action_changes": [
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "cabe25ecf8ef4"
+          }
+        ],
+        "gross_loss_reduction_assumed_usd": {
+          "consequential": -2.0,
+          "low_stakes": -0.25
+        },
+        "n": 24,
+        "transitions": {
+          "right->right": 15,
+          "right->unresolved": 1,
+          "unresolved->unresolved": 6,
+          "wrong->wrong": 2
+        }
+      }
+    },
+    "P3->P4": {
+      "all_known_actions": {
+        "action_changes": [
+          {
+            "after": "accept",
+            "before": "investigate",
+            "case_id": "c0fb9a45eb2da"
+          },
+          {
+            "after": "accept",
+            "before": "investigate",
+            "case_id": "c5af5e427a2f3"
+          },
+          {
+            "after": "defer",
+            "before": "investigate",
+            "case_id": "c5dd2167f348a"
+          },
+          {
+            "after": "accept",
+            "before": "investigate",
+            "case_id": "caeff6c6c4681"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "cf22aab3d75cf"
+          }
+        ],
+        "gross_loss_reduction_assumed_usd": {
+          "consequential": 5.0,
+          "low_stakes": 1.15
+        },
+        "n": 24,
+        "transitions": {
+          "right->right": 15,
+          "unresolved->right": 4,
+          "unresolved->unresolved": 3,
+          "wrong->wrong": 2
+        }
+      },
+      "published_status_ok_denominator": {
+        "action_changes": [
+          {
+            "after": "accept",
+            "before": "investigate",
+            "case_id": "c0fb9a45eb2da"
+          },
+          {
+            "after": "accept",
+            "before": "investigate",
+            "case_id": "c5af5e427a2f3"
+          },
+          {
+            "after": "accept",
+            "before": "investigate",
+            "case_id": "caeff6c6c4681"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "cf22aab3d75cf"
+          }
+        ],
+        "gross_loss_reduction_assumed_usd": {
+          "consequential": 8.0,
+          "low_stakes": 1.0
+        },
+        "n": 23,
+        "transitions": {
+          "right->right": 15,
+          "unresolved->right": 4,
+          "unresolved->unresolved": 2,
+          "wrong->wrong": 2
+        }
+      }
+    },
+    "never->always": {
+      "all_known_actions": {
+        "action_changes": [
+          {
+            "after": "accept",
+            "before": "investigate",
+            "case_id": "c0fb9a45eb2da"
+          },
+          {
+            "after": "accept",
+            "before": "investigate",
+            "case_id": "c4ac02ef39bfc"
+          },
+          {
+            "after": "reject",
+            "before": "accept",
+            "case_id": "c51eabfc2dae5"
+          },
+          {
+            "after": "accept",
+            "before": "investigate",
+            "case_id": "c5af5e427a2f3"
+          },
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "c85b37db76aaa"
+          }
+        ],
+        "gross_loss_reduction_assumed_usd": {
+          "consequential": 104.0,
+          "low_stakes": 2.5
+        },
+        "n": 11,
+        "transitions": {
+          "right->right": 6,
+          "right->unresolved": 1,
+          "unresolved->right": 3,
+          "wrong->right": 1
+        }
+      },
+      "published_status_ok_denominator": {
+        "action_changes": [
+          {
+            "after": "accept",
+            "before": "investigate",
+            "case_id": "c0fb9a45eb2da"
+          },
+          {
+            "after": "accept",
+            "before": "investigate",
+            "case_id": "c4ac02ef39bfc"
+          },
+          {
+            "after": "reject",
+            "before": "accept",
+            "case_id": "c51eabfc2dae5"
+          },
+          {
+            "after": "accept",
+            "before": "investigate",
+            "case_id": "c5af5e427a2f3"
+          },
+          {
+            "after": "investigate",
+            "before": "accept",
+            "case_id": "c85b37db76aaa"
+          }
+        ],
+        "gross_loss_reduction_assumed_usd": {
+          "consequential": 104.0,
+          "low_stakes": 2.5
+        },
+        "n": 11,
+        "transitions": {
+          "right->right": 6,
+          "right->unresolved": 1,
+          "unresolved->right": 3,
+          "wrong->right": 1
+        }
+      }
+    },
+    "reasoning_only->always": {
+      "all_known_actions": {
+        "action_changes": [
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c19acb40f8797"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c1c062765510d"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c51eabfc2dae5"
+          }
+        ],
+        "gross_loss_reduction_assumed_usd": {
+          "consequential": 6.0,
+          "low_stakes": 0.75
+        },
+        "n": 11,
+        "transitions": {
+          "right->right": 7,
+          "unresolved->right": 3,
+          "unresolved->unresolved": 1
+        }
+      },
+      "published_status_ok_denominator": {
+        "action_changes": [
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c19acb40f8797"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c1c062765510d"
+          },
+          {
+            "after": "reject",
+            "before": "investigate",
+            "case_id": "c51eabfc2dae5"
+          }
+        ],
+        "gross_loss_reduction_assumed_usd": {
+          "consequential": 6.0,
+          "low_stakes": 0.75
+        },
+        "n": 11,
+        "transitions": {
+          "right->right": 7,
+          "unresolved->right": 3,
+          "unresolved->unresolved": 1
+        }
+      }
+    }
+  },
+  "main_sha256": {
+    "cases.json": "2966e0c647dacee808bb6d6dd9eb6b6d5cf920d65fc216d3c10d810ebdd95030",
+    "decisions.json": "bc719a4bc807bd28ea4812017427028e2863f08ca4d34c218f5532f554f58992",
+    "packets.json": "0193addc3ab2e6f7df36ad2f73bccc3b1470c895d8d8f5ac6324c5e44fb5408b",
+    "probes.json": "376601d1821bea9049de0dd2b49d9523cf852ddec914a73b7c11a555f43667e4",
+    "reasoning-attempts.json": "30f404303a5e120ec5a80b7185f84096c055bdf1e8619c23f05722adcc551e3d",
+    "transport/attempts.jsonl": "ff57346942bdf44c77c8482268307ca28b1cc9b8eb8a219938716853594f2a3e"
+  },
+  "native_input_comparison": [
+    {
+      "case_id": "c06e2dd37f2ab",
+      "fallback_has_jev_assessment": true,
+      "fallback_has_probe": true,
+      "initial_action": "reject",
+      "postP3_action": "reject",
+      "same_original_evidence": true
+    },
+    {
+      "case_id": "c0fb9a45eb2da",
+      "fallback_has_jev_assessment": true,
+      "fallback_has_probe": true,
+      "initial_action": "accept",
+      "postP3_action": "accept",
+      "same_original_evidence": true
+    },
+    {
+      "case_id": "c19acb40f8797",
+      "fallback_has_jev_assessment": true,
+      "fallback_has_probe": true,
+      "initial_action": "investigate",
+      "postP3_action": "reject",
+      "same_original_evidence": true
+    },
+    {
+      "case_id": "c1c062765510d",
+      "fallback_has_jev_assessment": true,
+      "fallback_has_probe": true,
+      "initial_action": "investigate",
+      "postP3_action": "reject",
+      "same_original_evidence": true
+    },
+    {
+      "case_id": "c3e667a1b7532",
+      "fallback_has_jev_assessment": true,
+      "fallback_has_probe": true,
+      "initial_action": "reject",
+      "postP3_action": "reject",
+      "same_original_evidence": true
+    },
+    {
+      "case_id": "c4ac02ef39bfc",
+      "fallback_has_jev_assessment": true,
+      "fallback_has_probe": true,
+      "initial_action": "accept",
+      "postP3_action": "accept",
+      "same_original_evidence": true
+    },
+    {
+      "case_id": "c51eabfc2dae5",
+      "fallback_has_jev_assessment": true,
+      "fallback_has_probe": true,
+      "initial_action": "investigate",
+      "postP3_action": "reject",
+      "same_original_evidence": true
+    },
+    {
+      "case_id": "c5af5e427a2f3",
+      "fallback_has_jev_assessment": true,
+      "fallback_has_probe": true,
+      "initial_action": "accept",
+      "postP3_action": "accept",
+      "same_original_evidence": true
+    },
+    {
+      "case_id": "c756d2780a92a",
+      "fallback_has_jev_assessment": true,
+      "fallback_has_probe": true,
+      "initial_action": "reject",
+      "postP3_action": "reject",
+      "same_original_evidence": true
+    },
+    {
+      "case_id": "c85b37db76aaa",
+      "fallback_has_jev_assessment": true,
+      "fallback_has_probe": true,
+      "initial_action": "accept",
+      "postP3_action": "accept",
+      "same_original_evidence": true
+    },
+    {
+      "case_id": "c94d0a24d43b5",
+      "fallback_has_jev_assessment": true,
+      "fallback_has_probe": true,
+      "initial_action": "reject",
+      "postP3_action": "reject",
+      "same_original_evidence": true
+    }
+  ],
+  "paired": {
+    "P0": {
+      "actions": {
+        "accept": 4,
+        "investigate": 3,
+        "reject": 4
+      },
+      "correct_actions": 8,
+      "decisive_correct_wrong_unresolved": {
+        "right": 8,
+        "unresolved": 3
+      },
+      "n": 11,
+      "outcome_loss_assumed_usd": {
+        "consequential": 6.0,
+        "low_stakes": 0.75
+      },
+      "resource_dependencies": {
+        "jev_calls": 0,
+        "jev_input_tokens": 0,
+        "jev_list_price_usd": 0.0,
+        "missing_probe_ids": [],
+        "missing_request_ids": [],
+        "native_calls": 0,
+        "probe_seconds": 0,
+        "probes": 0,
+        "requests": 0
+      }
+    },
+    "P0_probe": {
+      "actions": {
+        "accept": 4,
+        "reject": 7
+      },
+      "correct_actions": 11,
+      "decisive_correct_wrong_unresolved": {
+        "right": 11
+      },
+      "n": 11,
+      "outcome_loss_assumed_usd": {
+        "consequential": 0.0,
+        "low_stakes": 0.0
+      },
+      "resource_dependencies": {
+        "jev_calls": 0,
+        "jev_input_tokens": 0,
+        "jev_list_price_usd": 0.0,
+        "missing_probe_ids": [],
+        "missing_request_ids": [],
+        "native_calls": 0,
+        "probe_seconds": 0.7249332870001126,
+        "probes": 3,
+        "requests": 0
+      }
+    },
+    "P1": {
+      "actions": {
+        "accept": 2,
+        "investigate": 4,
+        "reject": 5
+      },
+      "correct_actions": 6,
+      "decisive_correct_wrong_unresolved": {
+        "right": 6,
+        "unresolved": 4,
+        "wrong": 1
+      },
+      "n": 11,
+      "outcome_loss_assumed_usd": {
+        "consequential": 28.0,
+        "low_stakes": 1.5
+      },
+      "resource_dependencies": {
+        "jev_calls": 11,
+        "jev_input_tokens": 53170,
+        "jev_list_price_usd": 0.00223314,
+        "missing_probe_ids": [],
+        "missing_request_ids": [],
+        "native_calls": 0,
+        "probe_seconds": 0,
+        "probes": 0,
+        "requests": 11
+      }
+    },
+    "P2": {
+      "actions": {
+        "accept": 2,
+        "investigate": 3,
+        "reject": 6
+      },
+      "correct_actions": 7,
+      "decisive_correct_wrong_unresolved": {
+        "right": 7,
+        "unresolved": 3,
+        "wrong": 1
+      },
+      "n": 11,
+      "outcome_loss_assumed_usd": {
+        "consequential": 106.0,
+        "low_stakes": 2.75
+      },
+      "resource_dependencies": {
+        "jev_calls": 22,
+        "jev_input_tokens": 121028,
+        "jev_list_price_usd": 0.005083176,
+        "missing_probe_ids": [],
+        "missing_request_ids": [],
+        "native_calls": 0,
+        "probe_seconds": 4.68649395899979,
+        "probes": 11,
+        "requests": 22
+      }
+    },
+    "P3": {
+      "actions": {
+        "accept": 2,
+        "investigate": 3,
+        "reject": 6
+      },
+      "correct_actions": 7,
+      "decisive_correct_wrong_unresolved": {
+        "right": 7,
+        "unresolved": 3,
+        "wrong": 1
+      },
+      "n": 11,
+      "outcome_loss_assumed_usd": {
+        "consequential": 106.0,
+        "low_stakes": 2.75
+      },
+      "resource_dependencies": {
+        "jev_calls": 33,
+        "jev_input_tokens": 189214,
+        "jev_list_price_usd": 0.007946988,
+        "missing_probe_ids": [],
+        "missing_request_ids": [],
+        "native_calls": 0,
+        "probe_seconds": 4.68649395899979,
+        "probes": 11,
+        "requests": 33
+      }
+    },
+    "P4": {
+      "actions": {
+        "accept": 4,
+        "investigate": 1,
+        "reject": 6
+      },
+      "correct_actions": 9,
+      "decisive_correct_wrong_unresolved": {
+        "right": 9,
+        "unresolved": 1,
+        "wrong": 1
+      },
+      "n": 11,
+      "outcome_loss_assumed_usd": {
+        "consequential": 102.0,
+        "low_stakes": 2.25
+      },
+      "resource_dependencies": {
+        "jev_calls": 33,
+        "jev_input_tokens": 189214,
+        "jev_list_price_usd": 0.007946988,
+        "missing_probe_ids": [],
+        "missing_request_ids": [],
+        "native_calls": 0,
+        "probe_seconds": 7.395673973999692,
+        "probes": 16,
+        "requests": 33
+      }
+    },
+    "always": {
+      "actions": {
+        "accept": 3,
+        "investigate": 1,
+        "reject": 7
+      },
+      "correct_actions": 10,
+      "decisive_correct_wrong_unresolved": {
+        "right": 10,
+        "unresolved": 1
+      },
+      "n": 11,
+      "outcome_loss_assumed_usd": {
+        "consequential": 2.0,
+        "low_stakes": 0.25
+      },
+      "resource_dependencies": {
+        "jev_calls": 33,
+        "jev_input_tokens": 189214,
+        "jev_list_price_usd": 0.007946988,
+        "missing_probe_ids": [],
+        "missing_request_ids": [],
+        "native_calls": 11,
+        "probe_seconds": 4.68649395899979,
+        "probes": 11,
+        "requests": 44
+      }
+    },
+    "never": {
+      "actions": {
+        "accept": 2,
+        "investigate": 3,
+        "reject": 6
+      },
+      "correct_actions": 7,
+      "decisive_correct_wrong_unresolved": {
+        "right": 7,
+        "unresolved": 3,
+        "wrong": 1
+      },
+      "n": 11,
+      "outcome_loss_assumed_usd": {
+        "consequential": 106.0,
+        "low_stakes": 2.75
+      },
+      "resource_dependencies": {
+        "jev_calls": 33,
+        "jev_input_tokens": 189214,
+        "jev_list_price_usd": 0.007946988,
+        "missing_probe_ids": [],
+        "missing_request_ids": [],
+        "native_calls": 0,
+        "probe_seconds": 4.68649395899979,
+        "probes": 11,
+        "requests": 33
+      }
+    },
+    "random": {
+      "actions": {
+        "accept": 2,
+        "investigate": 3,
+        "reject": 6
+      },
+      "correct_actions": 7,
+      "decisive_correct_wrong_unresolved": {
+        "right": 7,
+        "unresolved": 3,
+        "wrong": 1
+      },
+      "n": 11,
+      "outcome_loss_assumed_usd": {
+        "consequential": 106.0,
+        "low_stakes": 2.75
+      },
+      "resource_dependencies": {
+        "jev_calls": 33,
+        "jev_input_tokens": 189214,
+        "jev_list_price_usd": 0.007946988,
+        "missing_probe_ids": [],
+        "missing_request_ids": [],
+        "native_calls": 0,
+        "probe_seconds": 4.68649395899979,
+        "probes": 11,
+        "requests": 33
+      }
+    },
+    "reasoning_only": {
+      "actions": {
+        "accept": 3,
+        "investigate": 4,
+        "reject": 4
+      },
+      "correct_actions": 7,
+      "decisive_correct_wrong_unresolved": {
+        "right": 7,
+        "unresolved": 4
+      },
+      "n": 11,
+      "outcome_loss_assumed_usd": {
+        "consequential": 8.0,
+        "low_stakes": 1.0
+      },
+      "resource_dependencies": {
+        "jev_calls": 0,
+        "jev_input_tokens": 0,
+        "jev_list_price_usd": 0.0,
+        "missing_probe_ids": [],
+        "missing_request_ids": [],
+        "native_calls": 11,
+        "probe_seconds": 0,
+        "probes": 0,
+        "requests": 11
+      }
+    },
+    "risk": {
+      "actions": {
+        "accept": 2,
+        "investigate": 2,
+        "reject": 7
+      },
+      "correct_actions": 9,
+      "decisive_correct_wrong_unresolved": {
+        "right": 9,
+        "unresolved": 2
+      },
+      "n": 11,
+      "outcome_loss_assumed_usd": {
+        "consequential": 4.0,
+        "low_stakes": 0.5
+      },
+      "resource_dependencies": {
+        "jev_calls": 33,
+        "jev_input_tokens": 189214,
+        "jev_list_price_usd": 0.007946988,
+        "missing_probe_ids": [],
+        "missing_request_ids": [],
+        "native_calls": 10,
+        "probe_seconds": 4.68649395899979,
+        "probes": 11,
+        "requests": 43
+      }
+    }
+  },
+  "policies": {
+    "P0": {
+      "actions": {
+        "accept": 8,
+        "investigate": 8,
+        "reject": 8
+      },
+      "correct_actions": 16,
+      "decisive_correct_wrong_unresolved": {
+        "right": 16,
+        "unresolved": 8
+      },
+      "n": 24,
+      "outcome_loss_assumed_usd": {
+        "consequential": 16.0,
+        "low_stakes": 2.0
+      },
+      "resource_dependencies": {
+        "jev_calls": 0,
+        "jev_input_tokens": 0,
+        "jev_list_price_usd": 0.0,
+        "missing_probe_ids": [],
+        "missing_request_ids": [],
+        "native_calls": 0,
+        "probe_seconds": 0,
+        "probes": 0,
+        "requests": 0
+      }
+    },
+    "P0_probe": {
+      "actions": {
+        "accept": 8,
+        "reject": 16
+      },
+      "correct_actions": 24,
+      "decisive_correct_wrong_unresolved": {
+        "right": 24
+      },
+      "n": 24,
+      "outcome_loss_assumed_usd": {
+        "consequential": 0.0,
+        "low_stakes": 0.0
+      },
+      "resource_dependencies": {
+        "jev_calls": 0,
+        "jev_input_tokens": 0,
+        "jev_list_price_usd": 0.0,
+        "missing_probe_ids": [],
+        "missing_request_ids": [],
+        "native_calls": 0,
+        "probe_seconds": 2.6169964010002786,
+        "probes": 8,
+        "requests": 0
+      }
+    },
+    "P1": {
+      "actions": {
+        "accept": 5,
+        "investigate": 11,
+        "reject": 8
+      },
+      "correct_actions": 11,
+      "decisive_correct_wrong_unresolved": {
+        "right": 11,
+        "unresolved": 11,
+        "wrong": 2
+      },
+      "n": 24,
+      "outcome_loss_assumed_usd": {
+        "consequential": 142.0,
+        "low_stakes": 5.25
+      },
+      "resource_dependencies": {
+        "jev_calls": 24,
+        "jev_input_tokens": 114550,
+        "jev_list_price_usd": 0.0048111000000000004,
+        "missing_probe_ids": [],
+        "missing_request_ids": [],
+        "native_calls": 0,
+        "probe_seconds": 0,
+        "probes": 0,
+        "requests": 24
+      }
+    },
+    "P2": {
+      "actions": {
+        "accept": 5,
+        "investigate": 6,
+        "reject": 13
+      },
+      "correct_actions": 16,
+      "decisive_correct_wrong_unresolved": {
+        "right": 16,
+        "unresolved": 6,
+        "wrong": 2
+      },
+      "n": 24,
+      "outcome_loss_assumed_usd": {
+        "consequential": 212.0,
+        "low_stakes": 5.5
+      },
+      "resource_dependencies": {
+        "jev_calls": 48,
+        "jev_input_tokens": 254228,
+        "jev_list_price_usd": 0.010677576000000001,
+        "missing_probe_ids": [],
+        "missing_request_ids": [],
+        "native_calls": 0,
+        "probe_seconds": 7.97521152499985,
+        "probes": 22,
+        "requests": 48
+      }
+    },
+    "P3": {
+      "actions": {
+        "accept": 4,
+        "investigate": 7,
+        "reject": 13
+      },
+      "correct_actions": 15,
+      "decisive_correct_wrong_unresolved": {
+        "right": 15,
+        "unresolved": 7,
+        "wrong": 2
+      },
+      "n": 24,
+      "outcome_loss_assumed_usd": {
+        "consequential": 214.0,
+        "low_stakes": 5.75
+      },
+      "resource_dependencies": {
+        "jev_calls": 72,
+        "jev_input_tokens": 394601,
+        "jev_list_price_usd": 0.016573242000000002,
+        "missing_probe_ids": [],
+        "missing_request_ids": [],
+        "native_calls": 0,
+        "probe_seconds": 7.97521152499985,
+        "probes": 22,
+        "requests": 72
+      }
+    },
+    "P4": {
+      "actions": {
+        "accept": 7,
+        "defer": 1,
+        "investigate": 2,
+        "reject": 14
+      },
+      "correct_actions": 19,
+      "decisive_correct_wrong_unresolved": {
+        "right": 19,
+        "unresolved": 3,
+        "wrong": 2
+      },
+      "n": 24,
+      "outcome_loss_assumed_usd": {
+        "consequential": 209.0,
+        "low_stakes": 4.6
+      },
+      "resource_dependencies": {
+        "jev_calls": 72,
+        "jev_input_tokens": 394601,
+        "jev_list_price_usd": 0.016573242000000002,
+        "missing_probe_ids": [],
+        "missing_request_ids": [],
+        "native_calls": 0,
+        "probe_seconds": 12.010904939999818,
+        "probes": 33,
+        "requests": 72
+      }
+    },
+    "always": {
+      "actions": {
+        "accept": 3,
+        "investigate": 1,
+        "reject": 7
+      },
+      "correct_actions": 10,
+      "decisive_correct_wrong_unresolved": {
+        "right": 10,
+        "unresolved": 1
+      },
+      "n": 11,
+      "outcome_loss_assumed_usd": {
+        "consequential": 2.0,
+        "low_stakes": 0.25
+      },
+      "resource_dependencies": {
+        "jev_calls": 33,
+        "jev_input_tokens": 189214,
+        "jev_list_price_usd": 0.007946988,
+        "missing_probe_ids": [],
+        "missing_request_ids": [],
+        "native_calls": 11,
+        "probe_seconds": 4.68649395899979,
+        "probes": 11,
+        "requests": 44
+      }
+    },
+    "never": {
+      "actions": {
+        "accept": 2,
+        "investigate": 3,
+        "reject": 6
+      },
+      "correct_actions": 7,
+      "decisive_correct_wrong_unresolved": {
+        "right": 7,
+        "unresolved": 3,
+        "wrong": 1
+      },
+      "n": 11,
+      "outcome_loss_assumed_usd": {
+        "consequential": 106.0,
+        "low_stakes": 2.75
+      },
+      "resource_dependencies": {
+        "jev_calls": 33,
+        "jev_input_tokens": 189214,
+        "jev_list_price_usd": 0.007946988,
+        "missing_probe_ids": [],
+        "missing_request_ids": [],
+        "native_calls": 0,
+        "probe_seconds": 4.68649395899979,
+        "probes": 11,
+        "requests": 33
+      }
+    },
+    "random": {
+      "actions": {
+        "accept": 2,
+        "investigate": 3,
+        "reject": 6
+      },
+      "correct_actions": 7,
+      "decisive_correct_wrong_unresolved": {
+        "right": 7,
+        "unresolved": 3,
+        "wrong": 1
+      },
+      "n": 11,
+      "outcome_loss_assumed_usd": {
+        "consequential": 106.0,
+        "low_stakes": 2.75
+      },
+      "resource_dependencies": {
+        "jev_calls": 33,
+        "jev_input_tokens": 189214,
+        "jev_list_price_usd": 0.007946988,
+        "missing_probe_ids": [],
+        "missing_request_ids": [],
+        "native_calls": 0,
+        "probe_seconds": 4.68649395899979,
+        "probes": 11,
+        "requests": 33
+      }
+    },
+    "reasoning_only": {
+      "actions": {
+        "accept": 3,
+        "investigate": 4,
+        "reject": 4
+      },
+      "correct_actions": 7,
+      "decisive_correct_wrong_unresolved": {
+        "right": 7,
+        "unresolved": 4
+      },
+      "n": 11,
+      "outcome_loss_assumed_usd": {
+        "consequential": 8.0,
+        "low_stakes": 1.0
+      },
+      "resource_dependencies": {
+        "jev_calls": 0,
+        "jev_input_tokens": 0,
+        "jev_list_price_usd": 0.0,
+        "missing_probe_ids": [],
+        "missing_request_ids": [],
+        "native_calls": 11,
+        "probe_seconds": 0,
+        "probes": 0,
+        "requests": 11
+      }
+    },
+    "risk": {
+      "actions": {
+        "accept": 2,
+        "investigate": 2,
+        "reject": 7
+      },
+      "correct_actions": 9,
+      "decisive_correct_wrong_unresolved": {
+        "right": 9,
+        "unresolved": 2
+      },
+      "n": 11,
+      "outcome_loss_assumed_usd": {
+        "consequential": 4.0,
+        "low_stakes": 0.5
+      },
+      "resource_dependencies": {
+        "jev_calls": 33,
+        "jev_input_tokens": 189214,
+        "jev_list_price_usd": 0.007946988,
+        "missing_probe_ids": [],
+        "missing_request_ids": [],
+        "native_calls": 10,
+        "probe_seconds": 4.68649395899979,
+        "probes": 11,
+        "requests": 43
+      }
+    }
+  },
+  "posthoc_interpreter_controls": {
+    "checks": 96,
+    "classification": "Reviewer-created synthetic controls; not new incident samples or provider responses.",
+    "n": 24,
+    "rows": [
+      {
+        "case_id": "c06e2dd37f2ab",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "c0fb9a45eb2da",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "c19acb40f8797",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "c1c062765510d",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "c3e667a1b7532",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "c4ac02ef39bfc",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "c51eabfc2dae5",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "c593af9fb49a0",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "c5999881a21d8",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "c5af5e427a2f3",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "c5dd2167f348a",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "c756d2780a92a",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "c85b37db76aaa",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "c8b932080dc3e",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "c94d0a24d43b5",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "c9de3dd808cb8",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "cabe25ecf8ef4",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "caeff6c6c4681",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "cb482dcc4a0c1",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "cbc761dc81aa1",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "cbfa1b0cc1f0f",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "cc191a8053cc3",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "cef7128badec1",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      },
+      {
+        "case_id": "cf22aab3d75cf",
+        "fault": "reject",
+        "foreign_subject": "investigate",
+        "healthy": "accept",
+        "missing": "investigate"
+      }
+    ]
+  },
+  "posthoc_no_new_evidence_ablation": {
+    "cases": 24,
+    "classification": "Post-hoc independent structured reinterpretation; no new observations or model calls; not a prespecified measured policy.",
+    "correct": 24,
+    "paired_correct": 11,
+    "retained_stale_missing_note_cases": [
+      "c19acb40f8797",
+      "c1c062765510d",
+      "c51eabfc2dae5",
+      "c593af9fb49a0",
+      "c9de3dd808cb8",
+      "cb482dcc4a0c1",
+      "cbfa1b0cc1f0f",
+      "cf22aab3d75cf"
+    ],
+    "rows": [
+      {
+        "action": "reject",
+        "case_id": "c06e2dd37f2ab",
+        "checks_known": true,
+        "correct": true,
+        "paired": true,
+        "retained_stale_missing_note": null,
+        "truth": "reject"
+      },
+      {
+        "action": "accept",
+        "case_id": "c0fb9a45eb2da",
+        "checks_known": true,
+        "correct": true,
+        "paired": true,
+        "retained_stale_missing_note": null,
+        "truth": "accept"
+      },
+      {
+        "action": "reject",
+        "case_id": "c19acb40f8797",
+        "checks_known": true,
+        "correct": true,
+        "paired": true,
+        "retained_stale_missing_note": "The actual boundary result must be collected; the success summary supplies no measurement.",
+        "truth": "reject"
+      },
+      {
+        "action": "reject",
+        "case_id": "c1c062765510d",
+        "checks_known": true,
+        "correct": true,
+        "paired": true,
+        "retained_stale_missing_note": "The actual boundary result must be collected; the success summary supplies no measurement.",
+        "truth": "reject"
+      },
+      {
+        "action": "reject",
+        "case_id": "c3e667a1b7532",
+        "checks_known": true,
+        "correct": true,
+        "paired": true,
+        "retained_stale_missing_note": null,
+        "truth": "reject"
+      },
+      {
+        "action": "accept",
+        "case_id": "c4ac02ef39bfc",
+        "checks_known": true,
+        "correct": true,
+        "paired": true,
+        "retained_stale_missing_note": null,
+        "truth": "accept"
+      },
+      {
+        "action": "reject",
+        "case_id": "c51eabfc2dae5",
+        "checks_known": true,
+        "correct": true,
+        "paired": true,
+        "retained_stale_missing_note": "The actual boundary result must be collected; the success summary supplies no measurement.",
+        "truth": "reject"
+      },
+      {
+        "action": "reject",
+        "case_id": "c593af9fb49a0",
+        "checks_known": true,
+        "correct": true,
+        "paired": false,
+        "retained_stale_missing_note": "The actual boundary result must be collected; the success summary supplies no measurement.",
+        "truth": "reject"
+      },
+      {
+        "action": "reject",
+        "case_id": "c5999881a21d8",
+        "checks_known": true,
+        "correct": true,
+        "paired": false,
+        "retained_stale_missing_note": null,
+        "truth": "reject"
+      },
+      {
+        "action": "accept",
+        "case_id": "c5af5e427a2f3",
+        "checks_known": true,
+        "correct": true,
+        "paired": true,
+        "retained_stale_missing_note": null,
+        "truth": "accept"
+      },
+      {
+        "action": "accept",
+        "case_id": "c5dd2167f348a",
+        "checks_known": true,
+        "correct": true,
+        "paired": false,
+        "retained_stale_missing_note": null,
+        "truth": "accept"
+      },
+      {
+        "action": "reject",
+        "case_id": "c756d2780a92a",
+        "checks_known": true,
+        "correct": true,
+        "paired": true,
+        "retained_stale_missing_note": null,
+        "truth": "reject"
+      },
+      {
+        "action": "accept",
+        "case_id": "c85b37db76aaa",
+        "checks_known": true,
+        "correct": true,
+        "paired": true,
+        "retained_stale_missing_note": null,
+        "truth": "accept"
+      },
+      {
+        "action": "accept",
+        "case_id": "c8b932080dc3e",
+        "checks_known": true,
+        "correct": true,
+        "paired": false,
+        "retained_stale_missing_note": null,
+        "truth": "accept"
+      },
+      {
+        "action": "reject",
+        "case_id": "c94d0a24d43b5",
+        "checks_known": true,
+        "correct": true,
+        "paired": true,
+        "retained_stale_missing_note": null,
+        "truth": "reject"
+      },
+      {
+        "action": "reject",
+        "case_id": "c9de3dd808cb8",
+        "checks_known": true,
+        "correct": true,
+        "paired": false,
+        "retained_stale_missing_note": "The actual boundary result must be collected; the success summary supplies no measurement.",
+        "truth": "reject"
+      },
+      {
+        "action": "accept",
+        "case_id": "cabe25ecf8ef4",
+        "checks_known": true,
+        "correct": true,
+        "paired": false,
+        "retained_stale_missing_note": null,
+        "truth": "accept"
+      },
+      {
+        "action": "accept",
+        "case_id": "caeff6c6c4681",
+        "checks_known": true,
+        "correct": true,
+        "paired": false,
+        "retained_stale_missing_note": null,
+        "truth": "accept"
+      },
+      {
+        "action": "reject",
+        "case_id": "cb482dcc4a0c1",
+        "checks_known": true,
+        "correct": true,
+        "paired": false,
+        "retained_stale_missing_note": "The actual boundary result must be collected; the success summary supplies no measurement.",
+        "truth": "reject"
+      },
+      {
+        "action": "reject",
+        "case_id": "cbc761dc81aa1",
+        "checks_known": true,
+        "correct": true,
+        "paired": false,
+        "retained_stale_missing_note": null,
+        "truth": "reject"
+      },
+      {
+        "action": "reject",
+        "case_id": "cbfa1b0cc1f0f",
+        "checks_known": true,
+        "correct": true,
+        "paired": false,
+        "retained_stale_missing_note": "The actual boundary result must be collected; the success summary supplies no measurement.",
+        "truth": "reject"
+      },
+      {
+        "action": "reject",
+        "case_id": "cc191a8053cc3",
+        "checks_known": true,
+        "correct": true,
+        "paired": false,
+        "retained_stale_missing_note": null,
+        "truth": "reject"
+      },
+      {
+        "action": "reject",
+        "case_id": "cef7128badec1",
+        "checks_known": true,
+        "correct": true,
+        "paired": false,
+        "retained_stale_missing_note": null,
+        "truth": "reject"
+      },
+      {
+        "action": "reject",
+        "case_id": "cf22aab3d75cf",
+        "checks_known": true,
+        "correct": true,
+        "paired": false,
+        "retained_stale_missing_note": "The actual boundary result must be collected; the success summary supplies no measurement.",
+        "truth": "reject"
+      }
+    ]
+  },
+  "probe_stages": {
+    "P0_probe": {
+      "records": 8,
+      "seconds": 2.6169964010002786,
+      "statuses": {
+        "executed": 8
+      }
+    },
+    "P2": {
+      "records": 22,
+      "seconds": 7.97521152499985,
+      "statuses": {
+        "executed": 21,
+        "unsupported": 1
+      }
+    },
+    "P4": {
+      "records": 11,
+      "seconds": 4.035693414999969,
+      "statuses": {
+        "executed": 10,
+        "unsupported": 1
+      }
+    },
+    "independent_random_audit": {
+      "records": 13,
+      "seconds": 4.394689340000468,
+      "statuses": {
+        "executed": 13
+      }
+    }
+  },
+  "scope": "Independent stdlib recomputation; no evaluation/report summaries imported. All USD losses analyst scenarios; actual invoices/native costs unknown.",
+  "supplement": {
+    "P4": {
+      "actions": {
+        "accept": 4,
+        "investigate": 1,
+        "reject": 6
+      },
+      "additional_probe_calls": 5,
+      "additional_probe_seconds": 2.7091800149999017,
+      "correct_actions": 9,
+      "decisive_correct_wrong_unresolved": {
+        "right": 9,
+        "unresolved": 1,
+        "wrong": 1
+      },
+      "n": 11,
+      "net_at_001_usd_per_second_before_other_costs": {
+        "consequential": 3.972908199850001,
+        "low_stakes": 0.472908199850001
+      },
+      "new_semantic_check_lists": 0,
+      "outcome_loss_assumed_usd": {
+        "consequential": 102.0,
+        "low_stakes": 2.25
+      },
+      "per_probe": [
+        {
+          "case_id": "c5af5e427a2f3",
+          "probe_id": "p_replay",
+          "seconds": 1.220525741999836,
+          "status": "executed"
+        },
+        {
+          "case_id": "c0fb9a45eb2da",
+          "probe_id": "p_effect",
+          "seconds": 0.052943579999919166,
+          "status": "executed"
+        },
+        {
+          "case_id": "c94d0a24d43b5",
+          "probe_id": "p_effect",
+          "seconds": 0.03931227199996101,
+          "status": "executed"
+        },
+        {
+          "case_id": "c3e667a1b7532",
+          "probe_id": "p_busy",
+          "seconds": 0.6949741010000707,
+          "status": "executed"
+        },
+        {
+          "case_id": "c19acb40f8797",
+          "probe_id": "p_busy",
+          "seconds": 0.7014243200001147,
+          "status": "executed"
+        }
+      ],
+      "vs_P3": {
+        "action_changes": [
+          {
+            "after": "accept",
+            "before": "investigate",
+            "case_id": "c0fb9a45eb2da"
+          },
+          {
+            "after": "accept",
+            "before": "investigate",
+            "case_id": "c5af5e427a2f3"
+          }
+        ],
+        "gross_loss_reduction_assumed_usd": {
+          "consequential": 4.0,
+          "low_stakes": 0.5
+        },
+        "n": 11,
+        "transitions": {
+          "right->right": 7,
+          "unresolved->right": 2,
+          "unresolved->unresolved": 1,
+          "wrong->wrong": 1
+        }
+      }
+    },
+    "common_prefix": {
+      "jev_calls": 33,
+      "jev_input_tokens": 189214,
+      "jev_list_price_usd": 0.007946988,
+      "missing_probe_ids": [],
+      "missing_request_ids": [],
+      "native_calls": 0,
+      "probe_seconds": 4.68649395899979,
+      "probes": 11,
+      "requests": 33
+    },
+    "random_probe": {
+      "actions": {
+        "accept": 2,
+        "investigate": 2,
+        "reject": 7
+      },
+      "additional_probe_calls": 5,
+      "additional_probe_seconds": 0.7763171379992855,
+      "correct_actions": 9,
+      "decisive_correct_wrong_unresolved": {
+        "right": 9,
+        "unresolved": 2
+      },
+      "n": 11,
+      "net_at_001_usd_per_second_before_other_costs": {
+        "consequential": 101.99223682862001,
+        "low_stakes": 2.242236828620007
+      },
+      "new_semantic_check_lists": 0,
+      "outcome_loss_assumed_usd": {
+        "consequential": 4.0,
+        "low_stakes": 0.5
+      },
+      "per_probe": [
+        {
+          "case_id": "c06e2dd37f2ab",
+          "probe_id": "p_context",
+          "seconds": 0.15595741499964788,
+          "status": "executed"
+        },
+        {
+          "case_id": "c1c062765510d",
+          "probe_id": "p_arguments",
+          "seconds": 0.008338031999755913,
+          "status": "executed"
+        },
+        {
+          "case_id": "c4ac02ef39bfc",
+          "probe_id": "p_assertion",
+          "seconds": 0.548553093999999,
+          "status": "executed"
+        },
+        {
+          "case_id": "c51eabfc2dae5",
+          "probe_id": "p_authority",
+          "seconds": 0.022470625000096334,
+          "status": "executed"
+        },
+        {
+          "case_id": "c94d0a24d43b5",
+          "probe_id": "p_effect",
+          "seconds": 0.04099797199978639,
+          "status": "executed"
+        }
+      ],
+      "vs_P3": {
+        "action_changes": [
+          {
+            "after": "accept",
+            "before": "investigate",
+            "case_id": "c4ac02ef39bfc"
+          },
+          {
+            "after": "reject",
+            "before": "accept",
+            "case_id": "c51eabfc2dae5"
+          }
+        ],
+        "gross_loss_reduction_assumed_usd": {
+          "consequential": 102.0,
+          "low_stakes": 2.25
+        },
+        "n": 11,
+        "transitions": {
+          "right->right": 7,
+          "unresolved->right": 1,
+          "unresolved->unresolved": 2,
+          "wrong->right": 1
+        }
+      }
+    },
+    "selection_verified": {
+      "random": [
+        "c06e2dd37f2ab",
+        "c1c062765510d",
+        "c4ac02ef39bfc",
+        "c51eabfc2dae5",
+        "c94d0a24d43b5"
+      ],
+      "simple": [
+        "c06e2dd37f2ab",
+        "c0fb9a45eb2da",
+        "c1c062765510d",
+        "c51eabfc2dae5",
+        "c94d0a24d43b5"
+      ],
+      "zero_missing_checks_all_paired": true
+    },
+    "simple_probe": {
+      "actions": {
+        "accept": 2,
+        "investigate": 2,
+        "reject": 7
+      },
+      "additional_probe_calls": 5,
+      "additional_probe_seconds": 0.1756209990003299,
+      "correct_actions": 9,
+      "decisive_correct_wrong_unresolved": {
+        "right": 9,
+        "unresolved": 2
+      },
+      "n": 11,
+      "net_at_001_usd_per_second_before_other_costs": {
+        "consequential": 101.99824379001,
+        "low_stakes": 2.2482437900099965
+      },
+      "new_semantic_check_lists": 0,
+      "outcome_loss_assumed_usd": {
+        "consequential": 4.0,
+        "low_stakes": 0.5
+      },
+      "per_probe": [
+        {
+          "case_id": "c06e2dd37f2ab",
+          "probe_id": "p_context",
+          "seconds": 0.0744126130002769,
+          "status": "executed"
+        },
+        {
+          "case_id": "c0fb9a45eb2da",
+          "probe_id": "p_effect",
+          "seconds": 0.03761693600017679,
+          "status": "executed"
+        },
+        {
+          "case_id": "c1c062765510d",
+          "probe_id": "p_arguments",
+          "seconds": 0.0053066699997543765,
+          "status": "executed"
+        },
+        {
+          "case_id": "c51eabfc2dae5",
+          "probe_id": "p_authority",
+          "seconds": 0.019021066000277642,
+          "status": "executed"
+        },
+        {
+          "case_id": "c94d0a24d43b5",
+          "probe_id": "p_effect",
+          "seconds": 0.039263713999844185,
+          "status": "executed"
+        }
+      ],
+      "vs_P3": {
+        "action_changes": [
+          {
+            "after": "accept",
+            "before": "investigate",
+            "case_id": "c0fb9a45eb2da"
+          },
+          {
+            "after": "reject",
+            "before": "accept",
+            "case_id": "c51eabfc2dae5"
+          }
+        ],
+        "gross_loss_reduction_assumed_usd": {
+          "consequential": 102.0,
+          "low_stakes": 2.25
+        },
+        "n": 11,
+        "transitions": {
+          "right->right": 7,
+          "unresolved->right": 1,
+          "unresolved->unresolved": 2,
+          "wrong->right": 1
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "output": "/workspace/work/pr7-review/package-check/raw.json",
+  "joins": {
+    "jev_wire_raw_response_usage": 103,
+    "native_request_response_invocation": 22,
+    "probe_raw_hash_and_operand_assertions": 52,
+    "structured_action_from_operands": 58,
+    "model_action_from_raw_answers": 141,
+    "p4_route_from_raw_signals": 24,
+    "e2e_raw_action_and_decision_binding": 23
+  },
+  "main_list_price_usd": "0.022708140"
+}

@@ -1,0 +1,4953 @@
+{
+  "reviewer_created_post_hoc": true,
+  "python": "3.12.14",
+  "probe_checks": [
+    {
+      "probe": "p_context",
+      "variant": "healthy",
+      "status": "executed",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_context",
+        "case_id": "c8b932080dc3e",
+        "status": "executed",
+        "exercised": true,
+        "decisive": true,
+        "distinguishing": true,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [
+          {
+            "boundary": "active Application / SQLite / configured evaluator",
+            "details": {
+              "changed_fields": {
+                "title": "Display title revised"
+              },
+              "reused_accepted": true,
+              "fresh_accepted": true
+            }
+          }
+        ],
+        "assertions": [
+          {
+            "invariant": "current_evidence",
+            "exercised": true,
+            "satisfied": true,
+            "actual": true,
+            "required": true,
+            "operator": "eq"
+          }
+        ],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "visible": {
+          "facts": {
+            "checks": [
+              {
+                "invariant": "current_evidence",
+                "left": true,
+                "operator": "eq",
+                "right": true,
+                "observed": true,
+                "note": "A reused assessment must agree with the fresh configured predicate after evaluator-consumed inputs change.",
+                "subject": {
+                  "expected": "operation-current",
+                  "observed": "operation-current"
+                }
+              }
+            ],
+            "policy_defined": true
+          },
+          "observations": [
+            {
+              "boundary": "active Application / SQLite / configured evaluator",
+              "details": {
+                "changed_fields": {
+                  "title": "Display title revised"
+                },
+                "reused_accepted": true,
+                "fresh_accepted": true
+              }
+            }
+          ]
+        },
+        "raw_reference": "/workspace/work/pr7-review/adversarial/controls-sandbox/p_context-healthy/raw.json",
+        "raw_sha256": "d2a7d5e10d7d2a70d35ba30b8db91338690645aac2fec6e4bf542352dc8334d3",
+        "elapsed_seconds": 0.20092973900000288
+      }
+    },
+    {
+      "probe": "p_context",
+      "variant": "fault",
+      "status": "executed",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_context",
+        "case_id": "c06e2dd37f2ab",
+        "status": "executed",
+        "exercised": true,
+        "decisive": true,
+        "distinguishing": true,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [
+          {
+            "boundary": "active Application / SQLite / configured evaluator",
+            "details": {
+              "changed_fields": {
+                "context": {
+                  "check_result": "failed"
+                }
+              },
+              "reused_accepted": true,
+              "fresh_accepted": false
+            }
+          }
+        ],
+        "assertions": [
+          {
+            "invariant": "current_evidence",
+            "exercised": true,
+            "satisfied": false,
+            "actual": true,
+            "required": false,
+            "operator": "eq"
+          }
+        ],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "visible": {
+          "facts": {
+            "checks": [
+              {
+                "invariant": "current_evidence",
+                "left": true,
+                "operator": "eq",
+                "right": false,
+                "observed": true,
+                "note": "A reused assessment must agree with the fresh configured predicate after evaluator-consumed inputs change.",
+                "subject": {
+                  "expected": "operation-current",
+                  "observed": "operation-current"
+                }
+              }
+            ],
+            "policy_defined": true
+          },
+          "observations": [
+            {
+              "boundary": "active Application / SQLite / configured evaluator",
+              "details": {
+                "changed_fields": {
+                  "context": {
+                    "check_result": "failed"
+                  }
+                },
+                "reused_accepted": true,
+                "fresh_accepted": false
+              }
+            }
+          ]
+        },
+        "raw_reference": "/workspace/work/pr7-review/adversarial/controls-sandbox/p_context-fault/raw.json",
+        "raw_sha256": "f397994b064bbf56ea639cbd9769774a02a60d9d7e98d80e74c91b8c5de1c2d2",
+        "elapsed_seconds": 0.08703637200000003
+      }
+    },
+    {
+      "probe": "p_context",
+      "variant": "setup",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_context",
+        "case_id": "c8b932080dc3e",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "ImportError",
+        "reason": "controlled unrelated setup failure",
+        "elapsed_seconds": 1.0090000017726197e-05
+      }
+    },
+    {
+      "probe": "p_context",
+      "variant": "helper",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_context",
+        "case_id": "c8b932080dc3e",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "AssertionError",
+        "reason": "TARGET_REQUIREMENT controlled helper; target not reached",
+        "elapsed_seconds": 3.864999996494589e-06
+      }
+    },
+    {
+      "probe": "p_context",
+      "variant": "timeout",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_context",
+        "case_id": "c8b932080dc3e",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "TimeoutExpired",
+        "reason": "timeout before target assertion",
+        "elapsed_seconds": 0.020587274000007483
+      }
+    },
+    {
+      "probe": "p_assertion",
+      "variant": "healthy",
+      "status": "executed",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_assertion",
+        "case_id": "c4ac02ef39bfc",
+        "status": "executed",
+        "exercised": true,
+        "decisive": true,
+        "distinguishing": true,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [
+          {
+            "boundary": "real pytest subprocess and actual candidate calibration classifier; controlled fixture",
+            "details": {
+              "target_phase": {
+                "phase": "comparison",
+                "actual": 2,
+                "expected": 1
+              },
+              "process_returncode": 1,
+              "candidate_classifier": {
+                "target": "test_target::test_target",
+                "expected_diagnostic": "TARGET_REQUIREMENT",
+                "unaffected": [],
+                "mutation_applied": true,
+                "classification": "detected"
+              },
+              "actual_exception_origin": "test_target assertion"
+            }
+          }
+        ],
+        "assertions": [
+          {
+            "invariant": "assertion_execution",
+            "exercised": true,
+            "satisfied": true,
+            "actual": true,
+            "required": true,
+            "operator": "eq"
+          }
+        ],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "visible": {
+          "facts": {
+            "checks": [
+              {
+                "invariant": "assertion_execution",
+                "left": true,
+                "operator": "eq",
+                "right": true,
+                "observed": true,
+                "note": "A verifier may credit intended detection only when the intended comparison actually executes and fails; helper exceptions cannot earn that credit.",
+                "subject": {
+                  "expected": "operation-current",
+                  "observed": "operation-current"
+                }
+              }
+            ],
+            "policy_defined": true
+          },
+          "observations": [
+            {
+              "boundary": "real pytest subprocess and actual candidate calibration classifier; controlled fixture",
+              "details": {
+                "target_phase": {
+                  "phase": "comparison",
+                  "actual": 2,
+                  "expected": 1
+                },
+                "process_returncode": 1,
+                "candidate_classifier": {
+                  "target": "test_target::test_target",
+                  "expected_diagnostic": "TARGET_REQUIREMENT",
+                  "unaffected": [],
+                  "mutation_applied": true,
+                  "classification": "detected"
+                },
+                "actual_exception_origin": "test_target assertion"
+              }
+            }
+          ]
+        },
+        "raw_reference": "/workspace/work/pr7-review/adversarial/controls-sandbox/p_assertion-healthy/raw.json",
+        "raw_sha256": "dd93136389b1fd685f94a2c8ed6d1cd6d858e1f8a839610a4215021cc43b177d",
+        "elapsed_seconds": 0.5872215560000029
+      }
+    },
+    {
+      "probe": "p_assertion",
+      "variant": "fault",
+      "status": "executed",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_assertion",
+        "case_id": "c5999881a21d8",
+        "status": "executed",
+        "exercised": true,
+        "decisive": true,
+        "distinguishing": true,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [
+          {
+            "boundary": "real pytest subprocess and actual candidate calibration classifier; controlled fixture",
+            "details": {
+              "target_phase": {
+                "phase": "entered"
+              },
+              "process_returncode": 1,
+              "candidate_classifier": {
+                "target": "test_target::test_target",
+                "expected_diagnostic": "TARGET_REQUIREMENT",
+                "unaffected": [],
+                "mutation_applied": true,
+                "classification": "detected"
+              },
+              "actual_exception_origin": "compute helper before the target comparison"
+            }
+          }
+        ],
+        "assertions": [
+          {
+            "invariant": "assertion_execution",
+            "exercised": true,
+            "satisfied": false,
+            "actual": true,
+            "required": false,
+            "operator": "eq"
+          }
+        ],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "visible": {
+          "facts": {
+            "checks": [
+              {
+                "invariant": "assertion_execution",
+                "left": true,
+                "operator": "eq",
+                "right": false,
+                "observed": true,
+                "note": "A verifier may credit intended detection only when the intended comparison actually executes and fails; helper exceptions cannot earn that credit.",
+                "subject": {
+                  "expected": "operation-current",
+                  "observed": "operation-current"
+                }
+              }
+            ],
+            "policy_defined": true
+          },
+          "observations": [
+            {
+              "boundary": "real pytest subprocess and actual candidate calibration classifier; controlled fixture",
+              "details": {
+                "target_phase": {
+                  "phase": "entered"
+                },
+                "process_returncode": 1,
+                "candidate_classifier": {
+                  "target": "test_target::test_target",
+                  "expected_diagnostic": "TARGET_REQUIREMENT",
+                  "unaffected": [],
+                  "mutation_applied": true,
+                  "classification": "detected"
+                },
+                "actual_exception_origin": "compute helper before the target comparison"
+              }
+            }
+          ]
+        },
+        "raw_reference": "/workspace/work/pr7-review/adversarial/controls-sandbox/p_assertion-fault/raw.json",
+        "raw_sha256": "0bdbe32ba1fd306e266112df2e6c923cfbd11c7a2478061118f60a8ca70bd1a0",
+        "elapsed_seconds": 0.5745635809999783
+      }
+    },
+    {
+      "probe": "p_assertion",
+      "variant": "setup",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_assertion",
+        "case_id": "c4ac02ef39bfc",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "ImportError",
+        "reason": "controlled unrelated setup failure",
+        "elapsed_seconds": 9.12900000571426e-06
+      }
+    },
+    {
+      "probe": "p_assertion",
+      "variant": "helper",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_assertion",
+        "case_id": "c4ac02ef39bfc",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "AssertionError",
+        "reason": "TARGET_REQUIREMENT controlled helper; target not reached",
+        "elapsed_seconds": 5.036999993990321e-06
+      }
+    },
+    {
+      "probe": "p_assertion",
+      "variant": "timeout",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_assertion",
+        "case_id": "c4ac02ef39bfc",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "TimeoutExpired",
+        "reason": "timeout before target assertion",
+        "elapsed_seconds": 0.020910172999975885
+      }
+    },
+    {
+      "probe": "p_arguments",
+      "variant": "healthy",
+      "status": "executed",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_arguments",
+        "case_id": "c5dd2167f348a",
+        "status": "executed",
+        "exercised": true,
+        "decisive": true,
+        "distinguishing": true,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [
+          {
+            "boundary": "production receipt and normalizer; controlled durable-record substitution, not live misdelivery",
+            "details": {
+              "ordered_attempts": [
+                {
+                  "id": "a0",
+                  "message_id": "m1",
+                  "recipient": "grok",
+                  "session_id": "grok-app",
+                  "incarnation": "grok-epoch",
+                  "native_id": "grok-native",
+                  "status": "submitted",
+                  "origin": "adapter",
+                  "submission": {
+                    "submitted": true
+                  },
+                  "sequence": 1
+                },
+                {
+                  "id": "a1",
+                  "message_id": "m2",
+                  "recipient": "codex",
+                  "session_id": "codex-app",
+                  "incarnation": "codex-epoch",
+                  "native_id": "codex-native",
+                  "status": "submitted",
+                  "origin": "adapter",
+                  "submission": {
+                    "submitted": true
+                  },
+                  "sequence": 1
+                }
+              ],
+              "native_arguments": {
+                "work_id": "w",
+                "body": {
+                  "verification": {
+                    "run_id": "run",
+                    "case_id": "case",
+                    "nonce": "nonce",
+                    "kind": "challenge",
+                    "memory": ""
+                  }
+                }
+              },
+              "executed_arguments": {
+                "work_id": "w",
+                "body": {
+                  "verification": {
+                    "run_id": "run",
+                    "case_id": "case",
+                    "nonce": "nonce",
+                    "kind": "challenge",
+                    "memory": ""
+                  }
+                }
+              },
+              "receipt": {
+                "verified": true,
+                "diagnostics": [],
+                "message_id": "m1",
+                "reply_id": "m2",
+                "receipt_evidence_id": "e1",
+                "submissions": [
+                  {
+                    "attempt_id": "a0",
+                    "session_id": "grok-app",
+                    "incarnation": "grok-epoch",
+                    "native_id": "grok-native"
+                  },
+                  {
+                    "attempt_id": "a1",
+                    "session_id": "codex-app",
+                    "incarnation": "codex-epoch",
+                    "native_id": "codex-native"
+                  }
+                ],
+                "native_calls": [
+                  {
+                    "native": "obs-0-native",
+                    "requested": "obs-0-requested",
+                    "completed": "obs-0-completed",
+                    "session_id": "codex-app",
+                    "call_id": "0",
+                    "native_id": "codex-native",
+                    "incarnation": "codex-epoch"
+                  },
+                  {
+                    "native": "obs-1-native",
+                    "requested": "obs-1-requested",
+                    "completed": "obs-1-completed",
+                    "session_id": "grok-app",
+                    "call_id": "1",
+                    "native_id": "grok-native",
+                    "incarnation": "grok-epoch"
+                  },
+                  {
+                    "native": "obs-2-native",
+                    "requested": "obs-2-requested",
+                    "completed": "obs-2-completed",
+                    "session_id": "codex-app",
+                    "call_id": "2",
+                    "native_id": "codex-native",
+                    "incarnation": "codex-epoch"
+                  }
+                ],
+                "claims": {
+                  "submitted": true,
+                  "received": true,
+                  "responded": true,
+                  "turn_completed": "not_measured",
+                  "task_accepted": "not_measured"
+                }
+              },
+              "normalized_tool_arguments": [
+                {
+                  "work_id": "w",
+                  "body": {
+                    "verification": {
+                      "run_id": "run",
+                      "case_id": "case",
+                      "nonce": "nonce",
+                      "kind": "challenge",
+                      "memory": ""
+                    }
+                  }
+                },
+                {
+                  "work_id": "w",
+                  "body": {
+                    "verification": {
+                      "run_id": "run",
+                      "case_id": "case",
+                      "nonce": "nonce",
+                      "kind": "reply",
+                      "memory": "secret"
+                    }
+                  }
+                },
+                {
+                  "work_id": "w",
+                  "result": {
+                    "verification": {
+                      "run_id": "run",
+                      "case_id": "case",
+                      "nonce": "nonce",
+                      "phase": "received",
+                      "memory": "secret",
+                      "peer": "grok"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "assertions": [
+          {
+            "invariant": "argument_integrity",
+            "exercised": true,
+            "satisfied": true,
+            "actual": {
+              "work_id": "w",
+              "body": {
+                "verification": {
+                  "run_id": "run",
+                  "case_id": "case",
+                  "nonce": "nonce",
+                  "kind": "challenge",
+                  "memory": ""
+                }
+              }
+            },
+            "required": {
+              "work_id": "w",
+              "body": {
+                "verification": {
+                  "run_id": "run",
+                  "case_id": "case",
+                  "nonce": "nonce",
+                  "kind": "challenge",
+                  "memory": ""
+                }
+              }
+            },
+            "operator": "eq"
+          },
+          {
+            "invariant": "effect_uncertainty",
+            "exercised": true,
+            "satisfied": true,
+            "actual": "submitted",
+            "required": "submitted",
+            "operator": "eq"
+          }
+        ],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "visible": {
+          "facts": {
+            "checks": [
+              {
+                "invariant": "argument_integrity",
+                "left": {
+                  "work_id": "w",
+                  "body": {
+                    "verification": {
+                      "run_id": "run",
+                      "case_id": "case",
+                      "nonce": "nonce",
+                      "kind": "challenge",
+                      "memory": ""
+                    }
+                  }
+                },
+                "operator": "eq",
+                "right": {
+                  "work_id": "w",
+                  "body": {
+                    "verification": {
+                      "run_id": "run",
+                      "case_id": "case",
+                      "nonce": "nonce",
+                      "kind": "challenge",
+                      "memory": ""
+                    }
+                  }
+                },
+                "observed": true,
+                "note": "Executed callback arguments must match the independently observed native request.",
+                "subject": {
+                  "expected": "operation-current",
+                  "observed": "operation-current"
+                }
+              },
+              {
+                "invariant": "effect_uncertainty",
+                "left": "submitted",
+                "operator": "eq",
+                "right": "submitted",
+                "observed": true,
+                "note": "A later unknown delivery attempt cannot inherit an earlier submitted status.",
+                "subject": {
+                  "expected": "operation-current",
+                  "observed": "operation-current"
+                }
+              }
+            ],
+            "policy_defined": true
+          },
+          "observations": [
+            {
+              "boundary": "production receipt and normalizer; controlled durable-record substitution, not live misdelivery",
+              "details": {
+                "ordered_attempts": [
+                  {
+                    "id": "a0",
+                    "message_id": "m1",
+                    "recipient": "grok",
+                    "session_id": "grok-app",
+                    "incarnation": "grok-epoch",
+                    "native_id": "grok-native",
+                    "status": "submitted",
+                    "origin": "adapter",
+                    "submission": {
+                      "submitted": true
+                    },
+                    "sequence": 1
+                  },
+                  {
+                    "id": "a1",
+                    "message_id": "m2",
+                    "recipient": "codex",
+                    "session_id": "codex-app",
+                    "incarnation": "codex-epoch",
+                    "native_id": "codex-native",
+                    "status": "submitted",
+                    "origin": "adapter",
+                    "submission": {
+                      "submitted": true
+                    },
+                    "sequence": 1
+                  }
+                ],
+                "native_arguments": {
+                  "work_id": "w",
+                  "body": {
+                    "verification": {
+                      "run_id": "run",
+                      "case_id": "case",
+                      "nonce": "nonce",
+                      "kind": "challenge",
+                      "memory": ""
+                    }
+                  }
+                },
+                "executed_arguments": {
+                  "work_id": "w",
+                  "body": {
+                    "verification": {
+                      "run_id": "run",
+                      "case_id": "case",
+                      "nonce": "nonce",
+                      "kind": "challenge",
+                      "memory": ""
+                    }
+                  }
+                },
+                "receipt": {
+                  "verified": true,
+                  "diagnostics": [],
+                  "message_id": "m1",
+                  "reply_id": "m2",
+                  "receipt_evidence_id": "e1",
+                  "submissions": [
+                    {
+                      "attempt_id": "a0",
+                      "session_id": "grok-app",
+                      "incarnation": "grok-epoch",
+                      "native_id": "grok-native"
+                    },
+                    {
+                      "attempt_id": "a1",
+                      "session_id": "codex-app",
+                      "incarnation": "codex-epoch",
+                      "native_id": "codex-native"
+                    }
+                  ],
+                  "native_calls": [
+                    {
+                      "native": "obs-0-native",
+                      "requested": "obs-0-requested",
+                      "completed": "obs-0-completed",
+                      "session_id": "codex-app",
+                      "call_id": "0",
+                      "native_id": "codex-native",
+                      "incarnation": "codex-epoch"
+                    },
+                    {
+                      "native": "obs-1-native",
+                      "requested": "obs-1-requested",
+                      "completed": "obs-1-completed",
+                      "session_id": "grok-app",
+                      "call_id": "1",
+                      "native_id": "grok-native",
+                      "incarnation": "grok-epoch"
+                    },
+                    {
+                      "native": "obs-2-native",
+                      "requested": "obs-2-requested",
+                      "completed": "obs-2-completed",
+                      "session_id": "codex-app",
+                      "call_id": "2",
+                      "native_id": "codex-native",
+                      "incarnation": "codex-epoch"
+                    }
+                  ],
+                  "claims": {
+                    "submitted": true,
+                    "received": true,
+                    "responded": true,
+                    "turn_completed": "not_measured",
+                    "task_accepted": "not_measured"
+                  }
+                },
+                "normalized_tool_arguments": [
+                  {
+                    "work_id": "w",
+                    "body": {
+                      "verification": {
+                        "run_id": "run",
+                        "case_id": "case",
+                        "nonce": "nonce",
+                        "kind": "challenge",
+                        "memory": ""
+                      }
+                    }
+                  },
+                  {
+                    "work_id": "w",
+                    "body": {
+                      "verification": {
+                        "run_id": "run",
+                        "case_id": "case",
+                        "nonce": "nonce",
+                        "kind": "reply",
+                        "memory": "secret"
+                      }
+                    }
+                  },
+                  {
+                    "work_id": "w",
+                    "result": {
+                      "verification": {
+                        "run_id": "run",
+                        "case_id": "case",
+                        "nonce": "nonce",
+                        "phase": "received",
+                        "memory": "secret",
+                        "peer": "grok"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "raw_reference": "/workspace/work/pr7-review/adversarial/controls-sandbox/p_arguments-healthy/raw.json",
+        "raw_sha256": "9b8376c2a81862dded43a255d8bf9a71b3cc54baf8ee5851435dc24758d68a2f",
+        "elapsed_seconds": 0.014316901000000826
+      }
+    },
+    {
+      "probe": "p_arguments",
+      "variant": "fault",
+      "status": "executed",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_arguments",
+        "case_id": "cc191a8053cc3",
+        "status": "executed",
+        "exercised": true,
+        "decisive": true,
+        "distinguishing": true,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [
+          {
+            "boundary": "production receipt and normalizer; controlled durable-record substitution, not live misdelivery",
+            "details": {
+              "ordered_attempts": [
+                {
+                  "id": "a0",
+                  "message_id": "m1",
+                  "recipient": "grok",
+                  "session_id": "grok-app",
+                  "incarnation": "grok-epoch",
+                  "native_id": "grok-native",
+                  "status": "submitted",
+                  "origin": "adapter",
+                  "submission": {
+                    "submitted": true
+                  },
+                  "sequence": 1
+                },
+                {
+                  "id": "a1",
+                  "message_id": "m2",
+                  "recipient": "codex",
+                  "session_id": "codex-app",
+                  "incarnation": "codex-epoch",
+                  "native_id": "codex-native",
+                  "status": "submitted",
+                  "origin": "adapter",
+                  "submission": {
+                    "submitted": true
+                  },
+                  "sequence": 1
+                },
+                {
+                  "id": "later-attempt",
+                  "message_id": "m1",
+                  "recipient": "grok",
+                  "session_id": "grok-app",
+                  "incarnation": "grok-epoch",
+                  "native_id": "grok-native",
+                  "status": "unknown",
+                  "origin": "adapter",
+                  "submission": {
+                    "submitted": true
+                  },
+                  "sequence": 2
+                }
+              ],
+              "native_arguments": {
+                "work_id": "w",
+                "body": {
+                  "verification": {
+                    "run_id": "run",
+                    "case_id": "case",
+                    "nonce": "nonce",
+                    "kind": "challenge",
+                    "memory": ""
+                  }
+                }
+              },
+              "executed_arguments": {
+                "work_id": "other-work",
+                "body": {
+                  "operation": "separate"
+                }
+              },
+              "receipt": {
+                "verified": false,
+                "diagnostics": [
+                  "native_call_id_conflict"
+                ]
+              },
+              "normalized_tool_arguments": [
+                {
+                  "work_id": "w",
+                  "body": {
+                    "verification": {
+                      "run_id": "run",
+                      "case_id": "case",
+                      "nonce": "nonce",
+                      "kind": "challenge",
+                      "memory": ""
+                    }
+                  }
+                },
+                {
+                  "work_id": "w",
+                  "body": {
+                    "verification": {
+                      "run_id": "run",
+                      "case_id": "case",
+                      "nonce": "nonce",
+                      "kind": "reply",
+                      "memory": "secret"
+                    }
+                  }
+                },
+                {
+                  "work_id": "w",
+                  "result": {
+                    "verification": {
+                      "run_id": "run",
+                      "case_id": "case",
+                      "nonce": "nonce",
+                      "phase": "received",
+                      "memory": "secret",
+                      "peer": "grok"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        "assertions": [
+          {
+            "invariant": "argument_integrity",
+            "exercised": true,
+            "satisfied": false,
+            "actual": {
+              "work_id": "other-work",
+              "body": {
+                "operation": "separate"
+              }
+            },
+            "required": {
+              "work_id": "w",
+              "body": {
+                "verification": {
+                  "run_id": "run",
+                  "case_id": "case",
+                  "nonce": "nonce",
+                  "kind": "challenge",
+                  "memory": ""
+                }
+              }
+            },
+            "operator": "eq"
+          },
+          {
+            "invariant": "effect_uncertainty",
+            "exercised": true,
+            "satisfied": false,
+            "actual": "unknown",
+            "required": "submitted",
+            "operator": "eq"
+          }
+        ],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "visible": {
+          "facts": {
+            "checks": [
+              {
+                "invariant": "argument_integrity",
+                "left": {
+                  "work_id": "other-work",
+                  "body": {
+                    "operation": "separate"
+                  }
+                },
+                "operator": "eq",
+                "right": {
+                  "work_id": "w",
+                  "body": {
+                    "verification": {
+                      "run_id": "run",
+                      "case_id": "case",
+                      "nonce": "nonce",
+                      "kind": "challenge",
+                      "memory": ""
+                    }
+                  }
+                },
+                "observed": true,
+                "note": "Executed callback arguments must match the independently observed native request.",
+                "subject": {
+                  "expected": "operation-current",
+                  "observed": "operation-current"
+                }
+              },
+              {
+                "invariant": "effect_uncertainty",
+                "left": "unknown",
+                "operator": "eq",
+                "right": "submitted",
+                "observed": true,
+                "note": "A later unknown delivery attempt cannot inherit an earlier submitted status.",
+                "subject": {
+                  "expected": "operation-current",
+                  "observed": "operation-current"
+                }
+              }
+            ],
+            "policy_defined": true
+          },
+          "observations": [
+            {
+              "boundary": "production receipt and normalizer; controlled durable-record substitution, not live misdelivery",
+              "details": {
+                "ordered_attempts": [
+                  {
+                    "id": "a0",
+                    "message_id": "m1",
+                    "recipient": "grok",
+                    "session_id": "grok-app",
+                    "incarnation": "grok-epoch",
+                    "native_id": "grok-native",
+                    "status": "submitted",
+                    "origin": "adapter",
+                    "submission": {
+                      "submitted": true
+                    },
+                    "sequence": 1
+                  },
+                  {
+                    "id": "a1",
+                    "message_id": "m2",
+                    "recipient": "codex",
+                    "session_id": "codex-app",
+                    "incarnation": "codex-epoch",
+                    "native_id": "codex-native",
+                    "status": "submitted",
+                    "origin": "adapter",
+                    "submission": {
+                      "submitted": true
+                    },
+                    "sequence": 1
+                  },
+                  {
+                    "id": "later-attempt",
+                    "message_id": "m1",
+                    "recipient": "grok",
+                    "session_id": "grok-app",
+                    "incarnation": "grok-epoch",
+                    "native_id": "grok-native",
+                    "status": "unknown",
+                    "origin": "adapter",
+                    "submission": {
+                      "submitted": true
+                    },
+                    "sequence": 2
+                  }
+                ],
+                "native_arguments": {
+                  "work_id": "w",
+                  "body": {
+                    "verification": {
+                      "run_id": "run",
+                      "case_id": "case",
+                      "nonce": "nonce",
+                      "kind": "challenge",
+                      "memory": ""
+                    }
+                  }
+                },
+                "executed_arguments": {
+                  "work_id": "other-work",
+                  "body": {
+                    "operation": "separate"
+                  }
+                },
+                "receipt": {
+                  "verified": false,
+                  "diagnostics": [
+                    "native_call_id_conflict"
+                  ]
+                },
+                "normalized_tool_arguments": [
+                  {
+                    "work_id": "w",
+                    "body": {
+                      "verification": {
+                        "run_id": "run",
+                        "case_id": "case",
+                        "nonce": "nonce",
+                        "kind": "challenge",
+                        "memory": ""
+                      }
+                    }
+                  },
+                  {
+                    "work_id": "w",
+                    "body": {
+                      "verification": {
+                        "run_id": "run",
+                        "case_id": "case",
+                        "nonce": "nonce",
+                        "kind": "reply",
+                        "memory": "secret"
+                      }
+                    }
+                  },
+                  {
+                    "work_id": "w",
+                    "result": {
+                      "verification": {
+                        "run_id": "run",
+                        "case_id": "case",
+                        "nonce": "nonce",
+                        "phase": "received",
+                        "memory": "secret",
+                        "peer": "grok"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "raw_reference": "/workspace/work/pr7-review/adversarial/controls-sandbox/p_arguments-fault/raw.json",
+        "raw_sha256": "9b8376c2a81862dded43a255d8bf9a71b3cc54baf8ee5851435dc24758d68a2f",
+        "elapsed_seconds": 0.006343078000014657
+      }
+    },
+    {
+      "probe": "p_arguments",
+      "variant": "setup",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_arguments",
+        "case_id": "c5dd2167f348a",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "ImportError",
+        "reason": "controlled unrelated setup failure",
+        "elapsed_seconds": 6.054000010635718e-06
+      }
+    },
+    {
+      "probe": "p_arguments",
+      "variant": "helper",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_arguments",
+        "case_id": "c5dd2167f348a",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "AssertionError",
+        "reason": "TARGET_REQUIREMENT controlled helper; target not reached",
+        "elapsed_seconds": 3.7469999938366527e-06
+      }
+    },
+    {
+      "probe": "p_arguments",
+      "variant": "timeout",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_arguments",
+        "case_id": "c5dd2167f348a",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "TimeoutExpired",
+        "reason": "timeout before target assertion",
+        "elapsed_seconds": 0.020630004999986795
+      }
+    },
+    {
+      "probe": "p_attempts",
+      "variant": "healthy",
+      "status": "executed",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_attempts",
+        "case_id": "caeff6c6c4681",
+        "status": "executed",
+        "exercised": true,
+        "decisive": true,
+        "distinguishing": true,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [
+          {
+            "boundary": "production receipt and normalizer; controlled durable-record substitution, not live misdelivery",
+            "details": {
+              "ordered_attempts": [
+                {
+                  "id": "a0",
+                  "message_id": "m1",
+                  "sequence": 1,
+                  "status": "submitted"
+                },
+                {
+                  "id": "a1",
+                  "message_id": "m2",
+                  "sequence": 1,
+                  "status": "submitted"
+                }
+              ],
+              "receipt": {
+                "verified": true,
+                "diagnostics": [],
+                "message_id": "m1",
+                "reply_id": "m2",
+                "receipt_evidence_id": "e1",
+                "submissions": [
+                  {
+                    "attempt_id": "a0",
+                    "session_id": "grok-app",
+                    "incarnation": "grok-epoch",
+                    "native_id": "grok-native"
+                  },
+                  {
+                    "attempt_id": "a1",
+                    "session_id": "codex-app",
+                    "incarnation": "codex-epoch",
+                    "native_id": "codex-native"
+                  }
+                ],
+                "native_calls": [
+                  {
+                    "native": "obs-0-native",
+                    "requested": "obs-0-requested",
+                    "completed": "obs-0-completed",
+                    "session_id": "codex-app",
+                    "call_id": "0",
+                    "native_id": "codex-native",
+                    "incarnation": "codex-epoch"
+                  },
+                  {
+                    "native": "obs-1-native",
+                    "requested": "obs-1-requested",
+                    "completed": "obs-1-completed",
+                    "session_id": "grok-app",
+                    "call_id": "1",
+                    "native_id": "grok-native",
+                    "incarnation": "grok-epoch"
+                  },
+                  {
+                    "native": "obs-2-native",
+                    "requested": "obs-2-requested",
+                    "completed": "obs-2-completed",
+                    "session_id": "codex-app",
+                    "call_id": "2",
+                    "native_id": "codex-native",
+                    "incarnation": "codex-epoch"
+                  }
+                ],
+                "claims": {
+                  "submitted": true,
+                  "received": true,
+                  "responded": true,
+                  "turn_completed": "not_measured",
+                  "task_accepted": "not_measured"
+                }
+              }
+            }
+          }
+        ],
+        "assertions": [
+          {
+            "invariant": "effect_uncertainty",
+            "exercised": true,
+            "satisfied": true,
+            "actual": "submitted",
+            "required": "submitted",
+            "operator": "eq"
+          }
+        ],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "visible": {
+          "facts": {
+            "checks": [
+              {
+                "invariant": "effect_uncertainty",
+                "left": "submitted",
+                "operator": "eq",
+                "right": "submitted",
+                "observed": true,
+                "note": "Current complete delivery requires the latest attempt to be submitted; an unknown later attempt cannot inherit an older success.",
+                "subject": {
+                  "expected": "operation-current",
+                  "observed": "operation-current"
+                }
+              }
+            ],
+            "policy_defined": true
+          },
+          "observations": [
+            {
+              "boundary": "production receipt and normalizer; controlled durable-record substitution, not live misdelivery",
+              "details": {
+                "ordered_attempts": [
+                  {
+                    "id": "a0",
+                    "message_id": "m1",
+                    "sequence": 1,
+                    "status": "submitted"
+                  },
+                  {
+                    "id": "a1",
+                    "message_id": "m2",
+                    "sequence": 1,
+                    "status": "submitted"
+                  }
+                ],
+                "receipt": {
+                  "verified": true,
+                  "diagnostics": [],
+                  "message_id": "m1",
+                  "reply_id": "m2",
+                  "receipt_evidence_id": "e1",
+                  "submissions": [
+                    {
+                      "attempt_id": "a0",
+                      "session_id": "grok-app",
+                      "incarnation": "grok-epoch",
+                      "native_id": "grok-native"
+                    },
+                    {
+                      "attempt_id": "a1",
+                      "session_id": "codex-app",
+                      "incarnation": "codex-epoch",
+                      "native_id": "codex-native"
+                    }
+                  ],
+                  "native_calls": [
+                    {
+                      "native": "obs-0-native",
+                      "requested": "obs-0-requested",
+                      "completed": "obs-0-completed",
+                      "session_id": "codex-app",
+                      "call_id": "0",
+                      "native_id": "codex-native",
+                      "incarnation": "codex-epoch"
+                    },
+                    {
+                      "native": "obs-1-native",
+                      "requested": "obs-1-requested",
+                      "completed": "obs-1-completed",
+                      "session_id": "grok-app",
+                      "call_id": "1",
+                      "native_id": "grok-native",
+                      "incarnation": "grok-epoch"
+                    },
+                    {
+                      "native": "obs-2-native",
+                      "requested": "obs-2-requested",
+                      "completed": "obs-2-completed",
+                      "session_id": "codex-app",
+                      "call_id": "2",
+                      "native_id": "codex-native",
+                      "incarnation": "codex-epoch"
+                    }
+                  ],
+                  "claims": {
+                    "submitted": true,
+                    "received": true,
+                    "responded": true,
+                    "turn_completed": "not_measured",
+                    "task_accepted": "not_measured"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "raw_reference": "/workspace/work/pr7-review/adversarial/controls-sandbox/p_attempts-healthy/raw.json",
+        "raw_sha256": "df1e515c3f282b68c5432112a115ed16244ebbca95e544b6ee75123bffa33431",
+        "elapsed_seconds": 0.004994464000020571
+      }
+    },
+    {
+      "probe": "p_attempts",
+      "variant": "fault",
+      "status": "executed",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_attempts",
+        "case_id": "cbc761dc81aa1",
+        "status": "executed",
+        "exercised": true,
+        "decisive": true,
+        "distinguishing": true,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [
+          {
+            "boundary": "production receipt and normalizer; controlled durable-record substitution, not live misdelivery",
+            "details": {
+              "ordered_attempts": [
+                {
+                  "id": "a0",
+                  "message_id": "m1",
+                  "sequence": 1,
+                  "status": "submitted"
+                },
+                {
+                  "id": "a1",
+                  "message_id": "m2",
+                  "sequence": 1,
+                  "status": "submitted"
+                },
+                {
+                  "id": "later-attempt",
+                  "message_id": "m1",
+                  "sequence": 2,
+                  "status": "unknown"
+                }
+              ],
+              "receipt": {
+                "verified": false,
+                "diagnostics": [
+                  "native_submission_missing"
+                ]
+              }
+            }
+          }
+        ],
+        "assertions": [
+          {
+            "invariant": "effect_uncertainty",
+            "exercised": true,
+            "satisfied": false,
+            "actual": "unknown",
+            "required": "submitted",
+            "operator": "eq"
+          }
+        ],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "visible": {
+          "facts": {
+            "checks": [
+              {
+                "invariant": "effect_uncertainty",
+                "left": "unknown",
+                "operator": "eq",
+                "right": "submitted",
+                "observed": true,
+                "note": "Current complete delivery requires the latest attempt to be submitted; an unknown later attempt cannot inherit an older success.",
+                "subject": {
+                  "expected": "operation-current",
+                  "observed": "operation-current"
+                }
+              }
+            ],
+            "policy_defined": true
+          },
+          "observations": [
+            {
+              "boundary": "production receipt and normalizer; controlled durable-record substitution, not live misdelivery",
+              "details": {
+                "ordered_attempts": [
+                  {
+                    "id": "a0",
+                    "message_id": "m1",
+                    "sequence": 1,
+                    "status": "submitted"
+                  },
+                  {
+                    "id": "a1",
+                    "message_id": "m2",
+                    "sequence": 1,
+                    "status": "submitted"
+                  },
+                  {
+                    "id": "later-attempt",
+                    "message_id": "m1",
+                    "sequence": 2,
+                    "status": "unknown"
+                  }
+                ],
+                "receipt": {
+                  "verified": false,
+                  "diagnostics": [
+                    "native_submission_missing"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "raw_reference": "/workspace/work/pr7-review/adversarial/controls-sandbox/p_attempts-fault/raw.json",
+        "raw_sha256": "df1e515c3f282b68c5432112a115ed16244ebbca95e544b6ee75123bffa33431",
+        "elapsed_seconds": 0.004541571000004296
+      }
+    },
+    {
+      "probe": "p_attempts",
+      "variant": "setup",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_attempts",
+        "case_id": "caeff6c6c4681",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "ImportError",
+        "reason": "controlled unrelated setup failure",
+        "elapsed_seconds": 6.807999994862257e-06
+      }
+    },
+    {
+      "probe": "p_attempts",
+      "variant": "helper",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_attempts",
+        "case_id": "caeff6c6c4681",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "AssertionError",
+        "reason": "TARGET_REQUIREMENT controlled helper; target not reached",
+        "elapsed_seconds": 4.181999997854291e-06
+      }
+    },
+    {
+      "probe": "p_attempts",
+      "variant": "timeout",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_attempts",
+        "case_id": "caeff6c6c4681",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "TimeoutExpired",
+        "reason": "timeout before target assertion",
+        "elapsed_seconds": 0.020624150999992708
+      }
+    },
+    {
+      "probe": "p_replay",
+      "variant": "healthy",
+      "status": "not_exercised",
+      "correct_exercised_control": false,
+      "record": {
+        "probe_id": "p_replay",
+        "case_id": "c5af5e427a2f3",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "RuntimeError",
+        "reason": "Adapter reproduction failed; inspect retained stderr (returncode 1)",
+        "elapsed_seconds": 0.426731870999987
+      }
+    },
+    {
+      "probe": "p_replay",
+      "variant": "fault",
+      "status": "not_exercised",
+      "correct_exercised_control": false,
+      "record": {
+        "probe_id": "p_replay",
+        "case_id": "c756d2780a92a",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "RuntimeError",
+        "reason": "Adapter reproduction failed; inspect retained stderr (returncode 1)",
+        "elapsed_seconds": 0.5295372349999923
+      }
+    },
+    {
+      "probe": "p_replay",
+      "variant": "setup",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_replay",
+        "case_id": "c5af5e427a2f3",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "ImportError",
+        "reason": "controlled unrelated setup failure",
+        "elapsed_seconds": 4.960000012488308e-06
+      }
+    },
+    {
+      "probe": "p_replay",
+      "variant": "helper",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_replay",
+        "case_id": "c5af5e427a2f3",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "AssertionError",
+        "reason": "TARGET_REQUIREMENT controlled helper; target not reached",
+        "elapsed_seconds": 3.0349999917689274e-06
+      }
+    },
+    {
+      "probe": "p_replay",
+      "variant": "timeout",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_replay",
+        "case_id": "c5af5e427a2f3",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "TimeoutExpired",
+        "reason": "timeout before target assertion",
+        "elapsed_seconds": 0.022709290999983978
+      }
+    },
+    {
+      "probe": "p_effect",
+      "variant": "healthy",
+      "status": "executed",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_effect",
+        "case_id": "c0fb9a45eb2da",
+        "status": "executed",
+        "exercised": true,
+        "decisive": true,
+        "distinguishing": true,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [
+          {
+            "boundary": "active Application / SQLite / real FIFO bridge / controlled counter native port",
+            "details": {
+              "effect_count_before_response": 1,
+              "connection_replaced": false,
+              "first_response": {
+                "result": {
+                  "session": {
+                    "driver": "external",
+                    "selection": {
+                      "requested": "external",
+                      "resolved": "external",
+                      "fallback_reason": null
+                    },
+                    "specification": {},
+                    "work_id": null,
+                    "actor_id": "owner",
+                    "status": "active",
+                    "backend": {
+                      "host_id": "4953d384e7e6400793267468164e0d27",
+                      "native_id": "counter-conversation",
+                      "protocol": "bridge",
+                      "native_protocol": null,
+                      "native_incarnation": "counter-native-incarnation",
+                      "incarnation": "9b6aa8e9961149a6bd6b24bdac72afb9",
+                      "ownership": "external",
+                      "connection_state": "connected",
+                      "resumable": true,
+                      "configuration_id": "counter-v1",
+                      "settings": {
+                        "requested": {},
+                        "resolved": {},
+                        "observed": {}
+                      },
+                      "resume_token": "cefc2e8c46913464297d4833c37cad3dc2389c5e51f854347902a00fddaa2915",
+                      "catalog_identity": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                      "instance": "c0b41272acc54a60afbcf80fa87df7ae",
+                      "handle": "7d6ba4882f7942a7981c8ce20b73969e",
+                      "bridge_endpoint": "/tmp/review-late-effect-wizqiawg/host",
+                      "bridge_transport": "fifo"
+                    },
+                    "pending_operation": null,
+                    "start_operation_id": "fcda76537fd0e93aa5026d18aaaa04ede7ec274c6d6263da29f11779fe05f9f7",
+                    "unresolved_effects": [],
+                    "created_by": "owner",
+                    "created_at": "2026-10-24T20:51:00.666288+00:00",
+                    "updated_at": "2026-10-24T20:51:00.673835+00:00",
+                    "id": "a95d0ac2f5b840d79e7710a0e7f7dd97",
+                    "version": 4
+                  },
+                  "output": {
+                    "applied_count": 1
+                  },
+                  "operation_id": "dd83f1957a2770f6b863dfe619f0f60813c8af8f30b2e1dd46e4a8350dfc816d"
+                }
+              },
+              "next_response": {
+                "result": {
+                  "session": {
+                    "driver": "external",
+                    "selection": {
+                      "requested": "external",
+                      "resolved": "external",
+                      "fallback_reason": null
+                    },
+                    "specification": {},
+                    "work_id": null,
+                    "actor_id": "owner",
+                    "status": "active",
+                    "backend": {
+                      "host_id": "4953d384e7e6400793267468164e0d27",
+                      "native_id": "counter-conversation",
+                      "protocol": "bridge",
+                      "native_protocol": null,
+                      "native_incarnation": "counter-native-incarnation",
+                      "incarnation": "9b6aa8e9961149a6bd6b24bdac72afb9",
+                      "ownership": "external",
+                      "connection_state": "connected",
+                      "resumable": true,
+                      "configuration_id": "counter-v1",
+                      "settings": {
+                        "requested": {},
+                        "resolved": {},
+                        "observed": {}
+                      },
+                      "resume_token": "cefc2e8c46913464297d4833c37cad3dc2389c5e51f854347902a00fddaa2915",
+                      "catalog_identity": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                      "instance": "c0b41272acc54a60afbcf80fa87df7ae",
+                      "handle": "7d6ba4882f7942a7981c8ce20b73969e",
+                      "bridge_endpoint": "/tmp/review-late-effect-wizqiawg/host",
+                      "bridge_transport": "fifo"
+                    },
+                    "pending_operation": null,
+                    "start_operation_id": "fcda76537fd0e93aa5026d18aaaa04ede7ec274c6d6263da29f11779fe05f9f7",
+                    "unresolved_effects": [],
+                    "created_by": "owner",
+                    "created_at": "2026-10-24T20:51:00.666288+00:00",
+                    "updated_at": "2026-10-24T20:51:00.677379+00:00",
+                    "id": "a95d0ac2f5b840d79e7710a0e7f7dd97",
+                    "version": 6
+                  },
+                  "output": {
+                    "applied_count": 2
+                  },
+                  "operation_id": "c00534cab837ea3ef95480ee28a9ba5c17386855958110b164836f18aa5d3c4a"
+                }
+              },
+              "final_effect_count": 2
+            }
+          }
+        ],
+        "assertions": [
+          {
+            "invariant": "effect_uncertainty",
+            "exercised": true,
+            "satisfied": true,
+            "actual": "completed",
+            "required": [
+              "completed"
+            ],
+            "operator": "in"
+          }
+        ],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "visible": {
+          "facts": {
+            "checks": [
+              {
+                "invariant": "effect_uncertainty",
+                "left": "completed",
+                "operator": "in",
+                "right": [
+                  "completed"
+                ],
+                "observed": true,
+                "note": "After a recorded effect and connection replacement, a missing response must retain uncertainty; after acknowledged completion, completion is valid.",
+                "subject": {
+                  "expected": "operation-current",
+                  "observed": "operation-current"
+                }
+              }
+            ],
+            "policy_defined": true
+          },
+          "observations": [
+            {
+              "boundary": "active Application / SQLite / real FIFO bridge / controlled counter native port",
+              "details": {
+                "effect_count_before_response": 1,
+                "connection_replaced": false,
+                "first_response": {
+                  "result": {
+                    "session": {
+                      "driver": "external",
+                      "selection": {
+                        "requested": "external",
+                        "resolved": "external",
+                        "fallback_reason": null
+                      },
+                      "specification": {},
+                      "work_id": null,
+                      "actor_id": "owner",
+                      "status": "active",
+                      "backend": {
+                        "host_id": "4953d384e7e6400793267468164e0d27",
+                        "native_id": "counter-conversation",
+                        "protocol": "bridge",
+                        "native_protocol": null,
+                        "native_incarnation": "counter-native-incarnation",
+                        "incarnation": "9b6aa8e9961149a6bd6b24bdac72afb9",
+                        "ownership": "external",
+                        "connection_state": "connected",
+                        "resumable": true,
+                        "configuration_id": "counter-v1",
+                        "settings": {
+                          "requested": {},
+                          "resolved": {},
+                          "observed": {}
+                        },
+                        "resume_token": "cefc2e8c46913464297d4833c37cad3dc2389c5e51f854347902a00fddaa2915",
+                        "catalog_identity": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                        "instance": "c0b41272acc54a60afbcf80fa87df7ae",
+                        "handle": "7d6ba4882f7942a7981c8ce20b73969e",
+                        "bridge_endpoint": "/tmp/review-late-effect-wizqiawg/host",
+                        "bridge_transport": "fifo"
+                      },
+                      "pending_operation": null,
+                      "start_operation_id": "fcda76537fd0e93aa5026d18aaaa04ede7ec274c6d6263da29f11779fe05f9f7",
+                      "unresolved_effects": [],
+                      "created_by": "owner",
+                      "created_at": "2026-10-24T20:51:00.666288+00:00",
+                      "updated_at": "2026-10-24T20:51:00.673835+00:00",
+                      "id": "a95d0ac2f5b840d79e7710a0e7f7dd97",
+                      "version": 4
+                    },
+                    "output": {
+                      "applied_count": 1
+                    },
+                    "operation_id": "dd83f1957a2770f6b863dfe619f0f60813c8af8f30b2e1dd46e4a8350dfc816d"
+                  }
+                },
+                "next_response": {
+                  "result": {
+                    "session": {
+                      "driver": "external",
+                      "selection": {
+                        "requested": "external",
+                        "resolved": "external",
+                        "fallback_reason": null
+                      },
+                      "specification": {},
+                      "work_id": null,
+                      "actor_id": "owner",
+                      "status": "active",
+                      "backend": {
+                        "host_id": "4953d384e7e6400793267468164e0d27",
+                        "native_id": "counter-conversation",
+                        "protocol": "bridge",
+                        "native_protocol": null,
+                        "native_incarnation": "counter-native-incarnation",
+                        "incarnation": "9b6aa8e9961149a6bd6b24bdac72afb9",
+                        "ownership": "external",
+                        "connection_state": "connected",
+                        "resumable": true,
+                        "configuration_id": "counter-v1",
+                        "settings": {
+                          "requested": {},
+                          "resolved": {},
+                          "observed": {}
+                        },
+                        "resume_token": "cefc2e8c46913464297d4833c37cad3dc2389c5e51f854347902a00fddaa2915",
+                        "catalog_identity": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                        "instance": "c0b41272acc54a60afbcf80fa87df7ae",
+                        "handle": "7d6ba4882f7942a7981c8ce20b73969e",
+                        "bridge_endpoint": "/tmp/review-late-effect-wizqiawg/host",
+                        "bridge_transport": "fifo"
+                      },
+                      "pending_operation": null,
+                      "start_operation_id": "fcda76537fd0e93aa5026d18aaaa04ede7ec274c6d6263da29f11779fe05f9f7",
+                      "unresolved_effects": [],
+                      "created_by": "owner",
+                      "created_at": "2026-10-24T20:51:00.666288+00:00",
+                      "updated_at": "2026-10-24T20:51:00.677379+00:00",
+                      "id": "a95d0ac2f5b840d79e7710a0e7f7dd97",
+                      "version": 6
+                    },
+                    "output": {
+                      "applied_count": 2
+                    },
+                    "operation_id": "c00534cab837ea3ef95480ee28a9ba5c17386855958110b164836f18aa5d3c4a"
+                  }
+                },
+                "final_effect_count": 2
+              }
+            }
+          ]
+        },
+        "raw_reference": "/workspace/work/pr7-review/adversarial/controls-sandbox/p_effect-healthy/raw.json",
+        "raw_sha256": "15b02bf084a95792d0ac90ecaf577eb3280a30b6db2264a83f7f5bb0debfa68f",
+        "elapsed_seconds": 0.0592618520000201
+      }
+    },
+    {
+      "probe": "p_effect",
+      "variant": "fault",
+      "status": "executed",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_effect",
+        "case_id": "c94d0a24d43b5",
+        "status": "executed",
+        "exercised": true,
+        "decisive": true,
+        "distinguishing": true,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [
+          {
+            "boundary": "active Application / SQLite / real FIFO bridge / controlled counter native port",
+            "details": {
+              "effect_count_before_response": 1,
+              "connection_replaced": true,
+              "first_response": {
+                "code": "operation_failed",
+                "details": {
+                  "operation_id": "dd83f1957a2770f6b863dfe619f0f60813c8af8f30b2e1dd46e4a8350dfc816d",
+                  "outcome": "failed",
+                  "cause": "stale_connection",
+                  "recording_error": null
+                }
+              },
+              "next_response": {
+                "result": {
+                  "session": {
+                    "driver": "external",
+                    "selection": {
+                      "requested": "external",
+                      "resolved": "external",
+                      "fallback_reason": null
+                    },
+                    "specification": {},
+                    "work_id": null,
+                    "actor_id": "owner",
+                    "status": "active",
+                    "backend": {
+                      "host_id": "3d93ce8c320c4f71a914ed489d1f319e",
+                      "native_id": "counter-conversation",
+                      "protocol": "bridge",
+                      "native_protocol": null,
+                      "native_incarnation": "counter-native-incarnation",
+                      "incarnation": "2b777844723c4028a5ca4055fb5be52c",
+                      "ownership": "external",
+                      "connection_state": "connected",
+                      "resumable": true,
+                      "configuration_id": "counter-v1",
+                      "settings": {
+                        "requested": {},
+                        "resolved": {},
+                        "observed": {}
+                      },
+                      "resume_token": "211e590fd7fe563ff775b2128fb38e03904ea9c6a4e51a2dbb03e618bea46f5a",
+                      "catalog_identity": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                      "instance": "afb8f90387664466bb6a664eaf2b1005",
+                      "handle": "12d0c5fb4b76495f849ccb6e9cc1ccc9",
+                      "bridge_endpoint": "/tmp/review-late-effect-4xl2c30z/host",
+                      "bridge_transport": "fifo"
+                    },
+                    "pending_operation": null,
+                    "start_operation_id": "0e3713bf976d7ab6ae0a5df9c23e8d9edb495c072bb2fd2f66ec67da43495ce9",
+                    "unresolved_effects": [
+                      "dd83f1957a2770f6b863dfe619f0f60813c8af8f30b2e1dd46e4a8350dfc816d"
+                    ],
+                    "resume_source": {
+                      "session_id": "72f22aa12d934cdba2ca2420c0ade028",
+                      "version": 2,
+                      "start_operation_id": "37ef12f898087c9ef837a763747b1d8c7f45505b03382b02f69dc9fefe4ba7ab"
+                    },
+                    "created_by": "owner",
+                    "created_at": "2026-10-24T20:51:00.756587+00:00",
+                    "updated_at": "2026-10-24T20:51:00.764516+00:00",
+                    "id": "518f036077f547348c65403acade1e88",
+                    "version": 4
+                  },
+                  "output": {
+                    "applied_count": 2
+                  },
+                  "operation_id": "c00534cab837ea3ef95480ee28a9ba5c17386855958110b164836f18aa5d3c4a"
+                }
+              },
+              "final_effect_count": 2
+            }
+          }
+        ],
+        "assertions": [
+          {
+            "invariant": "effect_uncertainty",
+            "exercised": true,
+            "satisfied": false,
+            "actual": "operation_failed",
+            "required": [
+              "operation_unknown"
+            ],
+            "operator": "in"
+          },
+          {
+            "invariant": "effect_uncertainty",
+            "exercised": true,
+            "satisfied": false,
+            "actual": "completed",
+            "required": "conflict",
+            "operator": "eq"
+          }
+        ],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "visible": {
+          "facts": {
+            "checks": [
+              {
+                "invariant": "effect_uncertainty",
+                "left": "operation_failed",
+                "operator": "in",
+                "right": [
+                  "operation_unknown"
+                ],
+                "observed": true,
+                "note": "After a recorded effect and connection replacement, a missing response must retain uncertainty; after acknowledged completion, completion is valid.",
+                "subject": {
+                  "expected": "operation-current",
+                  "observed": "operation-current"
+                }
+              },
+              {
+                "invariant": "effect_uncertainty",
+                "left": "completed",
+                "operator": "eq",
+                "right": "conflict",
+                "observed": true,
+                "note": "Retry of the same intended operation must remain fenced while its old outcome is unresolved.",
+                "subject": {
+                  "expected": "operation-current",
+                  "observed": "operation-current"
+                }
+              }
+            ],
+            "policy_defined": true
+          },
+          "observations": [
+            {
+              "boundary": "active Application / SQLite / real FIFO bridge / controlled counter native port",
+              "details": {
+                "effect_count_before_response": 1,
+                "connection_replaced": true,
+                "first_response": {
+                  "code": "operation_failed",
+                  "details": {
+                    "operation_id": "dd83f1957a2770f6b863dfe619f0f60813c8af8f30b2e1dd46e4a8350dfc816d",
+                    "outcome": "failed",
+                    "cause": "stale_connection",
+                    "recording_error": null
+                  }
+                },
+                "next_response": {
+                  "result": {
+                    "session": {
+                      "driver": "external",
+                      "selection": {
+                        "requested": "external",
+                        "resolved": "external",
+                        "fallback_reason": null
+                      },
+                      "specification": {},
+                      "work_id": null,
+                      "actor_id": "owner",
+                      "status": "active",
+                      "backend": {
+                        "host_id": "3d93ce8c320c4f71a914ed489d1f319e",
+                        "native_id": "counter-conversation",
+                        "protocol": "bridge",
+                        "native_protocol": null,
+                        "native_incarnation": "counter-native-incarnation",
+                        "incarnation": "2b777844723c4028a5ca4055fb5be52c",
+                        "ownership": "external",
+                        "connection_state": "connected",
+                        "resumable": true,
+                        "configuration_id": "counter-v1",
+                        "settings": {
+                          "requested": {},
+                          "resolved": {},
+                          "observed": {}
+                        },
+                        "resume_token": "211e590fd7fe563ff775b2128fb38e03904ea9c6a4e51a2dbb03e618bea46f5a",
+                        "catalog_identity": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+                        "instance": "afb8f90387664466bb6a664eaf2b1005",
+                        "handle": "12d0c5fb4b76495f849ccb6e9cc1ccc9",
+                        "bridge_endpoint": "/tmp/review-late-effect-4xl2c30z/host",
+                        "bridge_transport": "fifo"
+                      },
+                      "pending_operation": null,
+                      "start_operation_id": "0e3713bf976d7ab6ae0a5df9c23e8d9edb495c072bb2fd2f66ec67da43495ce9",
+                      "unresolved_effects": [
+                        "dd83f1957a2770f6b863dfe619f0f60813c8af8f30b2e1dd46e4a8350dfc816d"
+                      ],
+                      "resume_source": {
+                        "session_id": "72f22aa12d934cdba2ca2420c0ade028",
+                        "version": 2,
+                        "start_operation_id": "37ef12f898087c9ef837a763747b1d8c7f45505b03382b02f69dc9fefe4ba7ab"
+                      },
+                      "created_by": "owner",
+                      "created_at": "2026-10-24T20:51:00.756587+00:00",
+                      "updated_at": "2026-10-24T20:51:00.764516+00:00",
+                      "id": "518f036077f547348c65403acade1e88",
+                      "version": 4
+                    },
+                    "output": {
+                      "applied_count": 2
+                    },
+                    "operation_id": "c00534cab837ea3ef95480ee28a9ba5c17386855958110b164836f18aa5d3c4a"
+                  }
+                },
+                "final_effect_count": 2
+              }
+            }
+          ]
+        },
+        "raw_reference": "/workspace/work/pr7-review/adversarial/controls-sandbox/p_effect-fault/raw.json",
+        "raw_sha256": "ccd44f35485ee57ffe3388d5c6bf9ac29d64669151acfc75d74ad036b4ebc654",
+        "elapsed_seconds": 0.054176675999997315
+      }
+    },
+    {
+      "probe": "p_effect",
+      "variant": "setup",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_effect",
+        "case_id": "c0fb9a45eb2da",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "ImportError",
+        "reason": "controlled unrelated setup failure",
+        "elapsed_seconds": 5.529000020487729e-06
+      }
+    },
+    {
+      "probe": "p_effect",
+      "variant": "helper",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_effect",
+        "case_id": "c0fb9a45eb2da",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "AssertionError",
+        "reason": "TARGET_REQUIREMENT controlled helper; target not reached",
+        "elapsed_seconds": 2.62199998246615e-06
+      }
+    },
+    {
+      "probe": "p_effect",
+      "variant": "timeout",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_effect",
+        "case_id": "c0fb9a45eb2da",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "TimeoutExpired",
+        "reason": "timeout before target assertion",
+        "elapsed_seconds": 0.020636999000004153
+      }
+    },
+    {
+      "probe": "p_busy",
+      "variant": "healthy",
+      "status": "not_exercised",
+      "correct_exercised_control": false,
+      "record": {
+        "probe_id": "p_busy",
+        "case_id": "cabe25ecf8ef4",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "PermissionError",
+        "reason": "[Errno 1] Operation not permitted",
+        "elapsed_seconds": 0.01409960200001592
+      }
+    },
+    {
+      "probe": "p_busy",
+      "variant": "fault",
+      "status": "not_exercised",
+      "correct_exercised_control": false,
+      "record": {
+        "probe_id": "p_busy",
+        "case_id": "c3e667a1b7532",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "PermissionError",
+        "reason": "[Errno 1] Operation not permitted",
+        "elapsed_seconds": 0.008296209999997473
+      }
+    },
+    {
+      "probe": "p_busy",
+      "variant": "setup",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_busy",
+        "case_id": "cabe25ecf8ef4",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "ImportError",
+        "reason": "controlled unrelated setup failure",
+        "elapsed_seconds": 5.2720000098815945e-06
+      }
+    },
+    {
+      "probe": "p_busy",
+      "variant": "helper",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_busy",
+        "case_id": "cabe25ecf8ef4",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "AssertionError",
+        "reason": "TARGET_REQUIREMENT controlled helper; target not reached",
+        "elapsed_seconds": 2.9480000023340835e-06
+      }
+    },
+    {
+      "probe": "p_busy",
+      "variant": "timeout",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_busy",
+        "case_id": "cabe25ecf8ef4",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "TimeoutExpired",
+        "reason": "timeout before target assertion",
+        "elapsed_seconds": 0.020637520999997605
+      }
+    },
+    {
+      "probe": "p_authority",
+      "variant": "healthy",
+      "status": "executed",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_authority",
+        "case_id": "c85b37db76aaa",
+        "status": "executed",
+        "exercised": true,
+        "decisive": true,
+        "distinguishing": true,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [
+          {
+            "boundary": "real FIFO bridge / native callback observation / controlled native port",
+            "details": {
+              "observed_original_actor": "old-actor",
+              "observed_original_work": "old-work",
+              "executed_context": {
+                "actor": "old-actor",
+                "session_id": "old-session",
+                "work_id": "old-work",
+                "native_id": "controlled-conversation",
+                "incarnation": "072df5814f05490c9278ff4d10a7aeaf",
+                "native_incarnation": "native-incarnation",
+                "host_id": "2bad3fb9ee254fcebd14266c5558c5ce",
+                "call_id": "observed-old-call",
+                "action": "echo"
+              },
+              "old_incarnation": "072df5814f05490c9278ff4d10a7aeaf",
+              "new_incarnation": null
+            }
+          }
+        ],
+        "assertions": [
+          {
+            "invariant": "authority_binding",
+            "exercised": true,
+            "satisfied": true,
+            "actual": "old-actor",
+            "required": "old-actor",
+            "operator": "eq"
+          },
+          {
+            "invariant": "authority_binding",
+            "exercised": true,
+            "satisfied": true,
+            "actual": "old-work",
+            "required": "old-work",
+            "operator": "eq"
+          }
+        ],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "visible": {
+          "facts": {
+            "checks": [
+              {
+                "invariant": "authority_binding",
+                "left": "old-actor",
+                "operator": "eq",
+                "right": "old-actor",
+                "observed": true,
+                "note": "An already observed native call retains its original actor across reconnect.",
+                "subject": {
+                  "expected": "operation-current",
+                  "observed": "operation-current"
+                }
+              },
+              {
+                "invariant": "authority_binding",
+                "left": "old-work",
+                "operator": "eq",
+                "right": "old-work",
+                "observed": true,
+                "note": "An already observed native call retains its original work scope across reconnect.",
+                "subject": {
+                  "expected": "operation-current",
+                  "observed": "operation-current"
+                }
+              }
+            ],
+            "policy_defined": true
+          },
+          "observations": [
+            {
+              "boundary": "real FIFO bridge / native callback observation / controlled native port",
+              "details": {
+                "observed_original_actor": "old-actor",
+                "observed_original_work": "old-work",
+                "executed_context": {
+                  "actor": "old-actor",
+                  "session_id": "old-session",
+                  "work_id": "old-work",
+                  "native_id": "controlled-conversation",
+                  "incarnation": "072df5814f05490c9278ff4d10a7aeaf",
+                  "native_incarnation": "native-incarnation",
+                  "host_id": "2bad3fb9ee254fcebd14266c5558c5ce",
+                  "call_id": "observed-old-call",
+                  "action": "echo"
+                },
+                "old_incarnation": "072df5814f05490c9278ff4d10a7aeaf",
+                "new_incarnation": null
+              }
+            }
+          ]
+        },
+        "raw_reference": "/workspace/work/pr7-review/adversarial/controls-sandbox/p_authority-healthy/raw.json",
+        "raw_sha256": "6596cba05c72201b63c130548510029b4d5afdb26f75f5556178e1bc5f1ae3e4",
+        "elapsed_seconds": 0.01693048100000283
+      }
+    },
+    {
+      "probe": "p_authority",
+      "variant": "fault",
+      "status": "executed",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_authority",
+        "case_id": "cef7128badec1",
+        "status": "executed",
+        "exercised": true,
+        "decisive": true,
+        "distinguishing": true,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [
+          {
+            "boundary": "real FIFO bridge / native callback observation / controlled native port",
+            "details": {
+              "observed_original_actor": "old-actor",
+              "observed_original_work": "old-work",
+              "executed_context": {
+                "actor": "final-actor",
+                "session_id": "final-session",
+                "work_id": "final-work",
+                "native_id": "controlled-conversation",
+                "incarnation": "a1225cd1a795441e96a479018364174d",
+                "native_incarnation": "native-incarnation",
+                "host_id": "36fd32f4d4f54e7cb4bb6ef6e1c36424",
+                "call_id": "observed-old-call",
+                "action": "echo"
+              },
+              "old_incarnation": "a94038e864b647f8b6d36cc20e23445b",
+              "new_incarnation": "a1225cd1a795441e96a479018364174d"
+            }
+          }
+        ],
+        "assertions": [
+          {
+            "invariant": "authority_binding",
+            "exercised": true,
+            "satisfied": false,
+            "actual": "final-actor",
+            "required": "old-actor",
+            "operator": "eq"
+          },
+          {
+            "invariant": "authority_binding",
+            "exercised": true,
+            "satisfied": false,
+            "actual": "final-work",
+            "required": "old-work",
+            "operator": "eq"
+          }
+        ],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "visible": {
+          "facts": {
+            "checks": [
+              {
+                "invariant": "authority_binding",
+                "left": "final-actor",
+                "operator": "eq",
+                "right": "old-actor",
+                "observed": true,
+                "note": "An already observed native call retains its original actor across reconnect.",
+                "subject": {
+                  "expected": "operation-current",
+                  "observed": "operation-current"
+                }
+              },
+              {
+                "invariant": "authority_binding",
+                "left": "final-work",
+                "operator": "eq",
+                "right": "old-work",
+                "observed": true,
+                "note": "An already observed native call retains its original work scope across reconnect.",
+                "subject": {
+                  "expected": "operation-current",
+                  "observed": "operation-current"
+                }
+              }
+            ],
+            "policy_defined": true
+          },
+          "observations": [
+            {
+              "boundary": "real FIFO bridge / native callback observation / controlled native port",
+              "details": {
+                "observed_original_actor": "old-actor",
+                "observed_original_work": "old-work",
+                "executed_context": {
+                  "actor": "final-actor",
+                  "session_id": "final-session",
+                  "work_id": "final-work",
+                  "native_id": "controlled-conversation",
+                  "incarnation": "a1225cd1a795441e96a479018364174d",
+                  "native_incarnation": "native-incarnation",
+                  "host_id": "36fd32f4d4f54e7cb4bb6ef6e1c36424",
+                  "call_id": "observed-old-call",
+                  "action": "echo"
+                },
+                "old_incarnation": "a94038e864b647f8b6d36cc20e23445b",
+                "new_incarnation": "a1225cd1a795441e96a479018364174d"
+              }
+            }
+          ]
+        },
+        "raw_reference": "/workspace/work/pr7-review/adversarial/controls-sandbox/p_authority-fault/raw.json",
+        "raw_sha256": "c82b1be05658ce31e75ec104010ae48925f1bec33bcb0806ed215bf981729e34",
+        "elapsed_seconds": 0.019070628000008583
+      }
+    },
+    {
+      "probe": "p_authority",
+      "variant": "setup",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_authority",
+        "case_id": "c85b37db76aaa",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "ImportError",
+        "reason": "controlled unrelated setup failure",
+        "elapsed_seconds": 4.643000011128606e-06
+      }
+    },
+    {
+      "probe": "p_authority",
+      "variant": "helper",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_authority",
+        "case_id": "c85b37db76aaa",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "AssertionError",
+        "reason": "TARGET_REQUIREMENT controlled helper; target not reached",
+        "elapsed_seconds": 2.62199998246615e-06
+      }
+    },
+    {
+      "probe": "p_authority",
+      "variant": "timeout",
+      "status": "not_exercised",
+      "correct_exercised_control": true,
+      "record": {
+        "probe_id": "p_authority",
+        "case_id": "c85b37db76aaa",
+        "status": "not_exercised",
+        "exercised": false,
+        "decisive": false,
+        "distinguishing": false,
+        "subject": {
+          "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+          "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+        },
+        "observations": [],
+        "assertions": [],
+        "actual_cost_usd": null,
+        "cost_basis": "local runtime measured in seconds; machine monetary rate unavailable",
+        "error_type": "TimeoutExpired",
+        "reason": "timeout before target assertion",
+        "elapsed_seconds": 0.02051126599999975
+      }
+    }
+  ],
+  "action_checks": [
+    {
+      "case_id": "c06e2dd37f2ab",
+      "action": "accept",
+      "status": "executed",
+      "subject": {
+        "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+        "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+      },
+      "cost_usd": null,
+      "cost_basis": "local runtime; compute price and review time unknown",
+      "before": {
+        "requirements": {
+          "work_id": "092687d6049346f799822e6d58061e6c",
+          "objective": "Deliver the complete owner objective",
+          "outcomes": {
+            "A": "Current configured predicate and mechanical measurement"
+          },
+          "checks": {
+            "A": {
+              "capability": "checks/measure",
+              "outcomes": [
+                "A"
+              ],
+              "bindings": {
+                "scope": "product",
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "session_id": "conversation",
+                  "incarnation": "incarnation-2"
+                }
+              }
+            }
+          },
+          "identity": "0fe0abacae2a658d73cef30f2ffde3ad51c03a57f274c910d0b2caf5de558454",
+          "revised_by": "owner",
+          "revised_at": "2026-10-23T20:00:00Z",
+          "id": "092687d6049346f799822e6d58061e6c",
+          "version": 1
+        },
+        "candidate": {
+          "work_id": "092687d6049346f799822e6d58061e6c",
+          "candidate": {
+            "identity": "tree:measured-product",
+            "configuration": "config:nondefault"
+          },
+          "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+          "selected_by": "owner",
+          "selected_at": "2026-10-23T20:00:00Z",
+          "id": "092687d6049346f799822e6d58061e6c",
+          "version": 1
+        },
+        "coverage": {
+          "A": {
+            "covered": true,
+            "checks": [
+              "A"
+            ]
+          }
+        },
+        "acceptance_issues": [],
+        "measurements": [
+          {
+            "work_id": "092687d6049346f799822e6d58061e6c",
+            "check_id": "A",
+            "fingerprint": "733633fc6724d9c34533b0b70367425050a7c5ea00326f1fa5386b1b3e9d2b43",
+            "requirements_identity": "0fe0abacae2a658d73cef30f2ffde3ad51c03a57f274c910d0b2caf5de558454",
+            "requirement_revision": 1,
+            "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "candidate_revision": 1,
+            "provider_identity": null,
+            "request_binding": {
+              "work_id": "092687d6049346f799822e6d58061e6c",
+              "check_id": "A",
+              "requirements_identity": "0fe0abacae2a658d73cef30f2ffde3ad51c03a57f274c910d0b2caf5de558454",
+              "requirement_revision": 1,
+              "candidate": {
+                "identity": "tree:measured-product",
+                "configuration": "config:nondefault"
+              },
+              "bindings": {
+                "scope": "product",
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "session_id": "conversation",
+                  "incarnation": "incarnation-2"
+                }
+              },
+              "outcomes": [
+                "A"
+              ]
+            },
+            "operation_id": "e4d6f55a33d962537a67b2f8def2a3ce0d60055c0b9becfa173ed2b8e9aa7b1d",
+            "status": "completed",
+            "sequence": 1,
+            "created_by": "owner",
+            "created_at": "2026-10-23T20:00:00Z",
+            "raw_response": {
+              "measurement": {
+                "work_id": "092687d6049346f799822e6d58061e6c",
+                "check_id": "A",
+                "requirements_identity": "0fe0abacae2a658d73cef30f2ffde3ad51c03a57f274c910d0b2caf5de558454",
+                "requirement_revision": 1,
+                "candidate": {
+                  "identity": "tree:measured-product",
+                  "configuration": "config:nondefault"
+                },
+                "bindings": {
+                  "scope": "product",
+                  "artifact": {
+                    "name": "result.json",
+                    "sha256": "measured-artifact"
+                  },
+                  "native": {
+                    "session_id": "conversation",
+                    "incarnation": "incarnation-2"
+                  }
+                },
+                "status": "completed",
+                "passed": true,
+                "outcomes": {
+                  "A": true
+                }
+              }
+            },
+            "raw_digest": "b746f16ec77eedd94df2ed38e94f7b7bd710297231495f764645818f597c30df",
+            "finished_at": "2026-10-23T20:00:00Z",
+            "id": "b61971e6acfd9d55a3cb60bbd06df0d3ebb2fc2189fc7616cfd0545933dcfff2",
+            "version": 2
+          }
+        ],
+        "acceptance_history": [],
+        "accepted": false,
+        "contributions": []
+      },
+      "after": {
+        "requirements": {
+          "work_id": "092687d6049346f799822e6d58061e6c",
+          "objective": "Deliver the complete owner objective",
+          "outcomes": {
+            "A": "Current configured predicate and mechanical measurement"
+          },
+          "checks": {
+            "A": {
+              "capability": "checks/measure",
+              "outcomes": [
+                "A"
+              ],
+              "bindings": {
+                "scope": "product",
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "session_id": "conversation",
+                  "incarnation": "incarnation-2"
+                }
+              }
+            }
+          },
+          "identity": "0fe0abacae2a658d73cef30f2ffde3ad51c03a57f274c910d0b2caf5de558454",
+          "revised_by": "owner",
+          "revised_at": "2026-10-23T20:00:00Z",
+          "id": "092687d6049346f799822e6d58061e6c",
+          "version": 1
+        },
+        "candidate": {
+          "work_id": "092687d6049346f799822e6d58061e6c",
+          "candidate": {
+            "identity": "tree:measured-product",
+            "configuration": "config:nondefault"
+          },
+          "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+          "selected_by": "owner",
+          "selected_at": "2026-10-23T20:00:00Z",
+          "id": "092687d6049346f799822e6d58061e6c",
+          "version": 1
+        },
+        "coverage": {
+          "A": {
+            "covered": true,
+            "checks": [
+              "A"
+            ]
+          }
+        },
+        "acceptance_issues": [],
+        "measurements": [
+          {
+            "work_id": "092687d6049346f799822e6d58061e6c",
+            "check_id": "A",
+            "fingerprint": "733633fc6724d9c34533b0b70367425050a7c5ea00326f1fa5386b1b3e9d2b43",
+            "requirements_identity": "0fe0abacae2a658d73cef30f2ffde3ad51c03a57f274c910d0b2caf5de558454",
+            "requirement_revision": 1,
+            "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "candidate_revision": 1,
+            "provider_identity": null,
+            "request_binding": {
+              "work_id": "092687d6049346f799822e6d58061e6c",
+              "check_id": "A",
+              "requirements_identity": "0fe0abacae2a658d73cef30f2ffde3ad51c03a57f274c910d0b2caf5de558454",
+              "requirement_revision": 1,
+              "candidate": {
+                "identity": "tree:measured-product",
+                "configuration": "config:nondefault"
+              },
+              "bindings": {
+                "scope": "product",
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "session_id": "conversation",
+                  "incarnation": "incarnation-2"
+                }
+              },
+              "outcomes": [
+                "A"
+              ]
+            },
+            "operation_id": "e4d6f55a33d962537a67b2f8def2a3ce0d60055c0b9becfa173ed2b8e9aa7b1d",
+            "status": "completed",
+            "sequence": 1,
+            "created_by": "owner",
+            "created_at": "2026-10-23T20:00:00Z",
+            "raw_response": {
+              "measurement": {
+                "work_id": "092687d6049346f799822e6d58061e6c",
+                "check_id": "A",
+                "requirements_identity": "0fe0abacae2a658d73cef30f2ffde3ad51c03a57f274c910d0b2caf5de558454",
+                "requirement_revision": 1,
+                "candidate": {
+                  "identity": "tree:measured-product",
+                  "configuration": "config:nondefault"
+                },
+                "bindings": {
+                  "scope": "product",
+                  "artifact": {
+                    "name": "result.json",
+                    "sha256": "measured-artifact"
+                  },
+                  "native": {
+                    "session_id": "conversation",
+                    "incarnation": "incarnation-2"
+                  }
+                },
+                "status": "completed",
+                "passed": true,
+                "outcomes": {
+                  "A": true
+                }
+              }
+            },
+            "raw_digest": "b746f16ec77eedd94df2ed38e94f7b7bd710297231495f764645818f597c30df",
+            "finished_at": "2026-10-23T20:00:00Z",
+            "id": "b61971e6acfd9d55a3cb60bbd06df0d3ebb2fc2189fc7616cfd0545933dcfff2",
+            "version": 2
+          }
+        ],
+        "acceptance_history": [
+          {
+            "work_id": "092687d6049346f799822e6d58061e6c",
+            "accepted": true,
+            "binding": {
+              "requirements": {
+                "identity": "0fe0abacae2a658d73cef30f2ffde3ad51c03a57f274c910d0b2caf5de558454",
+                "revision": 1
+              },
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "b61971e6acfd9d55a3cb60bbd06df0d3ebb2fc2189fc7616cfd0545933dcfff2",
+                  2,
+                  "b746f16ec77eedd94df2ed38e94f7b7bd710297231495f764645818f597c30df"
+                ]
+              ],
+              "operations": [
+                [
+                  "e4d6f55a33d962537a67b2f8def2a3ce0d60055c0b9becfa173ed2b8e9aa7b1d",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+              "provider_configurations": {
+                "checks": null
+              }
+            },
+            "issues": [],
+            "policy_decision": {
+              "accepted": true,
+              "reasons": []
+            },
+            "coverage": {
+              "A": {
+                "covered": true,
+                "checks": [
+                  "A"
+                ]
+              }
+            },
+            "assessment_id": "4c5c6eb164b24bfdb886e3df9ec99ae8",
+            "assessment_version": 1,
+            "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+            "sequence": 1,
+            "created_by": "owner",
+            "created_at": "2026-10-23T20:00:00Z",
+            "id": "46289ca1a6c844f08000a86e5940619b",
+            "version": 1,
+            "current": true
+          }
+        ],
+        "accepted": true,
+        "contributions": []
+      },
+      "old_assessment": {
+        "question": "Evaluate current context",
+        "work_id": "092687d6049346f799822e6d58061e6c",
+        "evaluations": [
+          {
+            "evaluator": "review",
+            "outcome": "pass",
+            "confidence": 0.99,
+            "rationale": "Fixed configured context predicate",
+            "evidence": [],
+            "details": {}
+          }
+        ],
+        "conclusion": {
+          "evaluator": "review",
+          "outcome": "pass",
+          "confidence": 0.99,
+          "rationale": "Fixed configured context predicate",
+          "evidence": [],
+          "details": {}
+        },
+        "unresolved": false,
+        "escalation_error": null,
+        "work_version": 1,
+        "acceptance_binding": {
+          "requirements": {
+            "identity": "0fe0abacae2a658d73cef30f2ffde3ad51c03a57f274c910d0b2caf5de558454",
+            "revision": 1
+          },
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "b61971e6acfd9d55a3cb60bbd06df0d3ebb2fc2189fc7616cfd0545933dcfff2",
+              2,
+              "b746f16ec77eedd94df2ed38e94f7b7bd710297231495f764645818f597c30df"
+            ]
+          ],
+          "operations": [
+            [
+              "e4d6f55a33d962537a67b2f8def2a3ce0d60055c0b9becfa173ed2b8e9aa7b1d",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          }
+        },
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "created_by": "owner",
+        "created_at": "2026-10-23T20:00:00Z",
+        "id": "4c5c6eb164b24bfdb886e3df9ec99ae8",
+        "version": 1
+      },
+      "action_result": {
+        "work_id": "092687d6049346f799822e6d58061e6c",
+        "accepted": true,
+        "binding": {
+          "requirements": {
+            "identity": "0fe0abacae2a658d73cef30f2ffde3ad51c03a57f274c910d0b2caf5de558454",
+            "revision": 1
+          },
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "b61971e6acfd9d55a3cb60bbd06df0d3ebb2fc2189fc7616cfd0545933dcfff2",
+              2,
+              "b746f16ec77eedd94df2ed38e94f7b7bd710297231495f764645818f597c30df"
+            ]
+          ],
+          "operations": [
+            [
+              "e4d6f55a33d962537a67b2f8def2a3ce0d60055c0b9becfa173ed2b8e9aa7b1d",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          }
+        },
+        "issues": [],
+        "policy_decision": {
+          "accepted": true,
+          "reasons": []
+        },
+        "coverage": {
+          "A": {
+            "covered": true,
+            "checks": [
+              "A"
+            ]
+          }
+        },
+        "assessment_id": "4c5c6eb164b24bfdb886e3df9ec99ae8",
+        "assessment_version": 1,
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "sequence": 1,
+        "created_by": "owner",
+        "created_at": "2026-10-23T20:00:00Z",
+        "id": "46289ca1a6c844f08000a86e5940619b",
+        "version": 1
+      },
+      "independent_assessment": {
+        "question": "Evaluate current context",
+        "work_id": "092687d6049346f799822e6d58061e6c",
+        "evaluations": [
+          {
+            "evaluator": "review",
+            "outcome": "reject",
+            "confidence": 0.99,
+            "rationale": "Fixed configured context predicate",
+            "evidence": [],
+            "details": {}
+          }
+        ],
+        "conclusion": {
+          "evaluator": "review",
+          "outcome": "reject",
+          "confidence": 0.99,
+          "rationale": "Fixed configured context predicate",
+          "evidence": [],
+          "details": {}
+        },
+        "unresolved": false,
+        "escalation_error": null,
+        "work_version": 2,
+        "acceptance_binding": {
+          "requirements": {
+            "identity": "0fe0abacae2a658d73cef30f2ffde3ad51c03a57f274c910d0b2caf5de558454",
+            "revision": 1
+          },
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "b61971e6acfd9d55a3cb60bbd06df0d3ebb2fc2189fc7616cfd0545933dcfff2",
+              2,
+              "b746f16ec77eedd94df2ed38e94f7b7bd710297231495f764645818f597c30df"
+            ]
+          ],
+          "operations": [
+            [
+              "e4d6f55a33d962537a67b2f8def2a3ce0d60055c0b9becfa173ed2b8e9aa7b1d",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          }
+        },
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "created_by": "owner",
+        "created_at": "2026-10-23T20:00:00Z",
+        "id": "1382b38ae8904e40b4b5b0269e299d22",
+        "version": 1
+      },
+      "context_change": {
+        "context": {
+          "check_result": "failed"
+        }
+      },
+      "accepted_after": true,
+      "should_accept": false,
+      "consequential_false_accept": true,
+      "unnecessary_withholding": false,
+      "behavioral_outcome_correct": false,
+      "limitation": "Only actual acceptance state is measured. Reject/defer/investigate withhold acceptance; downstream repair, scheduling and business loss are not simulated as observed.",
+      "elapsed_seconds": 0.04247390800000517
+    },
+    {
+      "case_id": "c06e2dd37f2ab",
+      "action": "reject",
+      "status": "executed",
+      "subject": {
+        "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+        "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+      },
+      "cost_usd": null,
+      "cost_basis": "local runtime; compute price and review time unknown",
+      "before": {
+        "requirements": {
+          "work_id": "8079f68ce7b34ab6a5057a32f371a299",
+          "objective": "Deliver the complete owner objective",
+          "outcomes": {
+            "A": "Current configured predicate and mechanical measurement"
+          },
+          "checks": {
+            "A": {
+              "capability": "checks/measure",
+              "outcomes": [
+                "A"
+              ],
+              "bindings": {
+                "scope": "product",
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "session_id": "conversation",
+                  "incarnation": "incarnation-2"
+                }
+              }
+            }
+          },
+          "identity": "b6febe738861fdd2e4520f28d1d320e1e99b441ae977a837549a1fea67655427",
+          "revised_by": "owner",
+          "revised_at": "2026-10-23T20:00:00Z",
+          "id": "8079f68ce7b34ab6a5057a32f371a299",
+          "version": 1
+        },
+        "candidate": {
+          "work_id": "8079f68ce7b34ab6a5057a32f371a299",
+          "candidate": {
+            "identity": "tree:measured-product",
+            "configuration": "config:nondefault"
+          },
+          "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+          "selected_by": "owner",
+          "selected_at": "2026-10-23T20:00:00Z",
+          "id": "8079f68ce7b34ab6a5057a32f371a299",
+          "version": 1
+        },
+        "coverage": {
+          "A": {
+            "covered": true,
+            "checks": [
+              "A"
+            ]
+          }
+        },
+        "acceptance_issues": [],
+        "measurements": [
+          {
+            "work_id": "8079f68ce7b34ab6a5057a32f371a299",
+            "check_id": "A",
+            "fingerprint": "d54220f618e67287abc1f3079b08794ef70f0339f1c60a7e3735c73607c47e4b",
+            "requirements_identity": "b6febe738861fdd2e4520f28d1d320e1e99b441ae977a837549a1fea67655427",
+            "requirement_revision": 1,
+            "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "candidate_revision": 1,
+            "provider_identity": null,
+            "request_binding": {
+              "work_id": "8079f68ce7b34ab6a5057a32f371a299",
+              "check_id": "A",
+              "requirements_identity": "b6febe738861fdd2e4520f28d1d320e1e99b441ae977a837549a1fea67655427",
+              "requirement_revision": 1,
+              "candidate": {
+                "identity": "tree:measured-product",
+                "configuration": "config:nondefault"
+              },
+              "bindings": {
+                "scope": "product",
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "session_id": "conversation",
+                  "incarnation": "incarnation-2"
+                }
+              },
+              "outcomes": [
+                "A"
+              ]
+            },
+            "operation_id": "23900658ffff564380e0e8e690ed2e7bb93914303021c4e737a60c8ec151e072",
+            "status": "completed",
+            "sequence": 1,
+            "created_by": "owner",
+            "created_at": "2026-10-23T20:00:00Z",
+            "raw_response": {
+              "measurement": {
+                "work_id": "8079f68ce7b34ab6a5057a32f371a299",
+                "check_id": "A",
+                "requirements_identity": "b6febe738861fdd2e4520f28d1d320e1e99b441ae977a837549a1fea67655427",
+                "requirement_revision": 1,
+                "candidate": {
+                  "identity": "tree:measured-product",
+                  "configuration": "config:nondefault"
+                },
+                "bindings": {
+                  "scope": "product",
+                  "artifact": {
+                    "name": "result.json",
+                    "sha256": "measured-artifact"
+                  },
+                  "native": {
+                    "session_id": "conversation",
+                    "incarnation": "incarnation-2"
+                  }
+                },
+                "status": "completed",
+                "passed": true,
+                "outcomes": {
+                  "A": true
+                }
+              }
+            },
+            "raw_digest": "6c0c130d57f435d4502e2ab704435f640fce8adb02e3640d184a6de25b1848b2",
+            "finished_at": "2026-10-23T20:00:00Z",
+            "id": "9d86ee998b9b500f5b4021ca5c8a1de76d03e79852c23be0169baf3755aee48d",
+            "version": 2
+          }
+        ],
+        "acceptance_history": [],
+        "accepted": false,
+        "contributions": []
+      },
+      "after": {
+        "requirements": {
+          "work_id": "8079f68ce7b34ab6a5057a32f371a299",
+          "objective": "Deliver the complete owner objective",
+          "outcomes": {
+            "A": "Current configured predicate and mechanical measurement"
+          },
+          "checks": {
+            "A": {
+              "capability": "checks/measure",
+              "outcomes": [
+                "A"
+              ],
+              "bindings": {
+                "scope": "product",
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "session_id": "conversation",
+                  "incarnation": "incarnation-2"
+                }
+              }
+            }
+          },
+          "identity": "b6febe738861fdd2e4520f28d1d320e1e99b441ae977a837549a1fea67655427",
+          "revised_by": "owner",
+          "revised_at": "2026-10-23T20:00:00Z",
+          "id": "8079f68ce7b34ab6a5057a32f371a299",
+          "version": 1
+        },
+        "candidate": {
+          "work_id": "8079f68ce7b34ab6a5057a32f371a299",
+          "candidate": {
+            "identity": "tree:measured-product",
+            "configuration": "config:nondefault"
+          },
+          "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+          "selected_by": "owner",
+          "selected_at": "2026-10-23T20:00:00Z",
+          "id": "8079f68ce7b34ab6a5057a32f371a299",
+          "version": 1
+        },
+        "coverage": {
+          "A": {
+            "covered": true,
+            "checks": [
+              "A"
+            ]
+          }
+        },
+        "acceptance_issues": [],
+        "measurements": [
+          {
+            "work_id": "8079f68ce7b34ab6a5057a32f371a299",
+            "check_id": "A",
+            "fingerprint": "d54220f618e67287abc1f3079b08794ef70f0339f1c60a7e3735c73607c47e4b",
+            "requirements_identity": "b6febe738861fdd2e4520f28d1d320e1e99b441ae977a837549a1fea67655427",
+            "requirement_revision": 1,
+            "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "candidate_revision": 1,
+            "provider_identity": null,
+            "request_binding": {
+              "work_id": "8079f68ce7b34ab6a5057a32f371a299",
+              "check_id": "A",
+              "requirements_identity": "b6febe738861fdd2e4520f28d1d320e1e99b441ae977a837549a1fea67655427",
+              "requirement_revision": 1,
+              "candidate": {
+                "identity": "tree:measured-product",
+                "configuration": "config:nondefault"
+              },
+              "bindings": {
+                "scope": "product",
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "session_id": "conversation",
+                  "incarnation": "incarnation-2"
+                }
+              },
+              "outcomes": [
+                "A"
+              ]
+            },
+            "operation_id": "23900658ffff564380e0e8e690ed2e7bb93914303021c4e737a60c8ec151e072",
+            "status": "completed",
+            "sequence": 1,
+            "created_by": "owner",
+            "created_at": "2026-10-23T20:00:00Z",
+            "raw_response": {
+              "measurement": {
+                "work_id": "8079f68ce7b34ab6a5057a32f371a299",
+                "check_id": "A",
+                "requirements_identity": "b6febe738861fdd2e4520f28d1d320e1e99b441ae977a837549a1fea67655427",
+                "requirement_revision": 1,
+                "candidate": {
+                  "identity": "tree:measured-product",
+                  "configuration": "config:nondefault"
+                },
+                "bindings": {
+                  "scope": "product",
+                  "artifact": {
+                    "name": "result.json",
+                    "sha256": "measured-artifact"
+                  },
+                  "native": {
+                    "session_id": "conversation",
+                    "incarnation": "incarnation-2"
+                  }
+                },
+                "status": "completed",
+                "passed": true,
+                "outcomes": {
+                  "A": true
+                }
+              }
+            },
+            "raw_digest": "6c0c130d57f435d4502e2ab704435f640fce8adb02e3640d184a6de25b1848b2",
+            "finished_at": "2026-10-23T20:00:00Z",
+            "id": "9d86ee998b9b500f5b4021ca5c8a1de76d03e79852c23be0169baf3755aee48d",
+            "version": 2
+          }
+        ],
+        "acceptance_history": [],
+        "accepted": false,
+        "contributions": []
+      },
+      "old_assessment": {
+        "question": "Evaluate current context",
+        "work_id": "8079f68ce7b34ab6a5057a32f371a299",
+        "evaluations": [
+          {
+            "evaluator": "review",
+            "outcome": "pass",
+            "confidence": 0.99,
+            "rationale": "Fixed configured context predicate",
+            "evidence": [],
+            "details": {}
+          }
+        ],
+        "conclusion": {
+          "evaluator": "review",
+          "outcome": "pass",
+          "confidence": 0.99,
+          "rationale": "Fixed configured context predicate",
+          "evidence": [],
+          "details": {}
+        },
+        "unresolved": false,
+        "escalation_error": null,
+        "work_version": 1,
+        "acceptance_binding": {
+          "requirements": {
+            "identity": "b6febe738861fdd2e4520f28d1d320e1e99b441ae977a837549a1fea67655427",
+            "revision": 1
+          },
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "9d86ee998b9b500f5b4021ca5c8a1de76d03e79852c23be0169baf3755aee48d",
+              2,
+              "6c0c130d57f435d4502e2ab704435f640fce8adb02e3640d184a6de25b1848b2"
+            ]
+          ],
+          "operations": [
+            [
+              "23900658ffff564380e0e8e690ed2e7bb93914303021c4e737a60c8ec151e072",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          }
+        },
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "created_by": "owner",
+        "created_at": "2026-10-23T20:00:00Z",
+        "id": "af5f82bbb4ac49b8be5d6b380889a702",
+        "version": 1
+      },
+      "action_result": null,
+      "independent_assessment": {
+        "question": "Evaluate current context",
+        "work_id": "8079f68ce7b34ab6a5057a32f371a299",
+        "evaluations": [
+          {
+            "evaluator": "review",
+            "outcome": "reject",
+            "confidence": 0.99,
+            "rationale": "Fixed configured context predicate",
+            "evidence": [],
+            "details": {}
+          }
+        ],
+        "conclusion": {
+          "evaluator": "review",
+          "outcome": "reject",
+          "confidence": 0.99,
+          "rationale": "Fixed configured context predicate",
+          "evidence": [],
+          "details": {}
+        },
+        "unresolved": false,
+        "escalation_error": null,
+        "work_version": 2,
+        "acceptance_binding": {
+          "requirements": {
+            "identity": "b6febe738861fdd2e4520f28d1d320e1e99b441ae977a837549a1fea67655427",
+            "revision": 1
+          },
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "9d86ee998b9b500f5b4021ca5c8a1de76d03e79852c23be0169baf3755aee48d",
+              2,
+              "6c0c130d57f435d4502e2ab704435f640fce8adb02e3640d184a6de25b1848b2"
+            ]
+          ],
+          "operations": [
+            [
+              "23900658ffff564380e0e8e690ed2e7bb93914303021c4e737a60c8ec151e072",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          }
+        },
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "created_by": "owner",
+        "created_at": "2026-10-23T20:00:00Z",
+        "id": "7b03849c4a8d46d3923ea4dcde8a9ce6",
+        "version": 1
+      },
+      "context_change": {
+        "context": {
+          "check_result": "failed"
+        }
+      },
+      "accepted_after": false,
+      "should_accept": false,
+      "consequential_false_accept": false,
+      "unnecessary_withholding": false,
+      "behavioral_outcome_correct": true,
+      "limitation": "Only actual acceptance state is measured. Reject/defer/investigate withhold acceptance; downstream repair, scheduling and business loss are not simulated as observed.",
+      "elapsed_seconds": 0.035173396000004686
+    },
+    {
+      "case_id": "c8b932080dc3e",
+      "action": "accept",
+      "status": "executed",
+      "subject": {
+        "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+        "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+      },
+      "cost_usd": null,
+      "cost_basis": "local runtime; compute price and review time unknown",
+      "before": {
+        "requirements": {
+          "work_id": "c43703a052cc4f44b3da3d8014d7f5f6",
+          "objective": "Deliver the complete owner objective",
+          "outcomes": {
+            "A": "Current configured predicate and mechanical measurement"
+          },
+          "checks": {
+            "A": {
+              "capability": "checks/measure",
+              "outcomes": [
+                "A"
+              ],
+              "bindings": {
+                "scope": "product",
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "session_id": "conversation",
+                  "incarnation": "incarnation-2"
+                }
+              }
+            }
+          },
+          "identity": "769ed74556e19beb216b2dd11f5498969c1e9292a9bef1f3e79d80c7c9b0da96",
+          "revised_by": "owner",
+          "revised_at": "2026-10-23T20:00:00Z",
+          "id": "c43703a052cc4f44b3da3d8014d7f5f6",
+          "version": 1
+        },
+        "candidate": {
+          "work_id": "c43703a052cc4f44b3da3d8014d7f5f6",
+          "candidate": {
+            "identity": "tree:measured-product",
+            "configuration": "config:nondefault"
+          },
+          "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+          "selected_by": "owner",
+          "selected_at": "2026-10-23T20:00:00Z",
+          "id": "c43703a052cc4f44b3da3d8014d7f5f6",
+          "version": 1
+        },
+        "coverage": {
+          "A": {
+            "covered": true,
+            "checks": [
+              "A"
+            ]
+          }
+        },
+        "acceptance_issues": [],
+        "measurements": [
+          {
+            "work_id": "c43703a052cc4f44b3da3d8014d7f5f6",
+            "check_id": "A",
+            "fingerprint": "7b310b21e4a270fbbe8806e9e07d51f10ba46b297bf565b6c088536786e788ce",
+            "requirements_identity": "769ed74556e19beb216b2dd11f5498969c1e9292a9bef1f3e79d80c7c9b0da96",
+            "requirement_revision": 1,
+            "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "candidate_revision": 1,
+            "provider_identity": null,
+            "request_binding": {
+              "work_id": "c43703a052cc4f44b3da3d8014d7f5f6",
+              "check_id": "A",
+              "requirements_identity": "769ed74556e19beb216b2dd11f5498969c1e9292a9bef1f3e79d80c7c9b0da96",
+              "requirement_revision": 1,
+              "candidate": {
+                "identity": "tree:measured-product",
+                "configuration": "config:nondefault"
+              },
+              "bindings": {
+                "scope": "product",
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "session_id": "conversation",
+                  "incarnation": "incarnation-2"
+                }
+              },
+              "outcomes": [
+                "A"
+              ]
+            },
+            "operation_id": "4efc9d5fe845c7dff8cfe64cc524282b9d16955d59136ef1f8bc14f49cbea560",
+            "status": "completed",
+            "sequence": 1,
+            "created_by": "owner",
+            "created_at": "2026-10-23T20:00:00Z",
+            "raw_response": {
+              "measurement": {
+                "work_id": "c43703a052cc4f44b3da3d8014d7f5f6",
+                "check_id": "A",
+                "requirements_identity": "769ed74556e19beb216b2dd11f5498969c1e9292a9bef1f3e79d80c7c9b0da96",
+                "requirement_revision": 1,
+                "candidate": {
+                  "identity": "tree:measured-product",
+                  "configuration": "config:nondefault"
+                },
+                "bindings": {
+                  "scope": "product",
+                  "artifact": {
+                    "name": "result.json",
+                    "sha256": "measured-artifact"
+                  },
+                  "native": {
+                    "session_id": "conversation",
+                    "incarnation": "incarnation-2"
+                  }
+                },
+                "status": "completed",
+                "passed": true,
+                "outcomes": {
+                  "A": true
+                }
+              }
+            },
+            "raw_digest": "5acfd0a02f666da8f23e54b5f113f8d0d36c10aa622d2ada387ec34024eea8a9",
+            "finished_at": "2026-10-23T20:00:00Z",
+            "id": "198dba1893b763547ee8b2d98354614a7e9da7721e31066bd71e60eec805bf0b",
+            "version": 2
+          }
+        ],
+        "acceptance_history": [],
+        "accepted": false,
+        "contributions": []
+      },
+      "after": {
+        "requirements": {
+          "work_id": "c43703a052cc4f44b3da3d8014d7f5f6",
+          "objective": "Deliver the complete owner objective",
+          "outcomes": {
+            "A": "Current configured predicate and mechanical measurement"
+          },
+          "checks": {
+            "A": {
+              "capability": "checks/measure",
+              "outcomes": [
+                "A"
+              ],
+              "bindings": {
+                "scope": "product",
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "session_id": "conversation",
+                  "incarnation": "incarnation-2"
+                }
+              }
+            }
+          },
+          "identity": "769ed74556e19beb216b2dd11f5498969c1e9292a9bef1f3e79d80c7c9b0da96",
+          "revised_by": "owner",
+          "revised_at": "2026-10-23T20:00:00Z",
+          "id": "c43703a052cc4f44b3da3d8014d7f5f6",
+          "version": 1
+        },
+        "candidate": {
+          "work_id": "c43703a052cc4f44b3da3d8014d7f5f6",
+          "candidate": {
+            "identity": "tree:measured-product",
+            "configuration": "config:nondefault"
+          },
+          "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+          "selected_by": "owner",
+          "selected_at": "2026-10-23T20:00:00Z",
+          "id": "c43703a052cc4f44b3da3d8014d7f5f6",
+          "version": 1
+        },
+        "coverage": {
+          "A": {
+            "covered": true,
+            "checks": [
+              "A"
+            ]
+          }
+        },
+        "acceptance_issues": [],
+        "measurements": [
+          {
+            "work_id": "c43703a052cc4f44b3da3d8014d7f5f6",
+            "check_id": "A",
+            "fingerprint": "7b310b21e4a270fbbe8806e9e07d51f10ba46b297bf565b6c088536786e788ce",
+            "requirements_identity": "769ed74556e19beb216b2dd11f5498969c1e9292a9bef1f3e79d80c7c9b0da96",
+            "requirement_revision": 1,
+            "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "candidate_revision": 1,
+            "provider_identity": null,
+            "request_binding": {
+              "work_id": "c43703a052cc4f44b3da3d8014d7f5f6",
+              "check_id": "A",
+              "requirements_identity": "769ed74556e19beb216b2dd11f5498969c1e9292a9bef1f3e79d80c7c9b0da96",
+              "requirement_revision": 1,
+              "candidate": {
+                "identity": "tree:measured-product",
+                "configuration": "config:nondefault"
+              },
+              "bindings": {
+                "scope": "product",
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "session_id": "conversation",
+                  "incarnation": "incarnation-2"
+                }
+              },
+              "outcomes": [
+                "A"
+              ]
+            },
+            "operation_id": "4efc9d5fe845c7dff8cfe64cc524282b9d16955d59136ef1f8bc14f49cbea560",
+            "status": "completed",
+            "sequence": 1,
+            "created_by": "owner",
+            "created_at": "2026-10-23T20:00:00Z",
+            "raw_response": {
+              "measurement": {
+                "work_id": "c43703a052cc4f44b3da3d8014d7f5f6",
+                "check_id": "A",
+                "requirements_identity": "769ed74556e19beb216b2dd11f5498969c1e9292a9bef1f3e79d80c7c9b0da96",
+                "requirement_revision": 1,
+                "candidate": {
+                  "identity": "tree:measured-product",
+                  "configuration": "config:nondefault"
+                },
+                "bindings": {
+                  "scope": "product",
+                  "artifact": {
+                    "name": "result.json",
+                    "sha256": "measured-artifact"
+                  },
+                  "native": {
+                    "session_id": "conversation",
+                    "incarnation": "incarnation-2"
+                  }
+                },
+                "status": "completed",
+                "passed": true,
+                "outcomes": {
+                  "A": true
+                }
+              }
+            },
+            "raw_digest": "5acfd0a02f666da8f23e54b5f113f8d0d36c10aa622d2ada387ec34024eea8a9",
+            "finished_at": "2026-10-23T20:00:00Z",
+            "id": "198dba1893b763547ee8b2d98354614a7e9da7721e31066bd71e60eec805bf0b",
+            "version": 2
+          }
+        ],
+        "acceptance_history": [
+          {
+            "work_id": "c43703a052cc4f44b3da3d8014d7f5f6",
+            "accepted": true,
+            "binding": {
+              "requirements": {
+                "identity": "769ed74556e19beb216b2dd11f5498969c1e9292a9bef1f3e79d80c7c9b0da96",
+                "revision": 1
+              },
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "198dba1893b763547ee8b2d98354614a7e9da7721e31066bd71e60eec805bf0b",
+                  2,
+                  "5acfd0a02f666da8f23e54b5f113f8d0d36c10aa622d2ada387ec34024eea8a9"
+                ]
+              ],
+              "operations": [
+                [
+                  "4efc9d5fe845c7dff8cfe64cc524282b9d16955d59136ef1f8bc14f49cbea560",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+              "provider_configurations": {
+                "checks": null
+              }
+            },
+            "issues": [],
+            "policy_decision": {
+              "accepted": true,
+              "reasons": []
+            },
+            "coverage": {
+              "A": {
+                "covered": true,
+                "checks": [
+                  "A"
+                ]
+              }
+            },
+            "assessment_id": "0a4d3c5a18ba4c2695106175b8d6aa3b",
+            "assessment_version": 1,
+            "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+            "sequence": 1,
+            "created_by": "owner",
+            "created_at": "2026-10-23T20:00:00Z",
+            "id": "63ea22ecf1674fb7967b32ef6b7d0c21",
+            "version": 1,
+            "current": true
+          }
+        ],
+        "accepted": true,
+        "contributions": []
+      },
+      "old_assessment": {
+        "question": "Evaluate current context",
+        "work_id": "c43703a052cc4f44b3da3d8014d7f5f6",
+        "evaluations": [
+          {
+            "evaluator": "review",
+            "outcome": "pass",
+            "confidence": 0.99,
+            "rationale": "Fixed configured context predicate",
+            "evidence": [],
+            "details": {}
+          }
+        ],
+        "conclusion": {
+          "evaluator": "review",
+          "outcome": "pass",
+          "confidence": 0.99,
+          "rationale": "Fixed configured context predicate",
+          "evidence": [],
+          "details": {}
+        },
+        "unresolved": false,
+        "escalation_error": null,
+        "work_version": 1,
+        "acceptance_binding": {
+          "requirements": {
+            "identity": "769ed74556e19beb216b2dd11f5498969c1e9292a9bef1f3e79d80c7c9b0da96",
+            "revision": 1
+          },
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "198dba1893b763547ee8b2d98354614a7e9da7721e31066bd71e60eec805bf0b",
+              2,
+              "5acfd0a02f666da8f23e54b5f113f8d0d36c10aa622d2ada387ec34024eea8a9"
+            ]
+          ],
+          "operations": [
+            [
+              "4efc9d5fe845c7dff8cfe64cc524282b9d16955d59136ef1f8bc14f49cbea560",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          }
+        },
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "created_by": "owner",
+        "created_at": "2026-10-23T20:00:00Z",
+        "id": "0a4d3c5a18ba4c2695106175b8d6aa3b",
+        "version": 1
+      },
+      "action_result": {
+        "work_id": "c43703a052cc4f44b3da3d8014d7f5f6",
+        "accepted": true,
+        "binding": {
+          "requirements": {
+            "identity": "769ed74556e19beb216b2dd11f5498969c1e9292a9bef1f3e79d80c7c9b0da96",
+            "revision": 1
+          },
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "198dba1893b763547ee8b2d98354614a7e9da7721e31066bd71e60eec805bf0b",
+              2,
+              "5acfd0a02f666da8f23e54b5f113f8d0d36c10aa622d2ada387ec34024eea8a9"
+            ]
+          ],
+          "operations": [
+            [
+              "4efc9d5fe845c7dff8cfe64cc524282b9d16955d59136ef1f8bc14f49cbea560",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          }
+        },
+        "issues": [],
+        "policy_decision": {
+          "accepted": true,
+          "reasons": []
+        },
+        "coverage": {
+          "A": {
+            "covered": true,
+            "checks": [
+              "A"
+            ]
+          }
+        },
+        "assessment_id": "0a4d3c5a18ba4c2695106175b8d6aa3b",
+        "assessment_version": 1,
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "sequence": 1,
+        "created_by": "owner",
+        "created_at": "2026-10-23T20:00:00Z",
+        "id": "63ea22ecf1674fb7967b32ef6b7d0c21",
+        "version": 1
+      },
+      "independent_assessment": {
+        "question": "Evaluate current context",
+        "work_id": "c43703a052cc4f44b3da3d8014d7f5f6",
+        "evaluations": [
+          {
+            "evaluator": "review",
+            "outcome": "pass",
+            "confidence": 0.99,
+            "rationale": "Fixed configured context predicate",
+            "evidence": [],
+            "details": {}
+          }
+        ],
+        "conclusion": {
+          "evaluator": "review",
+          "outcome": "pass",
+          "confidence": 0.99,
+          "rationale": "Fixed configured context predicate",
+          "evidence": [],
+          "details": {}
+        },
+        "unresolved": false,
+        "escalation_error": null,
+        "work_version": 2,
+        "acceptance_binding": {
+          "requirements": {
+            "identity": "769ed74556e19beb216b2dd11f5498969c1e9292a9bef1f3e79d80c7c9b0da96",
+            "revision": 1
+          },
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "198dba1893b763547ee8b2d98354614a7e9da7721e31066bd71e60eec805bf0b",
+              2,
+              "5acfd0a02f666da8f23e54b5f113f8d0d36c10aa622d2ada387ec34024eea8a9"
+            ]
+          ],
+          "operations": [
+            [
+              "4efc9d5fe845c7dff8cfe64cc524282b9d16955d59136ef1f8bc14f49cbea560",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          }
+        },
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "created_by": "owner",
+        "created_at": "2026-10-23T20:00:00Z",
+        "id": "1e65e881112b43dd829d2b5266a3f3a5",
+        "version": 1
+      },
+      "context_change": {
+        "title": "Revised display label"
+      },
+      "accepted_after": true,
+      "should_accept": true,
+      "consequential_false_accept": false,
+      "unnecessary_withholding": false,
+      "behavioral_outcome_correct": true,
+      "limitation": "Only actual acceptance state is measured. Reject/defer/investigate withhold acceptance; downstream repair, scheduling and business loss are not simulated as observed.",
+      "elapsed_seconds": 0.0442810029999805
+    },
+    {
+      "case_id": "c8b932080dc3e",
+      "action": "investigate",
+      "status": "executed",
+      "subject": {
+        "commit": "d2d2123bb8d4e866454c8e8e364f7749fa63a198",
+        "tree": "7bb88d5fd01a21478b720ad2d42b2b627b74bb92"
+      },
+      "cost_usd": null,
+      "cost_basis": "local runtime; compute price and review time unknown",
+      "before": {
+        "requirements": {
+          "work_id": "cc819ce7b212458bac08fe5b95f80213",
+          "objective": "Deliver the complete owner objective",
+          "outcomes": {
+            "A": "Current configured predicate and mechanical measurement"
+          },
+          "checks": {
+            "A": {
+              "capability": "checks/measure",
+              "outcomes": [
+                "A"
+              ],
+              "bindings": {
+                "scope": "product",
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "session_id": "conversation",
+                  "incarnation": "incarnation-2"
+                }
+              }
+            }
+          },
+          "identity": "ab59f970e9f275029b334b7b75db84147c07c90c05649652fe67b1021e5c66ca",
+          "revised_by": "owner",
+          "revised_at": "2026-10-23T20:00:00Z",
+          "id": "cc819ce7b212458bac08fe5b95f80213",
+          "version": 1
+        },
+        "candidate": {
+          "work_id": "cc819ce7b212458bac08fe5b95f80213",
+          "candidate": {
+            "identity": "tree:measured-product",
+            "configuration": "config:nondefault"
+          },
+          "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+          "selected_by": "owner",
+          "selected_at": "2026-10-23T20:00:00Z",
+          "id": "cc819ce7b212458bac08fe5b95f80213",
+          "version": 1
+        },
+        "coverage": {
+          "A": {
+            "covered": true,
+            "checks": [
+              "A"
+            ]
+          }
+        },
+        "acceptance_issues": [],
+        "measurements": [
+          {
+            "work_id": "cc819ce7b212458bac08fe5b95f80213",
+            "check_id": "A",
+            "fingerprint": "77a3b31e896e220d28352b5daa52601cb814391bb77541cdac907feaa11d4562",
+            "requirements_identity": "ab59f970e9f275029b334b7b75db84147c07c90c05649652fe67b1021e5c66ca",
+            "requirement_revision": 1,
+            "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "candidate_revision": 1,
+            "provider_identity": null,
+            "request_binding": {
+              "work_id": "cc819ce7b212458bac08fe5b95f80213",
+              "check_id": "A",
+              "requirements_identity": "ab59f970e9f275029b334b7b75db84147c07c90c05649652fe67b1021e5c66ca",
+              "requirement_revision": 1,
+              "candidate": {
+                "identity": "tree:measured-product",
+                "configuration": "config:nondefault"
+              },
+              "bindings": {
+                "scope": "product",
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "session_id": "conversation",
+                  "incarnation": "incarnation-2"
+                }
+              },
+              "outcomes": [
+                "A"
+              ]
+            },
+            "operation_id": "efe58261e0de8c53eb93176164bd26cda203c95391c710b13f85fea9597926f0",
+            "status": "completed",
+            "sequence": 1,
+            "created_by": "owner",
+            "created_at": "2026-10-23T20:00:00Z",
+            "raw_response": {
+              "measurement": {
+                "work_id": "cc819ce7b212458bac08fe5b95f80213",
+                "check_id": "A",
+                "requirements_identity": "ab59f970e9f275029b334b7b75db84147c07c90c05649652fe67b1021e5c66ca",
+                "requirement_revision": 1,
+                "candidate": {
+                  "identity": "tree:measured-product",
+                  "configuration": "config:nondefault"
+                },
+                "bindings": {
+                  "scope": "product",
+                  "artifact": {
+                    "name": "result.json",
+                    "sha256": "measured-artifact"
+                  },
+                  "native": {
+                    "session_id": "conversation",
+                    "incarnation": "incarnation-2"
+                  }
+                },
+                "status": "completed",
+                "passed": true,
+                "outcomes": {
+                  "A": true
+                }
+              }
+            },
+            "raw_digest": "1600b5a9765493f9e01f3d84b114c2a8f61df98ec81f48a4005e045ba18a1ec0",
+            "finished_at": "2026-10-23T20:00:00Z",
+            "id": "d7db34344cd9f60a8f874ace4848e778e56d8d6e340d55e3be42e5324cbd8328",
+            "version": 2
+          }
+        ],
+        "acceptance_history": [],
+        "accepted": false,
+        "contributions": []
+      },
+      "after": {
+        "requirements": {
+          "work_id": "cc819ce7b212458bac08fe5b95f80213",
+          "objective": "Deliver the complete owner objective",
+          "outcomes": {
+            "A": "Current configured predicate and mechanical measurement"
+          },
+          "checks": {
+            "A": {
+              "capability": "checks/measure",
+              "outcomes": [
+                "A"
+              ],
+              "bindings": {
+                "scope": "product",
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "session_id": "conversation",
+                  "incarnation": "incarnation-2"
+                }
+              }
+            }
+          },
+          "identity": "ab59f970e9f275029b334b7b75db84147c07c90c05649652fe67b1021e5c66ca",
+          "revised_by": "owner",
+          "revised_at": "2026-10-23T20:00:00Z",
+          "id": "cc819ce7b212458bac08fe5b95f80213",
+          "version": 1
+        },
+        "candidate": {
+          "work_id": "cc819ce7b212458bac08fe5b95f80213",
+          "candidate": {
+            "identity": "tree:measured-product",
+            "configuration": "config:nondefault"
+          },
+          "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+          "selected_by": "owner",
+          "selected_at": "2026-10-23T20:00:00Z",
+          "id": "cc819ce7b212458bac08fe5b95f80213",
+          "version": 1
+        },
+        "coverage": {
+          "A": {
+            "covered": true,
+            "checks": [
+              "A"
+            ]
+          }
+        },
+        "acceptance_issues": [],
+        "measurements": [
+          {
+            "work_id": "cc819ce7b212458bac08fe5b95f80213",
+            "check_id": "A",
+            "fingerprint": "77a3b31e896e220d28352b5daa52601cb814391bb77541cdac907feaa11d4562",
+            "requirements_identity": "ab59f970e9f275029b334b7b75db84147c07c90c05649652fe67b1021e5c66ca",
+            "requirement_revision": 1,
+            "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "candidate_revision": 1,
+            "provider_identity": null,
+            "request_binding": {
+              "work_id": "cc819ce7b212458bac08fe5b95f80213",
+              "check_id": "A",
+              "requirements_identity": "ab59f970e9f275029b334b7b75db84147c07c90c05649652fe67b1021e5c66ca",
+              "requirement_revision": 1,
+              "candidate": {
+                "identity": "tree:measured-product",
+                "configuration": "config:nondefault"
+              },
+              "bindings": {
+                "scope": "product",
+                "artifact": {
+                  "name": "result.json",
+                  "sha256": "measured-artifact"
+                },
+                "native": {
+                  "session_id": "conversation",
+                  "incarnation": "incarnation-2"
+                }
+              },
+              "outcomes": [
+                "A"
+              ]
+            },
+            "operation_id": "efe58261e0de8c53eb93176164bd26cda203c95391c710b13f85fea9597926f0",
+            "status": "completed",
+            "sequence": 1,
+            "created_by": "owner",
+            "created_at": "2026-10-23T20:00:00Z",
+            "raw_response": {
+              "measurement": {
+                "work_id": "cc819ce7b212458bac08fe5b95f80213",
+                "check_id": "A",
+                "requirements_identity": "ab59f970e9f275029b334b7b75db84147c07c90c05649652fe67b1021e5c66ca",
+                "requirement_revision": 1,
+                "candidate": {
+                  "identity": "tree:measured-product",
+                  "configuration": "config:nondefault"
+                },
+                "bindings": {
+                  "scope": "product",
+                  "artifact": {
+                    "name": "result.json",
+                    "sha256": "measured-artifact"
+                  },
+                  "native": {
+                    "session_id": "conversation",
+                    "incarnation": "incarnation-2"
+                  }
+                },
+                "status": "completed",
+                "passed": true,
+                "outcomes": {
+                  "A": true
+                }
+              }
+            },
+            "raw_digest": "1600b5a9765493f9e01f3d84b114c2a8f61df98ec81f48a4005e045ba18a1ec0",
+            "finished_at": "2026-10-23T20:00:00Z",
+            "id": "d7db34344cd9f60a8f874ace4848e778e56d8d6e340d55e3be42e5324cbd8328",
+            "version": 2
+          }
+        ],
+        "acceptance_history": [],
+        "accepted": false,
+        "contributions": []
+      },
+      "old_assessment": {
+        "question": "Evaluate current context",
+        "work_id": "cc819ce7b212458bac08fe5b95f80213",
+        "evaluations": [
+          {
+            "evaluator": "review",
+            "outcome": "pass",
+            "confidence": 0.99,
+            "rationale": "Fixed configured context predicate",
+            "evidence": [],
+            "details": {}
+          }
+        ],
+        "conclusion": {
+          "evaluator": "review",
+          "outcome": "pass",
+          "confidence": 0.99,
+          "rationale": "Fixed configured context predicate",
+          "evidence": [],
+          "details": {}
+        },
+        "unresolved": false,
+        "escalation_error": null,
+        "work_version": 1,
+        "acceptance_binding": {
+          "requirements": {
+            "identity": "ab59f970e9f275029b334b7b75db84147c07c90c05649652fe67b1021e5c66ca",
+            "revision": 1
+          },
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "d7db34344cd9f60a8f874ace4848e778e56d8d6e340d55e3be42e5324cbd8328",
+              2,
+              "1600b5a9765493f9e01f3d84b114c2a8f61df98ec81f48a4005e045ba18a1ec0"
+            ]
+          ],
+          "operations": [
+            [
+              "efe58261e0de8c53eb93176164bd26cda203c95391c710b13f85fea9597926f0",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          }
+        },
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "created_by": "owner",
+        "created_at": "2026-10-23T20:00:00Z",
+        "id": "0871490f303d4b7ea17b724450fbf89c",
+        "version": 1
+      },
+      "action_result": {
+        "question": "Evaluate current context",
+        "work_id": "cc819ce7b212458bac08fe5b95f80213",
+        "evaluations": [
+          {
+            "evaluator": "review",
+            "outcome": "pass",
+            "confidence": 0.99,
+            "rationale": "Fixed configured context predicate",
+            "evidence": [],
+            "details": {}
+          }
+        ],
+        "conclusion": {
+          "evaluator": "review",
+          "outcome": "pass",
+          "confidence": 0.99,
+          "rationale": "Fixed configured context predicate",
+          "evidence": [],
+          "details": {}
+        },
+        "unresolved": false,
+        "escalation_error": null,
+        "work_version": 2,
+        "acceptance_binding": {
+          "requirements": {
+            "identity": "ab59f970e9f275029b334b7b75db84147c07c90c05649652fe67b1021e5c66ca",
+            "revision": 1
+          },
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "d7db34344cd9f60a8f874ace4848e778e56d8d6e340d55e3be42e5324cbd8328",
+              2,
+              "1600b5a9765493f9e01f3d84b114c2a8f61df98ec81f48a4005e045ba18a1ec0"
+            ]
+          ],
+          "operations": [
+            [
+              "efe58261e0de8c53eb93176164bd26cda203c95391c710b13f85fea9597926f0",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          }
+        },
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "created_by": "owner",
+        "created_at": "2026-10-23T20:00:00Z",
+        "id": "4a4febb5f9a34447b6430c3dfcdf8fbc",
+        "version": 1
+      },
+      "independent_assessment": {
+        "question": "Evaluate current context",
+        "work_id": "cc819ce7b212458bac08fe5b95f80213",
+        "evaluations": [
+          {
+            "evaluator": "review",
+            "outcome": "pass",
+            "confidence": 0.99,
+            "rationale": "Fixed configured context predicate",
+            "evidence": [],
+            "details": {}
+          }
+        ],
+        "conclusion": {
+          "evaluator": "review",
+          "outcome": "pass",
+          "confidence": 0.99,
+          "rationale": "Fixed configured context predicate",
+          "evidence": [],
+          "details": {}
+        },
+        "unresolved": false,
+        "escalation_error": null,
+        "work_version": 2,
+        "acceptance_binding": {
+          "requirements": {
+            "identity": "ab59f970e9f275029b334b7b75db84147c07c90c05649652fe67b1021e5c66ca",
+            "revision": 1
+          },
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "d7db34344cd9f60a8f874ace4848e778e56d8d6e340d55e3be42e5324cbd8328",
+              2,
+              "1600b5a9765493f9e01f3d84b114c2a8f61df98ec81f48a4005e045ba18a1ec0"
+            ]
+          ],
+          "operations": [
+            [
+              "efe58261e0de8c53eb93176164bd26cda203c95391c710b13f85fea9597926f0",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          }
+        },
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "created_by": "owner",
+        "created_at": "2026-10-23T20:00:00Z",
+        "id": "cc2b4f004f9f4215bfaa03bb8b40b49c",
+        "version": 1
+      },
+      "context_change": {
+        "title": "Revised display label"
+      },
+      "accepted_after": false,
+      "should_accept": true,
+      "consequential_false_accept": false,
+      "unnecessary_withholding": true,
+      "behavioral_outcome_correct": false,
+      "limitation": "Only actual acceptance state is measured. Reject/defer/investigate withhold acceptance; downstream repair, scheduling and business loss are not simulated as observed.",
+      "elapsed_seconds": 0.04523447400001146
+    }
+  ],
+  "retained_false_clears": [
+    {
+      "case_id": "cef7128badec1",
+      "probe_id": "p_authority",
+      "judgment_confidence": 0.95,
+      "raw_route": "none",
+      "route_recomputed": {
+        "route": "none",
+        "reason_codes": [
+          "no_supported_incremental_action_value"
+        ],
+        "signals": {
+          "route": "none",
+          "uncertainty": "none",
+          "decision_relevance": "consequential",
+          "probe_discrimination": "no",
+          "probe": "none"
+        },
+        "economic_estimate": {
+          "expected_benefit": null,
+          "possible_benefit_range": [
+            0,
+            100
+          ],
+          "expected_cost": 0,
+          "units": "analyst assumed loss units; possible maximum is not expected benefit",
+          "calibrated": false,
+          "method": "provisional-uncalibrated-1",
+          "scenario": {
+            "id": "provisional-unit-loss",
+            "currency": "assumed_loss_units",
+            "false_clear": 100,
+            "false_alarm": 10,
+            "unresolved": 1,
+            "consequence_class_units": {
+              "false_acceptance": 100,
+              "duplicate_effect": 500,
+              "wasted_investigation": 10,
+              "low_impact": 0.1
+            },
+            "reasoning_cost_units": 1,
+            "probe_cost_units": 0.1,
+            "basis": "Analyst assumptions, not owner dollar valuations; no calibration fitted."
+          },
+          "purpose": "operational"
+        }
+      },
+      "structured_control": "reject",
+      "available_facts": {
+        "checks": [
+          {
+            "invariant": "authority_binding",
+            "left": "final-actor",
+            "note": "An already observed native call retains its original actor across reconnect.",
+            "observed": true,
+            "operator": "eq",
+            "right": "old-actor",
+            "subject": {
+              "expected": "operation-current",
+              "observed": "operation-current"
+            }
+          },
+          {
+            "invariant": "authority_binding",
+            "left": "final-work",
+            "note": "An already observed native call retains its original work scope across reconnect.",
+            "observed": true,
+            "operator": "eq",
+            "right": "old-work",
+            "subject": {
+              "expected": "operation-current",
+              "observed": "operation-current"
+            }
+          }
+        ],
+        "policy_defined": true
+      }
+    },
+    {
+      "case_id": "c51eabfc2dae5",
+      "probe_id": "p_authority",
+      "judgment_confidence": 0.85,
+      "raw_route": "none",
+      "route_recomputed": {
+        "route": "none",
+        "reason_codes": [
+          "no_supported_incremental_action_value"
+        ],
+        "signals": {
+          "route": "none",
+          "uncertainty": "none",
+          "decision_relevance": "consequential",
+          "probe_discrimination": "no",
+          "probe": "none"
+        },
+        "economic_estimate": {
+          "expected_benefit": null,
+          "possible_benefit_range": [
+            0,
+            100
+          ],
+          "expected_cost": 0,
+          "units": "analyst assumed loss units; possible maximum is not expected benefit",
+          "calibrated": false,
+          "method": "provisional-uncalibrated-1",
+          "scenario": {
+            "id": "provisional-unit-loss",
+            "currency": "assumed_loss_units",
+            "false_clear": 100,
+            "false_alarm": 10,
+            "unresolved": 1,
+            "consequence_class_units": {
+              "false_acceptance": 100,
+              "duplicate_effect": 500,
+              "wasted_investigation": 10,
+              "low_impact": 0.1
+            },
+            "reasoning_cost_units": 1,
+            "probe_cost_units": 0.1,
+            "basis": "Analyst assumptions, not owner dollar valuations; no calibration fitted."
+          },
+          "purpose": "operational"
+        }
+      },
+      "structured_control": "investigate",
+      "available_facts": {
+        "checks": [
+          {
+            "invariant": "authority_binding",
+            "left": null,
+            "note": "An already observed native call retains its original actor across reconnect.",
+            "observed": false,
+            "operator": "eq",
+            "right": "old-actor",
+            "subject": {
+              "expected": "operation-current",
+              "observed": "operation-current"
+            }
+          },
+          {
+            "invariant": "authority_binding",
+            "left": null,
+            "note": "An already observed native call retains its original work scope across reconnect.",
+            "observed": false,
+            "operator": "eq",
+            "right": "old-work",
+            "subject": {
+              "expected": "operation-current",
+              "observed": "operation-current"
+            }
+          }
+        ],
+        "declared_missing": "The actual boundary result must be collected; the success summary supplies no measurement.",
+        "policy_defined": true
+      }
+    }
+  ],
+  "budget_controls": [
+    {
+      "status": "budget_exhausted",
+      "result": {
+        "judgment": "unresolved",
+        "action": "defer",
+        "violations": [],
+        "relationship": "insufficient"
+      }
+    },
+    {
+      "status": "provider_failure",
+      "result": {
+        "judgment": "unresolved",
+        "action": "defer",
+        "violations": [],
+        "relationship": "insufficient"
+      }
+    },
+    {
+      "status": "pending",
+      "result": {
+        "judgment": "unresolved",
+        "action": "defer",
+        "violations": [],
+        "relationship": "insufficient"
+      }
+    },
+    {
+      "status": "unresolved",
+      "result": {
+        "judgment": "unresolved",
+        "action": "defer",
+        "violations": [],
+        "relationship": "insufficient"
+      }
+    }
+  ],
+  "totals": {
+    "probe_variants": 40,
+    "passed": 36,
+    "not_exercised_ordinary_variants": [
+      {
+        "probe": "p_replay",
+        "variant": "healthy",
+        "reason": "Adapter reproduction failed; inspect retained stderr (returncode 1)"
+      },
+      {
+        "probe": "p_replay",
+        "variant": "fault",
+        "reason": "Adapter reproduction failed; inspect retained stderr (returncode 1)"
+      },
+      {
+        "probe": "p_busy",
+        "variant": "healthy",
+        "reason": "[Errno 1] Operation not permitted"
+      },
+      {
+        "probe": "p_busy",
+        "variant": "fault",
+        "reason": "[Errno 1] Operation not permitted"
+      }
+    ]
+  }
+}

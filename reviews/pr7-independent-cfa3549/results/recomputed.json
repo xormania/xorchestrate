@@ -1,0 +1,1932 @@
+{
+  "actual_e2e": {
+    "P0": {
+      "consequential_false_accept": 0,
+      "correct_actual_acceptance": 3,
+      "elapsed_seconds": 0.17676964399993267,
+      "executed": 3,
+      "unnecessary_withholding": 0
+    },
+    "P0_probe": {
+      "consequential_false_accept": 0,
+      "correct_actual_acceptance": 3,
+      "elapsed_seconds": 0.09280409899974984,
+      "executed": 3,
+      "unnecessary_withholding": 0
+    },
+    "P1": {
+      "consequential_false_accept": 0,
+      "correct_actual_acceptance": 3,
+      "elapsed_seconds": 0.09576794300005531,
+      "executed": 3,
+      "unnecessary_withholding": 0
+    },
+    "P2": {
+      "consequential_false_accept": 0,
+      "correct_actual_acceptance": 3,
+      "elapsed_seconds": 0.09269471499987958,
+      "executed": 3,
+      "unnecessary_withholding": 0
+    },
+    "P3": {
+      "consequential_false_accept": 0,
+      "correct_actual_acceptance": 3,
+      "elapsed_seconds": 0.09335287099997913,
+      "executed": 3,
+      "unnecessary_withholding": 0
+    },
+    "P4": {
+      "consequential_false_accept": 0,
+      "correct_actual_acceptance": 3,
+      "elapsed_seconds": 0.09173242199995002,
+      "executed": 3,
+      "unnecessary_withholding": 0
+    },
+    "always": {
+      "consequential_false_accept": 0,
+      "correct_actual_acceptance": 1,
+      "elapsed_seconds": 0.02972785599990857,
+      "executed": 1,
+      "unnecessary_withholding": 0
+    },
+    "never": {
+      "consequential_false_accept": 0,
+      "correct_actual_acceptance": 1,
+      "elapsed_seconds": 0.029616429000043354,
+      "executed": 1,
+      "unnecessary_withholding": 0
+    },
+    "random": {
+      "consequential_false_accept": 0,
+      "correct_actual_acceptance": 1,
+      "elapsed_seconds": 0.030436418000135745,
+      "executed": 1,
+      "unnecessary_withholding": 0
+    },
+    "reasoning_only": {
+      "consequential_false_accept": 0,
+      "correct_actual_acceptance": 1,
+      "elapsed_seconds": 0.029533063000144466,
+      "executed": 1,
+      "unnecessary_withholding": 0
+    },
+    "risk": {
+      "consequential_false_accept": 0,
+      "correct_actual_acceptance": 1,
+      "elapsed_seconds": 0.029532023000001573,
+      "executed": 1,
+      "unnecessary_withholding": 0
+    }
+  },
+  "audit": {
+    "error_stratum_errors": 2,
+    "error_stratum_n": 4,
+    "error_stratum_sample_n": 2,
+    "independent_errors": 0,
+    "probability_both_errors_unsampled_given_this_frozen_population": 0.16666666666666666,
+    "selected": 13,
+    "strata": {
+      "accept:none:high": 4,
+      "investigate:none:other": 2,
+      "investigate:probe:other": 5,
+      "reject:none:high": 7,
+      "reject:probe:high": 2,
+      "reject:probe:other": 4
+    }
+  },
+  "cases": 24,
+  "confidence": {
+    "P1": {
+      "composed_correct": 19,
+      "coverage": [
+        {
+          "kept": 24,
+          "raw_errors_kept": 12,
+          "threshold": 0
+        },
+        {
+          "kept": 17,
+          "raw_errors_kept": 7,
+          "threshold": 0.5
+        },
+        {
+          "kept": 9,
+          "raw_errors_kept": 2,
+          "threshold": 0.8
+        },
+        {
+          "kept": 5,
+          "raw_errors_kept": 0,
+          "threshold": 0.95
+        },
+        {
+          "kept": 0,
+          "raw_errors_kept": 0,
+          "threshold": 1.0
+        }
+      ],
+      "error_ranking_auc": 0.78125,
+      "limit": "Only raw judgment confidence, evaluated against stage-relative keys. Cases clustered; this is not production calibration or action-outcome probability.",
+      "raw_correct": 12,
+      "samples": [
+        {
+          "case_id": "c8b932080dc3e",
+          "composed_answer": "supports",
+          "composed_correct": true,
+          "confidence": 0.95,
+          "expected_for_stage": "supports",
+          "group": "g7a518fc6a0bc",
+          "raw_answer": "supports",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c06e2dd37f2ab",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.98,
+          "expected_for_stage": "contradicts",
+          "group": "g7a518fc6a0bc",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c593af9fb49a0",
+          "composed_answer": "unresolved",
+          "composed_correct": true,
+          "confidence": 0.73,
+          "expected_for_stage": "unresolved",
+          "group": "g7a518fc6a0bc",
+          "raw_answer": "contradicts",
+          "raw_correct": false
+        },
+        {
+          "case_id": "c4ac02ef39bfc",
+          "composed_answer": "supports",
+          "composed_correct": true,
+          "confidence": 0.34,
+          "expected_for_stage": "supports",
+          "group": "g8815a39076bc",
+          "raw_answer": "supports",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c5999881a21d8",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.85,
+          "expected_for_stage": "contradicts",
+          "group": "g8815a39076bc",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "cb482dcc4a0c1",
+          "composed_answer": "unresolved",
+          "composed_correct": true,
+          "confidence": 0.3,
+          "expected_for_stage": "unresolved",
+          "group": "g8815a39076bc",
+          "raw_answer": "contradicts",
+          "raw_correct": false
+        },
+        {
+          "case_id": "c5dd2167f348a",
+          "composed_answer": "unresolved",
+          "composed_correct": false,
+          "confidence": 0.21,
+          "expected_for_stage": "supports",
+          "group": "g4a9c459ebf73",
+          "raw_answer": "unresolved",
+          "raw_correct": false
+        },
+        {
+          "case_id": "cc191a8053cc3",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.98,
+          "expected_for_stage": "contradicts",
+          "group": "g4a9c459ebf73",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c1c062765510d",
+          "composed_answer": "unresolved",
+          "composed_correct": true,
+          "confidence": 0.94,
+          "expected_for_stage": "unresolved",
+          "group": "g4a9c459ebf73",
+          "raw_answer": "contradicts",
+          "raw_correct": false
+        },
+        {
+          "case_id": "caeff6c6c4681",
+          "composed_answer": "unresolved",
+          "composed_correct": false,
+          "confidence": 0.28,
+          "expected_for_stage": "supports",
+          "group": "g4a9c459ebf73",
+          "raw_answer": "unresolved",
+          "raw_correct": false
+        },
+        {
+          "case_id": "cbc761dc81aa1",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.8,
+          "expected_for_stage": "contradicts",
+          "group": "g4a9c459ebf73",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "cf22aab3d75cf",
+          "composed_answer": "unresolved",
+          "composed_correct": true,
+          "confidence": 0.34,
+          "expected_for_stage": "unresolved",
+          "group": "g4a9c459ebf73",
+          "raw_answer": "contradicts",
+          "raw_correct": false
+        },
+        {
+          "case_id": "c5af5e427a2f3",
+          "composed_answer": "contradicts",
+          "composed_correct": false,
+          "confidence": 0.28,
+          "expected_for_stage": "supports",
+          "group": "gd9c5d60efb17",
+          "raw_answer": "contradicts",
+          "raw_correct": false
+        },
+        {
+          "case_id": "c756d2780a92a",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.98,
+          "expected_for_stage": "contradicts",
+          "group": "gd9c5d60efb17",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "cbfa1b0cc1f0f",
+          "composed_answer": "unresolved",
+          "composed_correct": true,
+          "confidence": 0.59,
+          "expected_for_stage": "unresolved",
+          "group": "gd9c5d60efb17",
+          "raw_answer": "contradicts",
+          "raw_correct": false
+        },
+        {
+          "case_id": "c0fb9a45eb2da",
+          "composed_answer": "unresolved",
+          "composed_correct": false,
+          "confidence": 0.52,
+          "expected_for_stage": "supports",
+          "group": "g8c81f57a9b23",
+          "raw_answer": "contradicts",
+          "raw_correct": false
+        },
+        {
+          "case_id": "c94d0a24d43b5",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.69,
+          "expected_for_stage": "contradicts",
+          "group": "g8c81f57a9b23",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c9de3dd808cb8",
+          "composed_answer": "unresolved",
+          "composed_correct": true,
+          "confidence": 0.74,
+          "expected_for_stage": "unresolved",
+          "group": "g8c81f57a9b23",
+          "raw_answer": "unresolved",
+          "raw_correct": true
+        },
+        {
+          "case_id": "cabe25ecf8ef4",
+          "composed_answer": "supports",
+          "composed_correct": true,
+          "confidence": 0.02,
+          "expected_for_stage": "supports",
+          "group": "gbafd5cf357b5",
+          "raw_answer": "supports",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c3e667a1b7532",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.67,
+          "expected_for_stage": "contradicts",
+          "group": "gbafd5cf357b5",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c19acb40f8797",
+          "composed_answer": "unresolved",
+          "composed_correct": true,
+          "confidence": 0.51,
+          "expected_for_stage": "unresolved",
+          "group": "gbafd5cf357b5",
+          "raw_answer": "contradicts",
+          "raw_correct": false
+        },
+        {
+          "case_id": "c85b37db76aaa",
+          "composed_answer": "supports",
+          "composed_correct": true,
+          "confidence": 0.97,
+          "expected_for_stage": "supports",
+          "group": "gbc4c9743d8e9",
+          "raw_answer": "supports",
+          "raw_correct": true
+        },
+        {
+          "case_id": "cef7128badec1",
+          "composed_answer": "supports",
+          "composed_correct": false,
+          "confidence": 0.92,
+          "expected_for_stage": "contradicts",
+          "group": "gbc4c9743d8e9",
+          "raw_answer": "supports",
+          "raw_correct": false
+        },
+        {
+          "case_id": "c51eabfc2dae5",
+          "composed_answer": "unresolved",
+          "composed_correct": true,
+          "confidence": 0.62,
+          "expected_for_stage": "unresolved",
+          "group": "gbc4c9743d8e9",
+          "raw_answer": "contradicts",
+          "raw_correct": false
+        }
+      ]
+    },
+    "P2": {
+      "composed_correct": 16,
+      "coverage": [
+        {
+          "kept": 24,
+          "raw_errors_kept": 7,
+          "threshold": 0
+        },
+        {
+          "kept": 16,
+          "raw_errors_kept": 2,
+          "threshold": 0.5
+        },
+        {
+          "kept": 12,
+          "raw_errors_kept": 2,
+          "threshold": 0.8
+        },
+        {
+          "kept": 8,
+          "raw_errors_kept": 0,
+          "threshold": 0.95
+        },
+        {
+          "kept": 2,
+          "raw_errors_kept": 0,
+          "threshold": 1.0
+        }
+      ],
+      "error_ranking_auc": 0.7478991596638656,
+      "limit": "Only raw judgment confidence, evaluated against stage-relative keys. Cases clustered; this is not production calibration or action-outcome probability.",
+      "raw_correct": 17,
+      "samples": [
+        {
+          "case_id": "c8b932080dc3e",
+          "composed_answer": "supports",
+          "composed_correct": true,
+          "confidence": 0.91,
+          "expected_for_stage": "supports",
+          "group": "g7a518fc6a0bc",
+          "raw_answer": "supports",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c06e2dd37f2ab",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 1.0,
+          "expected_for_stage": "contradicts",
+          "group": "g7a518fc6a0bc",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c593af9fb49a0",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 1.0,
+          "expected_for_stage": "contradicts",
+          "group": "g7a518fc6a0bc",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c4ac02ef39bfc",
+          "composed_answer": "unresolved",
+          "composed_correct": false,
+          "confidence": 0.4,
+          "expected_for_stage": "supports",
+          "group": "g8815a39076bc",
+          "raw_answer": "supports",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c5999881a21d8",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.98,
+          "expected_for_stage": "contradicts",
+          "group": "g8815a39076bc",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "cb482dcc4a0c1",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.91,
+          "expected_for_stage": "contradicts",
+          "group": "g8815a39076bc",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c5dd2167f348a",
+          "composed_answer": "unresolved",
+          "composed_correct": false,
+          "confidence": 0.45,
+          "expected_for_stage": "supports",
+          "group": "g4a9c459ebf73",
+          "raw_answer": "unresolved",
+          "raw_correct": false
+        },
+        {
+          "case_id": "cc191a8053cc3",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.98,
+          "expected_for_stage": "contradicts",
+          "group": "g4a9c459ebf73",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c1c062765510d",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.97,
+          "expected_for_stage": "contradicts",
+          "group": "g4a9c459ebf73",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "caeff6c6c4681",
+          "composed_answer": "unresolved",
+          "composed_correct": false,
+          "confidence": 0.43,
+          "expected_for_stage": "supports",
+          "group": "g4a9c459ebf73",
+          "raw_answer": "unresolved",
+          "raw_correct": false
+        },
+        {
+          "case_id": "cbc761dc81aa1",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.64,
+          "expected_for_stage": "contradicts",
+          "group": "g4a9c459ebf73",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "cf22aab3d75cf",
+          "composed_answer": "unresolved",
+          "composed_correct": false,
+          "confidence": 0.4,
+          "expected_for_stage": "contradicts",
+          "group": "g4a9c459ebf73",
+          "raw_answer": "unresolved",
+          "raw_correct": false
+        },
+        {
+          "case_id": "c5af5e427a2f3",
+          "composed_answer": "unresolved",
+          "composed_correct": false,
+          "confidence": 0.2,
+          "expected_for_stage": "supports",
+          "group": "gd9c5d60efb17",
+          "raw_answer": "unresolved",
+          "raw_correct": false
+        },
+        {
+          "case_id": "c756d2780a92a",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.98,
+          "expected_for_stage": "contradicts",
+          "group": "gd9c5d60efb17",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "cbfa1b0cc1f0f",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.98,
+          "expected_for_stage": "contradicts",
+          "group": "gd9c5d60efb17",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c0fb9a45eb2da",
+          "composed_answer": "unresolved",
+          "composed_correct": false,
+          "confidence": 0.4,
+          "expected_for_stage": "supports",
+          "group": "g8c81f57a9b23",
+          "raw_answer": "contradicts",
+          "raw_correct": false
+        },
+        {
+          "case_id": "c94d0a24d43b5",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.77,
+          "expected_for_stage": "contradicts",
+          "group": "g8c81f57a9b23",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c9de3dd808cb8",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.35,
+          "expected_for_stage": "contradicts",
+          "group": "g8c81f57a9b23",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "cabe25ecf8ef4",
+          "composed_answer": "supports",
+          "composed_correct": true,
+          "confidence": 0.16,
+          "expected_for_stage": "supports",
+          "group": "gbafd5cf357b5",
+          "raw_answer": "supports",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c3e667a1b7532",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.61,
+          "expected_for_stage": "contradicts",
+          "group": "gbafd5cf357b5",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c19acb40f8797",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.61,
+          "expected_for_stage": "contradicts",
+          "group": "gbafd5cf357b5",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c85b37db76aaa",
+          "composed_answer": "supports",
+          "composed_correct": true,
+          "confidence": 0.95,
+          "expected_for_stage": "supports",
+          "group": "gbc4c9743d8e9",
+          "raw_answer": "supports",
+          "raw_correct": true
+        },
+        {
+          "case_id": "cef7128badec1",
+          "composed_answer": "supports",
+          "composed_correct": false,
+          "confidence": 0.94,
+          "expected_for_stage": "contradicts",
+          "group": "gbc4c9743d8e9",
+          "raw_answer": "supports",
+          "raw_correct": false
+        },
+        {
+          "case_id": "c51eabfc2dae5",
+          "composed_answer": "supports",
+          "composed_correct": false,
+          "confidence": 0.94,
+          "expected_for_stage": "contradicts",
+          "group": "gbc4c9743d8e9",
+          "raw_answer": "supports",
+          "raw_correct": false
+        }
+      ]
+    },
+    "P3": {
+      "composed_correct": 15,
+      "coverage": [
+        {
+          "kept": 24,
+          "raw_errors_kept": 7,
+          "threshold": 0
+        },
+        {
+          "kept": 18,
+          "raw_errors_kept": 2,
+          "threshold": 0.5
+        },
+        {
+          "kept": 13,
+          "raw_errors_kept": 2,
+          "threshold": 0.8
+        },
+        {
+          "kept": 9,
+          "raw_errors_kept": 1,
+          "threshold": 0.95
+        },
+        {
+          "kept": 1,
+          "raw_errors_kept": 0,
+          "threshold": 1.0
+        }
+      ],
+      "error_ranking_auc": 0.8361344537815126,
+      "limit": "Only raw judgment confidence, evaluated against stage-relative keys. Cases clustered; this is not production calibration or action-outcome probability.",
+      "raw_correct": 17,
+      "samples": [
+        {
+          "case_id": "c8b932080dc3e",
+          "composed_answer": "supports",
+          "composed_correct": true,
+          "confidence": 0.94,
+          "expected_for_stage": "supports",
+          "group": "g7a518fc6a0bc",
+          "raw_answer": "supports",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c06e2dd37f2ab",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 1.0,
+          "expected_for_stage": "contradicts",
+          "group": "g7a518fc6a0bc",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c593af9fb49a0",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.98,
+          "expected_for_stage": "contradicts",
+          "group": "g7a518fc6a0bc",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c4ac02ef39bfc",
+          "composed_answer": "unresolved",
+          "composed_correct": false,
+          "confidence": 0.52,
+          "expected_for_stage": "supports",
+          "group": "g8815a39076bc",
+          "raw_answer": "supports",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c5999881a21d8",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.95,
+          "expected_for_stage": "contradicts",
+          "group": "g8815a39076bc",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "cb482dcc4a0c1",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.95,
+          "expected_for_stage": "contradicts",
+          "group": "g8815a39076bc",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c5dd2167f348a",
+          "composed_answer": "unresolved",
+          "composed_correct": false,
+          "confidence": 0.38,
+          "expected_for_stage": "supports",
+          "group": "g4a9c459ebf73",
+          "raw_answer": "unresolved",
+          "raw_correct": false
+        },
+        {
+          "case_id": "cc191a8053cc3",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.98,
+          "expected_for_stage": "contradicts",
+          "group": "g4a9c459ebf73",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c1c062765510d",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.91,
+          "expected_for_stage": "contradicts",
+          "group": "g4a9c459ebf73",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "caeff6c6c4681",
+          "composed_answer": "unresolved",
+          "composed_correct": false,
+          "confidence": 0.45,
+          "expected_for_stage": "supports",
+          "group": "g4a9c459ebf73",
+          "raw_answer": "unresolved",
+          "raw_correct": false
+        },
+        {
+          "case_id": "cbc761dc81aa1",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.69,
+          "expected_for_stage": "contradicts",
+          "group": "g4a9c459ebf73",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "cf22aab3d75cf",
+          "composed_answer": "unresolved",
+          "composed_correct": false,
+          "confidence": 0.3,
+          "expected_for_stage": "contradicts",
+          "group": "g4a9c459ebf73",
+          "raw_answer": "unresolved",
+          "raw_correct": false
+        },
+        {
+          "case_id": "c5af5e427a2f3",
+          "composed_answer": "unresolved",
+          "composed_correct": false,
+          "confidence": 0.22,
+          "expected_for_stage": "supports",
+          "group": "gd9c5d60efb17",
+          "raw_answer": "unresolved",
+          "raw_correct": false
+        },
+        {
+          "case_id": "c756d2780a92a",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.98,
+          "expected_for_stage": "contradicts",
+          "group": "gd9c5d60efb17",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "cbfa1b0cc1f0f",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.98,
+          "expected_for_stage": "contradicts",
+          "group": "gd9c5d60efb17",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c0fb9a45eb2da",
+          "composed_answer": "unresolved",
+          "composed_correct": false,
+          "confidence": 0.41,
+          "expected_for_stage": "supports",
+          "group": "g8c81f57a9b23",
+          "raw_answer": "contradicts",
+          "raw_correct": false
+        },
+        {
+          "case_id": "c94d0a24d43b5",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.86,
+          "expected_for_stage": "contradicts",
+          "group": "g8c81f57a9b23",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c9de3dd808cb8",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.79,
+          "expected_for_stage": "contradicts",
+          "group": "g8c81f57a9b23",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "cabe25ecf8ef4",
+          "composed_answer": "unresolved",
+          "composed_correct": false,
+          "confidence": 0.33,
+          "expected_for_stage": "supports",
+          "group": "gbafd5cf357b5",
+          "raw_answer": "supports",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c3e667a1b7532",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.67,
+          "expected_for_stage": "contradicts",
+          "group": "gbafd5cf357b5",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c19acb40f8797",
+          "composed_answer": "contradicts",
+          "composed_correct": true,
+          "confidence": 0.66,
+          "expected_for_stage": "contradicts",
+          "group": "gbafd5cf357b5",
+          "raw_answer": "contradicts",
+          "raw_correct": true
+        },
+        {
+          "case_id": "c85b37db76aaa",
+          "composed_answer": "supports",
+          "composed_correct": true,
+          "confidence": 0.95,
+          "expected_for_stage": "supports",
+          "group": "gbc4c9743d8e9",
+          "raw_answer": "supports",
+          "raw_correct": true
+        },
+        {
+          "case_id": "cef7128badec1",
+          "composed_answer": "supports",
+          "composed_correct": false,
+          "confidence": 0.95,
+          "expected_for_stage": "contradicts",
+          "group": "gbc4c9743d8e9",
+          "raw_answer": "supports",
+          "raw_correct": false
+        },
+        {
+          "case_id": "c51eabfc2dae5",
+          "composed_answer": "supports",
+          "composed_correct": false,
+          "confidence": 0.85,
+          "expected_for_stage": "contradicts",
+          "group": "gbc4c9743d8e9",
+          "raw_answer": "supports",
+          "raw_correct": false
+        }
+      ]
+    }
+  },
+  "deployment": {
+    "P0": {
+      "jev_calls": 0,
+      "jev_list_price_usd": "0",
+      "native_calls": 0
+    },
+    "P0_probe": {
+      "jev_calls": 0,
+      "jev_list_price_usd": "0",
+      "native_calls": 0
+    },
+    "P1": {
+      "jev_calls": 24,
+      "jev_list_price_usd": "0.004811100",
+      "native_calls": 0
+    },
+    "P2": {
+      "jev_calls": 48,
+      "jev_list_price_usd": "0.010677576",
+      "native_calls": 0
+    },
+    "P3": {
+      "jev_calls": 72,
+      "jev_list_price_usd": "0.016573242",
+      "native_calls": 0
+    },
+    "P4": {
+      "jev_calls": 72,
+      "jev_list_price_usd": "0.016573242",
+      "native_calls": 0
+    },
+    "always": {
+      "jev_calls": 33,
+      "jev_list_price_usd": "0.007946988",
+      "native_calls": 11
+    },
+    "never": {
+      "jev_calls": 33,
+      "jev_list_price_usd": "0.007946988",
+      "native_calls": 0
+    },
+    "random": {
+      "jev_calls": 33,
+      "jev_list_price_usd": "0.007946988",
+      "native_calls": 0
+    },
+    "reasoning_only": {
+      "jev_calls": 0,
+      "jev_list_price_usd": "0",
+      "native_calls": 11
+    },
+    "risk": {
+      "jev_calls": 33,
+      "jev_list_price_usd": "0.007946988",
+      "native_calls": 10
+    }
+  },
+  "economic_scenarios": {
+    "P0->P0_probe": {
+      "include_observed_terminal": {
+        "gross_reduction": {
+          "consequential": "16",
+          "low_stakes": "2.00"
+        },
+        "n": 24
+      },
+      "status_ok_only": {
+        "gross_reduction": {
+          "consequential": "16",
+          "low_stakes": "2.00"
+        },
+        "n": 24
+      }
+    },
+    "P0->P1": {
+      "include_observed_terminal": {
+        "gross_reduction": {
+          "consequential": "-126",
+          "low_stakes": "-3.25"
+        },
+        "n": 24
+      },
+      "status_ok_only": {
+        "gross_reduction": {
+          "consequential": "-126",
+          "low_stakes": "-3.25"
+        },
+        "n": 24
+      }
+    },
+    "P0->P4": {
+      "include_observed_terminal": {
+        "gross_reduction": {
+          "consequential": "-193",
+          "low_stakes": "-2.60"
+        },
+        "n": 24
+      },
+      "status_ok_only": {
+        "gross_reduction": {
+          "consequential": "-188",
+          "low_stakes": "-2.50"
+        },
+        "n": 23
+      }
+    },
+    "P1->P2": {
+      "include_observed_terminal": {
+        "gross_reduction": {
+          "consequential": "-70",
+          "low_stakes": "-0.25"
+        },
+        "n": 24
+      },
+      "status_ok_only": {
+        "gross_reduction": {
+          "consequential": "-70",
+          "low_stakes": "-0.25"
+        },
+        "n": 24
+      }
+    },
+    "P2->P3": {
+      "include_observed_terminal": {
+        "gross_reduction": {
+          "consequential": "-2",
+          "low_stakes": "-0.25"
+        },
+        "n": 24
+      },
+      "status_ok_only": {
+        "gross_reduction": {
+          "consequential": "-2",
+          "low_stakes": "-0.25"
+        },
+        "n": 24
+      }
+    },
+    "P3->P4": {
+      "include_observed_terminal": {
+        "gross_reduction": {
+          "consequential": "5",
+          "low_stakes": "1.15"
+        },
+        "n": 24
+      },
+      "status_ok_only": {
+        "gross_reduction": {
+          "consequential": "8",
+          "low_stakes": "1.00"
+        },
+        "n": 23
+      }
+    },
+    "never->always": {
+      "include_observed_terminal": {
+        "gross_reduction": {
+          "consequential": "104",
+          "low_stakes": "2.50"
+        },
+        "n": 11
+      },
+      "status_ok_only": {
+        "gross_reduction": {
+          "consequential": "104",
+          "low_stakes": "2.50"
+        },
+        "n": 11
+      }
+    },
+    "reasoning_only->always": {
+      "include_observed_terminal": {
+        "gross_reduction": {
+          "consequential": "6",
+          "low_stakes": "0.75"
+        },
+        "n": 11
+      },
+      "status_ok_only": {
+        "gross_reduction": {
+          "consequential": "6",
+          "low_stakes": "0.75"
+        },
+        "n": 11
+      }
+    }
+  },
+  "false_clears": [
+    {
+      "audit": {
+        "case_id": "cef7128badec1",
+        "decision_population_sha256": "8d34a53f28457f5cde7f565345b6bef08394cff258924360299b975daf5e29c6",
+        "inclusion_probability": 0.5,
+        "population_size": 4,
+        "sample_size": 2,
+        "seed": 20261024,
+        "selected": false,
+        "selection_order": "after_initial_routes_frozen",
+        "status": "not_selected",
+        "stratum": "accept:none:high",
+        "stream": "independent_random_audit"
+      },
+      "case_id": "cef7128badec1",
+      "group": "gbc4c9743d8e9",
+      "judgment_confidence": 0.95,
+      "route": "none"
+    },
+    {
+      "audit": {
+        "case_id": "c51eabfc2dae5",
+        "decision_population_sha256": "8d34a53f28457f5cde7f565345b6bef08394cff258924360299b975daf5e29c6",
+        "inclusion_probability": 0.5,
+        "population_size": 4,
+        "sample_size": 2,
+        "seed": 20261024,
+        "selected": false,
+        "selection_order": "after_initial_routes_frozen",
+        "status": "not_selected",
+        "stratum": "accept:none:high",
+        "stream": "independent_random_audit"
+      },
+      "case_id": "c51eabfc2dae5",
+      "group": "gbc4c9743d8e9",
+      "judgment_confidence": 0.85,
+      "route": "none"
+    }
+  ],
+  "groups": 7,
+  "joins": {
+    "e2e_raw_action_and_decision_binding": 23,
+    "jev_wire_raw_response_usage": 103,
+    "model_action_from_raw_answers": 141,
+    "native_request_response_invocation": 22,
+    "p4_route_from_raw_signals": 24,
+    "probe_raw_hash_and_operand_assertions": 52,
+    "structured_action_from_operands": 58
+  },
+  "list_price_usd_by_stage": {
+    "adversarial": "0.005895666",
+    "initial": "0.004811100",
+    "post_probe": "0.005866476",
+    "robustness_equivalent_wording": "0.001235892",
+    "robustness_irrelevant_context": "0.001242696",
+    "robustness_remove_decisive": "0.001167936",
+    "robustness_reverse_options": "0.001236144",
+    "robustness_wrong_subject": "0.001238664",
+    "smoke": "0.000013566"
+  },
+  "main_list_price_usd": "0.022708140",
+  "native_conditions": {
+    "fallback": 11,
+    "reasoning_only": 11
+  },
+  "policy_outcomes": {
+    "P0": {
+      "abstention": 8,
+      "correct": 16
+    },
+    "P0_probe": {
+      "correct": 24
+    },
+    "P1": {
+      "abstention": 11,
+      "correct": 11,
+      "wrong": 2
+    },
+    "P2": {
+      "abstention": 6,
+      "correct": 16,
+      "wrong": 2
+    },
+    "P3": {
+      "abstention": 7,
+      "correct": 15,
+      "wrong": 2
+    },
+    "P4": {
+      "abstention": 2,
+      "correct": 19,
+      "unsupported_terminal": 1,
+      "wrong": 2
+    },
+    "always": {
+      "abstention": 1,
+      "correct": 10
+    },
+    "never": {
+      "abstention": 3,
+      "correct": 7,
+      "wrong": 1
+    },
+    "random": {
+      "abstention": 3,
+      "correct": 7,
+      "wrong": 1
+    },
+    "reasoning_only": {
+      "abstention": 4,
+      "correct": 7
+    },
+    "risk": {
+      "abstention": 2,
+      "correct": 9
+    }
+  },
+  "post_P3_structured_diagnostic": {
+    "cases": {
+      "c06e2dd37f2ab": {
+        "predicted": "reject",
+        "truth": "reject"
+      },
+      "c0fb9a45eb2da": {
+        "predicted": "accept",
+        "truth": "accept"
+      },
+      "c19acb40f8797": {
+        "predicted": "reject",
+        "truth": "reject"
+      },
+      "c1c062765510d": {
+        "predicted": "reject",
+        "truth": "reject"
+      },
+      "c3e667a1b7532": {
+        "predicted": "reject",
+        "truth": "reject"
+      },
+      "c4ac02ef39bfc": {
+        "predicted": "accept",
+        "truth": "accept"
+      },
+      "c51eabfc2dae5": {
+        "predicted": "reject",
+        "truth": "reject"
+      },
+      "c593af9fb49a0": {
+        "predicted": "reject",
+        "truth": "reject"
+      },
+      "c5999881a21d8": {
+        "predicted": "reject",
+        "truth": "reject"
+      },
+      "c5af5e427a2f3": {
+        "predicted": "accept",
+        "truth": "accept"
+      },
+      "c5dd2167f348a": {
+        "predicted": "accept",
+        "truth": "accept"
+      },
+      "c756d2780a92a": {
+        "predicted": "reject",
+        "truth": "reject"
+      },
+      "c85b37db76aaa": {
+        "predicted": "accept",
+        "truth": "accept"
+      },
+      "c8b932080dc3e": {
+        "predicted": "accept",
+        "truth": "accept"
+      },
+      "c94d0a24d43b5": {
+        "predicted": "reject",
+        "truth": "reject"
+      },
+      "c9de3dd808cb8": {
+        "predicted": "reject",
+        "truth": "reject"
+      },
+      "cabe25ecf8ef4": {
+        "predicted": "accept",
+        "truth": "accept"
+      },
+      "caeff6c6c4681": {
+        "predicted": "accept",
+        "truth": "accept"
+      },
+      "cb482dcc4a0c1": {
+        "predicted": "reject",
+        "truth": "reject"
+      },
+      "cbc761dc81aa1": {
+        "predicted": "reject",
+        "truth": "reject"
+      },
+      "cbfa1b0cc1f0f": {
+        "predicted": "reject",
+        "truth": "reject"
+      },
+      "cc191a8053cc3": {
+        "predicted": "reject",
+        "truth": "reject"
+      },
+      "cef7128badec1": {
+        "predicted": "reject",
+        "truth": "reject"
+      },
+      "cf22aab3d75cf": {
+        "predicted": "reject",
+        "truth": "reject"
+      }
+    },
+    "correct": 24,
+    "n": 24
+  },
+  "probe_summary": {
+    "P0_probe": {
+      "action_improvements": 8,
+      "seconds": 2.6169964010002786,
+      "statuses": {
+        "executed": 8
+      },
+      "structured_after_correct": 8,
+      "structured_before_correct": 0
+    },
+    "P2": {
+      "action_improvements": 6,
+      "seconds": 7.97521152499985,
+      "statuses": {
+        "executed": 21,
+        "unsupported": 1
+      },
+      "structured_after_correct": 22,
+      "structured_before_correct": 14
+    },
+    "P4": {
+      "action_improvements": 4,
+      "seconds": 4.035693414999969,
+      "statuses": {
+        "executed": 10,
+        "unsupported": 1
+      },
+      "structured_after_correct": 11,
+      "structured_before_correct": 11
+    },
+    "independent_random_audit": {
+      "action_improvements": 0,
+      "seconds": 4.394689340000468,
+      "statuses": {
+        "executed": 13
+      },
+      "structured_after_correct": 0,
+      "structured_before_correct": 0
+    }
+  },
+  "raw_probability_rounding": [
+    {
+      "question": "violation_effect_uncertainty",
+      "request_id": "92b15d89cd1ee8ab7b6ee0a517c8512c698c49f36d07f8c357222ff7b9782c20",
+      "sum": 0.9900000000000001
+    },
+    {
+      "question": "route",
+      "request_id": "2f7182e5f1573880b2c0ad665c92c6b5cf39a2ff1ba10fe48b36b8b43a1bdf2b",
+      "sum": 0.9900000000000001
+    },
+    {
+      "question": "probe_observation",
+      "request_id": "d350f1fecf562ede89d2a0e1dc092a440b7d4ddc6cfb58da94adca3e0b57d46d",
+      "sum": 0.9900000000000001
+    },
+    {
+      "question": "violation_authority_binding",
+      "request_id": "d6ac6d6a9988fac7f1323b6abafd5e9d9ef37831223215dae3c8088154af0c9f",
+      "sum": 0.9900000000000001
+    },
+    {
+      "question": "violation_recipient_observation",
+      "request_id": "af41461a105c68923f6bf2c564884fc9ee8f1eb65336e0a3cbdd84f1e3934cbd",
+      "sum": 0.9900000000000001
+    },
+    {
+      "question": "violation_authority_binding",
+      "request_id": "3a16c409be4e9184f87acecf6591c01f679526b84194b07165f4a468bead3e82",
+      "sum": 0.9900000000000001
+    },
+    {
+      "question": "probe",
+      "request_id": "aae75d55aef544fdc74d48ac372534361ec8a381bbef175dfb4c619288f0948e",
+      "sum": 0.9900000000000001
+    },
+    {
+      "question": "violation_concurrent_activity",
+      "request_id": "1d0f5b7a2a8a6e0b6a47c40577e8a59ddff911ea40bee3a29dec2d922419dd8e",
+      "sum": 0.9900000000000001
+    },
+    {
+      "question": "violation_assertion_execution",
+      "request_id": "4766ff7d788070ae6dcf6292902f84cf1717d80dde4c20ce5fa0e268b8576e83",
+      "sum": 0.9900000000000001
+    },
+    {
+      "question": "violation_recipient_observation",
+      "request_id": "b056098aa17a0d117dd2edaf5253a4621337a2053995ba5e9948668243d9dcd5",
+      "sum": 0.9900000000000001
+    },
+    {
+      "question": "probe",
+      "request_id": "d5b3142d06880101b456d1d76324f24e429c39fda428287ae758d55349a7aaa1",
+      "sum": 0.9900000000000001
+    },
+    {
+      "question": "violation_authority_binding",
+      "request_id": "d5b3142d06880101b456d1d76324f24e429c39fda428287ae758d55349a7aaa1",
+      "sum": 0.9900000000000001
+    },
+    {
+      "question": "probe",
+      "request_id": "906ff492b2cd6d4b33428a26d1f99a4cc80f676d51f789e6df35614452bf99c7",
+      "sum": 0.9900000000000001
+    },
+    {
+      "question": "probe",
+      "request_id": "e5c1e5a34715e8866b927bbd1641cf301fd8606e8e1ebc4741c789807881f5c9",
+      "sum": 0.9900000000000001
+    },
+    {
+      "question": "probe_observation",
+      "request_id": "acc8d7f7b7a02f1bc5754743677421998315e7bcb24408cdc89f4be04339e896",
+      "sum": 0.9900000000000001
+    },
+    {
+      "question": "probe",
+      "request_id": "4bbeaf1b4a0ec563962c4581b7eefc0b70867cd63434efa7894a73386f1786dc",
+      "sum": 0.9900000000000001
+    },
+    {
+      "question": "decision_relevance",
+      "request_id": "f93e14ec1670debc692117a432126845f73eda3159fe625ab2146e132ce7942b",
+      "sum": 0.9900000000000001
+    },
+    {
+      "question": "probe_observation",
+      "request_id": "c85434d2b1d5aa937228db59fd3c24e6a2d7a0657be362c3b2864cbad6c5bb1a",
+      "sum": 0.9900000000000001
+    },
+    {
+      "question": "violation_recipient_observation",
+      "request_id": "975bf5ff6a4c287264f1e0fe06525923771923b9c5019b763d00bbdc61ba9a86",
+      "sum": 0.9900000000000001
+    },
+    {
+      "question": "violation_argument_integrity",
+      "request_id": "0ed0d2cb41a0b515a4bedce3f68d9f51b86b3ecfed0f756c9072fde0db4da019",
+      "sum": 0.9900000000000001
+    },
+    {
+      "question": "violation_assertion_execution",
+      "request_id": "850564233b6a2a4c8a3e4314e04530b4434a600b1522475a9ed5b0b7f2badf13",
+      "sum": 0.9900000000000001
+    }
+  ],
+  "raw_request_stages": {
+    "adversarial": 24,
+    "initial": 24,
+    "post_probe": 24,
+    "robustness_equivalent_wording": 6,
+    "robustness_irrelevant_context": 6,
+    "robustness_remove_decisive": 6,
+    "robustness_reverse_options": 6,
+    "robustness_wrong_subject": 6,
+    "smoke": 1
+  },
+  "robustness": {
+    "equivalent_wording": {
+      "action_correct_for_stage": 5,
+      "n": 6,
+      "raw_judgment_correct": 5,
+      "same_composed_action_as_base": 5,
+      "same_raw_judgment_as_base": 5
+    },
+    "irrelevant_context": {
+      "action_correct_for_stage": 4,
+      "n": 6,
+      "raw_judgment_correct": 4,
+      "same_composed_action_as_base": 6,
+      "same_raw_judgment_as_base": 6
+    },
+    "remove_decisive": {
+      "action_correct_for_stage": 6,
+      "n": 6,
+      "raw_judgment_correct": 0,
+      "same_composed_action_as_base": 1,
+      "same_raw_judgment_as_base": 4
+    },
+    "reverse_options": {
+      "action_correct_for_stage": 4,
+      "n": 6,
+      "raw_judgment_correct": 4,
+      "same_composed_action_as_base": 6,
+      "same_raw_judgment_as_base": 6
+    },
+    "wrong_subject": {
+      "action_correct_for_stage": 6,
+      "n": 6,
+      "raw_judgment_correct": 0,
+      "same_composed_action_as_base": 1,
+      "same_raw_judgment_as_base": 4
+    }
+  },
+  "routes": {
+    "none": 13,
+    "probe": 11
+  },
+  "script_scope": "No experiment imports or evaluation.json. Original keys used as targets. Hashes bind but do not prove truth; raw projections/behavioral controls separately reviewed.",
+  "source": {
+    "commit": "9c6d7612e31bb78eb07868b5ac2a046629c5876c",
+    "python": "3.12.14",
+    "source_hashes": {
+      "devtools/jev.py": "06f5cfeee090f1ecc5bb75a22a25c477e91b237a338e08e090f12e100846f085",
+      "devtools/jev_config.py": "943dd200f54c650f040c4c011c97fc832b197ae66b3c1715f56e7ce32fc75509",
+      "experiments/jev_failure_correlation_v2/INPUTS.json": "c0b179dacdb6ebb881e1285b52dcff17fe91bf53c17c13b979e54aeac3cdbfa5",
+      "experiments/jev_failure_correlation_v2/__init__.py": "71c9e21108cc0ac31f0bda8a22493289abc79dafe5585d8d45d24238ac33c83b",
+      "experiments/jev_failure_correlation_v2/artifacts.py": "1b81377941256fc40fc73460903d99b112cdf91c14ce6537abe2a20b660994a3",
+      "experiments/jev_failure_correlation_v2/contracts.py": "a008cd6f596090d49b04c66bf71e6a066f5d4401acbce19cc64b630242795f96",
+      "experiments/jev_failure_correlation_v2/corpus.py": "b8c2ca383fed095b3b7a95b9fc7220b49b239bf3382f8d85f03a39517a3547e2",
+      "experiments/jev_failure_correlation_v2/data/frozen/cases.json": "70e3e7c948d46f6453cb424bc96b543aa73b93a06aba50f636b514fe286cedb5",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/healthy/module.py.txt": "a97a67e61663bbbb86a609a7c528fee96df7472e7512061711027a0081ae696a",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/healthy/phase.json": "b90e4bac923231b12f1d8e9f7d1ccf2d1516aa828aaadce38954f583779c7a3d",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/healthy/test_target.py.txt": "cbf109bf24b5886814c991cbb108ce01a71534e6d21bc9faafe318778a505461",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/helper_error/module.py.txt": "4c79f9bf87273cc53be1c19faffa8b975bf5138f76c9cd3e199f7241a78eeb72",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/helper_error/phase.json": "815b68741e0f45e8dcb6a667ded36f9fcd3c191b56e198e914313927b54e9cc8",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/helper_error/test_target.py.txt": "cbf109bf24b5886814c991cbb108ce01a71534e6d21bc9faafe318778a505461",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/wrong_return/module.py.txt": "996d348e9d72467d16b5111c896594e8b1c6c5cb6866d35cc53c298285be6200",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/wrong_return/phase.json": "e2ccbe06c6f214079cf2cd5b51b45b80f1c5f58ca496c04fb049661c9a9631e8",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_assertion/wrong_return/test_target.py.txt": "cbf109bf24b5886814c991cbb108ce01a71534e6d21bc9faafe318778a505461",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_authority/adaptation.json": "2151353c6d28bc084f9200ef58e877fac928517a468475e6d6fb5e6712bbdbe2",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_authority/lifecycle.py": "a2f4b371cf3edc63edfbbbc7401cf8c710f51cd2bbfa4066316b5542ef4149ad",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_busy/adaptation.json": "2151353c6d28bc084f9200ef58e877fac928517a468475e6d6fb5e6712bbdbe2",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_busy/lifecycle.py": "a2f4b371cf3edc63edfbbbc7401cf8c710f51cd2bbfa4066316b5542ef4149ad",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_effect/adaptation.json": "4cd48f45c97139732f88049f24b7071710f01c6f5ac30930fa158e76bc107129",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_effect/late_effect.py": "2f1c2af7bb026bfad2828a7b535986870b1cf043c14abc2c4e5500183e7dd093",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/adaptation.json": "3b3ee87187041d2bbfdf54c3e3d5a99426d2f3e89023fcb6a26cc28611ae7bd3",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/claude/configuration.json": "3bcf1a519f1ed9d258a6359a106a4e8bcbd268083fb75e937e4257397ef2700f",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/claude/observed.json": "5da7cad89ba9fbf481496bbabc91de15a832fb5e771cc244f862d461dc1a3d71",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/claude_peer.py": "5aebabaa6fa0453137c76ebb17e7eaa5c8e67bc167e08d7a61057ae0bf6f9136",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/codex/configuration.json": "74b637da87663ec95e80c716817d8760e08c88591b3857c8c5bfaa1834b434b4",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/codex/observed.json": "084036f274bb15738dcd17bc76988e43633d27331baaacab2b7f4e91c25c4c64",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/grok/configuration.json": "144c1bb9547b03994eac8f024d239d4d9bd2baa200a20963b96a9ed8e14a0296",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/grok/observed.json": "857038cb12b53347a0d477152412f8a4a8aab6d5a754c4459b0593218ed5acf1",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/native_peer.py": "63dd6c3db50108787ad2878b8ffd41fef2d39b492942520c2934932ed144889c",
+      "experiments/jev_failure_correlation_v2/data/frozen/executions/p_replay/probe.py": "bef8bb3b7d2ba3ddbb9ba59aa3272b8f411dceb94484f931031104aac262a3db",
+      "experiments/jev_failure_correlation_v2/data/frozen/freeze.json": "e8205a8810c11b39e47d94845ed43b6747273d69b6dfcf919e7e84f8a470cce7",
+      "experiments/jev_failure_correlation_v2/data/frozen/initial_key.json": "09466c0c32fd5cbf2796e82f0da7d966b5d2979b9e2199e942699ce30173929a",
+      "experiments/jev_failure_correlation_v2/data/frozen/initial_packets.json": "162037ddd32be14ed6025996cdb90d68dea5b3f8e1ea1eaf29d52ac1f4ca7060",
+      "experiments/jev_failure_correlation_v2/data/frozen/outcome_key.json": "10e5be2d15ad639db12ff7da4da054e7cef1c8e67d86eff5c55679e860c24086",
+      "experiments/jev_failure_correlation_v2/data/frozen/provenance.json": "bf189435953efe23330d7ff88642ea092d072addafba684a885427c0a9702028",
+      "experiments/jev_failure_correlation_v2/data/frozen/raw/p_arguments.json": "9b8376c2a81862dded43a255d8bf9a71b3cc54baf8ee5851435dc24758d68a2f",
+      "experiments/jev_failure_correlation_v2/data/frozen/raw/p_assertion.json": "699ea0da03d1af3ebedbacf428313795b7db4a81a49d0c8d83a59d5c2c72dd00",
+      "experiments/jev_failure_correlation_v2/data/frozen/raw/p_attempts.json": "df1e515c3f282b68c5432112a115ed16244ebbca95e544b6ee75123bffa33431",
+      "experiments/jev_failure_correlation_v2/data/frozen/raw/p_authority.json": "9401aed85cc560c199d75a0086c9a7e8d50b27efbffb65607eb08e27bf77c99f",
+      "experiments/jev_failure_correlation_v2/data/frozen/raw/p_busy.json": "566d32f073b5a3ac881090e9c5bf959a1f82726192410d0dbb608630f7c64ce7",
+      "experiments/jev_failure_correlation_v2/data/frozen/raw/p_context.json": "15c36206e955678d951aaf4f231c8cfb9e473ce49c672ac50dcf4a553533835e",
+      "experiments/jev_failure_correlation_v2/data/frozen/raw/p_effect.json": "dbe288296cfe8e2ab0663d919c550e7176012508a5b05ba3eec62d990cd00904",
+      "experiments/jev_failure_correlation_v2/data/frozen/raw/p_replay.json": "53ee56dd3ef8160ade18f43692d14b81824ef1d46f72e7c26d5e3af766e1eb91",
+      "experiments/jev_failure_correlation_v2/data/frozen/transformation_packets.json": "9e58e227127e87eb21377db92a7a089fa3dd9714718e771294670c0624499b54",
+      "experiments/jev_failure_correlation_v2/data/frozen/transformations.json": "589931aa36804a5f006c2d692c2a2869c090e54beb90edd4975221a8a409ca36",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/cases.json": "e73a96b01c5b51b3d0386ae8810b78a3b0bef36dd8fc99acc5cf6641748957b0",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_assertion/healthy/module.py.txt": "a97a67e61663bbbb86a609a7c528fee96df7472e7512061711027a0081ae696a",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_assertion/healthy/phase.json": "b90e4bac923231b12f1d8e9f7d1ccf2d1516aa828aaadce38954f583779c7a3d",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_assertion/healthy/test_target.py.txt": "cbf109bf24b5886814c991cbb108ce01a71534e6d21bc9faafe318778a505461",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_assertion/helper_error/module.py.txt": "4c79f9bf87273cc53be1c19faffa8b975bf5138f76c9cd3e199f7241a78eeb72",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_assertion/helper_error/phase.json": "815b68741e0f45e8dcb6a667ded36f9fcd3c191b56e198e914313927b54e9cc8",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_assertion/helper_error/test_target.py.txt": "cbf109bf24b5886814c991cbb108ce01a71534e6d21bc9faafe318778a505461",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_assertion/wrong_return/module.py.txt": "996d348e9d72467d16b5111c896594e8b1c6c5cb6866d35cc53c298285be6200",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_assertion/wrong_return/phase.json": "e2ccbe06c6f214079cf2cd5b51b45b80f1c5f58ca496c04fb049661c9a9631e8",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_assertion/wrong_return/test_target.py.txt": "cbf109bf24b5886814c991cbb108ce01a71534e6d21bc9faafe318778a505461",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_authority/lifecycle.py": "c9a233735d2c6ad7d56299e511104b5a441bc5fe7b9babd01daca16e0b6f557c",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_busy/lifecycle.py": "c9a233735d2c6ad7d56299e511104b5a441bc5fe7b9babd01daca16e0b6f557c",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_effect/late_effect.py": "2d420b2acb4fdf2171cc219a746e7f8d5e1e9b19f50455d361c9d7074d0bce64",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_replay/claude/configuration.json": "3bcf1a519f1ed9d258a6359a106a4e8bcbd268083fb75e937e4257397ef2700f",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_replay/claude/observed.json": "6d1f18fd8e01ba889723c04cce37bdfc7282d2fe47c5b7fb1a6c82547c15a81c",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_replay/claude_peer.py": "5aebabaa6fa0453137c76ebb17e7eaa5c8e67bc167e08d7a61057ae0bf6f9136",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_replay/codex/configuration.json": "74b637da87663ec95e80c716817d8760e08c88591b3857c8c5bfaa1834b434b4",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_replay/codex/observed.json": "b3fcfa0c67a820af98143ecb22cb941c3695edb5b17f246b88c47904e3c83a06",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_replay/grok/configuration.json": "144c1bb9547b03994eac8f024d239d4d9bd2baa200a20963b96a9ed8e14a0296",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_replay/grok/observed.json": "3f1d19cfd99f47b93dfff83ac0494da931ecada3509934035f0df8c174e81678",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_replay/native_peer.py": "63dd6c3db50108787ad2878b8ffd41fef2d39b492942520c2934932ed144889c",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/executions/p_replay/probe.py": "b89be55b04e34dbc826dc61962d9d8f39b36c8d11da7603217bb21dae4676135",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/freeze.json": "149c0b78f597e9a69112578ee180253001432f7ef92a48bee555cda6694f915d",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/initial_key.json": "c96964bcc5d8faefe1d8bc9dd2c5182b37e277886a11b94eb6fa9b1820db1de1",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/initial_packets.json": "3b80e579cd3a6177b99554ee1c2b1fdac04a5df5c4616ef68ee9a7038e8a8725",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/outcome_key.json": "b086dce341149b5f7d07c01b64a5106ef9eec802a9d656abd5645e333c87c265",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/provenance.json": "56e1452ed1914d4c86562ecd026da60452a636c2483d3fb1a259fda374b29f5a",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/raw/p_arguments.json": "9b8376c2a81862dded43a255d8bf9a71b3cc54baf8ee5851435dc24758d68a2f",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/raw/p_assertion.json": "c2be25cb159c3fe32554f063bb00bf11a2f72d5ce3d68136d97d768d4a84798c",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/raw/p_attempts.json": "df1e515c3f282b68c5432112a115ed16244ebbca95e544b6ee75123bffa33431",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/raw/p_authority.json": "9af35c406eaf8d3f7b64b3074c51e104d152cde771c1bff06898ec0efb6af0f1",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/raw/p_busy.json": "5d5379e4bccff6d70f39eb3bbb04827de2e10e96cae91893088ab2d5b2a0ccdb",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/raw/p_context.json": "239ae51c7279ce622bc22540216a7c69a9d9b3eb4b3b2f75a93f55f29a106428",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/raw/p_effect.json": "b2c5406dac0891ed572055160d46eb2eee109f1dfc1f1a41c3f48238bb8415f8",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/raw/p_replay.json": "fdc5a5071a745ae3a2082ceadac8f5f3006d84293da06ac7b1fa4a76cf80a2b3",
+      "experiments/jev_failure_correlation_v2/data/reference_replay/transformations.json": "2eaa3213b37bad5514574bb48cbde64187b3425da1e68e1c0bd5a8c7807fef41",
+      "experiments/jev_failure_correlation_v2/data/reproduction_sources/adapter_replay.py.txt": "b89be55b04e34dbc826dc61962d9d8f39b36c8d11da7603217bb21dae4676135",
+      "experiments/jev_failure_correlation_v2/data/reproduction_sources/late_effect.py.txt": "52b3256f177d9539b99b3b0d151170d7c0752bd58ab878b06ae7507b1668ec27",
+      "experiments/jev_failure_correlation_v2/data/reproduction_sources/lifecycle.py.txt": "ffd9035934612a61dc7268e119fd0985136e482cd3c32dfb21c63214497a65fa",
+      "experiments/jev_failure_correlation_v2/data/reproduction_sources/provenance.json": "85d00d0120ffba5087c5f83aaaf5d22d08b2e85062527f6c93cf96c10118f322",
+      "experiments/jev_failure_correlation_v2/economics.py": "687647aa63eebaca4128f957ce7d1c387d38ece8b168e5ae2a9dbefaf2b37a39",
+      "experiments/jev_failure_correlation_v2/evaluation.py": "4572f77d7a77d2345d57def7396a349977c923c1062534525c8dd538c507f244",
+      "experiments/jev_failure_correlation_v2/policies.py": "14c3b61aaaefb79eee75cfd6417e828f16477ca719fc3e43797719703ad6ece4",
+      "experiments/jev_failure_correlation_v2/probes.py": "a9e81e1358d09f1a0f0a016331aa55952718eb90200b050b0cd71e718d83f1a9",
+      "experiments/jev_failure_correlation_v2/runner.py": "343e1c99c9f79d2bd7490fb1a75cff78a041bdcb9a15e6cafaa848503864a8e8",
+      "experiments/jev_failure_correlation_v2/tests/__init__.py": "587eeae4edab745887632c95c4666fc0b35e1df2b87e216b63306adc8072caee",
+      "experiments/jev_failure_correlation_v2/tests/test_corpus_probes.py": "54b8b442aa9d72b8f6189682c218e4858185f727cba10521923e73ce88e9bd09",
+      "experiments/jev_failure_correlation_v2/tests/test_evaluation.py": "f8a874c906fd86277fa2451142136aa89ed9673e116b1d9a846e67fa13f7a8d6",
+      "experiments/jev_failure_correlation_v2/tests/test_policies.py": "1a45a80f408c76537b3df413ea87e328b2f6f08a9bc2a0596f4db981e9fdfd10",
+      "experiments/jev_failure_correlation_v2/tests/test_transport.py": "6a3d7f725e48a9b6c9948ad2675420b702f2002a3cdce18ea60c0f1cf2878d0e",
+      "experiments/jev_failure_correlation_v2/transport.py": "22c62c1abce8996951e8a321fcbf63f01b13018c483a997cab141ca0d214c263"
+    },
+    "tree": "5313e3a176515e7b160315a56da430fcde63b189"
+  },
+  "transitions": {
+    "P0->P0_probe": {
+      "action_changes": [
+        {
+          "after": "reject",
+          "before": "investigate",
+          "case_id": "c593af9fb49a0",
+          "truth": "reject"
+        },
+        {
+          "after": "reject",
+          "before": "investigate",
+          "case_id": "cb482dcc4a0c1",
+          "truth": "reject"
+        },
+        {
+          "after": "reject",
+          "before": "investigate",
+          "case_id": "c1c062765510d",
+          "truth": "reject"
+        },
+        {
+          "after": "reject",
+          "before": "investigate",
+          "case_id": "cf22aab3d75cf",
+          "truth": "reject"
+        },
+        {
+          "after": "reject",
+          "before": "investigate",
+          "case_id": "cbfa1b0cc1f0f",
+          "truth": "reject"
+        },
+        {
+          "after": "reject",
+          "before": "investigate",
+          "case_id": "c9de3dd808cb8",
+          "truth": "reject"
+        },
+        {
+          "after": "reject",
+          "before": "investigate",
+          "case_id": "c19acb40f8797",
+          "truth": "reject"
+        },
+        {
+          "after": "reject",
+          "before": "investigate",
+          "case_id": "c51eabfc2dae5",
+          "truth": "reject"
+        }
+      ],
+      "counts": {
+        "abstention->correct": 8,
+        "correct->correct": 16
+      }
+    },
+    "P0->P1": {
+      "action_changes": [
+        {
+          "after": "investigate",
+          "before": "accept",
+          "case_id": "c5dd2167f348a",
+          "truth": "accept"
+        },
+        {
+          "after": "investigate",
+          "before": "accept",
+          "case_id": "caeff6c6c4681",
+          "truth": "accept"
+        },
+        {
+          "after": "reject",
+          "before": "accept",
+          "case_id": "c5af5e427a2f3",
+          "truth": "accept"
+        },
+        {
+          "after": "investigate",
+          "before": "accept",
+          "case_id": "c0fb9a45eb2da",
+          "truth": "accept"
+        },
+        {
+          "after": "accept",
+          "before": "reject",
+          "case_id": "cef7128badec1",
+          "truth": "reject"
+        }
+      ],
+      "counts": {
+        "abstention->abstention": 8,
+        "correct->abstention": 3,
+        "correct->correct": 11,
+        "correct->wrong": 2
+      }
+    },
+    "P1->P2": {
+      "action_changes": [
+        {
+          "after": "reject",
+          "before": "investigate",
+          "case_id": "c593af9fb49a0",
+          "truth": "reject"
+        },
+        {
+          "after": "investigate",
+          "before": "accept",
+          "case_id": "c4ac02ef39bfc",
+          "truth": "accept"
+        },
+        {
+          "after": "reject",
+          "before": "investigate",
+          "case_id": "cb482dcc4a0c1",
+          "truth": "reject"
+        },
+        {
+          "after": "reject",
+          "before": "investigate",
+          "case_id": "c1c062765510d",
+          "truth": "reject"
+        },
+        {
+          "after": "investigate",
+          "before": "reject",
+          "case_id": "c5af5e427a2f3",
+          "truth": "accept"
+        },
+        {
+          "after": "reject",
+          "before": "investigate",
+          "case_id": "cbfa1b0cc1f0f",
+          "truth": "reject"
+        },
+        {
+          "after": "reject",
+          "before": "investigate",
+          "case_id": "c9de3dd808cb8",
+          "truth": "reject"
+        },
+        {
+          "after": "reject",
+          "before": "investigate",
+          "case_id": "c19acb40f8797",
+          "truth": "reject"
+        },
+        {
+          "after": "accept",
+          "before": "investigate",
+          "case_id": "c51eabfc2dae5",
+          "truth": "reject"
+        }
+      ],
+      "counts": {
+        "abstention->abstention": 4,
+        "abstention->correct": 6,
+        "abstention->wrong": 1,
+        "correct->abstention": 1,
+        "correct->correct": 10,
+        "wrong->abstention": 1,
+        "wrong->wrong": 1
+      }
+    },
+    "P2->P3": {
+      "action_changes": [
+        {
+          "after": "investigate",
+          "before": "accept",
+          "case_id": "cabe25ecf8ef4",
+          "truth": "accept"
+        }
+      ],
+      "counts": {
+        "abstention->abstention": 6,
+        "correct->abstention": 1,
+        "correct->correct": 15,
+        "wrong->wrong": 2
+      }
+    },
+    "P3->P4": {
+      "action_changes": [
+        {
+          "after": "defer",
+          "before": "investigate",
+          "case_id": "c5dd2167f348a",
+          "truth": "accept"
+        },
+        {
+          "after": "accept",
+          "before": "investigate",
+          "case_id": "caeff6c6c4681",
+          "truth": "accept"
+        },
+        {
+          "after": "reject",
+          "before": "investigate",
+          "case_id": "cf22aab3d75cf",
+          "truth": "reject"
+        },
+        {
+          "after": "accept",
+          "before": "investigate",
+          "case_id": "c5af5e427a2f3",
+          "truth": "accept"
+        },
+        {
+          "after": "accept",
+          "before": "investigate",
+          "case_id": "c0fb9a45eb2da",
+          "truth": "accept"
+        }
+      ],
+      "counts": {
+        "abstention->abstention": 2,
+        "abstention->correct": 4,
+        "abstention->unsupported_terminal": 1,
+        "correct->correct": 15,
+        "wrong->wrong": 2
+      }
+    },
+    "never->always": {
+      "action_changes": [
+        {
+          "after": "accept",
+          "before": "investigate",
+          "case_id": "c4ac02ef39bfc",
+          "truth": "accept"
+        },
+        {
+          "after": "accept",
+          "before": "investigate",
+          "case_id": "c5af5e427a2f3",
+          "truth": "accept"
+        },
+        {
+          "after": "accept",
+          "before": "investigate",
+          "case_id": "c0fb9a45eb2da",
+          "truth": "accept"
+        },
+        {
+          "after": "investigate",
+          "before": "accept",
+          "case_id": "c85b37db76aaa",
+          "truth": "accept"
+        },
+        {
+          "after": "reject",
+          "before": "accept",
+          "case_id": "c51eabfc2dae5",
+          "truth": "reject"
+        }
+      ],
+      "counts": {
+        "abstention->correct": 3,
+        "correct->abstention": 1,
+        "correct->correct": 6,
+        "wrong->correct": 1
+      }
+    },
+    "reasoning_only->always": {
+      "action_changes": [
+        {
+          "after": "reject",
+          "before": "investigate",
+          "case_id": "c1c062765510d",
+          "truth": "reject"
+        },
+        {
+          "after": "reject",
+          "before": "investigate",
+          "case_id": "c19acb40f8797",
+          "truth": "reject"
+        },
+        {
+          "after": "reject",
+          "before": "investigate",
+          "case_id": "c51eabfc2dae5",
+          "truth": "reject"
+        }
+      ],
+      "counts": {
+        "abstention->abstention": 1,
+        "abstention->correct": 3,
+        "correct->correct": 7
+      }
+    }
+  },
+  "unknown_costs": "22 native invocations; actual Jev invoice; machine charges; extraction, development, queue and human review time. They are not zero.",
+  "usage": {
+    "input_tokens": 540670,
+    "output_tokens": 89137
+  }
+}
