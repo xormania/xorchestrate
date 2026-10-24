@@ -135,6 +135,8 @@ class DeliveryMixin:
             arguments["native_call_id"] = record["id"]
         elif kind == "operation":
             arguments["operation_id"] = record["id"]
+        elif kind in {"invocation", "measurement"}:
+            arguments["operation_id"] = record["operation_id"]
         elif kind == "actor":
             arguments["actor_id"] = record["id"]
         elif kind == "assignment":
@@ -167,7 +169,7 @@ class DeliveryMixin:
                         # A callback's source session need not own the resource
                         # selected by its actual arguments. Inspecting the
                         # source must not lend its grant to a different target.
-                        executed = self._inspection_basis(actor, payload["arguments"], cache)
+                        executed = self._inspection_execution(actor, payload, cache)
                         executed["inspection"] = {**current["inspection"], "action": payload["action"],
                             "binding": "executed_arguments"}
                         executed["record"] = deepcopy(record)
@@ -201,6 +203,34 @@ class DeliveryMixin:
                     contexts.append(executed)
         return result, contexts
 
+    def _inspection_execution(self, actor, payload, cache):
+        """Retain the provider/capability scope of a recorded invocation."""
+        arguments = payload["arguments"]
+        scope_arguments = dict(arguments)
+        if payload.get("action") in {"invoke", "run_measurement"}:
+            result = payload.get("result", {})
+            if isinstance(result, dict):
+                resource = result.get("invocation", result.get("measurement", {}))
+                operation_id = result.get("operation_id") or (resource.get("operation_id") if isinstance(resource, dict) else None)
+                if operation_id:
+                    scope_arguments["operation_id"] = operation_id
+        current = self._inspection_basis(actor, scope_arguments, cache)
+        # A requested native invoke can precede its durable result. Its typed
+        # capability address already identifies the provider/name. Completed
+        # invocations additionally carry the retained descriptor via operation.
+        if payload.get("action") == "invoke" and isinstance(arguments.get("capability"), str):
+            current.setdefault("provider", arguments["capability"].partition("/")[0])
+            current.setdefault("capability", {"name": arguments["capability"]})
+        elif payload.get("action") == "capabilities" and isinstance(arguments.get("provider"), str):
+            current.setdefault("provider", arguments["provider"])
+        elif payload.get("action") == "run_measurement" and "operation_id" not in scope_arguments:
+            basis = current.get("acceptance_basis") or {}
+            check = (basis.get("requirements") or {}).get("checks", {}).get(arguments.get("check_id"), {})
+            if isinstance(check.get("capability"), str):
+                current.setdefault("provider", check["capability"].partition("/")[0])
+                current.setdefault("capability", {"name": check["capability"]})
+        return current
+
     def _inspection_result(self, action_name, actor, original_action, result, cache):
         """Project the typed records of a historical application result.
 
@@ -215,6 +245,22 @@ class DeliveryMixin:
         children, contexts = self._inspection_records(action_name, actor, sections, cache)
         for key, values in children.items():
             visible[key] = values if isinstance(visible[key], list) else values[0] if values else None
+        if original_action == "capabilities" and isinstance(visible.get("capabilities"), list):
+            descriptors = []
+            for descriptor in visible["capabilities"]:
+                current = self._inspection_basis(actor, {}, cache)
+                current.update({"capability": deepcopy(descriptor),
+                    "provider": descriptor["name"].partition("/")[0],
+                    "inspection": {"kind": "capability", "id": descriptor["name"]}, "record": deepcopy(descriptor)})
+                try:
+                    self._authorize(action_name, current)
+                except OrchestrationError as error:
+                    if error.code not in {"denied", "review_required"}:
+                        raise
+                    continue
+                descriptors.append(descriptor)
+                contexts.append(current)
+            visible["capabilities"] = descriptors
         for key, child_action in _INSPECTION_NESTED_RESULTS.get(original_action, {}).items():
             nested = visible.get(key)
             if isinstance(nested, (dict, list)):
@@ -232,12 +278,13 @@ class DeliveryMixin:
             self._verify_context(tx, context)
             original = snapshot(tx)
         projected, contexts = self._inspection_result(action_name, actor, action_name, original, {})
-        if "work" in original:
-            selected = self._inspection_context(actor, "work", original["work"])
-            self._authorize(action_name, selected)
-            if projected["work"] is None:
-                raise Conflict("Selected work inspection authority changed.", retry_safe=True)
-            contexts.append(selected)
+        for kind in ("work", "operation"):
+            if kind in original:
+                selected = self._inspection_context(actor, kind, original[kind])
+                self._authorize(action_name, selected)
+                if projected[kind] is None:
+                    raise Conflict("Selected record inspection authority changed.", retry_safe=True)
+                contexts.append(selected)
         with self.store.transaction() as tx:
             self._verify_context(tx, context)
             self._verify_inspection_contexts(tx, contexts)

@@ -286,3 +286,179 @@ def test_denied_selected_record_rejects_instead_of_returning_empty_success(histo
     assert denied.value.code == "denied"
     app.guardrail = RuleGuardrail()
     assert app.call(action, args, actor="limited")[kind]["id"] == args[f"{kind}_id"]
+
+
+def provider_history(history, measured=False):
+    from tests.hexagonal.test_application import Provider
+    from tests.hexagonal.test_work_acceptance import BINDINGS, CANDIDATE, MeasuringProvider
+    from xorchestrate.model import Capability
+
+    app, work, _, _ = history
+    opaque = {"session": {"id": "provider-only"}, "operation": {"id": "payload-only"},
+        "result": {"sessions": [{"id": "arbitrary"}]}}
+
+    class SelectedProvider(MeasuringProvider if measured else Provider):
+        def __init__(self, marker):
+            super().__init__()
+            self.marker = marker
+            self.discoveries = 0
+
+        def discover(self):
+            self.discoveries += 1
+            return [Capability("measure" if measured else "change", "Selected provider",
+                {"type": "object"}, {"visibility": self.marker})]
+
+        def invoke(self, name, arguments, context):
+            result = super().invoke(name, arguments, context) if measured else {}
+            if not measured:
+                self.calls.append(deepcopy(arguments))
+            return {**result, "marker": self.marker, "opaque": deepcopy(opaque)}
+
+    app.providers = {name: SelectedProvider(marker) for name, marker in (("private", SECRET), ("public", PUBLIC))}
+    if measured:
+        app.call("set_requirements", {"work_id": work, "expected_revision": 1, "objective": "both",
+            "outcomes": {"private": "private", "public": "public"}, "checks": {name: {
+                "capability": name + "/measure", "outcomes": [name], "bindings": BINDINGS}
+                for name in app.providers}})
+        app.call("set_candidate", {"work_id": work, "expected_revision": 0, "candidate": CANDIDATE})
+    original = {}
+    action = "run_measurement" if measured else "invoke"
+    for name in app.providers:
+        args = ({"work_id": work, "check_id": name, "measurement_key": name} if measured else
+            {"work_id": work, "capability": name + "/change", "arguments": {}, "idempotency_key": name + "-invoke"})
+        original[name] = record_history(history, action, args, name + "-" + action)
+        operation_id = original[name]["measurement"]["operation_id"] if measured else original[name]["operation_id"]
+        record_history(history, "get_operation", {"operation_id": operation_id}, name + "-operation")
+    if measured:
+        for read in ("get_work", "get_acceptance"):
+            record_history(history, read, {"work_id": work})
+    return original, opaque
+
+
+def restrict_provider(history, selector):
+    history[0].guardrail = RuleGuardrail({"rules": [{"actors": ["limited"],
+        "actions": ["native_observations", "get_operation", "get_work", "get_acceptance"],
+        **selector, "effect": "deny"}]})
+
+
+@pytest.mark.parametrize("mode", ["provider", "capability", "descriptor"])
+@pytest.mark.parametrize("measured", [False, True], ids=["invocation", "measurement"])
+def test_provider_bound_history_uses_saved_scope_without_reinvoking(history, mode, measured):
+    app, work, _, _ = history
+    original, opaque = provider_history(history, measured)
+    before = inspect(history)
+    # Other fixture records deliberately carry the same marker. Compare only
+    # the typed callback/provider results rather than arbitrary user evidence.
+    def results(observed):
+        return [row["result"] for row in observed["calls"] if row["action"] in {"invoke", "run_measurement", "get_operation"}]
+    assert SECRET in json.dumps(results(before)) and PUBLIC in json.dumps(results(before))
+    counts = {name: (provider.discoveries, len(provider.calls)) for name, provider in app.providers.items()}
+    capability = "private/measure" if measured else "private/change"
+    selector = {"provider": {"providers": ["private"]}, "capability": {"capabilities": [capability]},
+        "descriptor": {"where": {"capability.annotations.visibility": SECRET}}}[mode]
+    restrict_provider(history, selector)
+    operation_id = original["private"]["measurement"]["operation_id"] if measured else original["private"]["operation_id"]
+    with pytest.raises(OrchestrationError) as denied:
+        app.call("get_operation", {"operation_id": operation_id}, actor="limited")
+    assert denied.value.code == "denied"
+    visible = results(inspect(history))
+    assert SECRET not in json.dumps(visible), "IV01_PROVIDER_SCOPE"
+    assert PUBLIC in json.dumps(visible), "IV01_PUBLIC_PROVIDER_RETAINED"
+    returned = next(item["measurement" if measured else "invocation"] for item in visible
+        if ("measurement" if measured else "invocation") in item)
+    assert returned["raw_response" if measured else "result"]["opaque"] == opaque
+    if measured:
+        for action in ("get_work", "get_acceptance"):
+            rows = app.call(action, {"work_id": work}, actor="limited")["measurements"]
+            assert len(rows) == 1 and rows[0]["raw_response"]["marker"] == PUBLIC
+        for row in inspect(history)["calls"]:
+            if row["action"] in {"get_work", "get_acceptance"}:
+                assert [m["raw_response"]["marker"] for m in row["result"]["measurements"]] == [PUBLIC]
+    app.guardrail = RuleGuardrail()
+    assert inspect(history) == before, "IV01_RESTORED_PROVIDER_HISTORY_EXACT"
+    assert counts == {name: (provider.discoveries, len(provider.calls)) for name, provider in app.providers.items()}
+
+
+@pytest.mark.parametrize("selector", [{"providers": ["private"]},
+    {"capabilities": ["private/change"]}, {"where": {"capability.annotations.visibility": SECRET}}],
+    ids=["provider", "capability", "descriptor"])
+def test_historical_capability_catalog_has_current_descriptor_scope(history, selector):
+    app, _, _, _ = history
+    provider_history(history)
+    for provider in (None, "private", "public"):
+        record_history(history, "capabilities", {} if provider is None else {"provider": provider}, provider or "catalog")
+    before = inspect(history)
+    counts = {name: provider.discoveries for name, provider in app.providers.items()}
+    restrict_provider(history, selector)
+    catalogs = [row["result"]["capabilities"] for row in inspect(history)["calls"] if row["action"] == "capabilities"]
+    assert catalogs and all(item["name"] == "public/change" for rows in catalogs for item in rows)
+    assert any(rows for rows in catalogs), "IV01_AUTHORIZED_CATALOG_RETAINED"
+    app.guardrail = RuleGuardrail()
+    assert inspect(history) == before
+    assert counts == {name: provider.discoveries for name, provider in app.providers.items()}
+
+
+def test_direct_operation_projects_same_nested_result_as_history(history):
+    app, _, sessions, _ = history
+    args = {"operation_id": sessions["limited"]["start_operation_id"]}
+    original = record_history(history, "get_operation", args)
+    app.guardrail = RuleGuardrail({"rules": [{"actors": ["limited"],
+        "actions": ["get_operation", "native_observations"],
+        "where": {"inspection.kind": "session", "record.id": sessions["limited"]["id"]}, "effect": "deny"}]})
+    direct = app.call("get_operation", args, actor="limited")
+    historical = next(row["result"] for row in inspect(history)["calls"] if row["action"] == "get_operation")
+    for result in (direct, historical):
+        assert result["operation"]["result"]["session"] is None, "IV01_OPERATION_NESTED_SCOPE"
+        assert result["operation"]["id"] == args["operation_id"]
+        assert result["operation"]["external_result"] == original["operation"]["external_result"]
+    app.guardrail = RuleGuardrail({"rules": [{"actors": ["limited"], "actions": ["get_operation"],
+        "where": {"inspection.kind": "operation"}, "effect": "deny"}]})
+    with pytest.raises(OrchestrationError) as denied:
+        app.call("get_operation", args, actor="limited")
+    assert denied.value.code == "denied", "IV01_SELECTED_OPERATION_DENIAL"
+    app.guardrail = RuleGuardrail()
+    assert app.call("get_operation", args, actor="limited") == original
+
+
+def test_known_bad_provider_binding_omission_is_detected(history, monkeypatch):
+    app, _, _, _ = history
+    original, _ = provider_history(history)
+    restrict_provider(history, {"providers": ["private"]})
+
+    def assert_scope():
+        callbacks = [row["result"] for row in inspect(history)["calls"] if row["action"] == "invoke"]
+        assert SECRET not in json.dumps(callbacks), "IV01_PROVIDER_SCOPE"
+        assert PUBLIC in json.dumps(callbacks)
+
+    assert_scope()
+    previous = app._inspection_context
+
+    def omit_binding(actor, kind, record, cache=None):
+        context = previous(actor, kind, record, cache)
+        if kind == "invocation":
+            for key in ("provider", "capability", "operation"):
+                context.pop(key, None)
+        return context
+
+    monkeypatch.setattr(app, "_inspection_context", omit_binding)
+    monkeypatch.setattr(app, "_inspection_execution", lambda actor, payload, cache:
+        app._inspection_basis(actor, payload["arguments"], cache))
+    with pytest.raises(AssertionError, match="^IV01_PROVIDER_SCOPE(?:\\n|$)"):
+        assert_scope()
+    with pytest.raises(OrchestrationError) as denied:
+        app.call("get_operation", {"operation_id": original["private"]["operation_id"]}, actor="limited")
+    assert denied.value.code == "denied", "IV01_PROVIDER_CONTROL_STILL_DENIED"
+
+
+def test_unrelated_provider_scope_error_is_not_detection(history, monkeypatch):
+    app, _, _, _ = history
+    provider_history(history)
+    restrict_provider(history, {"providers": ["private"]})
+
+    def unavailable(*args, **kwargs):
+        raise TimeoutError("unrelated provider scope dependency")
+
+    monkeypatch.setattr(app, "_inspection_execution", unavailable)
+    with pytest.raises(TimeoutError, match="unrelated provider scope dependency"):
+        callbacks = [row["result"] for row in inspect(history)["calls"] if row["action"] == "invoke"]
+        assert SECRET not in json.dumps(callbacks), "IV01_PROVIDER_SCOPE"

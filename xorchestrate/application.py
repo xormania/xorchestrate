@@ -827,9 +827,8 @@ class Application(AcceptanceMixin, DeliveryMixin):
                 "pending_operation": operation.key if status == "unknown" else None}, session.version)
 
     def _get_operation(self, args: JSON, actor: str, context: JSON) -> JSON:
-        with self.store.transaction() as tx:
-            self._verify_context(tx, context)
-            return {"operation": _view(self._require(tx, "operation", args["operation_id"]))}
+        return self._inspect_snapshot("get_operation", actor, context,
+            lambda tx: {"operation": _view(self._require(tx, "operation", args["operation_id"]))})
 
     def _resolve_operation(self, args: JSON, actor: str, context: JSON) -> JSON:
         with self.store.transaction() as tx:
