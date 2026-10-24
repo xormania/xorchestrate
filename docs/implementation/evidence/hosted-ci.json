@@ -1,0 +1,596 @@
+{
+  "repository": "xormania/xorchestrate",
+  "pull_request": 5,
+  "run_url": "https://github.com/xormania/xorchestrate/actions/runs/40051248630",
+  "candidate": {
+    "commit": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a",
+    "tree": "0f4034870f40fb5a1d022c9f35ad0b866236455f",
+    "content_sha256_reported_by_local_and_ci_evidence": "ccba046c2b8caa0a4b94bcaa9be9e4229ce7c3e837db911720cf1ecf2e44aa09"
+  },
+  "checked_out_merge": {
+    "commit": "cdd84694c50b1c639caafae82067e9d0688f8b80",
+    "tree": "0f4034870f40fb5a1d022c9f35ad0b866236455f",
+    "parents": [
+      "30254fd0f184b7e31aa7e0896347429004933ed4",
+      "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a"
+    ],
+    "candidate_tree_equal": true,
+    "synthetic_pull_request_merge": true,
+    "pr_was_not_merged": true,
+    "proof": "b0a00f1-merge-tree-proof.json"
+  },
+  "workflow": {
+    "id": 40051248630,
+    "name": "CI",
+    "status": "completed",
+    "conclusion": "success",
+    "run_number": 22,
+    "jobs_url": "https://api.github.com/repos/xormania/xorchestrate/actions/runs/40051248630/jobs",
+    "logs_url": "https://api.github.com/repos/xormania/xorchestrate/actions/runs/40051248630/logs",
+    "workflow_id": 393504095
+  },
+  "all_six_jobs_success": true,
+  "jobs": [
+    {
+      "id": 120744538464,
+      "name": "Static checks",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 40051248630,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Install pinned linter",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Lint runtime and CI",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Check security lint coverage",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Check optional toolchain helpers",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Compile application and fixtures",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17
+        }
+      ],
+      "log_file": "40051248630-120744538464.log"
+    },
+    {
+      "id": 120744538735,
+      "name": "Tmux live acceptance (protocol fixture)",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 40051248630,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Install application and tmux",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Verify acceptance scenarios and lifecycle regressions",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Run reusable tmux acceptance fixture",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Run actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15
+        }
+      ],
+      "log_file": "40051248630-120744538735.log"
+    },
+    {
+      "id": 120744538738,
+      "name": "Application and adapter tests (Python 3.11)",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 40051248630,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Install application dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Run application, boundary, and subprocess integration tests",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Run composed three-harness protocol acceptance",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 6
+        },
+        {
+          "name": "Run actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 7
+        },
+        {
+          "name": "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15
+        }
+      ],
+      "log_file": "40051248630-120744538738.log"
+    },
+    {
+      "id": 120744538763,
+      "name": "Imported runtime regression (historical source)",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 40051248630,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Stage historical skill assets for source regression",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Run cue-lang/setup-cue@b0e30e540a2dae47304ebf16586a5b2db023b61c",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Install tmux",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Run imported source regression suite",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Run actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17
+        }
+      ],
+      "log_file": "40051248630-120744538763.log"
+    },
+    {
+      "id": 120744538791,
+      "name": "Application and adapter tests (Python 3.12)",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 40051248630,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Install application dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Run application, boundary, and subprocess integration tests",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5
+        },
+        {
+          "name": "Run composed three-harness protocol acceptance",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6
+        },
+        {
+          "name": "Run actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15
+        }
+      ],
+      "log_file": "40051248630-120744538791.log"
+    },
+    {
+      "id": 120744538817,
+      "name": "Recovered toolkit tests",
+      "status": "completed",
+      "conclusion": "success",
+      "run_id": 40051248630,
+      "logs_url": null,
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1
+        },
+        {
+          "name": "Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2
+        },
+        {
+          "name": "Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3
+        },
+        {
+          "name": "Check recovered testkit and coordination",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4
+        },
+        {
+          "name": "Post Run actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 7
+        },
+        {
+          "name": "Post Run actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9
+        }
+      ],
+      "log_file": "40051248630-120744538817.log"
+    }
+  ],
+  "measured_results": {
+    "application_python_311": {
+      "passed": 598,
+      "subtests_passed": 164,
+      "skipped": 0,
+      "seconds": 48.81
+    },
+    "application_python_312": {
+      "passed": 598,
+      "subtests_passed": 164,
+      "skipped": 0,
+      "seconds": 52.08
+    },
+    "composed_protocol": {
+      "status": "passed",
+      "native_acceptance": "pending_local_run",
+      "artifact": "composed-protocol-evidence"
+    },
+    "tmux": {
+      "tests_passed": 22,
+      "seconds": 9.06,
+      "fixture_status": "passed",
+      "artifact": "tmux-acceptance-evidence"
+    },
+    "recovered_toolkit": {
+      "collected": 285,
+      "executed": 285,
+      "skipped": 0,
+      "not_run": 0,
+      "censuses": [
+        64,
+        138,
+        35,
+        6,
+        9,
+        33
+      ]
+    },
+    "imported_runtime": {
+      "collected": 825,
+      "executed": 825,
+      "skipped": 0,
+      "not_run": 0,
+      "strict": true
+    },
+    "static": {
+      "ruff": "passed",
+      "security_lint_coverage": "passed",
+      "optional_toolchain_helpers": "passed",
+      "compile": "passed"
+    }
+  },
+  "artifacts": [
+    {
+      "id": 12543820578,
+      "name": "composed-protocol-evidence",
+      "size_in_bytes": 1045265,
+      "url": "https://api.github.com/repos/xormania/xorchestrate/actions/artifacts/12543820578",
+      "archive_download_url": "https://api.github.com/repos/xormania/xorchestrate/actions/artifacts/12543820578/zip",
+      "expired": false,
+      "created_at": "2026-10-24T01:48:39Z",
+      "expires_at": "2026-10-31T01:48:38Z",
+      "updated_at": "2026-10-24T01:48:39Z",
+      "digest": "sha256:65c6130cd1cd0d6558c24deaa3af536798045a03838c2e11b7ce619658df2a66",
+      "workflow_run": {
+        "id": 40051248630,
+        "repository_id": 1430398736,
+        "head_repository_id": 1430398736,
+        "head_branch": "repair/behavioral-preservation",
+        "head_sha": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a"
+      }
+    },
+    {
+      "id": 12543811132,
+      "name": "tmux-acceptance-evidence",
+      "size_in_bytes": 1013,
+      "url": "https://api.github.com/repos/xormania/xorchestrate/actions/artifacts/12543811132",
+      "archive_download_url": "https://api.github.com/repos/xormania/xorchestrate/actions/artifacts/12543811132/zip",
+      "expired": false,
+      "created_at": "2026-10-24T01:47:49Z",
+      "expires_at": "2026-10-31T01:47:48Z",
+      "updated_at": "2026-10-24T01:47:49Z",
+      "digest": "sha256:90f3989b418ee5704a789e40e5851bc6f6b00bd90908a8047f31486dfe7d9d40",
+      "workflow_run": {
+        "id": 40051248630,
+        "repository_id": 1430398736,
+        "head_repository_id": 1430398736,
+        "head_branch": "repair/behavioral-preservation",
+        "head_sha": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a"
+      }
+    },
+    {
+      "id": 12543228139,
+      "name": "runtime-evidence",
+      "size_in_bytes": 412236,
+      "url": "https://api.github.com/repos/xormania/xorchestrate/actions/artifacts/12543228139",
+      "archive_download_url": "https://api.github.com/repos/xormania/xorchestrate/actions/artifacts/12543228139/zip",
+      "expired": false,
+      "created_at": "2026-10-24T01:56:46Z",
+      "expires_at": "2027-01-22T01:45:44Z",
+      "updated_at": "2026-10-24T01:56:46Z",
+      "digest": "sha256:69a5b18cfcef727574d632691e37dd5ed0397a5dd5122d7a51be80684bc1d32b",
+      "workflow_run": {
+        "id": 40051248630,
+        "repository_id": 1430398736,
+        "head_repository_id": 1430398736,
+        "head_branch": "repair/behavioral-preservation",
+        "head_sha": "b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a"
+      }
+    }
+  ],
+  "retrieval": {
+    "provider": "GitHub connector",
+    "operations": [
+      "fetch_commit_workflow_runs",
+      "fetch_workflow_run_jobs",
+      "fetch_workflow_job_logs",
+      "fetch_workflow_run_artifacts"
+    ],
+    "mutation_performed": false,
+    "artifact_downloads_by_this_reviewer": false,
+    "artifact_download_note": "Root separately downloaded and verified protocol and tmux artifacts; see publication manifest."
+  },
+  "scope_notes": [
+    "Only run40051248630 measures final candidate b0a00f1.",
+    "Superseded runs40051002511 and40051128259 were cancelled by newer pushes; their retained logs are not substituted for the final result.",
+    "Native authenticated vendor acceptance remains pending a local run; deterministic protocol fixtures and tmux do not establish it.",
+    "Imported runtime and recovered toolkit remain separate historical regression evidence."
+  ],
+  "superseded_runs": [
+    {
+      "run_id": 40051002511,
+      "candidate": "9085222397690b0666c2305e5fefb0a09d775a9b",
+      "conclusion": "cancelled"
+    },
+    {
+      "run_id": 40051128259,
+      "candidate": "992baabf4430782d767b3ece03130a78c1786402",
+      "conclusion": "cancelled"
+    }
+  ]
+}

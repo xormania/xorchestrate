@@ -1,0 +1,447 @@
+[
+  {
+    "executed_variants": 4,
+    "selector": "test_application.py::test_resume_replay_reauthorizes_source_and_destination",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 4,
+    "selector": "test_application.py::test_resume_requires_source_control_and_destination_creation",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 6,
+    "selector": "test_application.py::test_resume_requires_verified_adapter_receipt",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_boundaries.py::DependencyBoundaryTests::test_active_package_does_not_import_the_historical_runtime",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_boundaries.py::DependencyBoundaryTests::test_application_and_its_helpers_do_not_depend_on_infrastructure",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_capabilities.py::CapabilityTests::test_cli_manifest_and_dynamic_discovery_share_call_contract",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_capabilities.py::CapabilityTests::test_mcp_negotiation_pagination_and_dynamic_new_tool",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_claude_sessions.py::test_claude_application_callback_through_active_composition_and_sqlite",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_claude_sessions.py::test_claude_changed_configuration_requires_explicit_policy",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_claude_sessions.py::test_claude_channel_delivery_during_outstanding_callback_and_unrelated_session",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_claude_sessions.py::test_claude_native_permissions_independent_of_application_tools",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_claude_sessions.py::test_claude_requested_resolved_and_observed_settings_and_resume",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_claude_sessions.py::test_claude_retained_context_callbacks_progress_without_poll_and_native_identity",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_composition.py::CompositionTests::test_installed_factory_extends_capabilities_without_source_changes",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_delivery.py::test_concurrent_dispatch_cannot_duplicate_native_effect",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_delivery.py::test_explicit_fallback_records_requested_and_resolved_driver",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_delivery.py::test_latest_session_policy_is_independent_of_store_key_order",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_delivery.py::test_lost_submission_stays_unknown_across_reconstructed_application",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_delivery.py::test_observation_and_control_available_without_resolving_unknown_effect",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_delivery.py::test_observation_provenance_duplicate_conflict_and_stale_incarnation",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_delivery.py::test_policy_substitution_scheduling_selection_and_authorization",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_delivery.py::test_reconnect_preserves_unknown_source_effect_while_enabling_observation",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_delivery.py::test_routing_queues_durable_attempt_and_submission_is_not_receipt",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_delivery_adversarial.py::test_conflicting_adapter_submission_identity_cannot_become_submitted",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_delivery_adversarial.py::test_delivery_selection_is_revalidated_before_native_effect",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_delivery_adversarial.py::test_effective_fallback_driver_must_be_authorized_before_launch",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_delivery_adversarial.py::test_native_call_replay_cannot_repeat_non_idempotent_application_action",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_delivery_adversarial.py::test_native_resolution_cannot_take_a_caller_supplied_result",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 3,
+    "selector": "test_delivery_adversarial.py::test_native_resolution_rejects_misbound_completion",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_delivery_adversarial.py::test_native_retry_reauthorizes_changed_guardrail_and_stays_denied",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_delivery_adversarial.py::test_post_enqueue_dispatch_conflict_never_repeats_committed_message",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_delivery_adversarial.py::test_receipt_commit_rechecks_authorization_context_after_policy_evaluation",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_external_bridge.py::test_actual_host_crash_preserves_unknown_applied_effect_without_replay",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_external_bridge.py::test_bridge_rejects_manufactured_receipts_and_changed_configuration",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 3,
+    "selector": "test_external_bridge.py::test_external_detach_does_not_terminate_host_and_reconnect_retains_context",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_external_bridge.py::test_replaced_connection_cannot_send_or_apply_late_completion",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_lifecycle_runner.py::test_all_lifecycle_cases_use_real_application_and_external_processes",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_native_sessions.py::test_codex_native_permission_response_is_explicit_and_independent",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_native_sessions.py::test_grok_native_permissions_separate_from_application_callback",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_native_sessions.py::test_native_callback_persists_trusted_evidence_through_active_composition",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_native_sessions.py::test_operational_limits_do_not_change_material_selection_identity",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_native_sessions.py::test_private_native_marker_retained_across_exchanges_and_resume",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_native_sessions.py::test_settings_preserve_requested_resolved_observed_and_require_changed_config_policy",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_native_sessions.py::test_submission_then_callback_busy_delivery_and_unrelated_progress",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_native_sessions.py::test_unknown_prompt_completion_is_not_idle_and_interjections_are_bounded",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_sessions.py::SessionTests::test_native_parameter_delegation_is_bounded_and_configuration_wins",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_storage.py::MemoryStoreTests::test_exception_rolls_back_record_and_event_bundle",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_storage.py::SQLiteStoreTests::test_exception_rolls_back_record_and_event_bundle",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_storage.py::SQLiteStoreTests::test_multiple_processes_commit_atomic_counter_and_event_updates",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_transport_progress.py::test_callback_after_submission_ack_progresses_without_poll",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_transport_progress.py::test_conflicting_call_or_unmatched_response_closes_with_unknown_outcome",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_transport_progress.py::test_held_callback_allows_native_control_and_nested_request",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_transports.py::TransportTests::test_external_capability_execution_and_replay_work_across_cli_and_mcp",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_verification.py::test_calibration_runs_isolated_real_control_and_mutation",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 6,
+    "selector": "test_verification.py::test_calibrator_distinguishes_target_detection_from_environment_failure",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_verification.py::test_candidate_capture_includes_dirty_and_untracked_inputs",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_verification.py::test_checker_loads_selected_candidate_instead_of_its_own_checkout",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_verification.py::test_complete_exchange_control_has_correlated_native_and_durable_evidence",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 12,
+    "selector": "test_verification.py::test_exchange_faults_fail_the_intended_assertion",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_verification.py::test_lifecycle_summary_without_raw_records_cannot_manufacture_a_pass",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_verification.py::test_native_inventory_preserves_complete_requested_counts",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 11,
+    "selector": "test_verification.py::test_production_receipt_faults_have_specific_diagnostics",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_verification.py::test_production_receipt_requires_durable_native_callback_chain",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_verification.py::test_requested_coverage_and_exact_bindings_override_fabricated_summary",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_verification.py::test_successful_transport_does_not_hide_wrong_work_missing_completion_or_unsupported_interjection",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_work_acceptance.py::test_acceptance_policy_substitutes_without_weakening_required_proof",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_work_acceptance.py::test_candidate_change_invalidates_existing_acceptance_and_old_evidence",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_work_acceptance.py::test_changed_basis_during_policy_evaluation_cannot_commit_acceptance",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_work_acceptance.py::test_claim_and_done_status_do_not_create_acceptance",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_work_acceptance.py::test_composed_cli_measurement_observes_file_identity_instead_of_echoing_request",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_work_acceptance.py::test_explicit_owner_revision_changes_current_basis_without_erasing_history",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_work_acceptance.py::test_full_owner_objective_survives_narrowing_and_cancellation",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 32,
+    "selector": "test_work_acceptance.py::test_insufficient_or_misbound_measurement_cannot_pass",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 4,
+    "selector": "test_work_acceptance.py::test_native_replay_cannot_present_historical_acceptance_as_current",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_work_acceptance.py::test_no_requirements_or_acceptance_policy_required_for_simple_messaging",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_work_acceptance.py::test_persisted_assessment_rejects_same_name_evaluator_reconfiguration_after_rebuild",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_work_acceptance.py::test_required_assessment_policy_and_authorization_remain_independent",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_work_acceptance.py::test_required_failure_cannot_be_erased_by_unrelated_success_or_high_assessment",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_work_acceptance.py::test_requirements_changed_during_assessment_make_it_historical",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_work_acceptance.py::test_running_measurement_blocks_earlier_pass_and_observation_progresses",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_work_acceptance.py::test_same_name_provider_configuration_change_invalidates_measurements_and_decisions",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_work_acceptance.py::test_scope_mismatch_and_stale_requirement_revisions_are_rejected",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_work_acceptance.py::test_tool_evaluator_binds_its_provider_configuration_across_composed_rebuild",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_work_acceptance.py::test_uncertain_measurement_cannot_be_masked_by_new_pass",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_work_acceptance.py::test_unrelated_evaluator_change_does_not_invalidate_selected_assessment",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 2,
+    "selector": "test_work_acceptance.py::test_unrelated_provider_change_does_not_invalidate_current_measurements",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_work_calibration.py::test_absent_requested_assertion_is_missing_coverage",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 5,
+    "selector": "test_work_calibration.py::test_calibrator_requires_exact_assertion_and_passing_controls",
+    "status": "passed"
+  },
+  {
+    "executed_variants": 1,
+    "selector": "test_work_calibration.py::test_missing_dependency_is_setup_error_and_never_fault_detection",
+    "status": "passed"
+  }
+]

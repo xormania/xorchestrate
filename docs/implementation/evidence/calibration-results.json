@@ -1,0 +1,119 @@
+[
+  {
+    "candidate_sha256": "ccba046c2b8caa0a4b94bcaa9be9e4229ce7c3e837db911720cf1ecf2e44aa09",
+    "classification": "detected",
+    "diagnostic": "GROK_MCP_REQUIRES_NATIVE_EXECUTION",
+    "evidence": "native-calibration/grok-native-observation/calibration.json",
+    "name": "grok-native-observation",
+    "target": "tests.hexagonal.test_native_sessions::test_grok_requires_execution_observation_and_rejects_conflicting_call_ids",
+    "unaffected_controls": [
+      "tests.hexagonal.test_native_sessions::test_grok_late_completion_cannot_clear_newer_activity"
+    ]
+  },
+  {
+    "candidate_sha256": "ccba046c2b8caa0a4b94bcaa9be9e4229ce7c3e837db911720cf1ecf2e44aa09",
+    "classification": "detected",
+    "diagnostic": "NATIVE_REQUESTED_SELECTION_RETAINED",
+    "evidence": "native-calibration/requested-selection/calibration.json",
+    "name": "requested-selection",
+    "target": "tests.hexagonal.test_native_sessions::test_settings_preserve_requested_resolved_observed_and_require_changed_config_policy[codex]",
+    "unaffected_controls": [
+      "tests.hexagonal.test_native_sessions::test_private_native_marker_retained_across_exchanges_and_resume[codex]"
+    ]
+  },
+  {
+    "candidate_sha256": "ccba046c2b8caa0a4b94bcaa9be9e4229ce7c3e837db911720cf1ecf2e44aa09",
+    "classification": "detected",
+    "diagnostic": "CLAUDE_NATIVE_HOOK_REQUIRED",
+    "evidence": "native-calibration/claude-native-hook/calibration.json",
+    "name": "claude-native-hook",
+    "target": "tests.hexagonal.test_claude_sessions::test_claude_callback_requires_matching_native_hook",
+    "unaffected_controls": [
+      "tests.hexagonal.test_claude_sessions::test_claude_retained_context_callbacks_progress_without_poll_and_native_identity"
+    ]
+  },
+  {
+    "candidate_sha256": "ccba046c2b8caa0a4b94bcaa9be9e4229ce7c3e837db911720cf1ecf2e44aa09",
+    "classification": "detected",
+    "diagnostic": "external_detach_must_not_terminate_native_process",
+    "evidence": "native-calibration/external-detach/calibration.json",
+    "name": "external-detach",
+    "target": "tests.hexagonal.test_external_bridge::test_external_detach_does_not_terminate_host_and_reconnect_retains_context[codex]",
+    "unaffected_controls": [
+      "tests.hexagonal.test_external_bridge::test_bridge_config_and_catalog_cannot_be_overridden_by_attachment"
+    ]
+  },
+  {
+    "candidate_sha256": "ccba046c2b8caa0a4b94bcaa9be9e4229ce7c3e837db911720cf1ecf2e44aa09",
+    "classification": "detected",
+    "diagnostic": "killed_host_must_preserve_unknown_effect",
+    "evidence": "native-calibration/crash-uncertainty/calibration.json",
+    "name": "crash-uncertainty",
+    "target": "tests.hexagonal.test_external_bridge::test_actual_host_crash_preserves_unknown_applied_effect_without_replay",
+    "unaffected_controls": [
+      "tests.hexagonal.test_external_bridge::test_bridge_rejects_manufactured_receipts_and_changed_configuration"
+    ]
+  },
+  {
+    "candidate_sha256": "ccba046c2b8caa0a4b94bcaa9be9e4229ce7c3e837db911720cf1ecf2e44aa09",
+    "classification": "detected",
+    "diagnostic": "post_ack_callback_progress",
+    "evidence": "native-calibration/autonomous-callback/calibration.json",
+    "name": "autonomous-callback",
+    "target": "tests.hexagonal.test_transport_progress::test_callback_after_submission_ack_progresses_without_poll",
+    "unaffected_controls": [
+      "tests.hexagonal.test_transport_progress::test_out_of_order_responses_remain_bound_to_their_request"
+    ]
+  },
+  {
+    "candidate_sha256": "ccba046c2b8caa0a4b94bcaa9be9e4229ce7c3e837db911720cf1ecf2e44aa09",
+    "classification": "detected",
+    "diagnostic": "DELIVERY_UNKNOWN_OUTCOME_PRESERVED",
+    "evidence": "native-calibration/delivery-uncertainty/calibration.json",
+    "name": "delivery-uncertainty",
+    "target": "tests.hexagonal.test_delivery::test_lost_submission_stays_unknown_across_reconstructed_application[memory]",
+    "unaffected_controls": [
+      "tests.hexagonal.test_delivery::test_routing_queues_durable_attempt_and_submission_is_not_receipt[memory]"
+    ]
+  },
+  {
+    "binding": "work-calibration/inputs.json hashes all matched final candidate manifest",
+    "classification": "detected",
+    "diagnostic": "OWNER_OUTCOME_B_MUST_REMAIN_REQUIRED",
+    "evidence": "work-calibration/B1-cancelled-contribution-erases-owner-outcome",
+    "name": "B1-cancelled-contribution-erases-owner-outcome",
+    "passing_unaffected_controls": 2
+  },
+  {
+    "binding": "work-calibration/inputs.json hashes all matched final candidate manifest",
+    "classification": "detected",
+    "diagnostic": "BOUND_REQUIRED_MEASUREMENT_MUST_PASS",
+    "evidence": "work-calibration/B2-wrong-observed-candidate",
+    "name": "B2-wrong-observed-candidate",
+    "passing_unaffected_controls": 2
+  },
+  {
+    "binding": "work-calibration/inputs.json hashes all matched final candidate manifest",
+    "classification": "detected",
+    "diagnostic": "ADAPTER_ORIGIN_REQUIRED",
+    "evidence": "work-calibration/B2-caller-origin-accepted-as-measurement",
+    "name": "B2-caller-origin-accepted-as-measurement",
+    "passing_unaffected_controls": 2
+  },
+  {
+    "binding": "work-calibration/inputs.json hashes all matched final candidate manifest",
+    "classification": "detected",
+    "diagnostic": "UNRESOLVED_MEASUREMENT_CANNOT_BE_MASKED",
+    "evidence": "work-calibration/B2-uncertain-measurement-hidden-by-later-pass",
+    "name": "B2-uncertain-measurement-hidden-by-later-pass",
+    "passing_unaffected_controls": 2
+  },
+  {
+    "binding": "work-calibration/inputs.json hashes all matched final candidate manifest",
+    "classification": "detected",
+    "diagnostic": "ASSESSMENT_CONFIGURATION_MUST_REMAIN_CURRENT",
+    "evidence": "work-calibration/B2-stale-assessment-configuration",
+    "name": "B2-stale-assessment-configuration",
+    "passing_unaffected_controls": 2
+  }
+]
