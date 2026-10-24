@@ -1,0 +1,622 @@
+{
+  "cases": {
+    "c10772a98b7": {
+      "family": "F04",
+      "kind": "valid_control",
+      "mechanism": [
+        "legitimate"
+      ],
+      "probe": [
+        "none"
+      ],
+      "rationale": "Fresh call reports revision 2 and direct duplicate is rejected.",
+      "requirements": [
+        "B1",
+        "B2"
+      ],
+      "split": "development"
+    },
+    "c132396d093": {
+      "family": "F01",
+      "kind": "product_defect",
+      "mechanism": [
+        "authority_scope"
+      ],
+      "probe": [
+        "p5"
+      ],
+      "rationale": "An authorized enclosing read returns data bound to a work explicitly denied to this actor.",
+      "requirements": [
+        "H5",
+        "H3",
+        "A2"
+      ],
+      "split": "development"
+    },
+    "c2b576d8713": {
+      "family": "F08",
+      "kind": "valid_control",
+      "mechanism": [
+        "legitimate"
+      ],
+      "probe": [
+        "none"
+      ],
+      "rationale": "Unmodified raw native arguments agree with executed callback for the same call.",
+      "requirements": [
+        "H3",
+        "B5"
+      ],
+      "split": "heldout"
+    },
+    "c2f397006d9": {
+      "family": "F06",
+      "kind": "product_defect",
+      "mechanism": [
+        "concurrent_activity"
+      ],
+      "probe": [
+        "p6"
+      ],
+      "rationale": "Activity idle is reported while B is explicitly held. This schedule is demonstrated only with protocol peer.",
+      "requirements": [
+        "H2",
+        "H7",
+        "H3",
+        "H8"
+      ],
+      "split": "heldout"
+    },
+    "c4568de1c87": {
+      "family": "F04",
+      "kind": "product_defect",
+      "mechanism": [
+        "obsolete_result"
+      ],
+      "probe": [
+        "p1"
+      ],
+      "rationale": "Repeated semantic call returns old accepted/current basis while fresh same-adapter and direct reads reject.",
+      "requirements": [
+        "B1",
+        "B2",
+        "H7",
+        "A2"
+      ],
+      "split": "development"
+    },
+    "c5b16f544f4": {
+      "family": "F07",
+      "kind": "checker_defect",
+      "mechanism": [
+        "assertion_proxy"
+      ],
+      "probe": [
+        "p4"
+      ],
+      "rationale": "Actual exception origin and execution counts distinguish target assertion from unrelated runtime/collection failures; intended assertion is a valid calibrator control.",
+      "requirements": [
+        "B4"
+      ],
+      "split": "development"
+    },
+    "c5b2286615d": {
+      "family": "F07",
+      "kind": "incomplete",
+      "mechanism": [
+        "insufficient"
+      ],
+      "probe": [
+        "insufficient"
+      ],
+      "rationale": "Actual exception origin and execution counts distinguish target assertion from unrelated runtime/collection failures; intended assertion is a valid calibrator control.",
+      "requirements": [
+        "B4"
+      ],
+      "split": "development"
+    },
+    "c6b464d0d2d": {
+      "family": "F09",
+      "kind": "checker_defect",
+      "mechanism": [
+        "evidence_contradiction",
+        "post_effect_uncertainty"
+      ],
+      "probe": [
+        "p3"
+      ],
+      "rationale": "Later unknown attempt cannot be certified by an earlier successful attempt. Synthetic evidence substitution; no claim of normal retry producing this history.",
+      "requirements": [
+        "B5",
+        "H8",
+        "H7",
+        "A2"
+      ],
+      "split": "heldout"
+    },
+    "c6c5a633d2e": {
+      "family": "F10",
+      "kind": "checker_defect",
+      "mechanism": [
+        "assertion_proxy"
+      ],
+      "probe": [
+        "p3"
+      ],
+      "rationale": "Checker records required reply-before-completion false but passes all cases; submission timing is insufficient.",
+      "requirements": [
+        "H2",
+        "H8",
+        "B5"
+      ],
+      "split": "heldout"
+    },
+    "c7a8d59bac1": {
+      "family": "F09",
+      "kind": "valid_control",
+      "mechanism": [
+        "legitimate"
+      ],
+      "probe": [
+        "none"
+      ],
+      "rationale": "Original unmodified protocol control has a submitted attempt without an appended later unknown.",
+      "requirements": [
+        "B5",
+        "H7"
+      ],
+      "split": "heldout"
+    },
+    "c81fa84c395": {
+      "family": "F07",
+      "kind": "valid_control",
+      "mechanism": [
+        "legitimate"
+      ],
+      "probe": [
+        "none"
+      ],
+      "rationale": "Actual exception origin and execution counts distinguish target assertion from unrelated runtime/collection failures; intended assertion is a valid calibrator control.",
+      "requirements": [
+        "B4"
+      ],
+      "split": "development"
+    },
+    "c8a1cd71143": {
+      "family": "F05",
+      "kind": "product_defect",
+      "mechanism": [
+        "obsolete_result"
+      ],
+      "probe": [
+        "p7"
+      ],
+      "rationale": "Material consumed context differs, fresh assessment rejects, reused assessment still accepts.",
+      "requirements": [
+        "B2",
+        "A2"
+      ],
+      "split": "heldout"
+    },
+    "c8c360ddd51": {
+      "family": "F07",
+      "kind": "valid_control",
+      "mechanism": [
+        "legitimate"
+      ],
+      "probe": [
+        "none"
+      ],
+      "rationale": "Actual exception origin and execution counts distinguish target assertion from unrelated runtime/collection failures; intended assertion is a valid calibrator control.",
+      "requirements": [
+        "B4"
+      ],
+      "split": "development"
+    },
+    "c965c818495": {
+      "family": "F05",
+      "kind": "valid_control",
+      "mechanism": [
+        "legitimate"
+      ],
+      "probe": [
+        "none"
+      ],
+      "rationale": "Cosmetic title changes leave evaluator dependency and both outcomes unchanged.",
+      "requirements": [
+        "B2",
+        "A2"
+      ],
+      "split": "heldout"
+    },
+    "c9c28a79619": {
+      "family": "F03",
+      "kind": "product_defect",
+      "mechanism": [
+        "post_effect_uncertainty"
+      ],
+      "probe": [
+        "p2"
+      ],
+      "rationale": "Applied effect becomes failed after reconnect while host retains completion.",
+      "requirements": [
+        "H7",
+        "H4"
+      ],
+      "split": "heldout"
+    },
+    "ca4ab47c946": {
+      "family": "F04",
+      "kind": "product_defect",
+      "mechanism": [
+        "obsolete_result"
+      ],
+      "probe": [
+        "p1"
+      ],
+      "rationale": "Repeated semantic call returns old accepted/current basis while fresh same-adapter and direct reads reject.",
+      "requirements": [
+        "B1",
+        "B2",
+        "H7",
+        "A2"
+      ],
+      "split": "development"
+    },
+    "ca4f1ba6d30": {
+      "family": "F10",
+      "kind": "valid_control",
+      "mechanism": [
+        "legitimate"
+      ],
+      "probe": [
+        "none"
+      ],
+      "rationale": "Original gated schedule satisfies stronger reply timing.",
+      "requirements": [
+        "H2",
+        "H8",
+        "B5"
+      ],
+      "split": "heldout"
+    },
+    "ca8a9086479": {
+      "family": "F01",
+      "kind": "product_defect",
+      "mechanism": [
+        "authority_scope"
+      ],
+      "probe": [
+        "p5"
+      ],
+      "rationale": "An authorized enclosing read returns data bound to a work explicitly denied to this actor.",
+      "requirements": [
+        "H5",
+        "H3",
+        "A2"
+      ],
+      "split": "development"
+    },
+    "cb501d6169f": {
+      "family": "F08",
+      "kind": "incomplete",
+      "mechanism": [
+        "insufficient"
+      ],
+      "probe": [
+        "insufficient"
+      ],
+      "rationale": "Missing coverage cannot count as behavioral success or target detection.",
+      "requirements": [
+        "B5"
+      ],
+      "split": "heldout"
+    },
+    "cb9080f7f96": {
+      "family": "F06",
+      "kind": "valid_control",
+      "mechanism": [
+        "legitimate"
+      ],
+      "probe": [
+        "none"
+      ],
+      "rationale": "Idle after both completions is legitimate.",
+      "requirements": [
+        "H2",
+        "H7"
+      ],
+      "split": "heldout"
+    },
+    "cc65f638301": {
+      "family": "F07",
+      "kind": "environment_failure",
+      "mechanism": [
+        "infrastructure"
+      ],
+      "probe": [
+        "none"
+      ],
+      "rationale": "Actual exception origin and execution counts distinguish target assertion from unrelated runtime/collection failures; intended assertion is a valid calibrator control.",
+      "requirements": [
+        "B4"
+      ],
+      "split": "development"
+    },
+    "cc6c0d5103e": {
+      "family": "F05",
+      "kind": "product_defect",
+      "mechanism": [
+        "obsolete_result"
+      ],
+      "probe": [
+        "p7"
+      ],
+      "rationale": "Material consumed context differs, fresh assessment rejects, reused assessment still accepts.",
+      "requirements": [
+        "B2",
+        "A2"
+      ],
+      "split": "heldout"
+    },
+    "ccb6546cc17": {
+      "family": "F01",
+      "kind": "valid_control",
+      "mechanism": [
+        "legitimate"
+      ],
+      "probe": [
+        "none"
+      ],
+      "rationale": "Direct denied reads return denied, without data.",
+      "requirements": [
+        "H5"
+      ],
+      "split": "development"
+    },
+    "cd58718f440": {
+      "family": "F07",
+      "kind": "checker_defect",
+      "mechanism": [
+        "assertion_proxy"
+      ],
+      "probe": [
+        "p4"
+      ],
+      "rationale": "Actual exception origin and execution counts distinguish target assertion from unrelated runtime/collection failures; intended assertion is a valid calibrator control.",
+      "requirements": [
+        "B4"
+      ],
+      "split": "development"
+    },
+    "cd9a464e21e": {
+      "family": "F04",
+      "kind": "product_defect",
+      "mechanism": [
+        "obsolete_result"
+      ],
+      "probe": [
+        "p1"
+      ],
+      "rationale": "Repeated semantic call returns old accepted/current basis while fresh same-adapter and direct reads reject.",
+      "requirements": [
+        "B1",
+        "B2",
+        "H7",
+        "A2"
+      ],
+      "split": "development"
+    },
+    "cdb9ded1cc2": {
+      "family": "F08",
+      "kind": "checker_defect",
+      "mechanism": [
+        "evidence_contradiction"
+      ],
+      "probe": [
+        "p3"
+      ],
+      "rationale": "Original native and application arguments differ on the joined call while checker passes. Input was substituted evidence, not a demonstrated live wrong dispatch.",
+      "requirements": [
+        "B5",
+        "H8",
+        "H3",
+        "A2"
+      ],
+      "split": "heldout"
+    },
+    "cde0dfa2876": {
+      "family": "F08",
+      "kind": "valid_control",
+      "mechanism": [
+        "legitimate"
+      ],
+      "probe": [
+        "none"
+      ],
+      "rationale": "Checker rejects the mismatched native identity; this is a correctly rejected invalid input control.",
+      "requirements": [
+        "H3",
+        "B5"
+      ],
+      "split": "heldout"
+    },
+    "cde81233c34": {
+      "family": "F03",
+      "kind": "valid_control",
+      "mechanism": [
+        "legitimate"
+      ],
+      "probe": [
+        "none"
+      ],
+      "rationale": "Completion remains known before a separate additional send.",
+      "requirements": [
+        "H7",
+        "H4"
+      ],
+      "split": "heldout"
+    },
+    "ce010ff9ebd": {
+      "family": "F02",
+      "kind": "product_defect",
+      "mechanism": [
+        "authority_scope"
+      ],
+      "probe": [
+        "p2"
+      ],
+      "rationale": "Old denied callback receives replacement principal/work and writes evidence.",
+      "requirements": [
+        "H5",
+        "H7",
+        "H4"
+      ],
+      "split": "development"
+    },
+    "ced6478d6f9": {
+      "family": "F02",
+      "kind": "valid_control",
+      "mechanism": [
+        "legitimate"
+      ],
+      "probe": [
+        "none"
+      ],
+      "rationale": "Denied callback writes no evidence; outer operation conservatively remains unknown.",
+      "requirements": [
+        "H5",
+        "H7",
+        "H4"
+      ],
+      "split": "development"
+    },
+    "v01": {
+      "family": "F07",
+      "kind": "checker_defect",
+      "mechanism": [
+        "assertion_proxy"
+      ],
+      "probe": [
+        "p4"
+      ],
+      "rationale": "The helper imports read_value; read_value raises ValueError before returning to the comparison. Compare executed outcome with both recorded classifier decisions.",
+      "scope": "independent dependency/exception transfer within known F07 family, not unseen-family evaluation",
+      "split": "development"
+    },
+    "v02": {
+      "family": "F07",
+      "kind": "checker_defect",
+      "mechanism": [
+        "assertion_proxy"
+      ],
+      "probe": [
+        "p4"
+      ],
+      "rationale": "The helper imports read_value; read_value raises its own AssertionError before returning to the comparison. Compare executed outcome with both recorded classifier decisions.",
+      "scope": "independent dependency/exception transfer within known F07 family, not unseen-family evaluation",
+      "split": "development"
+    },
+    "v03": {
+      "family": "F07",
+      "kind": "valid_control",
+      "mechanism": [
+        "legitimate"
+      ],
+      "probe": [
+        "none",
+        "p4"
+      ],
+      "rationale": "The helper imports read_value; read_value returns 1 and the comparison passes. Compare executed outcome with both recorded classifier decisions.",
+      "scope": "independent dependency/exception transfer within known F07 family, not unseen-family evaluation",
+      "split": "development"
+    },
+    "v04": {
+      "family": "F07",
+      "kind": "environment_failure",
+      "mechanism": [
+        "infrastructure"
+      ],
+      "probe": [
+        "none",
+        "p4"
+      ],
+      "rationale": "Importing the module raises ModuleNotFoundError before any test function executes. Compare executed outcome with both recorded classifier decisions.",
+      "scope": "independent dependency/exception transfer within known F07 family, not unseen-family evaluation",
+      "split": "development"
+    }
+  },
+  "frozen_before_live": true,
+  "relationships": {
+    "r22042f213a": {
+      "family": "F04+F05",
+      "rationale": "Same currentness invariant, adapter replay cache versus assessment dependency identity.",
+      "relationship": [
+        "shared_invariant"
+      ],
+      "split": "heldout"
+    },
+    "r3876eaf5b3": {
+      "family": "F08+F08",
+      "rationale": "Missing required coverage supplies no observation of argument checking.",
+      "relationship": [
+        "insufficient"
+      ],
+      "split": "heldout"
+    },
+    "r409c21d44a": {
+      "family": "F02+F03",
+      "rationale": "Both triggered around replacement, but authority rebinding and post-effect certainty are distinct.",
+      "relationship": [
+        "similar_symptom",
+        "shared_invariant",
+        "no_relationship",
+        "insufficient"
+      ],
+      "split": "heldout"
+    },
+    "r4c2d64b23b": {
+      "family": "F07+F07",
+      "rationale": "Same marker-in-traceback classifier with different helper failures.",
+      "relationship": [
+        "same_mechanism",
+        "insufficient"
+      ],
+      "split": "development"
+    },
+    "r65a51875a7": {
+      "family": "F01+F06",
+      "rationale": "Read scope and aggregate activity provide no shared implementation or violated invariant.",
+      "relationship": [
+        "no_relationship"
+      ],
+      "split": "heldout"
+    },
+    "r6a4360d930": {
+      "family": "F08+F09",
+      "rationale": "Both lose evidence sufficiency, but contradiction overwrite versus attempt ordering.",
+      "relationship": [
+        "shared_invariant"
+      ],
+      "split": "heldout"
+    },
+    "r6eb0b370b8": {
+      "family": "F04+F04",
+      "rationale": "Shared currentness invariant with separate adapter cache implementations.",
+      "relationship": [
+        "shared_invariant"
+      ],
+      "split": "development"
+    },
+    "rc938b1f250": {
+      "family": "F01+F01",
+      "rationale": "Same delivery snapshot projection across storage implementations.",
+      "relationship": [
+        "same_mechanism",
+        "insufficient"
+      ],
+      "split": "development"
+    }
+  },
+  "version": "1.1.0"
+}

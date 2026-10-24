@@ -43,3 +43,23 @@ Artifacts upload even after an incomplete evaluation. The scoped evidence-public
 The preserved H1–H8/B1–B5/A1–A2 requirements remain the external basis. F06 establishes the overlapping Claude schedule using a protocol peer; installed-vendor reachability is unverified. No result here establishes authenticated native harness acceptance.
 
 Preflight revision 1.0.0 was scored offline before a chronology-only F05 packet correction and inclusion of corpus tests in CI. Final revision 1.1.0 discloses that change; baseline rules were not tuned, and no Jev call occurred before the correction. Only final revision 1.1.0 supplies measured live comparisons.
+
+## Retrieve this completed measurement
+
+```sh
+git fetch origin experiment/jev-failure-correlation-v1 evidence/jev-failure-correlation-40065048378-1
+mkdir /tmp/jev-actions-evidence
+git archive 9dd1f434b27d41aa0297ccf120a38de1b5f90fb1 | tar -x -C /tmp/jev-actions-evidence
+python -m experiments.jev_failure_correlation.runner score --out /tmp/jev-actions-evidence/experiment-results/evaluation
+```
+
+The final experiment branch preserves the measured source, corpus, rubric and workflow hashes, so scoring remains valid after report/evidence publication. For an exact original source checkout, use `454f6f25cb01d0aca793e21c72a032f8428535a9`. A fresh live re-evaluation is a separate explicit action; this report update does not trigger another batch.
+
+The original hosted p4 probe has a JUnit classname/root-discovery limitation. Keep its `not_exercised` result. The separate corrected probe harness 1.2.0 can replay the same selections locally without another model call:
+
+```sh
+python experiments/jev_failure_correlation/evidence/probe_replay_v1_2.py --predictions /tmp/jev-actions-evidence/experiment-results/evaluation/baseline.json --selector baseline --out /tmp/jev-corrected-baseline
+python experiments/jev_failure_correlation/evidence/probe_replay_v1_2.py --predictions /tmp/jev-actions-evidence/experiment-results/evaluation/predictions.json --selector jev --out /tmp/jev-corrected-jev
+```
+
+Recorded corrected replays are in `evidence/probe-replay-v1.2-*`. They are local measurements; the original hosted p4 limitation remains visible. The full original published Actions results are also retained at `evidence/actions-40065048378/` for convenience. `publication.json` supplies the run URL, artifact ID/digest and exact measured source identity. All initial and final source/probe/control observations remain separate.

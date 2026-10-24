@@ -1,0 +1,19 @@
+{
+  "execution": "complete",
+  "calls": 43,
+  "provider_failures": 0,
+  "invalid_responses": 0,
+  "latency_seconds": 3.2602240490000085,
+  "usage": {
+    "input_tokens": 59623,
+    "output_tokens": 7313
+  },
+  "cost_usd": null,
+  "requested_model": "jev-1.13.0",
+  "returned_models": [
+    "jev-1.13.0"
+  ],
+  "unrun": [],
+  "answered_cases": 34,
+  "answered_pairs": 8
+}

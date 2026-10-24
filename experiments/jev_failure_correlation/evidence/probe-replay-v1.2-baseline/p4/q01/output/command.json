@@ -1,0 +1,25 @@
+{
+  "command": [
+    "/workspace/jev-venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "--tb=short",
+    "-p",
+    "no:cacheprovider",
+    "test_probe.py",
+    "--junitxml=/workspace/xorchestrate-jev/experiments/jev_failure_correlation/evidence/probe-replay-v1.2-baseline/p4/q01/output/results.xml",
+    "--rootdir=/workspace/xorchestrate-jev/experiments/jev_failure_correlation/evidence/probe-replay-v1.2-baseline/p4/q01/input"
+  ],
+  "cwd": "/workspace/xorchestrate-jev/experiments/jev_failure_correlation/evidence/probe-replay-v1.2-baseline/p4/q01/input",
+  "elapsed_seconds": 0.28005224100002124,
+  "exit_code": 1,
+  "source_sha256": {
+    "dependency.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "module.py": "996d348e9d72467d16b5111c896594e8b1c6c5cb6866d35cc53c298285be6200",
+    "test_probe.py": "dc8d804669fcb3bb0eb37153ed4266d21da7aadfe49f2f107641b7386a47a67a"
+  },
+  "started": "2026-10-24T05:10:57.132533+00:00",
+  "status": "completed",
+  "xml_sha256": "6d0fa6b8313a6dccfb58fdf576ee0ba20ad3013bb3ab232758e221e0ccaa64b1"
+}

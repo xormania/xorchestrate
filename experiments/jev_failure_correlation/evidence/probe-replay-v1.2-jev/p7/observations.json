@@ -1,0 +1,4286 @@
+{
+  "new_product_defect": false,
+  "probe": "p7",
+  "records": [
+    {
+      "backend": "memory",
+      "change": {
+        "title": "A revised display label"
+      },
+      "evaluator_contexts": [
+        {
+          "acceptance_basis": {
+            "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+            "binding": {
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "29dfac3b59c05650f5bf2f70bad7973160dc4201cea2235b1367fb2f725f02e7",
+                  2,
+                  "3c9c7b8060a36014bb2a678089b5a9697317fd1dc37002e5a23c4b76d7df78ce"
+                ]
+              ],
+              "operations": [
+                [
+                  "ff3bbe552f7654be986ece17505b218bcdd469073b7dd1797e61ea123dba65cb",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+              "provider_configurations": {
+                "checks": null
+              },
+              "requirements": {
+                "identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+                "revision": 1
+              }
+            },
+            "candidate": {
+              "candidate": {
+                "configuration": "config:nondefault",
+                "identity": "tree:measured-product"
+              },
+              "id": "474ede6787894bddb8e4f6ebd9ac5553",
+              "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+              "selected_at": "2026-10-23T20:00:00Z",
+              "selected_by": "owner",
+              "version": 1,
+              "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+            },
+            "contributions": [],
+            "coverage": {
+              "A": {
+                "checks": [
+                  "A"
+                ],
+                "covered": true
+              }
+            },
+            "issues": [],
+            "measurements": [
+              {
+                "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "candidate_revision": 1,
+                "check_id": "A",
+                "created_at": "2026-10-23T20:00:00Z",
+                "created_by": "owner",
+                "fingerprint": "2363d7d31f8bb11c07fac8f266ca4e1fad2b2a733ecebf4c14201271b2e48c49",
+                "finished_at": "2026-10-23T20:00:00Z",
+                "id": "29dfac3b59c05650f5bf2f70bad7973160dc4201cea2235b1367fb2f725f02e7",
+                "operation_id": "ff3bbe552f7654be986ece17505b218bcdd469073b7dd1797e61ea123dba65cb",
+                "provider_identity": null,
+                "raw_digest": "3c9c7b8060a36014bb2a678089b5a9697317fd1dc37002e5a23c4b76d7df78ce",
+                "raw_response": {
+                  "measurement": {
+                    "bindings": {
+                      "artifact": {
+                        "name": "result.json",
+                        "sha256": "measured-artifact"
+                      },
+                      "native": {
+                        "incarnation": "incarnation-2",
+                        "session_id": "conversation"
+                      },
+                      "scope": "product"
+                    },
+                    "candidate": {
+                      "configuration": "config:nondefault",
+                      "identity": "tree:measured-product"
+                    },
+                    "check_id": "A",
+                    "outcomes": {
+                      "A": true
+                    },
+                    "passed": true,
+                    "requirement_revision": 1,
+                    "requirements_identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+                    "status": "completed",
+                    "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+                  }
+                },
+                "request_binding": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "candidate": {
+                    "configuration": "config:nondefault",
+                    "identity": "tree:measured-product"
+                  },
+                  "check_id": "A",
+                  "outcomes": [
+                    "A"
+                  ],
+                  "requirement_revision": 1,
+                  "requirements_identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+                  "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+                },
+                "requirement_revision": 1,
+                "requirements_identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+                "sequence": 1,
+                "status": "completed",
+                "version": 2,
+                "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+              }
+            ],
+            "operations": {
+              "ff3bbe552f7654be986ece17505b218bcdd469073b7dd1797e61ea123dba65cb": {
+                "action": "invoke",
+                "actor": "owner",
+                "arguments": {
+                  "arguments": {
+                    "arguments": {},
+                    "measurement": {
+                      "bindings": {
+                        "artifact": {
+                          "name": "result.json",
+                          "sha256": "measured-artifact"
+                        },
+                        "native": {
+                          "incarnation": "incarnation-2",
+                          "session_id": "conversation"
+                        },
+                        "scope": "product"
+                      },
+                      "candidate": {
+                        "configuration": "config:nondefault",
+                        "identity": "tree:measured-product"
+                      },
+                      "check_id": "A",
+                      "outcomes": [
+                        "A"
+                      ],
+                      "requirement_revision": 1,
+                      "requirements_identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+                      "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+                    }
+                  },
+                  "capability": "checks/measure",
+                  "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+                },
+                "capability": {
+                  "annotations": {},
+                  "description": "Measure the configured product",
+                  "input_schema": {
+                    "required": [
+                      "measurement",
+                      "arguments"
+                    ],
+                    "type": "object"
+                  },
+                  "name": "checks/measure"
+                },
+                "created_at": "2026-10-23T20:00:00Z",
+                "created_by": "owner",
+                "external_result": {
+                  "measurement": {
+                    "bindings": {
+                      "artifact": {
+                        "name": "result.json",
+                        "sha256": "measured-artifact"
+                      },
+                      "native": {
+                        "incarnation": "incarnation-2",
+                        "session_id": "conversation"
+                      },
+                      "scope": "product"
+                    },
+                    "candidate": {
+                      "configuration": "config:nondefault",
+                      "identity": "tree:measured-product"
+                    },
+                    "check_id": "A",
+                    "outcomes": {
+                      "A": true
+                    },
+                    "passed": true,
+                    "requirement_revision": 1,
+                    "requirements_identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+                    "status": "completed",
+                    "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+                  }
+                },
+                "external_result_origin": "adapter",
+                "fingerprint": "288f984b561248ab1a38470bf16bd25f48b745cee3f8b55912245be24e26ca7d",
+                "finished_at": "2026-10-23T20:00:00Z",
+                "id": "ff3bbe552f7654be986ece17505b218bcdd469073b7dd1797e61ea123dba65cb",
+                "idempotency_key": "measurement:29dfac3b59c05650f5bf2f70bad7973160dc4201cea2235b1367fb2f725f02e7",
+                "result": {
+                  "invocation": {
+                    "arguments": {
+                      "arguments": {},
+                      "measurement": {
+                        "bindings": {
+                          "artifact": {
+                            "name": "result.json",
+                            "sha256": "measured-artifact"
+                          },
+                          "native": {
+                            "incarnation": "incarnation-2",
+                            "session_id": "conversation"
+                          },
+                          "scope": "product"
+                        },
+                        "candidate": {
+                          "configuration": "config:nondefault",
+                          "identity": "tree:measured-product"
+                        },
+                        "check_id": "A",
+                        "outcomes": [
+                          "A"
+                        ],
+                        "requirement_revision": 1,
+                        "requirements_identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+                        "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+                      }
+                    },
+                    "capability": "checks/measure",
+                    "created_at": "2026-10-23T20:00:00Z",
+                    "created_by": "owner",
+                    "id": "ff3bbe552f7654be986ece17505b218bcdd469073b7dd1797e61ea123dba65cb",
+                    "operation_id": "ff3bbe552f7654be986ece17505b218bcdd469073b7dd1797e61ea123dba65cb",
+                    "result": {
+                      "measurement": {
+                        "bindings": {
+                          "artifact": {
+                            "name": "result.json",
+                            "sha256": "measured-artifact"
+                          },
+                          "native": {
+                            "incarnation": "incarnation-2",
+                            "session_id": "conversation"
+                          },
+                          "scope": "product"
+                        },
+                        "candidate": {
+                          "configuration": "config:nondefault",
+                          "identity": "tree:measured-product"
+                        },
+                        "check_id": "A",
+                        "outcomes": {
+                          "A": true
+                        },
+                        "passed": true,
+                        "requirement_revision": 1,
+                        "requirements_identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+                        "status": "completed",
+                        "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+                      }
+                    },
+                    "status": "completed",
+                    "version": 2,
+                    "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+                  },
+                  "operation_id": "ff3bbe552f7654be986ece17505b218bcdd469073b7dd1797e61ea123dba65cb"
+                },
+                "status": "completed",
+                "version": 2,
+                "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+              }
+            },
+            "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+            "provider_configurations": {
+              "checks": null
+            },
+            "requirements": {
+              "checks": {
+                "A": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "capability": "checks/measure",
+                  "outcomes": [
+                    "A"
+                  ]
+                }
+              },
+              "id": "474ede6787894bddb8e4f6ebd9ac5553",
+              "identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+              "objective": "Deliver the complete owner objective",
+              "outcomes": {
+                "A": "Current measurements plus configured review"
+              },
+              "revised_at": "2026-10-23T20:00:00Z",
+              "revised_by": "owner",
+              "version": 1,
+              "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+            }
+          },
+          "actor": "owner",
+          "actor_record": null,
+          "arguments": {
+            "question": "Evaluate current context",
+            "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+          },
+          "context": {},
+          "evidence": [
+            {
+              "created_at": "2026-10-23T20:00:00Z",
+              "created_by": "owner",
+              "id": "17e03e04e3594975917de76f37a8fa7e",
+              "result": {
+                "measurement": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "candidate": {
+                    "configuration": "config:nondefault",
+                    "identity": "tree:measured-product"
+                  },
+                  "check_id": "A",
+                  "outcomes": {
+                    "A": true
+                  },
+                  "passed": true,
+                  "requirement_revision": 1,
+                  "requirements_identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+                  "status": "completed",
+                  "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+                }
+              },
+              "source": {
+                "operation_id": "ff3bbe552f7654be986ece17505b218bcdd469073b7dd1797e61ea123dba65cb",
+                "type": "capability"
+              },
+              "version": 1,
+              "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+            }
+          ],
+          "inputs": {},
+          "native_call": null,
+          "operation": null,
+          "request_context": {},
+          "session": null,
+          "session_actor": null,
+          "work": {
+            "context": {},
+            "created_at": "2026-10-23T20:00:00Z",
+            "created_by": "owner",
+            "goal": "Deliver A and B",
+            "id": "474ede6787894bddb8e4f6ebd9ac5553",
+            "inputs": {},
+            "metadata": {},
+            "status": "open",
+            "title": "Deliver A and B",
+            "version": 1
+          },
+          "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+        },
+        {
+          "acceptance_basis": {
+            "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+            "binding": {
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "29dfac3b59c05650f5bf2f70bad7973160dc4201cea2235b1367fb2f725f02e7",
+                  2,
+                  "3c9c7b8060a36014bb2a678089b5a9697317fd1dc37002e5a23c4b76d7df78ce"
+                ]
+              ],
+              "operations": [
+                [
+                  "ff3bbe552f7654be986ece17505b218bcdd469073b7dd1797e61ea123dba65cb",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+              "provider_configurations": {
+                "checks": null
+              },
+              "requirements": {
+                "identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+                "revision": 1
+              }
+            },
+            "candidate": {
+              "candidate": {
+                "configuration": "config:nondefault",
+                "identity": "tree:measured-product"
+              },
+              "id": "474ede6787894bddb8e4f6ebd9ac5553",
+              "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+              "selected_at": "2026-10-23T20:00:00Z",
+              "selected_by": "owner",
+              "version": 1,
+              "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+            },
+            "contributions": [],
+            "coverage": {
+              "A": {
+                "checks": [
+                  "A"
+                ],
+                "covered": true
+              }
+            },
+            "issues": [],
+            "measurements": [
+              {
+                "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "candidate_revision": 1,
+                "check_id": "A",
+                "created_at": "2026-10-23T20:00:00Z",
+                "created_by": "owner",
+                "fingerprint": "2363d7d31f8bb11c07fac8f266ca4e1fad2b2a733ecebf4c14201271b2e48c49",
+                "finished_at": "2026-10-23T20:00:00Z",
+                "id": "29dfac3b59c05650f5bf2f70bad7973160dc4201cea2235b1367fb2f725f02e7",
+                "operation_id": "ff3bbe552f7654be986ece17505b218bcdd469073b7dd1797e61ea123dba65cb",
+                "provider_identity": null,
+                "raw_digest": "3c9c7b8060a36014bb2a678089b5a9697317fd1dc37002e5a23c4b76d7df78ce",
+                "raw_response": {
+                  "measurement": {
+                    "bindings": {
+                      "artifact": {
+                        "name": "result.json",
+                        "sha256": "measured-artifact"
+                      },
+                      "native": {
+                        "incarnation": "incarnation-2",
+                        "session_id": "conversation"
+                      },
+                      "scope": "product"
+                    },
+                    "candidate": {
+                      "configuration": "config:nondefault",
+                      "identity": "tree:measured-product"
+                    },
+                    "check_id": "A",
+                    "outcomes": {
+                      "A": true
+                    },
+                    "passed": true,
+                    "requirement_revision": 1,
+                    "requirements_identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+                    "status": "completed",
+                    "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+                  }
+                },
+                "request_binding": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "candidate": {
+                    "configuration": "config:nondefault",
+                    "identity": "tree:measured-product"
+                  },
+                  "check_id": "A",
+                  "outcomes": [
+                    "A"
+                  ],
+                  "requirement_revision": 1,
+                  "requirements_identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+                  "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+                },
+                "requirement_revision": 1,
+                "requirements_identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+                "sequence": 1,
+                "status": "completed",
+                "version": 2,
+                "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+              }
+            ],
+            "operations": {
+              "ff3bbe552f7654be986ece17505b218bcdd469073b7dd1797e61ea123dba65cb": {
+                "action": "invoke",
+                "actor": "owner",
+                "arguments": {
+                  "arguments": {
+                    "arguments": {},
+                    "measurement": {
+                      "bindings": {
+                        "artifact": {
+                          "name": "result.json",
+                          "sha256": "measured-artifact"
+                        },
+                        "native": {
+                          "incarnation": "incarnation-2",
+                          "session_id": "conversation"
+                        },
+                        "scope": "product"
+                      },
+                      "candidate": {
+                        "configuration": "config:nondefault",
+                        "identity": "tree:measured-product"
+                      },
+                      "check_id": "A",
+                      "outcomes": [
+                        "A"
+                      ],
+                      "requirement_revision": 1,
+                      "requirements_identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+                      "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+                    }
+                  },
+                  "capability": "checks/measure",
+                  "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+                },
+                "capability": {
+                  "annotations": {},
+                  "description": "Measure the configured product",
+                  "input_schema": {
+                    "required": [
+                      "measurement",
+                      "arguments"
+                    ],
+                    "type": "object"
+                  },
+                  "name": "checks/measure"
+                },
+                "created_at": "2026-10-23T20:00:00Z",
+                "created_by": "owner",
+                "external_result": {
+                  "measurement": {
+                    "bindings": {
+                      "artifact": {
+                        "name": "result.json",
+                        "sha256": "measured-artifact"
+                      },
+                      "native": {
+                        "incarnation": "incarnation-2",
+                        "session_id": "conversation"
+                      },
+                      "scope": "product"
+                    },
+                    "candidate": {
+                      "configuration": "config:nondefault",
+                      "identity": "tree:measured-product"
+                    },
+                    "check_id": "A",
+                    "outcomes": {
+                      "A": true
+                    },
+                    "passed": true,
+                    "requirement_revision": 1,
+                    "requirements_identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+                    "status": "completed",
+                    "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+                  }
+                },
+                "external_result_origin": "adapter",
+                "fingerprint": "288f984b561248ab1a38470bf16bd25f48b745cee3f8b55912245be24e26ca7d",
+                "finished_at": "2026-10-23T20:00:00Z",
+                "id": "ff3bbe552f7654be986ece17505b218bcdd469073b7dd1797e61ea123dba65cb",
+                "idempotency_key": "measurement:29dfac3b59c05650f5bf2f70bad7973160dc4201cea2235b1367fb2f725f02e7",
+                "result": {
+                  "invocation": {
+                    "arguments": {
+                      "arguments": {},
+                      "measurement": {
+                        "bindings": {
+                          "artifact": {
+                            "name": "result.json",
+                            "sha256": "measured-artifact"
+                          },
+                          "native": {
+                            "incarnation": "incarnation-2",
+                            "session_id": "conversation"
+                          },
+                          "scope": "product"
+                        },
+                        "candidate": {
+                          "configuration": "config:nondefault",
+                          "identity": "tree:measured-product"
+                        },
+                        "check_id": "A",
+                        "outcomes": [
+                          "A"
+                        ],
+                        "requirement_revision": 1,
+                        "requirements_identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+                        "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+                      }
+                    },
+                    "capability": "checks/measure",
+                    "created_at": "2026-10-23T20:00:00Z",
+                    "created_by": "owner",
+                    "id": "ff3bbe552f7654be986ece17505b218bcdd469073b7dd1797e61ea123dba65cb",
+                    "operation_id": "ff3bbe552f7654be986ece17505b218bcdd469073b7dd1797e61ea123dba65cb",
+                    "result": {
+                      "measurement": {
+                        "bindings": {
+                          "artifact": {
+                            "name": "result.json",
+                            "sha256": "measured-artifact"
+                          },
+                          "native": {
+                            "incarnation": "incarnation-2",
+                            "session_id": "conversation"
+                          },
+                          "scope": "product"
+                        },
+                        "candidate": {
+                          "configuration": "config:nondefault",
+                          "identity": "tree:measured-product"
+                        },
+                        "check_id": "A",
+                        "outcomes": {
+                          "A": true
+                        },
+                        "passed": true,
+                        "requirement_revision": 1,
+                        "requirements_identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+                        "status": "completed",
+                        "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+                      }
+                    },
+                    "status": "completed",
+                    "version": 2,
+                    "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+                  },
+                  "operation_id": "ff3bbe552f7654be986ece17505b218bcdd469073b7dd1797e61ea123dba65cb"
+                },
+                "status": "completed",
+                "version": 2,
+                "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+              }
+            },
+            "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+            "provider_configurations": {
+              "checks": null
+            },
+            "requirements": {
+              "checks": {
+                "A": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "capability": "checks/measure",
+                  "outcomes": [
+                    "A"
+                  ]
+                }
+              },
+              "id": "474ede6787894bddb8e4f6ebd9ac5553",
+              "identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+              "objective": "Deliver the complete owner objective",
+              "outcomes": {
+                "A": "Current measurements plus configured review"
+              },
+              "revised_at": "2026-10-23T20:00:00Z",
+              "revised_by": "owner",
+              "version": 1,
+              "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+            }
+          },
+          "actor": "owner",
+          "actor_record": null,
+          "arguments": {
+            "question": "Evaluate current context",
+            "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+          },
+          "context": {},
+          "evidence": [
+            {
+              "created_at": "2026-10-23T20:00:00Z",
+              "created_by": "owner",
+              "id": "17e03e04e3594975917de76f37a8fa7e",
+              "result": {
+                "measurement": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "candidate": {
+                    "configuration": "config:nondefault",
+                    "identity": "tree:measured-product"
+                  },
+                  "check_id": "A",
+                  "outcomes": {
+                    "A": true
+                  },
+                  "passed": true,
+                  "requirement_revision": 1,
+                  "requirements_identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+                  "status": "completed",
+                  "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+                }
+              },
+              "source": {
+                "operation_id": "ff3bbe552f7654be986ece17505b218bcdd469073b7dd1797e61ea123dba65cb",
+                "type": "capability"
+              },
+              "version": 1,
+              "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+            },
+            {
+              "created_at": "2026-10-23T20:00:00Z",
+              "created_by": "owner",
+              "id": "9e294883365c4ba7942a94cce72ce697",
+              "result": {
+                "acceptance_binding": {
+                  "candidate": {
+                    "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                    "revision": 1
+                  },
+                  "measurements": [
+                    [
+                      "29dfac3b59c05650f5bf2f70bad7973160dc4201cea2235b1367fb2f725f02e7",
+                      2,
+                      "3c9c7b8060a36014bb2a678089b5a9697317fd1dc37002e5a23c4b76d7df78ce"
+                    ]
+                  ],
+                  "operations": [
+                    [
+                      "ff3bbe552f7654be986ece17505b218bcdd469073b7dd1797e61ea123dba65cb",
+                      2
+                    ]
+                  ],
+                  "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+                  "provider_configurations": {
+                    "checks": null
+                  },
+                  "requirements": {
+                    "identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+                    "revision": 1
+                  }
+                },
+                "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+                "conclusion": {
+                  "confidence": 0.99,
+                  "details": {},
+                  "evaluator": "review",
+                  "evidence": [],
+                  "outcome": "pass",
+                  "rationale": "Configured synthetic context predicate"
+                },
+                "escalation_error": null,
+                "evaluations": [
+                  {
+                    "confidence": 0.99,
+                    "details": {},
+                    "evaluator": "review",
+                    "evidence": [],
+                    "outcome": "pass",
+                    "rationale": "Configured synthetic context predicate"
+                  }
+                ],
+                "question": "Evaluate current context",
+                "unresolved": false,
+                "work_id": "474ede6787894bddb8e4f6ebd9ac5553",
+                "work_version": 1
+              },
+              "source": {
+                "assessment_id": "2dff8b9be4044fce8c2723a13369e85f",
+                "type": "assessment"
+              },
+              "version": 1,
+              "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+            }
+          ],
+          "inputs": {},
+          "native_call": null,
+          "operation": null,
+          "request_context": {},
+          "session": null,
+          "session_actor": null,
+          "work": {
+            "context": {},
+            "created_at": "2026-10-23T20:00:00Z",
+            "created_by": "owner",
+            "goal": "Deliver A and B",
+            "id": "474ede6787894bddb8e4f6ebd9ac5553",
+            "inputs": {},
+            "metadata": {},
+            "status": "open",
+            "title": "A revised display label",
+            "updated_at": "2026-10-23T20:00:00Z",
+            "version": 2
+          },
+          "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+        }
+      ],
+      "fresh_assessment": {
+        "acceptance_binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "29dfac3b59c05650f5bf2f70bad7973160dc4201cea2235b1367fb2f725f02e7",
+              2,
+              "3c9c7b8060a36014bb2a678089b5a9697317fd1dc37002e5a23c4b76d7df78ce"
+            ]
+          ],
+          "operations": [
+            [
+              "ff3bbe552f7654be986ece17505b218bcdd469073b7dd1797e61ea123dba65cb",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+            "revision": 1
+          }
+        },
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "conclusion": {
+          "confidence": 0.99,
+          "details": {},
+          "evaluator": "review",
+          "evidence": [],
+          "outcome": "pass",
+          "rationale": "Configured synthetic context predicate"
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "escalation_error": null,
+        "evaluations": [
+          {
+            "confidence": 0.99,
+            "details": {},
+            "evaluator": "review",
+            "evidence": [],
+            "outcome": "pass",
+            "rationale": "Configured synthetic context predicate"
+          }
+        ],
+        "id": "c103b93e309d425881b15f646ae8a894",
+        "question": "Evaluate current context",
+        "unresolved": false,
+        "version": 1,
+        "work_id": "474ede6787894bddb8e4f6ebd9ac5553",
+        "work_version": 2
+      },
+      "fresh_assessment_accepted": true,
+      "fresh_decision": {
+        "accepted": true,
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "assessment_id": "c103b93e309d425881b15f646ae8a894",
+        "assessment_version": 1,
+        "binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "29dfac3b59c05650f5bf2f70bad7973160dc4201cea2235b1367fb2f725f02e7",
+              2,
+              "3c9c7b8060a36014bb2a678089b5a9697317fd1dc37002e5a23c4b76d7df78ce"
+            ]
+          ],
+          "operations": [
+            [
+              "ff3bbe552f7654be986ece17505b218bcdd469073b7dd1797e61ea123dba65cb",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+            "revision": 1
+          }
+        },
+        "coverage": {
+          "A": {
+            "checks": [
+              "A"
+            ],
+            "covered": true
+          }
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "id": "87f7b4fc173c417e9cf8fb2c0d425424",
+        "issues": [],
+        "policy_decision": {
+          "accepted": true,
+          "reasons": []
+        },
+        "sequence": 3,
+        "version": 1,
+        "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+      },
+      "initial_accepted": true,
+      "known_defect_reproduced": false,
+      "old_assessment": {
+        "acceptance_binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "29dfac3b59c05650f5bf2f70bad7973160dc4201cea2235b1367fb2f725f02e7",
+              2,
+              "3c9c7b8060a36014bb2a678089b5a9697317fd1dc37002e5a23c4b76d7df78ce"
+            ]
+          ],
+          "operations": [
+            [
+              "ff3bbe552f7654be986ece17505b218bcdd469073b7dd1797e61ea123dba65cb",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+            "revision": 1
+          }
+        },
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "conclusion": {
+          "confidence": 0.99,
+          "details": {},
+          "evaluator": "review",
+          "evidence": [],
+          "outcome": "pass",
+          "rationale": "Configured synthetic context predicate"
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "escalation_error": null,
+        "evaluations": [
+          {
+            "confidence": 0.99,
+            "details": {},
+            "evaluator": "review",
+            "evidence": [],
+            "outcome": "pass",
+            "rationale": "Configured synthetic context predicate"
+          }
+        ],
+        "id": "2dff8b9be4044fce8c2723a13369e85f",
+        "question": "Evaluate current context",
+        "unresolved": false,
+        "version": 1,
+        "work_id": "474ede6787894bddb8e4f6ebd9ac5553",
+        "work_version": 1
+      },
+      "old_assessment_reaccepted": true,
+      "persisted_accepted_after_change": true,
+      "replay_decision": {
+        "accepted": true,
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "assessment_id": "2dff8b9be4044fce8c2723a13369e85f",
+        "assessment_version": 1,
+        "binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "29dfac3b59c05650f5bf2f70bad7973160dc4201cea2235b1367fb2f725f02e7",
+              2,
+              "3c9c7b8060a36014bb2a678089b5a9697317fd1dc37002e5a23c4b76d7df78ce"
+            ]
+          ],
+          "operations": [
+            [
+              "ff3bbe552f7654be986ece17505b218bcdd469073b7dd1797e61ea123dba65cb",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "548eba0669427ace2e64d44d8f5f1bb0559e9aa16a96dc91ccc1e450c307b667",
+            "revision": 1
+          }
+        },
+        "coverage": {
+          "A": {
+            "checks": [
+              "A"
+            ],
+            "covered": true
+          }
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "id": "0bc9f7bb829644509a11766cbfc37d1e",
+        "issues": [],
+        "policy_decision": {
+          "accepted": true,
+          "reasons": []
+        },
+        "sequence": 2,
+        "version": 1,
+        "work_id": "474ede6787894bddb8e4f6ebd9ac5553"
+      },
+      "valid_control_passed": true
+    },
+    {
+      "backend": "memory",
+      "change": {
+        "context": {
+          "check_result": "failed"
+        }
+      },
+      "evaluator_contexts": [
+        {
+          "acceptance_basis": {
+            "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+            "binding": {
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "3ccfbcc09d5237c3ba1fcb6456d4611c69f1dd6412593cede1e88a1ec8c1f9cc",
+                  2,
+                  "be27ee4495a9b55656380fd42f977e1b137dfb3e3ec7dc70cd39c59fd5dfe176"
+                ]
+              ],
+              "operations": [
+                [
+                  "509e2ae7c4bf84cd1a27675df8edb57310aba3f07ba81f6cf95bdb347e901442",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+              "provider_configurations": {
+                "checks": null
+              },
+              "requirements": {
+                "identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+                "revision": 1
+              }
+            },
+            "candidate": {
+              "candidate": {
+                "configuration": "config:nondefault",
+                "identity": "tree:measured-product"
+              },
+              "id": "23ad8642c58f4b5bb3eb25ab0e9b7be4",
+              "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+              "selected_at": "2026-10-23T20:00:00Z",
+              "selected_by": "owner",
+              "version": 1,
+              "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+            },
+            "contributions": [],
+            "coverage": {
+              "A": {
+                "checks": [
+                  "A"
+                ],
+                "covered": true
+              }
+            },
+            "issues": [],
+            "measurements": [
+              {
+                "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "candidate_revision": 1,
+                "check_id": "A",
+                "created_at": "2026-10-23T20:00:00Z",
+                "created_by": "owner",
+                "fingerprint": "eb00843207dc592eb6541ab58eb49dfca4ce843222ef5118f459e18ec01ef50a",
+                "finished_at": "2026-10-23T20:00:00Z",
+                "id": "3ccfbcc09d5237c3ba1fcb6456d4611c69f1dd6412593cede1e88a1ec8c1f9cc",
+                "operation_id": "509e2ae7c4bf84cd1a27675df8edb57310aba3f07ba81f6cf95bdb347e901442",
+                "provider_identity": null,
+                "raw_digest": "be27ee4495a9b55656380fd42f977e1b137dfb3e3ec7dc70cd39c59fd5dfe176",
+                "raw_response": {
+                  "measurement": {
+                    "bindings": {
+                      "artifact": {
+                        "name": "result.json",
+                        "sha256": "measured-artifact"
+                      },
+                      "native": {
+                        "incarnation": "incarnation-2",
+                        "session_id": "conversation"
+                      },
+                      "scope": "product"
+                    },
+                    "candidate": {
+                      "configuration": "config:nondefault",
+                      "identity": "tree:measured-product"
+                    },
+                    "check_id": "A",
+                    "outcomes": {
+                      "A": true
+                    },
+                    "passed": true,
+                    "requirement_revision": 1,
+                    "requirements_identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+                    "status": "completed",
+                    "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+                  }
+                },
+                "request_binding": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "candidate": {
+                    "configuration": "config:nondefault",
+                    "identity": "tree:measured-product"
+                  },
+                  "check_id": "A",
+                  "outcomes": [
+                    "A"
+                  ],
+                  "requirement_revision": 1,
+                  "requirements_identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+                  "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+                },
+                "requirement_revision": 1,
+                "requirements_identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+                "sequence": 1,
+                "status": "completed",
+                "version": 2,
+                "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+              }
+            ],
+            "operations": {
+              "509e2ae7c4bf84cd1a27675df8edb57310aba3f07ba81f6cf95bdb347e901442": {
+                "action": "invoke",
+                "actor": "owner",
+                "arguments": {
+                  "arguments": {
+                    "arguments": {},
+                    "measurement": {
+                      "bindings": {
+                        "artifact": {
+                          "name": "result.json",
+                          "sha256": "measured-artifact"
+                        },
+                        "native": {
+                          "incarnation": "incarnation-2",
+                          "session_id": "conversation"
+                        },
+                        "scope": "product"
+                      },
+                      "candidate": {
+                        "configuration": "config:nondefault",
+                        "identity": "tree:measured-product"
+                      },
+                      "check_id": "A",
+                      "outcomes": [
+                        "A"
+                      ],
+                      "requirement_revision": 1,
+                      "requirements_identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+                      "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+                    }
+                  },
+                  "capability": "checks/measure",
+                  "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+                },
+                "capability": {
+                  "annotations": {},
+                  "description": "Measure the configured product",
+                  "input_schema": {
+                    "required": [
+                      "measurement",
+                      "arguments"
+                    ],
+                    "type": "object"
+                  },
+                  "name": "checks/measure"
+                },
+                "created_at": "2026-10-23T20:00:00Z",
+                "created_by": "owner",
+                "external_result": {
+                  "measurement": {
+                    "bindings": {
+                      "artifact": {
+                        "name": "result.json",
+                        "sha256": "measured-artifact"
+                      },
+                      "native": {
+                        "incarnation": "incarnation-2",
+                        "session_id": "conversation"
+                      },
+                      "scope": "product"
+                    },
+                    "candidate": {
+                      "configuration": "config:nondefault",
+                      "identity": "tree:measured-product"
+                    },
+                    "check_id": "A",
+                    "outcomes": {
+                      "A": true
+                    },
+                    "passed": true,
+                    "requirement_revision": 1,
+                    "requirements_identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+                    "status": "completed",
+                    "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+                  }
+                },
+                "external_result_origin": "adapter",
+                "fingerprint": "8514ad70dbde3ed4a3936630786f1e688129150b186ff224695e09d944ad4a39",
+                "finished_at": "2026-10-23T20:00:00Z",
+                "id": "509e2ae7c4bf84cd1a27675df8edb57310aba3f07ba81f6cf95bdb347e901442",
+                "idempotency_key": "measurement:3ccfbcc09d5237c3ba1fcb6456d4611c69f1dd6412593cede1e88a1ec8c1f9cc",
+                "result": {
+                  "invocation": {
+                    "arguments": {
+                      "arguments": {},
+                      "measurement": {
+                        "bindings": {
+                          "artifact": {
+                            "name": "result.json",
+                            "sha256": "measured-artifact"
+                          },
+                          "native": {
+                            "incarnation": "incarnation-2",
+                            "session_id": "conversation"
+                          },
+                          "scope": "product"
+                        },
+                        "candidate": {
+                          "configuration": "config:nondefault",
+                          "identity": "tree:measured-product"
+                        },
+                        "check_id": "A",
+                        "outcomes": [
+                          "A"
+                        ],
+                        "requirement_revision": 1,
+                        "requirements_identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+                        "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+                      }
+                    },
+                    "capability": "checks/measure",
+                    "created_at": "2026-10-23T20:00:00Z",
+                    "created_by": "owner",
+                    "id": "509e2ae7c4bf84cd1a27675df8edb57310aba3f07ba81f6cf95bdb347e901442",
+                    "operation_id": "509e2ae7c4bf84cd1a27675df8edb57310aba3f07ba81f6cf95bdb347e901442",
+                    "result": {
+                      "measurement": {
+                        "bindings": {
+                          "artifact": {
+                            "name": "result.json",
+                            "sha256": "measured-artifact"
+                          },
+                          "native": {
+                            "incarnation": "incarnation-2",
+                            "session_id": "conversation"
+                          },
+                          "scope": "product"
+                        },
+                        "candidate": {
+                          "configuration": "config:nondefault",
+                          "identity": "tree:measured-product"
+                        },
+                        "check_id": "A",
+                        "outcomes": {
+                          "A": true
+                        },
+                        "passed": true,
+                        "requirement_revision": 1,
+                        "requirements_identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+                        "status": "completed",
+                        "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+                      }
+                    },
+                    "status": "completed",
+                    "version": 2,
+                    "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+                  },
+                  "operation_id": "509e2ae7c4bf84cd1a27675df8edb57310aba3f07ba81f6cf95bdb347e901442"
+                },
+                "status": "completed",
+                "version": 2,
+                "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+              }
+            },
+            "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+            "provider_configurations": {
+              "checks": null
+            },
+            "requirements": {
+              "checks": {
+                "A": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "capability": "checks/measure",
+                  "outcomes": [
+                    "A"
+                  ]
+                }
+              },
+              "id": "23ad8642c58f4b5bb3eb25ab0e9b7be4",
+              "identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+              "objective": "Deliver the complete owner objective",
+              "outcomes": {
+                "A": "Current measurements plus configured review"
+              },
+              "revised_at": "2026-10-23T20:00:00Z",
+              "revised_by": "owner",
+              "version": 1,
+              "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+            }
+          },
+          "actor": "owner",
+          "actor_record": null,
+          "arguments": {
+            "question": "Evaluate current context",
+            "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+          },
+          "context": {},
+          "evidence": [
+            {
+              "created_at": "2026-10-23T20:00:00Z",
+              "created_by": "owner",
+              "id": "286e1e7fdb1749c3932f7f4df448100d",
+              "result": {
+                "measurement": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "candidate": {
+                    "configuration": "config:nondefault",
+                    "identity": "tree:measured-product"
+                  },
+                  "check_id": "A",
+                  "outcomes": {
+                    "A": true
+                  },
+                  "passed": true,
+                  "requirement_revision": 1,
+                  "requirements_identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+                  "status": "completed",
+                  "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+                }
+              },
+              "source": {
+                "operation_id": "509e2ae7c4bf84cd1a27675df8edb57310aba3f07ba81f6cf95bdb347e901442",
+                "type": "capability"
+              },
+              "version": 1,
+              "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+            }
+          ],
+          "inputs": {},
+          "native_call": null,
+          "operation": null,
+          "request_context": {},
+          "session": null,
+          "session_actor": null,
+          "work": {
+            "context": {},
+            "created_at": "2026-10-23T20:00:00Z",
+            "created_by": "owner",
+            "goal": "Deliver A and B",
+            "id": "23ad8642c58f4b5bb3eb25ab0e9b7be4",
+            "inputs": {},
+            "metadata": {},
+            "status": "open",
+            "title": "Deliver A and B",
+            "version": 1
+          },
+          "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+        },
+        {
+          "acceptance_basis": {
+            "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+            "binding": {
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "3ccfbcc09d5237c3ba1fcb6456d4611c69f1dd6412593cede1e88a1ec8c1f9cc",
+                  2,
+                  "be27ee4495a9b55656380fd42f977e1b137dfb3e3ec7dc70cd39c59fd5dfe176"
+                ]
+              ],
+              "operations": [
+                [
+                  "509e2ae7c4bf84cd1a27675df8edb57310aba3f07ba81f6cf95bdb347e901442",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+              "provider_configurations": {
+                "checks": null
+              },
+              "requirements": {
+                "identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+                "revision": 1
+              }
+            },
+            "candidate": {
+              "candidate": {
+                "configuration": "config:nondefault",
+                "identity": "tree:measured-product"
+              },
+              "id": "23ad8642c58f4b5bb3eb25ab0e9b7be4",
+              "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+              "selected_at": "2026-10-23T20:00:00Z",
+              "selected_by": "owner",
+              "version": 1,
+              "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+            },
+            "contributions": [],
+            "coverage": {
+              "A": {
+                "checks": [
+                  "A"
+                ],
+                "covered": true
+              }
+            },
+            "issues": [],
+            "measurements": [
+              {
+                "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "candidate_revision": 1,
+                "check_id": "A",
+                "created_at": "2026-10-23T20:00:00Z",
+                "created_by": "owner",
+                "fingerprint": "eb00843207dc592eb6541ab58eb49dfca4ce843222ef5118f459e18ec01ef50a",
+                "finished_at": "2026-10-23T20:00:00Z",
+                "id": "3ccfbcc09d5237c3ba1fcb6456d4611c69f1dd6412593cede1e88a1ec8c1f9cc",
+                "operation_id": "509e2ae7c4bf84cd1a27675df8edb57310aba3f07ba81f6cf95bdb347e901442",
+                "provider_identity": null,
+                "raw_digest": "be27ee4495a9b55656380fd42f977e1b137dfb3e3ec7dc70cd39c59fd5dfe176",
+                "raw_response": {
+                  "measurement": {
+                    "bindings": {
+                      "artifact": {
+                        "name": "result.json",
+                        "sha256": "measured-artifact"
+                      },
+                      "native": {
+                        "incarnation": "incarnation-2",
+                        "session_id": "conversation"
+                      },
+                      "scope": "product"
+                    },
+                    "candidate": {
+                      "configuration": "config:nondefault",
+                      "identity": "tree:measured-product"
+                    },
+                    "check_id": "A",
+                    "outcomes": {
+                      "A": true
+                    },
+                    "passed": true,
+                    "requirement_revision": 1,
+                    "requirements_identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+                    "status": "completed",
+                    "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+                  }
+                },
+                "request_binding": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "candidate": {
+                    "configuration": "config:nondefault",
+                    "identity": "tree:measured-product"
+                  },
+                  "check_id": "A",
+                  "outcomes": [
+                    "A"
+                  ],
+                  "requirement_revision": 1,
+                  "requirements_identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+                  "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+                },
+                "requirement_revision": 1,
+                "requirements_identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+                "sequence": 1,
+                "status": "completed",
+                "version": 2,
+                "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+              }
+            ],
+            "operations": {
+              "509e2ae7c4bf84cd1a27675df8edb57310aba3f07ba81f6cf95bdb347e901442": {
+                "action": "invoke",
+                "actor": "owner",
+                "arguments": {
+                  "arguments": {
+                    "arguments": {},
+                    "measurement": {
+                      "bindings": {
+                        "artifact": {
+                          "name": "result.json",
+                          "sha256": "measured-artifact"
+                        },
+                        "native": {
+                          "incarnation": "incarnation-2",
+                          "session_id": "conversation"
+                        },
+                        "scope": "product"
+                      },
+                      "candidate": {
+                        "configuration": "config:nondefault",
+                        "identity": "tree:measured-product"
+                      },
+                      "check_id": "A",
+                      "outcomes": [
+                        "A"
+                      ],
+                      "requirement_revision": 1,
+                      "requirements_identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+                      "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+                    }
+                  },
+                  "capability": "checks/measure",
+                  "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+                },
+                "capability": {
+                  "annotations": {},
+                  "description": "Measure the configured product",
+                  "input_schema": {
+                    "required": [
+                      "measurement",
+                      "arguments"
+                    ],
+                    "type": "object"
+                  },
+                  "name": "checks/measure"
+                },
+                "created_at": "2026-10-23T20:00:00Z",
+                "created_by": "owner",
+                "external_result": {
+                  "measurement": {
+                    "bindings": {
+                      "artifact": {
+                        "name": "result.json",
+                        "sha256": "measured-artifact"
+                      },
+                      "native": {
+                        "incarnation": "incarnation-2",
+                        "session_id": "conversation"
+                      },
+                      "scope": "product"
+                    },
+                    "candidate": {
+                      "configuration": "config:nondefault",
+                      "identity": "tree:measured-product"
+                    },
+                    "check_id": "A",
+                    "outcomes": {
+                      "A": true
+                    },
+                    "passed": true,
+                    "requirement_revision": 1,
+                    "requirements_identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+                    "status": "completed",
+                    "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+                  }
+                },
+                "external_result_origin": "adapter",
+                "fingerprint": "8514ad70dbde3ed4a3936630786f1e688129150b186ff224695e09d944ad4a39",
+                "finished_at": "2026-10-23T20:00:00Z",
+                "id": "509e2ae7c4bf84cd1a27675df8edb57310aba3f07ba81f6cf95bdb347e901442",
+                "idempotency_key": "measurement:3ccfbcc09d5237c3ba1fcb6456d4611c69f1dd6412593cede1e88a1ec8c1f9cc",
+                "result": {
+                  "invocation": {
+                    "arguments": {
+                      "arguments": {},
+                      "measurement": {
+                        "bindings": {
+                          "artifact": {
+                            "name": "result.json",
+                            "sha256": "measured-artifact"
+                          },
+                          "native": {
+                            "incarnation": "incarnation-2",
+                            "session_id": "conversation"
+                          },
+                          "scope": "product"
+                        },
+                        "candidate": {
+                          "configuration": "config:nondefault",
+                          "identity": "tree:measured-product"
+                        },
+                        "check_id": "A",
+                        "outcomes": [
+                          "A"
+                        ],
+                        "requirement_revision": 1,
+                        "requirements_identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+                        "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+                      }
+                    },
+                    "capability": "checks/measure",
+                    "created_at": "2026-10-23T20:00:00Z",
+                    "created_by": "owner",
+                    "id": "509e2ae7c4bf84cd1a27675df8edb57310aba3f07ba81f6cf95bdb347e901442",
+                    "operation_id": "509e2ae7c4bf84cd1a27675df8edb57310aba3f07ba81f6cf95bdb347e901442",
+                    "result": {
+                      "measurement": {
+                        "bindings": {
+                          "artifact": {
+                            "name": "result.json",
+                            "sha256": "measured-artifact"
+                          },
+                          "native": {
+                            "incarnation": "incarnation-2",
+                            "session_id": "conversation"
+                          },
+                          "scope": "product"
+                        },
+                        "candidate": {
+                          "configuration": "config:nondefault",
+                          "identity": "tree:measured-product"
+                        },
+                        "check_id": "A",
+                        "outcomes": {
+                          "A": true
+                        },
+                        "passed": true,
+                        "requirement_revision": 1,
+                        "requirements_identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+                        "status": "completed",
+                        "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+                      }
+                    },
+                    "status": "completed",
+                    "version": 2,
+                    "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+                  },
+                  "operation_id": "509e2ae7c4bf84cd1a27675df8edb57310aba3f07ba81f6cf95bdb347e901442"
+                },
+                "status": "completed",
+                "version": 2,
+                "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+              }
+            },
+            "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+            "provider_configurations": {
+              "checks": null
+            },
+            "requirements": {
+              "checks": {
+                "A": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "capability": "checks/measure",
+                  "outcomes": [
+                    "A"
+                  ]
+                }
+              },
+              "id": "23ad8642c58f4b5bb3eb25ab0e9b7be4",
+              "identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+              "objective": "Deliver the complete owner objective",
+              "outcomes": {
+                "A": "Current measurements plus configured review"
+              },
+              "revised_at": "2026-10-23T20:00:00Z",
+              "revised_by": "owner",
+              "version": 1,
+              "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+            }
+          },
+          "actor": "owner",
+          "actor_record": null,
+          "arguments": {
+            "question": "Evaluate current context",
+            "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+          },
+          "context": {
+            "check_result": "failed"
+          },
+          "evidence": [
+            {
+              "created_at": "2026-10-23T20:00:00Z",
+              "created_by": "owner",
+              "id": "286e1e7fdb1749c3932f7f4df448100d",
+              "result": {
+                "measurement": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "candidate": {
+                    "configuration": "config:nondefault",
+                    "identity": "tree:measured-product"
+                  },
+                  "check_id": "A",
+                  "outcomes": {
+                    "A": true
+                  },
+                  "passed": true,
+                  "requirement_revision": 1,
+                  "requirements_identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+                  "status": "completed",
+                  "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+                }
+              },
+              "source": {
+                "operation_id": "509e2ae7c4bf84cd1a27675df8edb57310aba3f07ba81f6cf95bdb347e901442",
+                "type": "capability"
+              },
+              "version": 1,
+              "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+            },
+            {
+              "created_at": "2026-10-23T20:00:00Z",
+              "created_by": "owner",
+              "id": "4bcbb0402ea644d3ba2dcee9ba352eb2",
+              "result": {
+                "acceptance_binding": {
+                  "candidate": {
+                    "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                    "revision": 1
+                  },
+                  "measurements": [
+                    [
+                      "3ccfbcc09d5237c3ba1fcb6456d4611c69f1dd6412593cede1e88a1ec8c1f9cc",
+                      2,
+                      "be27ee4495a9b55656380fd42f977e1b137dfb3e3ec7dc70cd39c59fd5dfe176"
+                    ]
+                  ],
+                  "operations": [
+                    [
+                      "509e2ae7c4bf84cd1a27675df8edb57310aba3f07ba81f6cf95bdb347e901442",
+                      2
+                    ]
+                  ],
+                  "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+                  "provider_configurations": {
+                    "checks": null
+                  },
+                  "requirements": {
+                    "identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+                    "revision": 1
+                  }
+                },
+                "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+                "conclusion": {
+                  "confidence": 0.99,
+                  "details": {},
+                  "evaluator": "review",
+                  "evidence": [],
+                  "outcome": "pass",
+                  "rationale": "Configured synthetic context predicate"
+                },
+                "escalation_error": null,
+                "evaluations": [
+                  {
+                    "confidence": 0.99,
+                    "details": {},
+                    "evaluator": "review",
+                    "evidence": [],
+                    "outcome": "pass",
+                    "rationale": "Configured synthetic context predicate"
+                  }
+                ],
+                "question": "Evaluate current context",
+                "unresolved": false,
+                "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4",
+                "work_version": 1
+              },
+              "source": {
+                "assessment_id": "e8b74ee6ec0a41539624fd0ec6532d3a",
+                "type": "assessment"
+              },
+              "version": 1,
+              "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+            }
+          ],
+          "inputs": {},
+          "native_call": null,
+          "operation": null,
+          "request_context": {},
+          "session": null,
+          "session_actor": null,
+          "work": {
+            "context": {
+              "check_result": "failed"
+            },
+            "created_at": "2026-10-23T20:00:00Z",
+            "created_by": "owner",
+            "goal": "Deliver A and B",
+            "id": "23ad8642c58f4b5bb3eb25ab0e9b7be4",
+            "inputs": {},
+            "metadata": {},
+            "status": "open",
+            "title": "Deliver A and B",
+            "updated_at": "2026-10-23T20:00:00Z",
+            "version": 2
+          },
+          "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+        }
+      ],
+      "fresh_assessment": {
+        "acceptance_binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "3ccfbcc09d5237c3ba1fcb6456d4611c69f1dd6412593cede1e88a1ec8c1f9cc",
+              2,
+              "be27ee4495a9b55656380fd42f977e1b137dfb3e3ec7dc70cd39c59fd5dfe176"
+            ]
+          ],
+          "operations": [
+            [
+              "509e2ae7c4bf84cd1a27675df8edb57310aba3f07ba81f6cf95bdb347e901442",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+            "revision": 1
+          }
+        },
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "conclusion": {
+          "confidence": 0.99,
+          "details": {},
+          "evaluator": "review",
+          "evidence": [],
+          "outcome": "reject",
+          "rationale": "Configured synthetic context predicate"
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "escalation_error": null,
+        "evaluations": [
+          {
+            "confidence": 0.99,
+            "details": {},
+            "evaluator": "review",
+            "evidence": [],
+            "outcome": "reject",
+            "rationale": "Configured synthetic context predicate"
+          }
+        ],
+        "id": "5467dabe51d64624bc86b468acde69d6",
+        "question": "Evaluate current context",
+        "unresolved": false,
+        "version": 1,
+        "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4",
+        "work_version": 2
+      },
+      "fresh_assessment_accepted": false,
+      "fresh_decision": {
+        "accepted": false,
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "assessment_id": "5467dabe51d64624bc86b468acde69d6",
+        "assessment_version": 1,
+        "binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "3ccfbcc09d5237c3ba1fcb6456d4611c69f1dd6412593cede1e88a1ec8c1f9cc",
+              2,
+              "be27ee4495a9b55656380fd42f977e1b137dfb3e3ec7dc70cd39c59fd5dfe176"
+            ]
+          ],
+          "operations": [
+            [
+              "509e2ae7c4bf84cd1a27675df8edb57310aba3f07ba81f6cf95bdb347e901442",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+            "revision": 1
+          }
+        },
+        "coverage": {
+          "A": {
+            "checks": [
+              "A"
+            ],
+            "covered": true
+          }
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "id": "ba8956db982d41818f9497d29137872e",
+        "issues": [],
+        "policy_decision": {
+          "accepted": false,
+          "reasons": [
+            {
+              "code": "assessment_unfavorable"
+            }
+          ]
+        },
+        "sequence": 3,
+        "version": 1,
+        "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+      },
+      "initial_accepted": true,
+      "known_defect_reproduced": true,
+      "old_assessment": {
+        "acceptance_binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "3ccfbcc09d5237c3ba1fcb6456d4611c69f1dd6412593cede1e88a1ec8c1f9cc",
+              2,
+              "be27ee4495a9b55656380fd42f977e1b137dfb3e3ec7dc70cd39c59fd5dfe176"
+            ]
+          ],
+          "operations": [
+            [
+              "509e2ae7c4bf84cd1a27675df8edb57310aba3f07ba81f6cf95bdb347e901442",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+            "revision": 1
+          }
+        },
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "conclusion": {
+          "confidence": 0.99,
+          "details": {},
+          "evaluator": "review",
+          "evidence": [],
+          "outcome": "pass",
+          "rationale": "Configured synthetic context predicate"
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "escalation_error": null,
+        "evaluations": [
+          {
+            "confidence": 0.99,
+            "details": {},
+            "evaluator": "review",
+            "evidence": [],
+            "outcome": "pass",
+            "rationale": "Configured synthetic context predicate"
+          }
+        ],
+        "id": "e8b74ee6ec0a41539624fd0ec6532d3a",
+        "question": "Evaluate current context",
+        "unresolved": false,
+        "version": 1,
+        "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4",
+        "work_version": 1
+      },
+      "old_assessment_reaccepted": true,
+      "persisted_accepted_after_change": true,
+      "replay_decision": {
+        "accepted": true,
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "assessment_id": "e8b74ee6ec0a41539624fd0ec6532d3a",
+        "assessment_version": 1,
+        "binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "3ccfbcc09d5237c3ba1fcb6456d4611c69f1dd6412593cede1e88a1ec8c1f9cc",
+              2,
+              "be27ee4495a9b55656380fd42f977e1b137dfb3e3ec7dc70cd39c59fd5dfe176"
+            ]
+          ],
+          "operations": [
+            [
+              "509e2ae7c4bf84cd1a27675df8edb57310aba3f07ba81f6cf95bdb347e901442",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "4197e647b7d84a3825b38d3c41a4fb480259211d37e30b9295019f94b61e1926",
+            "revision": 1
+          }
+        },
+        "coverage": {
+          "A": {
+            "checks": [
+              "A"
+            ],
+            "covered": true
+          }
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "id": "710554fb199d47d9beb390b4c8e39e80",
+        "issues": [],
+        "policy_decision": {
+          "accepted": true,
+          "reasons": []
+        },
+        "sequence": 2,
+        "version": 1,
+        "work_id": "23ad8642c58f4b5bb3eb25ab0e9b7be4"
+      },
+      "valid_control_passed": false
+    },
+    {
+      "backend": "sqlite",
+      "change": {
+        "title": "A revised display label"
+      },
+      "evaluator_contexts": [
+        {
+          "acceptance_basis": {
+            "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+            "binding": {
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "8b3a5034746af54b4e7570fa23cffa998a1bf58a82e7cb0901d10d2630ec7e32",
+                  2,
+                  "c2e86eb53e1215f9a7db8df622619622af56a7b43ab8bf6a5ae5618c72724e5f"
+                ]
+              ],
+              "operations": [
+                [
+                  "5952e29db627118be1fcf9da70d9036b7fb5abdc5203d9d022c46eb02aad9f82",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+              "provider_configurations": {
+                "checks": null
+              },
+              "requirements": {
+                "identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+                "revision": 1
+              }
+            },
+            "candidate": {
+              "candidate": {
+                "configuration": "config:nondefault",
+                "identity": "tree:measured-product"
+              },
+              "id": "0913069db652489bb035f4600e077dec",
+              "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+              "selected_at": "2026-10-23T20:00:00Z",
+              "selected_by": "owner",
+              "version": 1,
+              "work_id": "0913069db652489bb035f4600e077dec"
+            },
+            "contributions": [],
+            "coverage": {
+              "A": {
+                "checks": [
+                  "A"
+                ],
+                "covered": true
+              }
+            },
+            "issues": [],
+            "measurements": [
+              {
+                "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "candidate_revision": 1,
+                "check_id": "A",
+                "created_at": "2026-10-23T20:00:00Z",
+                "created_by": "owner",
+                "fingerprint": "7d4a2801f1ba73fb1560b6bb041d9a4a637076bd77230d037376baeb401b87ac",
+                "finished_at": "2026-10-23T20:00:00Z",
+                "id": "8b3a5034746af54b4e7570fa23cffa998a1bf58a82e7cb0901d10d2630ec7e32",
+                "operation_id": "5952e29db627118be1fcf9da70d9036b7fb5abdc5203d9d022c46eb02aad9f82",
+                "provider_identity": null,
+                "raw_digest": "c2e86eb53e1215f9a7db8df622619622af56a7b43ab8bf6a5ae5618c72724e5f",
+                "raw_response": {
+                  "measurement": {
+                    "bindings": {
+                      "artifact": {
+                        "name": "result.json",
+                        "sha256": "measured-artifact"
+                      },
+                      "native": {
+                        "incarnation": "incarnation-2",
+                        "session_id": "conversation"
+                      },
+                      "scope": "product"
+                    },
+                    "candidate": {
+                      "configuration": "config:nondefault",
+                      "identity": "tree:measured-product"
+                    },
+                    "check_id": "A",
+                    "outcomes": {
+                      "A": true
+                    },
+                    "passed": true,
+                    "requirement_revision": 1,
+                    "requirements_identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+                    "status": "completed",
+                    "work_id": "0913069db652489bb035f4600e077dec"
+                  }
+                },
+                "request_binding": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "candidate": {
+                    "configuration": "config:nondefault",
+                    "identity": "tree:measured-product"
+                  },
+                  "check_id": "A",
+                  "outcomes": [
+                    "A"
+                  ],
+                  "requirement_revision": 1,
+                  "requirements_identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+                  "work_id": "0913069db652489bb035f4600e077dec"
+                },
+                "requirement_revision": 1,
+                "requirements_identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+                "sequence": 1,
+                "status": "completed",
+                "version": 2,
+                "work_id": "0913069db652489bb035f4600e077dec"
+              }
+            ],
+            "operations": {
+              "5952e29db627118be1fcf9da70d9036b7fb5abdc5203d9d022c46eb02aad9f82": {
+                "action": "invoke",
+                "actor": "owner",
+                "arguments": {
+                  "arguments": {
+                    "arguments": {},
+                    "measurement": {
+                      "bindings": {
+                        "artifact": {
+                          "name": "result.json",
+                          "sha256": "measured-artifact"
+                        },
+                        "native": {
+                          "incarnation": "incarnation-2",
+                          "session_id": "conversation"
+                        },
+                        "scope": "product"
+                      },
+                      "candidate": {
+                        "configuration": "config:nondefault",
+                        "identity": "tree:measured-product"
+                      },
+                      "check_id": "A",
+                      "outcomes": [
+                        "A"
+                      ],
+                      "requirement_revision": 1,
+                      "requirements_identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+                      "work_id": "0913069db652489bb035f4600e077dec"
+                    }
+                  },
+                  "capability": "checks/measure",
+                  "work_id": "0913069db652489bb035f4600e077dec"
+                },
+                "capability": {
+                  "annotations": {},
+                  "description": "Measure the configured product",
+                  "input_schema": {
+                    "required": [
+                      "measurement",
+                      "arguments"
+                    ],
+                    "type": "object"
+                  },
+                  "name": "checks/measure"
+                },
+                "created_at": "2026-10-23T20:00:00Z",
+                "created_by": "owner",
+                "external_result": {
+                  "measurement": {
+                    "bindings": {
+                      "artifact": {
+                        "name": "result.json",
+                        "sha256": "measured-artifact"
+                      },
+                      "native": {
+                        "incarnation": "incarnation-2",
+                        "session_id": "conversation"
+                      },
+                      "scope": "product"
+                    },
+                    "candidate": {
+                      "configuration": "config:nondefault",
+                      "identity": "tree:measured-product"
+                    },
+                    "check_id": "A",
+                    "outcomes": {
+                      "A": true
+                    },
+                    "passed": true,
+                    "requirement_revision": 1,
+                    "requirements_identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+                    "status": "completed",
+                    "work_id": "0913069db652489bb035f4600e077dec"
+                  }
+                },
+                "external_result_origin": "adapter",
+                "fingerprint": "157bef34bb9296fbf2c703338e6ac94c7ed63df59db84254a7a1ebb4ffac4640",
+                "finished_at": "2026-10-23T20:00:00Z",
+                "id": "5952e29db627118be1fcf9da70d9036b7fb5abdc5203d9d022c46eb02aad9f82",
+                "idempotency_key": "measurement:8b3a5034746af54b4e7570fa23cffa998a1bf58a82e7cb0901d10d2630ec7e32",
+                "result": {
+                  "invocation": {
+                    "arguments": {
+                      "arguments": {},
+                      "measurement": {
+                        "bindings": {
+                          "artifact": {
+                            "name": "result.json",
+                            "sha256": "measured-artifact"
+                          },
+                          "native": {
+                            "incarnation": "incarnation-2",
+                            "session_id": "conversation"
+                          },
+                          "scope": "product"
+                        },
+                        "candidate": {
+                          "configuration": "config:nondefault",
+                          "identity": "tree:measured-product"
+                        },
+                        "check_id": "A",
+                        "outcomes": [
+                          "A"
+                        ],
+                        "requirement_revision": 1,
+                        "requirements_identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+                        "work_id": "0913069db652489bb035f4600e077dec"
+                      }
+                    },
+                    "capability": "checks/measure",
+                    "created_at": "2026-10-23T20:00:00Z",
+                    "created_by": "owner",
+                    "id": "5952e29db627118be1fcf9da70d9036b7fb5abdc5203d9d022c46eb02aad9f82",
+                    "operation_id": "5952e29db627118be1fcf9da70d9036b7fb5abdc5203d9d022c46eb02aad9f82",
+                    "result": {
+                      "measurement": {
+                        "bindings": {
+                          "artifact": {
+                            "name": "result.json",
+                            "sha256": "measured-artifact"
+                          },
+                          "native": {
+                            "incarnation": "incarnation-2",
+                            "session_id": "conversation"
+                          },
+                          "scope": "product"
+                        },
+                        "candidate": {
+                          "configuration": "config:nondefault",
+                          "identity": "tree:measured-product"
+                        },
+                        "check_id": "A",
+                        "outcomes": {
+                          "A": true
+                        },
+                        "passed": true,
+                        "requirement_revision": 1,
+                        "requirements_identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+                        "status": "completed",
+                        "work_id": "0913069db652489bb035f4600e077dec"
+                      }
+                    },
+                    "status": "completed",
+                    "version": 2,
+                    "work_id": "0913069db652489bb035f4600e077dec"
+                  },
+                  "operation_id": "5952e29db627118be1fcf9da70d9036b7fb5abdc5203d9d022c46eb02aad9f82"
+                },
+                "status": "completed",
+                "version": 2,
+                "work_id": "0913069db652489bb035f4600e077dec"
+              }
+            },
+            "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+            "provider_configurations": {
+              "checks": null
+            },
+            "requirements": {
+              "checks": {
+                "A": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "capability": "checks/measure",
+                  "outcomes": [
+                    "A"
+                  ]
+                }
+              },
+              "id": "0913069db652489bb035f4600e077dec",
+              "identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+              "objective": "Deliver the complete owner objective",
+              "outcomes": {
+                "A": "Current measurements plus configured review"
+              },
+              "revised_at": "2026-10-23T20:00:00Z",
+              "revised_by": "owner",
+              "version": 1,
+              "work_id": "0913069db652489bb035f4600e077dec"
+            }
+          },
+          "actor": "owner",
+          "actor_record": null,
+          "arguments": {
+            "question": "Evaluate current context",
+            "work_id": "0913069db652489bb035f4600e077dec"
+          },
+          "context": {},
+          "evidence": [
+            {
+              "created_at": "2026-10-23T20:00:00Z",
+              "created_by": "owner",
+              "id": "aa7da18e7e434c61bd82ef9f1f55216f",
+              "result": {
+                "measurement": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "candidate": {
+                    "configuration": "config:nondefault",
+                    "identity": "tree:measured-product"
+                  },
+                  "check_id": "A",
+                  "outcomes": {
+                    "A": true
+                  },
+                  "passed": true,
+                  "requirement_revision": 1,
+                  "requirements_identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+                  "status": "completed",
+                  "work_id": "0913069db652489bb035f4600e077dec"
+                }
+              },
+              "source": {
+                "operation_id": "5952e29db627118be1fcf9da70d9036b7fb5abdc5203d9d022c46eb02aad9f82",
+                "type": "capability"
+              },
+              "version": 1,
+              "work_id": "0913069db652489bb035f4600e077dec"
+            }
+          ],
+          "inputs": {},
+          "native_call": null,
+          "operation": null,
+          "request_context": {},
+          "session": null,
+          "session_actor": null,
+          "work": {
+            "context": {},
+            "created_at": "2026-10-23T20:00:00Z",
+            "created_by": "owner",
+            "goal": "Deliver A and B",
+            "id": "0913069db652489bb035f4600e077dec",
+            "inputs": {},
+            "metadata": {},
+            "status": "open",
+            "title": "Deliver A and B",
+            "version": 1
+          },
+          "work_id": "0913069db652489bb035f4600e077dec"
+        },
+        {
+          "acceptance_basis": {
+            "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+            "binding": {
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "8b3a5034746af54b4e7570fa23cffa998a1bf58a82e7cb0901d10d2630ec7e32",
+                  2,
+                  "c2e86eb53e1215f9a7db8df622619622af56a7b43ab8bf6a5ae5618c72724e5f"
+                ]
+              ],
+              "operations": [
+                [
+                  "5952e29db627118be1fcf9da70d9036b7fb5abdc5203d9d022c46eb02aad9f82",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+              "provider_configurations": {
+                "checks": null
+              },
+              "requirements": {
+                "identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+                "revision": 1
+              }
+            },
+            "candidate": {
+              "candidate": {
+                "configuration": "config:nondefault",
+                "identity": "tree:measured-product"
+              },
+              "id": "0913069db652489bb035f4600e077dec",
+              "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+              "selected_at": "2026-10-23T20:00:00Z",
+              "selected_by": "owner",
+              "version": 1,
+              "work_id": "0913069db652489bb035f4600e077dec"
+            },
+            "contributions": [],
+            "coverage": {
+              "A": {
+                "checks": [
+                  "A"
+                ],
+                "covered": true
+              }
+            },
+            "issues": [],
+            "measurements": [
+              {
+                "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "candidate_revision": 1,
+                "check_id": "A",
+                "created_at": "2026-10-23T20:00:00Z",
+                "created_by": "owner",
+                "fingerprint": "7d4a2801f1ba73fb1560b6bb041d9a4a637076bd77230d037376baeb401b87ac",
+                "finished_at": "2026-10-23T20:00:00Z",
+                "id": "8b3a5034746af54b4e7570fa23cffa998a1bf58a82e7cb0901d10d2630ec7e32",
+                "operation_id": "5952e29db627118be1fcf9da70d9036b7fb5abdc5203d9d022c46eb02aad9f82",
+                "provider_identity": null,
+                "raw_digest": "c2e86eb53e1215f9a7db8df622619622af56a7b43ab8bf6a5ae5618c72724e5f",
+                "raw_response": {
+                  "measurement": {
+                    "bindings": {
+                      "artifact": {
+                        "name": "result.json",
+                        "sha256": "measured-artifact"
+                      },
+                      "native": {
+                        "incarnation": "incarnation-2",
+                        "session_id": "conversation"
+                      },
+                      "scope": "product"
+                    },
+                    "candidate": {
+                      "configuration": "config:nondefault",
+                      "identity": "tree:measured-product"
+                    },
+                    "check_id": "A",
+                    "outcomes": {
+                      "A": true
+                    },
+                    "passed": true,
+                    "requirement_revision": 1,
+                    "requirements_identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+                    "status": "completed",
+                    "work_id": "0913069db652489bb035f4600e077dec"
+                  }
+                },
+                "request_binding": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "candidate": {
+                    "configuration": "config:nondefault",
+                    "identity": "tree:measured-product"
+                  },
+                  "check_id": "A",
+                  "outcomes": [
+                    "A"
+                  ],
+                  "requirement_revision": 1,
+                  "requirements_identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+                  "work_id": "0913069db652489bb035f4600e077dec"
+                },
+                "requirement_revision": 1,
+                "requirements_identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+                "sequence": 1,
+                "status": "completed",
+                "version": 2,
+                "work_id": "0913069db652489bb035f4600e077dec"
+              }
+            ],
+            "operations": {
+              "5952e29db627118be1fcf9da70d9036b7fb5abdc5203d9d022c46eb02aad9f82": {
+                "action": "invoke",
+                "actor": "owner",
+                "arguments": {
+                  "arguments": {
+                    "arguments": {},
+                    "measurement": {
+                      "bindings": {
+                        "artifact": {
+                          "name": "result.json",
+                          "sha256": "measured-artifact"
+                        },
+                        "native": {
+                          "incarnation": "incarnation-2",
+                          "session_id": "conversation"
+                        },
+                        "scope": "product"
+                      },
+                      "candidate": {
+                        "configuration": "config:nondefault",
+                        "identity": "tree:measured-product"
+                      },
+                      "check_id": "A",
+                      "outcomes": [
+                        "A"
+                      ],
+                      "requirement_revision": 1,
+                      "requirements_identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+                      "work_id": "0913069db652489bb035f4600e077dec"
+                    }
+                  },
+                  "capability": "checks/measure",
+                  "work_id": "0913069db652489bb035f4600e077dec"
+                },
+                "capability": {
+                  "annotations": {},
+                  "description": "Measure the configured product",
+                  "input_schema": {
+                    "required": [
+                      "measurement",
+                      "arguments"
+                    ],
+                    "type": "object"
+                  },
+                  "name": "checks/measure"
+                },
+                "created_at": "2026-10-23T20:00:00Z",
+                "created_by": "owner",
+                "external_result": {
+                  "measurement": {
+                    "bindings": {
+                      "artifact": {
+                        "name": "result.json",
+                        "sha256": "measured-artifact"
+                      },
+                      "native": {
+                        "incarnation": "incarnation-2",
+                        "session_id": "conversation"
+                      },
+                      "scope": "product"
+                    },
+                    "candidate": {
+                      "configuration": "config:nondefault",
+                      "identity": "tree:measured-product"
+                    },
+                    "check_id": "A",
+                    "outcomes": {
+                      "A": true
+                    },
+                    "passed": true,
+                    "requirement_revision": 1,
+                    "requirements_identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+                    "status": "completed",
+                    "work_id": "0913069db652489bb035f4600e077dec"
+                  }
+                },
+                "external_result_origin": "adapter",
+                "fingerprint": "157bef34bb9296fbf2c703338e6ac94c7ed63df59db84254a7a1ebb4ffac4640",
+                "finished_at": "2026-10-23T20:00:00Z",
+                "id": "5952e29db627118be1fcf9da70d9036b7fb5abdc5203d9d022c46eb02aad9f82",
+                "idempotency_key": "measurement:8b3a5034746af54b4e7570fa23cffa998a1bf58a82e7cb0901d10d2630ec7e32",
+                "result": {
+                  "invocation": {
+                    "arguments": {
+                      "arguments": {},
+                      "measurement": {
+                        "bindings": {
+                          "artifact": {
+                            "name": "result.json",
+                            "sha256": "measured-artifact"
+                          },
+                          "native": {
+                            "incarnation": "incarnation-2",
+                            "session_id": "conversation"
+                          },
+                          "scope": "product"
+                        },
+                        "candidate": {
+                          "configuration": "config:nondefault",
+                          "identity": "tree:measured-product"
+                        },
+                        "check_id": "A",
+                        "outcomes": [
+                          "A"
+                        ],
+                        "requirement_revision": 1,
+                        "requirements_identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+                        "work_id": "0913069db652489bb035f4600e077dec"
+                      }
+                    },
+                    "capability": "checks/measure",
+                    "created_at": "2026-10-23T20:00:00Z",
+                    "created_by": "owner",
+                    "id": "5952e29db627118be1fcf9da70d9036b7fb5abdc5203d9d022c46eb02aad9f82",
+                    "operation_id": "5952e29db627118be1fcf9da70d9036b7fb5abdc5203d9d022c46eb02aad9f82",
+                    "result": {
+                      "measurement": {
+                        "bindings": {
+                          "artifact": {
+                            "name": "result.json",
+                            "sha256": "measured-artifact"
+                          },
+                          "native": {
+                            "incarnation": "incarnation-2",
+                            "session_id": "conversation"
+                          },
+                          "scope": "product"
+                        },
+                        "candidate": {
+                          "configuration": "config:nondefault",
+                          "identity": "tree:measured-product"
+                        },
+                        "check_id": "A",
+                        "outcomes": {
+                          "A": true
+                        },
+                        "passed": true,
+                        "requirement_revision": 1,
+                        "requirements_identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+                        "status": "completed",
+                        "work_id": "0913069db652489bb035f4600e077dec"
+                      }
+                    },
+                    "status": "completed",
+                    "version": 2,
+                    "work_id": "0913069db652489bb035f4600e077dec"
+                  },
+                  "operation_id": "5952e29db627118be1fcf9da70d9036b7fb5abdc5203d9d022c46eb02aad9f82"
+                },
+                "status": "completed",
+                "version": 2,
+                "work_id": "0913069db652489bb035f4600e077dec"
+              }
+            },
+            "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+            "provider_configurations": {
+              "checks": null
+            },
+            "requirements": {
+              "checks": {
+                "A": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "capability": "checks/measure",
+                  "outcomes": [
+                    "A"
+                  ]
+                }
+              },
+              "id": "0913069db652489bb035f4600e077dec",
+              "identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+              "objective": "Deliver the complete owner objective",
+              "outcomes": {
+                "A": "Current measurements plus configured review"
+              },
+              "revised_at": "2026-10-23T20:00:00Z",
+              "revised_by": "owner",
+              "version": 1,
+              "work_id": "0913069db652489bb035f4600e077dec"
+            }
+          },
+          "actor": "owner",
+          "actor_record": null,
+          "arguments": {
+            "question": "Evaluate current context",
+            "work_id": "0913069db652489bb035f4600e077dec"
+          },
+          "context": {},
+          "evidence": [
+            {
+              "created_at": "2026-10-23T20:00:00Z",
+              "created_by": "owner",
+              "id": "75c84cbc4ceb4b78b117b456ba26d0e7",
+              "result": {
+                "acceptance_binding": {
+                  "candidate": {
+                    "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                    "revision": 1
+                  },
+                  "measurements": [
+                    [
+                      "8b3a5034746af54b4e7570fa23cffa998a1bf58a82e7cb0901d10d2630ec7e32",
+                      2,
+                      "c2e86eb53e1215f9a7db8df622619622af56a7b43ab8bf6a5ae5618c72724e5f"
+                    ]
+                  ],
+                  "operations": [
+                    [
+                      "5952e29db627118be1fcf9da70d9036b7fb5abdc5203d9d022c46eb02aad9f82",
+                      2
+                    ]
+                  ],
+                  "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+                  "provider_configurations": {
+                    "checks": null
+                  },
+                  "requirements": {
+                    "identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+                    "revision": 1
+                  }
+                },
+                "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+                "conclusion": {
+                  "confidence": 0.99,
+                  "details": {},
+                  "evaluator": "review",
+                  "evidence": [],
+                  "outcome": "pass",
+                  "rationale": "Configured synthetic context predicate"
+                },
+                "escalation_error": null,
+                "evaluations": [
+                  {
+                    "confidence": 0.99,
+                    "details": {},
+                    "evaluator": "review",
+                    "evidence": [],
+                    "outcome": "pass",
+                    "rationale": "Configured synthetic context predicate"
+                  }
+                ],
+                "question": "Evaluate current context",
+                "unresolved": false,
+                "work_id": "0913069db652489bb035f4600e077dec",
+                "work_version": 1
+              },
+              "source": {
+                "assessment_id": "45d2accc2dff459983ffd954d0e238fd",
+                "type": "assessment"
+              },
+              "version": 1,
+              "work_id": "0913069db652489bb035f4600e077dec"
+            },
+            {
+              "created_at": "2026-10-23T20:00:00Z",
+              "created_by": "owner",
+              "id": "aa7da18e7e434c61bd82ef9f1f55216f",
+              "result": {
+                "measurement": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "candidate": {
+                    "configuration": "config:nondefault",
+                    "identity": "tree:measured-product"
+                  },
+                  "check_id": "A",
+                  "outcomes": {
+                    "A": true
+                  },
+                  "passed": true,
+                  "requirement_revision": 1,
+                  "requirements_identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+                  "status": "completed",
+                  "work_id": "0913069db652489bb035f4600e077dec"
+                }
+              },
+              "source": {
+                "operation_id": "5952e29db627118be1fcf9da70d9036b7fb5abdc5203d9d022c46eb02aad9f82",
+                "type": "capability"
+              },
+              "version": 1,
+              "work_id": "0913069db652489bb035f4600e077dec"
+            }
+          ],
+          "inputs": {},
+          "native_call": null,
+          "operation": null,
+          "request_context": {},
+          "session": null,
+          "session_actor": null,
+          "work": {
+            "context": {},
+            "created_at": "2026-10-23T20:00:00Z",
+            "created_by": "owner",
+            "goal": "Deliver A and B",
+            "id": "0913069db652489bb035f4600e077dec",
+            "inputs": {},
+            "metadata": {},
+            "status": "open",
+            "title": "A revised display label",
+            "updated_at": "2026-10-23T20:00:00Z",
+            "version": 2
+          },
+          "work_id": "0913069db652489bb035f4600e077dec"
+        }
+      ],
+      "fresh_assessment": {
+        "acceptance_binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "8b3a5034746af54b4e7570fa23cffa998a1bf58a82e7cb0901d10d2630ec7e32",
+              2,
+              "c2e86eb53e1215f9a7db8df622619622af56a7b43ab8bf6a5ae5618c72724e5f"
+            ]
+          ],
+          "operations": [
+            [
+              "5952e29db627118be1fcf9da70d9036b7fb5abdc5203d9d022c46eb02aad9f82",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+            "revision": 1
+          }
+        },
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "conclusion": {
+          "confidence": 0.99,
+          "details": {},
+          "evaluator": "review",
+          "evidence": [],
+          "outcome": "pass",
+          "rationale": "Configured synthetic context predicate"
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "escalation_error": null,
+        "evaluations": [
+          {
+            "confidence": 0.99,
+            "details": {},
+            "evaluator": "review",
+            "evidence": [],
+            "outcome": "pass",
+            "rationale": "Configured synthetic context predicate"
+          }
+        ],
+        "id": "b3acf41dddd14f7b82d146220d675e5c",
+        "question": "Evaluate current context",
+        "unresolved": false,
+        "version": 1,
+        "work_id": "0913069db652489bb035f4600e077dec",
+        "work_version": 2
+      },
+      "fresh_assessment_accepted": true,
+      "fresh_decision": {
+        "accepted": true,
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "assessment_id": "b3acf41dddd14f7b82d146220d675e5c",
+        "assessment_version": 1,
+        "binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "8b3a5034746af54b4e7570fa23cffa998a1bf58a82e7cb0901d10d2630ec7e32",
+              2,
+              "c2e86eb53e1215f9a7db8df622619622af56a7b43ab8bf6a5ae5618c72724e5f"
+            ]
+          ],
+          "operations": [
+            [
+              "5952e29db627118be1fcf9da70d9036b7fb5abdc5203d9d022c46eb02aad9f82",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+            "revision": 1
+          }
+        },
+        "coverage": {
+          "A": {
+            "checks": [
+              "A"
+            ],
+            "covered": true
+          }
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "id": "d3423b1683434a3ab32b73a17d084438",
+        "issues": [],
+        "policy_decision": {
+          "accepted": true,
+          "reasons": []
+        },
+        "sequence": 3,
+        "version": 1,
+        "work_id": "0913069db652489bb035f4600e077dec"
+      },
+      "initial_accepted": true,
+      "known_defect_reproduced": false,
+      "old_assessment": {
+        "acceptance_binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "8b3a5034746af54b4e7570fa23cffa998a1bf58a82e7cb0901d10d2630ec7e32",
+              2,
+              "c2e86eb53e1215f9a7db8df622619622af56a7b43ab8bf6a5ae5618c72724e5f"
+            ]
+          ],
+          "operations": [
+            [
+              "5952e29db627118be1fcf9da70d9036b7fb5abdc5203d9d022c46eb02aad9f82",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+            "revision": 1
+          }
+        },
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "conclusion": {
+          "confidence": 0.99,
+          "details": {},
+          "evaluator": "review",
+          "evidence": [],
+          "outcome": "pass",
+          "rationale": "Configured synthetic context predicate"
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "escalation_error": null,
+        "evaluations": [
+          {
+            "confidence": 0.99,
+            "details": {},
+            "evaluator": "review",
+            "evidence": [],
+            "outcome": "pass",
+            "rationale": "Configured synthetic context predicate"
+          }
+        ],
+        "id": "45d2accc2dff459983ffd954d0e238fd",
+        "question": "Evaluate current context",
+        "unresolved": false,
+        "version": 1,
+        "work_id": "0913069db652489bb035f4600e077dec",
+        "work_version": 1
+      },
+      "old_assessment_reaccepted": true,
+      "persisted_accepted_after_change": true,
+      "replay_decision": {
+        "accepted": true,
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "assessment_id": "45d2accc2dff459983ffd954d0e238fd",
+        "assessment_version": 1,
+        "binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "8b3a5034746af54b4e7570fa23cffa998a1bf58a82e7cb0901d10d2630ec7e32",
+              2,
+              "c2e86eb53e1215f9a7db8df622619622af56a7b43ab8bf6a5ae5618c72724e5f"
+            ]
+          ],
+          "operations": [
+            [
+              "5952e29db627118be1fcf9da70d9036b7fb5abdc5203d9d022c46eb02aad9f82",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "da1924736f7bec7507d1a225d2f9e52ecfc3b31aad48bb194f6817bf05f3f3e7",
+            "revision": 1
+          }
+        },
+        "coverage": {
+          "A": {
+            "checks": [
+              "A"
+            ],
+            "covered": true
+          }
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "id": "767b5c066d574628b2c9f3db61bf9027",
+        "issues": [],
+        "policy_decision": {
+          "accepted": true,
+          "reasons": []
+        },
+        "sequence": 2,
+        "version": 1,
+        "work_id": "0913069db652489bb035f4600e077dec"
+      },
+      "valid_control_passed": true
+    },
+    {
+      "backend": "sqlite",
+      "change": {
+        "context": {
+          "check_result": "failed"
+        }
+      },
+      "evaluator_contexts": [
+        {
+          "acceptance_basis": {
+            "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+            "binding": {
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "703c5cdfb34ecbc06e650c4a88404882032741747d649b9e3f0b5aa75bb3b53a",
+                  2,
+                  "f6aae00a95ab3a8d42a4fdd7171d45ca99d69f585eb6bafbe079aa00ef0f7f99"
+                ]
+              ],
+              "operations": [
+                [
+                  "1ebc73706b5038788e99c278fbea15b6ad54aa2560c8651a8a507cd86dadd682",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+              "provider_configurations": {
+                "checks": null
+              },
+              "requirements": {
+                "identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+                "revision": 1
+              }
+            },
+            "candidate": {
+              "candidate": {
+                "configuration": "config:nondefault",
+                "identity": "tree:measured-product"
+              },
+              "id": "abe8eeb717f1487787436f0faf24079c",
+              "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+              "selected_at": "2026-10-23T20:00:00Z",
+              "selected_by": "owner",
+              "version": 1,
+              "work_id": "abe8eeb717f1487787436f0faf24079c"
+            },
+            "contributions": [],
+            "coverage": {
+              "A": {
+                "checks": [
+                  "A"
+                ],
+                "covered": true
+              }
+            },
+            "issues": [],
+            "measurements": [
+              {
+                "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "candidate_revision": 1,
+                "check_id": "A",
+                "created_at": "2026-10-23T20:00:00Z",
+                "created_by": "owner",
+                "fingerprint": "dcb9139e40d0e41b82518abac4365fe099d5c9306df91159807d4729a82fcf19",
+                "finished_at": "2026-10-23T20:00:00Z",
+                "id": "703c5cdfb34ecbc06e650c4a88404882032741747d649b9e3f0b5aa75bb3b53a",
+                "operation_id": "1ebc73706b5038788e99c278fbea15b6ad54aa2560c8651a8a507cd86dadd682",
+                "provider_identity": null,
+                "raw_digest": "f6aae00a95ab3a8d42a4fdd7171d45ca99d69f585eb6bafbe079aa00ef0f7f99",
+                "raw_response": {
+                  "measurement": {
+                    "bindings": {
+                      "artifact": {
+                        "name": "result.json",
+                        "sha256": "measured-artifact"
+                      },
+                      "native": {
+                        "incarnation": "incarnation-2",
+                        "session_id": "conversation"
+                      },
+                      "scope": "product"
+                    },
+                    "candidate": {
+                      "configuration": "config:nondefault",
+                      "identity": "tree:measured-product"
+                    },
+                    "check_id": "A",
+                    "outcomes": {
+                      "A": true
+                    },
+                    "passed": true,
+                    "requirement_revision": 1,
+                    "requirements_identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+                    "status": "completed",
+                    "work_id": "abe8eeb717f1487787436f0faf24079c"
+                  }
+                },
+                "request_binding": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "candidate": {
+                    "configuration": "config:nondefault",
+                    "identity": "tree:measured-product"
+                  },
+                  "check_id": "A",
+                  "outcomes": [
+                    "A"
+                  ],
+                  "requirement_revision": 1,
+                  "requirements_identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+                  "work_id": "abe8eeb717f1487787436f0faf24079c"
+                },
+                "requirement_revision": 1,
+                "requirements_identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+                "sequence": 1,
+                "status": "completed",
+                "version": 2,
+                "work_id": "abe8eeb717f1487787436f0faf24079c"
+              }
+            ],
+            "operations": {
+              "1ebc73706b5038788e99c278fbea15b6ad54aa2560c8651a8a507cd86dadd682": {
+                "action": "invoke",
+                "actor": "owner",
+                "arguments": {
+                  "arguments": {
+                    "arguments": {},
+                    "measurement": {
+                      "bindings": {
+                        "artifact": {
+                          "name": "result.json",
+                          "sha256": "measured-artifact"
+                        },
+                        "native": {
+                          "incarnation": "incarnation-2",
+                          "session_id": "conversation"
+                        },
+                        "scope": "product"
+                      },
+                      "candidate": {
+                        "configuration": "config:nondefault",
+                        "identity": "tree:measured-product"
+                      },
+                      "check_id": "A",
+                      "outcomes": [
+                        "A"
+                      ],
+                      "requirement_revision": 1,
+                      "requirements_identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+                      "work_id": "abe8eeb717f1487787436f0faf24079c"
+                    }
+                  },
+                  "capability": "checks/measure",
+                  "work_id": "abe8eeb717f1487787436f0faf24079c"
+                },
+                "capability": {
+                  "annotations": {},
+                  "description": "Measure the configured product",
+                  "input_schema": {
+                    "required": [
+                      "measurement",
+                      "arguments"
+                    ],
+                    "type": "object"
+                  },
+                  "name": "checks/measure"
+                },
+                "created_at": "2026-10-23T20:00:00Z",
+                "created_by": "owner",
+                "external_result": {
+                  "measurement": {
+                    "bindings": {
+                      "artifact": {
+                        "name": "result.json",
+                        "sha256": "measured-artifact"
+                      },
+                      "native": {
+                        "incarnation": "incarnation-2",
+                        "session_id": "conversation"
+                      },
+                      "scope": "product"
+                    },
+                    "candidate": {
+                      "configuration": "config:nondefault",
+                      "identity": "tree:measured-product"
+                    },
+                    "check_id": "A",
+                    "outcomes": {
+                      "A": true
+                    },
+                    "passed": true,
+                    "requirement_revision": 1,
+                    "requirements_identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+                    "status": "completed",
+                    "work_id": "abe8eeb717f1487787436f0faf24079c"
+                  }
+                },
+                "external_result_origin": "adapter",
+                "fingerprint": "d554b1ea5081bf2e5fbfe16fd669eded7f997532f39d742019d10c4b289085ee",
+                "finished_at": "2026-10-23T20:00:00Z",
+                "id": "1ebc73706b5038788e99c278fbea15b6ad54aa2560c8651a8a507cd86dadd682",
+                "idempotency_key": "measurement:703c5cdfb34ecbc06e650c4a88404882032741747d649b9e3f0b5aa75bb3b53a",
+                "result": {
+                  "invocation": {
+                    "arguments": {
+                      "arguments": {},
+                      "measurement": {
+                        "bindings": {
+                          "artifact": {
+                            "name": "result.json",
+                            "sha256": "measured-artifact"
+                          },
+                          "native": {
+                            "incarnation": "incarnation-2",
+                            "session_id": "conversation"
+                          },
+                          "scope": "product"
+                        },
+                        "candidate": {
+                          "configuration": "config:nondefault",
+                          "identity": "tree:measured-product"
+                        },
+                        "check_id": "A",
+                        "outcomes": [
+                          "A"
+                        ],
+                        "requirement_revision": 1,
+                        "requirements_identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+                        "work_id": "abe8eeb717f1487787436f0faf24079c"
+                      }
+                    },
+                    "capability": "checks/measure",
+                    "created_at": "2026-10-23T20:00:00Z",
+                    "created_by": "owner",
+                    "id": "1ebc73706b5038788e99c278fbea15b6ad54aa2560c8651a8a507cd86dadd682",
+                    "operation_id": "1ebc73706b5038788e99c278fbea15b6ad54aa2560c8651a8a507cd86dadd682",
+                    "result": {
+                      "measurement": {
+                        "bindings": {
+                          "artifact": {
+                            "name": "result.json",
+                            "sha256": "measured-artifact"
+                          },
+                          "native": {
+                            "incarnation": "incarnation-2",
+                            "session_id": "conversation"
+                          },
+                          "scope": "product"
+                        },
+                        "candidate": {
+                          "configuration": "config:nondefault",
+                          "identity": "tree:measured-product"
+                        },
+                        "check_id": "A",
+                        "outcomes": {
+                          "A": true
+                        },
+                        "passed": true,
+                        "requirement_revision": 1,
+                        "requirements_identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+                        "status": "completed",
+                        "work_id": "abe8eeb717f1487787436f0faf24079c"
+                      }
+                    },
+                    "status": "completed",
+                    "version": 2,
+                    "work_id": "abe8eeb717f1487787436f0faf24079c"
+                  },
+                  "operation_id": "1ebc73706b5038788e99c278fbea15b6ad54aa2560c8651a8a507cd86dadd682"
+                },
+                "status": "completed",
+                "version": 2,
+                "work_id": "abe8eeb717f1487787436f0faf24079c"
+              }
+            },
+            "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+            "provider_configurations": {
+              "checks": null
+            },
+            "requirements": {
+              "checks": {
+                "A": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "capability": "checks/measure",
+                  "outcomes": [
+                    "A"
+                  ]
+                }
+              },
+              "id": "abe8eeb717f1487787436f0faf24079c",
+              "identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+              "objective": "Deliver the complete owner objective",
+              "outcomes": {
+                "A": "Current measurements plus configured review"
+              },
+              "revised_at": "2026-10-23T20:00:00Z",
+              "revised_by": "owner",
+              "version": 1,
+              "work_id": "abe8eeb717f1487787436f0faf24079c"
+            }
+          },
+          "actor": "owner",
+          "actor_record": null,
+          "arguments": {
+            "question": "Evaluate current context",
+            "work_id": "abe8eeb717f1487787436f0faf24079c"
+          },
+          "context": {},
+          "evidence": [
+            {
+              "created_at": "2026-10-23T20:00:00Z",
+              "created_by": "owner",
+              "id": "9e89cdf615304ba49116a212973922f3",
+              "result": {
+                "measurement": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "candidate": {
+                    "configuration": "config:nondefault",
+                    "identity": "tree:measured-product"
+                  },
+                  "check_id": "A",
+                  "outcomes": {
+                    "A": true
+                  },
+                  "passed": true,
+                  "requirement_revision": 1,
+                  "requirements_identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+                  "status": "completed",
+                  "work_id": "abe8eeb717f1487787436f0faf24079c"
+                }
+              },
+              "source": {
+                "operation_id": "1ebc73706b5038788e99c278fbea15b6ad54aa2560c8651a8a507cd86dadd682",
+                "type": "capability"
+              },
+              "version": 1,
+              "work_id": "abe8eeb717f1487787436f0faf24079c"
+            }
+          ],
+          "inputs": {},
+          "native_call": null,
+          "operation": null,
+          "request_context": {},
+          "session": null,
+          "session_actor": null,
+          "work": {
+            "context": {},
+            "created_at": "2026-10-23T20:00:00Z",
+            "created_by": "owner",
+            "goal": "Deliver A and B",
+            "id": "abe8eeb717f1487787436f0faf24079c",
+            "inputs": {},
+            "metadata": {},
+            "status": "open",
+            "title": "Deliver A and B",
+            "version": 1
+          },
+          "work_id": "abe8eeb717f1487787436f0faf24079c"
+        },
+        {
+          "acceptance_basis": {
+            "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+            "binding": {
+              "candidate": {
+                "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "revision": 1
+              },
+              "measurements": [
+                [
+                  "703c5cdfb34ecbc06e650c4a88404882032741747d649b9e3f0b5aa75bb3b53a",
+                  2,
+                  "f6aae00a95ab3a8d42a4fdd7171d45ca99d69f585eb6bafbe079aa00ef0f7f99"
+                ]
+              ],
+              "operations": [
+                [
+                  "1ebc73706b5038788e99c278fbea15b6ad54aa2560c8651a8a507cd86dadd682",
+                  2
+                ]
+              ],
+              "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+              "provider_configurations": {
+                "checks": null
+              },
+              "requirements": {
+                "identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+                "revision": 1
+              }
+            },
+            "candidate": {
+              "candidate": {
+                "configuration": "config:nondefault",
+                "identity": "tree:measured-product"
+              },
+              "id": "abe8eeb717f1487787436f0faf24079c",
+              "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+              "selected_at": "2026-10-23T20:00:00Z",
+              "selected_by": "owner",
+              "version": 1,
+              "work_id": "abe8eeb717f1487787436f0faf24079c"
+            },
+            "contributions": [],
+            "coverage": {
+              "A": {
+                "checks": [
+                  "A"
+                ],
+                "covered": true
+              }
+            },
+            "issues": [],
+            "measurements": [
+              {
+                "candidate_identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                "candidate_revision": 1,
+                "check_id": "A",
+                "created_at": "2026-10-23T20:00:00Z",
+                "created_by": "owner",
+                "fingerprint": "dcb9139e40d0e41b82518abac4365fe099d5c9306df91159807d4729a82fcf19",
+                "finished_at": "2026-10-23T20:00:00Z",
+                "id": "703c5cdfb34ecbc06e650c4a88404882032741747d649b9e3f0b5aa75bb3b53a",
+                "operation_id": "1ebc73706b5038788e99c278fbea15b6ad54aa2560c8651a8a507cd86dadd682",
+                "provider_identity": null,
+                "raw_digest": "f6aae00a95ab3a8d42a4fdd7171d45ca99d69f585eb6bafbe079aa00ef0f7f99",
+                "raw_response": {
+                  "measurement": {
+                    "bindings": {
+                      "artifact": {
+                        "name": "result.json",
+                        "sha256": "measured-artifact"
+                      },
+                      "native": {
+                        "incarnation": "incarnation-2",
+                        "session_id": "conversation"
+                      },
+                      "scope": "product"
+                    },
+                    "candidate": {
+                      "configuration": "config:nondefault",
+                      "identity": "tree:measured-product"
+                    },
+                    "check_id": "A",
+                    "outcomes": {
+                      "A": true
+                    },
+                    "passed": true,
+                    "requirement_revision": 1,
+                    "requirements_identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+                    "status": "completed",
+                    "work_id": "abe8eeb717f1487787436f0faf24079c"
+                  }
+                },
+                "request_binding": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "candidate": {
+                    "configuration": "config:nondefault",
+                    "identity": "tree:measured-product"
+                  },
+                  "check_id": "A",
+                  "outcomes": [
+                    "A"
+                  ],
+                  "requirement_revision": 1,
+                  "requirements_identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+                  "work_id": "abe8eeb717f1487787436f0faf24079c"
+                },
+                "requirement_revision": 1,
+                "requirements_identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+                "sequence": 1,
+                "status": "completed",
+                "version": 2,
+                "work_id": "abe8eeb717f1487787436f0faf24079c"
+              }
+            ],
+            "operations": {
+              "1ebc73706b5038788e99c278fbea15b6ad54aa2560c8651a8a507cd86dadd682": {
+                "action": "invoke",
+                "actor": "owner",
+                "arguments": {
+                  "arguments": {
+                    "arguments": {},
+                    "measurement": {
+                      "bindings": {
+                        "artifact": {
+                          "name": "result.json",
+                          "sha256": "measured-artifact"
+                        },
+                        "native": {
+                          "incarnation": "incarnation-2",
+                          "session_id": "conversation"
+                        },
+                        "scope": "product"
+                      },
+                      "candidate": {
+                        "configuration": "config:nondefault",
+                        "identity": "tree:measured-product"
+                      },
+                      "check_id": "A",
+                      "outcomes": [
+                        "A"
+                      ],
+                      "requirement_revision": 1,
+                      "requirements_identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+                      "work_id": "abe8eeb717f1487787436f0faf24079c"
+                    }
+                  },
+                  "capability": "checks/measure",
+                  "work_id": "abe8eeb717f1487787436f0faf24079c"
+                },
+                "capability": {
+                  "annotations": {},
+                  "description": "Measure the configured product",
+                  "input_schema": {
+                    "required": [
+                      "measurement",
+                      "arguments"
+                    ],
+                    "type": "object"
+                  },
+                  "name": "checks/measure"
+                },
+                "created_at": "2026-10-23T20:00:00Z",
+                "created_by": "owner",
+                "external_result": {
+                  "measurement": {
+                    "bindings": {
+                      "artifact": {
+                        "name": "result.json",
+                        "sha256": "measured-artifact"
+                      },
+                      "native": {
+                        "incarnation": "incarnation-2",
+                        "session_id": "conversation"
+                      },
+                      "scope": "product"
+                    },
+                    "candidate": {
+                      "configuration": "config:nondefault",
+                      "identity": "tree:measured-product"
+                    },
+                    "check_id": "A",
+                    "outcomes": {
+                      "A": true
+                    },
+                    "passed": true,
+                    "requirement_revision": 1,
+                    "requirements_identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+                    "status": "completed",
+                    "work_id": "abe8eeb717f1487787436f0faf24079c"
+                  }
+                },
+                "external_result_origin": "adapter",
+                "fingerprint": "d554b1ea5081bf2e5fbfe16fd669eded7f997532f39d742019d10c4b289085ee",
+                "finished_at": "2026-10-23T20:00:00Z",
+                "id": "1ebc73706b5038788e99c278fbea15b6ad54aa2560c8651a8a507cd86dadd682",
+                "idempotency_key": "measurement:703c5cdfb34ecbc06e650c4a88404882032741747d649b9e3f0b5aa75bb3b53a",
+                "result": {
+                  "invocation": {
+                    "arguments": {
+                      "arguments": {},
+                      "measurement": {
+                        "bindings": {
+                          "artifact": {
+                            "name": "result.json",
+                            "sha256": "measured-artifact"
+                          },
+                          "native": {
+                            "incarnation": "incarnation-2",
+                            "session_id": "conversation"
+                          },
+                          "scope": "product"
+                        },
+                        "candidate": {
+                          "configuration": "config:nondefault",
+                          "identity": "tree:measured-product"
+                        },
+                        "check_id": "A",
+                        "outcomes": [
+                          "A"
+                        ],
+                        "requirement_revision": 1,
+                        "requirements_identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+                        "work_id": "abe8eeb717f1487787436f0faf24079c"
+                      }
+                    },
+                    "capability": "checks/measure",
+                    "created_at": "2026-10-23T20:00:00Z",
+                    "created_by": "owner",
+                    "id": "1ebc73706b5038788e99c278fbea15b6ad54aa2560c8651a8a507cd86dadd682",
+                    "operation_id": "1ebc73706b5038788e99c278fbea15b6ad54aa2560c8651a8a507cd86dadd682",
+                    "result": {
+                      "measurement": {
+                        "bindings": {
+                          "artifact": {
+                            "name": "result.json",
+                            "sha256": "measured-artifact"
+                          },
+                          "native": {
+                            "incarnation": "incarnation-2",
+                            "session_id": "conversation"
+                          },
+                          "scope": "product"
+                        },
+                        "candidate": {
+                          "configuration": "config:nondefault",
+                          "identity": "tree:measured-product"
+                        },
+                        "check_id": "A",
+                        "outcomes": {
+                          "A": true
+                        },
+                        "passed": true,
+                        "requirement_revision": 1,
+                        "requirements_identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+                        "status": "completed",
+                        "work_id": "abe8eeb717f1487787436f0faf24079c"
+                      }
+                    },
+                    "status": "completed",
+                    "version": 2,
+                    "work_id": "abe8eeb717f1487787436f0faf24079c"
+                  },
+                  "operation_id": "1ebc73706b5038788e99c278fbea15b6ad54aa2560c8651a8a507cd86dadd682"
+                },
+                "status": "completed",
+                "version": 2,
+                "work_id": "abe8eeb717f1487787436f0faf24079c"
+              }
+            },
+            "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+            "provider_configurations": {
+              "checks": null
+            },
+            "requirements": {
+              "checks": {
+                "A": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "capability": "checks/measure",
+                  "outcomes": [
+                    "A"
+                  ]
+                }
+              },
+              "id": "abe8eeb717f1487787436f0faf24079c",
+              "identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+              "objective": "Deliver the complete owner objective",
+              "outcomes": {
+                "A": "Current measurements plus configured review"
+              },
+              "revised_at": "2026-10-23T20:00:00Z",
+              "revised_by": "owner",
+              "version": 1,
+              "work_id": "abe8eeb717f1487787436f0faf24079c"
+            }
+          },
+          "actor": "owner",
+          "actor_record": null,
+          "arguments": {
+            "question": "Evaluate current context",
+            "work_id": "abe8eeb717f1487787436f0faf24079c"
+          },
+          "context": {
+            "check_result": "failed"
+          },
+          "evidence": [
+            {
+              "created_at": "2026-10-23T20:00:00Z",
+              "created_by": "owner",
+              "id": "39847c1d1c9a4c5cb7e124954a56032c",
+              "result": {
+                "acceptance_binding": {
+                  "candidate": {
+                    "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+                    "revision": 1
+                  },
+                  "measurements": [
+                    [
+                      "703c5cdfb34ecbc06e650c4a88404882032741747d649b9e3f0b5aa75bb3b53a",
+                      2,
+                      "f6aae00a95ab3a8d42a4fdd7171d45ca99d69f585eb6bafbe079aa00ef0f7f99"
+                    ]
+                  ],
+                  "operations": [
+                    [
+                      "1ebc73706b5038788e99c278fbea15b6ad54aa2560c8651a8a507cd86dadd682",
+                      2
+                    ]
+                  ],
+                  "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+                  "provider_configurations": {
+                    "checks": null
+                  },
+                  "requirements": {
+                    "identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+                    "revision": 1
+                  }
+                },
+                "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+                "conclusion": {
+                  "confidence": 0.99,
+                  "details": {},
+                  "evaluator": "review",
+                  "evidence": [],
+                  "outcome": "pass",
+                  "rationale": "Configured synthetic context predicate"
+                },
+                "escalation_error": null,
+                "evaluations": [
+                  {
+                    "confidence": 0.99,
+                    "details": {},
+                    "evaluator": "review",
+                    "evidence": [],
+                    "outcome": "pass",
+                    "rationale": "Configured synthetic context predicate"
+                  }
+                ],
+                "question": "Evaluate current context",
+                "unresolved": false,
+                "work_id": "abe8eeb717f1487787436f0faf24079c",
+                "work_version": 1
+              },
+              "source": {
+                "assessment_id": "42c1824f56944fc8aaaa9ef7fb299cfe",
+                "type": "assessment"
+              },
+              "version": 1,
+              "work_id": "abe8eeb717f1487787436f0faf24079c"
+            },
+            {
+              "created_at": "2026-10-23T20:00:00Z",
+              "created_by": "owner",
+              "id": "9e89cdf615304ba49116a212973922f3",
+              "result": {
+                "measurement": {
+                  "bindings": {
+                    "artifact": {
+                      "name": "result.json",
+                      "sha256": "measured-artifact"
+                    },
+                    "native": {
+                      "incarnation": "incarnation-2",
+                      "session_id": "conversation"
+                    },
+                    "scope": "product"
+                  },
+                  "candidate": {
+                    "configuration": "config:nondefault",
+                    "identity": "tree:measured-product"
+                  },
+                  "check_id": "A",
+                  "outcomes": {
+                    "A": true
+                  },
+                  "passed": true,
+                  "requirement_revision": 1,
+                  "requirements_identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+                  "status": "completed",
+                  "work_id": "abe8eeb717f1487787436f0faf24079c"
+                }
+              },
+              "source": {
+                "operation_id": "1ebc73706b5038788e99c278fbea15b6ad54aa2560c8651a8a507cd86dadd682",
+                "type": "capability"
+              },
+              "version": 1,
+              "work_id": "abe8eeb717f1487787436f0faf24079c"
+            }
+          ],
+          "inputs": {},
+          "native_call": null,
+          "operation": null,
+          "request_context": {},
+          "session": null,
+          "session_actor": null,
+          "work": {
+            "context": {
+              "check_result": "failed"
+            },
+            "created_at": "2026-10-23T20:00:00Z",
+            "created_by": "owner",
+            "goal": "Deliver A and B",
+            "id": "abe8eeb717f1487787436f0faf24079c",
+            "inputs": {},
+            "metadata": {},
+            "status": "open",
+            "title": "Deliver A and B",
+            "updated_at": "2026-10-23T20:00:00Z",
+            "version": 2
+          },
+          "work_id": "abe8eeb717f1487787436f0faf24079c"
+        }
+      ],
+      "fresh_assessment": {
+        "acceptance_binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "703c5cdfb34ecbc06e650c4a88404882032741747d649b9e3f0b5aa75bb3b53a",
+              2,
+              "f6aae00a95ab3a8d42a4fdd7171d45ca99d69f585eb6bafbe079aa00ef0f7f99"
+            ]
+          ],
+          "operations": [
+            [
+              "1ebc73706b5038788e99c278fbea15b6ad54aa2560c8651a8a507cd86dadd682",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+            "revision": 1
+          }
+        },
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "conclusion": {
+          "confidence": 0.99,
+          "details": {},
+          "evaluator": "review",
+          "evidence": [],
+          "outcome": "reject",
+          "rationale": "Configured synthetic context predicate"
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "escalation_error": null,
+        "evaluations": [
+          {
+            "confidence": 0.99,
+            "details": {},
+            "evaluator": "review",
+            "evidence": [],
+            "outcome": "reject",
+            "rationale": "Configured synthetic context predicate"
+          }
+        ],
+        "id": "3fdca4a05d3f47b3ba2bde669c905225",
+        "question": "Evaluate current context",
+        "unresolved": false,
+        "version": 1,
+        "work_id": "abe8eeb717f1487787436f0faf24079c",
+        "work_version": 2
+      },
+      "fresh_assessment_accepted": false,
+      "fresh_decision": {
+        "accepted": false,
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "assessment_id": "3fdca4a05d3f47b3ba2bde669c905225",
+        "assessment_version": 1,
+        "binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "703c5cdfb34ecbc06e650c4a88404882032741747d649b9e3f0b5aa75bb3b53a",
+              2,
+              "f6aae00a95ab3a8d42a4fdd7171d45ca99d69f585eb6bafbe079aa00ef0f7f99"
+            ]
+          ],
+          "operations": [
+            [
+              "1ebc73706b5038788e99c278fbea15b6ad54aa2560c8651a8a507cd86dadd682",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+            "revision": 1
+          }
+        },
+        "coverage": {
+          "A": {
+            "checks": [
+              "A"
+            ],
+            "covered": true
+          }
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "id": "08d7097403014c8cb3aa072774ad8949",
+        "issues": [],
+        "policy_decision": {
+          "accepted": false,
+          "reasons": [
+            {
+              "code": "assessment_unfavorable"
+            }
+          ]
+        },
+        "sequence": 3,
+        "version": 1,
+        "work_id": "abe8eeb717f1487787436f0faf24079c"
+      },
+      "initial_accepted": true,
+      "known_defect_reproduced": true,
+      "old_assessment": {
+        "acceptance_binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "703c5cdfb34ecbc06e650c4a88404882032741747d649b9e3f0b5aa75bb3b53a",
+              2,
+              "f6aae00a95ab3a8d42a4fdd7171d45ca99d69f585eb6bafbe079aa00ef0f7f99"
+            ]
+          ],
+          "operations": [
+            [
+              "1ebc73706b5038788e99c278fbea15b6ad54aa2560c8651a8a507cd86dadd682",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+            "revision": 1
+          }
+        },
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "conclusion": {
+          "confidence": 0.99,
+          "details": {},
+          "evaluator": "review",
+          "evidence": [],
+          "outcome": "pass",
+          "rationale": "Configured synthetic context predicate"
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "escalation_error": null,
+        "evaluations": [
+          {
+            "confidence": 0.99,
+            "details": {},
+            "evaluator": "review",
+            "evidence": [],
+            "outcome": "pass",
+            "rationale": "Configured synthetic context predicate"
+          }
+        ],
+        "id": "42c1824f56944fc8aaaa9ef7fb299cfe",
+        "question": "Evaluate current context",
+        "unresolved": false,
+        "version": 1,
+        "work_id": "abe8eeb717f1487787436f0faf24079c",
+        "work_version": 1
+      },
+      "old_assessment_reaccepted": true,
+      "persisted_accepted_after_change": true,
+      "replay_decision": {
+        "accepted": true,
+        "assessment_configuration_identity": "8087fd5c21bb36b723982394fd7bbbc20b30a5be168e56b4a883659489232a6c",
+        "assessment_id": "42c1824f56944fc8aaaa9ef7fb299cfe",
+        "assessment_version": 1,
+        "binding": {
+          "candidate": {
+            "identity": "3f4eca90756891ab29de29dd38fbec89cd6c7a6ef57ab10cd42b0e23741c6009",
+            "revision": 1
+          },
+          "measurements": [
+            [
+              "703c5cdfb34ecbc06e650c4a88404882032741747d649b9e3f0b5aa75bb3b53a",
+              2,
+              "f6aae00a95ab3a8d42a4fdd7171d45ca99d69f585eb6bafbe079aa00ef0f7f99"
+            ]
+          ],
+          "operations": [
+            [
+              "1ebc73706b5038788e99c278fbea15b6ad54aa2560c8651a8a507cd86dadd682",
+              2
+            ]
+          ],
+          "policy_identity": "required-checks-v1:f6408fd73edd65cf78468ec61eab387d69cfe71a059f66b9ff8f15054b0ac14d",
+          "provider_configurations": {
+            "checks": null
+          },
+          "requirements": {
+            "identity": "fd5b58f0315c84cb8f3cfee25b6248f9e38cb7b372989c308ef53f09adb73e86",
+            "revision": 1
+          }
+        },
+        "coverage": {
+          "A": {
+            "checks": [
+              "A"
+            ],
+            "covered": true
+          }
+        },
+        "created_at": "2026-10-23T20:00:00Z",
+        "created_by": "owner",
+        "id": "14817ad11f664666b4f3a7d02bcfa31f",
+        "issues": [],
+        "policy_decision": {
+          "accepted": true,
+          "reasons": []
+        },
+        "sequence": 2,
+        "version": 1,
+        "work_id": "abe8eeb717f1487787436f0faf24079c"
+      },
+      "valid_control_passed": false
+    }
+  ]
+}

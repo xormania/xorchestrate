@@ -1,0 +1,562 @@
+{
+  "version": "1",
+  "github_run": "https://github.com/xormania/xorchestrate/actions/runs/40065048378",
+  "scope": "Read-only post-run comparison; no source edits, fixture reruns, relabeling or API calls.",
+  "finding": "Experiment p4 target identity is not portable when output is inside the repository.",
+  "mechanism": "The execution command omits an explicit pytest rootdir. Hosted output resides under the repository and pytest emits repository-relative qualified JUnit classnames. The probe hardcodes test_probe::test_target and test_probe::control. These keys are absent, so the native classifier returns not_exercised and target_observation is null. known_defect_reproduced requires BOTH native and work classifiers to say detected, producing zero despite the work classifier reproducing the fault.",
+  "source_lines": {
+    "experiments/jev_failure_correlation/probes.py": [
+      51,
+      79,
+      100,
+      101,
+      102,
+      103,
+      111
+    ]
+  },
+  "recorded_source_identities_match": true,
+  "recorded_git_head": "454f6f25cb01d0aca793e21c72a032f8428535a9",
+  "python_versions": {
+    "local": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+    "hosted": "3.12.15 (main, Oct  1 2026, 02:35:59) [GCC 13.3.0]"
+  },
+  "comparisons": [
+    {
+      "selector": "baseline",
+      "observation_sha256": "61cfb754abf5b9dde379912c4a4373af4012c35ad370bd11af68a1a2f5addf16",
+      "rows": [
+        {
+          "variant": "q01",
+          "local_exact_keys": [
+            "test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "test_probe::test_target"
+          ],
+          "hosted_exact_keys": [
+            "experiment-results.baseline-probes.p4.q01.input.test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "experiment-results.baseline-probes.p4.q01.input.test_probe::test_target"
+          ],
+          "hosted_target_testcases": 1,
+          "hosted_terminal_diagnostic": "AssertionError: TARGET_REQUIREMENT",
+          "exit_codes": {
+            "local": 1,
+            "hosted": 1
+          },
+          "native_classification": {
+            "local": "detected",
+            "hosted": "not_exercised"
+          },
+          "work_classification": {
+            "local": "detected",
+            "hosted": "detected"
+          },
+          "source_hashes_identical": true,
+          "evidence": {
+            "hosted_xml": "baseline-probes/p4/q01/output/results.xml",
+            "hosted_xml_sha256": "72fbcf6b7b591bfce2ef96e8e8aa3898b4d0cd7aeb66c32c45cbcd1f5a7724a1",
+            "local_xml": "baseline-probes/p4/q01/output/results.xml",
+            "local_xml_sha256": "a1328f26e70930e41a5cdb09502cd7491e44e0de223a633b1da2aa39fcc3515f"
+          }
+        },
+        {
+          "variant": "q02",
+          "local_exact_keys": [
+            "test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "test_probe::test_target"
+          ],
+          "hosted_exact_keys": [
+            "experiment-results.baseline-probes.p4.q02.input.test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "experiment-results.baseline-probes.p4.q02.input.test_probe::test_target"
+          ],
+          "hosted_target_testcases": 1,
+          "hosted_terminal_diagnostic": "TimeoutError: clock did not respond",
+          "exit_codes": {
+            "local": 1,
+            "hosted": 1
+          },
+          "native_classification": {
+            "local": "detected",
+            "hosted": "not_exercised"
+          },
+          "work_classification": {
+            "local": "detected",
+            "hosted": "detected"
+          },
+          "source_hashes_identical": true,
+          "evidence": {
+            "hosted_xml": "baseline-probes/p4/q02/output/results.xml",
+            "hosted_xml_sha256": "552e9c3f797e66e628eee4456201216131150dd3ce6d3da4114cf693a845d552",
+            "local_xml": "baseline-probes/p4/q02/output/results.xml",
+            "local_xml_sha256": "d00b1f19ffcee376e59b9f005b791ba2330df901dede24e93c60e7edf1cf605d"
+          }
+        },
+        {
+          "variant": "q03",
+          "local_exact_keys": [
+            "test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "test_probe::test_target"
+          ],
+          "hosted_exact_keys": [
+            "experiment-results.baseline-probes.p4.q03.input.test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "experiment-results.baseline-probes.p4.q03.input.test_probe::test_target"
+          ],
+          "hosted_target_testcases": 1,
+          "hosted_terminal_diagnostic": "ValueError: malformed response",
+          "exit_codes": {
+            "local": 1,
+            "hosted": 1
+          },
+          "native_classification": {
+            "local": "detected",
+            "hosted": "not_exercised"
+          },
+          "work_classification": {
+            "local": "detected",
+            "hosted": "detected"
+          },
+          "source_hashes_identical": true,
+          "evidence": {
+            "hosted_xml": "baseline-probes/p4/q03/output/results.xml",
+            "hosted_xml_sha256": "88b2128c9510e7437bf2794dec971b7b1448194f7641f114bad7bbda0e94022d",
+            "local_xml": "baseline-probes/p4/q03/output/results.xml",
+            "local_xml_sha256": "b8816bd875e5dd199f0f401d1dc5ba869f9119bc88c369ded819efe09eafcf77"
+          }
+        },
+        {
+          "variant": "q04",
+          "local_exact_keys": [
+            "test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "test_probe::test_target"
+          ],
+          "hosted_exact_keys": [
+            "experiment-results.baseline-probes.p4.q04.input.test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "experiment-results.baseline-probes.p4.q04.input.test_probe::test_target"
+          ],
+          "hosted_target_testcases": 1,
+          "hosted_terminal_diagnostic": "AssertionError: dependency invariant",
+          "exit_codes": {
+            "local": 1,
+            "hosted": 1
+          },
+          "native_classification": {
+            "local": "detected",
+            "hosted": "not_exercised"
+          },
+          "work_classification": {
+            "local": "detected",
+            "hosted": "detected"
+          },
+          "source_hashes_identical": true,
+          "evidence": {
+            "hosted_xml": "baseline-probes/p4/q04/output/results.xml",
+            "hosted_xml_sha256": "bcb51bb9fe819501e32722aca522480241c529a923a61cf9e4d410ae8e205ab0",
+            "local_xml": "baseline-probes/p4/q04/output/results.xml",
+            "local_xml_sha256": "8e41e5716cb57d739198b7958f8ba539bae0b1f9d1c45cf406e210c5e9b762d4"
+          }
+        },
+        {
+          "variant": "q05",
+          "local_exact_keys": [
+            "test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "test_probe::test_target"
+          ],
+          "hosted_exact_keys": [
+            "experiment-results.baseline-probes.p4.q05.input.test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "experiment-results.baseline-probes.p4.q05.input.test_probe::test_target"
+          ],
+          "hosted_target_testcases": 1,
+          "hosted_terminal_diagnostic": null,
+          "exit_codes": {
+            "local": 0,
+            "hosted": 0
+          },
+          "native_classification": {
+            "local": "escaped_fault",
+            "hosted": "not_exercised"
+          },
+          "work_classification": {
+            "local": "escaped_fault",
+            "hosted": "escaped_fault"
+          },
+          "source_hashes_identical": true,
+          "evidence": {
+            "hosted_xml": "baseline-probes/p4/q05/output/results.xml",
+            "hosted_xml_sha256": "932c67eda751c127fa1c6e9cb0f41110947ee2d825c60c58b368bf5760414c09",
+            "local_xml": "baseline-probes/p4/q05/output/results.xml",
+            "local_xml_sha256": "b8afdb0264eecbe94169ff4b062e282b6a28be34b6ffad949fb85690c26315ab"
+          }
+        },
+        {
+          "variant": "q06",
+          "local_exact_keys": [
+            "::test_probe"
+          ],
+          "hosted_exact_keys": [
+            "::experiment-results.baseline-probes.p4.q06.input.test_probe"
+          ],
+          "hosted_target_testcases": 0,
+          "hosted_terminal_diagnostic": null,
+          "exit_codes": {
+            "local": 2,
+            "hosted": 2
+          },
+          "native_classification": {
+            "local": "not_exercised",
+            "hosted": "not_exercised"
+          },
+          "work_classification": {
+            "local": "setup_error",
+            "hosted": "setup_error"
+          },
+          "source_hashes_identical": true,
+          "evidence": {
+            "hosted_xml": "baseline-probes/p4/q06/output/results.xml",
+            "hosted_xml_sha256": "497c0edaceb23db07e4cbd6c1e88ec5cb8bb32054f711d6b65141e8cc6dfdf7a",
+            "local_xml": "baseline-probes/p4/q06/output/results.xml",
+            "local_xml_sha256": "58d2a9b2127a05b569d4ff6e3732acae59769bc759aa198e47cc04405a509b9f"
+          }
+        },
+        {
+          "variant": "q07",
+          "local_exact_keys": [
+            "test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "test_probe::test_target"
+          ],
+          "hosted_exact_keys": [
+            "experiment-results.baseline-probes.p4.q07.input.test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "experiment-results.baseline-probes.p4.q07.input.test_probe::test_target"
+          ],
+          "hosted_target_testcases": 1,
+          "hosted_terminal_diagnostic": "capability unavailable",
+          "exit_codes": {
+            "local": 0,
+            "hosted": 0
+          },
+          "native_classification": {
+            "local": "skipped",
+            "hosted": "not_exercised"
+          },
+          "work_classification": {
+            "local": "skipped",
+            "hosted": "skipped"
+          },
+          "source_hashes_identical": true,
+          "evidence": {
+            "hosted_xml": "baseline-probes/p4/q07/output/results.xml",
+            "hosted_xml_sha256": "9a66ca4f249e40c763e4595da5ca19b09560eea840ce35359b9662ef66b543d4",
+            "local_xml": "baseline-probes/p4/q07/output/results.xml",
+            "local_xml_sha256": "f8355851a52c67ba6b98cd83f8a6dd67722bb878f373f2d717a8a9dd0ca2c8c7"
+          }
+        },
+        {
+          "variant": "q08",
+          "local_exact_keys": [
+            "test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute"
+          ],
+          "hosted_exact_keys": [
+            "experiment-results.baseline-probes.p4.q08.input.test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute"
+          ],
+          "hosted_target_testcases": 0,
+          "hosted_terminal_diagnostic": null,
+          "exit_codes": {
+            "local": 0,
+            "hosted": 0
+          },
+          "native_classification": {
+            "local": "not_exercised",
+            "hosted": "not_exercised"
+          },
+          "work_classification": {
+            "local": "missing_coverage",
+            "hosted": "missing_coverage"
+          },
+          "source_hashes_identical": true,
+          "evidence": {
+            "hosted_xml": "baseline-probes/p4/q08/output/results.xml",
+            "hosted_xml_sha256": "f809ca9377d2f79346fc907dec869c1264bb847aa879473145488633ac384cbc",
+            "local_xml": "baseline-probes/p4/q08/output/results.xml",
+            "local_xml_sha256": "1f8441d3ec6864e459f8c9ee3684a04ea7707a46076a95e58ae7e69dfdce3011"
+          }
+        }
+      ],
+      "hosted_work_classifier_false_detections": 3,
+      "hosted_native_not_exercised": 8,
+      "hosted_original_dual_classifier_reproductions": 0
+    },
+    {
+      "selector": "jev",
+      "observation_sha256": "b1f1c7197810c5fb9bd908352b4a462c7c20c1e7f0085e434d9217b618e96aee",
+      "rows": [
+        {
+          "variant": "q01",
+          "local_exact_keys": [
+            "test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "test_probe::test_target"
+          ],
+          "hosted_exact_keys": [
+            "experiment-results.jev-probes.p4.q01.input.test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "experiment-results.jev-probes.p4.q01.input.test_probe::test_target"
+          ],
+          "hosted_target_testcases": 1,
+          "hosted_terminal_diagnostic": "AssertionError: TARGET_REQUIREMENT",
+          "exit_codes": {
+            "local": 1,
+            "hosted": 1
+          },
+          "native_classification": {
+            "local": "detected",
+            "hosted": "not_exercised"
+          },
+          "work_classification": {
+            "local": "detected",
+            "hosted": "detected"
+          },
+          "source_hashes_identical": true,
+          "evidence": {
+            "hosted_xml": "jev-probes/p4/q01/output/results.xml",
+            "hosted_xml_sha256": "68552ad44d457482b91da1372d4b25343ee632f94cc99d1739a7a15c932fd4b3",
+            "local_xml": "baseline-probes/p4/q01/output/results.xml",
+            "local_xml_sha256": "a1328f26e70930e41a5cdb09502cd7491e44e0de223a633b1da2aa39fcc3515f"
+          }
+        },
+        {
+          "variant": "q02",
+          "local_exact_keys": [
+            "test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "test_probe::test_target"
+          ],
+          "hosted_exact_keys": [
+            "experiment-results.jev-probes.p4.q02.input.test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "experiment-results.jev-probes.p4.q02.input.test_probe::test_target"
+          ],
+          "hosted_target_testcases": 1,
+          "hosted_terminal_diagnostic": "TimeoutError: clock did not respond",
+          "exit_codes": {
+            "local": 1,
+            "hosted": 1
+          },
+          "native_classification": {
+            "local": "detected",
+            "hosted": "not_exercised"
+          },
+          "work_classification": {
+            "local": "detected",
+            "hosted": "detected"
+          },
+          "source_hashes_identical": true,
+          "evidence": {
+            "hosted_xml": "jev-probes/p4/q02/output/results.xml",
+            "hosted_xml_sha256": "0b8461d5eaa4a182b6b201b7d01a9f35cf1eefd7ebf2bbedf0659c9437d1043a",
+            "local_xml": "baseline-probes/p4/q02/output/results.xml",
+            "local_xml_sha256": "d00b1f19ffcee376e59b9f005b791ba2330df901dede24e93c60e7edf1cf605d"
+          }
+        },
+        {
+          "variant": "q03",
+          "local_exact_keys": [
+            "test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "test_probe::test_target"
+          ],
+          "hosted_exact_keys": [
+            "experiment-results.jev-probes.p4.q03.input.test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "experiment-results.jev-probes.p4.q03.input.test_probe::test_target"
+          ],
+          "hosted_target_testcases": 1,
+          "hosted_terminal_diagnostic": "ValueError: malformed response",
+          "exit_codes": {
+            "local": 1,
+            "hosted": 1
+          },
+          "native_classification": {
+            "local": "detected",
+            "hosted": "not_exercised"
+          },
+          "work_classification": {
+            "local": "detected",
+            "hosted": "detected"
+          },
+          "source_hashes_identical": true,
+          "evidence": {
+            "hosted_xml": "jev-probes/p4/q03/output/results.xml",
+            "hosted_xml_sha256": "001c657f691adcd4595e70df5ee0e8d144e8c2b6a0e6f50aede6a5fcd6f4a54d",
+            "local_xml": "baseline-probes/p4/q03/output/results.xml",
+            "local_xml_sha256": "b8816bd875e5dd199f0f401d1dc5ba869f9119bc88c369ded819efe09eafcf77"
+          }
+        },
+        {
+          "variant": "q04",
+          "local_exact_keys": [
+            "test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "test_probe::test_target"
+          ],
+          "hosted_exact_keys": [
+            "experiment-results.jev-probes.p4.q04.input.test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "experiment-results.jev-probes.p4.q04.input.test_probe::test_target"
+          ],
+          "hosted_target_testcases": 1,
+          "hosted_terminal_diagnostic": "AssertionError: dependency invariant",
+          "exit_codes": {
+            "local": 1,
+            "hosted": 1
+          },
+          "native_classification": {
+            "local": "detected",
+            "hosted": "not_exercised"
+          },
+          "work_classification": {
+            "local": "detected",
+            "hosted": "detected"
+          },
+          "source_hashes_identical": true,
+          "evidence": {
+            "hosted_xml": "jev-probes/p4/q04/output/results.xml",
+            "hosted_xml_sha256": "753c6ab17321cee1e8478d6ed08bea4de0931b337bf97a55cbe0ef1c40e20599",
+            "local_xml": "baseline-probes/p4/q04/output/results.xml",
+            "local_xml_sha256": "8e41e5716cb57d739198b7958f8ba539bae0b1f9d1c45cf406e210c5e9b762d4"
+          }
+        },
+        {
+          "variant": "q05",
+          "local_exact_keys": [
+            "test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "test_probe::test_target"
+          ],
+          "hosted_exact_keys": [
+            "experiment-results.jev-probes.p4.q05.input.test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "experiment-results.jev-probes.p4.q05.input.test_probe::test_target"
+          ],
+          "hosted_target_testcases": 1,
+          "hosted_terminal_diagnostic": null,
+          "exit_codes": {
+            "local": 0,
+            "hosted": 0
+          },
+          "native_classification": {
+            "local": "escaped_fault",
+            "hosted": "not_exercised"
+          },
+          "work_classification": {
+            "local": "escaped_fault",
+            "hosted": "escaped_fault"
+          },
+          "source_hashes_identical": true,
+          "evidence": {
+            "hosted_xml": "jev-probes/p4/q05/output/results.xml",
+            "hosted_xml_sha256": "74f58969cbee798da49f819af24e7aa6c1ba754ceed0e30e9e71997aaea0577a",
+            "local_xml": "baseline-probes/p4/q05/output/results.xml",
+            "local_xml_sha256": "b8afdb0264eecbe94169ff4b062e282b6a28be34b6ffad949fb85690c26315ab"
+          }
+        },
+        {
+          "variant": "q06",
+          "local_exact_keys": [
+            "::test_probe"
+          ],
+          "hosted_exact_keys": [
+            "::experiment-results.jev-probes.p4.q06.input.test_probe"
+          ],
+          "hosted_target_testcases": 0,
+          "hosted_terminal_diagnostic": null,
+          "exit_codes": {
+            "local": 2,
+            "hosted": 2
+          },
+          "native_classification": {
+            "local": "not_exercised",
+            "hosted": "not_exercised"
+          },
+          "work_classification": {
+            "local": "setup_error",
+            "hosted": "setup_error"
+          },
+          "source_hashes_identical": true,
+          "evidence": {
+            "hosted_xml": "jev-probes/p4/q06/output/results.xml",
+            "hosted_xml_sha256": "7b02a24a998197d9236e1cd71f95e035dcd692acaa1be34719f79e0e445ffc19",
+            "local_xml": "baseline-probes/p4/q06/output/results.xml",
+            "local_xml_sha256": "58d2a9b2127a05b569d4ff6e3732acae59769bc759aa198e47cc04405a509b9f"
+          }
+        },
+        {
+          "variant": "q07",
+          "local_exact_keys": [
+            "test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "test_probe::test_target"
+          ],
+          "hosted_exact_keys": [
+            "experiment-results.jev-probes.p4.q07.input.test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute",
+            "experiment-results.jev-probes.p4.q07.input.test_probe::test_target"
+          ],
+          "hosted_target_testcases": 1,
+          "hosted_terminal_diagnostic": "capability unavailable",
+          "exit_codes": {
+            "local": 0,
+            "hosted": 0
+          },
+          "native_classification": {
+            "local": "skipped",
+            "hosted": "not_exercised"
+          },
+          "work_classification": {
+            "local": "skipped",
+            "hosted": "skipped"
+          },
+          "source_hashes_identical": true,
+          "evidence": {
+            "hosted_xml": "jev-probes/p4/q07/output/results.xml",
+            "hosted_xml_sha256": "0bca31d654bdb510dd979282c56f38ecf0caf8c47b1999e3166b82b14e98d1d7",
+            "local_xml": "baseline-probes/p4/q07/output/results.xml",
+            "local_xml_sha256": "f8355851a52c67ba6b98cd83f8a6dd67722bb878f373f2d717a8a9dd0ca2c8c7"
+          }
+        },
+        {
+          "variant": "q08",
+          "local_exact_keys": [
+            "test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute"
+          ],
+          "hosted_exact_keys": [
+            "experiment-results.jev-probes.p4.q08.input.test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute"
+          ],
+          "hosted_target_testcases": 0,
+          "hosted_terminal_diagnostic": null,
+          "exit_codes": {
+            "local": 0,
+            "hosted": 0
+          },
+          "native_classification": {
+            "local": "not_exercised",
+            "hosted": "not_exercised"
+          },
+          "work_classification": {
+            "local": "missing_coverage",
+            "hosted": "missing_coverage"
+          },
+          "source_hashes_identical": true,
+          "evidence": {
+            "hosted_xml": "jev-probes/p4/q08/output/results.xml",
+            "hosted_xml_sha256": "e4da249fefd5f85fc4441eef9ae4656d39b200f9783c4775a63d5752cc7faebb",
+            "local_xml": "baseline-probes/p4/q08/output/results.xml",
+            "local_xml_sha256": "1f8441d3ec6864e459f8c9ee3684a04ea7707a46076a95e58ae7e69dfdce3011"
+          }
+        }
+      ],
+      "hosted_work_classifier_false_detections": 3,
+      "hosted_native_not_exercised": 8,
+      "hosted_original_dual_classifier_reproductions": 0
+    }
+  ],
+  "preserved_limitations": [
+    "Original hosted native-classifier attribution is not_exercised, not a valid pass or evidence the defect disappeared. It remains unvalidated for this execution.",
+    "Original hosted p4 summary remains zero dual-classifier reproductions and is not rewritten. Raw work-classifier outputs independently demonstrate three false detections in each selector batch.",
+    "Local dual-classifier reproduction count remains three. This is not credited as a hosted dual-classifier result.",
+    "The intended q01 assertion executed on hosted runners but the probe failed its identity lookup, so intended-detection credit remains false in original outputs.",
+    "This is an experiment portability defect, not a newly discovered Xorchestrate product defect or Jev misclassification.",
+    "No native vendor acceptance or new product-defect discovery follows from these probes."
+  ],
+  "recommended_followup": "In a new disclosed experiment revision, set an explicit isolated pytest rootdir or bind exact observed JUnit identities against a collision-checked manifest. Add a test whose output directory is inside the checkout. Reexecute deterministic probes, retaining original run artifacts; new Jev calls are not required merely to validate this probe correction.",
+  "unaffected_p7": {
+    "known_defect_reproductions": 2,
+    "valid_controls_passed": 2,
+    "observations_sha256": "d51a2c8221d322d6a93f2bfdcdbe14fcf3cb73dd0bd492dd079c7d4a31607947"
+  }
+}

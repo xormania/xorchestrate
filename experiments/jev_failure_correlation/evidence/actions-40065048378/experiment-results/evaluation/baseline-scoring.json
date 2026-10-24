@@ -1,0 +1,940 @@
+{
+  "selector": "baseline",
+  "by_split": {
+    "development": {
+      "cases": 19,
+      "mechanism_denominator": 19,
+      "mechanism_incorrect": 13,
+      "mechanism_answered": 19,
+      "probe_denominator": 19,
+      "probe_incorrect": 13,
+      "probe_answered": 19,
+      "valid_control_denominator": 6,
+      "false_alarms": 1,
+      "mechanism_abstentions": 10,
+      "probe_abstentions": 10,
+      "mechanism_correct": 6,
+      "probe_correct": 6,
+      "unrelated_failure_denominator": 2,
+      "unrelated_failures_miscredited": 1,
+      "relationship_denominator": 3,
+      "relationship_correct": 2,
+      "relationship_incorrect": 1
+    },
+    "heldout": {
+      "cases": 15,
+      "mechanism_denominator": 15,
+      "mechanism_incorrect": 10,
+      "mechanism_answered": 15,
+      "probe_denominator": 15,
+      "probe_incorrect": 10,
+      "probe_answered": 15,
+      "valid_control_denominator": 7,
+      "false_alarms": 3,
+      "mechanism_correct": 5,
+      "probe_correct": 5,
+      "mechanism_abstentions": 8,
+      "probe_abstentions": 8,
+      "relationship_denominator": 5,
+      "relationship_incorrect": 3,
+      "relationship_correct": 2
+    }
+  },
+  "by_family": {
+    "F04": {
+      "cases": 4,
+      "mechanism_denominator": 4,
+      "mechanism_incorrect": 1,
+      "mechanism_answered": 4,
+      "probe_denominator": 4,
+      "probe_incorrect": 1,
+      "probe_answered": 4,
+      "valid_control_denominator": 1,
+      "false_alarms": 1,
+      "mechanism_correct": 3,
+      "probe_correct": 3
+    },
+    "F01": {
+      "cases": 3,
+      "mechanism_denominator": 3,
+      "mechanism_incorrect": 3,
+      "mechanism_answered": 3,
+      "mechanism_abstentions": 3,
+      "probe_denominator": 3,
+      "probe_incorrect": 3,
+      "probe_answered": 3,
+      "probe_abstentions": 3,
+      "valid_control_denominator": 1
+    },
+    "F08": {
+      "cases": 4,
+      "mechanism_denominator": 4,
+      "mechanism_incorrect": 2,
+      "mechanism_answered": 4,
+      "probe_denominator": 4,
+      "probe_incorrect": 2,
+      "probe_answered": 4,
+      "valid_control_denominator": 2,
+      "false_alarms": 1,
+      "mechanism_correct": 2,
+      "mechanism_abstentions": 2,
+      "probe_correct": 2,
+      "probe_abstentions": 2
+    },
+    "F06": {
+      "cases": 2,
+      "mechanism_denominator": 2,
+      "mechanism_correct": 1,
+      "mechanism_answered": 2,
+      "probe_denominator": 2,
+      "probe_correct": 1,
+      "probe_answered": 2,
+      "mechanism_incorrect": 1,
+      "probe_incorrect": 1,
+      "valid_control_denominator": 1,
+      "false_alarms": 1
+    },
+    "F07": {
+      "cases": 10,
+      "mechanism_denominator": 10,
+      "mechanism_correct": 3,
+      "mechanism_answered": 10,
+      "probe_denominator": 10,
+      "probe_correct": 3,
+      "probe_answered": 10,
+      "mechanism_incorrect": 7,
+      "probe_incorrect": 7,
+      "mechanism_abstentions": 5,
+      "probe_abstentions": 5,
+      "valid_control_denominator": 3,
+      "unrelated_failure_denominator": 2,
+      "unrelated_failures_miscredited": 1
+    },
+    "F09": {
+      "cases": 2,
+      "mechanism_denominator": 2,
+      "mechanism_correct": 1,
+      "mechanism_answered": 2,
+      "probe_denominator": 2,
+      "probe_correct": 1,
+      "probe_answered": 2,
+      "mechanism_incorrect": 1,
+      "mechanism_abstentions": 1,
+      "probe_incorrect": 1,
+      "probe_abstentions": 1,
+      "valid_control_denominator": 1
+    },
+    "F10": {
+      "cases": 2,
+      "mechanism_denominator": 2,
+      "mechanism_correct": 1,
+      "mechanism_answered": 2,
+      "probe_denominator": 2,
+      "probe_correct": 1,
+      "probe_answered": 2,
+      "mechanism_incorrect": 1,
+      "probe_incorrect": 1,
+      "valid_control_denominator": 1,
+      "false_alarms": 1
+    },
+    "F05": {
+      "cases": 3,
+      "mechanism_denominator": 3,
+      "mechanism_incorrect": 3,
+      "mechanism_answered": 3,
+      "mechanism_abstentions": 3,
+      "probe_denominator": 3,
+      "probe_incorrect": 3,
+      "probe_answered": 3,
+      "probe_abstentions": 3,
+      "valid_control_denominator": 1
+    },
+    "F03": {
+      "cases": 2,
+      "mechanism_denominator": 2,
+      "mechanism_incorrect": 2,
+      "mechanism_answered": 2,
+      "mechanism_abstentions": 2,
+      "probe_denominator": 2,
+      "probe_incorrect": 2,
+      "probe_answered": 2,
+      "probe_abstentions": 2,
+      "valid_control_denominator": 1
+    },
+    "F02": {
+      "cases": 2,
+      "mechanism_denominator": 2,
+      "mechanism_incorrect": 2,
+      "mechanism_answered": 2,
+      "mechanism_abstentions": 2,
+      "probe_denominator": 2,
+      "probe_incorrect": 2,
+      "probe_answered": 2,
+      "probe_abstentions": 2,
+      "valid_control_denominator": 1
+    },
+    "F04+F05": {
+      "relationship_denominator": 1,
+      "relationship_incorrect": 1
+    },
+    "F08+F08": {
+      "relationship_denominator": 1,
+      "relationship_correct": 1
+    },
+    "F02+F03": {
+      "relationship_denominator": 1,
+      "relationship_correct": 1
+    },
+    "F07+F07": {
+      "relationship_denominator": 1,
+      "relationship_correct": 1
+    },
+    "F01+F06": {
+      "relationship_denominator": 1,
+      "relationship_incorrect": 1
+    },
+    "F08+F09": {
+      "relationship_denominator": 1,
+      "relationship_incorrect": 1
+    },
+    "F04+F04": {
+      "relationship_denominator": 1,
+      "relationship_incorrect": 1
+    },
+    "F01+F01": {
+      "relationship_denominator": 1,
+      "relationship_correct": 1
+    }
+  },
+  "cases": {
+    "c10772a98b7": {
+      "family": "F04",
+      "split": "development",
+      "kind": "valid_control",
+      "mechanism": {
+        "choice": "obsolete_result",
+        "acceptable": [
+          "legitimate"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "p1",
+        "acceptable": [
+          "none"
+        ],
+        "correct": false
+      }
+    },
+    "c132396d093": {
+      "family": "F01",
+      "split": "development",
+      "kind": "product_defect",
+      "mechanism": {
+        "choice": "insufficient",
+        "acceptable": [
+          "authority_scope"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "insufficient",
+        "acceptable": [
+          "p5"
+        ],
+        "correct": false
+      }
+    },
+    "c2b576d8713": {
+      "family": "F08",
+      "split": "heldout",
+      "kind": "valid_control",
+      "mechanism": {
+        "choice": "evidence_contradiction",
+        "acceptable": [
+          "legitimate"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "p3",
+        "acceptable": [
+          "none"
+        ],
+        "correct": false
+      }
+    },
+    "c2f397006d9": {
+      "family": "F06",
+      "split": "heldout",
+      "kind": "product_defect",
+      "mechanism": {
+        "choice": "concurrent_activity",
+        "acceptable": [
+          "concurrent_activity"
+        ],
+        "correct": true
+      },
+      "probe": {
+        "choice": "p6",
+        "acceptable": [
+          "p6"
+        ],
+        "correct": true
+      }
+    },
+    "c4568de1c87": {
+      "family": "F04",
+      "split": "development",
+      "kind": "product_defect",
+      "mechanism": {
+        "choice": "obsolete_result",
+        "acceptable": [
+          "obsolete_result"
+        ],
+        "correct": true
+      },
+      "probe": {
+        "choice": "p1",
+        "acceptable": [
+          "p1"
+        ],
+        "correct": true
+      }
+    },
+    "c5b16f544f4": {
+      "family": "F07",
+      "split": "development",
+      "kind": "checker_defect",
+      "mechanism": {
+        "choice": "assertion_proxy",
+        "acceptable": [
+          "assertion_proxy"
+        ],
+        "correct": true
+      },
+      "probe": {
+        "choice": "p4",
+        "acceptable": [
+          "p4"
+        ],
+        "correct": true
+      }
+    },
+    "c5b2286615d": {
+      "family": "F07",
+      "split": "development",
+      "kind": "incomplete",
+      "mechanism": {
+        "choice": "assertion_proxy",
+        "acceptable": [
+          "insufficient"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "p4",
+        "acceptable": [
+          "insufficient"
+        ],
+        "correct": false
+      }
+    },
+    "c6b464d0d2d": {
+      "family": "F09",
+      "split": "heldout",
+      "kind": "checker_defect",
+      "mechanism": {
+        "choice": "post_effect_uncertainty",
+        "acceptable": [
+          "evidence_contradiction",
+          "post_effect_uncertainty"
+        ],
+        "correct": true
+      },
+      "probe": {
+        "choice": "p3",
+        "acceptable": [
+          "p3"
+        ],
+        "correct": true
+      }
+    },
+    "c6c5a633d2e": {
+      "family": "F10",
+      "split": "heldout",
+      "kind": "checker_defect",
+      "mechanism": {
+        "choice": "assertion_proxy",
+        "acceptable": [
+          "assertion_proxy"
+        ],
+        "correct": true
+      },
+      "probe": {
+        "choice": "p3",
+        "acceptable": [
+          "p3"
+        ],
+        "correct": true
+      }
+    },
+    "c7a8d59bac1": {
+      "family": "F09",
+      "split": "heldout",
+      "kind": "valid_control",
+      "mechanism": {
+        "choice": "insufficient",
+        "acceptable": [
+          "legitimate"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "insufficient",
+        "acceptable": [
+          "none"
+        ],
+        "correct": false
+      }
+    },
+    "c81fa84c395": {
+      "family": "F07",
+      "split": "development",
+      "kind": "valid_control",
+      "mechanism": {
+        "choice": "insufficient",
+        "acceptable": [
+          "legitimate"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "insufficient",
+        "acceptable": [
+          "none"
+        ],
+        "correct": false
+      }
+    },
+    "c8a1cd71143": {
+      "family": "F05",
+      "split": "heldout",
+      "kind": "product_defect",
+      "mechanism": {
+        "choice": "insufficient",
+        "acceptable": [
+          "obsolete_result"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "insufficient",
+        "acceptable": [
+          "p7"
+        ],
+        "correct": false
+      }
+    },
+    "c8c360ddd51": {
+      "family": "F07",
+      "split": "development",
+      "kind": "valid_control",
+      "mechanism": {
+        "choice": "insufficient",
+        "acceptable": [
+          "legitimate"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "insufficient",
+        "acceptable": [
+          "none"
+        ],
+        "correct": false
+      }
+    },
+    "c965c818495": {
+      "family": "F05",
+      "split": "heldout",
+      "kind": "valid_control",
+      "mechanism": {
+        "choice": "insufficient",
+        "acceptable": [
+          "legitimate"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "insufficient",
+        "acceptable": [
+          "none"
+        ],
+        "correct": false
+      }
+    },
+    "c9c28a79619": {
+      "family": "F03",
+      "split": "heldout",
+      "kind": "product_defect",
+      "mechanism": {
+        "choice": "insufficient",
+        "acceptable": [
+          "post_effect_uncertainty"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "insufficient",
+        "acceptable": [
+          "p2"
+        ],
+        "correct": false
+      }
+    },
+    "ca4ab47c946": {
+      "family": "F04",
+      "split": "development",
+      "kind": "product_defect",
+      "mechanism": {
+        "choice": "obsolete_result",
+        "acceptable": [
+          "obsolete_result"
+        ],
+        "correct": true
+      },
+      "probe": {
+        "choice": "p1",
+        "acceptable": [
+          "p1"
+        ],
+        "correct": true
+      }
+    },
+    "ca4f1ba6d30": {
+      "family": "F10",
+      "split": "heldout",
+      "kind": "valid_control",
+      "mechanism": {
+        "choice": "assertion_proxy",
+        "acceptable": [
+          "legitimate"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "p3",
+        "acceptable": [
+          "none"
+        ],
+        "correct": false
+      }
+    },
+    "ca8a9086479": {
+      "family": "F01",
+      "split": "development",
+      "kind": "product_defect",
+      "mechanism": {
+        "choice": "insufficient",
+        "acceptable": [
+          "authority_scope"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "insufficient",
+        "acceptable": [
+          "p5"
+        ],
+        "correct": false
+      }
+    },
+    "cb501d6169f": {
+      "family": "F08",
+      "split": "heldout",
+      "kind": "incomplete",
+      "mechanism": {
+        "choice": "insufficient",
+        "acceptable": [
+          "insufficient"
+        ],
+        "correct": true
+      },
+      "probe": {
+        "choice": "insufficient",
+        "acceptable": [
+          "insufficient"
+        ],
+        "correct": true
+      }
+    },
+    "cb9080f7f96": {
+      "family": "F06",
+      "split": "heldout",
+      "kind": "valid_control",
+      "mechanism": {
+        "choice": "concurrent_activity",
+        "acceptable": [
+          "legitimate"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "p6",
+        "acceptable": [
+          "none"
+        ],
+        "correct": false
+      }
+    },
+    "cc65f638301": {
+      "family": "F07",
+      "split": "development",
+      "kind": "environment_failure",
+      "mechanism": {
+        "choice": "assertion_proxy",
+        "acceptable": [
+          "infrastructure"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "p4",
+        "acceptable": [
+          "none"
+        ],
+        "correct": false
+      }
+    },
+    "cc6c0d5103e": {
+      "family": "F05",
+      "split": "heldout",
+      "kind": "product_defect",
+      "mechanism": {
+        "choice": "insufficient",
+        "acceptable": [
+          "obsolete_result"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "insufficient",
+        "acceptable": [
+          "p7"
+        ],
+        "correct": false
+      }
+    },
+    "ccb6546cc17": {
+      "family": "F01",
+      "split": "development",
+      "kind": "valid_control",
+      "mechanism": {
+        "choice": "insufficient",
+        "acceptable": [
+          "legitimate"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "insufficient",
+        "acceptable": [
+          "none"
+        ],
+        "correct": false
+      }
+    },
+    "cd58718f440": {
+      "family": "F07",
+      "split": "development",
+      "kind": "checker_defect",
+      "mechanism": {
+        "choice": "assertion_proxy",
+        "acceptable": [
+          "assertion_proxy"
+        ],
+        "correct": true
+      },
+      "probe": {
+        "choice": "p4",
+        "acceptable": [
+          "p4"
+        ],
+        "correct": true
+      }
+    },
+    "cd9a464e21e": {
+      "family": "F04",
+      "split": "development",
+      "kind": "product_defect",
+      "mechanism": {
+        "choice": "obsolete_result",
+        "acceptable": [
+          "obsolete_result"
+        ],
+        "correct": true
+      },
+      "probe": {
+        "choice": "p1",
+        "acceptable": [
+          "p1"
+        ],
+        "correct": true
+      }
+    },
+    "cdb9ded1cc2": {
+      "family": "F08",
+      "split": "heldout",
+      "kind": "checker_defect",
+      "mechanism": {
+        "choice": "evidence_contradiction",
+        "acceptable": [
+          "evidence_contradiction"
+        ],
+        "correct": true
+      },
+      "probe": {
+        "choice": "p3",
+        "acceptable": [
+          "p3"
+        ],
+        "correct": true
+      }
+    },
+    "cde0dfa2876": {
+      "family": "F08",
+      "split": "heldout",
+      "kind": "valid_control",
+      "mechanism": {
+        "choice": "insufficient",
+        "acceptable": [
+          "legitimate"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "insufficient",
+        "acceptable": [
+          "none"
+        ],
+        "correct": false
+      }
+    },
+    "cde81233c34": {
+      "family": "F03",
+      "split": "heldout",
+      "kind": "valid_control",
+      "mechanism": {
+        "choice": "insufficient",
+        "acceptable": [
+          "legitimate"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "insufficient",
+        "acceptable": [
+          "none"
+        ],
+        "correct": false
+      }
+    },
+    "ce010ff9ebd": {
+      "family": "F02",
+      "split": "development",
+      "kind": "product_defect",
+      "mechanism": {
+        "choice": "insufficient",
+        "acceptable": [
+          "authority_scope"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "insufficient",
+        "acceptable": [
+          "p2"
+        ],
+        "correct": false
+      }
+    },
+    "ced6478d6f9": {
+      "family": "F02",
+      "split": "development",
+      "kind": "valid_control",
+      "mechanism": {
+        "choice": "insufficient",
+        "acceptable": [
+          "legitimate"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "insufficient",
+        "acceptable": [
+          "none"
+        ],
+        "correct": false
+      }
+    },
+    "v01": {
+      "family": "F07",
+      "split": "development",
+      "kind": "checker_defect",
+      "mechanism": {
+        "choice": "insufficient",
+        "acceptable": [
+          "assertion_proxy"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "insufficient",
+        "acceptable": [
+          "p4"
+        ],
+        "correct": false
+      }
+    },
+    "v02": {
+      "family": "F07",
+      "split": "development",
+      "kind": "checker_defect",
+      "mechanism": {
+        "choice": "insufficient",
+        "acceptable": [
+          "assertion_proxy"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "insufficient",
+        "acceptable": [
+          "p4"
+        ],
+        "correct": false
+      }
+    },
+    "v03": {
+      "family": "F07",
+      "split": "development",
+      "kind": "valid_control",
+      "mechanism": {
+        "choice": "insufficient",
+        "acceptable": [
+          "legitimate"
+        ],
+        "correct": false
+      },
+      "probe": {
+        "choice": "insufficient",
+        "acceptable": [
+          "none",
+          "p4"
+        ],
+        "correct": false
+      }
+    },
+    "v04": {
+      "family": "F07",
+      "split": "development",
+      "kind": "environment_failure",
+      "mechanism": {
+        "choice": "infrastructure",
+        "acceptable": [
+          "infrastructure"
+        ],
+        "correct": true
+      },
+      "probe": {
+        "choice": "p4",
+        "acceptable": [
+          "none",
+          "p4"
+        ],
+        "correct": true
+      }
+    }
+  },
+  "pairs": {
+    "r22042f213a": {
+      "choice": "insufficient",
+      "acceptable": [
+        "shared_invariant"
+      ],
+      "correct": false,
+      "split": "heldout",
+      "family": "F04+F05"
+    },
+    "r3876eaf5b3": {
+      "choice": "insufficient",
+      "acceptable": [
+        "insufficient"
+      ],
+      "correct": true,
+      "split": "heldout",
+      "family": "F08+F08"
+    },
+    "r409c21d44a": {
+      "choice": "insufficient",
+      "acceptable": [
+        "similar_symptom",
+        "shared_invariant",
+        "no_relationship",
+        "insufficient"
+      ],
+      "correct": true,
+      "split": "heldout",
+      "family": "F02+F03"
+    },
+    "r4c2d64b23b": {
+      "choice": "same_mechanism",
+      "acceptable": [
+        "same_mechanism",
+        "insufficient"
+      ],
+      "correct": true,
+      "split": "development",
+      "family": "F07+F07"
+    },
+    "r65a51875a7": {
+      "choice": "insufficient",
+      "acceptable": [
+        "no_relationship"
+      ],
+      "correct": false,
+      "split": "heldout",
+      "family": "F01+F06"
+    },
+    "r6a4360d930": {
+      "choice": "no_relationship",
+      "acceptable": [
+        "shared_invariant"
+      ],
+      "correct": false,
+      "split": "heldout",
+      "family": "F08+F09"
+    },
+    "r6eb0b370b8": {
+      "choice": "same_mechanism",
+      "acceptable": [
+        "shared_invariant"
+      ],
+      "correct": false,
+      "split": "development",
+      "family": "F04+F04"
+    },
+    "rc938b1f250": {
+      "choice": "insufficient",
+      "acceptable": [
+        "same_mechanism",
+        "insufficient"
+      ],
+      "correct": true,
+      "split": "development",
+      "family": "F01+F01"
+    }
+  },
+  "interpretation": "Option agreement only; probe usefulness requires separate executed observations. Unrun is not incorrect or abstention."
+}

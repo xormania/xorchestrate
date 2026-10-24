@@ -1,0 +1,15 @@
+F.                                                                       [100%]
+=================================== FAILURES ===================================
+_________________________________ test_target __________________________________
+test_probe.py:3: in test_target
+    assert compute() == 1, "TARGET_REQUIREMENT"
+           ^^^^^^^^^
+module.py:3: in compute
+    return read_value()
+           ^^^^^^^^^^^^
+dependency.py:2: in read_value
+    raise ValueError('malformed response')
+E   ValueError: malformed response
+=========================== short test summary info ============================
+FAILED test_probe.py::test_target - ValueError: malformed response
+1 failed, 1 passed in 0.06s

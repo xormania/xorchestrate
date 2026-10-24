@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="2" time="0.039" timestamp="2026-10-24T05:08:10.106848+00:00" hostname="runnervm8k3b6"><testcase classname="experiment-results.jev-probes.p4.q01.input.test_probe" name="test_target" time="0.001"><failure message="AssertionError: TARGET_REQUIREMENT&#10;assert 2 == 1&#10; +  where 2 = compute()">test_probe.py:3: in test_target
+    assert compute() == 1, "TARGET_REQUIREMENT"
+E   AssertionError: TARGET_REQUIREMENT
+E   assert 2 == 1
+E    +  where 2 = compute()</failure></testcase><testcase classname="experiment-results.jev-probes.p4.q01.input.test_probe" name="test_measurement_replay_is_bound_to_request_and_does_not_reexecute" time="0.000" /></testsuite></testsuites>

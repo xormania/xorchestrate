@@ -1,0 +1,226 @@
+{
+  "conclusion": "Distinguishes target assertion from helper exceptions using independently fixed fixture behavior.",
+  "control": {
+    "command": [
+      "/workspace/jev-venv/bin/python",
+      "-m",
+      "pytest",
+      "-q",
+      "--tb=short",
+      "-p",
+      "no:cacheprovider",
+      "test_probe.py",
+      "--junitxml=/workspace/xorchestrate-jev/experiments/jev_failure_correlation/evidence/probe-replay-v1.2-jev/p4/control/output/results.xml",
+      "--rootdir=/workspace/xorchestrate-jev/experiments/jev_failure_correlation/evidence/probe-replay-v1.2-jev/p4/control/input"
+    ],
+    "cwd": "/workspace/xorchestrate-jev/experiments/jev_failure_correlation/evidence/probe-replay-v1.2-jev/p4/control/input",
+    "elapsed_seconds": 0.26330134800002725,
+    "exit_code": 0,
+    "source_sha256": {
+      "dependency.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "module.py": "a97a67e61663bbbb86a609a7c528fee96df7472e7512061711027a0081ae696a",
+      "test_probe.py": "dc8d804669fcb3bb0eb37153ed4266d21da7aadfe49f2f107641b7386a47a67a"
+    },
+    "started": "2026-10-24T05:10:59.442670+00:00",
+    "status": "completed",
+    "xml_sha256": "7dba7c8702d96371cb549be60a125d14a20113a7bc8e5cf5ecb5fcc3c228165b"
+  },
+  "new_product_defect": false,
+  "probe": "p4",
+  "records": [
+    {
+      "cases": {
+        "test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute": {
+          "diagnostic": "",
+          "status": "passed"
+        },
+        "test_probe::test_target": {
+          "diagnostic": "AssertionError: TARGET_REQUIREMENT\nassert 2 == 1\n +  where 2 = compute()\ntest_probe.py:3: in test_target\n    assert compute() == 1, \"TARGET_REQUIREMENT\"\nE   AssertionError: TARGET_REQUIREMENT\nE   assert 2 == 1\nE    +  where 2 = compute()",
+          "status": "failed"
+        }
+      },
+      "control_exit": 0,
+      "exit_code": 1,
+      "expected_execution": "intended_assertion",
+      "fixture_sha256": "b54660edc637d4266cc0a5ea58a067ee0fe20dc671d107226ba9708aa2f89574",
+      "independent": false,
+      "intended_detection_credit": true,
+      "known_defect_reproduced": false,
+      "native_classification": "detected",
+      "target_observation": {
+        "diagnostic": "AssertionError: TARGET_REQUIREMENT\nassert 2 == 1\n +  where 2 = compute()\ntest_probe.py:3: in test_target\n    assert compute() == 1, \"TARGET_REQUIREMENT\"\nE   AssertionError: TARGET_REQUIREMENT\nE   assert 2 == 1\nE    +  where 2 = compute()",
+        "status": "failed"
+      },
+      "variant": "q01",
+      "work_classification": "detected"
+    },
+    {
+      "cases": {
+        "test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute": {
+          "diagnostic": "",
+          "status": "passed"
+        },
+        "test_probe::test_target": {
+          "diagnostic": "TimeoutError: clock did not respond\ntest_probe.py:3: in test_target\n    assert compute() == 1, \"TARGET_REQUIREMENT\"\n           ^^^^^^^^^\nmodule.py:2: in compute\n    raise TimeoutError('clock did not respond')\nE   TimeoutError: clock did not respond",
+          "status": "failed"
+        }
+      },
+      "control_exit": 0,
+      "exit_code": 1,
+      "expected_execution": "unrelated_failure",
+      "fixture_sha256": "b54660edc637d4266cc0a5ea58a067ee0fe20dc671d107226ba9708aa2f89574",
+      "independent": false,
+      "intended_detection_credit": false,
+      "known_defect_reproduced": true,
+      "native_classification": "detected",
+      "target_observation": {
+        "diagnostic": "TimeoutError: clock did not respond\ntest_probe.py:3: in test_target\n    assert compute() == 1, \"TARGET_REQUIREMENT\"\n           ^^^^^^^^^\nmodule.py:2: in compute\n    raise TimeoutError('clock did not respond')\nE   TimeoutError: clock did not respond",
+        "status": "failed"
+      },
+      "variant": "q02",
+      "work_classification": "detected"
+    },
+    {
+      "cases": {
+        "test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute": {
+          "diagnostic": "",
+          "status": "passed"
+        },
+        "test_probe::test_target": {
+          "diagnostic": "ValueError: malformed response\ntest_probe.py:3: in test_target\n    assert compute() == 1, \"TARGET_REQUIREMENT\"\n           ^^^^^^^^^\nmodule.py:3: in compute\n    return read_value()\n           ^^^^^^^^^^^^\ndependency.py:2: in read_value\n    raise ValueError('malformed response')\nE   ValueError: malformed response",
+          "status": "failed"
+        }
+      },
+      "control_exit": 0,
+      "exit_code": 1,
+      "expected_execution": "unrelated_failure",
+      "fixture_sha256": "b54660edc637d4266cc0a5ea58a067ee0fe20dc671d107226ba9708aa2f89574",
+      "independent": true,
+      "intended_detection_credit": false,
+      "known_defect_reproduced": true,
+      "native_classification": "detected",
+      "target_observation": {
+        "diagnostic": "ValueError: malformed response\ntest_probe.py:3: in test_target\n    assert compute() == 1, \"TARGET_REQUIREMENT\"\n           ^^^^^^^^^\nmodule.py:3: in compute\n    return read_value()\n           ^^^^^^^^^^^^\ndependency.py:2: in read_value\n    raise ValueError('malformed response')\nE   ValueError: malformed response",
+        "status": "failed"
+      },
+      "variant": "q03",
+      "work_classification": "detected"
+    },
+    {
+      "cases": {
+        "test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute": {
+          "diagnostic": "",
+          "status": "passed"
+        },
+        "test_probe::test_target": {
+          "diagnostic": "AssertionError: dependency invariant\ntest_probe.py:3: in test_target\n    assert compute() == 1, \"TARGET_REQUIREMENT\"\n           ^^^^^^^^^\nmodule.py:3: in compute\n    return read_value()\n           ^^^^^^^^^^^^\ndependency.py:2: in read_value\n    assert False, 'dependency invariant'\n           ^^^^^\nE   AssertionError: dependency invariant",
+          "status": "failed"
+        }
+      },
+      "control_exit": 0,
+      "exit_code": 1,
+      "expected_execution": "unrelated_assertion",
+      "fixture_sha256": "b54660edc637d4266cc0a5ea58a067ee0fe20dc671d107226ba9708aa2f89574",
+      "independent": true,
+      "intended_detection_credit": false,
+      "known_defect_reproduced": true,
+      "native_classification": "detected",
+      "target_observation": {
+        "diagnostic": "AssertionError: dependency invariant\ntest_probe.py:3: in test_target\n    assert compute() == 1, \"TARGET_REQUIREMENT\"\n           ^^^^^^^^^\nmodule.py:3: in compute\n    return read_value()\n           ^^^^^^^^^^^^\ndependency.py:2: in read_value\n    assert False, 'dependency invariant'\n           ^^^^^\nE   AssertionError: dependency invariant",
+        "status": "failed"
+      },
+      "variant": "q04",
+      "work_classification": "detected"
+    },
+    {
+      "cases": {
+        "test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute": {
+          "diagnostic": "",
+          "status": "passed"
+        },
+        "test_probe::test_target": {
+          "diagnostic": "",
+          "status": "passed"
+        }
+      },
+      "control_exit": 0,
+      "exit_code": 0,
+      "expected_execution": "valid",
+      "fixture_sha256": "b54660edc637d4266cc0a5ea58a067ee0fe20dc671d107226ba9708aa2f89574",
+      "independent": true,
+      "intended_detection_credit": false,
+      "known_defect_reproduced": false,
+      "native_classification": "escaped_fault",
+      "target_observation": {
+        "diagnostic": "",
+        "status": "passed"
+      },
+      "variant": "q05",
+      "work_classification": "escaped_fault"
+    },
+    {
+      "cases": {
+        "::test_probe": {
+          "diagnostic": "collection failure\nImportError while importing test module '/workspace/xorchestrate-jev/experiments/jev_failure_correlation/evidence/probe-replay-v1.2-jev/p4/q06/input/test_probe.py'.\nHint: make sure your test modules/packages have valid Python names.\nTraceback:\n/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/importlib/__init__.py:90: in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntest_probe.py:1: in <module>\n    from module import compute\nmodule.py:1: in <module>\n    import missing_probe_dependency_jev_v1\nE   ModuleNotFoundError: No module named 'missing_probe_dependency_jev_v1'",
+          "status": "error"
+        }
+      },
+      "control_exit": 0,
+      "exit_code": 2,
+      "expected_execution": "setup_error",
+      "fixture_sha256": "b54660edc637d4266cc0a5ea58a067ee0fe20dc671d107226ba9708aa2f89574",
+      "independent": true,
+      "intended_detection_credit": false,
+      "known_defect_reproduced": false,
+      "native_classification": "not_exercised",
+      "target_observation": null,
+      "variant": "q06",
+      "work_classification": "setup_error"
+    },
+    {
+      "cases": {
+        "test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute": {
+          "diagnostic": "",
+          "status": "passed"
+        },
+        "test_probe::test_target": {
+          "diagnostic": "capability unavailable\n/workspace/xorchestrate-jev/experiments/jev_failure_correlation/evidence/probe-replay-v1.2-jev/p4/q07/input/module.py:3: capability unavailable",
+          "status": "skipped"
+        }
+      },
+      "control_exit": 0,
+      "exit_code": 0,
+      "expected_execution": "skipped",
+      "fixture_sha256": "b54660edc637d4266cc0a5ea58a067ee0fe20dc671d107226ba9708aa2f89574",
+      "independent": false,
+      "intended_detection_credit": false,
+      "known_defect_reproduced": false,
+      "native_classification": "skipped",
+      "target_observation": {
+        "diagnostic": "capability unavailable\n/workspace/xorchestrate-jev/experiments/jev_failure_correlation/evidence/probe-replay-v1.2-jev/p4/q07/input/module.py:3: capability unavailable",
+        "status": "skipped"
+      },
+      "variant": "q07",
+      "work_classification": "skipped"
+    },
+    {
+      "cases": {
+        "test_probe::test_measurement_replay_is_bound_to_request_and_does_not_reexecute": {
+          "diagnostic": "",
+          "status": "passed"
+        }
+      },
+      "control_exit": 0,
+      "exit_code": 0,
+      "expected_execution": "missing_coverage",
+      "fixture_sha256": "b54660edc637d4266cc0a5ea58a067ee0fe20dc671d107226ba9708aa2f89574",
+      "independent": false,
+      "intended_detection_credit": false,
+      "known_defect_reproduced": false,
+      "native_classification": "not_exercised",
+      "target_observation": null,
+      "variant": "q08",
+      "work_classification": "missing_coverage"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "p4_pytest_processes": 9,
+  "p7_application_scenarios": 4,
+  "retries": 0,
+  "selection_rule": "Run each supported selected option once; keep all selecting case IDs. Do not replace unsupported selections.",
+  "subprocess_timeout_seconds": 30,
+  "supported": [
+    "p4",
+    "p7"
+  ],
+  "unique_probes_per_selector": 2
+}

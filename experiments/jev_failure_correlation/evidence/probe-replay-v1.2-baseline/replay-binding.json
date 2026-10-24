@@ -1,0 +1,9 @@
+{
+  "probe_harness_version": "1.2.0",
+  "change": "Explicit per-fixture pytest --rootdir; all other arguments and fixtures unchanged",
+  "model_calls": 0,
+  "replay_script_sha256": "388a16ade0d665561002861e4d0fb671c067eed2df7e6c3028097182bd06dbd9",
+  "original_probe_sha256": "ddde016c20f99b64094fb6666e72180f5fa125aa98588cab5f3c92d3c69dd77d",
+  "predictions_sha256": "4a5e7cd3115a122392a69cf1c0ac70809fff780484cd22cbc47cf07e82ca68fd",
+  "execution_location": "Codex Cloud; corrected replay of actual GitHub Actions selections"
+}

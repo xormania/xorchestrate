@@ -1,0 +1,139 @@
+{
+  "budget": {
+    "p4_pytest_processes": 9,
+    "p7_application_scenarios": 4,
+    "retries": 0,
+    "selection_rule": "Run each supported selected option once; keep all selecting case IDs. Do not replace unsupported selections.",
+    "subprocess_timeout_seconds": 30,
+    "supported": [
+      "p4",
+      "p7"
+    ],
+    "unique_probes_per_selector": 2
+  },
+  "note": "One execution per distinct selected option, not one per selecting case. No unexecuted option receives utility credit.",
+  "results": [
+    {
+      "case_ids": [
+        "c6b464d0d2d",
+        "c7a8d59bac1",
+        "cb501d6169f"
+      ],
+      "intended_detection_credit": false,
+      "probe": "insufficient",
+      "reason": "no_probe_selected",
+      "selector": "jev",
+      "status": "unexecuted"
+    },
+    {
+      "case_ids": [
+        "v03",
+        "v04"
+      ],
+      "intended_detection_credit": false,
+      "probe": "none",
+      "reason": "no_probe_selected",
+      "selector": "jev",
+      "status": "unexecuted"
+    },
+    {
+      "case_ids": [
+        "c10772a98b7",
+        "c4568de1c87",
+        "ca4ab47c946",
+        "cd9a464e21e"
+      ],
+      "intended_detection_credit": false,
+      "probe": "p1",
+      "reason": "outside_prespecified_executable_subset",
+      "selector": "jev",
+      "status": "unexecuted"
+    },
+    {
+      "case_ids": [
+        "c9c28a79619",
+        "cde81233c34",
+        "ce010ff9ebd"
+      ],
+      "intended_detection_credit": false,
+      "probe": "p2",
+      "reason": "outside_prespecified_executable_subset",
+      "selector": "jev",
+      "status": "unexecuted"
+    },
+    {
+      "case_ids": [
+        "c2b576d8713",
+        "c6c5a633d2e",
+        "c81fa84c395",
+        "ca4f1ba6d30",
+        "cdb9ded1cc2",
+        "cde0dfa2876"
+      ],
+      "intended_detection_credit": false,
+      "probe": "p3",
+      "reason": "outside_prespecified_executable_subset",
+      "selector": "jev",
+      "status": "unexecuted"
+    },
+    {
+      "case_ids": [
+        "c5b16f544f4",
+        "c5b2286615d",
+        "c8c360ddd51",
+        "cc65f638301",
+        "cd58718f440",
+        "v01",
+        "v02"
+      ],
+      "distinguished_explanations": true,
+      "intended_detection_credit": false,
+      "known_defect_reproductions": 3,
+      "new_product_defect": false,
+      "observations": 8,
+      "probe": "p4",
+      "selector": "jev",
+      "status": "executed"
+    },
+    {
+      "case_ids": [
+        "c132396d093",
+        "ca8a9086479",
+        "ccb6546cc17",
+        "ced6478d6f9"
+      ],
+      "intended_detection_credit": false,
+      "probe": "p5",
+      "reason": "outside_prespecified_executable_subset",
+      "selector": "jev",
+      "status": "unexecuted"
+    },
+    {
+      "case_ids": [
+        "c2f397006d9",
+        "cb9080f7f96"
+      ],
+      "intended_detection_credit": false,
+      "probe": "p6",
+      "reason": "outside_prespecified_executable_subset",
+      "selector": "jev",
+      "status": "unexecuted"
+    },
+    {
+      "case_ids": [
+        "c8a1cd71143",
+        "c965c818495",
+        "cc6c0d5103e"
+      ],
+      "distinguished_explanations": true,
+      "intended_detection_credit": false,
+      "known_defect_reproductions": 2,
+      "new_product_defect": false,
+      "observations": 4,
+      "probe": "p7",
+      "selector": "jev",
+      "status": "executed"
+    }
+  ],
+  "selector": "jev"
+}

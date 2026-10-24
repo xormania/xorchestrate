@@ -1,0 +1,100 @@
+{
+  "budget": {
+    "p4_pytest_processes": 9,
+    "p7_application_scenarios": 4,
+    "retries": 0,
+    "selection_rule": "Run each supported selected option once; keep all selecting case IDs. Do not replace unsupported selections.",
+    "subprocess_timeout_seconds": 30,
+    "supported": [
+      "p4",
+      "p7"
+    ],
+    "unique_probes_per_selector": 2
+  },
+  "note": "One execution per distinct selected option, not one per selecting case. No unexecuted option receives utility credit.",
+  "results": [
+    {
+      "case_ids": [
+        "c132396d093",
+        "c7a8d59bac1",
+        "c81fa84c395",
+        "c8a1cd71143",
+        "c8c360ddd51",
+        "c965c818495",
+        "c9c28a79619",
+        "ca8a9086479",
+        "cb501d6169f",
+        "cc6c0d5103e",
+        "ccb6546cc17",
+        "cde0dfa2876",
+        "cde81233c34",
+        "ce010ff9ebd",
+        "ced6478d6f9",
+        "v01",
+        "v02",
+        "v03"
+      ],
+      "intended_detection_credit": false,
+      "probe": "insufficient",
+      "reason": "no_probe_selected",
+      "selector": "baseline",
+      "status": "unexecuted"
+    },
+    {
+      "case_ids": [
+        "c10772a98b7",
+        "c4568de1c87",
+        "ca4ab47c946",
+        "cd9a464e21e"
+      ],
+      "intended_detection_credit": false,
+      "probe": "p1",
+      "reason": "outside_prespecified_executable_subset",
+      "selector": "baseline",
+      "status": "unexecuted"
+    },
+    {
+      "case_ids": [
+        "c2b576d8713",
+        "c6b464d0d2d",
+        "c6c5a633d2e",
+        "ca4f1ba6d30",
+        "cdb9ded1cc2"
+      ],
+      "intended_detection_credit": false,
+      "probe": "p3",
+      "reason": "outside_prespecified_executable_subset",
+      "selector": "baseline",
+      "status": "unexecuted"
+    },
+    {
+      "case_ids": [
+        "c5b16f544f4",
+        "c5b2286615d",
+        "cc65f638301",
+        "cd58718f440",
+        "v04"
+      ],
+      "distinguished_explanations": true,
+      "intended_detection_credit": false,
+      "known_defect_reproductions": 3,
+      "new_product_defect": false,
+      "observations": 8,
+      "probe": "p4",
+      "selector": "baseline",
+      "status": "executed"
+    },
+    {
+      "case_ids": [
+        "c2f397006d9",
+        "cb9080f7f96"
+      ],
+      "intended_detection_credit": false,
+      "probe": "p6",
+      "reason": "outside_prespecified_executable_subset",
+      "selector": "baseline",
+      "status": "unexecuted"
+    }
+  ],
+  "selector": "baseline"
+}

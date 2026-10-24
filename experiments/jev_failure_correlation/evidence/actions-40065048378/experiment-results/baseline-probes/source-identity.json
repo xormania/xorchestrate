@@ -1,0 +1,12 @@
+{
+  "files": {
+    "experiments/jev_failure_correlation/probe_fixtures/calibration.json": "b54660edc637d4266cc0a5ea58a067ee0fe20dc671d107226ba9708aa2f89574",
+    "experiments/jev_failure_correlation/probes.py": "ddde016c20f99b64094fb6666e72180f5fa125aa98588cab5f3c92d3c69dd77d",
+    "scripts/verification/calibration.py": "e1ecbe638d28e9283ad86df09b0ca4f287306f0e644f696876b722af4a584023",
+    "tests/hexagonal/calibrate_work_acceptance.py": "d50c5bfc8b00a777bec848337362824f596ac20e7e16409a884cd1ba915b6315",
+    "tests/hexagonal/test_work_acceptance.py": "8cf7dc96b44170df96f6f29bf3ccee753c0f0aeb6ca1d0a9b8b28dc8b153c658",
+    "xorchestrate/acceptance.py": "80cbba8b3c61a058053ed60a77a5986f26d9c25dbb52a3627c47580e7ed4ccbf"
+  },
+  "git_head": "454f6f25cb01d0aca793e21c72a032f8428535a9",
+  "python": "3.12.15 (main, Oct  1 2026, 02:35:59) [GCC 13.3.0]"
+}

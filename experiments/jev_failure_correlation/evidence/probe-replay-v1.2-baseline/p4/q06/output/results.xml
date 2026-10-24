@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="1" failures="0" skipped="0" tests="1" time="0.093" timestamp="2026-10-24T05:10:58.691956+00:00" hostname="b4051d28dcaa"><testcase classname="" name="test_probe" time="0.000"><error message="collection failure">ImportError while importing test module '/workspace/xorchestrate-jev/experiments/jev_failure_correlation/evidence/probe-replay-v1.2-baseline/p4/q06/input/test_probe.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+test_probe.py:1: in &lt;module&gt;
+    from module import compute
+module.py:1: in &lt;module&gt;
+    import missing_probe_dependency_jev_v1
+E   ModuleNotFoundError: No module named 'missing_probe_dependency_jev_v1'</error></testcase></testsuite></testsuites>

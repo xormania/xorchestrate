@@ -1,0 +1,171 @@
+{
+  "predictions": {
+    "cases": {
+      "c10772a98b7": {
+        "mechanism": "obsolete_result",
+        "probe": "p1"
+      },
+      "c132396d093": {
+        "mechanism": "authority_scope",
+        "probe": "p5"
+      },
+      "c2b576d8713": {
+        "mechanism": "insufficient",
+        "probe": "p3"
+      },
+      "c2f397006d9": {
+        "mechanism": "concurrent_activity",
+        "probe": "p6"
+      },
+      "c4568de1c87": {
+        "mechanism": "obsolete_result",
+        "probe": "p1"
+      },
+      "c5b16f544f4": {
+        "mechanism": "infrastructure",
+        "probe": "p4"
+      },
+      "c5b2286615d": {
+        "mechanism": "infrastructure",
+        "probe": "p4"
+      },
+      "c6b464d0d2d": {
+        "mechanism": "insufficient",
+        "probe": "insufficient"
+      },
+      "c6c5a633d2e": {
+        "mechanism": "evidence_contradiction",
+        "probe": "p3"
+      },
+      "c7a8d59bac1": {
+        "mechanism": "insufficient",
+        "probe": "insufficient"
+      },
+      "c81fa84c395": {
+        "mechanism": "legitimate",
+        "probe": "p3"
+      },
+      "c8a1cd71143": {
+        "mechanism": "obsolete_result",
+        "probe": "p7"
+      },
+      "c8c360ddd51": {
+        "mechanism": "insufficient",
+        "probe": "p4"
+      },
+      "c965c818495": {
+        "mechanism": "legitimate",
+        "probe": "p7"
+      },
+      "c9c28a79619": {
+        "mechanism": "infrastructure",
+        "probe": "p2"
+      },
+      "ca4ab47c946": {
+        "mechanism": "obsolete_result",
+        "probe": "p1"
+      },
+      "ca4f1ba6d30": {
+        "mechanism": "legitimate",
+        "probe": "p3"
+      },
+      "ca8a9086479": {
+        "mechanism": "authority_scope",
+        "probe": "p5"
+      },
+      "cb501d6169f": {
+        "mechanism": "insufficient",
+        "probe": "insufficient"
+      },
+      "cb9080f7f96": {
+        "mechanism": "insufficient",
+        "probe": "p6"
+      },
+      "cc65f638301": {
+        "mechanism": "infrastructure",
+        "probe": "p4"
+      },
+      "cc6c0d5103e": {
+        "mechanism": "obsolete_result",
+        "probe": "p7"
+      },
+      "ccb6546cc17": {
+        "mechanism": "authority_scope",
+        "probe": "p5"
+      },
+      "cd58718f440": {
+        "mechanism": "infrastructure",
+        "probe": "p4"
+      },
+      "cd9a464e21e": {
+        "mechanism": "obsolete_result",
+        "probe": "p1"
+      },
+      "cdb9ded1cc2": {
+        "mechanism": "evidence_contradiction",
+        "probe": "p3"
+      },
+      "cde0dfa2876": {
+        "mechanism": "insufficient",
+        "probe": "p3"
+      },
+      "cde81233c34": {
+        "mechanism": "concurrent_activity",
+        "probe": "p2"
+      },
+      "ce010ff9ebd": {
+        "mechanism": "infrastructure",
+        "probe": "p2"
+      },
+      "ced6478d6f9": {
+        "mechanism": "authority_scope",
+        "probe": "p5"
+      },
+      "v01": {
+        "mechanism": "infrastructure",
+        "probe": "p4"
+      },
+      "v02": {
+        "mechanism": "assertion_proxy",
+        "probe": "p4"
+      },
+      "v03": {
+        "mechanism": "legitimate",
+        "probe": "none"
+      },
+      "v04": {
+        "mechanism": "infrastructure",
+        "probe": "none"
+      }
+    },
+    "corpus_binding": "7ed4ec43c30855a03117d1a9f8624833bc6322ca29d1a0663cc3a1be89042e72",
+    "pairs": {
+      "r22042f213a": {
+        "relationship": "similar_symptom"
+      },
+      "r3876eaf5b3": {
+        "relationship": "insufficient"
+      },
+      "r409c21d44a": {
+        "relationship": "similar_symptom"
+      },
+      "r4c2d64b23b": {
+        "relationship": "similar_symptom"
+      },
+      "r65a51875a7": {
+        "relationship": "insufficient"
+      },
+      "r6a4360d930": {
+        "relationship": "similar_symptom"
+      },
+      "r6eb0b370b8": {
+        "relationship": "similar_symptom"
+      },
+      "rc938b1f250": {
+        "relationship": "similar_symptom"
+      }
+    },
+    "selector": "jev"
+  },
+  "selector": "jev"
+}
