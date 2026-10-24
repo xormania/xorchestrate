@@ -1,0 +1,13 @@
+{
+  "plan_sha256": "197bd8547da565db8284bccee821864cb3307e50f9a28350f92098302a53e6ca",
+  "script_sha256": "501c7eda6570523df62a7b0700303eea1bf8029068829859fa08bec30eb38d3d",
+  "review_stage": "before any supplemental execution; after main outcomes seen",
+  "n_cases": 11,
+  "k": 5,
+  "seed": 4017,
+  "same_P3_inputs": true,
+  "hidden_selector_input": false,
+  "matching": "call-count proxy only",
+  "all_P3_checks_observed": true,
+  "candidate_and_route_joint_confound": true
+}

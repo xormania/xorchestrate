@@ -1,0 +1,16 @@
+{
+  "command": [
+    "/workspace/jev-venv/bin/python",
+    "experiments/jev_failure_correlation_v2/evidence/supplements/random_probe.py",
+    "replay",
+    "--out",
+    "/workspace/jev-v2-supplement-tamper-check",
+    "--main",
+    "/workspace/jev-v2-relocated-replay/cloud-20261024-01"
+  ],
+  "exit_code": 1,
+  "stdout": "",
+  "stderr": "Traceback (most recent call last):\n  File \"/workspace/xorchestrate-jev/experiments/jev_failure_correlation_v2/evidence/supplements/random_probe.py\", line 407, in <module>\n    main()\n  File \"/workspace/xorchestrate-jev/experiments/jev_failure_correlation_v2/evidence/supplements/random_probe.py\", line 402, in main\n    value = prepare(args.main, args.out) if args.command == \"prepare\" else execute(args.out) if args.command == \"execute\" else replay(args.out, args.main)\n                                                                                                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/workspace/xorchestrate-jev/experiments/jev_failure_correlation_v2/evidence/supplements/random_probe.py\", line 383, in replay\n    raise ValueError(\"Decision differs from deterministic raw replay\")\nValueError: Decision differs from deterministic raw replay\n",
+  "intended_mutation": "Changed selected supplemental derived action only; original archived evidence untouched.",
+  "expected": "replay rejects tampered derived decision"
+}

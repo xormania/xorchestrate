@@ -1,0 +1,421 @@
+{
+  "main_run": "cloud-20261024-01",
+  "main_source": "9c6d7612e31bb78eb07868b5ac2a046629c5876c",
+  "main_tree": "5313e3a176515e7b160315a56da430fcde63b189",
+  "corpus_sha256": "ca68bf8fa36c7e51da5e2b24764e968605b36a6dc13c62b0e7088135d7b8bd4c",
+  "plan_sha256": "3f64cc115a881fef4f3212cbc12d36504eb10ac6898f3f8842ffc4d95cc7aed4",
+  "policies": {
+    "P0": {
+      "n": 24,
+      "stage_judgment_correct": 24,
+      "final_action_correct": 16,
+      "wrong_terminal": 0,
+      "unresolved": 8,
+      "false_clear": 0
+    },
+    "P0_probe": {
+      "n": 24,
+      "stage_judgment_correct": 24,
+      "final_action_correct": 24,
+      "wrong_terminal": 0,
+      "unresolved": 0,
+      "false_clear": 0
+    },
+    "P1": {
+      "n": 24,
+      "stage_judgment_correct": 19,
+      "final_action_correct": 11,
+      "wrong_terminal": 2,
+      "unresolved": 11,
+      "false_clear": 1
+    },
+    "P2": {
+      "n": 24,
+      "stage_judgment_correct": 16,
+      "final_action_correct": 16,
+      "wrong_terminal": 2,
+      "unresolved": 6,
+      "false_clear": 2
+    },
+    "P3": {
+      "n": 24,
+      "stage_judgment_correct": 15,
+      "final_action_correct": 15,
+      "wrong_terminal": 2,
+      "unresolved": 7,
+      "false_clear": 2
+    },
+    "P4": {
+      "n": 24,
+      "stage_judgment_correct": 19,
+      "final_action_correct": 19,
+      "wrong_terminal": 2,
+      "unresolved": 3,
+      "false_clear": 2
+    },
+    "always": {
+      "n": 11,
+      "stage_judgment_correct": 10,
+      "final_action_correct": 10,
+      "wrong_terminal": 0,
+      "unresolved": 1,
+      "false_clear": 0
+    },
+    "never": {
+      "n": 11,
+      "stage_judgment_correct": 7,
+      "final_action_correct": 7,
+      "wrong_terminal": 1,
+      "unresolved": 3,
+      "false_clear": 1
+    },
+    "random": {
+      "n": 11,
+      "stage_judgment_correct": 7,
+      "final_action_correct": 7,
+      "wrong_terminal": 1,
+      "unresolved": 3,
+      "false_clear": 1
+    },
+    "reasoning_only": {
+      "n": 11,
+      "stage_judgment_correct": 10,
+      "final_action_correct": 7,
+      "wrong_terminal": 0,
+      "unresolved": 4,
+      "false_clear": 0
+    },
+    "risk": {
+      "n": 11,
+      "stage_judgment_correct": 9,
+      "final_action_correct": 9,
+      "wrong_terminal": 0,
+      "unresolved": 2,
+      "false_clear": 0
+    }
+  },
+  "jev": {
+    "attempts_incurred": 125,
+    "cache_reuses": 0,
+    "known_charges_usd": 0.0,
+    "unknown_charge_attempts": 125,
+    "actual_total_usd": null,
+    "known_list_price_estimate_usd": 0.02270814000000001,
+    "unknown_list_price_attempts": 22,
+    "list_price_basis": "Provider usage \u00d7 documented list price where supplied; not invoiced charges.",
+    "actual_or_list_price_basis_usd": 0.02270814000000001,
+    "unpriced_calls_after_list_price": 22,
+    "known_serial_latency_seconds": 21.602007397001216,
+    "unknown_latency_attempts": 22,
+    "reported_usage": {
+      "input_tokens": 540670.0,
+      "output_tokens": 89137.0
+    },
+    "usage_note": "Reported provider usage only; not inferred billed tokens. Missing records are unknown.",
+    "statuses": {
+      "ok": 125
+    },
+    "execution_routes": {
+      "typesafe_direct_api": 103,
+      "native-session": 22
+    },
+    "budget_purposes": {
+      "unspecified": 125
+    },
+    "recorded_distinct_invocations": 22,
+    "charge_units": 125,
+    "charge_unit_note": "Shared native invocation is one cost unit when invocation_id and billing_scope=invocation are recorded; assessment records remain separate."
+  },
+  "supplement": {
+    "run": "supplement-20261024-02",
+    "identity": {
+      "commit": "4577eb2c09a211218cfb822f195127d6a8a3f918",
+      "main_source": "9c6d7612e31bb78eb07868b5ac2a046629c5876c",
+      "plan_sha256": "197bd8547da565db8284bccee821864cb3307e50f9a28350f92098302a53e6ca",
+      "script_sha256": "501c7eda6570523df62a7b0700303eea1bf8029068829859fa08bec30eb38d3d",
+      "started_at": "2026-10-24T07:01:23.168603+00:00",
+      "tree": "58930924d0d7fe0db7def67625cd09354d0b9c00"
+    },
+    "plan_sha256": "197bd8547da565db8284bccee821864cb3307e50f9a28350f92098302a53e6ca",
+    "policies": {
+      "P3": {
+        "correct_actions": 7,
+        "additional_probe_calls": 0,
+        "additional_probe_seconds": 0,
+        "scenarios": {
+          "consequential": {
+            "break_even_probe_usd_per_second": null,
+            "gross_loss_reduction_vs_P3_usd_assumed": 0.0,
+            "known_loss_subtotal_usd_assumed": 106.0,
+            "outcome_loss_usd_assumed": 106.0,
+            "probe_compute_sensitivity": [
+              {
+                "incremental_probe_cost_usd_assumed": 0.0,
+                "net_value_vs_P3_usd_assumed": 0.0,
+                "usd_per_second": 0.0
+              },
+              {
+                "incremental_probe_cost_usd_assumed": 0.0,
+                "net_value_vs_P3_usd_assumed": 0.0,
+                "usd_per_second": 0.001
+              },
+              {
+                "incremental_probe_cost_usd_assumed": 0.0,
+                "net_value_vs_P3_usd_assumed": 0.0,
+                "usd_per_second": 0.01
+              }
+            ],
+            "unknown_P3_loss_cases": 0,
+            "unknown_loss_cases": 0,
+            "unpriced": [
+              "human review",
+              "queue/critical-path delay beyond observed duration",
+              "development effort",
+              "actual compute billing"
+            ]
+          },
+          "low_stakes": {
+            "break_even_probe_usd_per_second": null,
+            "gross_loss_reduction_vs_P3_usd_assumed": 0.0,
+            "known_loss_subtotal_usd_assumed": 2.75,
+            "outcome_loss_usd_assumed": 2.75,
+            "probe_compute_sensitivity": [
+              {
+                "incremental_probe_cost_usd_assumed": 0.0,
+                "net_value_vs_P3_usd_assumed": 0.0,
+                "usd_per_second": 0.0
+              },
+              {
+                "incremental_probe_cost_usd_assumed": 0.0,
+                "net_value_vs_P3_usd_assumed": 0.0,
+                "usd_per_second": 0.001
+              },
+              {
+                "incremental_probe_cost_usd_assumed": 0.0,
+                "net_value_vs_P3_usd_assumed": 0.0,
+                "usd_per_second": 0.01
+              }
+            ],
+            "unknown_P3_loss_cases": 0,
+            "unknown_loss_cases": 0,
+            "unpriced": [
+              "human review",
+              "queue/critical-path delay beyond observed duration",
+              "development effort",
+              "actual compute billing"
+            ]
+          }
+        }
+      },
+      "P4": {
+        "correct_actions": 9,
+        "additional_probe_calls": 5,
+        "additional_probe_seconds": 2.7091800149999017,
+        "scenarios": {
+          "consequential": {
+            "break_even_probe_usd_per_second": 1.476461504164811,
+            "gross_loss_reduction_vs_P3_usd_assumed": 4.0,
+            "known_loss_subtotal_usd_assumed": 102.0,
+            "outcome_loss_usd_assumed": 102.0,
+            "probe_compute_sensitivity": [
+              {
+                "incremental_probe_cost_usd_assumed": 0.0,
+                "net_value_vs_P3_usd_assumed": 4.0,
+                "usd_per_second": 0.0
+              },
+              {
+                "incremental_probe_cost_usd_assumed": 0.0027091800149999018,
+                "net_value_vs_P3_usd_assumed": 3.997290819985,
+                "usd_per_second": 0.001
+              },
+              {
+                "incremental_probe_cost_usd_assumed": 0.027091800149999016,
+                "net_value_vs_P3_usd_assumed": 3.972908199850001,
+                "usd_per_second": 0.01
+              }
+            ],
+            "unknown_P3_loss_cases": 0,
+            "unknown_loss_cases": 0,
+            "unpriced": [
+              "human review",
+              "queue/critical-path delay beyond observed duration",
+              "development effort",
+              "actual compute billing"
+            ]
+          },
+          "low_stakes": {
+            "break_even_probe_usd_per_second": 0.18455768802060138,
+            "gross_loss_reduction_vs_P3_usd_assumed": 0.5,
+            "known_loss_subtotal_usd_assumed": 2.25,
+            "outcome_loss_usd_assumed": 2.25,
+            "probe_compute_sensitivity": [
+              {
+                "incremental_probe_cost_usd_assumed": 0.0,
+                "net_value_vs_P3_usd_assumed": 0.5,
+                "usd_per_second": 0.0
+              },
+              {
+                "incremental_probe_cost_usd_assumed": 0.0027091800149999018,
+                "net_value_vs_P3_usd_assumed": 0.4972908199850001,
+                "usd_per_second": 0.001
+              },
+              {
+                "incremental_probe_cost_usd_assumed": 0.027091800149999016,
+                "net_value_vs_P3_usd_assumed": 0.472908199850001,
+                "usd_per_second": 0.01
+              }
+            ],
+            "unknown_P3_loss_cases": 0,
+            "unknown_loss_cases": 0,
+            "unpriced": [
+              "human review",
+              "queue/critical-path delay beyond observed duration",
+              "development effort",
+              "actual compute billing"
+            ]
+          }
+        }
+      },
+      "random_probe": {
+        "correct_actions": 9,
+        "additional_probe_calls": 5,
+        "additional_probe_seconds": 0.7763171379992855,
+        "scenarios": {
+          "consequential": {
+            "break_even_probe_usd_per_second": 131.38960227372164,
+            "gross_loss_reduction_vs_P3_usd_assumed": 102.0,
+            "known_loss_subtotal_usd_assumed": 4.0,
+            "outcome_loss_usd_assumed": 4.0,
+            "probe_compute_sensitivity": [
+              {
+                "incremental_probe_cost_usd_assumed": 0.0,
+                "net_value_vs_P3_usd_assumed": 102.0,
+                "usd_per_second": 0.0
+              },
+              {
+                "incremental_probe_cost_usd_assumed": 0.0007763171379992855,
+                "net_value_vs_P3_usd_assumed": 101.999223682862,
+                "usd_per_second": 0.001
+              },
+              {
+                "incremental_probe_cost_usd_assumed": 0.007763171379992855,
+                "net_value_vs_P3_usd_assumed": 101.99223682862001,
+                "usd_per_second": 0.01
+              }
+            ],
+            "unknown_P3_loss_cases": 0,
+            "unknown_loss_cases": 0,
+            "unpriced": [
+              "human review",
+              "queue/critical-path delay beyond observed duration",
+              "development effort",
+              "actual compute billing"
+            ]
+          },
+          "low_stakes": {
+            "break_even_probe_usd_per_second": 2.8983000501556244,
+            "gross_loss_reduction_vs_P3_usd_assumed": 2.25,
+            "known_loss_subtotal_usd_assumed": 0.5,
+            "outcome_loss_usd_assumed": 0.5,
+            "probe_compute_sensitivity": [
+              {
+                "incremental_probe_cost_usd_assumed": 0.0,
+                "net_value_vs_P3_usd_assumed": 2.25,
+                "usd_per_second": 0.0
+              },
+              {
+                "incremental_probe_cost_usd_assumed": 0.0007763171379992855,
+                "net_value_vs_P3_usd_assumed": 2.249223682862001,
+                "usd_per_second": 0.001
+              },
+              {
+                "incremental_probe_cost_usd_assumed": 0.007763171379992855,
+                "net_value_vs_P3_usd_assumed": 2.242236828620007,
+                "usd_per_second": 0.01
+              }
+            ],
+            "unknown_P3_loss_cases": 0,
+            "unknown_loss_cases": 0,
+            "unpriced": [
+              "human review",
+              "queue/critical-path delay beyond observed duration",
+              "development effort",
+              "actual compute billing"
+            ]
+          }
+        }
+      },
+      "simple_probe": {
+        "correct_actions": 9,
+        "additional_probe_calls": 5,
+        "additional_probe_seconds": 0.1756209990003299,
+        "scenarios": {
+          "consequential": {
+            "break_even_probe_usd_per_second": 580.7961495527559,
+            "gross_loss_reduction_vs_P3_usd_assumed": 102.0,
+            "known_loss_subtotal_usd_assumed": 4.0,
+            "outcome_loss_usd_assumed": 4.0,
+            "probe_compute_sensitivity": [
+              {
+                "incremental_probe_cost_usd_assumed": 0.0,
+                "net_value_vs_P3_usd_assumed": 102.0,
+                "usd_per_second": 0.0
+              },
+              {
+                "incremental_probe_cost_usd_assumed": 0.00017562099900032992,
+                "net_value_vs_P3_usd_assumed": 101.999824379001,
+                "usd_per_second": 0.001
+              },
+              {
+                "incremental_probe_cost_usd_assumed": 0.001756209990003299,
+                "net_value_vs_P3_usd_assumed": 101.99824379001,
+                "usd_per_second": 0.01
+              }
+            ],
+            "unknown_P3_loss_cases": 0,
+            "unknown_loss_cases": 0,
+            "unpriced": [
+              "human review",
+              "queue/critical-path delay beyond observed duration",
+              "development effort",
+              "actual compute billing"
+            ]
+          },
+          "low_stakes": {
+            "break_even_probe_usd_per_second": 12.811679769546085,
+            "gross_loss_reduction_vs_P3_usd_assumed": 2.25,
+            "known_loss_subtotal_usd_assumed": 0.5,
+            "outcome_loss_usd_assumed": 0.5,
+            "probe_compute_sensitivity": [
+              {
+                "incremental_probe_cost_usd_assumed": 0.0,
+                "net_value_vs_P3_usd_assumed": 2.25,
+                "usd_per_second": 0.0
+              },
+              {
+                "incremental_probe_cost_usd_assumed": 0.00017562099900032992,
+                "net_value_vs_P3_usd_assumed": 2.2498243790009997,
+                "usd_per_second": 0.001
+              },
+              {
+                "incremental_probe_cost_usd_assumed": 0.001756209990003299,
+                "net_value_vs_P3_usd_assumed": 2.2482437900099965,
+                "usd_per_second": 0.01
+              }
+            ],
+            "unknown_P3_loss_cases": 0,
+            "unknown_loss_cases": 0,
+            "unpriced": [
+              "human review",
+              "queue/critical-path delay beyond observed duration",
+              "development effort",
+              "actual compute billing"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "strict_native_model_attribution": "unverified; exact native model/effort/provider invoice unexposed",
+  "independent_review_next": "Separate session using spec/05-INDEPENDENT-VERIFICATION.md"
+}

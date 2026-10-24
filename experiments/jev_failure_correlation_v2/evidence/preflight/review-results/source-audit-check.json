@@ -1,0 +1,110 @@
+{
+  "verified_requests": 102,
+  "verified_probes": 54,
+  "source": "9c6d7612e31bb78eb07868b5ac2a046629c5876c",
+  "audit_check": {
+    "population_n": 24,
+    "selected_n": 13,
+    "miss_recompute_mismatch": [],
+    "terminal_errors_ht": 0.0,
+    "terminal_error_rate_ht": 0.0,
+    "probabilities": [
+      0.5,
+      0.5714285714285714,
+      0.6
+    ],
+    "selected_findings": [
+      {
+        "case_id": "c85b37db76aaa",
+        "initial_action": "accept",
+        "miss": false,
+        "probability": 0.5,
+        "evidence": "audit-executions/c85b37db76aaa/raw.json"
+      },
+      {
+        "case_id": "c8b932080dc3e",
+        "initial_action": "accept",
+        "miss": false,
+        "probability": 0.5,
+        "evidence": "audit-executions/c8b932080dc3e/raw.json"
+      },
+      {
+        "case_id": "c4ac02ef39bfc",
+        "initial_action": "investigate",
+        "miss": false,
+        "probability": 0.5,
+        "evidence": "audit-executions/c4ac02ef39bfc/raw.json"
+      },
+      {
+        "case_id": "c0fb9a45eb2da",
+        "initial_action": "investigate",
+        "miss": false,
+        "probability": 0.6,
+        "evidence": "audit-executions/c0fb9a45eb2da/raw.json"
+      },
+      {
+        "case_id": "c5dd2167f348a",
+        "initial_action": "investigate",
+        "miss": false,
+        "probability": 0.6,
+        "evidence": "audit-executions/c5dd2167f348a/raw.json"
+      },
+      {
+        "case_id": "caeff6c6c4681",
+        "initial_action": "investigate",
+        "miss": false,
+        "probability": 0.6,
+        "evidence": "audit-executions/caeff6c6c4681/raw.json"
+      },
+      {
+        "case_id": "c06e2dd37f2ab",
+        "initial_action": "reject",
+        "miss": false,
+        "probability": 0.5714285714285714,
+        "evidence": "audit-executions/c06e2dd37f2ab/raw.json"
+      },
+      {
+        "case_id": "c756d2780a92a",
+        "initial_action": "reject",
+        "miss": false,
+        "probability": 0.5714285714285714,
+        "evidence": "audit-executions/c756d2780a92a/raw.json"
+      },
+      {
+        "case_id": "cb482dcc4a0c1",
+        "initial_action": "reject",
+        "miss": false,
+        "probability": 0.5714285714285714,
+        "evidence": "audit-executions/cb482dcc4a0c1/raw.json"
+      },
+      {
+        "case_id": "cc191a8053cc3",
+        "initial_action": "reject",
+        "miss": false,
+        "probability": 0.5714285714285714,
+        "evidence": "audit-executions/cc191a8053cc3/raw.json"
+      },
+      {
+        "case_id": "cbfa1b0cc1f0f",
+        "initial_action": "reject",
+        "miss": false,
+        "probability": 0.5,
+        "evidence": "audit-executions/cbfa1b0cc1f0f/raw.json"
+      },
+      {
+        "case_id": "c3e667a1b7532",
+        "initial_action": "reject",
+        "miss": false,
+        "probability": 0.5,
+        "evidence": "audit-executions/c3e667a1b7532/raw.json"
+      },
+      {
+        "case_id": "c9de3dd808cb8",
+        "initial_action": "reject",
+        "miss": false,
+        "probability": 0.5,
+        "evidence": "audit-executions/c9de3dd808cb8/raw.json"
+      }
+    ]
+  }
+}

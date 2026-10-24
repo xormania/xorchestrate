@@ -1,0 +1,222 @@
+{
+  "equivalent_wording": {
+    "n": 6,
+    "key_correct": 5,
+    "judgment_flips_vs_P1": 1,
+    "unchanged_judgment": 5,
+    "details": [
+      {
+        "case_id": "c8b932080dc3e",
+        "initial": "supports",
+        "transformed": "supports",
+        "expected": "supports"
+      },
+      {
+        "case_id": "c06e2dd37f2ab",
+        "initial": "contradicts",
+        "transformed": "contradicts",
+        "expected": "contradicts"
+      },
+      {
+        "case_id": "c5dd2167f348a",
+        "initial": "unresolved",
+        "transformed": "supports",
+        "expected": "supports"
+      },
+      {
+        "case_id": "cc191a8053cc3",
+        "initial": "contradicts",
+        "transformed": "contradicts",
+        "expected": "contradicts"
+      },
+      {
+        "case_id": "c5af5e427a2f3",
+        "initial": "contradicts",
+        "transformed": "contradicts",
+        "expected": "supports"
+      },
+      {
+        "case_id": "c756d2780a92a",
+        "initial": "contradicts",
+        "transformed": "contradicts",
+        "expected": "contradicts"
+      }
+    ]
+  },
+  "irrelevant_context": {
+    "n": 6,
+    "key_correct": 4,
+    "judgment_flips_vs_P1": 0,
+    "unchanged_judgment": 6,
+    "details": [
+      {
+        "case_id": "c8b932080dc3e",
+        "initial": "supports",
+        "transformed": "supports",
+        "expected": "supports"
+      },
+      {
+        "case_id": "c06e2dd37f2ab",
+        "initial": "contradicts",
+        "transformed": "contradicts",
+        "expected": "contradicts"
+      },
+      {
+        "case_id": "c5dd2167f348a",
+        "initial": "unresolved",
+        "transformed": "unresolved",
+        "expected": "supports"
+      },
+      {
+        "case_id": "cc191a8053cc3",
+        "initial": "contradicts",
+        "transformed": "contradicts",
+        "expected": "contradicts"
+      },
+      {
+        "case_id": "c5af5e427a2f3",
+        "initial": "contradicts",
+        "transformed": "contradicts",
+        "expected": "supports"
+      },
+      {
+        "case_id": "c756d2780a92a",
+        "initial": "contradicts",
+        "transformed": "contradicts",
+        "expected": "contradicts"
+      }
+    ]
+  },
+  "remove_decisive": {
+    "n": 6,
+    "key_correct": 6,
+    "judgment_flips_vs_P1": 5,
+    "unchanged_judgment": 1,
+    "details": [
+      {
+        "case_id": "c8b932080dc3e",
+        "initial": "supports",
+        "transformed": "unresolved",
+        "expected": "unresolved"
+      },
+      {
+        "case_id": "c06e2dd37f2ab",
+        "initial": "contradicts",
+        "transformed": "unresolved",
+        "expected": "unresolved"
+      },
+      {
+        "case_id": "c5dd2167f348a",
+        "initial": "unresolved",
+        "transformed": "unresolved",
+        "expected": "unresolved"
+      },
+      {
+        "case_id": "cc191a8053cc3",
+        "initial": "contradicts",
+        "transformed": "unresolved",
+        "expected": "unresolved"
+      },
+      {
+        "case_id": "c5af5e427a2f3",
+        "initial": "contradicts",
+        "transformed": "unresolved",
+        "expected": "unresolved"
+      },
+      {
+        "case_id": "c756d2780a92a",
+        "initial": "contradicts",
+        "transformed": "unresolved",
+        "expected": "unresolved"
+      }
+    ]
+  },
+  "reverse_options": {
+    "n": 6,
+    "key_correct": 4,
+    "judgment_flips_vs_P1": 0,
+    "unchanged_judgment": 6,
+    "details": [
+      {
+        "case_id": "c8b932080dc3e",
+        "initial": "supports",
+        "transformed": "supports",
+        "expected": "supports"
+      },
+      {
+        "case_id": "c06e2dd37f2ab",
+        "initial": "contradicts",
+        "transformed": "contradicts",
+        "expected": "contradicts"
+      },
+      {
+        "case_id": "c5dd2167f348a",
+        "initial": "unresolved",
+        "transformed": "unresolved",
+        "expected": "supports"
+      },
+      {
+        "case_id": "cc191a8053cc3",
+        "initial": "contradicts",
+        "transformed": "contradicts",
+        "expected": "contradicts"
+      },
+      {
+        "case_id": "c5af5e427a2f3",
+        "initial": "contradicts",
+        "transformed": "contradicts",
+        "expected": "supports"
+      },
+      {
+        "case_id": "c756d2780a92a",
+        "initial": "contradicts",
+        "transformed": "contradicts",
+        "expected": "contradicts"
+      }
+    ]
+  },
+  "wrong_subject": {
+    "n": 6,
+    "key_correct": 6,
+    "judgment_flips_vs_P1": 5,
+    "unchanged_judgment": 1,
+    "details": [
+      {
+        "case_id": "c8b932080dc3e",
+        "initial": "supports",
+        "transformed": "unresolved",
+        "expected": "unresolved"
+      },
+      {
+        "case_id": "c06e2dd37f2ab",
+        "initial": "contradicts",
+        "transformed": "unresolved",
+        "expected": "unresolved"
+      },
+      {
+        "case_id": "c5dd2167f348a",
+        "initial": "unresolved",
+        "transformed": "unresolved",
+        "expected": "unresolved"
+      },
+      {
+        "case_id": "cc191a8053cc3",
+        "initial": "contradicts",
+        "transformed": "unresolved",
+        "expected": "unresolved"
+      },
+      {
+        "case_id": "c5af5e427a2f3",
+        "initial": "contradicts",
+        "transformed": "unresolved",
+        "expected": "unresolved"
+      },
+      {
+        "case_id": "c756d2780a92a",
+        "initial": "contradicts",
+        "transformed": "unresolved",
+        "expected": "unresolved"
+      }
+    ]
+  }
+}
