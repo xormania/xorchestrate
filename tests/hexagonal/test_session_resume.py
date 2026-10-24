@@ -71,7 +71,7 @@ def test_authorized_resume_after_restart_binds_callbacks_to_destination(tmp_path
 
     with build(config) as runtime:
         app = runtime.application
-        assert app.call("list_sessions", {})["sessions"][0]["status"] == "active"
+        assert app.call("list_sessions", {})["sessions"][0]["status"] == "disconnected"
         contexts = []
         app.sessions["agent"].set_request_handler(lambda method, params, context: contexts.append(context) or {})
         resumed = app.call("start_session", {"driver": "agent", "resume_session_id": source["id"],
@@ -83,4 +83,8 @@ def test_authorized_resume_after_restart_binds_callbacks_to_destination(tmp_path
         assert resumed["work_id"] == target_work["id"]
         app.call("send_session", {"session_id": resumed["id"], "message": {"text": "tool"},
                                   "idempotency_key": "callback"}, actor="delegate")
-        assert contexts == [{"actor": "delegate", "delegated_by": "controller", "work_id": target_work["id"]}]
+        import time
+        deadline = time.monotonic() + 2
+        while not contexts and time.monotonic() < deadline:
+            time.sleep(.01)
+        assert contexts == [{"actor": "delegate", "delegated_by": "controller", "work_id": target_work["id"], "session_id": resumed["id"]}]

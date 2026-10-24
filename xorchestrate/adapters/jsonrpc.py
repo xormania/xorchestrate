@@ -16,6 +16,8 @@ import subprocess
 import threading
 import time
 from collections.abc import Callable
+from concurrent.futures import Future
+from copy import deepcopy
 from typing import Any
 
 from ..model import OrchestrationError
@@ -210,228 +212,326 @@ def run_json_process(options: dict, payload: dict, command_key: str = "command")
 
 
 class JsonLineProcess:
-    """A serialized JSON-RPC client with bounded asynchronous receive buffering.
+    """Bounded, full-duplex JSON-RPC client.
 
-    Server requests are answered while a request or poll is in progress. A
-    request_handler receives (method, params) and returns a JSON result. It must
-    not recursively issue requests on this connection. Unsupported requests are
-    rejected. No protocol notification or remote metadata grants authority.
+    A reader continuously correlates responses and dispatches callbacks, even
+    after a submission has returned. Callback workers and output buffering are
+    bounded independently. ``request_async`` returns after writing the request;
+    its Future represents the eventual response, not successful native receipt.
+    Notification observers must be short and nonblocking. They see packets in
+    wire order, while ``poll_notifications`` retains the same bounded packets.
     """
 
-    def __init__(self, options: dict, request_handler: Callable | None = None, *, jsonrpc: bool = True):
+    def __init__(self, options: dict, request_handler: Callable | None = None, *,
+                 jsonrpc: bool = True, notification_handler: Callable | None = None):
         self.timeout = positive_number(options, "timeout", 30)
         self.shutdown_timeout = positive_number(options, "shutdown_timeout", 0.2)
+        self.callback_timeout = positive_number(options, "callback_timeout", self.timeout)
         self.max_frame = positive_integer(options, "max_frame_bytes", 1024 * 1024)
         self.max_output = positive_integer(options, "max_output_bytes", 4 * 1024 * 1024)
         self.max_pending = positive_integer(options, "max_pending_messages", 1024)
+        self.max_callback_history = positive_integer(options, "max_callback_history", 4096)
+        worker_count = positive_integer(options, "callback_workers", 8)
         self.handler = request_handler
+        self.notification_handler = notification_handler
         self.jsonrpc = jsonrpc
-        self._incoming: queue.Queue = queue.Queue(maxsize=self.max_pending)
-        self._buffer_lock = threading.Lock()
-        self._operation_lock = threading.RLock()
-        self._buffered = 0
-        self._received_total = 0
+        self._state = threading.RLock()
+        self._write_lock = threading.Lock()
+        self._write_slots = threading.BoundedSemaphore(self.max_pending)
+        self._pending: dict[int, dict] = {}
+        self._callbacks: dict[tuple, dict] = {}
+        self._callback_queue: queue.Queue = queue.Queue(maxsize=self.max_pending)
+        self._callback_bytes = 0
         self._notifications: list[dict] = []
         self._notification_bytes = 0
-        self._failure: OrchestrationError | None = None
+        self._failure: BaseException | None = None
         self._next_id = 0
         self._closed = False
+        self._close_complete = threading.Event()
+        self._close_owner = None
         try:
-            self.process = subprocess.Popen(**command_options(options), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0)
+            self.process = subprocess.Popen(**command_options(options), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                            stderr=subprocess.DEVNULL, bufsize=0)
         except (OSError, ValueError) as exc:
             raise OrchestrationError("Could not start configured subprocess.", "provider_unavailable", {"outcome": "not_started"}) from exc
+        self._workers = [threading.Thread(target=self._callback_worker, daemon=True) for _ in range(worker_count)]
         self._reader = threading.Thread(target=self._read, daemon=True)
+        for worker in self._workers:
+            worker.start()
         self._reader.start()
+
+    @staticmethod
+    def _unavailable(outcome="unknown"):
+        return OrchestrationError("Subprocess connection is closed.", "provider_unavailable", {"outcome": outcome})
+
+    def _fail(self, error):
+        if isinstance(error, OrchestrationError):
+            error.details["outcome"] = "unknown"
+        elif isinstance(error, Exception):
+            error = OrchestrationError("Subprocess exchange failed unexpectedly.", "provider_unavailable", {"outcome": "unknown"})
+        with self._state:
+            if self._failure is None:
+                self._failure = error
+        self.close()
 
     def _read(self):
         try:
             while not self._closed:
                 line = self.process.stdout.readline(self.max_frame + 1)
                 if not line:
-                    self._incoming.put_nowait((None, 0))
+                    if not self._closed:
+                        raise OrchestrationError("Subprocess closed its output stream.", "provider_unavailable", {"outcome": "unknown"})
                     return
                 if len(line) > self.max_frame or not line.endswith(b"\n"):
                     raise OrchestrationError("Subprocess exceeded the JSON-line frame bound or omitted its delimiter.", "provider_protocol")
-                with self._buffer_lock:
-                    self._buffered += len(line)
-                    if self._buffered > self.max_output:
-                        raise OrchestrationError("Subprocess exceeded the receive buffer bound.", "provider_protocol")
-                self._incoming.put_nowait((decode_json(line), len(line)))
-        except (OSError, ValueError, queue.Full, OrchestrationError) as exc:
+                packet = decode_json(line)
+                if not isinstance(packet, dict) or (self.jsonrpc and packet.get("jsonrpc") != "2.0"):
+                    raise OrchestrationError("Invalid JSON-RPC envelope.", "provider_protocol")
+                with self._state:
+                    for pending in self._pending.values():
+                        pending["received"] += len(line)
+                        if pending["received"] > self.max_output:
+                            raise OrchestrationError("Subprocess response exceeded its output bound.", "provider_protocol")
+                self._dispatch(packet)
+        except BaseException as exc:
             if not self._closed:
-                self._failure = exc if isinstance(exc, OrchestrationError) else OrchestrationError("Subprocess communication failed or exceeded its queue bound.", "provider_protocol")
-                _signal_group(self.process, signal.SIGKILL)
+                self._fail(exc)
+
+    def _dispatch(self, packet):
+        if "method" in packet:
+            if not isinstance(packet["method"], str) or not packet["method"] or "result" in packet or "error" in packet:
+                raise OrchestrationError("Invalid JSON-RPC request or notification.", "provider_protocol")
+            params = packet.get("params", {})
+            if not isinstance(params, (dict, list)):
+                raise OrchestrationError("Invalid JSON-RPC parameters.", "provider_protocol")
+            if "id" not in packet:
+                size = len(encode_json(packet))
+                with self._state:
+                    if len(self._notifications) >= self.max_pending or self._notification_bytes + size > self.max_output:
+                        raise OrchestrationError("Subprocess notification buffer exceeded its bound.", "provider_protocol")
+                    self._notifications.append(packet)
+                    self._notification_bytes += size
+                if self.notification_handler is not None:
+                    self.notification_handler(packet["method"], deepcopy(params))
+                return
+            identifier = packet["id"]
+            if type(identifier) not in (int, str):
+                raise OrchestrationError("Invalid JSON-RPC request identifier.", "provider_protocol")
+            # A retransmitted native request cannot execute its callback twice.
+            # Never evict identity history and silently permit a conflicting reuse.
+            key = (type(identifier), identifier)
+            fingerprint = encode_json(packet, sort_keys=True)
+            with self._state:
+                previous = self._callbacks.get(key)
+                if previous:
+                    if previous["fingerprint"] != fingerprint:
+                        raise OrchestrationError("Conflicting JSON-RPC callback identifier reuse.", "provider_protocol")
+                    answer = previous.get("answer")
+                else:
+                    if len(self._callbacks) >= self.max_callback_history or self._callback_bytes + len(fingerprint) > self.max_output:
+                        raise OrchestrationError("Subprocess callback history exceeded its bound.", "provider_protocol")
+                    self._callbacks[key] = {"fingerprint": fingerprint}
+                    self._callback_bytes += len(fingerprint)
+                    try:
+                        self._callback_queue.put_nowait((key, packet))
+                    except queue.Full as exc:
+                        raise OrchestrationError("Subprocess callback queue exceeded its bound.", "provider_protocol") from exc
+                    return
+            if answer is not None:
+                self._write(answer, time.monotonic() + self.timeout)
+            return
+        identifier = packet.get("id")
+        if type(identifier) is not int or ("result" in packet) == ("error" in packet):
+            raise OrchestrationError("Unexpected or malformed JSON-RPC response.", "provider_protocol")
+        error = packet.get("error")
+        if "error" in packet and (not isinstance(error, dict) or type(error.get("code")) is not int or not isinstance(error.get("message"), str)):
+            raise OrchestrationError("Malformed JSON-RPC error.", "provider_protocol")
+        with self._state:
+            pending = self._pending.pop(identifier, None)
+        if pending is None:
+            raise OrchestrationError("Unexpected or duplicate JSON-RPC response.", "provider_protocol")
+        if pending["timer"]:
+            pending["timer"].cancel()
+        if "error" in packet:
+            pending["future"].set_exception(OrchestrationError("Subprocess returned a JSON-RPC error.", "provider_error", {
+                "outcome": "unknown", "remote_error": error}))
+        else:
+            pending["future"].set_result(packet["result"])
+
+    def _callback_worker(self):
+        while not self._closed:
+            try:
+                key, packet = self._callback_queue.get(timeout=0.05)
+            except queue.Empty:
+                continue
+            finished = threading.Event()
+
+            def expire_callback(finished=finished):
+                if not finished.is_set() and not self._closed:
+                    self._fail(OrchestrationError("Subprocess callback exceeded its deadline.", "provider_timeout", {"outcome": "unknown"}))
+
+            timer = threading.Timer(self.callback_timeout, expire_callback)
+            timer.daemon = True
+            timer.start()
+            try:
+                if self._closed:
+                    return
+                try:
+                    if packet["method"] == "ping":
+                        result = {}
+                    elif self.handler is not None:
+                        result = self.handler(packet["method"], packet.get("params", {}))
+                    else:
+                        raise OrchestrationError("Client does not support this request.", "unsupported_method")
+                    answer = self._envelope(id=packet["id"], result=result)
+                except OrchestrationError as exc:
+                    answer = self._envelope(id=packet["id"], error={"code": -32601 if exc.code == "unsupported_method" else -32603, "message": str(exc)})
+                size = len(encode_json(answer))
+                with self._state:
+                    if self._callback_bytes + size > self.max_output:
+                        raise OrchestrationError("Subprocess callback history exceeded its byte bound.", "provider_protocol")
+                    self._callback_bytes += size
+                    self._callbacks[key]["answer"] = answer
+                self._write(answer, time.monotonic() + self.timeout)
+            except BaseException as exc:
+                if not self._closed:
+                    self._fail(exc)
+            finally:
+                finished.set()
+                timer.cancel()
+                self._callback_queue.task_done()
 
     def _write(self, message: dict, deadline: float):
-        if self._closed:
-            raise OrchestrationError("Subprocess connection is closed.", "provider_unavailable", {"outcome": "not_started"})
+        with self._state:
+            if self._closed:
+                raise self._unavailable("not_started")
         data = encode_json(message) + b"\n"
         if len(data) > self.max_frame:
             raise OrchestrationError("Request exceeds the configured frame bound.", "invalid_request", {"outcome": "not_started"})
+        if not self._write_slots.acquire(timeout=max(0, deadline - time.monotonic())):
+            raise OrchestrationError("Subprocess write capacity deadline exceeded.", "provider_timeout", {"outcome": "not_started"})
         done = threading.Event()
         failures = []
 
         def send():
             try:
-                remaining = memoryview(data)
-                while remaining:
-                    written = self.process.stdin.write(remaining)
-                    remaining = remaining[written:]
+                with self._write_lock:
+                    if self._closed:
+                        raise OSError("Connection closed")
+                    remaining = memoryview(data)
+                    while remaining:
+                        written = self.process.stdin.write(remaining)
+                        if not written:
+                            raise OSError("Incomplete subprocess input")
+                        remaining = remaining[written:]
             except (OSError, ValueError) as exc:
                 failures.append(exc)
             finally:
+                self._write_slots.release()
                 done.set()
 
-        writer = threading.Thread(target=send, daemon=True)
-        writer.start()
+        threading.Thread(target=send, daemon=True).start()
         if not done.wait(max(0, deadline - time.monotonic())):
-            self.close()
             raise OrchestrationError("Subprocess did not accept input before the deadline.", "provider_timeout", {"outcome": "unknown"})
         if failures:
-            self.close()
             raise OrchestrationError("Subprocess input stream is unavailable.", "provider_unavailable", {"outcome": "unknown"}) from failures[0]
 
     def _envelope(self, **fields):
         return {"jsonrpc": "2.0", **fields} if self.jsonrpc else fields
 
-    def _receive(self, deadline: float, block: bool = True):
-        while True:
-            if self._failure:
-                raise self._failure
-            wait = max(0, deadline - time.monotonic())
-            try:
-                packet, size = self._incoming.get(timeout=min(wait, 0.05)) if block else self._incoming.get_nowait()
-            except queue.Empty:
-                if not block:
-                    return None
-                if wait <= 0:
-                    raise OrchestrationError("Subprocess request exceeded its deadline.", "provider_timeout", {"outcome": "unknown"})
-                continue
-            with self._buffer_lock:
-                self._buffered -= size
-            self._received_total += size
-            if packet is None:
-                raise OrchestrationError("Subprocess closed its output stream.", "provider_unavailable", {"outcome": "unknown"})
-            if not isinstance(packet, dict) or (self.jsonrpc and packet.get("jsonrpc") != "2.0"):
-                raise OrchestrationError("Invalid JSON-RPC envelope.", "provider_protocol")
-            return packet
+    def _expire(self, identifier):
+        with self._state:
+            if identifier not in self._pending or self._closed:
+                return
+        self._fail(OrchestrationError("Subprocess request exceeded its deadline.", "provider_timeout", {"outcome": "unknown"}))
 
-    def _handle_message(self, packet: dict, deadline: float) -> bool:
-        if "method" not in packet:
-            return False
-        if not isinstance(packet["method"], str) or not packet["method"] or "result" in packet or "error" in packet:
-            raise OrchestrationError("Invalid JSON-RPC request or notification.", "provider_protocol")
-        params = packet.get("params", {})
-        if not isinstance(params, (dict, list)):
-            raise OrchestrationError("Invalid JSON-RPC parameters.", "provider_protocol")
-        if "id" in packet:
-            identifier = packet["id"]
-            if type(identifier) not in (int, str):
-                raise OrchestrationError("Invalid JSON-RPC request identifier.", "provider_protocol")
-            try:
-                if packet["method"] == "ping":
-                    result = {}
-                elif self.handler is not None:
-                    result = self.handler(packet["method"], params)
-                else:
-                    raise OrchestrationError("Client does not support this request.", "unsupported_method")
-                answer = self._envelope(id=identifier, result=result)
-            except OrchestrationError as exc:
-                answer = self._envelope(id=identifier, error={"code": -32601 if exc.code == "unsupported_method" else -32603, "message": str(exc)})
-            self._write(answer, deadline)
-        else:
-            size = len(encode_json(packet))
-            self._notification_bytes += size
-            if len(self._notifications) >= self.max_pending or self._notification_bytes > self.max_output:
-                raise OrchestrationError("Subprocess notification buffer exceeded its bound.", "provider_protocol")
-            self._notifications.append(packet)
-        return True
-
-    def request(self, method: str, params: dict | list | None = None, timeout: float | None = None) -> Any:
-        with self._operation_lock:
-            deadline = time.monotonic() + (self.timeout if timeout is None else positive_number({"timeout": timeout}, "timeout", self.timeout))
+    def request_async(self, method: str, params: dict | list | None = None, timeout: float | None = None) -> Future:
+        duration = self.timeout if timeout is None else positive_number({"timeout": timeout}, "timeout", self.timeout)
+        deadline = time.monotonic() + duration
+        with self._state:
+            if self._closed:
+                raise self._unavailable("not_started")
+            if len(self._pending) >= self.max_pending:
+                raise OrchestrationError("Too many pending subprocess requests.", "provider_capacity", {"outcome": "not_started"})
             self._next_id += 1
             identifier = self._next_id
-            received_before = self._received_total
-            original_dispatched = False
-            try:
-                self._write(self._envelope(id=identifier, method=method, params={} if params is None else params), deadline)
-                original_dispatched = True
-                while True:
-                    packet = self._receive(deadline)
-                    if self._received_total - received_before > self.max_output:
-                        raise OrchestrationError("Subprocess response exceeded its output bound.", "provider_protocol")
-                    if self._handle_message(packet, deadline):
-                        continue
-                    if type(packet.get("id")) is not int or packet["id"] != identifier or ("result" in packet) == ("error" in packet):
-                        raise OrchestrationError("Unexpected or malformed JSON-RPC response.", "provider_protocol")
-                    if "error" in packet:
-                        error = packet["error"]
-                        if not isinstance(error, dict) or type(error.get("code")) is not int or not isinstance(error.get("message"), str):
-                            raise OrchestrationError("Malformed JSON-RPC error.", "provider_protocol")
-                        # A protocol error can follow a partial side effect; an
-                        # error response alone does not prove rollback or that
-                        # execution never began. Keep the evidence for recovery.
-                        raise OrchestrationError("Subprocess returned a JSON-RPC error.", "provider_error", {"outcome": "unknown", "remote_error": error})
-                    return packet["result"]
-            except OrchestrationError as exc:
-                # Callback response encoding/writes can fail after the original
-                # request and callback effects have executed. Their local
-                # "not_started" classification cannot describe this request.
-                if original_dispatched:
-                    exc.details["outcome"] = "unknown"
-                if exc.code != "provider_error":
-                    exc.details.setdefault("outcome", "unknown")
-                    self.close()
-                raise
-            except Exception as exc:
+            packet = self._envelope(id=identifier, method=method, params={} if params is None else params)
+            # Validate before publishing a pending request or writing any bytes.
+            if len(encode_json(packet)) + 1 > self.max_frame:
+                raise OrchestrationError("Request exceeds the configured frame bound.", "invalid_request", {"outcome": "not_started"})
+            future = Future()
+            # Cancellation cannot discard an already submitted effect or lose a
+            # subsequent response. Consumers retain the uncertain operation.
+            future.set_running_or_notify_cancel()
+            self._pending[identifier] = {"future": future, "received": 0, "timer": None}
+        try:
+            self._write(packet, deadline)
+            with self._state:
+                pending = self._pending.get(identifier)
+                if pending:
+                    timer = threading.Timer(max(0, deadline - time.monotonic()), self._expire, args=(identifier,))
+                    timer.daemon = True
+                    pending["timer"] = timer
+                    timer.start()
+            return future
+        except BaseException as exc:
+            if isinstance(exc, OrchestrationError) and exc.details.get("outcome") == "not_started":
+                with self._state:
+                    self._pending.pop(identifier, None)
+                if not future.done():
+                    future.set_exception(exc)
+            else:
+                self._fail(exc)
+            raise
+
+    def request(self, method: str, params: dict | list | None = None, timeout: float | None = None) -> Any:
+        try:
+            return self.request_async(method, params, timeout).result()
+        except BaseException:
+            if self._closed:
                 self.close()
-                raise OrchestrationError("Subprocess exchange failed unexpectedly.", "provider_unavailable", {"outcome": "unknown"}) from exc
-            except BaseException:
-                self.close()
-                raise
+            raise
 
     def notify(self, method: str, params: dict | None = None) -> None:
-        with self._operation_lock:
+        try:
             self._write(self._envelope(method=method, **({"params": params} if params is not None else {})), time.monotonic() + self.timeout)
+        except OrchestrationError as exc:
+            if exc.details.get("outcome") != "not_started":
+                self._fail(exc)
+            raise
 
     def poll_notifications(self) -> list[dict]:
-        try:
-            return self._poll_notifications()
-        except OrchestrationError as exc:
-            # Polling also services server requests whose handlers may already
-            # have applied effects before a response could be written.
-            exc.details["outcome"] = "unknown"
-            self.close()
-            raise
-        except Exception as exc:
-            self.close()
-            raise OrchestrationError("Subprocess exchange failed unexpectedly.", "provider_unavailable", {"outcome": "unknown"}) from exc
-        except BaseException:
-            self.close()
-            raise
-
-    def _poll_notifications(self) -> list[dict]:
-        with self._operation_lock:
-            deadline = time.monotonic() + self.timeout
-            received_before = self._received_total
-            while True:
-                packet = self._receive(deadline, block=False)
-                if packet is None:
-                    break
-                if self._received_total - received_before > self.max_output or time.monotonic() >= deadline:
-                    self.close()
-                    raise OrchestrationError("Subprocess polling exceeded its configured bounds.", "provider_protocol")
-                if not self._handle_message(packet, deadline):
-                    self.close()
-                    raise OrchestrationError("Unexpected JSON-RPC response without a pending request.", "provider_protocol")
+        with self._state:
+            failure = self._failure
             result, self._notifications = self._notifications, []
             self._notification_bytes = 0
-            return result
+        if failure:
+            self.close()
+            raise failure
+        return result
 
     def close(self) -> None:
-        if not self._closed:
-            self._closed = True
-            close_process(self.process, self.shutdown_timeout)
-            if threading.current_thread() is not self._reader:
-                self._reader.join(timeout=1)
+        with self._state:
+            if not self._closed:
+                self._closed = True
+                self._close_owner = threading.current_thread()
+                pending, self._pending = list(self._pending.values()), {}
+                for item in pending:
+                    if item["timer"]:
+                        item["timer"].cancel()
+                owner = True
+            else:
+                owner = False
+        if owner:
+            try:
+                close_process(self.process, self.shutdown_timeout)
+                if threading.current_thread() is not self._reader:
+                    self._reader.join(timeout=1)
+            finally:
+                self._close_complete.set()
+                for item in pending:
+                    if not item["future"].done():
+                        item["future"].set_exception(self._failure or self._unavailable())
+        elif threading.current_thread() not in (self._reader, self._close_owner):
+            self._close_complete.wait(timeout=2 * self.shutdown_timeout + 2)
+            self._reader.join(timeout=1)

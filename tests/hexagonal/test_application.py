@@ -390,7 +390,8 @@ def test_session_lifecycle_retains_handles_context_and_output(store):
     trusted_context = driver.specifications[0]["context"]
     assert trusted_context["actor"] == "builder" and trusted_context["delegated_by"] == "owner"
     assert trusted_context["work_id"] == work["id"]
-    assert set(trusted_context) == {"actor", "delegated_by", "work_id"}
+    assert set(trusted_context) == {"actor", "delegated_by", "work_id", "session_id"}
+    assert trusted_context["session_id"] == session_id
     app.call("send_session", {"session_id": session_id, "message": {"text": "Begin"}, "idempotency_key": "send"})
     poll_args = {"session_id": session_id, "idempotency_key": "poll"}
     assert app.call("poll_session", poll_args)["output"] == [{"text": "Feature checked"}]
@@ -411,8 +412,11 @@ def test_unknown_session_effect_blocks_overlapping_effect_and_reconciles():
     with pytest.raises(OrchestrationError) as error:
         app.call("send_session", {"session_id": session["id"], "message": {}, "idempotency_key": "send"})
     operation = app.call("get_operation", {"operation_id": error.value.details["operation_id"]})["operation"]
+    polled = app.call("poll_session", {"session_id": session["id"], "idempotency_key": "inspect"})
+    assert polled["session"]["status"] == "unknown"
+    assert polled["session"]["pending_operation"] == operation["id"]
     with pytest.raises(Conflict):
-        app.call("stop_session", {"session_id": session["id"], "idempotency_key": "stop"})
+        app.call("send_session", {"session_id": session["id"], "message": {}, "idempotency_key": "other-send"})
     app.call("resolve_operation", {"operation_id": operation["id"], "expected_version": operation["version"],
         "outcome": "completed", "result": {"accepted": True}, "reason": "Observed accepted turn"})
     assert app.call("stop_session", {"session_id": session["id"], "idempotency_key": "stop"})["session"]["status"] == "stopped"
@@ -478,7 +482,7 @@ def test_authorized_resume_preserves_source_provenance_and_uses_opaque_backend(s
     assert result["session"]["actor_id"] == arguments["actor_id"]
     assert result["session"]["work_id"] == arguments["work_id"]
     assert driver.resumes[0][0] == source["backend"]
-    assert driver.resumes[0][1]["context"] == {"actor": arguments["actor_id"], "delegated_by": "alice", "work_id": arguments["work_id"]}
+    assert driver.resumes[0][1]["context"] == {"actor": arguments["actor_id"], "delegated_by": "alice", "work_id": arguments["work_id"], "session_id": result["session"]["id"]}
     provenance = {"session_id": source["id"], "version": source["version"], "start_operation_id": source["start_operation_id"]}
     assert result["session"]["resume_source"] == provenance
     with store.transaction() as tx:
