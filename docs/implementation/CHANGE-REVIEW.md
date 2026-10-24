@@ -73,6 +73,10 @@ known controller actions, at most eight times with the same request/key. A real
 application regression forces that callback race and verifies one native send;
 unqualified conflicts and exhausted retries still fail. No acceptance predicate
 or required case was removed. The failed run is retained in the evidence package.
+The next integrated run also exercised that race in the Claude test's read-only
+`get_work` observation loop. Its polling helper now retries only safe conflicts
+within the existing deadline; unsafe conflicts and other errors still propagate.
+The retained failing assertion was not removed or relaxed.
 
 The full composed communication inventory is 46 cases, including 15 lifecycle
 cases. That report is not B1/B2 acceptance coverage: those requirements map to the

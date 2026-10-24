@@ -7,18 +7,62 @@ import pytest
 
 from xorchestrate.adapters.claude import ClaudeSessionDriver
 from xorchestrate.adapters.native_gateway import request
-from xorchestrate.model import Capability, OrchestrationError
+from xorchestrate.model import Capability, Conflict, OrchestrationError
 
 FIXTURE = Path(__file__).parent / "fixtures" / "claude_native.py"
 
 
 def wait_for(predicate, timeout=5):
+    """Wait on read-only observations, retrying only stale authorization reads."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        if predicate():
-            return
+        try:
+            if predicate():
+                return
+        except Conflict as error:
+            if error.details.get("retry_safe") is not True:
+                raise
         time.sleep(0.01)
     raise AssertionError("Expected native observation did not arrive")
+
+
+def test_wait_for_retries_safe_observation_conflict():
+    attempts = []
+
+    def observation():
+        attempts.append(True)
+        if len(attempts) == 1:
+            raise Conflict("Evidence changed", retry_safe=True)
+        return True
+
+    wait_for(observation)
+    assert len(attempts) == 2
+
+
+@pytest.mark.parametrize("error", [Conflict("Unresolved effect"),
+    OrchestrationError("Unknown effect", "operation_unknown", {"retry_safe": True})])
+def test_wait_for_propagates_unsafe_errors(error):
+    attempts = []
+
+    def observation():
+        attempts.append(True)
+        raise error
+
+    with pytest.raises(type(error)) as raised:
+        wait_for(observation)
+    assert raised.value is error and len(attempts) == 1
+
+
+def test_wait_for_safe_conflict_keeps_original_deadline(monkeypatch):
+    ticks = iter([0, 0, 1])
+    monkeypatch.setattr(time, "monotonic", lambda: next(ticks))
+    monkeypatch.setattr(time, "sleep", lambda delay: None)
+
+    def observation():
+        raise Conflict("Evidence keeps changing", retry_safe=True)
+
+    with pytest.raises(AssertionError, match="Expected native observation did not arrive"):
+        wait_for(observation, timeout=.5)
 
 
 @pytest.fixture
