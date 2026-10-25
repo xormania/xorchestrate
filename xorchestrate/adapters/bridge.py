@@ -21,6 +21,7 @@ import threading
 import time
 import uuid
 from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError
+from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import asdict
 from datetime import datetime, timezone
@@ -551,6 +552,18 @@ class SessionBridgeHost:
         if peer is not self._active or params.get("incarnation") != self._lease:
             raise _error("The bridge connection was detached or replaced.", "stale_connection", outcome)
 
+    @contextmanager
+    def _settlement(self, peer, params):
+        """Retain native knowledge, then fence every result/error leaving the host."""
+        with self._lock:
+            try:
+                yield
+            finally:
+                # Settlement may itself fail or carry a completed native result.
+                # The current owner retains that evidence; a replaced connection
+                # gets no result and cannot infer permission to repeat the effect.
+                self._check(peer, params, outcome="unknown")
+
     def _request(self, peer, method, params):
         if not isinstance(params, dict):
             raise _error("Bridge parameters must be an object.", "bridge_protocol")
@@ -629,7 +642,7 @@ class SessionBridgeHost:
             else:
                 result = function(deepcopy(self.backend), message)
         except Exception as exc:
-            with self._lock:
+            with self._settlement(peer, params):
                 knowledge = effect_outcome(exc)
                 event = "fail" if knowledge in {"not_started", "failed"} else "uncertain"
                 evidence = {"error": getattr(exc, "code", type(exc).__name__), "effect_outcome": knowledge,
@@ -651,7 +664,7 @@ class SessionBridgeHost:
             raise
         finally:
             self._effect_context.lease = None
-        with self._lock:
+        with self._settlement(peer, params):
             # Retain the returned result independently of whether the configured
             # lifecycle can settle it. Never force a guard-denied transition.
             self._effects[key].update({"result": deepcopy(result), "effect_outcome": "completed"})
@@ -672,9 +685,6 @@ class SessionBridgeHost:
                 raise OrchestrationError("Native effect completed but host settlement could not be retained.",
                     "completed_unapplied", {"outcome": "completed", "result": deepcopy(result),
                         "cause": getattr(settlement, "code", type(settlement).__name__)}) from settlement
-            # Retain the result on the host even if a new attachment replaced the
-            # issuing connection while the native operation was in progress.
-            self._check(peer, params, outcome="unknown")
         return result
 
     def _replay_callback(self, action, arguments, native_context, idempotency_key=None):

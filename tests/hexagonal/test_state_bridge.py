@@ -1,5 +1,7 @@
 """The host's durable effect boundary consumes replaceable state definitions."""
 import json
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import replace
@@ -7,7 +9,7 @@ from dataclasses import replace
 import pytest
 
 from xorchestrate.activity import activity_definitions
-from xorchestrate.adapters.bridge import SessionBridgeHost
+from xorchestrate.adapters.bridge import BridgeSessionDriver, SessionBridgeHost
 from xorchestrate.model import OrchestrationError
 from xorchestrate.state import StateEngine
 
@@ -163,6 +165,108 @@ def test_returned_result_is_carried_outward_when_host_persistence_fails(tmp_path
             request(host, peer, receipt, message={"value": 7})
         assert replay.value.details["outcome"] == "completed"
         assert native.calls == 1
+
+
+class HeldNativeResult(NativeEffects):
+    """Hold completion until the test has either preserved or replaced its lease."""
+
+    def __init__(self, raise_result):
+        super().__init__()
+        self.raise_result = raise_result
+        self.entered = threading.Event()
+        self.release = threading.Event()
+        self.finished = threading.Event()
+        self.result = {"native_output": "retained-native-result-canary"}
+
+    def send(self, backend, message):
+        self.calls += 1
+        self.entered.set()
+        if not self.release.wait(5):
+            raise TimeoutError("test did not release the native completion gate")
+        self.finished.set()
+        if self.raise_result:
+            raise OrchestrationError("Native result needs settlement", "completed_unapplied",
+                                     {"outcome": "completed", "result": deepcopy(self.result)})
+        return deepcopy(self.result)
+
+    def close(self):
+        self.release.set()
+
+
+def bridge_effect_response(client, receipt):
+    try:
+        return {"result": client.send(receipt, {})}
+    except OrchestrationError as error:
+        return {"error": {"code": error.code, "message": str(error), "details": error.details}}
+
+
+@pytest.mark.parametrize("replace_attachment", [False, True], ids=["current", "replaced"])
+@pytest.mark.parametrize("settlement", ["normal", "guard", "persistence"])
+@pytest.mark.parametrize("raise_result", [False, True], ids=["returned-result", "native-error-result"])
+def test_post_effect_results_are_retained_but_only_exposed_to_current_lease(
+        tmp_path, monkeypatch, replace_attachment, settlement, raise_result):
+    definitions = activity_definitions()
+    if settlement == "guard":
+        definition = definitions["native_effect"]
+        definitions["native_effect"] = replace(definition, transitions=tuple(
+            replace(rule, guard=lambda context: False)
+            if rule.event in {"succeed", "uncertain"} else rule for rule in definition.transitions))
+    native = HeldNativeResult(raise_result)
+    host = SessionBridgeHost(native, tmp_path / "lease-host", state_engine=StateEngine(definitions),
+                             options={"transport": "fifo", "state_path": str(tmp_path / "lease-state.json")})
+    options = {"endpoint": str(host.endpoint), "transport": "fifo", "timeout": 3}
+    original, replacement = BridgeSessionDriver(options), BridgeSessionDriver(options)
+    save = host._save_state
+    if settlement == "persistence":
+        def fail_post_effect_save():
+            if native.finished.is_set():
+                raise OSError("controlled post-effect storage failure")
+            save()
+
+        monkeypatch.setattr(host, "_save_state", fail_post_effect_save)
+    try:
+        old = original.attach({"context": {"actor": "old-actor", "work_id": "old-work"}})
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            pending = pool.submit(bridge_effect_response, original, old)
+            try:
+                assert native.entered.wait(3), "control: native effect must be in flight before replacement"
+                current_client, current = original, old
+                if replace_attachment:
+                    current_client = replacement
+                    current = replacement.resume(old, {"context": {"actor": "new-actor", "work_id": "new-work"}})
+                    assert current["incarnation"] != old["incarnation"]
+            finally:
+                native.release.set()
+            response = pending.result(3)
+        # Inspect through the current client's wire API, not internal host state.
+        retained = current_client.inspect(current)["effects"]
+        assert len(retained) == 1
+        effect = next(iter(retained.values()))
+        assert effect["result"] == native.result
+        assert effect["effect_outcome"] == "completed"
+        assert effect["incarnation"] == old["incarnation"]
+        assert native.calls == 1
+        if replace_attachment:
+            assert response.get("error", {}).get("code") == "stale_connection", response
+            assert response["error"]["details"] == {"outcome": "unknown"}
+            assert "retained-native-result-canary" not in json.dumps(response)
+        elif not raise_result and settlement == "normal":
+            assert response == {"result": native.result}
+        else:
+            error = response["error"]
+            assert error["code"] == ("effect_unapplied" if raise_result and settlement != "normal"
+                                      else "completed_unapplied")
+            assert error["details"]["outcome"] == "completed"
+            if error["code"] == "completed_unapplied":
+                assert error["details"]["result"] == native.result
+        if settlement != "persistence":
+            persisted = json.loads(host.state_path.read_text())["effects"]
+            assert next(iter(persisted.values()))["result"] == native.result
+    finally:
+        native.release.set()
+        original.close()
+        replacement.close()
+        host.close()
 
 
 def test_host_recovery_uses_definition_and_retains_pending_effect_history(tmp_path):
