@@ -13,7 +13,9 @@ import uuid
 from collections import deque
 from copy import deepcopy
 
+from ..activity import ActivityMap, ActivitySet
 from ..model import Capability, OrchestrationError
+from ..outcomes import before_effect, effect_outcome
 from .jsonrpc import encode_json
 from .sessions import ACPSessionDriver, _identifier, _object
 
@@ -21,15 +23,25 @@ from .sessions import ACPSessionDriver, _identifier, _object
 class GrokSessionDriver(ACPSessionDriver):
     protocol = "grok"
 
+    @staticmethod
+    def _work_state(live):
+        state = live.grok
+        # These views also admit older in-memory fixture/native state without
+        # retaining two mutable sources of activity truth.
+        if not isinstance(state["active_prompts"], ActivitySet):
+            state["active_prompts"] = live.activity_model.set("native_prompt", state["active_prompts"])
+        if not isinstance(state["interjections"], ActivityMap):
+            state["interjections"] = live.activity_model.mapping("interjection", state["interjections"])
+        return state
+
     def _activity(self, live):
-        state = getattr(live, "grok", {})
-        live.activity = ("active" if live.pending or live.active_callbacks or live.submissions
-                         or state.get("native_busy") or state.get("interjections") else
-                         "unknown" if live.activity_uncertain else "idle")
+        if hasattr(live, "grok"):
+            self._work_state(live)
+        live.activity = live.activity_model.activity
         return live.activity
 
     def _native_prompt_started(self, live, prompt):
-        state = live.grok
+        state = self._work_state(live)
         if not isinstance(prompt, str) or not prompt:
             live.activity_uncertain = True
         elif prompt not in state["completed"]:
@@ -43,7 +55,7 @@ class GrokSessionDriver(ACPSessionDriver):
         state["native_busy"] = bool(state["active_prompts"])
 
     def _native_prompt_finished(self, live, prompt, completed):
-        state = live.grok
+        state = self._work_state(live)
         identified = isinstance(prompt, str) and bool(prompt)
         duplicate = identified and prompt in state["completed"]
         if not identified or (prompt not in state["active_prompts"] and not duplicate):
@@ -53,7 +65,7 @@ class GrokSessionDriver(ACPSessionDriver):
             if not duplicate:
                 state["completed"].append(prompt)
         if not completed:
-            live.activity_uncertain = True
+            live.activity_model.uncertain("native_prompt", prompt if identified else "unidentified")
         state["native_busy"] = bool(state["active_prompts"])
         return duplicate
 
@@ -197,86 +209,116 @@ class GrokSessionDriver(ACPSessionDriver):
             live.active_callbacks.add(token)
             self._observation(live, "activity", state=self._activity(live))
         try:
-            result = self._gateway_call(live, action, payload)
+            result = self._gateway_call(live, action, payload, owner=token)
             completed = True
             return result
+        except Exception as error:
+            completed = effect_outcome(error) in {"not_started", "failed"}
+            key = encode_json([payload.get("mcp_connection_id"), payload.get("mcp_request_id")]).decode()
+            with live.lock:
+                prior = live.grok["mcp_requests"].get(key)
+                if prior and prior.get("owner") == token and prior["state"] == "pending":
+                    event = "fail" if completed else "uncertain"
+                    try:
+                        prior["state"] = self._state_engine.decide("native_effect", prior["state"], event,
+                            {"kind": "callback", "identity": key}).target
+                    except Exception as recording_error:
+                        prior["recording_error"] = getattr(recording_error, "code", type(recording_error).__name__)
+                    prior.update({"effect_outcome": effect_outcome(error), "error": {"code": getattr(error, "code", "callback_failed"),
+                        "message": str(error), "details": deepcopy(getattr(error, "details", {}))}})
+            raise
         finally:
             with live.lock:
                 live.active_callbacks.discard(token)
                 if not completed:
-                    live.activity_uncertain = True
+                    live.activity_model.uncertain("callback", token)
                 self._observation(live, "activity", state=self._activity(live))
 
-    def _gateway_call(self, live, action, payload):
-        if action == "tools/list":
-            return {"tools": [{"name": c.name, "description": c.description, "inputSchema": c.input_schema} for c in self._application_tools.values()]}
-        if action == "initialized":
-            return {}
-        if action != "tools/call":
-            raise OrchestrationError("Unsupported Grok gateway action.", "unsupported_method")
-        name, arguments = payload.get("name"), _object(payload.get("arguments", {}), "Tool arguments")
-        if name not in self._application_tools or self._application_callback is None:
-            raise OrchestrationError("Unknown application tool.", "unknown_action")
-        if live.native_id is None:
-            raise OrchestrationError("Native conversation identity is not established.", "session_identity")
-        request_key = encode_json([payload.get("mcp_connection_id"), payload.get("mcp_request_id")]).decode()
-        if not payload.get("mcp_connection_id") or payload.get("mcp_request_id") is None:
-            raise OrchestrationError("MCP request lacks a connection-scoped identity.", "missing_call_identity")
-        fingerprint = hashlib.sha256(encode_json([name, arguments], sort_keys=True)).hexdigest()
-        replay = None
-        with live.lock:
-            prior = live.grok["mcp_requests"].get(request_key)
-            if prior:
-                if prior["fingerprint"] != fingerprint:
-                    raise OrchestrationError("MCP request ID was reused with different arguments.", "call_id_conflict")
-                if prior["state"] == "completed":
-                    replay = deepcopy(prior)
+    def _gateway_call(self, live, action, payload, *, owner=None):
+        with before_effect():
+            if action == "tools/list":
+                return {"tools": [{"name": c.name, "description": c.description, "inputSchema": c.input_schema} for c in self._application_tools.values()]}
+            if action == "initialized":
+                return {}
+            if action != "tools/call":
+                raise OrchestrationError("Unsupported Grok gateway action.", "unsupported_method")
+            name, arguments = payload.get("name"), _object(payload.get("arguments", {}), "Tool arguments")
+            if name not in self._application_tools or self._application_callback is None:
+                raise OrchestrationError("Unknown application tool.", "unknown_action")
+            if live.native_id is None:
+                raise OrchestrationError("Native conversation identity is not established.", "session_identity")
+            request_key = encode_json([payload.get("mcp_connection_id"), payload.get("mcp_request_id")]).decode()
+            if not payload.get("mcp_connection_id") or payload.get("mcp_request_id") is None:
+                raise OrchestrationError("MCP request lacks a connection-scoped identity.", "missing_call_identity")
+            fingerprint = hashlib.sha256(encode_json([name, arguments], sort_keys=True)).hexdigest()
+            replay = None
+            with live.lock:
+                prior = live.grok["mcp_requests"].get(request_key)
+                if prior:
+                    if prior["fingerprint"] != fingerprint:
+                        raise OrchestrationError("MCP request ID was reused with different arguments.", "call_id_conflict")
+                    if prior["state"] == "completed":
+                        replay = deepcopy(prior)
+                    elif prior["state"] == "failed":
+                        error = prior["error"]
+                        raise OrchestrationError(error["message"], error["code"], error["details"])
+                    else:
+                        raise OrchestrationError("MCP request already has an unresolved invocation.", "call_in_progress",
+                        {"outcome": prior.get("effect_outcome", "unknown")})
                 else:
-                    raise OrchestrationError("MCP request already has an unresolved invocation.", "call_in_progress")
-            else:
-                if len(live.grok["mcp_requests"]) >= self.max_native_calls:
-                    raise OrchestrationError("MCP replay ledger is full.", "session_capacity")
-                live.grok["mcp_requests"][request_key] = {"fingerprint": fingerprint, "state": "pending"}
-        if replay is not None:
-            if self._application_replay:
-                return self._application_replay(name, deepcopy(arguments), deepcopy(replay["context"]), replay["key"])
-            return replay["result"]
-        deadline = time.monotonic() + self.options.get("observation_timeout", 10)
-        with live.grok["condition"]:
-            while True:
-                matches = [(ident, row) for ident, row in live.grok["calls"].items()
-                           if row["action"] == name and row["arguments"] == arguments and not row["used"]]
-                if matches:
-                    # ACP observations carry native IDs; MCP requests do not.
-                    # Exact equal inputs are semantically indistinguishable, so
-                    # consume them one-to-one in observed order and retain the
-                    # association basis instead of inventing stronger identity.
-                    eligible = [ident for ident, _ in matches]
-                    call_id, row = matches[0]
-                    row["used"] = True
-                    break
-                remaining = deadline - time.monotonic()
-                if remaining <= 0 or live.closed:
-                    raise OrchestrationError("MCP execution has no matching native tool observation.", "missing_native_observation")
-                live.grok["condition"].wait(min(remaining, .1))
-        trusted = self._callback_context(live, name, call_id)
-        trusted["correlation_basis"] = "exact_action_arguments_observed_order"
-        self._observation(live, "native_mcp_association", call_id=call_id, action=name, arguments=arguments,
-                          eligible_native_call_ids=eligible, mcp_connection_id=payload["mcp_connection_id"],
-                          mcp_request_id=payload["mcp_request_id"], correlation_basis=trusted["correlation_basis"])
+                    if len(live.grok["mcp_requests"]) >= self.max_native_calls:
+                        raise OrchestrationError("MCP replay ledger is full.", "session_capacity")
+                    target = self._state_engine.decide("native_effect", None, "reserve",
+                        {"kind": "callback", "identity": request_key}).target
+                    live.grok["mcp_requests"][request_key] = {"fingerprint": fingerprint, "state": target, "owner": owner}
+            if replay is not None:
+                if self._application_replay:
+                    return self._application_replay(name, deepcopy(arguments), deepcopy(replay["context"]), replay["key"])
+                return replay["result"]
+            deadline = time.monotonic() + self.options.get("observation_timeout", 10)
+            with live.grok["condition"]:
+                while True:
+                    matches = [(ident, row) for ident, row in live.grok["calls"].items()
+                               if row["action"] == name and row["arguments"] == arguments and not row["used"]]
+                    if matches:
+                        # ACP observations carry native IDs; MCP requests do not.
+                        # Exact equal inputs are semantically indistinguishable, so
+                        # consume them one-to-one in observed order and retain the
+                        # association basis instead of inventing stronger identity.
+                        eligible = [ident for ident, _ in matches]
+                        call_id, row = matches[0]
+                        row["used"] = True
+                        break
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0 or live.closed:
+                        raise OrchestrationError("MCP execution has no matching native tool observation.", "missing_native_observation")
+                    live.grok["condition"].wait(min(remaining, .1))
+            trusted = self._callback_context(live, name, call_id)
+            trusted["correlation_basis"] = "exact_action_arguments_observed_order"
+            self._observation(live, "native_mcp_association", call_id=call_id, action=name, arguments=arguments,
+                              eligible_native_call_ids=eligible, mcp_connection_id=payload["mcp_connection_id"],
+                              mcp_request_id=payload["mcp_request_id"], correlation_basis=trusted["correlation_basis"])
         result = self._application_callback(name, arguments, trusted, "grok:" + encode_json([live.native_id, call_id]).decode())
-        self._observation(live, "native_tool_result", action=name, arguments=arguments, call_id=call_id, result=result)
         with live.lock:
-            live.grok["mcp_requests"][request_key] = {"fingerprint": fingerprint, "state": "completed", "result": deepcopy(result),
-                "context": deepcopy(trusted), "key": "grok:" + encode_json([live.native_id, call_id]).decode()}
+            live.grok["mcp_requests"][request_key].update({"result": deepcopy(result), "effect_outcome": "completed",
+                "context": deepcopy(trusted), "key": "grok:" + encode_json([live.native_id, call_id]).decode()})
+        try:
+            self._observation(live, "native_tool_result", action=name, arguments=arguments, call_id=call_id, result=result)
+            with live.lock:
+                row = live.grok["mcp_requests"][request_key]
+                row["state"] = self._state_engine.decide("native_effect", row["state"], "succeed",
+                    {"kind": "callback", "identity": request_key}).target
+        except Exception as error:
+            raise OrchestrationError("Callback completed but local settlement was refused.", "operation_unresolved",
+                {"outcome": "completed", "result": deepcopy(result), "cause": getattr(error, "code", type(error).__name__)}) from error
         return result
 
     def _launch(self, specification, resume):
         specification, requested = self._prepare_start(specification, ("sessionId",))
         def handshake(live, spec):
-            live.grok = {"current": None, "native_busy": False, "active_prompts": set(),
+            live.grok = {"current": None, "native_busy": False, "active_prompts": live.activity_model.set("native_prompt"),
                          "seen": deque(maxlen=1024), "completed": deque(maxlen=1024),
-                         "calls": {}, "mcp_requests": {}, "interjections": {}, "condition": threading.Condition(live.lock)}
+                         "calls": {}, "mcp_requests": {}, "interjections": live.activity_model.mapping("interjection"), "condition": threading.Condition(live.lock)}
             params = {**requested, **deepcopy(self.session)}
             if self._application_callback:
                 from .native_gateway import LocalGateway
@@ -326,7 +368,8 @@ class GrokSessionDriver(ACPSessionDriver):
         message = _object(message, "Delivery envelope")
         live = self._get(session)
         with live.lock:
-            busy = bool(live.pending or live.active_callbacks or live.grok["native_busy"] or live.grok["interjections"])
+            self._work_state(live)
+            busy = live.activity_model.activity == "active"
             if busy:
                 if len(live.grok["interjections"]) >= self.options.get("max_pending_messages", 1024):
                     raise OrchestrationError("Outstanding interjection capacity reached.", "session_capacity", {"outcome": "not_started"})
@@ -334,8 +377,16 @@ class GrokSessionDriver(ACPSessionDriver):
                 live.grok["interjections"][ident] = deepcopy(message)
         if not busy:
             return super().send(session, message)
-        result = _object(live.process.request("_x.ai/interject", {"sessionId": live.native_id,
-            "text": message.get("text", encode_json(message).decode()), "interjectionId": ident}), "Grok interjection result", "provider_protocol")
+        try:
+            result = _object(live.process.request("_x.ai/interject", {"sessionId": live.native_id,
+                "text": message.get("text", encode_json(message).decode()), "interjectionId": ident}), "Grok interjection result", "provider_protocol")
+        except Exception as error:
+            with live.lock:
+                live.grok["interjections"].pop(ident, None)
+                if effect_outcome(error) not in {"not_started", "failed"}:
+                    live.activity_model.uncertain("interjection", ident)
+                self._observation(live, "activity", state=self._activity(live))
+            raise
         self._observation(live, "native_submission", transport="grok/_x.ai/interject", message=message, interjection_id=ident, result=result)
         return {"submitted": True, "native_id": live.native_id, "incarnation": live.incarnation,
                 "transport": "grok/_x.ai/interject", "interjection_id": ident, "result": result, "completion": "pending"}

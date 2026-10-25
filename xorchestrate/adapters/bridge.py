@@ -26,7 +26,9 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 
+from ..activity import activity_engine
 from ..model import OrchestrationError
+from ..outcomes import before_effect, effect_outcome
 from .jsonrpc import decode_json, positive_number
 
 
@@ -353,8 +355,12 @@ class _Peer:
 class SessionBridgeHost:
     """Keep one configured native conversation alive across client attachments."""
 
-    def __init__(self, driver, endpoint, specification=None, capabilities=(), options=None):
+    def __init__(self, driver, endpoint, specification=None, capabilities=(), options=None, *, state_engine=None):
         self.driver = driver
+        self.state_engine = state_engine if state_engine is not None else activity_engine()
+        bind_state = getattr(driver, "bind_state_engine", None)
+        if callable(bind_state):
+            bind_state(self.state_engine)
         self.endpoint = Path(endpoint).expanduser().absolute()
         self.options = _copy(options or {})
         state_path = self.options.get("state_path")
@@ -400,10 +406,10 @@ class SessionBridgeHost:
             self.host_id = saved["host_id"]
             self._secret = bytes.fromhex(saved["secret"])
             self._effects = saved.get("effects", {})
-            for effect in self._effects.values():
+            for key, effect in tuple(self._effects.items()):
                 if effect["status"] == "pending":
-                    effect["status"] = "unknown"
-                    effect["recovery_reason"] = "host_restarted_before_effect_outcome"
+                    self._transition_effect(key, "recover", {
+                        "recovery_reason": "host_restarted_before_effect_outcome"})
             self._events = saved.get("events", [])
             self._sequence = saved.get("sequence", 0)
             self._bindings = {(field, value): lease for field, value, lease in saved.get("bindings", [])}
@@ -457,6 +463,21 @@ class SessionBridgeHost:
         fd = os.open(self.state_path, os.O_RDONLY | os.O_NOFOLLOW)
         with os.fdopen(fd, "rb") as source:
             return decode_json(source.read())
+
+    def _transition_effect(self, key, event, changes):
+        """Decide before replacing the one effect row in the host snapshot."""
+        previous = self._effects.get(key)
+        proposed = {**deepcopy(previous or {}), **deepcopy(changes)}
+        decision = self.state_engine.decide("native_effect", previous["status"] if previous else None,
+            event, {"identity": key, "current": previous, "proposed": proposed})
+        proposed["status"] = decision.target
+        proposed["state_version"] = (previous or {}).get("state_version", 0) + 1
+        proposed["state_history"] = [*(previous or {}).get("state_history", []), {
+            "event": event, "source": decision.source, "target": decision.target,
+            "definition_version": decision.definition_version, "version": proposed["state_version"],
+        }]
+        self._effects[key] = proposed
+        return proposed
 
     def _save_state(self):
         if self.state_path is None or not hasattr(self, "backend"):
@@ -577,39 +598,80 @@ class SessionBridgeHost:
                     raise _error("Bridge operation identity was reused for another effect.", "conflict")
                 if existing["status"] == "completed":
                     return deepcopy(existing["result"])
+                if existing.get("effect_outcome", existing.get("error_details", {}).get("outcome")) == "completed":
+                    details = {"outcome": "completed"}
+                    if "result" in existing:
+                        details["result"] = deepcopy(existing["result"])
+                    raise OrchestrationError("The native effect completed but host settlement is unresolved.",
+                        "completed_unapplied", details)
+                if existing["status"] == "failed" or existing.get("effect_outcome") in {"not_started", "failed"}:
+                    raise OrchestrationError(existing.get("error_message", "The native effect was refused."),
+                        existing.get("error", "effect_failed"),
+                        {**existing.get("error_details", {}), "outcome": "failed"})
                 raise _error("The bridge effect remains unresolved.", "operation_unresolved", "unknown")
             if len(self._effects) >= self.max_events:
                 raise _error("Host effect retention limit reached; inspect and rotate the host.", "bridge_capacity")
-            self._effects[key] = {"identity": identity, "incarnation": lease, "status": "pending"}
-            message = _copy(params.get("message", {}))
-            if not isinstance(message, dict):
-                raise _error("Session message must be an object.", "bridge_protocol")
-            if message.get("attempt_id"):
-                self._bindings[("attempt_id", message["attempt_id"])] = lease
-            self._save_state()
-        try:
-            self._effect_context.lease = lease
-            if method == "poll":
-                result = self.driver.poll(deepcopy(self.backend))
-            else:
+            with before_effect():
+                message = _copy(params.get("message", {}))
+                if not isinstance(message, dict):
+                    raise _error("Session message must be an object.", "bridge_protocol")
                 function = getattr(self.driver, method, None)
                 if not callable(function):
                     raise _error("Native driver does not implement this operation.", "unsupported_operation")
+                self._transition_effect(key, "reserve", {"identity": identity, "incarnation": lease})
+                if message.get("attempt_id"):
+                    self._bindings[("attempt_id", message["attempt_id"])] = lease
+                self._save_state()
+        try:
+            self._effect_context.lease = lease
+            if method == "poll":
+                result = function(deepcopy(self.backend))
+            else:
                 result = function(deepcopy(self.backend), message)
         except Exception as exc:
             with self._lock:
-                self._effects[key].update({"status": "unknown" if getattr(exc, "details", {}).get("outcome") not in {"not_started", "failed"} else "failed", "error": getattr(exc, "code", type(exc).__name__)})
-                self._save_state()
+                knowledge = effect_outcome(exc)
+                event = "fail" if knowledge in {"not_started", "failed"} else "uncertain"
+                evidence = {"error": getattr(exc, "code", type(exc).__name__), "effect_outcome": knowledge,
+                    "error_message": str(exc), "error_details": deepcopy(getattr(exc, "details", {}))}
+                if knowledge == "completed" and "result" in evidence["error_details"]:
+                    evidence["result"] = deepcopy(evidence["error_details"]["result"])
+                # Observed effect knowledge is evidence, not a forced lifecycle
+                # transition. A configured terminal guard may refuse settlement.
+                self._effects[key].update(evidence)
+                try:
+                    self._save_state()
+                    self._transition_effect(key, event, {})
+                    self._save_state()
+                except Exception as settlement:
+                    raise OrchestrationError("Native outcome could not be settled by the host.", "effect_unapplied", {
+                        "outcome": knowledge, "cause": getattr(settlement, "code", type(settlement).__name__),
+                        "native_error": evidence["error"],
+                    }) from settlement
             raise
         finally:
             self._effect_context.lease = None
         with self._lock:
-            if isinstance(result, dict):
-                for field in ("turn_id", "prompt_id", "submission_id", "call_id"):
-                    if result.get(field):
-                        self._bindings[(field, result[field])] = lease
-            self._effects[key].update({"status": "completed", "result": deepcopy(result)})
-            self._save_state()
+            # Retain the returned result independently of whether the configured
+            # lifecycle can settle it. Never force a guard-denied transition.
+            self._effects[key].update({"result": deepcopy(result), "effect_outcome": "completed"})
+            try:
+                self._save_state()
+                self._transition_effect(key, "succeed", {})
+                if isinstance(result, dict):
+                    for field in ("turn_id", "prompt_id", "submission_id", "call_id"):
+                        if result.get(field):
+                            self._bindings[(field, result[field])] = lease
+                self._save_state()
+            except Exception as settlement:
+                self._effects[key]["recording_error"] = getattr(settlement, "code", type(settlement).__name__)
+                try:
+                    self._save_state()
+                except Exception:
+                    pass  # The original returned result is also carried outward.
+                raise OrchestrationError("Native effect completed but host settlement could not be retained.",
+                    "completed_unapplied", {"outcome": "completed", "result": deepcopy(result),
+                        "cause": getattr(settlement, "code", type(settlement).__name__)}) from settlement
             # Retain the result on the host even if a new attachment replaced the
             # issuing connection while the native operation was in progress.
             self._check(peer, params, outcome="unknown")

@@ -365,8 +365,11 @@ def unresolved_completed_native_call(app, driver):
 
     app.observe_native = fault
     try:
-        with pytest.raises(OSError):
+        with pytest.raises(OrchestrationError) as unapplied:
             driver.callback("create_work", {"goal": "Exactly one retained native effect"}, context, "retained-completion")
+        assert unapplied.value.code == "result_unapplied"
+        assert unapplied.value.details["outcome"] == "completed"
+        assert "work" in unapplied.value.details["external_result"]
     finally:
         app.observe_native = observe
     call = app.call("native_observations", {"session_id": source["id"]})["calls"][0]

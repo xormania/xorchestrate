@@ -8,6 +8,7 @@ import json
 from copy import deepcopy
 
 from .model import Capability, Conflict, OrchestrationError
+from .outcomes import before_effect, effect_outcome
 
 
 def digest(value):
@@ -411,8 +412,8 @@ class DeliveryMixin:
                 "delivery_id": delivery_id, "recipient": delivery.data["recipient"], "session_id": selected,
                 "incarnation": incarnation, "native_id": native_id, "status": "pending", "work_id": message.data.get("work_id"),
                 "sequence": len(current.data["attempts"]) + 1, "submission": None})
-            tx.put("delivery", delivery_id, {**current.data, "status": "pending", "current_attempt": attempt.key,
-                "attempts": [*current.data["attempts"], attempt.key]}, current.version)
+            self._transition(tx, current, "reserve", {**current.data, "status": "pending", "current_attempt": attempt.key,
+                "attempts": [*current.data["attempts"], attempt.key]}, actor)
             self._event(tx, "delivery.reserved", actor, delivery_id=delivery_id, attempt_id=attempt.key,
                 session_id=selected, incarnation=incarnation)
         envelope = {"message_id": message.key, "recipient": delivery.data["recipient"], "attempt_id": attempt.key,
@@ -426,25 +427,54 @@ class DeliveryMixin:
             for field, expected in (("native_id", native_id), ("incarnation", incarnation), ("attempt_id", attempt.key), ("message_id", message.key)):
                 if field in raw and raw[field] != expected:
                     raise OrchestrationError("Native submission returned conflicting identity.", "submission_identity")
-            status, failure = "submitted", None
+            status, failure, known_outcome = "submitted", None, "completed"
         except Exception as error:
-            status = "failed" if isinstance(error, OrchestrationError) and error.details.get("outcome") in {"failed", "not_started"} else "unknown"
-            failure = {"code": getattr(error, "code", type(error).__name__), "message": str(error) if isinstance(error, OrchestrationError) else "Native submission outcome is unknown."}
-        with self.store.transaction() as tx:
-            current = self._require(tx, "delivery", delivery_id)
-            measured = self._require(tx, "delivery_attempt", attempt.key)
-            live = self._require(tx, "session", selected)
-            stale = (current.data.get("current_attempt") != attempt.key or measured.data["status"] != "pending"
-                or live.data.get("backend", {}).get("incarnation") != incarnation or live.data.get("status") not in {"active", "unknown"})
-            changes = {"late_result": raw, "late_error": failure} if stale else {
-                "status": status, "submission": raw if status == "submitted" else None,
-                "rejected_result": raw if status != "submitted" else None, "error": failure, "finished_at": self.clock(), "origin": "adapter"}
-            tx.put("delivery_attempt", attempt.key, {**measured.data, **changes}, measured.version)
-            if not stale:
-                current = tx.put("delivery", delivery_id, {**current.data, "status": status}, current.version)
-            self._event(tx, "delivery.stale_result" if stale else "delivery." + status, actor,
-                delivery_id=delivery_id, attempt_id=attempt.key)
-            return {"delivery": view(current), "attempt": view(self._require(tx, "delivery_attempt", attempt.key)), "stale": stale}
+            known_outcome = effect_outcome(error)
+            status = "failed" if known_outcome in {"failed", "not_started"} else "unknown"
+            details = getattr(error, "details", {})
+            if known_outcome == "completed":
+                if "external_result" in details:
+                    raw = deepcopy(details["external_result"])
+                elif "result" in details:
+                    raw = deepcopy(details["result"])
+            failure = {"code": getattr(error, "code", type(error).__name__), "outcome": known_outcome,
+                "message": str(error) if isinstance(error, OrchestrationError) else "Native submission outcome is unknown."}
+        try:
+            with self.store.transaction() as tx:
+                current = self._require(tx, "delivery", delivery_id)
+                measured = self._require(tx, "delivery_attempt", attempt.key)
+                live = self._require(tx, "session", selected)
+                stale = (current.data.get("current_attempt") != attempt.key or measured.data["status"] != "pending"
+                    or live.data.get("backend", {}).get("incarnation") != incarnation or live.data.get("status") not in {"active", "unknown"})
+                changes = {"late_result": raw, "late_error": failure} if stale else {
+                    "status": status, "submission": raw if status == "submitted" else None,
+                    "rejected_result": raw if status != "submitted" else None, "error": failure,
+                    "effect_outcome": known_outcome, "finished_at": self.clock(), "origin": "adapter"}
+                event = "retain_late" if stale else {"submitted": "submit", "failed": "fail", "unknown": "uncertain"}[status]
+                self._transition(tx, measured, event, {**measured.data, **changes}, actor)
+                if not stale:
+                    current = self._transition(tx, current, event, {**current.data, "status": status}, actor)
+                self._event(tx, "delivery.stale_result" if stale else "delivery." + status, actor,
+                    delivery_id=delivery_id, attempt_id=attempt.key)
+                return {"delivery": view(current), "attempt": view(self._require(tx, "delivery_attempt", attempt.key)), "stale": stale}
+        except Exception as error:
+            # A lifecycle guard may refuse settlement after the adapter already
+            # returned. Retain that fact independently of mutable state guards;
+            # the pending attempt still fences any automatic resubmission.
+            outcome = known_outcome
+            observation, recording_error = None, None
+            try:
+                observation = self.observe_native(selected_session["driver"],
+                    {"session_id": selected, "actor": actor}, {
+                        "kind": "delivery_result", "phase": "settlement_unapplied", "native_id": native_id,
+                        "incarnation": incarnation, "attempt_id": attempt.key, "message_id": message.key,
+                        "outcome": outcome, "result": deepcopy(raw), "error": deepcopy(failure)})
+            except Exception as retained_error:
+                recording_error = type(retained_error).__name__
+            raise OrchestrationError("The adapter outcome could not be applied; inspect retained evidence before reconciliation.",
+                "result_unapplied", {"delivery_id": delivery_id, "attempt_id": attempt.key, "outcome": outcome,
+                "external_result": deepcopy(raw), "observation_id": observation["id"] if observation else None,
+                "recording_error": recording_error}) from error
 
     def _retry_delivery(self, args, actor, context):
         with self.store.transaction() as tx:
@@ -457,7 +487,7 @@ class DeliveryMixin:
             history = [view(self._require(tx, "delivery_attempt", key)) for key in delivery.data["attempts"]]
             if self.retry_policy and not self.retry_policy.permit(view(delivery), history):
                 raise OrchestrationError("The retry policy denied another attempt.", "retry_denied")
-            record = tx.put("delivery", delivery.key, {**delivery.data, "status": "queued"}, delivery.version)
+            record = self._transition(tx, delivery, "retry", {**delivery.data, "status": "queued"}, actor)
             self._event(tx, "delivery.retry_scheduled", actor, delivery_id=delivery.key)
             return {"delivery": view(record)}
 
@@ -471,10 +501,10 @@ class DeliveryMixin:
                 raise OrchestrationError("Only an unresolved delivery can be reconciled.", "invalid_state")
             attempt = self._require(tx, "delivery_attempt", delivery.data["current_attempt"])
             # This explicit disposition never manufactures a native observation or receipt.
-            tx.put("delivery_attempt", attempt.key, {**attempt.data, "status": "reconciled", "original_status": attempt.data["status"],
-                "disposition": args["outcome"], "resolution": args["reason"], "resolved_by": actor}, attempt.version)
-            updated = tx.put("delivery", delivery.key, {**delivery.data, "status": args["outcome"],
-                "resolution": args["reason"]}, delivery.version)
+            self._transition(tx, attempt, "reconcile", {**attempt.data, "status": "reconciled", "original_status": attempt.data["status"],
+                "disposition": args["outcome"], "resolution": args["reason"], "resolved_by": actor}, actor)
+            updated = self._transition(tx, delivery, "resolve_" + args["outcome"], {**delivery.data, "status": args["outcome"],
+                "resolution": args["reason"]}, actor)
             self._event(tx, "delivery.resolved", actor, delivery_id=delivery.key, attempt_id=attempt.key)
             return {"delivery": view(updated)}
 
@@ -515,28 +545,34 @@ class DeliveryMixin:
 
     def invoke_native(self, driver_name, action_name, arguments, context, *, replay_only=False):
         """Durably fence semantic native call IDs even for non-idempotent actions."""
-        identity = digest([driver_name, context["native_id"], context["call_id"]])
-        fingerprint = digest([action_name, arguments, context["session_id"], context["incarnation"], context["actor"]])
-        native = {key: context[key] for key in ("native_id", "incarnation", "call_id")}
-        native.update({"kind": "application_tool", "action": action_name, "arguments": deepcopy(arguments)})
-        replay = None
-        with self.store.transaction() as tx:
-            self._verify_native_source(tx, context, context["actor"])
-            previous = tx.get("native_call", identity)
-            if previous:
-                if previous.data["fingerprint"] != fingerprint:
-                    raise Conflict("A native call identity was reused with different bindings or arguments.")
-                if previous.data["status"] == "completed":
-                    replay = deepcopy(previous.data["result"])
+        with before_effect():
+            identity = digest([driver_name, context["native_id"], context["call_id"]])
+            fingerprint = digest([action_name, arguments, context["session_id"], context["incarnation"], context["actor"]])
+            native = {key: context[key] for key in ("native_id", "incarnation", "call_id")}
+            native.update({"kind": "application_tool", "action": action_name, "arguments": deepcopy(arguments)})
+            replay = None
+            with self.store.transaction() as tx:
+                self._verify_native_source(tx, context, context["actor"])
+                previous = tx.get("native_call", identity)
+                if previous:
+                    if previous.data["fingerprint"] != fingerprint:
+                        raise Conflict("A native call identity was reused with different bindings or arguments.")
+                    if previous.data["status"] == "completed":
+                        replay = deepcopy(previous.data["result"])
+                    elif previous.data["status"] == "failed":
+                        raise OrchestrationError("The native call has a retained definite failure and will not execute again.",
+                            "native_call_failed", {"outcome": previous.data.get("effect_outcome", "failed"),
+                            "cause": previous.data.get("error")})
+                    else:
+                        raise OrchestrationError("The native call has an unresolved effect and will not execute again.",
+                            "native_call_unresolved", {"outcome": "unknown"})
                 else:
-                    raise OrchestrationError("The native call has an unresolved effect and will not execute again.", "native_call_unresolved")
-            else:
-                if replay_only:
-                    raise OrchestrationError("The native replay has no retained completed application call.", "native_call_unresolved")
-                self._create(tx, "native_call", context["actor"], {"fingerprint": fingerprint,
-                "status": "pending", "session_id": context["session_id"], "native_id": context["native_id"],
-                "incarnation": context["incarnation"], "call_id": context["call_id"],
-                "action": action_name, "arguments": deepcopy(arguments), "work_id": context.get("work_id")}, identity)
+                    if replay_only:
+                        raise OrchestrationError("The native replay has no retained completed application call.", "native_call_unresolved")
+                    self._create(tx, "native_call", context["actor"], {"fingerprint": fingerprint,
+                    "status": "pending", "session_id": context["session_id"], "native_id": context["native_id"],
+                    "incarnation": context["incarnation"], "call_id": context["call_id"],
+                    "action": action_name, "arguments": deepcopy(arguments), "work_id": context.get("work_id")}, identity)
         if replay is not None:
             if "idempotency_key" in arguments:
                 return self.call(action_name, arguments, actor=context["actor"], native_context=context, replay_only=replay_only)
@@ -557,8 +593,10 @@ class DeliveryMixin:
                 if digest(observed) != digest(replay):
                     raise OrchestrationError("The retained read result is stale; issue a new native call to observe current state.", "stale_native_result")
             return replay
+        completed = False
         try:
-            self.observe_native(driver_name, context, {**native, "phase": "requested"})
+            with before_effect():
+                self.observe_native(driver_name, context, {**native, "phase": "requested"})
             # Only pre-effect authorization snapshot conflicts can retry. Each
             # attempt builds and authorizes a fresh context; uncertain effects,
             # post-effect storage failures and native results are never retried.
@@ -571,16 +609,44 @@ class DeliveryMixin:
                 except Conflict as conflict:
                     if not conflict.details.get("retry_safe") or action_name not in retryable or retry == 7:
                         raise
+            completed = True
             self.observe_native(driver_name, context, {**native, "phase": "completed", "result": deepcopy(result)})
-        except Exception as error:
             with self.store.transaction() as tx:
                 row = self._require(tx, "native_call", identity)
-                tx.put("native_call", identity, {**row.data, "status": "unknown",
-                    "error": getattr(error, "code", type(error).__name__)}, row.version)
+                self._transition(tx, row, "complete", {**row.data, "status": "completed",
+                    "effect_outcome": "completed", "result": deepcopy(result)}, context["actor"])
+        except Exception as error:
+            # Once the application returned, a later observation/storage refusal
+            # cannot reclassify its completed effect as never started.
+            outcome = "completed" if completed else effect_outcome(error)
+            original_error = error
+            if completed:
+                error = OrchestrationError("The application completed, but native-call settlement needs reconciliation.",
+                    "result_unapplied", {"outcome": "completed", "external_result": deepcopy(result),
+                    "cause": getattr(original_error, "code", type(original_error).__name__)})
+            try:
+                with self.store.transaction() as tx:
+                    row = self._require(tx, "native_call", identity)
+                    definite = outcome in {"not_started", "failed"}
+                    if row.data["status"] == "pending":
+                        event = "fail" if definite else "uncertain"
+                        changes = {"status": "failed" if definite else "unknown", "effect_outcome": outcome,
+                            "error": getattr(error, "code", type(error).__name__)}
+                    else:
+                        # Concurrent evidence-based reconciliation wins. Retain
+                        # the late fact without reopening its settled lifecycle.
+                        event = "retain_late"
+                        changes = {"late_error": getattr(error, "code", type(error).__name__),
+                            "late_effect_outcome": outcome}
+                    self._transition(tx, row, event, {**row.data, **changes}, context["actor"])
+            except Exception as recording_error:
+                if isinstance(error, OrchestrationError):
+                    error.details = {**error.details, "recording_error": type(recording_error).__name__}
+                else:
+                    error.add_note(f"Native call outcome retention failed: {type(recording_error).__name__}")
+            if completed:
+                raise error from original_error
             raise
-        with self.store.transaction() as tx:
-            row = self._require(tx, "native_call", identity)
-            tx.put("native_call", identity, {**row.data, "status": "completed", "result": deepcopy(result)}, row.version)
         return result
 
     def _native_observations(self, args, actor, context):
@@ -614,8 +680,9 @@ class DeliveryMixin:
             if len(observations) != 1:
                 raise OrchestrationError("Reconciliation requires the retained adapter-origin application result.", "unverified_native_result")
             result = observations[0].data["observation"]["result"]
-            updated = tx.put("native_call", row.key, {**row.data, "status": "completed", "result": deepcopy(result),
-                "resolved_by": actor, "resolution": args["reason"], "observation_id": observations[0].key}, row.version)
+            updated = self._transition(tx, row, "resolve", {**row.data, "status": "completed",
+                "effect_outcome": "completed", "result": deepcopy(result),
+                "resolved_by": actor, "resolution": args["reason"], "observation_id": observations[0].key}, actor)
             return {"native_call": view(updated)}
 
     def _verify_exchange(self, args, actor, context):

@@ -26,13 +26,16 @@ def main():
     # The host owns only the native driver. Application state and authorization
     # are provided by the attached application, not a second hidden runtime.
     host_config = {"store": {"adapter": "memory"}, "sessions": {args.driver: specification}}
+    if "state_engine" in config:
+        host_config["state_engine"] = config["state_engine"]
     stopped = threading.Event()
     for name in (signal.SIGINT, signal.SIGTERM):
         signal.signal(name, lambda *_: stopped.set())
     with build(host_config, base) as runtime:
         capabilities = runtime.application.describe() if args.application_tools else ()
         host = SessionBridgeHost(runtime.application.sessions[args.driver], args.endpoint,
-            json.loads(args.specification), capabilities, {"transport": args.transport, "state_path": args.state})
+            json.loads(args.specification), capabilities, {"transport": args.transport, "state_path": args.state},
+            state_engine=runtime.application.state_engine)
         try:
             print(json.dumps({"ready": True, "endpoint": str(host.endpoint), "host_id": host.host_id,
                 "native_id": host.backend["native_id"], "ownership": "operator"}), flush=True)

@@ -17,7 +17,9 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
+from ..activity import ActivityState, NativeConnection, activity_engine
 from ..model import JSON, Capability, OrchestrationError
+from ..outcomes import before_effect, effect_outcome
 from ..ports import ApplicationToolCallback
 from ..schema import check_schema, validate
 from .jsonrpc import JsonLineProcess, command_options, decode_json, encode_json, positive_integer
@@ -47,15 +49,39 @@ class _LiveSession:
     settings: JSON = field(default_factory=lambda: {"requested": {}, "resolved": {}, "observed": {}})
     events: list[JSON] = field(default_factory=list)
     calls: dict[str, tuple[str, JSON]] = field(default_factory=dict)
-    pending: dict[str, Any] = field(default_factory=dict)
-    closed: bool = False
+    activity_model: ActivityState = field(default_factory=ActivityState)
+    pending: Any = field(init=False)
+    connection: NativeConnection = field(init=False)
     preidentity: list[JSON] = field(default_factory=list)
     completed: deque = field(default_factory=lambda: deque(maxlen=1024))
     seen_turns: deque = field(default_factory=lambda: deque(maxlen=1024))
-    active_callbacks: set = field(default_factory=set)
-    submissions: set = field(default_factory=set)
-    activity_uncertain: bool = False
+    active_callbacks: Any = field(init=False)
+    submissions: Any = field(init=False)
     unbound_completions: set = field(default_factory=set)
+
+    def __post_init__(self):
+        self.connection = NativeConnection(self.activity_model.engine, self.incarnation)
+        self.pending = self.activity_model.mapping("prompt")
+        self.active_callbacks = self.activity_model.set("callback")
+        self.submissions = self.activity_model.set("submission")
+
+    @property
+    def closed(self):
+        return self.connection.state == "closed"
+
+    @closed.setter
+    def closed(self, value):
+        if value:
+            self.connection.transition("close")
+
+    @property
+    def activity_uncertain(self):
+        return self.activity_model.has_uncertainty
+
+    @activity_uncertain.setter
+    def activity_uncertain(self, value):
+        if value:
+            self.activity_model.uncertain()
 
 
 class _ProcessSessions:
@@ -80,6 +106,7 @@ class _ProcessSessions:
         self._closed = False
         self._observer = None
         self._application_replay = None
+        self._state_engine = activity_engine()
         self.configuration_snapshot_id = hashlib.sha256(encode_json(self.options, sort_keys=True)).hexdigest()
         operational = {"timeout", "turn_timeout", "callback_timeout", "callback_workers", "shutdown_timeout",
                        "gateway_timeout", "gateway_workers", "observation_timeout", "allow_configuration_change_on_resume"}
@@ -94,6 +121,13 @@ class _ProcessSessions:
             if self._sessions or self._starting:
                 raise OrchestrationError("Bind observers before starting sessions.", "conflict")
             self._observer = observer
+
+    def bind_state_engine(self, engine) -> None:
+        """Select transition behavior before any native resource is created."""
+        with self._lock:
+            if self._sessions or self._starting:
+                raise OrchestrationError("Bind state management before starting sessions.", "conflict")
+            self._state_engine = engine
 
     def bind_application_replay(self, callback: ApplicationToolCallback) -> None:
         """Bind a read-only replay validator, separate from effectful dispatch."""
@@ -151,14 +185,14 @@ class _ProcessSessions:
 
     def _activity(self, live):
         """Under live.lock: aggregate turns, in-flight submissions and callbacks."""
-        live.activity = ("active" if live.pending or live.active_callbacks or live.submissions else
-                         "unknown" if live.activity_uncertain else "idle")
+        live.activity = live.activity_model.activity
         return live.activity
 
     def _request(self, live: _LiveSession, method: str, params: Any) -> JSON:
-        params = self._verified_request(live, params)
-        if self._handler is None:
-            raise OrchestrationError("No handler is configured for this native request.", "unsupported_method")
+        with before_effect():
+            params = self._verified_request(live, params)
+            if self._handler is None:
+                raise OrchestrationError("No handler is configured for this native request.", "unsupported_method")
         token = uuid.uuid4().hex
         completed = False
         with live.lock:
@@ -168,11 +202,14 @@ class _ProcessSessions:
             result = self._handler(method, params, _object(live.context, "Context"))
             completed = True
             return result
+        except Exception as error:
+            completed = effect_outcome(error) in {"not_started", "failed"}
+            raise
         finally:
             with live.lock:
                 live.active_callbacks.discard(token)
                 if not completed:
-                    live.activity_uncertain = True
+                    live.activity_model.uncertain("callback", token)
                 self._observation(live, "activity", state=self._activity(live))
 
     def _new(self, specification: JSON) -> _LiveSession:
@@ -184,7 +221,7 @@ class _ProcessSessions:
             self._starting += 1
         try:
             context = _object(specification.get("context", {}), "Session context")
-            live = _LiveSession(context=context)
+            live = _LiveSession(context=context, activity_model=ActivityState(self._state_engine))
             live.process = JsonLineProcess(self.options, lambda method, params: self._request(live, method, params), jsonrpc=self.jsonrpc,
                                            notification_handler=lambda method, params: self._notification(live, method, params))
             return live
@@ -201,6 +238,7 @@ class _ProcessSessions:
         with self._lock:
             if self._closed:
                 raise OrchestrationError("Session driver closed while starting the session.", "session_unavailable")
+            live.connection.transition("connect")
             self._sessions[handle] = live
         receipt = {"instance": self._instance, "handle": handle, "native_id": live.native_id,
                    "protocol": self.protocol, "resumable": self.resumable, "incarnation": live.incarnation,
@@ -262,8 +300,11 @@ class _ProcessSessions:
 
     def status(self, session: JSON) -> JSON:
         live = self._get(session)
+        with live.lock:
+            if live.process.process.poll() is not None:
+                live.connection.transition("disconnect")
         return {"native_id": live.native_id, "incarnation": live.incarnation,
-                "connection_state": "connected" if live.process.process.poll() is None else "disconnected",
+                "connection_state": live.connection.state,
                 "activity": live.activity, "settings": deepcopy(live.settings), "ownership": "owned"}
 
     def detach(self, session: JSON) -> JSON:
@@ -487,21 +528,22 @@ class CodexSessionDriver(_NativeSessions):
             self._application_callback = callback
 
     def _application_request(self, live: _LiveSession, params: JSON) -> JSON:
-        arguments = params.get("arguments", {})
-        if isinstance(arguments, str):
-            arguments = decode_json(arguments.encode("utf-8"))
-        arguments = _object(arguments, "Tool arguments")
-        key = None
-        if "callId" in params:
-            call_id = params["callId"]
-            if not isinstance(call_id, str) or not call_id:
-                raise OrchestrationError("Native tool callId must be a nonempty string.")
-            key = "codex:" + encode_json([live.native_id, call_id]).decode("utf-8")
-        call_id = _identifier(params.get("callId"), "native tool call ID")
-        if params.get("threadId") != live.native_id:
-            raise OrchestrationError("Application tools require an independently observed native thread ID.", "session_identity")
-        trusted = self._callback_context(live, params["tool"], call_id)
-        self._observation(live, "native_tool_call", call_id=call_id, action=params["tool"], arguments=arguments)
+        with before_effect():
+            arguments = params.get("arguments", {})
+            if isinstance(arguments, str):
+                arguments = decode_json(arguments.encode("utf-8"))
+            arguments = _object(arguments, "Tool arguments")
+            key = None
+            if "callId" in params:
+                call_id = params["callId"]
+                if not isinstance(call_id, str) or not call_id:
+                    raise OrchestrationError("Native tool callId must be a nonempty string.")
+                key = "codex:" + encode_json([live.native_id, call_id]).decode("utf-8")
+            call_id = _identifier(params.get("callId"), "native tool call ID")
+            if params.get("threadId") != live.native_id:
+                raise OrchestrationError("Application tools require an independently observed native thread ID.", "session_identity")
+            trusted = self._callback_context(live, params["tool"], call_id)
+            self._observation(live, "native_tool_call", call_id=call_id, action=params["tool"], arguments=arguments)
         result = self._application_callback(params["tool"], arguments, trusted, key)
         self._observation(live, "native_tool_result", call_id=call_id, action=params["tool"], arguments=arguments, result=result)
         return result
@@ -574,14 +616,14 @@ class CodexSessionDriver(_NativeSessions):
                     live.calls[call_id] = (fingerprint, deepcopy(response))
             # A rejected duplicate/replay never resolves the original call. A
             # definitely pre-effect denial is terminal, unlike unknown effects.
-            completed = not claimed or exc.details.get("outcome") in {"failed", "not_started"}
+            completed = not claimed or effect_outcome(exc) in {"failed", "not_started"}
             return response
         finally:
             if callback_token is not None:
                 with live.lock:
                     live.active_callbacks.discard(callback_token)
                     if not completed:
-                        live.activity_uncertain = True
+                        live.activity_model.uncertain("callback", callback_token)
                     self._observation(live, "activity", state=self._activity(live))
 
     def _launch(self, specification: JSON, resume: str | None) -> JSON:
@@ -653,8 +695,8 @@ class CodexSessionDriver(_NativeSessions):
             return result
         except Exception as exc:
             with live.lock:
-                if not isinstance(exc, OrchestrationError) or exc.details.get("outcome") not in {"failed", "not_started"}:
-                    live.activity_uncertain = True
+                if effect_outcome(exc) not in {"failed", "not_started"}:
+                    live.activity_model.uncertain("submission", token)
             raise
         finally:
             with live.lock:
@@ -747,7 +789,7 @@ class ACPSessionDriver(_NativeSessions):
 
     def _prompt_finished(self, live, prompt_id, completed):
         if not completed:
-            live.activity_uncertain = True
+            live.activity_model.uncertain("prompt", prompt_id)
         self._activity(live)
 
     def send(self, session: JSON, message: JSON) -> JSON:
@@ -761,7 +803,7 @@ class ACPSessionDriver(_NativeSessions):
                 raise OrchestrationError("This ACP driver has an outstanding prompt and no interjection contract.", "session_busy", {"outcome": "not_started"})
             prompt_id = uuid.uuid4().hex
             live.pending[prompt_id] = None
-            live.activity = "active"
+            self._activity(live)
             self._prompt_started(live, prompt_id)
         try:
             future = live.process.request_async("session/prompt", {
@@ -771,8 +813,7 @@ class ACPSessionDriver(_NativeSessions):
         except Exception as exc:
             with live.lock:
                 live.pending.pop(prompt_id, None)
-                if not isinstance(exc, OrchestrationError) or exc.details.get("outcome") not in {"failed", "not_started"}:
-                    live.activity_uncertain = True
+                self._prompt_finished(live, prompt_id, effect_outcome(exc) in {"failed", "not_started"})
                 self._observation(live, "activity", state=self._activity(live))
             raise
         with live.lock:

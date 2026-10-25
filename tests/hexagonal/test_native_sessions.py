@@ -339,7 +339,7 @@ def test_unknown_prompt_completion_is_not_idle_and_interjections_are_bounded():
         live = adapter._get(session)
         adapter._prompt_finished(live, 'lost-prompt', False)
         assert live.activity == 'unknown'
-        live.grok['native_busy'] = True
+        adapter._native_prompt_started(live, 'busy-prompt')
         live.process.request = lambda *args, **kwargs: {'accepted': True}
         adapter.deliver(session, {'attempt_id': 'unresolved', 'body': 'first'})
         with pytest.raises(OrchestrationError) as limited:

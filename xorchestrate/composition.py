@@ -16,6 +16,7 @@ from .application import Application
 from .model import OrchestrationError
 
 BUILTINS = {
+    "state_engine": {"declared": "xorchestrate.adapters.state:ConfiguredStateEngine"},
     "store": {"memory": "xorchestrate.adapters.storage:MemoryStore", "sqlite": "xorchestrate.adapters.storage:SQLiteStore"},
     "providers": {"mcp": "xorchestrate.adapters.capabilities:StdioMCPProvider", "cli": "xorchestrate.adapters.capabilities:CLIProvider"},
     "sessions": {
@@ -172,6 +173,7 @@ def build(config=None, base_dir=None):
         return result
 
     try:
+        state_engine = construct("state_engine", config.get("state_engine", {"adapter": "declared"}))
         store = construct("store", config.get("store", {"adapter": "sqlite"}))
         providers.update(collection("providers"))
         sessions = collection("sessions")
@@ -190,8 +192,12 @@ def build(config=None, base_dir=None):
             receipt_policy=construct("receipt_policy", config.get("receipt_policy", {"adapter": "complete-exchange"})),
             session_fallbacks=config.get("session_fallbacks"), provider_configurations=provider_configurations,
             evaluator_configurations=evaluator_configurations,
+            state_engine=state_engine,
         )
         for name, driver in sessions.items():
+            bind_state_engine = getattr(driver, "bind_state_engine", None)
+            if callable(bind_state_engine):
+                bind_state_engine(state_engine)
             bind_observer = getattr(driver, "bind_observer", None)
             if callable(bind_observer):
                 bind_observer(lambda context, observation, name=name: application.observe_native(name, context, observation))

@@ -112,6 +112,11 @@
           "run": "python3 -m scripts.verification.calibrate_suite --candidate . --out \"$RUNNER_TEMP/xor-checks/native-calibration\"\npython3 tests/hexagonal/calibrate_work_acceptance.py --output \"$RUNNER_TEMP/xor-checks/work-calibration\""
         },
         {
+          "name": "Calibrate shared state enforcement",
+          "if": "matrix.python == '3.12'",
+          "run": "python3 -m scripts.verification.calibrate_state --candidate . --out \"$RUNNER_TEMP/xor-checks/state-calibration\""
+        },
+        {
           "name": "Run composed three-harness protocol acceptance",
           "if": "matrix.python == '3.12'",
           "run": "mkdir -p \"$RUNNER_TEMP/xor-verification\"\ncp docs/implementation/owner-brief.md \"$RUNNER_TEMP/xor-verification/owner-brief.md\"\npython3 -m scripts.verification criteria --brief \"$RUNNER_TEMP/xor-verification/owner-brief.md\" --out \"$RUNNER_TEMP/xor-verification/criteria.json\"\npython3 -m scripts.verification.multi_harness --mode protocol-fixture --brief \"$RUNNER_TEMP/xor-verification/owner-brief.md\" --criteria \"$RUNNER_TEMP/xor-verification/criteria.json\" --out \"$RUNNER_TEMP/xor-verification/run\" --timeout 60"
@@ -131,7 +136,7 @@
           "if": "always()",
           "with": {
             "name": "repair-checks-python-${{ matrix.python }}",
-            "path": "${{ runner.temp }}/xor-checks/**/*.json\n${{ runner.temp }}/xor-checks/**/*.xml\n${{ runner.temp }}/xor-checks/**/*.log\n${{ runner.temp }}/xor-checks/**/*.txt\n!${{ runner.temp }}/xor-checks/native-calibration/**/snapshot/**\n!${{ runner.temp }}/xor-checks/native-calibration/**/control/**\n!${{ runner.temp }}/xor-checks/native-calibration/**/mutant/**\n!${{ runner.temp }}/xor-checks/native-calibration/**/candidate/**\n!${{ runner.temp }}/xor-checks/work-calibration/**/snapshot/**\n!${{ runner.temp }}/xor-checks/work-calibration/**/candidate/**",
+            "path": "${{ runner.temp }}/xor-checks/**/*.json\n${{ runner.temp }}/xor-checks/**/*.xml\n${{ runner.temp }}/xor-checks/**/*.log\n${{ runner.temp }}/xor-checks/**/*.txt\n!${{ runner.temp }}/xor-checks/native-calibration/**/snapshot/**\n!${{ runner.temp }}/xor-checks/native-calibration/**/control/**\n!${{ runner.temp }}/xor-checks/native-calibration/**/mutant/**\n!${{ runner.temp }}/xor-checks/native-calibration/**/candidate/**\n!${{ runner.temp }}/xor-checks/work-calibration/**/snapshot/**\n!${{ runner.temp }}/xor-checks/work-calibration/**/candidate/**\n!${{ runner.temp }}/xor-checks/state-calibration/**/snapshot/**\n!${{ runner.temp }}/xor-checks/state-calibration/**/control/**\n!${{ runner.temp }}/xor-checks/state-calibration/**/mutant/**\n!${{ runner.temp }}/xor-checks/state-calibration/**/candidate/**",
             "if-no-files-found": "error",
             "retention-days": 30
           }
