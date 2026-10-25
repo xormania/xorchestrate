@@ -14,6 +14,7 @@ import time
 import uuid
 from copy import deepcopy
 
+from scripts.testkit.core import ResourceScope
 from xorchestrate.composition import build
 from xorchestrate.model import OrchestrationError
 
@@ -120,31 +121,43 @@ def _append(suite, peer, operation, before, after, operation_id, **evidence):
     suite.executed.append(f"lifecycle-{peer}-{operation}")
 
 
-def _host(config_file, peer, endpoint, directory, timeout):
+def _stop_host(process):
+    if process.poll() is None:
+        process.terminate()
+    try:
+        process.wait(timeout=10)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        process.wait(timeout=10)
+        raise VerificationFailure("external_host_forced_shutdown")
+
+
+def _host(config_file, peer, endpoint, directory, timeout, resources):
     stderr = (directory / "host-stderr.log").open("w")
+    resources.defer("host_stderr", stderr.close)
     command = [sys.executable, "-m", "xorchestrate.bridge", "--config", str(config_file), "--driver", peer,
         "--endpoint", str(endpoint), "--transport", "fifo", "--state", str(directory / "host-state.json"), "--application-tools"]
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=stderr, text=True)
+    resources.defer("host_stdout", process.stdout.close)
+    resources.defer("external_host", lambda: _stop_host(process))
     deadline = time.monotonic() + timeout
-    try:
-        while time.monotonic() < deadline:
-            if select.select([process.stdout], [], [], .1)[0]:
-                line = process.stdout.readline()
-                if not line:
-                    break
-                ready = json.loads(line)
-                if ready.get("ready"):
-                    write_json(directory / "host-launch.json", {"command": command, "pid": process.pid, "ready": ready, "at": now()})
-                    return process, stderr
-            if process.poll() is not None:
+    while time.monotonic() < deadline:
+        if select.select([process.stdout], [], [], .1)[0]:
+            line = process.stdout.readline()
+            if not line:
                 break
-        raise VerificationFailure("external_host_start_failed")
-    except Exception:
-        if process.poll() is None:
-            process.terminate()
-        process.wait(timeout=10)
-        stderr.close()
-        raise
+            ready = json.loads(line)
+            if ready.get("ready"):
+                write_json(directory / "host-launch.json", {"command": command, "pid": process.pid, "ready": ready, "at": now()})
+                return process, stderr
+        if process.poll() is not None:
+            break
+    raise VerificationFailure("external_host_start_failed")
+
+
+def _retain_records(suite, peer, application, directory):
+    suite.lifecycle_records.append({"peer": peer, "records": _records(application)})
+    write_json(directory / "raw-records.json", suite.lifecycle_records[-1])
 
 
 def run_lifecycle(suite, config, base):
@@ -170,12 +183,15 @@ def run_lifecycle(suite, config, base):
             specification.setdefault("options", {}).setdefault("cwd", str(base.resolve()))
         write_json(config_file, host_config)
         endpoint = directory / "host-endpoint"
-        process, stderr = _host(config_file, peer, endpoint, directory, suite.timeout)
-        runtime = None
+        resources = ResourceScope()
+        process = None
         try:
+            process, stderr = _host(config_file, peer, endpoint, directory, suite.timeout, resources)
             runtime = build({"store": {"adapter": "sqlite", "options": {"path": str(directory / "state.sqlite3")}},
                 "sessions": {peer: {"adapter": "bridge", "options": {"endpoint": str(endpoint), "transport": "fifo", "application_tools": True,
                     "timeout": suite.timeout}}}}, base)
+            resources.defer("lifecycle_runtime", runtime.close)
+            resources.defer("lifecycle_records", lambda: _retain_records(suite, peer, runtime.application, directory))
             application = runtime.application
             _call(application, "add_actor", actor_id=peer)
             work = _call(application, "create_work", goal="Verify external native conversation lifecycle")["work"]["id"]
@@ -210,15 +226,15 @@ def run_lifecycle(suite, config, base):
                     retained_observation=retained, stale_rejected=True, stale_errors=stale)
                 previous = replacement["session"]
         finally:
-            if runtime is not None:
-                suite.lifecycle_records.append({"peer": peer, "records": _records(runtime.application)})
-                write_json(directory / "raw-records.json", suite.lifecycle_records[-1])
-                runtime.close()
-            if process.poll() is None:
-                process.terminate()
-            process.wait(timeout=10)
-            stderr.close()
-            write_json(directory / "cleanup.json", {"host_returncode": process.returncode,
+            active_error = sys.exception()
+            errors = resources.close()
+            failed = bool(errors) or (process is not None and process.returncode != 0) or endpoint.exists()
+            write_json(directory / "cleanup.json", {
+                "status": "failed" if failed else "passed", "errors": errors,
+                "host_returncode": process.returncode if process is not None else None,
                 "endpoint_removed": not endpoint.exists(), "at": now()})
-            if process.returncode != 0 or endpoint.exists():
-                raise VerificationFailure("external_host_cleanup_failed")
+            if failed:
+                if active_error is not None:
+                    active_error.add_note("external_host_cleanup_failed: " + json.dumps(errors))
+                else:
+                    raise VerificationFailure("external_host_cleanup_failed")

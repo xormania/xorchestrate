@@ -9,6 +9,13 @@ project stack, model vendor, or evaluator. Project knowledge and explicitly
 chosen standards arrive through configured MCP or CLI tools. Observed tool output
 and model recommendations do not become policy on their own.
 
+## Live harness tests
+
+Use `python3 -m scripts.testkit doctor` and `python3 -m scripts.testkit run` from
+the checkout. Both local and CI runners use the shared hexagonal test-kit. See
+[reusable live tests](docs/live-testkit.md) for native configuration, suite selection
+and retained evidence.
+
 ## Run locally
 
 Use Python 3.11 or newer. From the checkout:

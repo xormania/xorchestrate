@@ -1,5 +1,8 @@
 # Reusable tmux live acceptance
 
+Use the [shared live test-kit](live-testkit.md) for repeatable local/CI runs.
+The direct commands below remain supported.
+
 The acceptance runner starts a real MCP client inside a private tmux pane. That
 client launches the current `xorchestrate` application and checks observable
 results through its public tools. Tmux provides an attachable terminal and an

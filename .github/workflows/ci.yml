@@ -54,7 +54,7 @@
         },
         {
           "name": "Compile application and fixtures",
-          "run": "python3 -m compileall -q xorchestrate tests/hexagonal scripts/acceptance"
+          "run": "python3 -m compileall -q xorchestrate tests/hexagonal scripts/testkit scripts/acceptance scripts/verification"
         }
       ]
     },
@@ -119,14 +119,14 @@
         {
           "name": "Run composed three-harness protocol acceptance",
           "if": "matrix.python == '3.12'",
-          "run": "mkdir -p \"$RUNNER_TEMP/xor-verification\"\ncp docs/implementation/owner-brief.md \"$RUNNER_TEMP/xor-verification/owner-brief.md\"\npython3 -m scripts.verification criteria --brief \"$RUNNER_TEMP/xor-verification/owner-brief.md\" --out \"$RUNNER_TEMP/xor-verification/criteria.json\"\npython3 -m scripts.verification.multi_harness --mode protocol-fixture --brief \"$RUNNER_TEMP/xor-verification/owner-brief.md\" --criteria \"$RUNNER_TEMP/xor-verification/criteria.json\" --out \"$RUNNER_TEMP/xor-verification/run\" --timeout 60"
+          "run": "python3 -m scripts.testkit run --suite multi-harness --mode protocol-fixture --output \"$RUNNER_TEMP/xor-verification\" --timeout 60"
         },
         {
           "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
           "if": "always() && matrix.python == '3.12'",
           "with": {
             "name": "composed-protocol-evidence",
-            "path": "${{ runner.temp }}/xor-verification/run/**",
+            "path": "${{ runner.temp }}/xor-verification/**",
             "if-no-files-found": "warn",
             "retention-days": 7
           }
@@ -178,7 +178,7 @@
         },
         {
           "name": "Run reusable tmux acceptance fixture",
-          "run": "python3 -m scripts.acceptance --output \"$RUNNER_TEMP/acceptance-evidence\" --timeout 120"
+          "run": "python3 -m scripts.testkit run --suite acceptance --mode protocol-fixture --output \"$RUNNER_TEMP/acceptance-evidence\" --timeout 120"
         },
         {
           "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
