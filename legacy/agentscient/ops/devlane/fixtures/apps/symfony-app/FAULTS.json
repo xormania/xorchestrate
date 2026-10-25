@@ -1,0 +1,112 @@
+{
+  "name": "symfony-app",
+  "check": "composer check",
+  "probe_timeout": 30,
+  "toolchain": {
+    "install": "composer install --prefer-dist --no-progress --no-interaction",
+    "ready": "test -x vendor/bin/phpunit"
+  },
+  "not_planted": {
+    "K7": "K7 belongs to the service-boundary fixture.",
+    "K9": "K9 is absent because the Symfony dependencies are pinned and locked."
+  },
+  "faults": [
+    {
+      "id": "SA-01",
+      "kind": "K1",
+      "severity": "p1",
+      "location": {"path": "src/Command/ArchiveCommand.php", "lines": [23, 23]},
+      "declared": {"text": "User-supplied archive names are passed as argument-vector entries, never interpolated into a shell command.", "path": "README.md", "lines": [7, 7]},
+      "practiced": {"text": "$process = Process::fromShellCommandline(\"printf '%s\\\\n' \".$name.' >/dev/null');", "path": "src/Command/ArchiveCommand.php", "lines": [23, 23]},
+      "finding": "The archive name is interpolated into a shell command despite the argument-vector declaration.",
+      "neighbour": {"path": "src/Command/ArchiveCommand.php", "lines": [31, 31], "why_clean": "The neighboring helper passes the name as one Process argument-vector entry."},
+      "probe": "sh probes/sa01.sh",
+      "fix": "fixes/sa01.patch",
+      "visible_to": "audit",
+      "needs": ["test -x vendor/bin/phpunit"]
+    },
+    {
+      "id": "SA-02",
+      "kind": "K2",
+      "severity": "p1",
+      "location": {"path": "src/Controller/ServeController.php", "lines": [17, 17]},
+      "declared": {"text": "Served paths always remain beneath the configured share root.", "path": "README.md", "lines": [9, 9]},
+      "practiced": {"text": "$path = $this->root.'/'.$name;", "path": "src/Controller/ServeController.php", "lines": [17, 17]},
+      "finding": "The controller joins an untrusted path without checking that it remains under the share root.",
+      "neighbour": {"path": "src/Controller/ServeController.php", "lines": [27, 30], "why_clean": "The neighboring helper resolves both paths and checks the root prefix."},
+      "probe": "sh probes/sa02.sh",
+      "fix": "fixes/sa02.patch",
+      "visible_to": "both",
+      "needs": ["test -x vendor/bin/phpunit"]
+    },
+    {
+      "id": "SA-03",
+      "kind": "K3",
+      "severity": "p2",
+      "location": {"path": "src/Service/Ledger.php", "lines": [16, 16]},
+      "declared": {"text": "A count of zero is an answer and is distinct from an absent record.", "path": "README.md", "lines": [11, 11]},
+      "practiced": {"text": "if (!$count) {", "path": "src/Service/Ledger.php", "lines": [16, 16]},
+      "finding": "The count renderer uses truthiness and therefore reports zero as absent.",
+      "neighbour": {"path": "src/Service/Ledger.php", "lines": [25, 25], "why_clean": "The neighboring renderer distinguishes absence with a strict null comparison."},
+      "probe": "sh probes/sa03.sh",
+      "fix": "fixes/sa03.patch",
+      "visible_to": "test",
+      "needs": ["test -x vendor/bin/phpunit"]
+    },
+    {
+      "id": "SA-04",
+      "kind": "K4",
+      "severity": "p1",
+      "location": {"path": "src/Service/Ledger.php", "lines": [30, 30]},
+      "declared": {"text": "Credentials never leave the process in failure logs.", "path": "README.md", "lines": [13, 13]},
+      "practiced": {"text": "$this->logger->error('write failed: environment='.json_encode($_ENV));", "path": "src/Service/Ledger.php", "lines": [30, 30]},
+      "finding": "The failure log serializes the process environment, including credentials.",
+      "neighbour": {"path": "src/Service/Ledger.php", "lines": [35, 35], "why_clean": "The neighboring log emits a fixed redaction marker."},
+      "probe": "sh probes/sa04.sh",
+      "fix": "fixes/sa04.patch",
+      "visible_to": "audit",
+      "needs": ["test -x vendor/bin/phpunit"]
+    },
+    {
+      "id": "SA-05",
+      "kind": "K5",
+      "severity": "p2",
+      "location": {"path": "src/Service/Ledger.php", "lines": [42, 43]},
+      "declared": {"text": "An unreadable or corrupt ledger is reported, never served as an empty answer.", "path": "README.md", "lines": [15, 15]},
+      "practiced": {"text": "catch (\\Throwable) {\n            return [];", "path": "src/Service/Ledger.php", "lines": [42, 43]},
+      "finding": "The ledger catches every load failure and returns an authoritative-looking empty answer.",
+      "neighbour": {"path": "src/Service/Ledger.php", "lines": [51, 52], "why_clean": "The neighboring decoder catches only the expected JSON exception."},
+      "probe": "sh probes/sa05.sh",
+      "fix": "fixes/sa05.patch",
+      "visible_to": "test",
+      "needs": ["test -x vendor/bin/phpunit"]
+    },
+    {
+      "id": "SA-06",
+      "kind": "K6",
+      "severity": "p2",
+      "location": {"path": "src/Model/Interval.php", "lines": [13, 13]},
+      "declared": {"text": "Intervals are half-open, including their start and excluding their end.", "path": "README.md", "lines": [17, 17]},
+      "practiced": {"text": "return $this->start <= $value && $value <= $this->end;", "path": "src/Model/Interval.php", "lines": [13, 13]},
+      "finding": "Interval containment includes the end boundary despite the half-open declaration.",
+      "neighbour": {"path": "src/Model/Interval.php", "lines": [18, 18], "why_clean": "The neighboring values method stops at end minus one."},
+      "probe": "sh probes/sa06.sh",
+      "fix": "fixes/sa06.patch",
+      "visible_to": "test",
+      "needs": ["test -x vendor/bin/phpunit"]
+    },
+    {
+      "id": "SA-07",
+      "kind": "K8",
+      "severity": "p3",
+      "location": {"path": "tests/Service/LedgerTest.php", "lines": [24, 24]},
+      "declared": {"text": "Test oracles are independent literals, not values computed by the code under test.", "path": "README.md", "lines": [19, 19]},
+      "practiced": {"text": "$expected = Checksum::of('fixture');", "path": "tests/Service/LedgerTest.php", "lines": [24, 24]},
+      "finding": "The fixture checksum test asks the subject under test to calculate its own expected value.",
+      "neighbour": {"path": "tests/Service/LedgerTest.php", "lines": [18, 18], "why_clean": "The neighboring checksum test uses an independent numeric literal."},
+      "probe": "sh probes/sa07.sh",
+      "fix": "fixes/sa07.patch",
+      "visible_to": "audit"
+    }
+  ]
+}

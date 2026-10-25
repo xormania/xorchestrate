@@ -1,0 +1,1 @@
+{"tool": "coordination_mcp.py", "rows": [{"argv": ["--config", "/dev/null", "check"], "class": "config", "identity": false}, {"argv": ["call", "coord_nothing_of_the_kind"], "class": "arguments", "identity": false}, {"argv": ["call", "coord_brief"], "class": "session", "identity": false}]}

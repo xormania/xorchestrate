@@ -1,0 +1,5 @@
+# Serena uses hatchling; proxy-tools has a setuptools-only source distribution.
+# The remaining versions are constrained by Serena's own uv.lock; see README.md.
+hatchling==1.27.0
+setuptools==83.0.0
+trove-classifiers==2026.9.21.13

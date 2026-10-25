@@ -1,0 +1,16 @@
+{
+  "repository": "uscient/agentscient",
+  "tag": "ci-toolchain-php-8.5.11-composer-2.10.3-1",
+  "php": {
+    "version": "8.5.11",
+    "asset": "php-8.5.11-cli-linux-x86_64.tar.gz",
+    "sha256": "bc03d6be4eafa2f77e3fadd3875de6f021dd6369684ee0a10c7d2fbcaead76ed",
+    "source": "https://dl.static-php.dev/v3/php-bin/common/php-8.5.11-cli-linux-x86_64.tar.gz"
+  },
+  "composer": {
+    "version": "2.10.3",
+    "asset": "composer-2.10.3.phar",
+    "sha256": "7a2d379d5b8ffdaa028580ef26494c36d2feef4b178d3dd1473a4dbc5e17c8d6",
+    "source": "https://getcomposer.org/download/2.10.3/composer.phar"
+  }
+}

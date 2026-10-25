@@ -1,0 +1,8 @@
+diff --git a/src/Service/Ledger.php b/src/Service/Ledger.php
+--- a/src/Service/Ledger.php
++++ b/src/Service/Ledger.php
+@@ -29,3 +29,3 @@
+     {
+-        $this->logger->error('write failed: environment='.json_encode($_ENV));
++        $this->logger->error('write failed: [REDACTED]');
+     }

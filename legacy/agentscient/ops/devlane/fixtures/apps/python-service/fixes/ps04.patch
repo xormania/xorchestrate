@@ -1,0 +1,12 @@
+diff --git a/service/api.py b/service/api.py
+--- a/service/api.py
++++ b/service/api.py
+@@ -31,6 +31,6 @@
+ def handle(line: str, store: Path) -> dict[str, object]:
+     try:
+         request = parse_request(line)
+-    except Exception:
+-        return {"ok": True, "records": []}
++    except (json.JSONDecodeError, ValueError) as error:
++        return problem("request", str(error), "send one JSON object with a verb")
+ 

@@ -1,0 +1,11 @@
+diff --git a/src/Controller/ServeController.php b/src/Controller/ServeController.php
+--- a/src/Controller/ServeController.php
++++ b/src/Controller/ServeController.php
+@@ -16,3 +16,6 @@
+     {
+-        $path = $this->root.'/'.$name;
++        $path = $this->safePath($name);
++        if ($path === null) {
++            return new Response('', Response::HTTP_NOT_FOUND);
++        }
+         if (!is_file($path)) {

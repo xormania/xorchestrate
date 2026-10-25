@@ -1,0 +1,8 @@
+diff --git a/src/interval.rs b/src/interval.rs
+--- a/src/interval.rs
++++ b/src/interval.rs
+@@ -14,3 +14,3 @@
+     pub const fn contains(&self, v: i64) -> bool {
+-        self.start <= v && v <= self.end
++        self.start <= v && v < self.end
+     }

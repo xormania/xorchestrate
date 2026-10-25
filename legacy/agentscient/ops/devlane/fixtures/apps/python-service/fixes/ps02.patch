@@ -1,0 +1,8 @@
+diff --git a/service/store.py b/service/store.py
+--- a/service/store.py
++++ b/service/store.py
+@@ -9,3 +9,3 @@
+ def record_path(root: Path, name: str) -> Path:
+-    return root / name
++    return checked_record_path(root, name)
+ 

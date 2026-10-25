@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "adapters": {
+    "evaluation": {
+      "typesafe": "devtools.jev:TypeSafeAdapter"
+    },
+    "role": {
+      "co": "devtools.role_behaviors:co_behavior",
+      "xo": "devtools.role_behaviors:xo_behavior",
+      "nco": "devtools.role_behaviors:nco_behavior",
+      "planner": "devtools.role_behaviors:planner_behavior",
+      "coder": "devtools.role_behaviors:coder_behavior",
+      "audit": "devtools.role_behaviors:audit_behavior",
+      "docs": "devtools.role_behaviors:docs_behavior",
+      "research": "devtools.role_behaviors:research_behavior",
+      "arbitrator": "devtools.role_behaviors:arbitrator_behavior",
+      "test_writer": "devtools.role_behaviors:test_writer_behavior",
+      "architect": "devtools.role_behaviors:architect_behavior"
+    },
+    "harness": {
+      "codex": "devtools.harnesses:CodexHarness",
+      "claude": "devtools.harnesses:ClaudeHarness",
+      "grok": "devtools.harnesses:GrokHarness"
+    }
+  }
+}

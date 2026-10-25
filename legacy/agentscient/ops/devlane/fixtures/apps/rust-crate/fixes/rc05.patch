@@ -1,0 +1,11 @@
+diff --git a/src/store.rs b/src/store.rs
+--- a/src/store.rs
++++ b/src/store.rs
+@@ -75,6 +75,6 @@
+ pub fn read_records(path: &Path) -> Result<Vec<Record>, StoreError> {
+     match fs::read_to_string(path) {
+         Ok(body) => body.lines().map(parse_record).collect(),
+-        Err(_) => Ok(Vec::new()),
++        Err(error) => Err(error.into()),
+     }
+ }

@@ -1,0 +1,85 @@
+[package]
+name = "fixture-rust-crate"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "fixture-rust-crate"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "*"
+hex = "=0.4.3"
+
+[lints.clippy]
+all = "deny"
+
+[[test]]
+name = "rc01"
+path = "probes/rc01.rs"
+test = false
+harness = true
+
+[[test]]
+name = "rc02"
+path = "probes/rc02.rs"
+test = false
+harness = true
+
+[[test]]
+name = "rc03"
+path = "probes/rc03.rs"
+test = false
+harness = true
+
+[[test]]
+name = "rc04"
+path = "probes/rc04.rs"
+test = false
+harness = true
+
+[[test]]
+name = "rc05"
+path = "probes/rc05.rs"
+test = false
+harness = true
+
+[[test]]
+name = "rc06"
+path = "probes/rc06.rs"
+test = false
+harness = true
+
+[[example]]
+name = "rc01"
+path = "examples/rc01.rs"
+test = false
+
+[[example]]
+name = "rc02"
+path = "examples/rc02.rs"
+test = false
+
+[[example]]
+name = "rc03"
+path = "examples/rc03.rs"
+test = false
+
+[[example]]
+name = "rc04"
+path = "examples/rc04.rs"
+test = false
+
+[[example]]
+name = "rc05"
+path = "examples/rc05.rs"
+test = false
+
+[[example]]
+name = "rc06"
+path = "examples/rc06.rs"
+test = false

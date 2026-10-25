@@ -1,0 +1,179 @@
+# Lint configuration for the dev lane.
+#
+# It exists so the answer to "is this clean?" is the same here, in a
+# hook, and in CI. Without a file, every runner uses whatever its own
+# ruff version defaults to, and a version bump silently changes the
+# verdict — the same class as a gate whose argv drifted from its
+# checker.
+#
+# Package code is not linted here; each package repository carries its
+# own toolchain config.
+
+# A minor bump can add rules to a family we already select, which
+# would change the verdict without anyone editing this file. Ruff
+# refuses to run outside this range rather than lint under rules
+# nobody chose — CI installs the same range.
+required-version = ">=0.16,<0.17"
+
+target-version = "py312"
+line-length = 88
+
+# `ruff format` is deliberately NOT part of the contract. Adopting it
+# would rewrite nearly every file at once, which costs the review
+# process its most useful property — that a diff is small enough to
+# read closely — for a property nothing here has needed. Editors and
+# hooks may format; the gate judges `ruff check` only, so a formatter
+# complaint is advice and never a failure.
+extend-exclude = [
+    ".git",
+    # `ruff check ..` is the dispatch gate. The sibling `home/` is launcher
+    # runtime custody (harness installs and caches), not this repository.
+    "../home",
+    # Fixture apps are linted through their own prove/check commands. Root
+    # ruff must leave their planted K1/K4 faults intact for calibration.
+    "ops/devlane/fixtures/apps",
+]
+
+[lint]
+# Explicit, not inherited: pinned families mean a ruff upgrade can add
+# rules to a family we already accept, but cannot switch on a family
+# nobody chose.
+select = [
+    "E4", "E7", "E9",  # pycodestyle: the errors, not the style opinions
+    "F",               # pyflakes: unused imports/names, real dead code
+    "I",               # import sorting
+    "B",               # bugbear: mutable defaults, loop-variable capture
+    "SIM",             # simplifications that remove branches
+    "RUF",             # ruff's own, incl. RUF100 unused-noqa
+    "PLW", "PLE",      # pylint warnings/errors (not the refactor nags)
+    "FURB",            # modern-idiom rewrites
+    "ISC",             # implicit string concatenation in collections
+    "BLE",             # blind except
+    "DTZ",             # naive datetimes — this lane's figures are stamped
+    "S",               # security: subprocess, try-except-pass, tempfiles
+]
+ignore = [
+    # Style, not correctness: [*a, b] vs a + [b] reads no better here
+    # and the rewrite churns lines the review process reads closely.
+    "RUF005",
+    # `for raw in lines: raw = raw.strip()` is the idiom this codebase
+    # uses, and every later line reads that same name. Renaming the
+    # binding to satisfy the rule leaves the rest of the block reading
+    # the UNSTRIPPED value — attempted 2026-08-22, caught by F841 and
+    # a broken parse, not by the tests.
+    "PLW2901",
+]
+
+[lint.per-file-ignores]
+# Import ORDER IS LOAD-BEARING in these suites: `import support` puts
+# the app directory on sys.path, so `import probe` resolves at all.
+# Sorting the block alphabetically puts `probe` first and the module
+# becomes uncollectable — the sorter would undo the fix and the failure
+# would read as a broken test rather than a broken import order.
+"ops/devlane/harness/tests/*.py" = ["I001"]
+
+# Tests plant credential-shaped strings and run subprocesses on
+# purpose; S105/S106/S603/S607 are the fixture, not a finding.
+"ops/devlane/fixtures/*.py" = ["S105", "S106"]
+"ops/devlane/workflow/checks/*.py" = ["S603", "S607"]
+# probes.py executes corpus row commands: that is the instrument, per
+# probes-lever.md; THIS FILE ONLY, S603 is the mechanism, not a defect.
+"ops/conductor/tools/probes.py" = ["S603"]
+
+# S314 is exempted for THIS FILE ONLY. The wildcard above would have
+# exempted every present and future check, none of which carries the
+# mitigation that justifies it. diagnostics.py parses JUnit XML with
+# ElementTree; defusedxml is the rule's remedy and this lane is
+# stdlib-only by design (no pip step in CI), so the mitigation is in
+# the code instead: a document whose PROLOG declares DOCTYPE or ENTITY
+# is refused before it reaches the parser, which is the expansion
+# attack the rule is about. ElementTree resolves no external entities,
+# and the producer is a command the gate registry names.
+"ops/devlane/workflow/checks/diagnostics.py" = ["S603", "S607", "S314"]
+"ops/devlane/telemetry/*.py" = ["S603", "S607"]
+
+# The task app's whole job is running other programs — git to read a
+# ref without touching the working tree, and whatever argv a parity
+# check is given. S603/S607 flag the mechanism, not a defect.
+"ops/devlane/task/*.py" = ["S603", "S607"]
+# The dispatch app is the launcher split out of task: it runs git to
+# mint a snapshot without touching the live tree and the harness CLIs
+# to dispatch work. S603/S607 flag that mechanism, the same as for the
+# task app it composes.
+"ops/devlane/dispatch/*.py" = ["S603", "S607"]
+
+# The test kit (docs/tests.md) runs subjects and planted programs through
+# one command runner and one fake registry: subprocess is the instrument,
+# and its argv is built by the caller. THIS DIRECTORY ONLY; a kit module
+# that needs another rule earns it here with its reason.
+"ops/testkit/*.py" = ["S603", "S607"]
+
+# The harness app's whole job is launching other harnesses: probe.py
+# runs `grok inspect` and `claude -p` to observe what a dispatch
+# actually loaded, which is the only check that can catch a harness
+# ignoring its isolation variable. S603 fires on that call today;
+# S607 is the same class and fires as soon as an argv is inlined
+# rather than built by a caller.
+"ops/devlane/harness/*.py" = ["S603", "S607"]
+"ops/devlane/harness/controls/*.py" = ["S603", "S607"]
+
+# hooks/claude carries S603/S607 inline: its input is a command string,
+# and a file-wide S603 ignore would exempt the one call the rule exists for.
+
+# Tests: a test that runs a subprocess asserts on its returncode a
+# line later — that assertion IS the check, so PLW1510 measures
+# nothing here. The rest are readability rules whose subjects
+# (throwaway loop names, table-driven class attributes, index-0 reads
+# of a just-built list) read fine in a fixture and would only churn
+# the files the review process reads most closely.
+# The conductor instruments shell out on purpose — git, gh, sibling
+# instruments — each with a code-built argv; THIS-FILE-ONLY rows, as the
+# House kept them, so a future tool earns its own row or stays clean.
+"ops/conductor/tools/watch.py" = ["S603"]
+"ops/conductor/tools/watchdog.py" = ["S603", "BLE001"]  # gh and pgrep with code-built argv; the tick guard catches everything by design
+"ops/conductor/tools/ci.py" = ["S603"]
+"ops/conductor/tools/land.py" = ["S603"]
+"ops/conductor/tools/ladder.py" = ["S603"]
+"ops/conductor/tools/branches.py" = ["S603"]
+"ops/conductor/tools/co_doc.py" = ["S603", "S608"]
+# monitor.py runs code-built bounded Git ref reads and `gh api rate_limit`.
+"ops/conductor/tools/monitor.py" = ["S603"]
+# Frozen owner argv and code-built Git reads are this controller's interface.
+"ops/conductor/tools/control.py" = ["S603", "S607"]
+# Every adapter failure must become a native denial.
+"ops/devlane/hooks/conductor-control.py" = ["BLE001"]
+# The repo-scoped skills are scripts that ASK other tools: shelling out is
+# the job, not an incident.
+".claude/skills/*/*.py" = ["S603", "S607"]
+# The programs the conductor suites plant (moved out of test modules
+# verbatim, plan slice 8): the test-suite row, plus the formatting rules a
+# string literal never met. THIS DIRECTORY ONLY.
+"ops/conductor/tests/fakes/*.py" = [
+    "S101", "S105", "S106", "S108", "S603", "S607",
+    "PLW1510", "E741", "RUF012", "RUF015", "B007", "PLW2901",
+    "S608", "BLE001", "SIM117", "I001", "SIM108",
+]
+# Conductor and skill suites: subprocess is the subject.
+"ops/conductor/tests/*.py" = [
+    "S101", "S105", "S106", "S108", "S603", "S607",
+    "PLW1510", "E741", "RUF012", "RUF015", "B007", "PLW2901",
+    "S608", "BLE001", "SIM117",
+]
+"ops/testkit/tests/*.py" = [
+    "S101", "S105", "S106", "S108", "S603", "S607",
+    "PLW1510", "E741", "RUF012", "RUF015", "B007", "PLW2901",
+    "S608", "BLE001", "SIM117",
+]
+".claude/skills/*/tests/*.py" = [
+    "S101", "S105", "S106", "S108", "S603", "S607",
+    "PLW1510", "E741", "RUF012", "RUF015", "B007", "PLW2901",
+    "S608", "BLE001", "SIM117",
+]
+"ops/devlane/*/tests/*.py" = [
+    "S101", "S105", "S106", "S108", "S603", "S607",
+    "PLW1510", "E741", "RUF012", "RUF015", "B007", "PLW2901",
+    # Fixtures build SQL from literals they own, catch broadly to
+    # report a harness failure rather than mask it, and nest with-
+    # blocks where the nesting mirrors the scenario being set up.
+    "S608", "BLE001", "SIM117",
+]

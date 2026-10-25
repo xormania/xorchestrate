@@ -1,0 +1,8 @@
+diff --git a/src/store.rs b/src/store.rs
+--- a/src/store.rs
++++ b/src/store.rs
+@@ -46,3 +46,3 @@
+ pub fn record_path(root: &Path, name: &str) -> Result<PathBuf, StoreError> {
+-    Ok(root.join(name))
++    checked_record_path(root, name)
+ }

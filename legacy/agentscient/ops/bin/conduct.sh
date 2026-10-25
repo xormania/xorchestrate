@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+exec python3 "$script_dir/../conductor/tools/sessions.py" "$@"

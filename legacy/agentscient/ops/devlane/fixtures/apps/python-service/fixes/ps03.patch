@@ -1,0 +1,10 @@
+diff --git a/service/audit.py b/service/audit.py
+--- a/service/audit.py
++++ b/service/audit.py
+@@ -13,5 +13,3 @@
+ def log_request(request: dict[str, object], path: Path) -> None:
+-    headers = _headers(request)
+-    path.parent.mkdir(parents=True, exist_ok=True)
+-    path.write_text(f"headers={headers}\n", encoding="utf-8")
++    log_request_redacted(request, path)
+ 

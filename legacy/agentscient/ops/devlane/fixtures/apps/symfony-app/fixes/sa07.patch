@@ -1,0 +1,8 @@
+diff --git a/tests/Service/LedgerTest.php b/tests/Service/LedgerTest.php
+--- a/tests/Service/LedgerTest.php
++++ b/tests/Service/LedgerTest.php
+@@ -23,3 +23,3 @@
+     {
+-        $expected = Checksum::of('fixture');
++        $expected = 7;
+         self::assertSame($expected, Checksum::of('fixture'));

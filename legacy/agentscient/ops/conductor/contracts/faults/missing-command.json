@@ -1,0 +1,32 @@
+{
+  "schema": "agentscient.board/v1",
+  "query": "branches",
+  "started_at": "2026-08-30T12:00:00Z",
+  "ended_at": "2026-08-30T12:00:01Z",
+  "repository": {
+    "root": "/srv/agentscient",
+    "head": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "branch": "agentscient/board",
+    "evidence": ["obs.git.branches"]
+  },
+  "observations": {
+    "obs.git.branches": {
+      "state": "measured",
+      "started_at": "2026-08-30T12:00:00Z",
+      "ended_at": "2026-08-30T12:00:00Z",
+      "cwd": "/srv/agentscient",
+      "environment": {"lane": "dev"},
+      "ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "exit": 0,
+      "raw_sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+    }
+  },
+  "sections": {
+    "branches": {
+      "state": "measured",
+      "evidence": ["obs.git.branches"],
+      "items": []
+    }
+  }
+}
+

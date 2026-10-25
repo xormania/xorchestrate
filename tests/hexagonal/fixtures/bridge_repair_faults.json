@@ -1,0 +1,32 @@
+{
+  "schema": "xorchestrate-retained-behavioral-faults-v1",
+  "faults": [
+    {
+      "id": "F02-reassigned-callback",
+      "requirements": ["H4", "H5", "H7", "A2"],
+      "definition": "tests.hexagonal.test_bridge_repair_calibration:ReassignedCallbackHost",
+      "activation": "An old call is observed, reconnect changes actor and work, then callback dispatch overwrites its original lease binding.",
+      "activation_evidence": "fault_activated is true and the new work contains OLD_WORK_CALLBACK attributed to new-actor",
+      "observable_violation": "A callback denied to old-actor records evidence using replacement authority.",
+      "target_assertion": "F02_CALLBACK_MUST_NOT_ACQUIRE_REPLACEMENT_AUTHORITY",
+      "test": "tests/hexagonal/test_bridge_repair_calibration.py::test_f02_known_bad_callback_reassignment_is_detected",
+      "passing_control": "Same host fault with no replacement never activates; original actor denial and empty work evidence hold.",
+      "unrelated_controls": ["TimeoutError", "ModuleNotFoundError"],
+      "stores": ["memory", "sqlite"]
+    },
+    {
+      "id": "F03-false-not-started",
+      "requirements": ["H4", "H7", "A2"],
+      "definition": "tests.hexagonal.test_bridge_repair_calibration:FalseNotStartedHost",
+      "activation": "An effect increments a native counter, reconnect occurs while its response is held, then its completed host result is classified not_started.",
+      "activation_evidence": "fault_activated is true, host has a completed effect, application operation is failed and a new send increments the counter to two",
+      "observable_violation": "False certainty removes the recovery fence and permits another effect.",
+      "target_assertion": "F03_APPLIED_EFFECT_MUST_NOT_BECOME_NOT_STARTED",
+      "test": "tests/hexagonal/test_bridge_repair_calibration.py::test_f03_known_bad_not_started_classification_is_detected",
+      "passing_control": "Same host fault without replacement never activates; completion is truthful and a subsequent send is legitimate.",
+      "unrelated_controls": ["TimeoutError", "ModuleNotFoundError"],
+      "stores": ["memory", "sqlite"]
+    }
+  ],
+  "attribution": "Each scenario and activation check completes before the target assertion is expected to raise. Setup exceptions propagate outside that handler; only the named AssertionError earns detection. Faulty subjects remain faulty."
+}

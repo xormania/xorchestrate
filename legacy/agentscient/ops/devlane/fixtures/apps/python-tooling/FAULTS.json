@@ -1,0 +1,206 @@
+{
+  "name": "python-tooling",
+  "check": "python3 -m unittest discover -s tests -p 'test_*.py' && ruff check .",
+  "not_planted": {
+    "K7": "K7 is reserved for python-service, where an external boundary is worth stubbing.",
+    "K9": "K9 does not apply to this stdlib-only dialect because it has no dependency manifest or lock."
+  },
+  "faults": [
+    {
+      "id": "PT-01",
+      "kind": "K1",
+      "severity": "p1",
+      "location": {
+        "path": "tool/cli.py",
+        "lines": [17, 17]
+      },
+      "declared": {
+        "text": "User-supplied helper names are passed as argument-vector entries, never interpolated into a shell command.",
+        "path": "README.md",
+        "lines": [9, 9]
+      },
+      "practiced": {
+        "text": "return os.system(f\"printf '%s\\\\n' {name} >/dev/null\")",
+        "path": "tool/cli.py",
+        "lines": [17, 17]
+      },
+      "finding": "The helper name is interpolated into an os.system shell line despite the argv declaration.",
+      "neighbour": {
+        "path": "tool/cli.py",
+        "lines": [21, 21],
+        "why_clean": "The neighbouring helper passes the same value as one entry in a subprocess argument list."
+      },
+      "probe": "PYTHONPATH=. python3 probes/pt01.py",
+      "fix": "fixes/pt01.patch",
+      "visible_to": "audit"
+    },
+    {
+      "id": "PT-02",
+      "kind": "K2",
+      "severity": "p1",
+      "location": {
+        "path": "tool/service.py",
+        "lines": [10, 10]
+      },
+      "declared": {
+        "text": "Record paths always remain beneath the configured store root.",
+        "path": "README.md",
+        "lines": [11, 11]
+      },
+      "practiced": {
+        "text": "return root / name",
+        "path": "tool/service.py",
+        "lines": [10, 10]
+      },
+      "finding": "The record path joins an untrusted name without resolving and checking containment under the root.",
+      "neighbour": {
+        "path": "tool/service.py",
+        "lines": [16, 16],
+        "why_clean": "The checked neighbour proves the resolved candidate is relative to the resolved root."
+      },
+      "probe": "PYTHONPATH=. python3 probes/pt02.py",
+      "fix": "fixes/pt02.patch",
+      "visible_to": "both"
+    },
+    {
+      "id": "PT-03",
+      "kind": "K3",
+      "severity": "p2",
+      "location": {
+        "path": "tool/cli.py",
+        "lines": [25, 25]
+      },
+      "declared": {
+        "text": "A count of zero is an answer and is distinct from an absent record.",
+        "path": "README.md",
+        "lines": [13, 13]
+      },
+      "practiced": {
+        "text": "if not count:",
+        "path": "tool/cli.py",
+        "lines": [25, 25]
+      },
+      "finding": "The count renderer uses truthiness and therefore reports a stored zero as absent.",
+      "neighbour": {
+        "path": "tool/cli.py",
+        "lines": [31, 31],
+        "why_clean": "The optional-label neighbour distinguishes absence explicitly with is None."
+      },
+      "probe": "PYTHONPATH=. python3 probes/pt03.py",
+      "fix": "fixes/pt03.patch",
+      "visible_to": "test"
+    },
+    {
+      "id": "PT-04",
+      "kind": "K4",
+      "severity": "p1",
+      "location": {
+        "path": "tool/cli.py",
+        "lines": [37, 37]
+      },
+      "declared": {
+        "text": "Credentials never leave the process in failure logs.",
+        "path": "README.md",
+        "lines": [15, 15]
+      },
+      "practiced": {
+        "text": "path.write_text(f\"write failed: environment={dict(os.environ)}\\n\", encoding=\"utf-8\")",
+        "path": "tool/cli.py",
+        "lines": [37, 37]
+      },
+      "finding": "The failure logger serializes the entire process environment, including credentials.",
+      "neighbour": {
+        "path": "tool/cli.py",
+        "lines": [41, 41],
+        "why_clean": "The neighbouring failure log emits a fixed redaction marker instead of the token."
+      },
+      "probe": "PYTHONPATH=. python3 probes/pt04.py",
+      "fix": "fixes/pt04.patch",
+      "visible_to": "audit"
+    },
+    {
+      "id": "PT-05",
+      "kind": "K5",
+      "severity": "p2",
+      "location": {
+        "path": "tool/service.py",
+        "lines": [23, 24]
+      },
+      "declared": {
+        "text": "An unreadable or corrupt store is reported as a refusal, never served as an empty answer.",
+        "path": "README.md",
+        "lines": [17, 17]
+      },
+      "practiced": {
+        "text": "except Exception:\n        return []",
+        "path": "tool/service.py",
+        "lines": [23, 24]
+      },
+      "finding": "The store catches every read or decode failure and returns an empty list that looks authoritative.",
+      "neighbour": {
+        "path": "tool/cli.py",
+        "lines": [47, 48],
+        "why_clean": "The read boundary catches only I/O failure and immediately re-raises it."
+      },
+      "probe": "PYTHONPATH=. python3 probes/pt05.py",
+      "fix": "fixes/pt05.patch",
+      "visible_to": "test"
+    },
+    {
+      "id": "PT-06",
+      "kind": "K6",
+      "severity": "p2",
+      "location": {
+        "path": "tool/model.py",
+        "lines": [16, 16]
+      },
+      "declared": {
+        "text": "Intervals are half-open, including their start and excluding their end.",
+        "path": "README.md",
+        "lines": [19, 19]
+      },
+      "practiced": {
+        "text": "return self.start <= value <= self.end",
+        "path": "tool/model.py",
+        "lines": [16, 16]
+      },
+      "finding": "Interval.contains uses an inclusive end although the model declares a half-open interval.",
+      "neighbour": {
+        "path": "tool/model.py",
+        "lines": [20, 20],
+        "why_clean": "The values neighbour uses Python's half-open range with the same start and end."
+      },
+      "probe": "PYTHONPATH=. python3 probes/pt06.py",
+      "fix": "fixes/pt06.patch",
+      "visible_to": "test"
+    },
+    {
+      "id": "PT-07",
+      "kind": "K8",
+      "severity": "p3",
+      "location": {
+        "path": "tests/test_tooling.py",
+        "lines": [19, 19]
+      },
+      "declared": {
+        "text": "Test oracles are independent literals, not values computed by the code under test.",
+        "path": "README.md",
+        "lines": [21, 21]
+      },
+      "practiced": {
+        "text": "expected = checksum(\"fixture\")",
+        "path": "tests/test_tooling.py",
+        "lines": [19, 19]
+      },
+      "finding": "The fixture-case test calculates its expected checksum by calling the checksum function itself.",
+      "neighbour": {
+        "path": "tests/test_tooling.py",
+        "lines": [15, 16],
+        "why_clean": "The neighbouring checksum test supplies a literal expected value independent of the function."
+      },
+      "probe": "PYTHONPATH=. python3 probes/pt07.py",
+      "fix": "fixes/pt07.patch",
+      "visible_to": "audit"
+    }
+  ]
+}

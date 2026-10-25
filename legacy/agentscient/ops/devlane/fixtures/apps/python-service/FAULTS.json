@@ -1,0 +1,211 @@
+{
+  "name": "python-service",
+  "check": ".venv/bin/python -m pytest -q tests && ruff check .",
+  "toolchain": {
+    "install": "python3 -m venv .venv && .venv/bin/python -m pip install -r requirements.lock",
+    "ready": "test -x .venv/bin/python && .venv/bin/python -c 'import pytest'"
+  },
+  "not_planted": {
+    "K3": "K3 is covered by python-tooling.",
+    "K8": "K8 is covered by python-tooling.",
+    "K9": "A second K9 would be a lock version that contradicts its manifest pin; it waits for the first grading run."
+  },
+  "faults": [
+    {
+      "id": "PS-01",
+      "kind": "K1",
+      "severity": "p1",
+      "location": {
+        "path": "service/export.py",
+        "lines": [9, 17]
+      },
+      "declared": {
+        "text": "Request fields are passed to helpers as argument-vector entries, never as shell text.",
+        "path": "README.md",
+        "lines": [13, 13]
+      },
+      "practiced": {
+        "text": "f\"tar -czf {target} -C {root} {name}\"",
+        "path": "service/export.py",
+        "lines": [9, 17]
+      },
+      "finding": "The archive name is interpolated into a shell command despite the argv declaration.",
+      "neighbour": {
+        "path": "service/export.py",
+        "lines": [21, 22],
+        "why_clean": "The checksum helper passes its path as one entry in a subprocess argument list."
+      },
+      "probe": "PYTHONPATH=. python3 probes/ps01.py",
+      "fix": "fixes/ps01.patch",
+      "visible_to": "audit"
+    },
+    {
+      "id": "PS-02",
+      "kind": "K2",
+      "severity": "p1",
+      "location": {
+        "path": "service/store.py",
+        "lines": [9, 11]
+      },
+      "declared": {
+        "text": "Served files always resolve beneath the store root.",
+        "path": "README.md",
+        "lines": [15, 15]
+      },
+      "practiced": {
+        "text": "return root / name",
+        "path": "service/store.py",
+        "lines": [9, 11]
+      },
+      "finding": "The record path joins an untrusted name without checking containment under the root.",
+      "neighbour": {
+        "path": "service/store.py",
+        "lines": [16, 16],
+        "why_clean": "The checked resolver proves the resolved candidate is relative to the root."
+      },
+      "probe": "PYTHONPATH=. python3 probes/ps02.py",
+      "fix": "fixes/ps02.patch",
+      "visible_to": "both"
+    },
+    {
+      "id": "PS-03",
+      "kind": "K4",
+      "severity": "p1",
+      "location": {
+        "path": "service/audit.py",
+        "lines": [13, 17]
+      },
+      "declared": {
+        "text": "Credentials never enter the request log.",
+        "path": "README.md",
+        "lines": [17, 17]
+      },
+      "practiced": {
+        "text": "path.write_text(f\"headers={headers}\\n\", encoding=\"utf-8\")",
+        "path": "service/audit.py",
+        "lines": [13, 17]
+      },
+      "finding": "The request logger writes all headers, including the authorization credential.",
+      "neighbour": {
+        "path": "service/audit.py",
+        "lines": [22, 22],
+        "why_clean": "The neighbouring logger emits a fixed redaction marker instead of the credential."
+      },
+      "probe": "PYTHONPATH=. python3 probes/ps03.py",
+      "fix": "fixes/ps03.patch",
+      "visible_to": "audit"
+    },
+    {
+      "id": "PS-04",
+      "kind": "K5",
+      "severity": "p2",
+      "location": {
+        "path": "service/api.py",
+        "lines": [31, 36]
+      },
+      "declared": {
+        "text": "A malformed request is refused with a problem, never answered as empty success.",
+        "path": "README.md",
+        "lines": [19, 19]
+      },
+      "practiced": {
+        "text": "except Exception:\n        return {\"ok\": True, \"records\": []}",
+        "path": "service/api.py",
+        "lines": [31, 36]
+      },
+      "finding": "The request boundary swallows parse failures and serves an authoritative empty success.",
+      "neighbour": {
+        "path": "service/api.py",
+        "lines": [43, 43],
+        "why_clean": "The missing-field path catches KeyError and returns an explicit problem object."
+      },
+      "probe": "PYTHONPATH=. python3 probes/ps04.py",
+      "fix": "fixes/ps04.patch",
+      "visible_to": "test"
+    },
+    {
+      "id": "PS-05",
+      "kind": "K6",
+      "severity": "p2",
+      "location": {
+        "path": "service/paging.py",
+        "lines": [8, 10]
+      },
+      "declared": {
+        "text": "Pages are half-open: the start is included and the stop excluded.",
+        "path": "README.md",
+        "lines": [21, 21]
+      },
+      "practiced": {
+        "text": "return records[start : stop + 1]",
+        "path": "service/paging.py",
+        "lines": [8, 10]
+      },
+      "finding": "The page slice adds one to stop and therefore includes the declared exclusive end.",
+      "neighbour": {
+        "path": "service/paging.py",
+        "lines": [15, 15],
+        "why_clean": "The page-count helper uses a half-open range with total as its stop."
+      },
+      "probe": "PYTHONPATH=. python3 probes/ps05.py",
+      "fix": "fixes/ps05.patch",
+      "visible_to": "test"
+    },
+    {
+      "id": "PS-06",
+      "kind": "K7",
+      "severity": "p3",
+      "location": {
+        "path": "tests/test_api.py",
+        "lines": [6, 10]
+      },
+      "declared": {
+        "text": "Tests exercise the real request parser at the boundary.",
+        "path": "README.md",
+        "lines": [23, 23]
+      },
+      "practiced": {
+        "text": "monkeypatch.setattr(api, \"parse_request\", lambda _line: {\"verb\": \"unknown\"})",
+        "path": "tests/test_api.py",
+        "lines": [6, 10]
+      },
+      "finding": "The boundary refusal test replaces the parser and therefore proves the stub rather than real input.",
+      "neighbour": {
+        "path": "tests/test_api.py",
+        "lines": [12, 12],
+        "why_clean": "The neighbouring parser test calls parse_request directly on a literal request."
+      },
+      "probe": "PYTHONPATH=. python3 probes/ps06.py",
+      "fix": "fixes/ps06.patch",
+      "visible_to": "audit"
+    },
+    {
+      "id": "PS-07",
+      "kind": "K9",
+      "severity": "p2",
+      "location": {
+        "path": "pyproject.toml",
+        "lines": [5, 7]
+      },
+      "declared": {
+        "text": "Runtime dependencies are pinned to one version in the manifest and the lock agrees.",
+        "path": "README.md",
+        "lines": [25, 25]
+      },
+      "practiced": {
+        "text": "\"python-json-logger>=2.0\"",
+        "path": "pyproject.toml",
+        "lines": [5, 7]
+      },
+      "finding": "The runtime manifest admits a version range although the lock names one release.",
+      "neighbour": {
+        "path": "pyproject.toml",
+        "lines": [8, 8],
+        "why_clean": "The sibling runtime dependency is pinned to exactly version 1.0.1."
+      },
+      "probe": "PYTHONPATH=. python3 probes/ps07.py",
+      "fix": "fixes/ps07.patch",
+      "visible_to": "audit"
+    }
+  ]
+}

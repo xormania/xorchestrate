@@ -1,0 +1,8 @@
+diff --git a/src/Service/Ledger.php b/src/Service/Ledger.php
+--- a/src/Service/Ledger.php
++++ b/src/Service/Ledger.php
+@@ -15,3 +15,3 @@
+     {
+-        if (!$count) {
++        if ($count === null) {
+             return 'absent';

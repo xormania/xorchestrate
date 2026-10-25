@@ -1,0 +1,3 @@
+# Private prod-lane code provider. Leave operator-wide Serena installations alone.
+# Serena 2.0.0.dev0 (dev-v2), persistent REPL; PHP backend pin: Intelephense 1.14.4.
+serena-agent @ git+https://github.com/oraios/serena.git@b79e2a55f9d4072084977dd35bd07d31146d88b9

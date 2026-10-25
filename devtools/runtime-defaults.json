@@ -1,0 +1,109 @@
+{
+  "version": 1,
+  "max_sessions": 12,
+  "profiles": {
+    "codex_sol_xhigh": {
+      "harness": "codex",
+      "vendor": "openai",
+      "model": "gpt-6.1-sol",
+      "reasoning": "xhigh",
+      "provider": "openai"
+    },
+    "codex_sol6_high": {
+      "harness": "codex",
+      "vendor": "openai",
+      "model": "gpt-6-sol",
+      "reasoning": "high",
+      "provider": "openai"
+    },
+    "claude_opus_xhigh": {
+      "harness": "claude",
+      "vendor": "anthropic",
+      "model": "claude-opus-5-5",
+      "reasoning": "xhigh"
+    },
+    "codex_astra_max": {
+      "harness": "codex",
+      "vendor": "openai",
+      "model": "gpt-6-astra",
+      "reasoning": "max",
+      "provider": "openai"
+    },
+    "codex_astra_xhigh": {
+      "harness": "codex",
+      "vendor": "openai",
+      "model": "gpt-6-astra",
+      "reasoning": "xhigh",
+      "provider": "openai"
+    },
+    "codex_astra_high": {
+      "harness": "codex",
+      "vendor": "openai",
+      "model": "gpt-6-astra",
+      "reasoning": "high",
+      "provider": "openai"
+    },
+    "grok_high": {
+      "harness": "grok",
+      "vendor": "xai",
+      "model": "grok-4.7",
+      "reasoning": "high"
+    },
+    "codex_daybreak_blue_xhigh": {
+      "harness": "codex",
+      "vendor": "openai",
+      "model": "gpt-daybreak-blue-latest",
+      "reasoning": "xhigh",
+      "provider": "openai"
+    },
+    "claude_sonnet_high": {
+      "harness": "claude",
+      "vendor": "anthropic",
+      "model": "claude-sonnet-5-5",
+      "reasoning": "high"
+    }
+  },
+  "roles": {
+    "co": [
+      "codex_astra_xhigh",
+      "codex_sol_xhigh",
+      "grok_high"
+    ],
+    "xo": [
+      "codex_astra_xhigh"
+    ],
+    "nco": [
+      "codex_astra_high"
+    ],
+    "planner": [
+      "codex_sol_xhigh"
+    ],
+    "architect": [
+      "claude_opus_xhigh"
+    ],
+    "research": [
+      "codex_astra_max"
+    ],
+    "arbitrator": [
+      "codex_astra_xhigh"
+    ],
+    "coder": [
+      "claude_opus_xhigh"
+    ],
+    "test_writer": [
+      "codex_sol_xhigh"
+    ],
+    "audit": [
+      "grok_high"
+    ],
+    "security_auditor": [
+      "codex_daybreak_blue_xhigh"
+    ],
+    "adversarial_review": [
+      "codex_sol6_high"
+    ],
+    "docs": [
+      "claude_sonnet_high"
+    ]
+  }
+}

@@ -1,0 +1,1 @@
+{"tool": "coordination.py", "rows": [{"argv": ["teleport"], "class": "arguments", "identity": false}, {"argv": ["bind", "--roles", "worker"], "class": "identity", "identity": false}]}

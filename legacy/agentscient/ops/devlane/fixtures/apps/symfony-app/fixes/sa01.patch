@@ -1,0 +1,8 @@
+diff --git a/src/Command/ArchiveCommand.php b/src/Command/ArchiveCommand.php
+--- a/src/Command/ArchiveCommand.php
++++ b/src/Command/ArchiveCommand.php
+@@ -22,3 +22,3 @@
+         $name = (string) $input->getArgument('name');
+-        $process = Process::fromShellCommandline("printf '%s\\n' ".$name.' >/dev/null');
++        $process = new Process(['printf', '%s\\n', $name]);
+         $process->run();

@@ -1,0 +1,361 @@
+{
+  "name": "CI",
+  "on": {
+    "pull_request": {
+      "types": [
+        "opened",
+        "reopened",
+        "synchronize",
+        "edited"
+      ]
+    },
+    "push": {
+      "branches": [
+        "dev",
+        "master"
+      ]
+    },
+    "merge_group": {},
+    "workflow_dispatch": {}
+  },
+  "permissions": {
+    "contents": "read"
+  },
+  "jobs": {
+    "changes": {
+      "runs-on": "${{ fromJSON(vars.CI_RUNNER_MODE == 'local' && '\"self-hosted\"' || (vars.CI_RUNNER_MODE == '' || vars.CI_RUNNER_MODE == 'hosted') && '\"ubuntu-24.04\"' || 'INVALID_CI_RUNNER_MODE_expected_hosted_or_local') }}",
+      "timeout-minutes": 5,
+      "outputs": {
+        "live-mcp": "${{ steps.select.outputs['live-mcp'] }}",
+        "maker-mate": "${{ steps.select.outputs['maker-mate'] }}",
+        "symfony": "${{ steps.select.outputs['symfony'] }}",
+        "serena": "${{ steps.select.outputs['serena'] }}"
+      },
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false,
+            "fetch-depth": 0
+          }
+        },
+        {
+          "name": "Verify CI selection and aggregate gate",
+          "run": "python3 -m unittest discover -s .github/tests -v"
+        },
+        {
+          "name": "Select jobs from changed files",
+          "id": "select",
+          "run": "python3 .github/ci.py select"
+        },
+        {
+          "name": "Prepare Python and hosted pip cache",
+          "if": "${{ runner.environment == 'github-hosted' && steps.select.outputs['live-mcp'] == 'true' }}",
+          "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "with": {
+            "python-version": "3.12",
+            "cache": "pip",
+            "cache-dependency-path": ".github/requirements-ci.txt"
+          }
+        },
+        {
+          "name": "Install linter",
+          "run": "python3 -m venv \"$RUNNER_TEMP/live-mcp-venv\"\n\"$RUNNER_TEMP/live-mcp-venv/bin/python\" -m pip install --disable-pip-version-check -r .github/requirements-ci.txt",
+          "if": "${{ steps.select.outputs['live-mcp'] == 'true' }}"
+        },
+        {
+          "name": "Lint live support",
+          "id": "lint",
+          "run": "\"$RUNNER_TEMP/live-mcp-venv/bin/python\" -m ruff check devtools .github",
+          "if": "${{ steps.select.outputs['live-mcp'] == 'true' }}"
+        },
+        {
+          "name": "Verify security lint coverage",
+          "run": "\"$RUNNER_TEMP/live-mcp-venv/bin/python\" .github/lint_checks.py",
+          "if": "${{ steps.select.outputs['live-mcp'] == 'true' }}"
+        },
+        {
+          "name": "Prepare CUE for configuration validation",
+          "if": "${{ steps.select.outputs['live-mcp'] == 'true' }}",
+          "uses": "cue-lang/setup-cue@b0e30e540a2dae47304ebf16586a5b2db023b61c",
+          "with": {
+            "version": "v0.17.1"
+          }
+        },
+        {
+          "name": "Validate configuration, role exports and framework consistency",
+          "if": "${{ steps.select.outputs['live-mcp'] == 'true' }}",
+          "env": {
+            "AGENTSCIENT_CUE": "cue"
+          },
+          "run": "python3 -m devtools.role_packages --check\npython3 -m devtools.configuration --check\npython3 -m devtools.consistency\nPYTHONPATH=devtools/tests:. python3 -m unittest devtools.tests.test_role_packages.PackageCatalogTests.test_cue_source_and_export_agree_and_invalid_definitions_are_rejected devtools.tests.test_configuration.ConfigurationTests.test_cue_export_matches_and_rejects_stale_unknown_fields -v"
+        }
+      ]
+    },
+    "live-mcp": {
+      "runs-on": "${{ fromJSON(vars.CI_RUNNER_MODE == 'local' && '\"self-hosted\"' || (vars.CI_RUNNER_MODE == '' || vars.CI_RUNNER_MODE == 'hosted') && '\"ubuntu-24.04\"' || 'INVALID_CI_RUNNER_MODE_expected_hosted_or_local') }}",
+      "timeout-minutes": 10,
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "name": "Prepare Python",
+          "if": "${{ runner.environment == 'github-hosted' }}",
+          "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "with": {
+            "python-version": "3.12"
+          }
+        },
+        {
+          "name": "Prepare tmux",
+          "if": "${{ runner.environment == 'github-hosted' }}",
+          "run": "command -v tmux || (sudo apt-get update && sudo apt-get install -y tmux)"
+        },
+        {
+          "name": "Verify live MCP and transport protocols",
+          "env": {
+            "AGENTSCIENT_REQUIRE_TMUX": "1",
+            "AGENTSCIENT_REQUIRE_ABSTRACT_SOCKETS": "1",
+            "AGENTSCIENT_EVIDENCE_DIR": "${{ runner.temp }}/runtime-evidence",
+            "JEV_CI_DIR": "${{ runner.temp }}/jev-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}"
+          },
+          "run": "mkdir -p \"$JEV_CI_DIR\"\npython3 -m devtools.tests.run --strict --allow-skip test_role_packages.PackageCatalogTests.test_cue_source_and_export_agree_and_invalid_definitions_are_rejected --allow-skip test_configuration.ConfigurationTests.test_cue_export_matches_and_rejects_stale_unknown_fields -v --durations 10 --report \"$AGENTSCIENT_EVIDENCE_DIR/test-census.json\" 2>&1 | tee \"$JEV_CI_DIR/command.log\"",
+          "id": "verify",
+          "shell": "bash"
+        },
+        {
+          "name": "Diagnose failed check with Jev",
+          "if": "${{ failure() && steps.verify.outcome == 'failure' }}",
+          "continue-on-error": true,
+          "timeout-minutes": 2,
+          "env": {
+            "TYPESAFE_API_KEY": "${{ secrets.TYPESAFE_API_KEY }}",
+            "JEV_CI_DIR": "${{ runner.temp }}/jev-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}"
+          },
+          "run": "python3 .github/ci_jev.py --job live-mcp --log \"$JEV_CI_DIR/command.log\" --output \"$JEV_CI_DIR/assessment\" --evidence \"${{ runner.temp }}/runtime-evidence\""
+        },
+        {
+          "name": "Retain Jev diagnosis",
+          "if": "${{ always() && steps.verify.outcome == 'failure' }}",
+          "continue-on-error": true,
+          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "with": {
+            "name": "jev-ci-live-mcp-${{ github.run_id }}-${{ github.run_attempt }}",
+            "path": "${{ runner.temp }}/jev-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}/assessment/",
+            "if-no-files-found": "warn",
+            "retention-days": 7
+          }
+        },
+        {
+          "name": "Retain runtime fixture evidence",
+          "if": "${{ always() }}",
+          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "with": {
+            "name": "runtime-fixture-evidence",
+            "path": "${{ runner.temp }}/runtime-evidence",
+            "retention-days": 7
+          }
+        }
+      ],
+      "needs": [
+        "changes"
+      ],
+      "if": "${{ needs.changes.outputs['live-mcp'] == 'true' }}"
+    },
+    "maker-mate": {
+      "runs-on": "${{ fromJSON(vars.CI_RUNNER_MODE == 'local' && '\"self-hosted\"' || (vars.CI_RUNNER_MODE == '' || vars.CI_RUNNER_MODE == 'hosted') && '\"ubuntu-24.04\"' || 'INVALID_CI_RUNNER_MODE_expected_hosted_or_local') }}",
+      "timeout-minutes": 15,
+      "env": {
+        "APP_ENV": "test",
+        "APP_DEBUG": "1"
+      },
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "name": "Prepare PHP and Composer",
+          "uses": "./.github/actions/php-runtime"
+        },
+        {
+          "name": "Record integration revision and versions",
+          "run": "mkdir -p var/ci/maker-mate\ngit rev-parse HEAD > var/ci/maker-mate/revision.txt\nphp --version\ncomposer --version"
+        },
+        {
+          "name": "Exercise Maker/Mate through normal MCP",
+          "run": "mkdir -p \"$JEV_CI_DIR\"\nset +e\npython3 devtools/integration/symfony.py --evidence-dir var/ci/maker-mate > var/ci/maker-mate/development-tools.json 2> \"$JEV_CI_DIR/command.log\"\ncommand_status=$?\ncat \"$JEV_CI_DIR/command.log\" >&2\nexit \"$command_status\"",
+          "id": "verify",
+          "shell": "bash",
+          "env": {
+            "JEV_CI_DIR": "${{ runner.temp }}/jev-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}"
+          }
+        },
+        {
+          "name": "Diagnose failed check with Jev",
+          "if": "${{ failure() && steps.verify.outcome == 'failure' }}",
+          "continue-on-error": true,
+          "timeout-minutes": 2,
+          "env": {
+            "TYPESAFE_API_KEY": "${{ secrets.TYPESAFE_API_KEY }}",
+            "JEV_CI_DIR": "${{ runner.temp }}/jev-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}"
+          },
+          "run": "python3 .github/ci_jev.py --job maker-mate --log \"$JEV_CI_DIR/command.log\" --output \"$JEV_CI_DIR/assessment\" --evidence \"var/ci/maker-mate\""
+        },
+        {
+          "name": "Retain Jev diagnosis",
+          "if": "${{ always() && steps.verify.outcome == 'failure' }}",
+          "continue-on-error": true,
+          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "with": {
+            "name": "jev-ci-maker-mate-${{ github.run_id }}-${{ github.run_attempt }}",
+            "path": "${{ runner.temp }}/jev-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}/assessment/",
+            "if-no-files-found": "warn",
+            "retention-days": 7
+          }
+        },
+        {
+          "name": "Retain Maker/Mate integration evidence",
+          "if": "${{ always() }}",
+          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "with": {
+            "name": "maker-mate-${{ github.run_id }}-${{ github.run_attempt }}",
+            "path": "var/ci/maker-mate/",
+            "if-no-files-found": "error",
+            "retention-days": 7
+          }
+        }
+      ],
+      "needs": [
+        "changes"
+      ],
+      "if": "${{ needs.changes.outputs['maker-mate'] == 'true' }}"
+    },
+    "symfony": {
+      "uses": "./.github/workflows/ci-prod-lane.yml",
+      "needs": [
+        "changes"
+      ],
+      "if": "${{ needs.changes.outputs['symfony'] == 'true' }}"
+    },
+    "serena": {
+      "runs-on": "${{ fromJSON(vars.CI_RUNNER_MODE == 'local' && '\"self-hosted\"' || (vars.CI_RUNNER_MODE == '' || vars.CI_RUNNER_MODE == 'hosted') && '\"ubuntu-24.04\"' || 'INVALID_CI_RUNNER_MODE_expected_hosted_or_local') }}",
+      "timeout-minutes": 20,
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "name": "Check Docker readiness",
+          "run": "command -v docker >/dev/null || { echo '::error::Docker is missing from this runner PATH'; exit 1; }\ndocker info --format '{{.ServerVersion}}'"
+        },
+        {
+          "name": "Build with persistent local Docker cache",
+          "if": "${{ runner.environment == 'self-hosted' }}",
+          "run": "docker build --tag \"$AGENTSCIENT_SERENA_IMAGE\" devtools/serena"
+        },
+        {
+          "name": "Prepare hosted Buildx",
+          "if": "${{ runner.environment == 'github-hosted' }}",
+          "uses": "docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069"
+        },
+        {
+          "name": "Build with hosted layer cache",
+          "if": "${{ runner.environment == 'github-hosted' }}",
+          "uses": "docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc",
+          "with": {
+            "context": "devtools/serena",
+            "load": true,
+            "tags": "${{ env.AGENTSCIENT_SERENA_IMAGE }}",
+            "cache-from": "type=gha,scope=agentscient-serena",
+            "cache-to": "type=gha,mode=max,scope=agentscient-serena,ignore-error=true"
+          }
+        },
+        {
+          "name": "Verify real Serena REPL and workspace boundary",
+          "run": "mkdir -p \"$JEV_CI_DIR\"\npython3 devtools/integration/serena.py 2>&1 | tee \"$JEV_CI_DIR/command.log\"",
+          "id": "verify",
+          "shell": "bash",
+          "env": {
+            "JEV_CI_DIR": "${{ runner.temp }}/jev-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}"
+          }
+        },
+        {
+          "name": "Diagnose failed check with Jev",
+          "if": "${{ failure() && steps.verify.outcome == 'failure' }}",
+          "continue-on-error": true,
+          "timeout-minutes": 2,
+          "env": {
+            "TYPESAFE_API_KEY": "${{ secrets.TYPESAFE_API_KEY }}",
+            "JEV_CI_DIR": "${{ runner.temp }}/jev-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}"
+          },
+          "run": "python3 .github/ci_jev.py --job serena --log \"$JEV_CI_DIR/command.log\" --output \"$JEV_CI_DIR/assessment\""
+        },
+        {
+          "name": "Retain Jev diagnosis",
+          "if": "${{ always() && steps.verify.outcome == 'failure' }}",
+          "continue-on-error": true,
+          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "with": {
+            "name": "jev-ci-serena-${{ github.run_id }}-${{ github.run_attempt }}",
+            "path": "${{ runner.temp }}/jev-ci-${{ github.run_id }}-${{ github.run_attempt }}-${{ github.job }}/assessment/",
+            "if-no-files-found": "warn",
+            "retention-days": 7
+          }
+        },
+        {
+          "name": "Remove this run's image tag",
+          "if": "${{ always() }}",
+          "run": "if docker image inspect \"$AGENTSCIENT_SERENA_IMAGE\" >/dev/null 2>&1; then\n  docker image rm \"$AGENTSCIENT_SERENA_IMAGE\"\nfi"
+        }
+      ],
+      "needs": [
+        "changes"
+      ],
+      "if": "${{ needs.changes.outputs['serena'] == 'true' }}",
+      "env": {
+        "AGENTSCIENT_SERENA_IMAGE": "agentscient-serena:ci-${{ github.run_id }}-${{ github.run_attempt }}"
+      }
+    },
+    "lane": {
+      "needs": [
+        "changes",
+        "live-mcp",
+        "maker-mate",
+        "symfony",
+        "serena"
+      ],
+      "if": "${{ always() }}",
+      "runs-on": "${{ fromJSON(vars.CI_RUNNER_MODE == 'local' && '\"self-hosted\"' || (vars.CI_RUNNER_MODE == '' || vars.CI_RUNNER_MODE == 'hosted') && '\"ubuntu-24.04\"' || 'INVALID_CI_RUNNER_MODE_expected_hosted_or_local') }}",
+      "timeout-minutes": 2,
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "name": "Require all selected checks to pass",
+          "env": {
+            "NEEDS_JSON": "${{ toJSON(needs) }}"
+          },
+          "run": "python3 .github/ci.py gate"
+        }
+      ]
+    }
+  },
+  "concurrency": {
+    "group": "${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}",
+    "cancel-in-progress": true
+  }
+}
