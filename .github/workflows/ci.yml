@@ -117,7 +117,7 @@
           "run": "mkdir -p \"$RUNNER_TEMP/xor-verification\"\ncp docs/implementation/owner-brief.md \"$RUNNER_TEMP/xor-verification/owner-brief.md\"\npython3 -m scripts.verification criteria --brief \"$RUNNER_TEMP/xor-verification/owner-brief.md\" --out \"$RUNNER_TEMP/xor-verification/criteria.json\"\npython3 -m scripts.verification.multi_harness --mode protocol-fixture --brief \"$RUNNER_TEMP/xor-verification/owner-brief.md\" --criteria \"$RUNNER_TEMP/xor-verification/criteria.json\" --out \"$RUNNER_TEMP/xor-verification/run\" --timeout 60"
         },
         {
-          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always() && matrix.python == '3.12'",
           "with": {
             "name": "composed-protocol-evidence",
@@ -127,7 +127,7 @@
           }
         },
         {
-          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
             "name": "repair-checks-python-${{ matrix.python }}",
@@ -176,7 +176,7 @@
           "run": "python3 -m scripts.acceptance --output \"$RUNNER_TEMP/acceptance-evidence\" --timeout 120"
         },
         {
-          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
             "name": "tmux-acceptance-evidence",
@@ -229,7 +229,7 @@
           "run": "python3 -m devtools.role_packages --check\npython3 -m devtools.configuration --check\npython3 -m devtools.consistency\npython3 -m devtools.tests.run --strict --report \"$AGENTSCIENT_EVIDENCE_DIR/test-census.json\""
         },
         {
-          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
             "name": "runtime-evidence",
