@@ -39,7 +39,11 @@ def test_cli_result_requires_complete_request_delivery(tmp_path):
 
 def test_early_stdout_close_can_precede_successful_input_delivery(tmp_path):
     marker = tmp_path / "peer.jsonl"
-    assert run_json_process(options("late_input", marker), PAYLOAD) == {"ok": True}
+    try:
+        result = run_json_process(options("late_input", marker), PAYLOAD)
+    except OrchestrationError as error:
+        pytest.fail(f"Late-input peer failed: {error.code} {error.details}; markers={records(marker) if marker.exists() else []}")
+    assert result == {"ok": True}
     assert records(marker)[-1] == {"event": "input_received", "value_length": len(PAYLOAD["value"])}
 
 

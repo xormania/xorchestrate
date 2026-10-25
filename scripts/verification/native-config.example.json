@@ -1,0 +1,45 @@
+{
+  "sessions": {
+    "codex": {
+      "adapter": "codex",
+      "options": {
+        "command": ["codex", "app-server", "--listen", "stdio://"],
+        "cwd": "/absolute/path/to/isolated/native-workspace",
+        "pass_env": ["PATH", "HOME", "CODEX_HOME"],
+        "application_tools": true,
+        "timeout": 120,
+        "thread": {}
+      }
+    },
+    "claude": {
+      "adapter": "claude",
+      "options": {
+        "command": ["claude"],
+        "cwd": "/absolute/path/to/isolated/native-workspace",
+        "pass_env": ["PATH", "HOME", "ANTHROPIC_API_KEY"],
+        "application_tools": true,
+        "terminal": "inherit",
+        "startup_timeout": 180,
+        "timeout": 120,
+        "launch": {},
+        "permissions": {"application_tools": "allow"}
+      }
+    },
+    "grok": {
+      "adapter": "grok",
+      "options": {
+        "command": ["grok", "agent", "stdio"],
+        "cwd": "/absolute/path/to/isolated/native-workspace",
+        "pass_env": ["PATH", "HOME", "XAI_API_KEY"],
+        "application_tools": true,
+        "resume_supported": true,
+        "timeout": 120,
+        "turn_timeout": 600,
+        "native_permissions": {
+          "default": "deny",
+          "allow": ["xorchestrate__send_message", "xorchestrate__record_result", "xorchestrate__invoke", "search_tool", "use_tool"]
+        }
+      }
+    }
+  }
+}

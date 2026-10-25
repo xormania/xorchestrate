@@ -82,6 +82,19 @@ class ApplicationToolSessionDriver(SessionDriver, Protocol):
         ...
 
 
+class ApplicationReplaySessionDriver(SessionDriver, Protocol):
+    def bind_application_replay(self, callback: ApplicationToolCallback) -> None:
+        """Validate a completed cache hit without invoking a new effect.
+
+        This optional boundary retains the original native call identity and
+        lets composition recheck current authorization and result applicability.
+        The callback must reject a missing/unresolved durable call; it cannot
+        turn an adapter cache hit into a fresh application invocation. Drivers
+        with custom callbacks may keep their own cache-only replay contract.
+        """
+        ...
+
+
 class Evaluator(Protocol):
     def assess(self, question: str, context: JSON) -> Assessment: ...
     def close(self) -> None: ...
@@ -100,3 +113,40 @@ class Clock(Protocol):
 
 
 Identifier = Callable[[], str]
+
+
+class NativeDeliveryDriver(SessionDriver, Protocol):
+    def deliver(self, session: JSON, message: JSON) -> JSON:
+        """Submit a correlated delivery without claiming receipt or completion."""
+        ...
+    def bind_observer(self, observer: Callable[[JSON, JSON], None]) -> None:
+        """Bind trusted native evidence before creating sessions."""
+        ...
+
+
+class AttachSessionDriver(SessionDriver, Protocol):
+    def attach(self, specification: JSON) -> JSON: ...
+    def detach(self, session: JSON) -> JSON: ...
+    def reconnect(self, source_backend: JSON, specification: JSON) -> JSON: ...
+
+
+class SessionSelection(Protocol):
+    def select(self, message: JSON, recipient: str, sessions: list[JSON]) -> str | None: ...
+
+
+class DeliveryScheduling(Protocol):
+    dispatch_on_enqueue: bool
+    def ready(self, delivery: JSON, session: JSON, now: str) -> bool: ...
+
+
+class DeliveryRetry(Protocol):
+    def permit(self, delivery: JSON, history: list[JSON]) -> bool: ...
+
+
+class ReceiptPolicy(Protocol):
+    def evaluate(self, snapshot: JSON, recipient: str, expectation: JSON) -> JSON: ...
+
+
+class AcceptancePolicy(Protocol):
+    identity: str
+    def evaluate(self, snapshot: JSON) -> JSON: ...

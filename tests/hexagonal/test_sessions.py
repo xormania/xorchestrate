@@ -1,6 +1,7 @@
 import copy
 import json
 import sys
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -111,7 +112,7 @@ class SessionTests(unittest.TestCase):
         self.assertTrue(tool["success"])
         self.assertEqual({"echo": "from-native"}, json.loads(tool["contentItems"][0]["text"]))
         driver.send(session, {"text": "tool"})
-        self.assertEqual([("item/tool/call", {"actor": "coder"})] * 2, contexts)
+        self.assertEqual([("item/tool/call", {"actor": "coder"})], contexts)  # duplicate native call is replayed
         self.assert_code("conflict", driver.set_tools, [])
         self.assertEqual(2, len(driver.poll(session)))
 
@@ -133,17 +134,22 @@ class SessionTests(unittest.TestCase):
         self.assertEqual([{"type": "function", "name": "echo", "description": "Application callback",
                            "inputSchema": capability.input_schema}], result["start"]["dynamicTools"])
         self.assertTrue(result["tool_response"]["result"]["success"])
-        self.assertEqual(("echo", {"value": "from-native"}, {"actor": "bound-coder", "work_id": "assigned-work"}), calls[0][:3])
+        self.assertEqual(("echo", {"value": "from-native"}), calls[0][:2])
+        self.assertEqual({"actor": "bound-coder", "work_id": "assigned-work", "native_id": session["native_id"],
+                          "incarnation": session["incarnation"], "call_id": "call-1", "action": "echo"}, calls[0][2])
         self.assertTrue(calls[0][3])
 
         translated = driver._request(driver._get(session), "item/tool/call", {
             "tool": "echo", "arguments": json.dumps({"value": "JSON arguments", "actor": "claimed-owner"}),
             "actor": "claimed-owner", "context": {"actor": "claimed-owner"},
+            "threadId": session["native_id"], "callId": "native-json-args",
         })
         self.assertTrue(translated["success"])
         self.assertEqual({"echo": "JSON arguments"}, json.loads(translated["contentItems"][0]["text"]))
         self.assertEqual(("echo", {"value": "JSON arguments", "actor": "claimed-owner"},
-                          {"actor": "bound-coder", "work_id": "assigned-work"}, None), calls[1])
+                          {"actor": "bound-coder", "work_id": "assigned-work", "native_id": session["native_id"],
+                           "incarnation": session["incarnation"], "call_id": "native-json-args", "action": "echo"}, calls[1][3]), calls[1])
+        self.assertTrue(calls[1][3])
 
     def test_codex_application_invocation_keys_use_verified_identity_without_delimiter_collisions(self):
         driver = self.driver(CodexSessionDriver, "codex")
@@ -152,7 +158,7 @@ class SessionTests(unittest.TestCase):
                                       lambda action, arguments, context, key: keys.append(key) or {})
         for native_id, call_id in (("a:b", "c"), ("a", "b:c"), ("other", "c"), ("a:b", "c")):
             live = _LiveSession(context={"actor": "coder"}, native_id=native_id)
-            result = driver._request(live, "item/tool/call", {"tool": "echo", "arguments": {}, "callId": call_id})
+            result = driver._request(live, "item/tool/call", {"tool": "echo", "arguments": {}, "callId": call_id, "threadId": native_id})
             self.assertTrue(result["success"])
         self.assertEqual(keys[0], keys[3])
         self.assertEqual(3, len(set(keys[:3])))
@@ -182,12 +188,13 @@ class SessionTests(unittest.TestCase):
         self.assertEqual({"echo", "record_result"}, {tool["name"] for tool in result["start"]["dynamicTools"]})
         self.assertEqual({"handled": "raw"}, json.loads(result["tool_response"]["result"]["contentItems"][0]["text"]))
         live = driver._get(session)
-        response = driver._request(live, "item/tool/call", {"tool": "record_result", "arguments": {"result": "observed"}})
+        response = driver._request(live, "item/tool/call", {"tool": "record_result", "arguments": {"result": "observed"}, "threadId": session["native_id"], "callId": "record-1"})
         self.assertEqual({"handled": "application"}, json.loads(response["contentItems"][0]["text"]))
         self.assertEqual({"handled": "raw"}, driver._request(live, "item/commandExecution/requestApproval", {"threadId": session["native_id"]}))
         self.assertEqual(["item/tool/call", "item/commandExecution/requestApproval"], [call[0] for call in raw_calls])
         self.assertEqual(1, len(application_calls))
-        self.assertEqual({"actor": "coder"}, application_calls[0][2])
+        self.assertEqual({"actor": "coder", "native_id": session["native_id"], "incarnation": session["incarnation"],
+                          "call_id": "record-1", "action": "record_result"}, application_calls[0][2])
 
     def test_codex_application_tool_names_cannot_replace_configured_tools(self):
         driver = self.driver(CodexSessionDriver, "codex", dynamic_tools=[{
@@ -272,7 +279,7 @@ class SessionTests(unittest.TestCase):
         driver = self.driver(CodexSessionDriver, "codex")
         session = driver.start({})
         process = driver._get(session).process.process
-        driver.send(session, {"text": "wrong_identity"})
+        self.assert_code("session_identity", driver.send, session, {"text": "wrong_identity"})
         self.assert_code("session_identity", driver.poll, session)
         self.assertIsNotNone(process.poll())
 
@@ -286,7 +293,7 @@ class SessionTests(unittest.TestCase):
         self.assertEqual(session["native_id"], resumed["native_id"])
         self.assertNotEqual(session["instance"], resumed["instance"])
         self.assertTrue(replacement.send(resumed, {"text": "resumed"})["accepted"])
-        mismatch = self.driver(CodexSessionDriver, "codex_mismatch")
+        mismatch = self.driver(CodexSessionDriver, "codex_mismatch", allow_configuration_change_on_resume=True)
         self.assert_code("session_identity", mismatch.resume, session, {})
 
     def test_acp_session_authentication_prompt_and_explicit_resume(self):
@@ -295,10 +302,19 @@ class SessionTests(unittest.TestCase):
         })
         session = driver.start({"parameters": {"cwd": "/requested"}})
         result = driver.send(session, {"text": "ACP task"})
-        self.assertEqual("end_turn", result["stopReason"])
-        self.assertEqual("/configured", result["start"]["cwd"])
-        self.assertEqual({"methodId": "operator-login"}, result["authentication"])
-        self.assertEqual("echo:ACP task", driver.poll(session)[0]["params"]["update"]["content"]["text"])
+        self.assertTrue(result["submitted"])
+        self.assertEqual("pending", result["completion"])
+        self.assertNotIn("stopReason", result)
+        events = []
+        deadline = time.monotonic() + 3
+        while not any(event.get("kind") == "native_completion" for event in events) and time.monotonic() < deadline:
+            events.extend(driver.poll(session))
+            time.sleep(.01)
+        completion = next(event["result"] for event in events if event.get("kind") == "native_completion")
+        self.assertEqual("end_turn", completion["stopReason"])
+        self.assertEqual("/configured", completion["start"]["cwd"])
+        self.assertEqual({"methodId": "operator-login"}, completion["authentication"])
+        self.assertEqual("echo:ACP task", events[0]["params"]["update"]["content"]["text"])
         resumed = driver.resume(session, {})
         self.assertEqual(session["native_id"], resumed["native_id"])
         unsupported = self.driver(ACPSessionDriver, "acp")

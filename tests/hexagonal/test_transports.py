@@ -249,8 +249,9 @@ class TransportTests(unittest.TestCase):
             "message": {"text": "No implicit restart"}, "idempotency_key": "send-after-exit"}).encode(), actor="session-owner")
         self.assertEqual(stale.returncode, 2)
         error = json.loads(stale.stderr)["error"]
-        self.assertEqual(error["code"], "operation_failed")
-        self.assertEqual(error["details"]["cause"], "session_unavailable")
+        # Runtime shutdown now durably marks the connection disconnected, so
+        # application lifecycle validation refuses before starting an effect.
+        self.assertEqual(error["code"], "invalid_state")
         self.assertEqual(stale.stdout, b"")
 
     def test_cli_input_file_and_failures_do_not_print_traceback_or_argument_secrets(self):

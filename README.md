@@ -88,6 +88,12 @@ Runtime tool arguments cannot replace a configured executable. Filesystem,
 network, and native tool access also depend on the chosen process environment and
 harness; application guardrails are not an operating-system sandbox.
 
+The native adapters include Codex, Claude Code, and Grok Build. Routed messages
+have durable delivery attempts and independently observed callback evidence;
+submission, receipt, reply, turn completion and work acceptance remain separate.
+See [native sessions](docs/native-sessions.md), [external attachment and recovery](docs/external-session-bridge.md),
+and [owner requirements and acceptance](docs/work-acceptance.md).
+
 See [the architecture and contracts](docs/hexagonal-architecture.md),
 [configuration examples](examples/), and [validation](.github/CI.md) for the
 supported behavior and limits. The deterministic tests use real subprocess
@@ -107,6 +113,10 @@ retains a receipt plus evidence for each run. The default uses deterministic
 protocol peers and needs no model account. A configured native profile verifies
 a real harness's application-tool callback. See [live acceptance](docs/live-acceptance.md)
 for both profiles, observation, and cleanup behavior.
+
+The complete behavioral-preservation procedure and evidence are indexed in the
+[implementation handoff](docs/implementation/HANDOFF.md). Authenticated native
+acceptance is an explicit local run; protocol fixtures cannot supply that result.
 
 ## Source layout
 

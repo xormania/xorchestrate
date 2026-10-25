@@ -1,0 +1,11 @@
+{
+  "repository": "xormania/xorchestrate",
+  "base_commit": "30254fd0f184b7e31aa7e0896347429004933ed4",
+  "base_branch": "integration/hexagonal",
+  "working_branch": "repair/behavioral-preservation",
+  "starting_working_changes": [],
+  "owner_brief_sha256": "41545d3fab334e432f58f1f1b1367c70bed29bf2c39c1280c3eacd9cbdc783ad",
+  "recorded_at": "2026-10-24T01:26:32.964901+00:00",
+  "native_verification": "pending local run",
+  "independent_review": "pending"
+}

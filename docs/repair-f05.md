@@ -1,0 +1,19 @@
+# F05: material assessment inputs
+
+The assessment's favorable conclusion is historical unless the material inputs supplied to inference still apply. Requirement, candidate, measurement and evaluator-configuration bindings remain in place; the repair additionally binds work content, supplied work inputs/context, the assessing actor record, evidence IDs/versions/content hashes, and contribution IDs/versions/content hashes. The assessment's own newly emitted evidence is excluded only when checking that assessment, because it was an output rather than an input. Other evidence added or changed afterward invalidates it.
+
+Checks apply when consuming an assessment, committing an acceptance decision, and reading current acceptance through `get_acceptance` or `get_work`. Currentness-sensitive native replay reaches those same views. Mechanical-only acceptance remains independent of unused evaluator inputs. Historical assessments lacking the new `input_binding` are retained but require reassessment before they can establish current acceptance.
+
+By default the evaluator's `work` input omits display `title`, record `version`, `created_at`, and `updated_at`. These are not silently supplied and then ignored by the binding. The optional `assessment.work_input_fields` list selects the fields supplied under `work`; a deployment can include `title` or record bookkeeping when its review requires them. Selected fields then participate in freshness, and changing the selection changes the assessment configuration identity. Top-level `inputs` and `context` remain supplied and bound independently of that work-field selection. Request question/context are immutable assessment inputs; the assessment retains both. Evidence and the full owner requirements remain visible to inference.
+
+## Regression and sustained calibration
+
+Run `python -m pytest tests/hexagonal/test_assessment_inputs.py -q`.
+
+The suite covers both stores; context/evidence changes during inference, after inference and after acceptance; other mutable work fields; actor and contribution changes; title and unrelated-work controls; policy-decision races; optional title consumption; mechanical-only acceptance; and the actual CLI provider/ToolEvaluator/SQLite composition with a diagnostic returned by the provider.
+
+The retained fault is `test_known_bad_stale_input_fault_is_detected_by_intended_assertion`: after a passing control and an input mutation, it deliberately bypasses `_assessment_inputs_current`. The faulty subject actually accepts stale evidence. The calibration succeeds only when the behavioral assertion raises `F05_MATERIAL_ASSESSMENT_INPUTS_MUST_REMAIN_CURRENT`, and records activation through the specific assessment ID. The faulty subject remains faulty throughout that measurement. `test_unrelated_evaluator_failure_is_not_target_detection` separately propagates a provider TimeoutError and verifies that no assessment or acceptance was manufactured. This is deterministic calibration, not installed-vendor acceptance.
+
+The independent review's two reproductions were executed before repair against `b0a00f1aed08d4ad8e066de8eb51f94e21da9f4a`, retaining the six direct defect cases and the three composed variants, including the passing benign-title control. Their exit zero means the defect was demonstrated. Fourteen new behavioral assertions fail for their intended reasons on that source and pass on the repaired source. The parent repair evidence manifest identifies the measured final commit and retains original and repaired raw results separately.
+
+An independent in-session challenge found Python equality conflating JSON numbers and booleans. Material bindings and the decision-time fence now compare canonical JSON content. Both-store regressions use a type-sensitive evaluator for context, inputs and metadata and retain the old/current/fresh distinctions.

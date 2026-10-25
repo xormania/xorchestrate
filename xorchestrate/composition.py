@@ -3,6 +3,7 @@
 Only this module selects infrastructure. Installed ``module:factory`` extensions
 receive their options as a dict; incoming tool arguments never choose factories.
 """
+import hashlib
 import importlib
 import json
 from copy import deepcopy
@@ -21,7 +22,15 @@ BUILTINS = {
         "jsonrpc": "xorchestrate.adapters.sessions:JSONRPCSessionDriver",
         "codex": "xorchestrate.adapters.sessions:CodexSessionDriver",
         "acp": "xorchestrate.adapters.sessions:ACPSessionDriver",
+        "grok": "xorchestrate.adapters.grok:GrokSessionDriver",
+        "claude": "xorchestrate.adapters.claude:ClaudeSessionDriver",
+        "bridge": "xorchestrate.adapters.bridge:BridgeSessionDriver",
     },
+    "acceptance": {"required-checks": "xorchestrate.adapters.acceptance:RequiredChecksAcceptance"},
+    "session_selection": {"latest": "xorchestrate.adapters.delivery:LatestSessionSelection"},
+    "delivery_scheduler": {"manual": "xorchestrate.adapters.delivery:DeliverySchedule"},
+    "retry_policy": {"definite-failure": "xorchestrate.adapters.delivery:DefiniteFailureRetry"},
+    "receipt_policy": {"complete-exchange": "xorchestrate.adapters.delivery:CompleteExchangeReceipt"},
     "guardrail": {"rules": "xorchestrate.adapters.policies:RuleGuardrail"},
     "routing": {"configurable": "xorchestrate.adapters.policies:ConfigurableRouting"},
     "evaluators": {"tool": "xorchestrate.adapters.evaluation:ToolEvaluator", "typesafe": "xorchestrate.adapters.evaluation:TypeSafeEvaluator"},
@@ -73,6 +82,8 @@ class Runtime:
         while self._resources:
             resource = self._resources.pop()
             try:
+                if self.application is not None and resource is self.application.store:
+                    self.application.runtime_closed()
                 close = getattr(resource, "close", None)
                 if close:
                     close()
@@ -99,12 +110,14 @@ def build(config=None, base_dir=None):
         raise OrchestrationError("Configuration must contain JSON values.", "configuration_error") from exc
     if not isinstance(config, dict):
         raise OrchestrationError("Configuration must be an object.", "configuration_error")
-    unknown = set(config) - set(BUILTINS) - {"assessment"}
+    unknown = set(config) - set(BUILTINS) - {"assessment", "session_fallbacks"}
     if unknown:
         raise OrchestrationError("Unknown configuration sections.", "configuration_error", {"sections": sorted(unknown)})
     base_dir = Path(base_dir or Path.cwd()).resolve()
     resources = []
     providers = {}
+    provider_configurations = {}
+    evaluator_configurations = {}
 
     def construct(kind, specification):
         if not isinstance(specification, dict) or not isinstance(specification.get("adapter"), str):
@@ -148,6 +161,14 @@ def build(config=None, base_dir=None):
             if isinstance(specification, dict) and specification.get("enabled") is False:
                 continue
             result[name] = construct(kind, specification)
+            if kind in {"providers", "evaluators"}:
+                material = deepcopy(specification)
+                material.setdefault("options", {})["cwd"] = str((base_dir / material.get("options", {}).get("cwd", ".")).resolve())
+                if kind == "evaluators" and specification.get("adapter") == "tool":
+                    provider = material["options"].get("provider")
+                    material["measurement_provider_configuration"] = provider_configurations.get(provider)
+                identities = provider_configurations if kind == "providers" else evaluator_configurations
+                identities[name] = hashlib.sha256(json.dumps(material, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         return result
 
     try:
@@ -162,8 +183,18 @@ def build(config=None, base_dir=None):
             routing=routing, evaluators=evaluators,
             clock=lambda: datetime.now(timezone.utc).isoformat(), identifiers=lambda: uuid4().hex,
             assessment=config.get("assessment"),
+            acceptance=construct("acceptance", config.get("acceptance", {"adapter": "required-checks"})),
+            session_selection=construct("session_selection", config.get("session_selection", {"adapter": "latest"})),
+            delivery_scheduler=construct("delivery_scheduler", config.get("delivery_scheduler", {"adapter": "manual"})),
+            retry_policy=construct("retry_policy", config.get("retry_policy", {"adapter": "definite-failure"})),
+            receipt_policy=construct("receipt_policy", config.get("receipt_policy", {"adapter": "complete-exchange"})),
+            session_fallbacks=config.get("session_fallbacks"), provider_configurations=provider_configurations,
+            evaluator_configurations=evaluator_configurations,
         )
         for name, driver in sessions.items():
+            bind_observer = getattr(driver, "bind_observer", None)
+            if callable(bind_observer):
+                bind_observer(lambda context, observation, name=name: application.observe_native(name, context, observation))
             specification = config["sessions"][name]
             if specification.get("options", {}).get("application_tools", False):
                 _wire_application_tools(name, driver, application)
@@ -183,7 +214,7 @@ def _wire_application_tools(name, driver, application):
         raise OrchestrationError("This session adapter cannot expose application tools.", "configuration_error")
     capabilities = {capability.name: capability for capability in application.describe()}
 
-    def handle(action, arguments, context, idempotency_key=None):
+    def handle(action, arguments, context, idempotency_key=None, *, replay_only=False):
         if not isinstance(action, str) or action not in capabilities:
             raise OrchestrationError("Unknown application tool.", "unknown_action")
         if not isinstance(arguments, dict) or not isinstance(context, dict):
@@ -202,9 +233,23 @@ def _wire_application_tools(name, driver, application):
             else:
                 arguments["idempotency_key"] = "session:" + json.dumps([name, idempotency_key], separators=(",", ":"))
         # The driver supplies the owned session's principal separately from tool arguments.
+        observed = all(context.get(field) for field in ("session_id", "native_id", "incarnation", "call_id"))
+        if observed:
+            for attempt in range(8):
+                try:
+                    return application.invoke_native(name, action, arguments, context, replay_only=replay_only)
+                except OrchestrationError as error:
+                    if not replay_only or error.code != "conflict" or not error.details.get("retry_safe") or attempt == 7:
+                        raise
+        if replay_only:
+            raise OrchestrationError("Replay requires its original native binding.", "native_evidence_missing")
         return application.call(action, arguments, actor=context.get("actor"))
 
     bind(deepcopy(list(capabilities.values())), handle)
+    replay = getattr(driver, "bind_application_replay", None)
+    if callable(replay):
+        replay(lambda action, arguments, context, key=None:
+               handle(action, arguments, context, key, replay_only=True))
 
 
 def describe(application):
