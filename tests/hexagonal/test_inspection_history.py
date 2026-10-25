@@ -491,10 +491,19 @@ def test_conflicting_operation_key_cannot_supply_another_requests_inspection_sco
     action = "run_measurement" if measured else "invoke"
     args = ({"work_id": work, "check_id": "private", "measurement_key": "public"} if measured else
         {"work_id": work, "capability": "private/change", "arguments": {}, "idempotency_key": "public-invoke"})
-    with pytest.raises(Conflict):
+    counts = {name: (provider.discoveries, len(provider.calls)) for name, provider in app.providers.items()}
+    with pytest.raises(Conflict) as conflict:
         record_history(history, action, args, "conflicting-private")
+    assert {name: (provider.discoveries, len(provider.calls)) for name, provider in app.providers.items()} == counts
     before = inspect(history)
-    assert any(row["call_id"] == "conflicting-private" and row["status"] == "unknown" for row in before["calls"])
+    conflicting, = [row for row in before["calls"] if row["call_id"] == "conflicting-private"]
+    # invoke rejects the mismatched operation fingerprint in call's explicit
+    # pre-effect boundary, before discovery or provider execution. Measurement
+    # checks its key inside its handler and retains conservative uncertainty.
+    assert conflicting["status"] == ("unknown" if measured else "failed")
+    assert conflicting["effect_outcome"] == ("unknown" if measured else "not_started")
+    if not measured:
+        assert conflict.value.details["outcome"] == "not_started"
     selected = {"providers": ["private"]} if selector == "provider" else {
         "capabilities": ["private/measure" if measured else "private/change"]}
     app.guardrail = RuleGuardrail({"rules": [{"actors": ["owner"], "actions": ["native_observations"],

@@ -2,8 +2,8 @@
   {
     "name": "grok-native-observation",
     "mutation": {
-      "new": "                if not matches:\n                    matches = [(\"fabricated-native-call\", {\"used\": False})]\n                if matches:\n                    # ACP observations",
-      "old": "                if matches:\n                    # ACP observations",
+      "new": "                    if not matches:\n                        matches = [(\"fabricated-native-call\", {\"used\": False})]\n                    if matches:\n                        # ACP observations",
+      "old": "                    if matches:\n                        # ACP observations",
       "path": "xorchestrate/adapters/grok.py"
     },
     "selectors": [
@@ -36,8 +36,8 @@
   {
     "name": "claude-native-hook",
     "mutation": {
-      "new": "            if matched is None:\n                matched = \"planted-unverified-native-call\"\n                live.calls[matched] = {\"used\": False}\n                live.pending_calls.append(matched)",
-      "old": "            if matched is None:\n                raise OrchestrationError(\"Application call has no matching native hook.\", \"native_evidence_missing\")",
+      "new": "                if matched is None:\n                    matched = \"planted-unverified-native-call\"\n                    live.calls[matched] = {\"used\": False}\n                    live.pending_calls.append(matched)",
+      "old": "                if matched is None:\n                    raise OrchestrationError(\"Application call has no matching native hook.\", \"native_evidence_missing\")",
       "path": "xorchestrate/adapters/claude.py"
     },
     "selectors": [
@@ -70,9 +70,9 @@
   {
     "name": "crash-uncertainty",
     "mutation": {
-      "new": "effect[\"status\"] = \"completed\"\n                    effect[\"recovery_reason\"]",
-      "old": "effect[\"status\"] = \"unknown\"\n                    effect[\"recovery_reason\"]",
-      "path": "xorchestrate/adapters/bridge.py"
+      "new": "Transition(\"recover\", frozenset({\"pending\"}), \"completed\")",
+      "old": "Transition(\"recover\", frozenset({\"pending\"}), \"unknown\")",
+      "path": "xorchestrate/activity.py"
     },
     "selectors": [
       "tests/hexagonal/test_external_bridge.py::test_actual_host_crash_preserves_unknown_applied_effect_without_replay",
@@ -105,7 +105,7 @@
     "name": "delivery-uncertainty",
     "mutation": {
       "path": "xorchestrate/delivery.py",
-      "old": "status = \"failed\" if isinstance(error, OrchestrationError) and error.details.get(\"outcome\") in {\"failed\", \"not_started\"} else \"unknown\"",
+      "old": "status = \"failed\" if known_outcome in {\"failed\", \"not_started\"} else \"unknown\"",
       "new": "status = \"failed\"  # deliberate fault: convert unknown to definite failure"
     },
     "selectors": [

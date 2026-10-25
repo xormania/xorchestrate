@@ -13,6 +13,9 @@ from .model import JSON, Assessment, Capability, Record, Verdict
 
 
 class Transaction(Protocol):
+    def abort(self) -> None:
+        """Mark the whole transaction for rollback, even if its caller catches an error."""
+        ...
     def get(self, kind: str, key: str) -> Record | None: ...
     def list(self, kind: str) -> list[Record]: ...
     def put(self, kind: str, key: str, data: JSON, expected_version: int | None = None) -> Record:

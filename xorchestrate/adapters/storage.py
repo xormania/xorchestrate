@@ -70,10 +70,18 @@ class _Transaction:
     def __init__(self):
         self.active = True
         self.owner = threading.get_ident()
+        self.aborted = False
 
     def _check(self):
         if not self.active or self.owner != threading.get_ident():
             raise RuntimeError("Use a transaction only inside its context and on its owning thread.")
+        if self.aborted:
+            raise OrchestrationError("The transaction was aborted and cannot commit.", "transaction_aborted")
+
+    def abort(self):
+        if not self.active or self.owner != threading.get_ident():
+            raise RuntimeError("Abort a transaction only inside its context and on its owning thread.")
+        self.aborted = True
 
 
 class _MemoryTransaction(_Transaction):
@@ -156,6 +164,7 @@ class MemoryStore:
             transaction = _MemoryTransaction(self._records, self._events)
             try:
                 yield transaction
+                transaction._check()
                 self._records = transaction.records
                 self._events = transaction.log
             finally:
@@ -318,6 +327,7 @@ class SQLiteStore:
                 self._active = True
                 transaction = _SQLiteTransaction(self._connection)
                 yield transaction
+                transaction._check()
                 self._connection.commit()
             except sqlite3.Error as exc:
                 self._rollback()

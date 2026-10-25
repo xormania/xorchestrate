@@ -112,6 +112,11 @@
           "run": "python3 -m scripts.verification.calibrate_suite --candidate . --out \"$RUNNER_TEMP/xor-checks/native-calibration\"\npython3 tests/hexagonal/calibrate_work_acceptance.py --output \"$RUNNER_TEMP/xor-checks/work-calibration\""
         },
         {
+          "name": "Calibrate shared state enforcement",
+          "if": "matrix.python == '3.12'",
+          "run": "python3 -m scripts.verification.calibrate_state --candidate . --out \"$RUNNER_TEMP/xor-checks/state-calibration\""
+        },
+        {
           "name": "Run composed three-harness protocol acceptance",
           "if": "matrix.python == '3.12'",
           "run": "mkdir -p \"$RUNNER_TEMP/xor-verification\"\ncp docs/implementation/owner-brief.md \"$RUNNER_TEMP/xor-verification/owner-brief.md\"\npython3 -m scripts.verification criteria --brief \"$RUNNER_TEMP/xor-verification/owner-brief.md\" --out \"$RUNNER_TEMP/xor-verification/criteria.json\"\npython3 -m scripts.verification.multi_harness --mode protocol-fixture --brief \"$RUNNER_TEMP/xor-verification/owner-brief.md\" --criteria \"$RUNNER_TEMP/xor-verification/criteria.json\" --out \"$RUNNER_TEMP/xor-verification/run\" --timeout 60"
@@ -131,7 +136,7 @@
           "if": "always()",
           "with": {
             "name": "repair-checks-python-${{ matrix.python }}",
-            "path": "${{ runner.temp }}/xor-checks/**/*.json\n${{ runner.temp }}/xor-checks/**/*.xml\n${{ runner.temp }}/xor-checks/**/*.log\n${{ runner.temp }}/xor-checks/**/*.txt\n!${{ runner.temp }}/xor-checks/native-calibration/**/snapshot/**\n!${{ runner.temp }}/xor-checks/native-calibration/**/control/**\n!${{ runner.temp }}/xor-checks/native-calibration/**/mutant/**\n!${{ runner.temp }}/xor-checks/native-calibration/**/candidate/**\n!${{ runner.temp }}/xor-checks/work-calibration/**/snapshot/**\n!${{ runner.temp }}/xor-checks/work-calibration/**/candidate/**",
+            "path": "${{ runner.temp }}/xor-checks/**/*.json\n${{ runner.temp }}/xor-checks/**/*.xml\n${{ runner.temp }}/xor-checks/**/*.log\n${{ runner.temp }}/xor-checks/**/*.txt\n!${{ runner.temp }}/xor-checks/native-calibration/**/snapshot/**\n!${{ runner.temp }}/xor-checks/native-calibration/**/control/**\n!${{ runner.temp }}/xor-checks/native-calibration/**/mutant/**\n!${{ runner.temp }}/xor-checks/native-calibration/**/candidate/**\n!${{ runner.temp }}/xor-checks/work-calibration/**/snapshot/**\n!${{ runner.temp }}/xor-checks/work-calibration/**/candidate/**\n!${{ runner.temp }}/xor-checks/state-calibration/**/snapshot/**\n!${{ runner.temp }}/xor-checks/state-calibration/**/control/**\n!${{ runner.temp }}/xor-checks/state-calibration/**/mutant/**\n!${{ runner.temp }}/xor-checks/state-calibration/**/candidate/**",
             "if-no-files-found": "error",
             "retention-days": 30
           }
@@ -235,6 +240,59 @@
             "name": "runtime-evidence",
             "path": "${{ runner.temp }}/runtime-evidence",
             "if-no-files-found": "error"
+          }
+        }
+      ]
+    },
+    "architecture": {
+      "name": "Hexagonal architecture",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 6,
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "with": {
+            "python-version": "3.12"
+          }
+        },
+        {
+          "name": "Install test and diagnostic dependencies",
+          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]'"
+        },
+        {
+          "name": "Enforce declared hexagonal architecture",
+          "id": "deterministic",
+          "run": "python3 -m scripts.architecture --output \"$RUNNER_TEMP/architecture/deterministic.json\""
+        },
+        {
+          "name": "Exercise checker controls and port substitution",
+          "if": "always()",
+          "run": "python3 -m pytest -q tests/hexagonal/test_architecture_enforcement.py tests/hexagonal/test_architecture_diagnostics.py tests/hexagonal/test_architecture_cli.py tests/hexagonal/test_boundaries.py tests/hexagonal/test_composition.py tests/hexagonal/test_storage.py tests/hexagonal/test_state_composition.py tests/hexagonal/test_state_contracts.py --junitxml=\"$RUNNER_TEMP/architecture/contracts.xml\""
+        },
+        {
+          "name": "Jev architecture diagnostics",
+          "if": "always()",
+          "env": {
+            "TYPESAFE_API_KEY": "${{ secrets.TYPESAFE_API_KEY || secrets.JEV_API_KEY }}",
+            "JEV_ENDPOINT": "${{ vars.JEV_ENDPOINT }}",
+            "JEV_MODEL": "${{ vars.JEV_MODEL }}"
+          },
+          "run": "python3 -m scripts.architecture --jev-config contracts/hexagonal-jev.json --diagnostics-only --output \"$RUNNER_TEMP/architecture/diagnostics.json\""
+        },
+        {
+          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "if": "always()",
+          "with": {
+            "name": "architecture-evidence",
+            "path": "${{ runner.temp }}/architecture/",
+            "if-no-files-found": "error",
+            "retention-days": 30
           }
         }
       ]
