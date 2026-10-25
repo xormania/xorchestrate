@@ -38,6 +38,11 @@ def _digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
 
 
+def _call_binding(native_context):
+    return ("native_call", json.dumps([native_context.get("native_id"), native_context.get("incarnation"),
+        native_context.get("call_id")], separators=(",", ":")))
+
+
 def _error(message, code="bridge_unavailable", outcome="not_started"):
     return OrchestrationError(message, code, {"outcome": outcome})
 
@@ -333,6 +338,11 @@ class _Peer:
             self.socket.shutdown(socket.SHUT_RDWR)
         except OSError:
             pass
+        # FIFO shutdown wakes its bounded receive loop without closing the file
+        # descriptors. Let that reader leave before they can be reused by a new
+        # attachment; otherwise an old reader can consume the new peer's frame.
+        if threading.current_thread() is not self.reader:
+            self.reader.join()
         self.socket.close()
         for future in pending.values():
             if not future.done():
@@ -376,6 +386,9 @@ class SessionBridgeHost:
             if not callable(bind):
                 raise _error("Native driver cannot expose configured application tools.", "invalid_configuration")
             bind(list(self.capabilities), self._callback)
+            bind_replay = getattr(driver, "bind_application_replay", None)
+            if callable(bind_replay):
+                bind_replay(self._replay_callback)
         observer = getattr(driver, "bind_observer", None)
         if callable(observer):
             observer(self._observe)
@@ -394,6 +407,13 @@ class SessionBridgeHost:
             self._events = saved.get("events", [])
             self._sequence = saved.get("sequence", 0)
             self._bindings = {(field, value): lease for field, value, lease in saved.get("bindings", [])}
+            # Older host snapshots indexed call IDs without native incarnation.
+            # Recover the qualified bindings from their retained observations;
+            # never reinterpret those calls as calls from the resumed driver.
+            for event in self._events:
+                if event.get("call_id"):
+                    binding = _call_binding({**event, "incarnation": event.get("native_incarnation")})
+                    self._bindings.setdefault(binding, event.get("incarnation"))
             self.backend = resume(deepcopy(saved["backend"]), _copy(specification or {}))
             if self.backend.get("native_id") != saved["backend"].get("native_id"):
                 driver.close()
@@ -506,9 +526,9 @@ class SessionBridgeHost:
             "configuration_id": self.configuration_id, "settings": deepcopy(self.backend.get("settings", {"requested": {}, "resolved": {}, "observed": {}})),
             "resume_token": self._token(), "catalog_identity": self.catalog_identity}
 
-    def _check(self, peer, params):
+    def _check(self, peer, params, *, outcome="not_started"):
         if peer is not self._active or params.get("incarnation") != self._lease:
-            raise _error("The bridge connection was detached or replaced.", "stale_connection")
+            raise _error("The bridge connection was detached or replaced.", "stale_connection", outcome)
 
     def _request(self, peer, method, params):
         if not isinstance(params, dict):
@@ -592,20 +612,46 @@ class SessionBridgeHost:
             self._save_state()
             # Retain the result on the host even if a new attachment replaced the
             # issuing connection while the native operation was in progress.
-            self._check(peer, params)
+            self._check(peer, params, outcome="unknown")
         return result
 
-    def _callback(self, action, arguments, native_context, idempotency_key=None):
+    def _replay_callback(self, action, arguments, native_context, idempotency_key=None):
+        return self._callback(action, arguments, native_context, idempotency_key, replay_only=True)
+
+    def _callback(self, action, arguments, native_context, idempotency_key=None, *, replay_only=False):
         with self._lock:
             peer, lease = self._active, self._lease
             if peer is None or peer.closed or not self._active_ready:
-                raise _error("No application is attached to receive native tool calls.", "application_detached")
+                raise _error("No application is attached to receive native tool calls.", "application_detached", "unknown")
+            call_id = native_context.get("call_id")
+            if not isinstance(call_id, str) or not call_id:
+                raise _error("Native callback lacks a call identity.", "missing_call_identity", "unknown")
+            if (native_context.get("native_id") != self.backend["native_id"]
+                    or native_context.get("incarnation") != self.backend.get("incarnation")):
+                raise _error("Native callback belongs to another conversation incarnation.", "session_identity", "unknown")
+            call_key = _call_binding(native_context)
+            # Observation is the first authority binding, not dispatch time. A
+            # reconnect may replace actor/work as well as the connection. Never
+            # lend that replacement authority to a call already seen elsewhere.
+            bound_lease = self._bindings.get(call_key, getattr(self._effect_context, "lease", None) or lease)
+            if bound_lease != lease:
+                raise _error("Native callback belongs to a detached or replaced application connection.", "stale_connection", "unknown")
             context = {**deepcopy(self._context), "native_id": self.backend["native_id"], "incarnation": lease,
                 "native_incarnation": native_context.get("incarnation"), "host_id": self.host_id,
-                "call_id": native_context.get("call_id"), "action": action}
-            if context["call_id"]:
-                self._bindings[("call_id", context["call_id"])] = lease
-        result = peer.request("application_tool", {"action": action, "arguments": arguments, "context": context, "idempotency_key": idempotency_key})
+                "call_id": call_id, "action": action}
+            if call_id:
+                self._bindings.setdefault(call_key, lease)
+                self._save_state()
+        try:
+            result = peer.request("application_tool", {"action": action, "arguments": arguments, "context": context,
+                "idempotency_key": idempotency_key, "replay_only": replay_only})
+        except OrchestrationError as error:
+            # A callback rejected before application execution says nothing
+            # about other native effects in the enclosing send/delivery.
+            if error.details.get("outcome") in {"not_started", "failed"}:
+                raise OrchestrationError(str(error), error.code, {**error.details, "outcome": "unknown",
+                    "callback_outcome": error.details["outcome"]}) from error
+            raise
         with self._lock:
             if peer is not self._active or lease != self._lease:
                 raise _error("Native callback completed after its application connection was replaced.", "stale_connection", "unknown")
@@ -622,7 +668,8 @@ class SessionBridgeHost:
             for field in fields:
                 if observation.get(field):
                     identities[field] = observation[field]
-                    lease = lease or self._bindings.get((field, observation[field]))
+                    key = _call_binding(observation) if field == "call_id" else (field, observation[field])
+                    lease = lease or self._bindings.get(key)
             payload = observation.get("payload", {})
             if not observation.get("call_id") and isinstance(payload, dict) and payload.get("turnId"):
                 identities["turn_id"] = payload["turnId"]
@@ -635,21 +682,38 @@ class SessionBridgeHost:
             if not observation.get("call_id") and isinstance(result, dict) and isinstance(result.get("turn"), dict) and result["turn"].get("id"):
                 identities["turn_id"] = result["turn"]["id"]
                 lease = lease or self._bindings.get(("turn_id", identities["turn_id"]))
-            # Tool observations arrive before their callback; current tool calls
-            # may be attributed now. Completion without a known turn stays
+            # Tool observations arrive before their callback; bind them once,
+            # including an unbound observation made before any attachment.
+            # Completion without a known turn stays
             # unbound rather than becoming evidence for a replacement lease.
             if lease is None and observation.get("kind") in {"native_tool", "native_tool_call", "tool_call", "native_call"}:
-                lease = self._lease
-                if observation.get("call_id") and lease:
-                    self._bindings[("call_id", observation["call_id"])] = lease
-            conflict = False
+                call_key = _call_binding(observation)
+                lease = self._bindings.get(call_key, self._lease)
+                if observation.get("call_id"):
+                    self._bindings.setdefault(call_key, lease)
+            conflict = hasattr(self, "backend") and (
+                observation.get("native_id") != self.backend.get("native_id")
+                or observation.get("incarnation") != self.backend.get("incarnation"))
+            # An asynchronous native tool may be the first lease-qualified
+            # observation of its enclosing turn. Preserve that relation so its
+            # later completion can be forwarded. A fresh call never transfers
+            # an already-owned turn, and a stale call cannot bind a new turn.
+            if (not conflict and lease and lease == self._lease
+                    and observation.get("kind") in {"native_tool", "native_tool_call", "tool_call", "native_call"}
+                    and observation.get("call_id")
+                    and self._bindings.get(_call_binding(observation)) == lease):
+                for field in ("turn_id", "prompt_id"):
+                    turn = observation.get(field)
+                    if isinstance(turn, str) and turn:
+                        self._bindings.setdefault((field, turn), lease)
             if lease:
                 for field, value in identities.items():
-                    previous = self._bindings.get((field, value))
-                    if previous and previous != lease:
+                    key = _call_binding(observation) if field == "call_id" else (field, value)
+                    previous = self._bindings.get(key)
+                    if key in self._bindings and previous != lease:
                         conflict = True
                     else:
-                        self._bindings[(field, value)] = lease
+                        self._bindings[key] = lease
             if conflict:
                 lease = None
             self._sequence += 1
@@ -702,6 +766,8 @@ class SessionBridgeHost:
             self._socket.shutdown(socket.SHUT_RDWR)
         except OSError:
             pass
+        if threading.current_thread() is not self.thread:
+            self.thread.join()
         self._socket.close()
         with self._lock:
             peers = list(self._peers)
@@ -732,6 +798,7 @@ class BridgeSessionDriver:
         self._sessions = {}
         self._capabilities = ()
         self._callback = None
+        self._application_replay = None
         self._observer = None
         self._lock = threading.RLock()
         self._closed = False
@@ -740,6 +807,13 @@ class BridgeSessionDriver:
         if self._sessions:
             raise _error("Bind application tools before attaching.", "conflict")
         self._capabilities, self._callback = tuple(capabilities), callback
+
+    def bind_application_replay(self, callback):
+        if self._sessions:
+            raise _error("Bind replay validation before attaching.", "conflict")
+        if not callable(callback):
+            raise _error("Application replay validator must be callable.", "invalid_configuration")
+        self._application_replay = callback
 
     def bind_observer(self, observer):
         if self._sessions:
@@ -760,7 +834,10 @@ class BridgeSessionDriver:
         receipt = local.get("receipt")
         if receipt is None or context.get("native_id") != receipt["native_id"] or context.get("incarnation") != receipt["incarnation"] or context.get("host_id") != receipt["host_id"]:
             raise _error("Callback does not match this bridge attachment.", "session_identity")
-        return self._callback(params["action"], _copy(params["arguments"]), _copy(context), params.get("idempotency_key"))
+        callback = self._application_replay if params.get("replay_only") else self._callback
+        if callback is None:
+            raise _error("Application replay validation is unavailable.", "stale_native_result", "unknown")
+        return callback(params["action"], _copy(params["arguments"]), _copy(context), params.get("idempotency_key"))
 
     def _emit_observation(self, local, observation):
         with self._lock:

@@ -17,6 +17,7 @@ from copy import deepcopy
 from xorchestrate.composition import build
 from xorchestrate.model import OrchestrationError
 
+from .adapters.native import default_decoders
 from .capture import now, write_json
 from .checker import PEERS, VerificationFailure
 
@@ -38,15 +39,15 @@ def _view(session):
             "settings": deepcopy(backend.get("settings", {}))}
 
 
-def _source_matches(peer, mode, observation):
-    source = observation.get("source", "")
-    return ((mode == "fixture" and source == "fixture") or
-            (mode in {"native", "protocol-fixture"} and ((peer == "codex" and source.startswith("codex")) or
-             (peer == "grok" and source.startswith("grok")) or
-             (peer == "claude" and source == "claude/PreToolUse"))))
+def _native_tool_matches(decoder, mode, row, action, result):
+    return any(fact.get("event") == "native_tool" and fact.get("tool") == action
+               and fact.get("arguments", {}).get("result") == result
+               for fact in decoder.decode(row, mode))
 
 
 def _probe(suite, application, peer, session, case_id, initialize=False):
+    decoder = getattr(suite, "decoders", None) or default_decoders()
+    decoder = decoder[peer]
     command = {"kind": "startup" if initialize else "lifecycle_probe", "run_id": suite.run_id, "case_id": case_id}
     if initialize:
         command["memory"] = suite.memories[peer]
@@ -80,13 +81,10 @@ def _probe(suite, application, peer, session, case_id, initialize=False):
                 raise VerificationFailure("lifecycle_evidence_binding")
             native = next((row for row in raw["native_observation"] if row.get("session_id") == session["id"]
                 and row.get("origin") == "adapter" and not row.get("stale")
-                and row["observation"].get("kind") in {"native_tool_call", "native_tool"}
                 and row["observation"].get("call_id") == value.get("call_id")
                 and row["observation"].get("native_id") == session["backend"]["native_id"]
                 and row["observation"].get("incarnation") == session["backend"]["incarnation"]
-                and row["observation"].get("action") == "record_result"
-                and row["observation"].get("arguments", {}).get("result") == value["arguments"].get("result")
-                and _source_matches(peer, suite.mode, row["observation"])), None)
+                and _native_tool_matches(decoder, suite.mode, row, "record_result", value["arguments"].get("result"))), None)
             if native is None:
                 continue
             if payload.get("memory") != suite.memories[peer]:

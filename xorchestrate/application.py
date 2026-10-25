@@ -175,6 +175,7 @@ class Application(AcceptanceMixin, DeliveryMixin):
                     "triage": _STRING, "escalate": _STRING,
                     "confidence_threshold": {"type": "number", "minimum": 0, "maximum": 1},
                     "uncertain_outcomes": {"type": "array", "items": _STRING},
+                    "work_input_fields": {"type": "array", "uniqueItems": True, "items": _STRING},
                 },
             })
         except OrchestrationError as error:
@@ -184,7 +185,7 @@ class Application(AcceptanceMixin, DeliveryMixin):
     def describe(self) -> list[Capability]:
         return [Capability(name, spec.description, deepcopy(spec.input_schema), deepcopy(spec.annotations)) for name, spec in _ACTIONS.items()]
 
-    def call(self, action: str, arguments: JSON, actor: str = "owner", *, native_context=None) -> JSON:
+    def call(self, action: str, arguments: JSON, actor: str = "owner", *, native_context=None, replay_only=False) -> JSON:
         if action not in _ACTIONS:
             raise OrchestrationError(f"Unknown action: {action}", "unknown_action")
         if not isinstance(actor, str) or not actor:
@@ -232,6 +233,8 @@ class Application(AcceptanceMixin, DeliveryMixin):
                 with self.store.transaction() as tx:
                     self._verify_context(tx, context)
                     return self._replay(self._require(tx, "operation", existing.key))
+        if replay_only:
+            raise OrchestrationError("The replay has no retained application operation; no new effect was invoked.", "native_call_unresolved")
         if action not in {"invoke", "capabilities"}:
             self._authorize(action, context)
         return getattr(self, f"_{action}")(arguments, actor, context)
@@ -368,14 +371,15 @@ class Application(AcceptanceMixin, DeliveryMixin):
             return {"work": _view(record)}
 
     def _get_work(self, args: JSON, actor: str, context: JSON) -> JSON:
-        with self.store.transaction() as tx:
-            self._verify_context(tx, context)
-            work = self._require(tx, "work", args["work_id"])
-            result = {"work": _view(work)}
-            result.update(self._work_acceptance_view(tx, work.key))
-            for kind, plural in (("assignment", "assignments"), ("evidence", "evidence"), ("session", "sessions")):
-                result[plural] = [_view(r) for r in tx.list(kind) if r.data.get("work_id") == work.key]
-            return result
+        return self._inspect_snapshot("get_work", actor, context, lambda tx: self._work_snapshot(tx, args["work_id"]))
+
+    def _work_snapshot(self, tx: Transaction, work_id: str) -> JSON:
+        work = self._require(tx, "work", work_id)
+        result = {"work": _view(work)}
+        result.update(self._work_acceptance_view(tx, work.key))
+        for kind, plural in (("assignment", "assignments"), ("evidence", "evidence"), ("session", "sessions")):
+            result[plural] = [_view(r) for r in tx.list(kind) if r.data.get("work_id") == work.key]
+        return result
 
     def _list_work(self, args: JSON, actor: str, context: JSON) -> JSON:
         with self.store.transaction() as tx:
@@ -823,9 +827,8 @@ class Application(AcceptanceMixin, DeliveryMixin):
                 "pending_operation": operation.key if status == "unknown" else None}, session.version)
 
     def _get_operation(self, args: JSON, actor: str, context: JSON) -> JSON:
-        with self.store.transaction() as tx:
-            self._verify_context(tx, context)
-            return {"operation": _view(self._require(tx, "operation", args["operation_id"]))}
+        return self._inspect_snapshot("get_operation", actor, context,
+            lambda tx: {"operation": _view(self._require(tx, "operation", args["operation_id"]))})
 
     def _resolve_operation(self, args: JSON, actor: str, context: JSON) -> JSON:
         with self.store.transaction() as tx:
@@ -861,6 +864,11 @@ class Application(AcceptanceMixin, DeliveryMixin):
         if triage not in self.evaluators:
             raise OrchestrationError(f"Evaluator {triage} is unavailable.", "evaluation_unavailable")
         evaluation_context = {**deepcopy(context), "request_context": deepcopy(args.get("context", {}))}
+        # Display titles and write bookkeeping must not silently become material
+        # evaluator inputs. Everything supplied from mutable work/evidence is
+        # bound to its observed content and rechecked when consumed.
+        evaluation_context["work"] = self._assessment_work_input(context.get("work"))
+        input_binding = self._assessment_input_binding(evaluation_context)
         evaluations = []
         first = self.evaluators[triage].assess(args["question"], deepcopy(evaluation_context))
         self._validate_assessment(first)
@@ -886,6 +894,8 @@ class Application(AcceptanceMixin, DeliveryMixin):
             # The evidence describes exactly the snapshot evaluated, even when the
             # work changes during inference. It confers no permission on later work.
             data["work_version"] = context["work"]["version"] if context.get("work") else None
+            data["input_binding"] = input_binding
+            data["request_context"] = deepcopy(args.get("context", {}))
             data["acceptance_binding"] = deepcopy((context.get("acceptance_basis") or {}).get("binding"))
             data["assessment_configuration_identity"] = (context.get("acceptance_basis") or {}).get("assessment_configuration_identity")
             record = self._create(tx, "assessment", actor, data)

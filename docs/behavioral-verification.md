@@ -18,15 +18,16 @@ organization restriction.
 | Private-memory startup | 3 | Native call and persisted ready report for each persistent conversation |
 | Directed exchange | 6 | Native challenge callback, durable delivery attempt/submission, retained-memory reply callback, reverse delivery, native sender receipt |
 | Outstanding-tool exchange | 3 | Submission inside a held provider callback followed by the complete exchange |
-| Unfinished-work exchange | 6 | Complete exchange with submission while later work batches remain gated |
+| Unfinished-work exchange | 6 | Complete exchange with submission and reply before later work batches finish |
 | Work batches | 9 | Three independently scored latest-attempt build-log batches for each harness |
-| Native turn completion | 3 | Matching native completion observations after submissions |
+| Native turn completion | 3 | Latest qualified aggregate idle after matching callback completion; applicable pending or unknown durable effects veto completion |
 | Lifecycle | 15 | Resume, external attachment, detach, reconnect and replaced connection for each harness; native retained-memory probes and stale-binding rejection |
-| Native-call audit | 1 | Every actual application callback matches native action, arguments, conversation, incarnation and call identity |
+| Native-call audit | 1 | Every requested and completed application callback independently matches native action, arguments, conversation, session, incarnation, call identity and actor bindings |
 
 Busy submission does not assert interruption during token generation. Reports
-retain acknowledgement-after-reply timing and whether replies preceded hold/work
-completion. Communication, work correctness, native completion and application
+retain acknowledgement-after-reply timing. Unfinished-work cases require the
+reply before work completion; held-tool cases require submission during the hold
+and permit the reply after release. Communication, work correctness, native completion and application
 work acceptance are different facts. A delivery receipt never accepts a work
 item; work acceptance is covered by the separate application acceptance tests.
 
@@ -207,6 +208,11 @@ diagnostic, correct failure exit and passing unaffected controls earns
 `detected`. Setup errors, unrelated failures, skipped assertions, missing cases,
 invalid controls and escaped faults are distinct outcomes. Calibration of the
 calibrator covers missing dependencies, timeouts, skips and wrong diagnostics.
+Assertion attribution also checks the terminal raising instruction's source
+span. A different statement on the same line, an exception while evaluating an
+assertion, or missing/ambiguous source positions earns no detection credit.
+Retain the observer's instruction/assertion spans with the raw JUnit. A rejected
+ambiguous observation is not evidence that the planted behavioral fault escaped.
 
 ## Privacy, provenance and limits
 
@@ -234,3 +240,57 @@ Reused mechanisms and inspected source:
 Implementation, deterministic verification, native verification and independent
 review remain separate states in the implementation handoff matrix. A passed
 deterministic suite establishes only the declared deterministic coverage.
+
+
+## Focused native repair schedules
+
+After the deterministic [F01–F10 repair](repair/EXECUTION.md), run these focused
+schedules against installed vendors in addition to the normal 46 cases. Retain
+the same exact candidate/checker/configuration and raw observation bindings. The
+protocol-peer regressions are executable references, not installed-vendor proof.
+
+- **Acceptance replay (Codex, Claude, Grok):** create passing acceptance, record
+  the successful native call ID and request, explicitly revise owner requirements,
+  then replay the same semantic call (new transport request ID for Codex). Retain
+  direct and fresh-call controls. The old cached response must be rejected as stale
+  and the side-effect ledger must show no reexecution. Repeat after material
+  evaluator context/evidence changes.
+- **Overlapping Claude work:** hold distinct A/B callbacks through the actual
+  provider, release A, and retain its actual Stop hook. Inspect status while B is
+  still gated; it must remain active. Release B and then establish idle. Keep
+  hook correlation and native version/ordering; an installed version that cannot
+  produce the schedule leaves this measurement pending, not passed.
+- **Overlapping Codex work:** hold A and B through the application/provider
+  boundary and exercise both completion orders, including releasing B first.
+  Keep the older callback gated while inspecting activity and its durable
+  operation. A single completed turn cannot establish global idle. Also retain
+  the schedule where a turn completion arrives before its callback returns;
+  eventual idle needs terminal callback evidence. The independent checker must
+  reject pending or uncertain callbacks/operations even if a native observation
+  claims idle. Preserve valid after-all-completions controls.
+- **Historical inspection:** record native reads while permitted, then apply
+  an explicit inspection denial to one session within otherwise authorized
+  work. Read the current and historical aggregates through an authorized source.
+  Denied nested records must be projected out while authorized records and the
+  unmodified trusted internal evidence remain available.
+- **Native/callback identity:** preserve independently observed native calls,
+  requested and completed application callbacks, and durable session bindings.
+  Their qualified identities must agree. Rechecking copied raw records with a
+  contradictory or null callback identity must reject; a valid native record
+  cannot supply missing authority to a contradictory application record.
+- **Observed callback across reconnect:** gate dispatch after the native
+  observation, replace the application connection with a differently authorized
+  actor/work, and release the callback. Its old binding must be retained or the
+  call rejected; it must never execute with replacement authority. Include the
+  no-replacement denial control and inspect both works' persisted evidence.
+- **Applied effect across reconnect:** use a countable provider effect, gate its
+  response after the effect, reconnect, and attempt another send. The unresolved
+  operation must stay fenced after releasing the old response. Poll/recovery
+  must expose the retained result/uncertainty; explicitly reconcile before a new
+  effect and count actual effects. Do not interpret connection error as proof of
+  non-execution or as an exactly-once guarantee.
+
+Use private stores/endpoints and event gates, with ownership-aware cleanup;
+never substitute arbitrary sleeps for the required causal ordering. Native
+credentials and private traces stay local. Report each unexecuted focused case
+as pending separately from the original 46-case inventory.

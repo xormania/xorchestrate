@@ -9,7 +9,7 @@ import pytest
 
 from xorchestrate.adapters.grok import GrokSessionDriver
 from xorchestrate.adapters.sessions import CodexSessionDriver
-from xorchestrate.model import Capability, OrchestrationError
+from xorchestrate.model import Capability, Conflict, OrchestrationError
 
 PEER = Path(__file__).parent / 'fixtures' / 'native_progress_peer.py'
 
@@ -17,8 +17,15 @@ PEER = Path(__file__).parent / 'fixtures' / 'native_progress_peer.py'
 def eventually(predicate, timeout=4):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        if predicate():
-            return
+        try:
+            if predicate():
+                return
+        except Conflict as error:
+            # Public reads reauthorize a snapshot; concurrent callback evidence
+            # may invalidate it before commit. Only an explicit safe retry is
+            # part of this polling schedule, never an uncertain effect/error.
+            if not error.details.get("retry_safe"):
+                raise
         time.sleep(.01)
     assert predicate(), 'expected native observation did not arrive'
 
@@ -254,7 +261,7 @@ def test_codex_late_start_cannot_replace_current_turn_or_reactivate_completed_tu
         live = adapter._get(session)
         for method, turn in (('turn/started', 'old'), ('turn/completed', 'old'), ('turn/started', 'current'), ('turn/started', 'old')):
             adapter._notification(live, method, {'threadId': session['native_id'], 'turn': {'id': turn}})
-        assert live.pending['turn'] == 'current'
+        assert set(live.pending) == {'current'}
         adapter._notification(live, 'turn/completed', {'threadId': session['native_id'], 'turn': {'id': 'current'}})
         adapter._notification(live, 'turn/started', {'threadId': session['native_id'], 'turn': {'id': 'current'}})
         assert live.activity == 'idle'

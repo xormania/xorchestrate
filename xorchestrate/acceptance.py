@@ -177,10 +177,61 @@ class AcceptanceMixin:
         """
         configuration = {"triage": self.assessment.get("triage"), "escalate": self.assessment.get("escalate"),
             "confidence_threshold": self.assessment.get("confidence_threshold", 0.8),
-            "uncertain_outcomes": self.assessment.get("uncertain_outcomes", ["uncertain", "borderline", "review"])}
+            "uncertain_outcomes": self.assessment.get("uncertain_outcomes", ["uncertain", "borderline", "review"]),
+            "work_input_fields": self.assessment.get("work_input_fields")}
         selected = {name for name in (configuration["triage"], configuration["escalate"]) if name}
         identities = getattr(self, "evaluator_configurations", {})
         return _hash({"assessment": configuration, "evaluators": {name: identities.get(name) for name in sorted(selected)}})
+
+    def _assessment_work_input(self, work):
+        """Select supplied work fields; display metadata is excluded by default.
+
+        A deployment may explicitly consume title or bookkeeping fields through
+        work_input_fields. Selected fields then participate in freshness too.
+        """
+        if work is None:
+            return None
+        selected = self.assessment.get("work_input_fields")
+        if selected is None:
+            selected = work.keys() - {"title", "version", "created_at", "updated_at"}
+        return {key: deepcopy(work[key]) for key in selected if key in work}
+
+    def _assessment_input_binding(self, context):
+        """Bind the material records supplied to inference, not all store state.
+
+        The question and request context are immutable parts of the assessment;
+        this identity tracks the mutable records on which that assessment relies.
+        Evidence digests retain provenance/content without recursively embedding
+        earlier assessments. Requirement/measurement/configuration identities have
+        their own existing acceptance binding.
+        """
+        return {"work": self._assessment_work_input(context.get("work")),
+            "inputs": deepcopy(context.get("inputs", {})), "context": deepcopy(context.get("context", {})),
+            "actor_record": deepcopy(context.get("actor_record")),
+            "evidence": sorted([[item["id"], item["version"], _hash(item)]
+                for item in context.get("evidence", [])]),
+            "contributions": sorted([[item["id"], item["version"], _hash(item)]
+                for item in (context.get("acceptance_basis") or {}).get("contributions", [])])}
+
+    def _current_assessment_input_binding(self, tx, assessment):
+        work_id = assessment.data.get("work_id")
+        work = tx.get("work", work_id) if work_id else None
+        actor = tx.get("actor", assessment.data["created_by"])
+        # Recording this assessment is an output of inference, never one of its
+        # own inputs. Other newly supplied evidence still invalidates the result.
+        evidence = [_view(item) for item in tx.list("evidence")
+            if item.data.get("work_id") == work_id and work_id is not None
+            and not (item.data.get("source", {}).get("type") == "assessment"
+                and item.data["source"].get("assessment_id") == assessment.key)]
+        contributions = [_view(item) for item in tx.list("contribution") if item.data.get("work_id") == work_id]
+        return self._assessment_input_binding({"work": _view(work) if work else None,
+            "inputs": deepcopy(work.data.get("inputs", {})) if work else {},
+            "context": deepcopy(work.data.get("context", {})) if work else {},
+            "actor_record": _view(actor) if actor else None, "evidence": evidence,
+            "acceptance_basis": {"contributions": contributions}})
+
+    def _assessment_inputs_current(self, tx, assessment):
+        return _same(assessment.data.get("input_binding"), self._current_assessment_input_binding(tx, assessment))
 
     def _acceptance_snapshot(self, tx, work_id):
         requirements, candidate = tx.get("requirements", work_id), tx.get("candidate", work_id)
@@ -367,6 +418,10 @@ class AcceptanceMixin:
                 snapshot["issues"].append({"code": "assessment_stale"})
             if assessment.data.get("assessment_configuration_identity") != snapshot["assessment_configuration_identity"]:
                 snapshot["issues"].append({"code": "assessment_configuration_stale"})
+            with self.store.transaction() as tx:
+                if not self._assessment_inputs_current(tx, assessment):
+                    snapshot["issues"].append({"code": "assessment_inputs_stale"})
+                assessment_inputs = self._current_assessment_input_binding(tx, assessment)
         else:
             snapshot["assessment"] = None
         decision = self.acceptance.evaluate(deepcopy(snapshot))
@@ -379,6 +434,8 @@ class AcceptanceMixin:
                 raise Conflict("Acceptance dependencies changed during the decision.")
             if assessment:
                 latest = self._require(tx, "assessment", assessment.key)
+                if not _same(self._current_assessment_input_binding(tx, latest), assessment_inputs):
+                    raise Conflict("Assessment inputs changed during the decision.")
                 if (latest.version != assessment.version
                         or current["assessment_configuration_identity"] != snapshot["assessment_configuration_identity"]):
                     raise Conflict("Assessment or its configuration changed during the decision.")
@@ -401,7 +458,8 @@ class AcceptanceMixin:
                 assessment = tx.get("assessment", item["assessment_id"])
                 item["current"] = item["current"] and bool(assessment and assessment.version == item["assessment_version"]
                     and item.get("assessment_configuration_identity") == snapshot["assessment_configuration_identity"]
-                    and assessment.data.get("assessment_configuration_identity") == snapshot["assessment_configuration_identity"])
+                    and assessment.data.get("assessment_configuration_identity") == snapshot["assessment_configuration_identity"]
+                    and self._assessment_inputs_current(tx, assessment))
         latest = decisions[-1] if decisions else None
         return {"requirements": snapshot["requirements"], "candidate": snapshot["candidate"],
             "coverage": snapshot["coverage"], "acceptance_issues": snapshot["issues"],
@@ -410,6 +468,5 @@ class AcceptanceMixin:
             "contributions": [_view(item) for item in tx.list("contribution") if item.data["work_id"] == work_id]}
 
     def _get_acceptance(self, args, actor, context):
-        with self.store.transaction() as tx:
-            self._verify_context(tx, context)
-            return self._work_acceptance_view(tx, args["work_id"])
+        return self._inspect_snapshot("get_acceptance", actor, context,
+            lambda tx: self._work_acceptance_view(tx, args["work_id"]))

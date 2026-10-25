@@ -33,11 +33,32 @@ def _valid_observation(record, snapshot, actor):
     session = _session(snapshot, record.get("session_id"))
     if not session or session.get("actor_id") != actor:
         return False
+    # Optional historical claims may be absent. An explicit claim, including
+    # null, must agree with its own observed session rather than borrowing the
+    # identity of a matching callback elsewhere in the snapshot.
+    if ("created_by" in record and record["created_by"] != actor
+            or "session_id" in observation and observation["session_id"] != record.get("session_id")
+            or "work_id" in record and "work_id" in session and record["work_id"] != session["work_id"]):
+        return False
     backend = session.get("backend", {})
     return (bool(observation.get("call_id")) and bool(observation.get("native_id"))
             and bool(observation.get("incarnation"))
             and observation["native_id"] == backend.get("native_id")
             and observation["incarnation"] == backend.get("incarnation"))
+
+
+def _effect_matches(result, kind, effect, actor):
+    """Join typed returned identities without interpreting opaque payloads.
+
+    Historical callbacks may return only an id. Additional explicit identity
+    claims must agree with the durable effect and its authenticated caller.
+    """
+    returned = result.get(kind, {}) if isinstance(result, dict) else {}
+    fields = ("work_id",) + (("sender",) if kind == "message" else ("source",))
+    return (isinstance(returned, dict) and returned.get("id") == effect["id"]
+            and ("created_by" not in effect or effect["created_by"] == actor)
+            and ("created_by" not in returned or returned["created_by"] == actor)
+            and all(key not in returned or returned[key] == effect.get(key) for key in fields))
 
 
 def _callback(snapshot, actor, action, arguments_match, result_match):
@@ -49,9 +70,15 @@ def _callback(snapshot, actor, action, arguments_match, result_match):
                 and arguments_match(data.get("arguments", {})) and result_match(data.get("result", {}))):
             continue
         identity = (completed.get("session_id"), data["native_id"], data["incarnation"], data["call_id"])
-        same_call = [record for record in records if (
-            record.get("session_id"), record.get("observation", {}).get("native_id"),
-            record.get("observation", {}).get("incarnation"), record.get("observation", {}).get("call_id")) == identity]
+        # A record that independently claims this application session or this
+        # native connection belongs to the join even when another explicit
+        # identity contradicts it. Separate historical sessions/incarnations
+        # may reuse call labels without becoming evidence for the current call.
+        same_call = [record for record in records
+            if record.get("observation", {}).get("call_id") == identity[3]
+            and (record.get("session_id") == identity[0]
+                 or (record.get("observation", {}).get("native_id"),
+                     record.get("observation", {}).get("incarnation")) == identity[1:3])]
         requests = [record for record in same_call if record.get("observation", {}).get("phase") == "requested"]
         require(requests, "native_request_observation_missing")
         native = [record for record in same_call if record.get("observation", {}).get("kind") in
@@ -59,16 +86,31 @@ def _callback(snapshot, actor, action, arguments_match, result_match):
         require(native, "independent_native_observation_missing")
         for record in [r for r in same_call if r.get("observation", {}).get("phase") in {"requested", "completed", "failed"}]:
             observed = record["observation"]
-            require(observed.get("action") == action and observed.get("arguments") == data["arguments"],
+            require(_valid_observation(record, snapshot, actor)
+                    and observed.get("action") == action and observed.get("arguments") == data["arguments"]
+                    and (observed.get("phase") != "completed" or result_match(observed.get("result", {}))),
                     "native_call_id_conflict")
-        for record in native:
+        returned = [record for record in same_call if record.get("observation", {}).get("kind") in
+                    {"native_tool_result", "tool_result"} and record.get("observation", {}).get("source")]
+        for record in [*native, *returned]:
             observed = record["observation"]
             raw = observed.get("arguments", {})
             require(_valid_observation(record, snapshot, actor) and observed.get("action") == action
-                    and isinstance(raw, dict) and all(data["arguments"].get(k) == v for k, v in raw.items()
-                                                     if k != "idempotency_key")
-                    and set(data["arguments"]) - set(raw) <= {"idempotency_key", "work_id"},
+                    and ((record in returned and "arguments" not in observed)
+                         or isinstance(raw, dict) and all(data["arguments"].get(k) == v for k, v in raw.items()
+                                                          if k != "idempotency_key")
+                         and set(data["arguments"]) - set(raw) <= {"idempotency_key", "work_id"}),
                     "independent_native_arguments_mismatch")
+        # A native return is another observation of the application result.
+        # Some adapters retain only the call metadata; when the typed result is
+        # present its explicit identities must agree with the durable effect.
+        for record in returned:
+            observed = record["observation"]
+            result = observed.get("result")
+            kind = "message" if action == "send_message" else "evidence"
+            require("result" not in observed or isinstance(result, dict)
+                    and (kind not in result or result_match(result)),
+                    "native_result_identity_mismatch")
         require(all(_valid_observation(record, snapshot, actor) for record in requests), "native_request_identity_mismatch")
         return {"native": native[0]["id"], "requested": requests[0]["id"], "completed": completed["id"],
                 "session_id": completed["session_id"], "call_id": data["call_id"],
@@ -115,7 +157,7 @@ def evaluate_exchange(snapshot, recipient, expectation):
                 "challenge_missing_or_misbound")
         challenge_call = _callback(snapshot, sender, "send_message",
             lambda args: args.get("body") == challenge["body"] and args.get("work_id") == challenge.get("work_id"),
-            lambda result: result.get("message", {}).get("id") == challenge["id"])
+            lambda result: _effect_matches(result, "message", challenge, sender))
         submitted = _submission(snapshot, challenge, recipient)
         replies = [message for message in snapshot["messages"] if message.get("sender") == recipient
                    and sender in message.get("recipients", []) and message.get("work_id") == challenge.get("work_id")
@@ -124,7 +166,7 @@ def evaluate_exchange(snapshot, recipient, expectation):
         reply = replies[0]
         reply_call = _callback(snapshot, recipient, "send_message",
             lambda args: args.get("body") == reply["body"] and args.get("work_id") == reply.get("work_id"),
-            lambda result: result.get("message", {}).get("id") == reply["id"])
+            lambda result: _effect_matches(result, "message", reply, recipient))
         require(reply_call["session_id"] == submitted["session_id"]
                 and reply_call["incarnation"] == submitted["incarnation"], "reply_delivery_incarnation_mismatch")
         reply_submitted = _submission(snapshot, reply, sender)
@@ -136,7 +178,7 @@ def evaluate_exchange(snapshot, recipient, expectation):
         receipt = receipts[0]
         receipt_call = _callback(snapshot, sender, "record_result",
             lambda args: args.get("result") == expected_receipt and args.get("work_id") == challenge.get("work_id"),
-            lambda result: result.get("evidence", {}).get("id") == receipt["id"])
+            lambda result: _effect_matches(result, "evidence", receipt, sender))
         require(receipt_call["session_id"] == reply_submitted["session_id"]
                 and receipt_call["incarnation"] == reply_submitted["incarnation"], "receipt_delivery_incarnation_mismatch")
         require(challenge.get("created_at") and reply.get("created_at") and receipt.get("created_at")

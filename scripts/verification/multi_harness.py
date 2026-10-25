@@ -38,7 +38,8 @@ def snapshot(application):
             return [{**deepcopy(r.data), "id": r.key, "version": r.version} for r in tx.list(kind)]
         return {"sessions": records("session"), "messages": records("message"), "attempts": records("delivery_attempt"),
                 "observations": records("native_observation"), "evidence": records("evidence"),
-                "operations": records("operation"), "receipts": records("delivery_receipt")}
+                "operations": records("operation"), "receipts": records("delivery_receipt"),
+                "native_calls": records("native_call")}
 
 
 def protocol_config(root, state):
@@ -349,7 +350,7 @@ def main(argv=None):
     config, base = load_config(args.config)
     config = prepare_config(config, base, directory, args.mode, args.fixture.resolve(), candidate_root)
     candidate = candidate_identity(candidate_root)
-    checker_files = {str(p.relative_to(ROOT)): file_identity(p) for p in sorted(Path(__file__).parent.glob("*.py"))}
+    checker_files = {str(p.relative_to(ROOT)): file_identity(p) for p in sorted(Path(__file__).parent.rglob("*.py"))}
     bindings = {"candidate_sha256": candidate["content_sha256"], "criteria_sha256": digest(canonical(criteria)),
                 "checker_sha256": digest(canonical(checker_files)), "fixture_sha256": digest(canonical(fixture)),
                 "configuration_sha256": digest(canonical(config)), "owner_basis_sha256": digest(args.brief.read_bytes())}
