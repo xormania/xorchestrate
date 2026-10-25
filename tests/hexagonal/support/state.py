@@ -7,12 +7,11 @@ from threading import Barrier
 
 from tests.hexagonal.contracts.state import StateObservation, StateOutcome
 from xorchestrate.adapters.acceptance import RequiredChecksAcceptance
-from xorchestrate.adapters.policies import ConfigurableRouting, RuleGuardrail
-from xorchestrate.adapters.storage import MemoryStore, SQLiteStore
-from xorchestrate.application import Application
 from xorchestrate.lifecycles import default_definitions
 from xorchestrate.model import Capability
 from xorchestrate.state import MachineDefinition, StateEngine, Transition
+
+from .application import application, make_store
 
 
 def parcel_definition():
@@ -48,7 +47,7 @@ class StoredStateFixture:
         self.engine = StateEngine({"parcel-flow": parcel_definition()})
 
     def _store(self):
-        return MemoryStore({}) if self.storage == "memory" else SQLiteStore({"path": str(self.path)})
+        return make_store(self.storage, self.path)
 
     def close(self):
         self.store.close()
@@ -204,12 +203,11 @@ class LiveStateFixture:
         self.message = None
 
     def _store(self):
-        return MemoryStore({}) if self.storage == "memory" else SQLiteStore({"path": str(self.path)})
+        return make_store(self.storage, self.path)
 
     def _application(self):
-        return Application(self.store, {"fixture": self.provider}, {"fixture": self.driver},
-                           RuleGuardrail(), ConfigurableRouting(), {},
-                           lambda: "2026-10-25T12:00:00Z", lambda: f"fixture-{next(self.identifiers)}",
+        return application(self.store, providers={"fixture": self.provider}, sessions={"fixture": self.driver},
+                           clock=lambda: "2026-10-25T12:00:00Z", identifiers=lambda: f"fixture-{next(self.identifiers)}",
                            acceptance=RequiredChecksAcceptance(), state_engine=self.engine)
 
     def close(self):

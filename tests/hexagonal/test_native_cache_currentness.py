@@ -3,105 +3,10 @@
 The cache-bypass fault deliberately removes only replay validation after a valid
 call. Its target is the currentness/authorization assertion, not an adapter crash.
 """
-import json
-import sys
-import time
-from contextlib import ExitStack, contextmanager
-from pathlib import Path
-
 import pytest
 
-from tests.hexagonal.test_work_acceptance import MeasuringProvider, accept, make_app, measure, setup_work
-from xorchestrate.adapters.bridge import SessionBridgeHost
-from xorchestrate.adapters.claude import ClaudeSessionDriver
-from xorchestrate.adapters.grok import GrokSessionDriver
-from xorchestrate.adapters.sessions import CodexSessionDriver
-from xorchestrate.composition import build
-from xorchestrate.model import Conflict, OrchestrationError
-
-FIXTURES = Path(__file__).parent / "fixtures"
-
-
-def retry(app, action, args):
-    for attempt in range(8):
-        try:
-            return app.call(action, args)
-        except Conflict as error:
-            if not error.details.get("retry_safe") or attempt == 7:
-                raise
-
-
-@contextmanager
-def native_runtime(protocol, tmp_path, bridge=False):
-    wire = tmp_path / "wire.jsonl"
-    options = {"command": [sys.executable, str(FIXTURES / ("claude_native.py" if protocol == "claude" else "native_progress_peer.py")),
-                            *([] if protocol == "claude" else [protocol])],
-               "env": {"PEER_RESULTS": str(wire), "CLAUDE_STATE_DIR": str(tmp_path / "claude")},
-               "timeout": 5, "application_tools": True}
-    if protocol == "claude":
-        options.update(terminal="discard", startup_timeout=10)
-    if protocol == "grok":
-        options["resume_supported"] = True
-    config = {"store": {"adapter": "sqlite", "options": {"path": str(tmp_path / "state.sqlite")}},
-              "guardrail": {"adapter": "rules", "options": {"rules": [{"actions": ["get_acceptance", "create_work"],
-                  "roles": ["revoked"], "effect": "deny"}]}},
-              "sessions": {"native": {"adapter": protocol, "options": options}}}
-    with ExitStack() as stack:
-        if bridge:
-            native = {"codex": CodexSessionDriver, "claude": ClaudeSessionDriver, "grok": GrokSessionDriver}[protocol](
-                {key: value for key, value in options.items() if key != "application_tools"})
-            host = SessionBridgeHost(native, tmp_path / "host", capabilities=make_app().describe(), options={"transport": "fifo"})
-            stack.callback(host.close)
-            config["sessions"]["native"] = {"adapter": "bridge", "options": {"endpoint": str(host.endpoint),
-                "transport": "fifo", "timeout": 5, "application_tools": True}}
-        runtime = stack.enter_context(build(config, Path.cwd()))
-        app = runtime.application
-        app.providers["checks"] = MeasuringProvider()
-        actor = app.call("add_actor", {"actor_id": "owner", "roles": ["allowed"]})["actor"]
-        work, basis = setup_work(app, {"A": "A"})
-        measure(app, work)
-        assert accept(app, work)["accepted"]
-        session = retry(app, "start_session", {"driver": "native", "specification": {}, "work_id": work["id"], "idempotency_key": "start"})["session"]
-        adapter = app.sessions["native"]
-        rejected = []
-        replay = getattr(adapter, "_application_replay", None)
-
-        def checked(*args):
-            try:
-                return replay(*args)
-            except OrchestrationError as error:
-                rejected.append(error.code)
-                raise
-        if replay is not None:
-            adapter._application_replay = checked
-
-        def send(label, action="get_acceptance", arguments=None, fresh=False):
-            arguments = {"work_id": work["id"]} if arguments is None else arguments
-            body = {"replay_fixture": {"label": label, "call_id": "fresh" if fresh else "fixed",
-                                      "mcp_request_id": "fresh" if fresh else "fixed"}}
-            if protocol == "claude":
-                body["application_call"] = {"action": action, "arguments": arguments}
-                message = body
-            else:
-                body.update(action="tool", name=action, arguments=arguments)
-                message = {"text": json.dumps(body)}
-            retry(app, "send_session", {"session_id": session["id"], "message": message, "idempotency_key": label})
-            deadline = time.monotonic() + 8
-            while time.monotonic() < deadline:
-                records = [json.loads(row) for row in wire.read_text().splitlines()] if wire.exists() else []
-                matches = [row for row in records if row["label"] == label]
-                if matches:
-                    result = matches[-1]["result"]
-                    if protocol == "codex":
-                        return json.loads(result["contentItems"][0]["text"])
-                    if "error" in result:
-                        return result
-                    if protocol == "grok":
-                        result = result["result"]
-                    return result["structuredContent"]
-                time.sleep(.01)
-            raise AssertionError("native replay fixture did not return a wire result")
-        yield app, adapter, work, basis, actor, send, rejected
+from tests.hexagonal.support.native import native_runtime, retry
+from xorchestrate.model import OrchestrationError
 
 
 def assert_replay_rejected(result, errors, expected):

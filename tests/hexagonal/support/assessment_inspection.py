@@ -3,10 +3,10 @@ from copy import deepcopy
 from itertools import count
 
 from tests.hexagonal.contracts.assessment_inspection import InspectionFailure
-from xorchestrate.adapters.policies import ConfigurableRouting, RuleGuardrail
-from xorchestrate.adapters.storage import MemoryStore, SQLiteStore
-from xorchestrate.application import Application
+from xorchestrate.adapters.policies import RuleGuardrail
 from xorchestrate.model import Assessment, Capability, OrchestrationError
+
+from .application import application, make_store
 
 
 class SessionDriver:
@@ -35,15 +35,15 @@ class Evaluator:
 
 class Fixture:
     def __init__(self, implementation, path, *, work_fields=None, fault=None):
-        self.store = MemoryStore() if implementation == "memory" else SQLiteStore(str(path))
+        self.store = make_store(implementation, path)
         self.evaluator = Evaluator()
         identifiers = count()
         assessment = {"triage": "review"}
         if work_fields is not None:
             assessment["work_input_fields"] = work_fields
-        self.app = Application(self.store, {"fixture": EchoProvider()}, {"fixture": SessionDriver()},
-            RuleGuardrail(), ConfigurableRouting(), {"review": self.evaluator},
-            lambda: "2026-10-24T00:00:00Z", lambda: f"record-{next(identifiers)}", assessment=assessment)
+        self.app = application(self.store, providers={"fixture": EchoProvider()}, sessions={"fixture": SessionDriver()},
+            evaluators={"review": self.evaluator}, clock=lambda: "2026-10-24T00:00:00Z",
+            identifiers=lambda: f"record-{next(identifiers)}", assessment=assessment)
         if fault == "omit_assessment_projection":
             self.app._inspection_assessment_binding = lambda *args: []
         elif fault == "unrelated_error":

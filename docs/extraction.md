@@ -1,5 +1,10 @@
 # Agentscient extraction
 
+Historical test suites, their runner and CI jobs were removed when the active
+testing framework was consolidated. This document and extraction manifests record
+the original import; use their pinned source revisions or Git history for removed
+files. Current validation is described in [testing-framework.md](testing-framework.md).
+
 > Historical reference: this document describes the imported Agentscient runtime in
 > `devtools/`. Its roles, defaults, restrictions, and setup procedures are not
 > requirements of the current Xorchestrate application. Start with the

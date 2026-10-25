@@ -4,9 +4,8 @@ from dataclasses import replace
 
 import pytest
 
-from tests.hexagonal.test_application import Provider, application, store  # noqa: F401
-from tests.hexagonal.test_delivery import Native
-from tests.hexagonal.test_delivery_adversarial import Driver
+from tests.hexagonal.support.application import Provider, application
+from tests.hexagonal.support.delivery import Driver, Native
 from xorchestrate.adapters.policies import RuleGuardrail
 from xorchestrate.lifecycles import default_definitions
 from xorchestrate.model import OrchestrationError
@@ -29,7 +28,7 @@ def deny_events(machine, events):
     ("completion_retention", "unknown", "completed", 1),
 ])
 def test_native_outcome_knowledge_follows_effect_boundary_and_never_reexecutes(
-        store, boundary, expected_status, expected_outcome, effects):  # noqa: F811
+        store, boundary, expected_status, expected_outcome, effects):
     app = application(store, driver=Driver())
     session = app.call("start_session", {
         "driver": "agent", "specification": {}, "idempotency_key": "source",
@@ -95,7 +94,7 @@ def test_native_outcome_knowledge_follows_effect_boundary_and_never_reexecutes(
 
 
 @pytest.mark.parametrize("machine", ["delivery", "delivery_attempt"])
-def test_submission_guard_cannot_erase_completed_adapter_result_or_resubmit(store, machine):  # noqa: F811
+def test_submission_guard_cannot_erase_completed_adapter_result_or_resubmit(store, machine):
     driver = Native()
     app = application(store, driver=driver)
     app.state_engine = deny_events(machine, {"submit", "retain_late"})
@@ -129,7 +128,7 @@ def test_submission_guard_cannot_erase_completed_adapter_result_or_resubmit(stor
     assert len(driver.calls) == 1
 
 
-def test_native_terminal_and_uncertainty_guard_refusal_preserves_completion_evidence(store):  # noqa: F811
+def test_native_terminal_and_uncertainty_guard_refusal_preserves_completion_evidence(store):
     app = application(store, driver=Driver())
     app.state_engine = deny_events("native_call", {"complete", "uncertain"})
     session = app.call("start_session", {"driver": "agent", "specification": {},
@@ -158,7 +157,7 @@ def test_native_terminal_and_uncertainty_guard_refusal_preserves_completion_evid
 
 @pytest.mark.parametrize("result_field", ["result", "external_result"])
 def test_completed_adapter_error_survives_operation_boundary_and_reconciles_without_replay(
-        store, result_field):  # noqa: F811
+        store, result_field):
     raw = {"value": 42}
 
     def completed_then_refused(*_):
@@ -188,7 +187,7 @@ def test_completed_adapter_error_survives_operation_boundary_and_reconciles_with
     assert len(provider.calls) == 1
 
 
-def test_completed_delivery_error_retains_response_without_claiming_verified_submission(store):  # noqa: F811
+def test_completed_delivery_error_retains_response_without_claiming_verified_submission(store):
     driver = Native()
     raw = {"submitted": True, "incarnation": "unverified-incarnation"}
     driver.failure = OrchestrationError("Adapter completed before local settlement failed", "completed_unapplied",

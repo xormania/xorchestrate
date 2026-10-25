@@ -13,19 +13,32 @@ from .core import execute_checks
 from .model import Check
 
 ROOT = Path(__file__).resolve().parents[2]
-SUITES = ("acceptance", "multi-harness", "all")
+COMPONENT_SUITES = ("checks", "calibration", "acceptance", "multi-harness")
+SUITES = (*COMPONENT_SUITES, "all")
 MODES = ("fixture", "protocol-fixture", "native")
 
 
-def preflight(*, suite, mode, config=None, driver=None, timeout=180, root=ROOT):
+def preflight(*, suite, mode, config=None, driver=None, timeout=180, root=ROOT,
+              families=(), check_timeout=600):
     """Validate selected inputs before launching anything; authentication is live evidence."""
     if suite not in SUITES or mode not in MODES:
         raise ValueError("Unknown suite or mode")
     if not math.isfinite(timeout) or timeout <= 0:
         raise ValueError("Timeout must be a positive finite number")
+    if not math.isfinite(check_timeout) or check_timeout <= 0:
+        raise ValueError("Check timeout must be a positive finite number")
     root = Path(root).resolve()
-    selected = ("acceptance", "multi-harness") if suite == "all" else (suite,)
+    selected = COMPONENT_SUITES if suite == "all" else (suite,)
     checks = []
+    if families and "checks" not in selected:
+        raise ValueError("--family selects the checks suite")
+    if "checks" in selected:
+        from .adapters.pytest_plugin import load_catalog
+        from .catalog import select_families
+
+        _, assignments = load_catalog(root)
+        select_families(assignments, families)
+        checks.append({"name": "test_catalog", "passed": True, "modules": len(assignments)})
     if "acceptance" in selected:
         binary = shutil.which("tmux")
         checks.append({"name": "tmux", "passed": binary is not None, "path": binary})
@@ -77,11 +90,32 @@ def preflight(*, suite, mode, config=None, driver=None, timeout=180, root=ROOT):
             "authentication": "verified by live callbacks only" if mode == "native" else "not used"}
 
 
-def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=ROOT, brief=None):
+def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=ROOT, brief=None,
+         families=(), check_timeout=600):
     """Declare scenarios once. Both local and CI entrypoints execute this plan."""
     root, directory = Path(root).resolve(), Path(directory).resolve()
-    selected = ("acceptance", "multi-harness") if suite == "all" else (suite,)
+    selected = COMPONENT_SUITES if suite == "all" else (suite,)
     checks = []
+    if "checks" in selected:
+        argv = [sys.executable, "-m", "pytest", "tests/hexagonal", "-q", "-rs",
+                "--test-inventory", str(directory / "inventory.json"),
+                "--junitxml=" + str(directory / "tests.xml")]
+        for family in families:
+            argv += ["--test-family", family]
+        checks.append(Check("tests", tuple(argv), check_timeout, ("contracts/testing.json", "tests/conftest.py")))
+        checks.append(Check("architecture", (sys.executable, "-m", "scripts.architecture", "--output",
+                            str(directory / "architecture.json")), check_timeout, ("contracts/hexagonal.json",)))
+    if "calibration" in selected:
+        definitions = (
+            ("native-calibration", "scripts.verification.calibrate_suite"),
+            ("work-calibration", "tests.hexagonal.calibrate_work_acceptance"),
+            ("state-calibration", "scripts.verification.calibrate_state"),
+        )
+        for name, module in definitions:
+            options = ("--output", str(directory / name)) if name == "work-calibration" else (
+                "--candidate", str(root), "--out", str(directory / name))
+            checks.append(Check(name, (sys.executable, "-m", module, *options), check_timeout,
+                                (module.replace(".", "/") + ".py",)))
     if "acceptance" in selected:
         argv = [sys.executable, "-m", "scripts.acceptance", "--output", str(directory / "acceptance"),
                 "--profile", "native" if mode == "native" else "fixture", "--timeout", str(timeout)]
@@ -111,7 +145,7 @@ def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=
 
 
 def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=None,
-        timeout=180, root=ROOT, brief=None):
+        timeout=180, root=ROOT, brief=None, families=(), check_timeout=600):
     root, output = Path(root).resolve(), Path(output).expanduser().resolve()
     if output == root or root in output.parents:
         raise ValueError("Run output must be outside the measured candidate")
@@ -119,13 +153,14 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
     report = {"schema_version": 1, "suite": suite, "mode": mode, "status": "setup_error",
               "directory": str(directory), "checks": []}
     try:
-        readiness = preflight(suite=suite, mode=mode, config=config, driver=driver, timeout=timeout, root=root)
+        readiness = preflight(suite=suite, mode=mode, config=config, driver=driver, timeout=timeout, root=root,
+                              families=families, check_timeout=check_timeout)
         write_json(directory / "preflight.json", readiness)
         if readiness["status"] != "passed":
             report["preflight"] = readiness
         else:
             checks = plan(directory=directory, suite=suite, mode=mode, config=config, driver=driver,
-                          timeout=timeout, root=root, brief=brief)
+                          timeout=timeout, root=root, brief=brief, families=families, check_timeout=check_timeout)
             # Native Claude inherits the operator's terminal; capturing the
             # outer command would silently replace it with pipes and EOF.
             runner = RecordingRunner(directory / "commands", terminal="inherit" if mode == "native" else "capture")

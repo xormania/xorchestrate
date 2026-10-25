@@ -1,5 +1,8 @@
 # Shared live test-kit
 
+The [testing framework](testing-framework.md) owns deterministic tests, calibration
+and live workflows. This page describes its live execution adapters.
+
 The active acceptance and multi-harness runners use `scripts.testkit` for command
 execution, resource ownership, check recording, configuration isolation and
 private evidence. These are shared implementations used inside the runners, as
@@ -9,7 +12,7 @@ testing system alongside the product.
 ## Run
 
 From the checkout, install Python 3.11+ dependencies with
-`python3 -m pip install -e '.[test]'`. The tmux suite also needs tmux, Linux/WSL2,
+`python3 -m pip install -e '.[test]' -r .github/requirements-ci.txt`. The tmux suite also needs tmux, Linux/WSL2,
 PTYs, Unix sockets and a matching `/proc` process namespace.
 
 ```bash
@@ -17,8 +20,8 @@ python3 -m scripts.testkit doctor
 python3 -m scripts.testkit run
 ```
 
-The default runs both suites with real application processes and deterministic
-protocol peers. It does not contact vendor models. Each invocation creates a
+The default runs deterministic checks and calibration followed by both live suites
+with real application processes and deterministic protocol peers. It does not contact vendor models. Each invocation creates a
 fresh private run under `../xorchestrate-runs/`, prints its directory and writes
 `report.json`. `--output /path/outside/checkout` changes that reusable parent.
 No manual copying of the owner brief, creation of criteria or selection of a new

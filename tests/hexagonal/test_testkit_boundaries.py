@@ -1,4 +1,4 @@
-"""The production architecture evaluator also governs the active live-test kit.
+"""One architecture evaluator governs product, test contracts and test-kit layers.
 
 Faults are planted in copies of the real source, using the real profile. No
 test-specific dependency walker or alternate policy decides these verdicts.
@@ -33,6 +33,11 @@ def test_live_test_tooling_is_classified_and_passes_the_shared_policy():
     assert roles["scripts.verification.multi_harness"] == "verification_runner"
     assert roles["scripts.verification.core"] == "verification_core"
     assert roles["scripts.verification.adapters.native"] == "verification_decoders"
+    assert roles["tests.hexagonal.contracts.identity"] == "test_contracts"
+    assert roles["tests.hexagonal.support.identity_evidence"] == "test_support"
+    assert roles["tests.hexagonal.test_identity_contracts"] == "test_collection"
+    assert roles["scripts.architecture.core"] == "architecture_core"
+    assert report["coverage"]["classified"] == report["coverage"]["modules"]
 
 
 @pytest.mark.parametrize("dependency,rule", [
@@ -74,3 +79,29 @@ def test_generic_execution_adapter_cannot_import_product_wiring(subject):
     assert any(item["rule_id"] == "dependencies.allowed"
                and item.get("module") == "scripts.testkit.adapters.command"
                and item.get("target") == "xorchestrate.composition" for item in report["findings"])
+
+
+@pytest.mark.parametrize("module,dependency", [
+    ("tests.hexagonal.support.application", "tests.hexagonal.test_application"),
+    ("tests.hexagonal.test_application", "tests.hexagonal.test_delivery"),
+    ("tests.hexagonal.contracts.state", "tests.hexagonal.support.state"),
+    ("tests.hexagonal.contracts.state", "xorchestrate.state"),
+    ("tests.hexagonal.contracts.state", "scripts.verification.core"),
+])
+def test_shared_framework_roles_reject_coupled_tests_and_borrowed_oracles(subject, module, dependency):
+    path = subject / (module.replace(".", "/") + ".py")
+    path.write_text(path.read_text() + "\nimport " + dependency + "\n")
+    report = check(subject, PROFILE)
+    assert report["status"] == "violation"
+    assert any(item["rule_id"] == "dependencies.allowed" and item.get("module") == module
+               and item.get("target") == dependency for item in report["findings"]), report["findings"]
+
+
+@pytest.mark.parametrize("module", ["scripts.verification.core", "tests.hexagonal.contracts.state"])
+def test_shared_invariants_cannot_inline_native_wire_decoding(subject, module):
+    path = subject / (module.replace(".", "/") + ".py")
+    path.write_text(path.read_text() + "\ndef injected_decode(item):\n    return item.get('promptId')\n")
+    report = check(subject, PROFILE)
+    assert report["status"] == "violation"
+    assert any(item["rule_id"] == "literals.allowed" and item.get("module") == module
+               and item.get("value") == "promptId" for item in report["findings"]), report["findings"]

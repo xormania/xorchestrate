@@ -1,53 +1,24 @@
 """Active application delivery, policy substitution and recovery contracts."""
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from copy import deepcopy
 
 import pytest
 
-from tests.hexagonal.test_application import Sessions, application
+from tests.hexagonal.support.application import application
+from tests.hexagonal.support.delivery import Native, dispatch
 from xorchestrate.adapters.delivery import DefiniteFailureRetry, DeliverySchedule
 from xorchestrate.adapters.policies import RuleGuardrail
-from xorchestrate.adapters.storage import MemoryStore, SQLiteStore
 from xorchestrate.model import Conflict, OrchestrationError
 
 
-class Native(Sessions):
-    def __init__(self):
-        super().__init__()
-        self.count = 0
-        self.failure = None
-        self.entered = threading.Event()
-        self.release = None
-
-    def start(self, specification):
-        self.count += 1
-        return {"native_id": "conversation", "incarnation": str(self.count), "ownership": "owned"}
-
-    def deliver(self, session, message):
-        self.calls.append(("deliver", deepcopy(session), deepcopy(message)))
-        self.entered.set()
-        if self.release:
-            assert self.release.wait(3)
-        if self.failure:
-            raise self.failure
-        return {"submitted": True}
-
-
-@pytest.fixture(params=["memory", "sqlite"])
-def setup(request, tmp_path):
-    store = MemoryStore() if request.param == "memory" else SQLiteStore(str(tmp_path / 'state.sqlite3'))
+@pytest.fixture
+def setup(store):
     driver = Native()
     app = application(store, driver=driver)
     app.call("add_actor", {"actor_id": "bob"})
     session = app.call("start_session", {"driver": "agent", "specification": {}, "actor_id": "bob", "idempotency_key": "start"})['session']
     message = app.call("send_message", {"destination": {"actor": "bob"}, "body": {"text": "challenge"}})['message']
     yield app, driver, session, message
-    store.close()
-
-
-def dispatch(app, message):
-    return app.call('dispatch_deliveries', {'message_id': message['id']})['deliveries'][0]
 
 
 def test_routing_queues_durable_attempt_and_submission_is_not_receipt(setup):

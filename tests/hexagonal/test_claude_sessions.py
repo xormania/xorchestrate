@@ -1,29 +1,12 @@
-import sys
 import threading
 import time
 from pathlib import Path
 
 import pytest
 
-from xorchestrate.adapters.claude import ClaudeSessionDriver
+from tests.hexagonal.support.native import native_drivers, peer_options, wait_for
 from xorchestrate.adapters.native_gateway import request
 from xorchestrate.model import Capability, Conflict, OrchestrationError
-
-FIXTURE = Path(__file__).parent / "fixtures" / "claude_native.py"
-
-
-def wait_for(predicate, timeout=5):
-    """Wait on read-only observations, retrying only stale authorization reads."""
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        try:
-            if predicate():
-                return
-        except Conflict as error:
-            if error.details.get("retry_safe") is not True:
-                raise
-        time.sleep(0.01)
-    raise AssertionError("Expected native observation did not arrive")
 
 
 def test_wait_for_retries_safe_observation_conflict():
@@ -67,23 +50,17 @@ def test_wait_for_safe_conflict_keeps_original_deadline(monkeypatch):
 
 @pytest.fixture
 def make_driver(tmp_path):
-    drivers = []
+    with native_drivers() as create:
+        def make(**options):
+            driver = create("claude", state=tmp_path, **options)
+            observations, calls = [], []
+            driver.bind_observer(lambda context, event: observations.append((context, event)))
+            caps = [Capability("echo", "Echo", {"type": "object", "properties": {"marker": {}, "nonce": {}}, "required": ["marker", "nonce"]}),
+                    Capability("hold", "Held callback", {"type": "object", "properties": {"nonce": {}}, "required": ["nonce"]})]
+            driver.bind_application_tools(caps, lambda action, args, context, key: calls.append((action, args, context, key)) or {"accepted": True})
+            return driver, observations, calls
 
-    def make(**options):
-        opts = {"command": [sys.executable, str(FIXTURE)], "env": {"CLAUDE_STATE_DIR": str(tmp_path)},
-                "terminal": "discard", "startup_timeout": 5, "timeout": 3, **options}
-        driver = ClaudeSessionDriver(opts)
-        observations, calls = [], []
-        driver.bind_observer(lambda context, event: observations.append((context, event)))
-        caps = [Capability("echo", "Echo", {"type": "object", "properties": {"marker": {}, "nonce": {}}, "required": ["marker", "nonce"]}),
-                Capability("hold", "Held callback", {"type": "object", "properties": {"nonce": {}}, "required": ["nonce"]})]
-        driver.bind_application_tools(caps, lambda action, args, context, key: calls.append((action, args, context, key)) or {"accepted": True})
-        drivers.append(driver)
-        return driver, observations, calls
-
-    yield make
-    for driver in drivers:
-        driver.close()
+        yield make
 
 
 def test_claude_retained_context_callbacks_progress_without_poll_and_native_identity(make_driver):
@@ -252,9 +229,7 @@ def test_claude_resume_replaces_same_instance_connection_after_verified_launch(m
 def test_claude_application_callback_through_active_composition_and_sqlite(tmp_path):
     from xorchestrate.composition import build
     config = {"store": {"adapter": "sqlite", "options": {"path": str(tmp_path / "state.sqlite3")}},
-              "sessions": {"worker": {"adapter": "claude", "options": {
-                  "command": [sys.executable, str(FIXTURE)], "env": {"CLAUDE_STATE_DIR": str(tmp_path / "native")},
-                  "application_tools": True, "terminal": "discard", "startup_timeout": 5, "timeout": 3}}}}
+              "sessions": {"worker": {"adapter": "claude", "options": peer_options("claude", state=tmp_path / "native", application_tools=True)}}}
     with build(config) as runtime:
         app = runtime.application
         work = app.call("create_work", {"goal": "Retain native callback provenance"})["work"]

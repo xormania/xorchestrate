@@ -4,6 +4,10 @@ Goal: integrate the existing Agentscient test-kit mechanisms into Xorchestrate's
 active hexagonal testing architecture so local and CI runners reuse concern
 implementations and retain independent behavioral evidence.
 
+The testing-framework consolidation extends this integration to all active test
+families, deterministic checks and calibration. Its current scope and required
+outcomes are in [testing-framework.md](../testing-framework.md).
+
 ## Required completion and evidence
 
 | Requirement | Implementation | Evidence |

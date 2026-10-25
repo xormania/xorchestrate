@@ -18,49 +18,8 @@ from scripts.verification.capture import (
     verify_candidate,
 )
 from scripts.verification.checker import VerificationFailure, exchange_evidence, native_inventory, tool_audit, verify
+from tests.hexagonal.support.verification_evidence import proof_chain, repository
 from xorchestrate.exchange import evaluate_exchange
-
-
-def repository(path):
-    path.mkdir()
-    subprocess.run(["git", "init", "-q", str(path)], check=True)
-    subprocess.run(["git", "-C", str(path), "config", "user.name", "fixture"], check=True)
-    subprocess.run(["git", "-C", str(path), "config", "user.email", "fixture@example.invalid"], check=True)
-    (path / "module.py").write_text("VALUE = 1\n")
-    subprocess.run(["git", "-C", str(path), "add", "."], check=True)
-    subprocess.run(["git", "-C", str(path), "commit", "-qm", "fixture"], check=True)
-    return path
-
-
-def proof_chain():
-    sessions = {p: {"native_id": p + "-native", "session_id": p + "-app", "incarnation": p + "-epoch"}
-                for p in ("codex", "grok")}
-    case = {"id": "case", "source": "codex", "target": "grok", "kind": "exchange"}
-    events = []
-    def add(event, peer, **data):
-        value = {"seq": len(events) + 1, "event": event, "peer": peer, **sessions[peer], **data}
-        events.append(value)
-        return value
-    def callback(peer, tool, args, event, **data):
-        call_id = "call-" + str(len(events))
-        add("native_tool", peer, tool=tool, arguments=args, call_id=call_id,
-            origin={"codex": "codex/item/tool/call", "grok": "grok/session/update"}[peer])
-        add("tool_called", peer, tool=tool, arguments=args, call_id=call_id)
-        add(event, peer, tool=tool, arguments=args, call_id=call_id, **data)
-        add("tool_completed", peer, tool=tool, arguments=args, call_id=call_id)
-    challenge = {"id": "challenge", "to": "grok", "kind": "challenge", "case_id": "case", "nonce": "nonce", "memory": ""}
-    callback("codex", "send_message", challenge, "queued", message=challenge)
-    add("attempt", "grok", message_id="challenge", attempt_id="attempt-1", recipient="grok",
-        attempt_sequence=1, status="submitted", origin="adapter", submission={"submitted": True})
-    add("submitted", "grok", message_id="challenge", attempt_id="attempt-1", state="submitted")
-    reply = {"id": "reply", "to": "codex", "kind": "reply", "case_id": "case", "nonce": "nonce", "memory": "private"}
-    callback("grok", "send_message", reply, "queued", message=reply)
-    add("attempt", "codex", message_id="reply", attempt_id="attempt-2", recipient="codex",
-        attempt_sequence=1, status="submitted", origin="adapter", submission={"submitted": True})
-    add("submitted", "codex", message_id="reply", attempt_id="attempt-2", state="submitted")
-    receipt = {"phase": "received", "case_id": "case", "nonce": "nonce", "memory": "private", "peer": "grok"}
-    callback("codex", "record_result", receipt, "report", report=receipt)
-    return events, sessions, case
 
 
 def test_candidate_capture_includes_dirty_and_untracked_inputs(tmp_path):
@@ -168,7 +127,7 @@ def test_native_inventory_preserves_complete_requested_counts():
 
 def test_composed_runner_reauthorizes_after_callback_without_duplicating_submission():
     from scripts.verification.multi_harness import ComposedSuite
-    from tests.hexagonal.test_application import Sessions, application
+    from tests.hexagonal.support.application import Sessions, application
     from xorchestrate.model import Verdict
 
     class CallbackDuringAuthorization:

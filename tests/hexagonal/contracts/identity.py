@@ -228,7 +228,8 @@ LIFECYCLE_SCENARIOS = (
 )
 
 
-def assert_identity_scenario(factory: IdentityFactory, scenario: IdentityScenario, operation: str = "reconnect") -> None:
+def assert_identity_scenario(factory: IdentityFactory, scenario: IdentityScenario, operation: str = "reconnect",
+                             *, exact_diagnostic: bool = False) -> None:
     subject = factory(scenario.scope, operation)
     control = subject.evaluate()
     assert control.accepted, ("IV03_VALID_CONTROL", control.detail)
@@ -272,7 +273,9 @@ def assert_identity_scenario(factory: IdentityFactory, scenario: IdentityScenari
                                                   "application_effect_arguments_mismatch"},
             "native_result_binding": {"independent_native_arguments_mismatch", "native_result_identity_mismatch"},
         }
-        allowed = {scenario.diagnostic} | receipt_reasons.get(scenario.diagnostic, set())
+        allowed = {scenario.diagnostic}
+        if not exact_diagnostic:
+            allowed |= receipt_reasons.get(scenario.diagnostic, set())
         assert allowed & observed.diagnostics, ("IV03_NAMED_REJECTION", scenario.name, observed.detail)
 
 

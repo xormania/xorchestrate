@@ -28,19 +28,40 @@ def test_all_plan_is_the_same_named_checks_as_individual_suites(tmp_path, mode):
     options = dict(directory=tmp_path, mode=mode, config=config,
                    driver="codex" if mode == "native" else None, timeout=7)
     together = composition.plan(suite="all", **options)
-    separately = composition.plan(suite="acceptance", **options) + composition.plan(suite="multi-harness", **options)
+    separately = sum((composition.plan(suite=suite, **options) for suite in composition.COMPONENT_SUITES), ())
     assert together == separately
-    assert [check.name for check in together] == ["acceptance", "multi-harness"]
-    acceptance, multi = together
+    assert [check.name for check in together] == ["tests", "architecture", "native-calibration", "work-calibration",
+                                                "state-calibration", "acceptance", "multi-harness"]
+    acceptance, multi = together[-2:]
     assert acceptance.argv[:3] == (sys.executable, "-m", "scripts.acceptance")
     assert multi.argv[:3] == (sys.executable, "-m", "scripts.verification.multi_harness")
     assert acceptance.argv[acceptance.argv.index("--profile") + 1] == ("native" if mode == "native" else "fixture")
     assert multi.argv[multi.argv.index("--mode") + 1] == mode
-    for check in together:
+    for check in (acceptance, multi):
         assert ("--config" in check.argv) == (mode == "native")
     frozen = tmp_path / "owner-brief.md"
     criteria = json.loads((tmp_path / "criteria.json").read_text())
     assert criteria["owner_basis_sha256"] == digest(frozen.read_bytes())
+
+
+def test_checks_plan_selects_declared_family_and_retains_inventory(tmp_path):
+    checks = composition.plan(directory=tmp_path, suite="checks", mode="protocol-fixture",
+                              families=("state",), check_timeout=37)
+    assert len(checks) == 2
+    assert checks[0].argv[-2:] == ("--test-family", "state")
+    assert "--test-inventory" in checks[0].argv
+    assert checks[0].timeout == 37
+    assert checks[1].name == "architecture"
+
+
+def test_unknown_family_is_rejected_before_any_command(tmp_path, monkeypatch):
+    def unexpected_launch(*args, **kwargs):
+        pytest.fail("unclassified family launched a command")
+
+    monkeypatch.setattr(RecordingRunner, "run", unexpected_launch)
+    report = composition.run(output=tmp_path, suite="checks", families=("missing-family",))
+    assert report["status"] == "setup_error" and report["checks"] == []
+    assert "Unknown test families" in report["error"]["diagnostic"]
 
 
 @pytest.mark.parametrize("fault", ["no_config", "tools_disabled", "missing_command", "string_command"])
