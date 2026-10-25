@@ -243,6 +243,59 @@
           }
         }
       ]
+    },
+    "architecture": {
+      "name": "Hexagonal architecture",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 6,
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "with": {
+            "python-version": "3.12"
+          }
+        },
+        {
+          "name": "Install test and diagnostic dependencies",
+          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]'"
+        },
+        {
+          "name": "Enforce declared hexagonal architecture",
+          "id": "deterministic",
+          "run": "python3 -m scripts.architecture --output \"$RUNNER_TEMP/architecture/deterministic.json\""
+        },
+        {
+          "name": "Exercise checker controls and port substitution",
+          "if": "always()",
+          "run": "python3 -m pytest -q tests/hexagonal/test_architecture_enforcement.py tests/hexagonal/test_architecture_diagnostics.py tests/hexagonal/test_architecture_cli.py tests/hexagonal/test_boundaries.py tests/hexagonal/test_composition.py tests/hexagonal/test_storage.py tests/hexagonal/test_state_composition.py tests/hexagonal/test_state_contracts.py --junitxml=\"$RUNNER_TEMP/architecture/contracts.xml\""
+        },
+        {
+          "name": "Jev architecture diagnostics",
+          "if": "always()",
+          "env": {
+            "TYPESAFE_API_KEY": "${{ secrets.TYPESAFE_API_KEY || secrets.JEV_API_KEY }}",
+            "JEV_ENDPOINT": "${{ vars.JEV_ENDPOINT }}",
+            "JEV_MODEL": "${{ vars.JEV_MODEL }}"
+          },
+          "run": "python3 -m scripts.architecture --jev-config contracts/hexagonal-jev.json --diagnostics-only --output \"$RUNNER_TEMP/architecture/diagnostics.json\""
+        },
+        {
+          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "if": "always()",
+          "with": {
+            "name": "architecture-evidence",
+            "path": "${{ runner.temp }}/architecture/",
+            "if-no-files-found": "error",
+            "retention-days": 30
+          }
+        }
+      ]
     }
   }
 }

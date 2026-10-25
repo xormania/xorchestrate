@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "xorchestrate.hexagonal",
+  "version": "1",
+  "description": "Current application-owned ports, infrastructure-independent core and replaceable adapters. Composition is the trusted factory boundary. Source dependencies are distinct from runtime calls through ports.",
+  "source_roots": ["xorchestrate"],
+  "roles": {
+    "foundation": {
+      "modules": ["xorchestrate", "xorchestrate.model", "xorchestrate.ports"],
+      "allowed_roles": ["foundation"],
+      "allowed_external": ["__future__", "collections", "contextlib", "dataclasses", "typing"],
+      "allow_dynamic": false,
+      "forbidden_calls": ["open", "input", "print"]
+    },
+    "core": {
+      "modules": ["xorchestrate.acceptance", "xorchestrate.activity", "xorchestrate.application", "xorchestrate.delivery", "xorchestrate.exchange", "xorchestrate.lifecycles", "xorchestrate.outcomes", "xorchestrate.schema", "xorchestrate.state"],
+      "allowed_roles": ["foundation", "core"],
+      "allowed_external": ["__future__", "collections", "contextlib", "copy", "dataclasses", "hashlib", "json", "jsonschema", "referencing", "types", "typing"],
+      "allow_dynamic": false,
+      "forbidden_calls": ["open", "input", "print"]
+    },
+    "adapters": {
+      "modules": ["xorchestrate.adapters", "xorchestrate.adapters.*"],
+      "allowed_roles": ["foundation", "core", "adapters"],
+      "allowed_external": ["stdlib:*", "jsonschema", "referencing"],
+      "allow_dynamic": true
+    },
+    "composition": {
+      "modules": ["xorchestrate.composition"],
+      "allowed_roles": ["foundation", "core", "adapters", "composition"],
+      "allowed_external": ["stdlib:*", "jsonschema", "referencing"],
+      "allow_dynamic": true
+    },
+    "entrypoints": {
+      "modules": ["xorchestrate.__main__", "xorchestrate.bridge", "xorchestrate.cli", "xorchestrate.mcp"],
+      "allowed_roles": ["foundation", "core", "adapters", "composition", "entrypoints"],
+      "allowed_external": ["stdlib:*", "jsonschema", "referencing"],
+      "allow_dynamic": true
+    }
+  }
+}

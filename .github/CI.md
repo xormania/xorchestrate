@@ -1,7 +1,9 @@
 # Validation
 
 CI runs on GitHub-hosted Ubuntu; application tests use Python 3.11 and 3.12. It
-needs no repository secrets or authenticated model accounts. Pinned action revisions use read-only repository
+needs no repository secrets or authenticated model accounts for deterministic checks.
+Jev architecture diagnostics use a configured repository secret when available and
+report unavailable credentials explicitly. Pinned action revisions use read-only repository
 permissions. Pull requests and pushes to `master` or `integration/hexagonal` run
 the checks.
 
@@ -17,8 +19,8 @@ python3 -m pytest tests/hexagonal -q
 
 Application tests cover orchestration through injected ports. Adapter tests
 exercise persistence, process protocols, discovery, validation, and failures with
-local fixtures. Dependency tests follow the application's local imports to check
-that it does not depend on infrastructure or the imported runtime. They do not
+local fixtures. The declared architecture profile exhaustively classifies active modules and checks
+direct/transitive dependencies, external imports and constrained dynamic loading. They do not
 freeze a role hierarchy, a model choice, or exact documentation language.
 
 These checks establish the behavior they exercise. Authenticated native harnesses,
@@ -89,3 +91,13 @@ candidate for each CI measurement. A fresh independent review must still select
 and inspect its own owner basis/checker; CI copying a file is not independent
 approval of its content. Deterministic evidence is uploaded for seven days.
 Authenticated native mode is never launched by CI.
+
+## Hexagonal architecture
+
+The `Hexagonal architecture` job runs the generic deterministic checker, calibrated
+healthy/fault controls, and existing port/composition contracts. It fails on
+violations or incomplete/invalid structural inputs. Jev runs afterward for
+diagnostics, including when deterministic enforcement fails. The
+`architecture-evidence` artifact retains both reports and contract-test JUnit.
+See [architecture enforcement](../docs/architecture-enforcement.md) for local
+commands, profile extension, Jev configuration and evidence limits.
