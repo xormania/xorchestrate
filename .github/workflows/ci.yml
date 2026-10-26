@@ -86,7 +86,7 @@
           "run": "python3 -m scripts.testkit run --suite multi-harness --mode protocol-fixture --output \"$RUNNER_TEMP/xor-verification\" --timeout 60"
         },
         {
-          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always() && matrix.python == '3.12'",
           "with": {
             "name": "composed-protocol-evidence",
@@ -96,7 +96,7 @@
           }
         },
         {
-          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
             "name": "framework-checks-python-${{ matrix.python }}",
@@ -141,7 +141,7 @@
           "run": "python3 -m scripts.testkit run --suite acceptance --mode protocol-fixture --output \"$RUNNER_TEMP/acceptance-evidence\" --timeout 120"
         },
         {
-          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
             "name": "tmux-acceptance-evidence",
@@ -189,7 +189,7 @@
           "run": "python3 -m scripts.architecture --jev-config contracts/hexagonal-jev.json --diagnostics-only --output \"$RUNNER_TEMP/architecture/diagnostics.json\""
         },
         {
-          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
             "name": "architecture-evidence",
