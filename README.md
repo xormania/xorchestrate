@@ -9,6 +9,14 @@ project stack, model vendor, or evaluator. Project knowledge and explicitly
 chosen standards arrive through configured MCP or CLI tools. Observed tool output
 and model recommendations do not become policy on their own.
 
+## Testing framework
+
+Use `python3 -m scripts.testkit run --suite checks` for deterministic testing, or
+`python3 -m scripts.testkit run` for checks, calibration and live protocol workflows.
+Local and CI runs use the same [testing framework](docs/testing-framework.md),
+shared contracts, fixtures and evidence services. See [live tests](docs/live-testkit.md)
+for authenticated native configuration.
+
 ## Run locally
 
 Use Python 3.11 or newer. From the checkout:
@@ -123,9 +131,10 @@ acceptance is an explicit local run; protocol fixtures cannot supply that result
 | Location | Purpose |
 | --- | --- |
 | `xorchestrate/` | Current application, ports, adapters, composition, CLI, and MCP input |
-| `tests/hexagonal/` | Application behavior, adapter contracts, process fixtures, and dependency boundaries |
+| `tests/hexagonal/` | Declared behavioral families, independent contracts, support adapters and collected scenarios |
+| `scripts/testkit/` | Shared test framework, collection, execution, lifecycle and evidence services |
 | `scripts/acceptance/` | Reusable tmux acceptance runner, scenarios, and deterministic protocol peers |
-| `devtools/` | Imported Agentscient implementation retained for selective reuse and source regression |
+| `devtools/` | Imported source retained for selective reuse; historical tests and CI removed |
 | `reference/imported-agent-skills/` | Historical agent instructions, removed from active skill discovery |
 | `legacy/agentscient/` | Earlier conductor, tooling, fixtures, and testkit source collection |
 | `reference/agentscient-dev/` | Original repository guidance and CI machinery |

@@ -12,7 +12,11 @@ from contextlib import contextmanager
 from pathlib import Path
 from uuid import uuid4
 
-from xorchestrate.composition import BUILTINS, load_config
+from scripts.testkit.adapters.clock import SystemClock
+from scripts.testkit.adapters.configuration import isolated_config
+from scripts.testkit.adapters.evidence import write_json as atomic_json
+from scripts.testkit.core import CheckRecorder, ResourceScope
+from xorchestrate.composition import load_config
 
 from .peers import SCHEMA
 
@@ -27,14 +31,6 @@ class AcceptanceFailure(Exception):
 def require(condition, code):
     if not condition:
         raise AcceptanceFailure(code)
-
-
-def atomic_json(path, value):
-    temporary = path.with_name(path.name + ".tmp")
-    with temporary.open("w", encoding="utf-8") as output:
-        json.dump(value, output, allow_nan=False, indent=2)
-        output.write("\n")
-    temporary.replace(path)
 
 
 def marker_records(path):
@@ -124,45 +120,51 @@ class Scenario:
         self.directory = directory
         self.deadline = time.monotonic() + timeout
         self.profile = profile
-        self.checks = []
+        self.recorder = CheckRecorder(SystemClock())
+        self.checks = self.recorder.checks
+        self.resources = ResourceScope()
         self.clients = []
+        self._client_tokens = {}
 
     @contextmanager
     def check(self, name):
-        started = time.monotonic()
-        entry = {"name": name, "status": "failed"}
-        self.checks.append(entry)
         print("CHECK " + name, flush=True)
+        before = len(self.checks)
         try:
-            yield
-            entry["status"] = "passed"
-        finally:
-            entry["duration_seconds"] = round(time.monotonic() - started, 3)
+            with self.recorder.check(name):
+                yield
+        except BaseException as exc:
+            # The generic recorder keeps raw diagnostics. This exportable
+            # acceptance receipt exposes only deliberate assertion codes.
+            if len(self.checks) > before:
+                self.checks[-1]["failure"] = {
+                    "type": type(exc).__name__,
+                    "code": str(exc) if isinstance(exc, AcceptanceFailure) else "scenario_error",
+                }
+            raise
 
     def client(self, config, actor="owner"):
         client = Client(config, self.deadline, actor)
+        self._client_tokens[client] = self.resources.defer("application-client", client.close)
         self.clients.append(client)
         return client
 
     def close(self, client):
-        client.close()
+        error = self.resources.release(self._client_tokens.pop(client))
         self.clients.remove(client)
+        require(error is None, "runtime_cleanup_failed")
 
     def cleanup(self):
-        errors = []
-        while self.clients:
-            try:
-                self.clients.pop().close()
-            except BaseException as exc:
-                errors.append(type(exc).__name__)
+        errors = self.resources.close()
+        self.clients.clear()
+        self._client_tokens.clear()
         require(not errors, "runtime_cleanup_failed")
 
 
 def fixture_config(directory):
     def command(mode, marker=None):
         return [sys.executable, "-m", "scripts.acceptance.peers", mode, *(["--marker", str(marker)] if marker else [])]
-    return {
-        "store": {"adapter": "sqlite", "options": {"path": str(directory / "state.sqlite3")}},
+    return isolated_config({
         "providers": {
             "local-cli": {"adapter": "cli", "options": {
                 "command": command("cli", directory / "cli-effects.jsonl"), "cwd": str(ROOT),
@@ -181,7 +183,7 @@ def fixture_config(directory):
         "guardrail": {"adapter": "rules", "options": {"rules": [
             {"actions": ["invoke"], "where": {"arguments.arguments.nonce": "guardrail-denied"}, "effect": "deny"},
         ]}},
-    }
+    }, ROOT, directory)
 
 
 def native_config(source, directory, driver):
@@ -189,15 +191,7 @@ def native_config(source, directory, driver):
     selected = config.get("sessions", {}).get(driver)
     require(isinstance(selected, dict) and selected.get("enabled", True) is True, "native_driver_unavailable")
     require(selected.get("options", {}).get("application_tools") is True, "native_application_tools_required")
-    # Composition resolves only builtin cwd against the source file. Preserve
-    # exactly that interpretation when relocating this private derived config.
-    for kind in ("providers", "sessions"):
-        for specification in config.get(kind, {}).values():
-            if specification.get("enabled", True) and specification.get("adapter") in BUILTINS[kind]:
-                options = specification.setdefault("options", {})
-                options["cwd"] = str((base / options.get("cwd", ".")).resolve())
-    config["store"] = {"adapter": "sqlite", "options": {"path": str(directory / "state.sqlite3")}}
-    return config
+    return isolated_config(config, base, directory)
 
 
 def callback_receipt(scenario, client, driver, work_id, actor, nonce):

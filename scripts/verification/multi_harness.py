@@ -15,6 +15,10 @@ import uuid
 from copy import deepcopy
 from pathlib import Path
 
+from scripts.testkit.adapters.clock import SystemClock
+from scripts.testkit.adapters.configuration import isolated_config
+from scripts.testkit.core import CheckRecorder, ResourceScope
+
 from .capture import (
     candidate_identity,
     canonical,
@@ -58,13 +62,9 @@ def protocol_config(root, state):
 
 
 def prepare_config(config, base, directory, mode, fixture=FIXTURE, candidate_root=ROOT):
-    config = deepcopy(config)
     if mode == "protocol-fixture" and not config:
         config = protocol_config(candidate_root, directory / "peer-state")
-    for category in ("sessions", "providers"):
-        for spec in config.get(category, {}).values():
-            if spec.get("options", {}).get("cwd") is not None:
-                spec["options"]["cwd"] = str((base / spec["options"]["cwd"]).resolve())
+    config = isolated_config(config, base, directory)
     if mode == "fixture":
         config["sessions"] = {peer: {"adapter": "scripts.verification.fixture:SyntheticSessionDriver",
             "options": {"peer": peer, "application_tools": True}} for peer in PEERS}
@@ -73,7 +73,6 @@ def prepare_config(config, base, directory, mode, fixture=FIXTURE, candidate_roo
             raise ValueError("Configure a session driver named " + peer)
         if config["sessions"][peer].get("options", {}).get("application_tools") is not True:
             raise ValueError("Native application_tools must be enabled for " + peer)
-    config["store"] = {"adapter": "sqlite", "options": {"path": str(directory / "state.sqlite3")}}
     config.setdefault("providers", {})["verification"] = {
         "adapter": "scripts.verification.fixture:VerificationProvider", "options": {"fixture": str(fixture), "hold_timeout": 300}}
     # Scheduling is exercised explicitly through the public application action.
@@ -103,6 +102,7 @@ class ComposedSuite:
         self.lifecycle_records = []
         self.tool_versions = {}
         self.product_modules = {}
+        self.checks = CheckRecorder(SystemClock())
 
     def call(self, action, arguments):
         from xorchestrate.model import Conflict
@@ -130,6 +130,7 @@ class ComposedSuite:
                   "phase": self.phase, "failures": deepcopy(self.failures)}
         result["tool_versions"] = deepcopy(self.tool_versions)
         result["product_modules"] = deepcopy(self.product_modules)
+        result["checks"] = deepcopy(self.checks.checks)
         result["cleanup"] = {"status": "pending"}
         result["events"] = normalize(raw, self.sessions, provider, self.mode)
         result["lifecycle_records"] = deepcopy(self.lifecycle_records)
@@ -300,18 +301,23 @@ class ComposedSuite:
             self.verify_product_receipt(case)
 
     def run(self):
-        self.start()
+        with self.checks.check("startup"):
+            self.start()
         for case in self.criteria["required_cases"]:
             if case["kind"] in {"exchange", "busy"}:
-                self.exchange(case)
-        self.work()
+                with self.checks.check(case["id"]):
+                    self.exchange(case)
+        with self.checks.check("controlled_work"):
+            self.work()
         self.phase = "completion-and-native-audit"
         for case in self.criteria["required_cases"]:
             if case["kind"] in {"completion", "audit"}:
-                self.executed.append(case["id"])
-                self.wait(lambda run, case=case: check_case(case, run, self.fixture), "final_native_evidence_missing")
+                with self.checks.check(case["id"]):
+                    self.executed.append(case["id"])
+                    self.wait(lambda run, case=case: check_case(case, run, self.fixture), "final_native_evidence_missing")
         from .lifecycle import run_lifecycle
-        run_lifecycle(self, self.config, self.base)
+        with self.checks.check("native_lifecycle"):
+            run_lifecycle(self, self.config, self.base)
         return self.save()
 
 
@@ -350,17 +356,25 @@ def main(argv=None):
     config, base = load_config(args.config)
     config = prepare_config(config, base, directory, args.mode, args.fixture.resolve(), candidate_root)
     candidate = candidate_identity(candidate_root)
-    checker_files = {str(p.relative_to(ROOT)): file_identity(p) for p in sorted(Path(__file__).parent.rglob("*.py"))}
+    checker_files = {
+        str(path.relative_to(ROOT)): file_identity(path)
+        for package in (Path(__file__).parent, ROOT / "scripts/testkit")
+        for path in sorted(package.rglob("*.py"))
+    }
     bindings = {"candidate_sha256": candidate["content_sha256"], "criteria_sha256": digest(canonical(criteria)),
                 "checker_sha256": digest(canonical(checker_files)), "fixture_sha256": digest(canonical(fixture)),
                 "configuration_sha256": digest(canonical(config)), "owner_basis_sha256": digest(args.brief.read_bytes())}
     for name, value in (("candidate.json", candidate), ("bindings.json", bindings), ("criteria.json", criteria),
                         ("fixture.json", fixture), ("configuration.json", config), ("checker.json", checker_files)):
         write_json(directory / name, value)
-    runtime = None
+    resources = ResourceScope()
     suite = None
     try:
         runtime = build(config, base)
+        resources.defer("application_runtime", runtime.close)
+        # Release holds before drivers close. Each cleanup is independent so a
+        # provider failure cannot prevent runtime shutdown.
+        resources.defer("verification_holds", runtime.application.providers["verification"].close)
         suite = ComposedSuite(runtime, directory, args.mode, criteria, bindings, fixture, args.timeout, config, base)
         suite.product_modules = {name: {"path": module.__file__, **file_identity(module.__file__)}
             for name, module in list(sys.modules.items()) if name.startswith("xorchestrate.") and getattr(module, "__file__", None)}
@@ -378,15 +392,8 @@ def main(argv=None):
         else:
             write_json(directory / "setup-failure.json", {"type": type(exc).__name__, "diagnostic": str(exc)})
     finally:
-        cleanup = {"status": "passed", "finished_at": now()}
-        if runtime:
-            # Release owned holds before closing drivers; never strand a native
-            # callback behind cleanup of its provider.
-            try:
-                runtime.application.providers["verification"].close()
-                runtime.close()
-            except BaseException as exc:
-                cleanup = {"status": "failed", "type": type(exc).__name__, "diagnostic": str(exc), "finished_at": now()}
+        errors = resources.close()
+        cleanup = {"status": "failed" if errors else "passed", "errors": errors, "finished_at": now()}
         after = verify_candidate(candidate_root, candidate)
         write_json(directory / "candidate-after.json", after)
         write_json(directory / "cleanup.json", cleanup)

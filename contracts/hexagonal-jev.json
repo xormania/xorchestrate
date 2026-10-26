@@ -1,0 +1,14 @@
+{
+  "endpoint": "https://api.typesafe.ai/v1/systemone",
+  "model": "jev-1.14.0",
+  "credential_env": "TYPESAFE_API_KEY",
+  "timeout": 15,
+  "max_source_bytes": 24000,
+  "max_files": 8,
+  "source_paths": [
+    "xorchestrate/ports.py",
+    "xorchestrate/application.py",
+    "xorchestrate/composition.py",
+    "xorchestrate/state.py"
+  ]
+}

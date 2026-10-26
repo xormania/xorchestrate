@@ -4,19 +4,17 @@ from copy import deepcopy
 
 import pytest
 
-from tests.hexagonal.test_application import application
-from tests.hexagonal.test_delivery import Native
+from tests.hexagonal.support.application import application
+from tests.hexagonal.support.delivery import Native
 from xorchestrate.adapters.policies import RuleGuardrail
-from xorchestrate.adapters.storage import MemoryStore, SQLiteStore
 from xorchestrate.model import Conflict, OrchestrationError
 
 SECRET = "IV01_DENIED_RECORD"
 PUBLIC = "IV01_AUTHORIZED_RECORD"
 
 
-@pytest.fixture(params=["memory", "sqlite"])
-def history(request, tmp_path):
-    store = MemoryStore() if request.param == "memory" else SQLiteStore(str(tmp_path / "history.sqlite"))
+@pytest.fixture
+def history(store):
     app = application(store, driver=Native())
     for actor in ("limited", "private"):
         app.call("add_actor", {"actor_id": actor})
@@ -33,7 +31,6 @@ def history(request, tmp_path):
     message = app.call("send_message", {"work_id": work, "destination": {"actor": "limited"},
         "body": {"marker": PUBLIC}})["message"]["id"]
     yield app, work, sessions, message
-    store.close()
 
 
 def record_history(history, action, args, call_id=None):
@@ -217,7 +214,7 @@ def test_selected_message_and_historical_message_project_explicit_actor_policy(h
 
 
 def test_provider_output_with_record_named_keys_remains_opaque(history):
-    from tests.hexagonal.test_application import Provider
+    from tests.hexagonal.support.application import Provider
 
     app, work, _, _ = history
     payload = {"sessions": [{"id": "provider-only", "work_id": "not-an-application-work"}],
@@ -289,8 +286,8 @@ def test_denied_selected_record_rejects_instead_of_returning_empty_success(histo
 
 
 def provider_history(history, measured=False):
-    from tests.hexagonal.test_application import Provider
-    from tests.hexagonal.test_work_acceptance import BINDINGS, CANDIDATE, MeasuringProvider
+    from tests.hexagonal.support.application import Provider
+    from tests.hexagonal.support.work_acceptance import BINDINGS, CANDIDATE, MeasuringProvider
     from xorchestrate.model import Capability
 
     app, work, _, _ = history
@@ -491,10 +488,19 @@ def test_conflicting_operation_key_cannot_supply_another_requests_inspection_sco
     action = "run_measurement" if measured else "invoke"
     args = ({"work_id": work, "check_id": "private", "measurement_key": "public"} if measured else
         {"work_id": work, "capability": "private/change", "arguments": {}, "idempotency_key": "public-invoke"})
-    with pytest.raises(Conflict):
+    counts = {name: (provider.discoveries, len(provider.calls)) for name, provider in app.providers.items()}
+    with pytest.raises(Conflict) as conflict:
         record_history(history, action, args, "conflicting-private")
+    assert {name: (provider.discoveries, len(provider.calls)) for name, provider in app.providers.items()} == counts
     before = inspect(history)
-    assert any(row["call_id"] == "conflicting-private" and row["status"] == "unknown" for row in before["calls"])
+    conflicting, = [row for row in before["calls"] if row["call_id"] == "conflicting-private"]
+    # invoke rejects the mismatched operation fingerprint in call's explicit
+    # pre-effect boundary, before discovery or provider execution. Measurement
+    # checks its key inside its handler and retains conservative uncertainty.
+    assert conflicting["status"] == ("unknown" if measured else "failed")
+    assert conflicting["effect_outcome"] == ("unknown" if measured else "not_started")
+    if not measured:
+        assert conflict.value.details["outcome"] == "not_started"
     selected = {"providers": ["private"]} if selector == "provider" else {
         "capabilities": ["private/measure" if measured else "private/change"]}
     app.guardrail = RuleGuardrail({"rules": [{"actors": ["owner"], "actions": ["native_observations"],

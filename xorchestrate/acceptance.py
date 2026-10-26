@@ -361,8 +361,8 @@ class AcceptanceMixin:
                 if (existing.data["status"] in {"pending", "unknown"} and operation
                         and operation.data["status"] == "completed" and operation.data.get("external_result_origin") == "adapter"):
                     raw = operation.data["external_result"]
-                    existing = tx.put("measurement", key, {**existing.data, "status": "completed",
-                        "raw_response": deepcopy(raw), "raw_digest": _hash(raw), "finished_at": self.clock()}, existing.version)
+                    existing = self._transition(tx, existing, "recover", {**existing.data, "status": "completed",
+                        "raw_response": deepcopy(raw), "raw_digest": _hash(raw), "finished_at": self.clock()}, actor)
                     self._event(tx, "measurement.recovered", actor, work_id=args["work_id"], measurement_id=key)
                 return {"measurement": _view(existing), "replayed": True}
             requirement = self._require(tx, "requirements", args["work_id"])
@@ -394,16 +394,24 @@ class AcceptanceMixin:
                 current = self._require(tx, "measurement", key)
                 operation = tx.get("operation", operation_id)
                 uncertain = operation is not None and operation.data["status"] in {"pending", "unknown", "completed_unapplied"}
-                tx.put("measurement", key, {**current.data, "status": "unknown" if uncertain else "failed",
-                    "error": {"code": getattr(error, "code", type(error).__name__)}, "finished_at": self.clock()}, current.version)
+                self._transition(tx, current, "uncertain" if uncertain else "fail",
+                    {**current.data, "status": "unknown" if uncertain else "failed",
+                    "error": {"code": getattr(error, "code", type(error).__name__)}, "finished_at": self.clock()}, actor)
                 self._event(tx, "measurement.unresolved" if uncertain else "measurement.failed", actor, work_id=args["work_id"], measurement_id=key)
             raise
-        with self.store.transaction() as tx:
-            current = self._require(tx, "measurement", key)
-            record = tx.put("measurement", key, {**current.data, "status": "completed", "raw_response": deepcopy(raw),
-                "raw_digest": _hash(raw), "finished_at": self.clock()}, current.version)
-            self._event(tx, "measurement.completed", actor, work_id=args["work_id"], measurement_id=key, operation_id=operation_id)
-            return {"measurement": _view(record), "replayed": False}
+        try:
+            with self.store.transaction() as tx:
+                current = self._require(tx, "measurement", key)
+                record = self._transition(tx, current, "complete", {**current.data, "status": "completed", "raw_response": deepcopy(raw),
+                    "raw_digest": _hash(raw), "finished_at": self.clock()}, actor)
+                self._event(tx, "measurement.completed", actor, work_id=args["work_id"], measurement_id=key, operation_id=operation_id)
+                return {"measurement": _view(record), "replayed": False}
+        except Exception as error:
+            # The invocation's completed operation already retains the adapter
+            # response. Replay recovers this measurement without invoking again.
+            raise OrchestrationError("The measurement completed, but its result needs reconciliation.",
+                "result_unapplied", {"measurement_id": key, "operation_id": operation_id,
+                "outcome": "completed", "external_result": deepcopy(raw)}) from error
 
     def _accept_work(self, args, actor, context):
         if getattr(self, "acceptance", None) is None:

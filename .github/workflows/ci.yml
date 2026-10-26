@@ -42,42 +42,11 @@
         {
           "name": "Lint runtime and CI",
           "id": "lint",
-          "run": "python3 -m ruff check xorchestrate tests devtools .github scripts"
-        },
-        {
-          "name": "Check security lint coverage",
-          "run": "python3 .github/lint_checks.py"
-        },
-        {
-          "name": "Check optional toolchain helpers",
-          "run": "python3 -m unittest discover -s .github/tests -v"
+          "run": "python3 -m ruff check xorchestrate tests .github scripts"
         },
         {
           "name": "Compile application and fixtures",
-          "run": "python3 -m compileall -q xorchestrate tests/hexagonal scripts/acceptance"
-        }
-      ]
-    },
-    "legacy": {
-      "name": "Recovered toolkit tests",
-      "runs-on": "ubuntu-24.04",
-      "timeout-minutes": 20,
-      "steps": [
-        {
-          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
-          "with": {
-            "persist-credentials": false
-          }
-        },
-        {
-          "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
-          "with": {
-            "python-version": "3.12"
-          }
-        },
-        {
-          "name": "Check recovered testkit and coordination",
-          "run": "python3 scripts/check_legacy.py"
+          "run": "python3 -m compileall -q xorchestrate tests/hexagonal scripts/testkit scripts/acceptance scripts/verification"
         }
       ]
     },
@@ -100,28 +69,28 @@
         },
         {
           "name": "Install application dependencies",
-          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]'"
+          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]' -r .github/requirements-ci.txt"
         },
         {
           "name": "Run application, boundary, and subprocess integration tests",
-          "run": "mkdir -p \"$RUNNER_TEMP/xor-checks\"\ngit show -s --format='%H%n%T%n%P' HEAD > \"$RUNNER_TEMP/xor-checks/identity.txt\"\npython3 -m pytest tests/hexagonal -q -rs --junitxml=\"$RUNNER_TEMP/xor-checks/application.xml\""
+          "run": "mkdir -p \"$RUNNER_TEMP/xor-checks\"\ngit show -s --format='%H%n%T%n%P' HEAD > \"$RUNNER_TEMP/xor-checks/identity.txt\"\npython3 -m scripts.testkit run --suite checks --output \"$RUNNER_TEMP/xor-checks/tests\" --check-timeout 600"
         },
         {
-          "name": "Retain original assertion fault calibrations",
+          "name": "Calibrate independent verification through the shared framework",
           "if": "matrix.python == '3.12'",
-          "run": "python3 -m scripts.verification.calibrate_suite --candidate . --out \"$RUNNER_TEMP/xor-checks/native-calibration\"\npython3 tests/hexagonal/calibrate_work_acceptance.py --output \"$RUNNER_TEMP/xor-checks/work-calibration\""
+          "run": "python3 -m scripts.testkit run --suite calibration --output \"$RUNNER_TEMP/xor-checks/calibration\" --check-timeout 600"
         },
         {
           "name": "Run composed three-harness protocol acceptance",
           "if": "matrix.python == '3.12'",
-          "run": "mkdir -p \"$RUNNER_TEMP/xor-verification\"\ncp docs/implementation/owner-brief.md \"$RUNNER_TEMP/xor-verification/owner-brief.md\"\npython3 -m scripts.verification criteria --brief \"$RUNNER_TEMP/xor-verification/owner-brief.md\" --out \"$RUNNER_TEMP/xor-verification/criteria.json\"\npython3 -m scripts.verification.multi_harness --mode protocol-fixture --brief \"$RUNNER_TEMP/xor-verification/owner-brief.md\" --criteria \"$RUNNER_TEMP/xor-verification/criteria.json\" --out \"$RUNNER_TEMP/xor-verification/run\" --timeout 60"
+          "run": "python3 -m scripts.testkit run --suite multi-harness --mode protocol-fixture --output \"$RUNNER_TEMP/xor-verification\" --timeout 60"
         },
         {
           "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always() && matrix.python == '3.12'",
           "with": {
             "name": "composed-protocol-evidence",
-            "path": "${{ runner.temp }}/xor-verification/run/**",
+            "path": "${{ runner.temp }}/xor-verification/**",
             "if-no-files-found": "warn",
             "retention-days": 7
           }
@@ -130,8 +99,8 @@
           "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
-            "name": "repair-checks-python-${{ matrix.python }}",
-            "path": "${{ runner.temp }}/xor-checks/**/*.json\n${{ runner.temp }}/xor-checks/**/*.xml\n${{ runner.temp }}/xor-checks/**/*.log\n${{ runner.temp }}/xor-checks/**/*.txt\n!${{ runner.temp }}/xor-checks/native-calibration/**/snapshot/**\n!${{ runner.temp }}/xor-checks/native-calibration/**/control/**\n!${{ runner.temp }}/xor-checks/native-calibration/**/mutant/**\n!${{ runner.temp }}/xor-checks/native-calibration/**/candidate/**\n!${{ runner.temp }}/xor-checks/work-calibration/**/snapshot/**\n!${{ runner.temp }}/xor-checks/work-calibration/**/candidate/**",
+            "name": "framework-checks-python-${{ matrix.python }}",
+            "path": "${{ runner.temp }}/xor-checks/**/*.json\n${{ runner.temp }}/xor-checks/**/*.xml\n${{ runner.temp }}/xor-checks/**/*.log\n${{ runner.temp }}/xor-checks/**/*.txt\n!${{ runner.temp }}/xor-checks/**/snapshot/**\n!${{ runner.temp }}/xor-checks/**/control/**\n!${{ runner.temp }}/xor-checks/**/mutant/**\n!${{ runner.temp }}/xor-checks/**/candidate/**",
             "if-no-files-found": "error",
             "retention-days": 30
           }
@@ -168,12 +137,8 @@
           "run": "python3 -m pip install --disable-pip-version-check -e '.[test]'\nsudo apt-get update\nsudo apt-get install -y tmux"
         },
         {
-          "name": "Verify acceptance scenarios and lifecycle regressions",
-          "run": "python3 -m pytest tests/hexagonal/test_acceptance_*.py -q"
-        },
-        {
           "name": "Run reusable tmux acceptance fixture",
-          "run": "python3 -m scripts.acceptance --output \"$RUNNER_TEMP/acceptance-evidence\" --timeout 120"
+          "run": "python3 -m scripts.testkit run --suite acceptance --mode protocol-fixture --output \"$RUNNER_TEMP/acceptance-evidence\" --timeout 120"
         },
         {
           "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
@@ -187,10 +152,10 @@
         }
       ]
     },
-    "imported-runtime": {
-      "name": "Imported runtime regression (historical source)",
+    "architecture": {
+      "name": "Hexagonal architecture",
       "runs-on": "ubuntu-24.04",
-      "timeout-minutes": 20,
+      "timeout-minutes": 6,
       "steps": [
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
@@ -205,36 +170,32 @@
           }
         },
         {
-          "name": "Stage historical skill assets for source regression",
-          "run": "mkdir -p .agents\ncp -R reference/imported-agent-skills .agents/skills"
+          "name": "Install test and diagnostic dependencies",
+          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]'"
         },
         {
-          "uses": "cue-lang/setup-cue@b0e30e540a2dae47304ebf16586a5b2db023b61c",
-          "with": {
-            "version": "v0.17.1"
-          }
+          "name": "Enforce declared hexagonal architecture",
+          "id": "deterministic",
+          "run": "python3 -m scripts.architecture --output \"$RUNNER_TEMP/architecture/deterministic.json\""
         },
         {
-          "name": "Install tmux",
-          "run": "sudo apt-get update\nsudo apt-get install -y tmux"
-        },
-        {
-          "name": "Run imported source regression suite",
+          "name": "Jev architecture diagnostics",
+          "if": "always()",
           "env": {
-            "AGENTSCIENT_CUE": "cue",
-            "AGENTSCIENT_REQUIRE_TMUX": "1",
-            "AGENTSCIENT_REQUIRE_ABSTRACT_SOCKETS": "1",
-            "AGENTSCIENT_EVIDENCE_DIR": "${{ runner.temp }}/runtime-evidence"
+            "TYPESAFE_API_KEY": "${{ secrets.TYPESAFE_API_KEY || secrets.JEV_API_KEY }}",
+            "JEV_ENDPOINT": "${{ vars.JEV_ENDPOINT }}",
+            "JEV_MODEL": "${{ vars.JEV_MODEL }}"
           },
-          "run": "python3 -m devtools.role_packages --check\npython3 -m devtools.configuration --check\npython3 -m devtools.consistency\npython3 -m devtools.tests.run --strict --report \"$AGENTSCIENT_EVIDENCE_DIR/test-census.json\""
+          "run": "python3 -m scripts.architecture --jev-config contracts/hexagonal-jev.json --diagnostics-only --output \"$RUNNER_TEMP/architecture/diagnostics.json\""
         },
         {
           "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
-            "name": "runtime-evidence",
-            "path": "${{ runner.temp }}/runtime-evidence",
-            "if-no-files-found": "error"
+            "name": "architecture-evidence",
+            "path": "${{ runner.temp }}/architecture/",
+            "if-no-files-found": "error",
+            "retention-days": 30
           }
         }
       ]

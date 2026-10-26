@@ -1,5 +1,8 @@
 # Behavioral verification and native handoff
 
+Use the [shared live test-kit](live-testkit.md) for repeatable local/CI runs.
+The direct commands below remain supported.
+
 The implementation brief supplied by xor remains the requirement basis: H1–H8,
 B1–B5 and A1–A2. The tools here measure a selected candidate. Their source and
 criteria must be reviewed; hashes establish identity, not correctness or owner

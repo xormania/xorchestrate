@@ -23,7 +23,9 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
+from ..activity import ActivityState, NativeConnection, activity_engine
 from ..model import OrchestrationError
+from ..outcomes import before_effect, effect_outcome
 from ..schema import check_schema, validate
 from .jsonrpc import close_process, command_options, decode_json, encode_json, positive_integer, positive_number
 from .native_gateway import LocalGateway
@@ -62,11 +64,33 @@ class _ClaudeLive:
     failure: object = None
     channel_ready: bool = False
     diagnostics: dict = field(default_factory=dict)
-    active_turns: set = field(default_factory=set)
+    activity_model: ActivityState = field(default_factory=ActivityState)
+    active_turns: set = field(init=False)
     completed_turns: set = field(default_factory=set)
-    anonymous_turns: int = 0
-    active_tools: set = field(default_factory=set)
-    activity_uncertain: bool = False
+    active_tools: set = field(init=False)
+    connection: NativeConnection = field(init=False)
+
+    def __post_init__(self):
+        self.connection = NativeConnection(self.activity_model.engine, self.incarnation)
+        self.active_turns = self.activity_model.set("turn")
+        self.active_tools = self.activity_model.set("callback")
+
+    @property
+    def anonymous_turns(self):
+        return len(self.activity_model.active("anonymous_turn"))
+
+    @anonymous_turns.setter
+    def anonymous_turns(self, count):
+        self.activity_model.set_anonymous_count(count)
+
+    @property
+    def activity_uncertain(self):
+        return self.activity_model.has_uncertainty
+
+    @activity_uncertain.setter
+    def activity_uncertain(self, value):
+        if value:
+            self.activity_model.uncertain()
 
 
 class ClaudeSessionDriver:
@@ -109,6 +133,13 @@ class ClaudeSessionDriver:
         self._callback = None
         self._application_replay = None
         self._capabilities = {}
+        self._state_engine = activity_engine()
+
+    def bind_state_engine(self, engine):
+        with self._lock:
+            if self._sessions or self._starting:
+                raise OrchestrationError("Bind state handling before launching sessions.", "conflict")
+            self._state_engine = engine
 
     def bind_observer(self, observer):
         with self._lock:
@@ -133,8 +164,7 @@ class ClaudeSessionDriver:
 
     def _activity(self, live):
         """Called under live.lock; a completion only retires its own work."""
-        live.activity = ("active" if live.active_turns or live.anonymous_turns or live.active_tools else
-                         "unknown" if live.activity_uncertain else "idle")
+        live.activity = live.activity_model.activity
         return live.activity
 
     def _emit(self, live, kind, source, **fields):
@@ -204,7 +234,9 @@ class ClaudeSessionDriver:
                     prompt = packet.get("prompt_id")
                     if isinstance(prompt, str) and prompt:
                         live.active_turns.add(prompt)
-                live.activity = "active"
+                    elif action not in self._capabilities and not live.active_turns and not live.anonymous_turns:
+                        live.anonymous_turns += 1
+                self._activity(live)
             self._emit(live, "native_tool", source, call_id=call_id, action=action, tool=tool,
                        arguments=arguments, turn_id=packet.get("prompt_id"))
             self._emit(live, "native_permission", source, call_id=call_id, tool=tool, decision=decision)
@@ -251,55 +283,80 @@ class ClaudeSessionDriver:
         return {}
 
     def _tool(self, live, payload):
-        name, arguments = payload.get("name"), payload.get("arguments", {})
-        if name not in self._capabilities or self._callback is None:
-            raise OrchestrationError("Unknown application tool.", "unknown_action")
-        arguments = _object(arguments, "Native tool arguments")
-        # Composition validates after injecting trusted work/idempotency context.
-        mcp_id = payload.get("mcp_request_id")
-        if isinstance(mcp_id, bool) or not isinstance(mcp_id, (str, int)):
-            raise OrchestrationError("MCP invocation requires a request ID.", "native_evidence_missing")
-        mcp_key = json.dumps([payload.get("mcp_connection_id", "direct-gateway"), mcp_id])
-        fingerprint = _digest([name, arguments])
-        replay = None
-        with live.lock:
-            previous = live.mcp_calls.get(mcp_key)
-            if previous:
-                if previous["fingerprint"] != fingerprint:
-                    raise OrchestrationError("MCP request ID reused with different arguments.", "native_call_conflict")
-                if "result" not in previous:
-                    raise OrchestrationError("Native callback outcome is unresolved.", "operation_unresolved")
-                replay = deepcopy(previous)
-            matched = previous["call_id"] if previous else next((key for key in live.pending_calls if not live.calls[key]["used"]
-                            and live.calls[key]["action"] == name and live.calls[key]["arguments"] == arguments), None)
-            if matched is None:
-                raise OrchestrationError("Application call has no matching native hook.", "native_evidence_missing")
-            if live.calls[matched].get("decision") == "deny":
-                raise OrchestrationError("Configured native tool policy denied this call.", "denied")
-            if not previous:
-                live.calls[matched]["used"] = True
-                live.pending_calls.remove(matched)
-                live.mcp_calls[mcp_key] = {"fingerprint": fingerprint, "call_id": matched}
-        trusted = {**deepcopy(live.context), "native_id": live.native_id, "incarnation": live.incarnation,
-                   "call_id": matched, "action": name, "native_observation": "claude/PreToolUse"}
-        if replay is not None:
-            if self._application_replay:
-                return self._application_replay(name, deepcopy(arguments), trusted,
-                    json.dumps([live.native_id, live.incarnation, matched]))
-            return replay["result"]
+        with before_effect():
+            name, arguments = payload.get("name"), payload.get("arguments", {})
+            if name not in self._capabilities or self._callback is None:
+                raise OrchestrationError("Unknown application tool.", "unknown_action")
+            arguments = _object(arguments, "Native tool arguments")
+            # Composition validates after injecting trusted work/idempotency context.
+            mcp_id = payload.get("mcp_request_id")
+            if isinstance(mcp_id, bool) or not isinstance(mcp_id, (str, int)):
+                raise OrchestrationError("MCP invocation requires a request ID.", "native_evidence_missing")
+            mcp_key = json.dumps([payload.get("mcp_connection_id", "direct-gateway"), mcp_id])
+            fingerprint = _digest([name, arguments])
+            replay = None
+            with live.lock:
+                previous = live.mcp_calls.get(mcp_key)
+                if previous:
+                    if previous["fingerprint"] != fingerprint:
+                        raise OrchestrationError("MCP request ID reused with different arguments.", "native_call_conflict")
+                    if previous.get("state") == "failed":
+                        error = previous["error"]
+                        raise OrchestrationError(error["message"], error["code"], error["details"])
+                    if previous.get("state") != "completed":
+                        raise OrchestrationError("Native callback outcome is unresolved.", "operation_unresolved",
+                            {"outcome": previous.get("effect_outcome", "unknown")})
+                    replay = deepcopy(previous)
+                matched = previous["call_id"] if previous else next((key for key in live.pending_calls if not live.calls[key]["used"]
+                                and live.calls[key]["action"] == name and live.calls[key]["arguments"] == arguments), None)
+                if matched is None:
+                    raise OrchestrationError("Application call has no matching native hook.", "native_evidence_missing")
+                if live.calls[matched].get("decision") == "deny":
+                    raise OrchestrationError("Configured native tool policy denied this call.", "denied")
+                if not previous:
+                    target = self._state_engine.decide("native_effect", None, "reserve",
+                        {"kind": "callback", "identity": mcp_key}).target
+                    live.calls[matched]["used"] = True
+                    live.pending_calls.remove(matched)
+                    live.mcp_calls[mcp_key] = {"fingerprint": fingerprint, "call_id": matched, "state": target}
+            trusted = {**deepcopy(live.context), "native_id": live.native_id, "incarnation": live.incarnation,
+                       "call_id": matched, "action": name, "native_observation": "claude/PreToolUse"}
+            if replay is not None:
+                if self._application_replay:
+                    return self._application_replay(name, deepcopy(arguments), trusted,
+                        json.dumps([live.native_id, live.incarnation, matched]))
+                return replay["result"]
+        returned = False
         try:
             result = self._callback(name, deepcopy(arguments), trusted, json.dumps([live.native_id, live.incarnation, matched]))
-        except Exception:
+            returned = True
+            with live.lock:
+                live.mcp_calls[mcp_key].update({"result": deepcopy(result), "effect_outcome": "completed"})
+            self._emit(live, "tool_result", "claude/mcp", call_id=matched, action=name, arguments=arguments)
+            with live.lock:
+                live.mcp_calls[mcp_key]["state"] = self._state_engine.decide("native_effect", "pending", "succeed",
+                    {"kind": "callback", "identity": mcp_key}).target
+                live.active_tools.discard(matched)
+                self._activity(live)
+        except Exception as error:
+            if returned:
+                error = OrchestrationError("Callback completed but local settlement was refused.", "operation_unresolved",
+                    {"outcome": "completed", "result": deepcopy(result), "cause": getattr(error, "code", type(error).__name__)})
             with live.lock:
                 live.active_tools.discard(matched)
-                live.activity_uncertain = True
+                if effect_outcome(error) not in {"not_started", "failed"}:
+                    live.activity_model.uncertain("callback", matched)
+                try:
+                    live.mcp_calls[mcp_key]["state"] = self._state_engine.decide("native_effect", "pending",
+                        "fail" if effect_outcome(error) in {"not_started", "failed"} else "uncertain",
+                        {"kind": "callback", "identity": mcp_key}).target
+                except Exception as recording_error:
+                    live.mcp_calls[mcp_key]["recording_error"] = getattr(recording_error, "code", type(recording_error).__name__)
+                live.mcp_calls[mcp_key]["effect_outcome"] = effect_outcome(error)
+                live.mcp_calls[mcp_key]["error"] = {"code": getattr(error, "code", "callback_failed"),
+                    "message": str(error), "details": {**deepcopy(getattr(error, "details", {})), "outcome": effect_outcome(error)}}
                 self._activity(live)
-            raise
-        self._emit(live, "tool_result", "claude/mcp", call_id=matched, action=name, arguments=arguments)
-        with live.lock:
-            live.mcp_calls[mcp_key]["result"] = deepcopy(result)
-            live.active_tools.discard(matched)
-            self._activity(live)
+            raise error
         return result
 
     def _gateway(self, live, action, payload):
@@ -361,7 +418,8 @@ class ClaudeSessionDriver:
             if self._closed or len(self._sessions) + self._starting >= self.max_sessions:
                 raise OrchestrationError("Claude session capacity unavailable.", "session_capacity", {"outcome": "not_started"})
             self._starting += 1
-        live = _ClaudeLive(_object(specification.get("context", {}), "Trusted session context"), source["native_id"] if source else str(uuid.uuid4()))
+        live = _ClaudeLive(_object(specification.get("context", {}), "Trusted session context"), source["native_id"] if source else str(uuid.uuid4()),
+                           activity_model=ActivityState(self._state_engine))
         live.settings = {"requested": requested, "resolved": resolved,
                          "observed": {"model": None, "effort": None}, "precedence": "trusted_configuration"}
         if source and source.get("configuration_id") != self.configuration_id:
@@ -426,12 +484,14 @@ class ClaudeSessionDriver:
                     if marker.search(data):
                         live.channel_ready = True
                 if live.hook_ready.is_set() and live.mcp_ready.is_set() and live.channel_ready:
+                    live.connection.transition("connect")
                     self._emit(live, "channel_ready", "claude/debug-log", server=self.server_name)
                     self._emit(live, "connected", "claude/driver", ownership="owned")
                     return self._receipt(live)
                 time.sleep(0.02)
             raise OrchestrationError("Claude channel/hook readiness was not independently observed before timeout.", "session_start_timeout")
         except BaseException:
+            live.connection.transition("close")
             if live.process:
                 close_process(live.process)
             if live.gateway:
@@ -505,7 +565,10 @@ class ClaudeSessionDriver:
         if (not live or session.get("instance") != self._instance or session.get("incarnation") != live.incarnation
                 or session.get("native_id") != live.native_id or session.get("protocol") != self.protocol):
             raise OrchestrationError("Claude connection receipt is stale or invalid.", "session_unavailable", {"outcome": "not_started"})
-        connection = "disconnected" if live.stopped.is_set() or live.process.poll() is not None else "connected"
+        with live.lock:
+            if live.process.poll() is not None and live.connection.state != "closed":
+                live.connection.transition("disconnect")
+            connection = live.connection.state
         return {"native_id": live.native_id, "incarnation": live.incarnation, "ownership": "owned",
                 "connection_state": connection, "activity": "unknown" if live.failure else live.activity,
                 "settings": deepcopy(live.settings)}
@@ -525,7 +588,9 @@ class ClaudeSessionDriver:
         if (not live or session.get("instance") != self._instance or session.get("incarnation") != live.incarnation
                 or session.get("native_id") != live.native_id or session.get("protocol") != self.protocol):
             raise OrchestrationError("Claude connection receipt is stale or invalid.", "session_unavailable", {"outcome": "not_started"})
-        live.stopped.set()
+        with live.lock:
+            live.connection.transition("close")
+            live.stopped.set()
         close_process(live.process)
         live.gateway.close()
         with self._lock:

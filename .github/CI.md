@@ -1,91 +1,62 @@
 # Validation
 
-CI runs on GitHub-hosted Ubuntu; application tests use Python 3.11 and 3.12. It
-needs no repository secrets or authenticated model accounts. Pinned action revisions use read-only repository
-permissions. Pull requests and pushes to `master` or `integration/hexagonal` run
-the checks.
-
-## Current application
+Local and CI execution use the [testing framework](../docs/testing-framework.md).
+Install the declared application/test dependencies and the single pinned linter
+requirements file:
 
 ```bash
 python3 -m pip install -e '.[test]' -r .github/requirements-ci.txt
-python3 -m ruff check xorchestrate tests devtools .github scripts
-python3 .github/lint_checks.py
-python3 -m compileall -q xorchestrate tests/hexagonal scripts/acceptance
-python3 -m pytest tests/hexagonal -q
+python3 -m scripts.testkit run --suite checks
+python3 -m scripts.testkit run --suite calibration
+python3 -m scripts.testkit run --suite multi-harness
+python3 -m scripts.testkit run --suite acceptance
 ```
 
-Application tests cover orchestration through injected ports. Adapter tests
-exercise persistence, process protocols, discovery, validation, and failures with
-local fixtures. Dependency tests follow the application's local imports to check
-that it does not depend on infrastructure or the imported runtime. They do not
-freeze a role hierarchy, a model choice, or exact documentation language.
+`python3 -m scripts.testkit run` composes all four suites. `--family NAME` selects
+one declared deterministic family. Each run gets fresh private evidence outside
+the candidate. Direct pytest is available for a focused scenario; default
+collection targets only active tests and validates `contracts/testing.json`.
 
-These checks establish the behavior they exercise. Authenticated native harnesses,
-remote MCP providers, and a live Jev endpoint require separate acceptance runs
-with the intended configuration. Fixture success is not evidence that an account
-has access to a particular model or service.
+## CI jobs
 
-## Tmux live acceptance
+CI runs on GitHub-hosted Ubuntu. Pinned actions have read-only repository
+permissions. Pull requests, pushes to master/integration and manual runs invoke:
 
-The `Tmux live acceptance (protocol fixture)` job installs tmux and runs the
-reusable acceptance scenario in an owned terminal:
+| Job | Purpose |
+|---|---|
+| Static checks | Lint and compile active product/framework/test code |
+| Application and adapter tests, Python 3.11 and 3.12 | Shared `checks` suite: declared behavioral families, pytest inventory/JUnit, deterministic architecture report |
+| Python 3.12 follow-up steps | Shared `calibration` suite and composed three-harness protocol suite |
+| Tmux live acceptance | Shared acceptance suite with tmux explicitly installed; private owned process cleanup is part of the receipt |
+| Hexagonal architecture | Declared dependency enforcement and optional Jev diagnostics, with retained reports |
 
-```bash
-python3 -m scripts.acceptance --output .xorchestrate/acceptance --timeout 120
-```
+The former historical-runtime and recovered-toolkit jobs, PHP provisioning/tests
+and historical runner have been removed. Historical test sources remain available
+at their pinned source revisions and in Git history. CI does not preserve an old
+implementation as a product acceptance obligation.
 
-This job exercises the public MCP interface across actual process boundaries,
-SQLite persistence, configured capabilities, and session callbacks. It also
-checks termination of the fixture's owned processes and tmux server. Missing
-tmux, scenario failures, timeouts, or failed cleanup make the run fail. There is
-no successful skip for an unavailable dependency.
+Security-lint calibration belongs to the catalog's architecture family and uses
+the actual CI lint command/configuration. Architecture and tmux regression tests
+run through the application matrices; their dedicated jobs no longer rerun the
+same selected pytest modules.
 
-Each run retains a unique evidence directory. CI uploads its `report.json` and
-`scenario.json` receipts as `tmux-acceptance-evidence` after success or failure and
-retains them for seven days. The job also runs the acceptance scenario, lifecycle,
-and cleanup regressions with tmux installed. Raw configuration, state, and pane
-capture stay outside the upload. The native profile is an explicit local/operator run and is
-not automatically uploaded by this job.
-See [live acceptance](../docs/live-acceptance.md) for observation, receipt
-interpretation, and the configured native profile.
+## Evidence and limits
 
-## Imported source regression
+`framework-checks-python-*` artifacts retain family/case inventories, JUnit,
+command records, deterministic architecture results and calibration reports for
+30 days. Full calibration candidate copies are excluded from artifact uploads.
+Composed protocol receipts remain available for seven days; tmux uploads selected
+report/scenario receipts for seven days. Raw native configurations and terminal
+logs are private local-run artifacts, not automatically published by CI.
 
-A separately named job checks the historical `devtools` implementation. That job
-stages `reference/imported-agent-skills` back into `.agents/skills` in its own
-checkout because the imported source expects those paths. The new application
-does not load these assets, and they are not installed at the repository root.
+Deterministic fixtures require no model accounts. Authenticated native harnesses,
+remote MCP services and actual model behavior need their configured environment;
+a fixture pass is not native authentication evidence. Native mode never falls back
+to a fixture. See [live test-kit](../docs/live-testkit.md).
 
-The imported job installs CUE v0.17.1 and tmux, validates its original catalogs,
-and runs its test census in strict mode. Strict mode fails on skips, unexecuted
-tests, expected failures, or failures. These checks preserve useful source evidence;
-they do not make historical behavior a requirement for the new application.
+Jev diagnostics use the configured repository secret when available, retain their
+selected/omitted source scope, and do not override deterministic violations or
+create requirements from findings. See
+[architecture enforcement](../docs/architecture-enforcement.md).
 
-The earlier toolkit has a separate `scripts/check_legacy.py` job. Only its selected
-suites run; the entire historical tree is not an active acceptance gate. Synthetic
-application fixtures may deliberately contain faults.
-
-## Optional infrastructure
-
-The retained PHP helper tests run separately from the application tests. The helper
-manifest and provisioning procedures retain assumptions about the original
-product. Serena/Docker, Symfony/Maker/Mate, model subscriptions, GitHub mutation,
-and original host acceptance need separately provisioned environments. Original CI
-is kept under `reference/agentscient-dev/.github/` as source material.
-
-CI does not request model reviews or merge branches. Review and merge decisions
-follow the authorization for the current effort; the workflow does not impose
-that delivery policy on projects coordinated by Xorchestrate.
-
-## Complete composed communication and lifecycle fixture
-
-The Python 3.12 application job additionally runs `scripts.verification.multi_harness`
-in `protocol-fixture` mode. It exercises all three native protocol adapters,
-routed durable delivery, independent callback observations, six directed exchanges,
-three held-tool submissions, six unfinished-work exchanges, nine work batches and
-separate lifecycle cases. Its 46-case requested inventory is copied outside the
-candidate for each CI measurement. A fresh independent review must still select
-and inspect its own owner basis/checker; CI copying a file is not independent
-approval of its content. Deterministic evidence is uploaded for seven days.
-Authenticated native mode is never launched by CI.
+CI neither requests reviews nor merges branches. xor controls those decisions.

@@ -1,59 +1,14 @@
 """Independent regressions for delivery/lifecycle authorization and stale effects."""
-import itertools
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
-from xorchestrate.adapters.policies import ConfigurableRouting, RuleGuardrail
-from xorchestrate.adapters.storage import MemoryStore
-from xorchestrate.application import Application
+from tests.hexagonal.support.delivery import Driver, start
+from tests.hexagonal.support.delivery import adversarial_application as application
+from xorchestrate.adapters.policies import RuleGuardrail
 from xorchestrate.composition import _wire_application_tools
 from xorchestrate.model import Conflict, OrchestrationError
-
-
-class Driver:
-    def __init__(self):
-        self.starts = []
-        self.callback = None
-        self.entered = threading.Event()
-        self.release = threading.Event()
-        self.send_error = None
-
-    def start(self, specification):
-        self.starts.append(specification)
-        return {"native_id": "conversation", "incarnation": "generation-1", "handle": "connection"}
-
-    def bind_application_tools(self, capabilities, callback):
-        self.callback = callback
-
-    def send(self, backend, message):
-        self.entered.set()
-        assert self.release.wait(2)
-        if self.send_error:
-            raise self.send_error
-        return {"submitted": True}
-
-    def stop(self, backend):
-        return {"stopped": True}
-
-    def detach(self, backend):
-        return {"detached": True}
-
-    def poll(self, backend):
-        return []
-
-
-def application(driver, *, guardrail=None, fallbacks=None, receipt_policy=None):
-    identifiers = itertools.count(1)
-    return Application(store=MemoryStore(), providers={}, sessions={"agent": driver},
-        guardrail=guardrail or RuleGuardrail(), routing=ConfigurableRouting(), evaluators={},
-        clock=lambda: "2026-10-23T12:00:00Z", identifiers=lambda: f"r{next(identifiers)}",
-        session_fallbacks=fallbacks, receipt_policy=receipt_policy)
-
-
-def start(app):
-    return app.call("start_session", {"driver": "agent", "specification": {}, "idempotency_key": "start"})["session"]
 
 
 def test_effective_fallback_driver_must_be_authorized_before_launch():
@@ -365,8 +320,11 @@ def unresolved_completed_native_call(app, driver):
 
     app.observe_native = fault
     try:
-        with pytest.raises(OSError):
+        with pytest.raises(OrchestrationError) as unapplied:
             driver.callback("create_work", {"goal": "Exactly one retained native effect"}, context, "retained-completion")
+        assert unapplied.value.code == "result_unapplied"
+        assert unapplied.value.details["outcome"] == "completed"
+        assert "work" in unapplied.value.details["external_result"]
     finally:
         app.observe_native = observe
     call = app.call("native_observations", {"session_id": source["id"]})["calls"][0]

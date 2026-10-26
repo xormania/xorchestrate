@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import difflib
 import json
 import os
 import shutil
@@ -17,8 +18,13 @@ def read_json(path):
     return json.loads(Path(path).read_text())
 
 
-def calibrate(root, output, mutation, selectors, target, diagnostic, unaffected):
-    """Run a passing control and exactly one source mutation in isolated copies."""
+def calibration_workspace(root, output, mutation):
+    """Capture the complete candidate and plant one fault in an isolated copy.
+
+    Every calibration family uses the same input capture, path checks, unique
+    anchor validation and retained mutation patch. Families supply their own
+    target selectors and independent verdict policy.
+    """
     output = Path(output).resolve()
     output.mkdir(parents=True, exist_ok=False, mode=0o700)
     identity = capture_candidate(root, output / "snapshot")
@@ -34,24 +40,51 @@ def calibrate(root, output, mutation, selectors, target, diagnostic, unaffected)
     original = source.read_text()
     if not mutation.get("old") or original.count(mutation["old"]) != 1:
         raise ValueError("Mutation must replace exactly one known source occurrence")
+    changed = original.replace(mutation["old"], mutation["new"], 1)
+    source.write_text(changed)
     write_json(output / "mutation.json", mutation)
-    checker = output / "checker"
-    checker.mkdir()
+    (output / "mutation.patch").write_text("".join(difflib.unified_diff(
+        original.splitlines(keepends=True), changed.splitlines(keepends=True),
+        fromfile="a/" + relative.as_posix(), tofile="b/" + relative.as_posix())))
+    return identity, control, mutant
+
+
+def observed_pytest(root, output, selectors, *, junit=None, timeout=120):
+    """Execute selected cases through the common command/evidence adapter.
+
+    The trusted assertion observer is retained outside the subject's package.
+    This also supports small standalone faulty subjects without a test catalog.
+    """
+    root, output = Path(root).resolve(), Path(output).resolve()
+    checker = output.parent / (output.name + "-observer")
+    checker.mkdir(parents=True, exist_ok=False, mode=0o700)
     observer = checker / "_xorchestrate_calibration_observer.py"
     observer.write_bytes(Path(__file__).with_name("pytest_calibration.py").read_bytes())
+    observer.chmod(0o600)
+    junit = Path(junit).resolve() if junit is not None else output / "results.xml"
+    command = [sys.executable, "-m", "pytest", "-p", "_xorchestrate_calibration_observer",
+               "-q", "--tb=short", *selectors, "--junitxml=" + str(junit)]
+    record = run_command(command, root, output, timeout=timeout, environment={
+        "PYTHONPATH": str(checker) + os.pathsep + str(root), "PYTHONDONTWRITEBYTECODE": "1"})
+    record.update(xml=str(junit), stdout=str(output / "stdout.log"), stderr=str(output / "stderr.log"),
+                  assertion_observer_sha256=digest(observer.read_bytes()))
+    write_json(output / "command.json", record)
+    return record
+
+
+def calibrate(root, output, mutation, selectors, target, diagnostic, unaffected):
+    """Run a passing control and exactly one source mutation in isolated copies."""
+    output = Path(output).resolve()
+    identity, control, mutant = calibration_workspace(root, output, mutation)
     records, cases = {}, {}
     for name, directory in (("control", control), ("mutant", mutant)):
-        if name == "mutant":
-            source.write_text(original.replace(mutation["old"], mutation["new"], 1))
         junit = output / (name + ".xml")
-        command = [sys.executable, "-m", "pytest", "-p", "_xorchestrate_calibration_observer", "-q", *selectors, "--junitxml=" + str(junit)]
-        records[name] = run_command(command, directory, output / (name + "-run"), timeout=120,
-                                    environment={"PYTHONPATH": str(checker) + os.pathsep + str(directory)})
+        records[name] = observed_pytest(directory, output / (name + "-run"), selectors, junit=junit)
         cases[name] = junit_cases(junit) if junit.exists() else {}
     result = classify(cases["control"], cases["mutant"], target, diagnostic, unaffected,
                       control_exit=records["control"]["exit_status"], mutant_exit=records["mutant"]["exit_status"])
     result.update(candidate_sha256=identity["content_sha256"], mutation_sha256=digest(canonical(mutation)),
-                  assertion_observer_sha256=digest(observer.read_bytes()),
+                  assertion_observer_sha256=records["control"]["assertion_observer_sha256"],
                   commands=records, finished_at=now())
     write_json(output / "calibration.json", result)
     return result

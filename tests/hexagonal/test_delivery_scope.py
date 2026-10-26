@@ -10,18 +10,16 @@ from types import MethodType
 
 import pytest
 
-from tests.hexagonal.test_application import application
-from tests.hexagonal.test_delivery import Native
+from tests.hexagonal.support.application import application
+from tests.hexagonal.support.delivery import Native
 from xorchestrate.adapters.policies import RuleGuardrail
-from xorchestrate.adapters.storage import MemoryStore, SQLiteStore
 from xorchestrate.model import OrchestrationError
 
 CANARY = "F01_PRIVATE_RECORD_CANARY"
 
 
-@pytest.fixture(params=["memory", "sqlite"])
-def scope(request, tmp_path):
-    store = MemoryStore() if request.param == "memory" else SQLiteStore(str(tmp_path / "scope.sqlite3"))
+@pytest.fixture
+def scope(store):
     app = application(store, driver=Native())
     for actor in ("limited", "private-owner"):
         app.call("add_actor", {"actor_id": actor})
@@ -42,7 +40,6 @@ def scope(request, tmp_path):
         app.invoke_native("agent", "record_result", {"work_id": work["id"], "result": {"marker": marker}}, source)
         bundles.append({"work": work, "session": session, "message": message})
     yield app, bundles[0], bundles[1]
-    store.close()
 
 
 def restricted(app, public, *, extra=()):

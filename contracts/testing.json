@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "id": "xorchestrate.testing",
+  "roots": [
+    "tests/hexagonal"
+  ],
+  "families": {
+    "orchestration": {
+      "guarantee": "Work, actors and configured policies preserve owner intent, validation and application composition through injected ports.",
+      "modules": {
+        "tests/hexagonal/test_application.py": "contract",
+        "tests/hexagonal/test_policies.py": "contract",
+        "tests/hexagonal/test_schema.py": "contract",
+        "tests/hexagonal/test_composition.py": "composition"
+      }
+    },
+    "storage": {
+      "guarantee": "Replaceable stores provide equivalent record, transaction, concurrency and persistence behavior.",
+      "modules": {
+        "tests/hexagonal/test_storage.py": "adapter"
+      }
+    },
+    "capabilities": {
+      "guarantee": "Configured capability providers and evaluators preserve discovery, invocation, permissions and assessment evidence across process adapters.",
+      "modules": {
+        "tests/hexagonal/test_capabilities.py": "adapter",
+        "tests/hexagonal/test_evaluation.py": "adapter"
+      }
+    },
+    "delivery": {
+      "guarantee": "Queued messages, delivery attempts, retries and recovery preserve recipient scope, effect uncertainty and causal receipts.",
+      "modules": {
+        "tests/hexagonal/test_delivery.py": "contract",
+        "tests/hexagonal/test_delivery_adversarial.py": "contract",
+        "tests/hexagonal/test_delivery_scope.py": "contract"
+      }
+    },
+    "sessions": {
+      "guarantee": "Session adapters preserve native conversations, resume, concurrent progress and turn ownership through their declared protocols.",
+      "modules": {
+        "tests/hexagonal/test_sessions.py": "adapter",
+        "tests/hexagonal/test_native_sessions.py": "adapter",
+        "tests/hexagonal/test_claude_sessions.py": "adapter",
+        "tests/hexagonal/test_session_resume.py": "adapter",
+        "tests/hexagonal/test_claude_overlap.py": "adapter"
+      }
+    },
+    "bridge": {
+      "guarantee": "External session attachment and callbacks preserve connection leases, operation ownership and cleanup across process transports.",
+      "modules": {
+        "tests/hexagonal/test_external_bridge.py": "adapter",
+        "tests/hexagonal/test_bridge_turn_contracts.py": "adapter",
+        "tests/hexagonal/test_bridge_repair_calibration.py": "calibration"
+      }
+    },
+    "identity": {
+      "guarantee": "Independent evidence joins reject stale, contradictory or missing caller/session identity across interchangeable decoders and product receipts.",
+      "modules": {
+        "tests/hexagonal/test_identity_contracts.py": "contract",
+        "tests/hexagonal/test_callback_identity.py": "contract",
+        "tests/hexagonal/test_raw_evidence_calibration.py": "calibration"
+      }
+    },
+    "work-acceptance": {
+      "guarantee": "Completion and assessment require current, correctly bound evidence without losing owner goals or conflating turn completion with accepted work.",
+      "modules": {
+        "tests/hexagonal/test_work_acceptance.py": "contract",
+        "tests/hexagonal/test_assessment_inputs.py": "contract",
+        "tests/hexagonal/test_assessment_inspection_contract.py": "contract",
+        "tests/hexagonal/test_inspection_history.py": "contract",
+        "tests/hexagonal/test_completion_contracts.py": "contract",
+        "tests/hexagonal/test_completion_evidence.py": "contract",
+        "tests/hexagonal/test_aggregate_completion.py": "composition",
+        "tests/hexagonal/test_native_cache_currentness.py": "composition",
+        "tests/hexagonal/test_native_completion_state.py": "composition"
+      }
+    },
+    "state": {
+      "guarantee": "Configurable state definitions and shared transition enforcement preserve guards, versions, history and lifecycle integration.",
+      "modules": {
+        "tests/hexagonal/test_state_contracts.py": "contract",
+        "tests/hexagonal/test_state_definition.py": "contract",
+        "tests/hexagonal/test_state_activity.py": "contract",
+        "tests/hexagonal/test_state_application.py": "composition",
+        "tests/hexagonal/test_state_bridge.py": "adapter",
+        "tests/hexagonal/test_state_bridge_cli.py": "composition",
+        "tests/hexagonal/test_state_composition.py": "composition",
+        "tests/hexagonal/test_state_integration_contracts.py": "composition"
+      }
+    },
+    "transport": {
+      "guarantee": "Transport boundaries preserve framing, autonomous progress, cancellation, limits and cleanup while exposing explicit failures.",
+      "modules": {
+        "tests/hexagonal/test_jsonrpc.py": "adapter",
+        "tests/hexagonal/test_transports.py": "adapter",
+        "tests/hexagonal/test_transport_progress.py": "adapter"
+      }
+    },
+    "verification": {
+      "guarantee": "Independent checker observations, verdicts and fault attribution establish the selected candidate behavior without using product verdicts as the oracle.",
+      "modules": {
+        "tests/hexagonal/test_verification.py": "calibration",
+        "tests/hexagonal/test_verification_decoders.py": "adapter",
+        "tests/hexagonal/test_lifecycle_runner.py": "composition",
+        "tests/hexagonal/test_calibration_attribution.py": "calibration",
+        "tests/hexagonal/test_work_calibration.py": "calibration"
+      }
+    },
+    "architecture": {
+      "guarantee": "Deterministic dependency policy and planted violations preserve product, test-kit, scenario and evidence-decoder boundaries.",
+      "modules": {
+        "tests/hexagonal/test_architecture_enforcement.py": "framework",
+        "tests/hexagonal/test_architecture_diagnostics.py": "adapter",
+        "tests/hexagonal/test_architecture_cli.py": "composition",
+        "tests/hexagonal/test_testkit_boundaries.py": "framework",
+        "tests/hexagonal/test_security_lint.py": "calibration"
+      }
+    },
+    "live-acceptance": {
+      "guarantee": "The public-process MCP scenario retains native callback and persistence evidence and proves cleanup of owned terminal resources.",
+      "modules": {
+        "tests/hexagonal/test_acceptance_scenario.py": "composition",
+        "tests/hexagonal/test_acceptance_lifecycle.py": "adapter"
+      }
+    },
+    "framework": {
+      "guarantee": "Shared execution, resource ownership, configuration, evidence and collection guarantee complete declared plans and honest outcomes for every selected test family.",
+      "modules": {
+        "tests/hexagonal/test_testkit_core.py": "contract",
+        "tests/hexagonal/test_testkit_command.py": "adapter",
+        "tests/hexagonal/test_testkit_configuration.py": "adapter",
+        "tests/hexagonal/test_testkit_entrypoint.py": "composition",
+        "tests/hexagonal/test_testkit_integration.py": "composition",
+        "tests/hexagonal/test_acceptance_testkit.py": "composition",
+        "tests/hexagonal/test_test_framework.py": "framework"
+      }
+    }
+  }
+}

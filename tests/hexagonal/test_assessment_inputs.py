@@ -5,9 +5,8 @@ from copy import deepcopy
 
 import pytest
 
-from tests.hexagonal.test_work_acceptance import accept, issues, make_app, measure, setup_work
+from tests.hexagonal.support.work_acceptance import accept, issues, make_app, measure, setup_work
 from xorchestrate.adapters.acceptance import RequiredChecksAcceptance
-from xorchestrate.adapters.storage import MemoryStore, SQLiteStore
 from xorchestrate.composition import build
 from xorchestrate.model import Assessment, Conflict
 
@@ -29,15 +28,13 @@ class MaterialEvaluator:
         pass
 
 
-@pytest.fixture(params=["memory", "sqlite"])
-def configured(request, tmp_path):
-    store = MemoryStore() if request.param == "memory" else SQLiteStore(str(tmp_path / "state.sqlite"))
+@pytest.fixture
+def configured(store):
     evaluator = MaterialEvaluator()
     app = make_app(store, evaluator=evaluator, policy=RequiredChecksAcceptance({"require_assessment": True}))
     work, _ = setup_work(app, {"A": "Functional behavior plus current configured review"})
     measure(app, work)
     yield app, work, evaluator
-    store.close()
 
 
 def assess(app, work):

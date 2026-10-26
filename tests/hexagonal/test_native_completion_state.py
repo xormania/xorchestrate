@@ -1,46 +1,25 @@
 """Per-turn completion must preserve aggregate activity into saved-run checks."""
 import json
-import threading
-import time
+from functools import partial
 
 import pytest
 
 from scripts.verification.checker import VerificationFailure, check_case
 from scripts.verification.multi_harness import snapshot
 from scripts.verification.normalize import normalize
-from tests.hexagonal.test_native_cache_currentness import native_runtime, retry
+from tests.hexagonal.support.native import (
+    ControlledCallbacks as Holds,
+)
+from tests.hexagonal.support.native import (
+    application_message,
+    native_driver,
+    native_runtime,
+    retry,
+    wait_for,
+)
 from xorchestrate.delivery import view
-from xorchestrate.model import Capability
 
-
-class Holds:
-    def __init__(self):
-        self.entered = {name: threading.Event() for name in ("A", "B")}
-        self.release = {name: threading.Event() for name in ("A", "B")}
-        self.finished = []
-
-    def discover(self):
-        return [Capability("hold", "Hold a callback", {"type": "object"})]
-
-    def invoke(self, name, arguments, context):
-        label = arguments["nonce"]
-        self.entered[label].set()
-        assert self.release[label].wait(10), "fixture must release its callback"
-        self.finished.append(label)
-        return {"released": label}
-
-    def close(self):
-        for event in self.release.values():
-            event.set()
-
-
-def wait(predicate):
-    deadline = time.monotonic() + 8
-    while time.monotonic() < deadline:
-        if predicate():
-            return
-        time.sleep(.01)
-    raise AssertionError("native completion schedule did not complete")
+wait = partial(wait_for, timeout=8, message='native completion schedule did not complete')
 
 
 def completion_events(raw):
@@ -56,7 +35,7 @@ def assert_completion_matches_state(raw, status):
 @pytest.mark.parametrize("protocol", ["codex", "claude", "grok"])
 def test_actual_completion_snapshot_keeps_held_callback_visible_to_checker(protocol, tmp_path):
     with native_runtime(protocol, tmp_path) as (app, adapter, work, basis, actor, send, rejected):
-        holds = Holds()
+        holds = Holds(timeout=10)
         app.providers["holds"] = holds
         with app.store.transaction() as tx:
             session = view(tx.list("session")[0])
@@ -76,8 +55,7 @@ def test_actual_completion_snapshot_keeps_held_callback_visible_to_checker(proto
         try:
             for label in ("A", "B"):
                 arguments = {"capability": "holds/hold", "arguments": {"nonce": label}}
-                body = {"application_call": {"action": "invoke", "arguments": arguments}} if protocol == "claude" else {
-                    "text": json.dumps({"action": "tool", "name": "invoke", "arguments": arguments})}
+                body = application_message(protocol, "invoke", arguments)
                 retry(app, "send_session", {"session_id": session["id"], "message": body, "idempotency_key": "hold-" + label})
                 assert holds.entered[label].wait(4)
             _, before, run = measured("before-stops")
@@ -126,12 +104,7 @@ def test_actual_completion_snapshot_keeps_held_callback_visible_to_checker(proto
 @pytest.mark.parametrize("message,expected_kind,expected_state", [
     ("completed", "native_completion", "idle"), ("exit", "native_completion_unknown", "unknown")])
 def test_actual_acp_completion_observation_follows_pending_transition(message, expected_kind, expected_state, tmp_path):
-    import sys
-    from pathlib import Path
-
-    from xorchestrate.adapters.sessions import ACPSessionDriver
-    fixture = Path(__file__).parent / "fixtures" / "session_server.py"
-    driver = ACPSessionDriver({"command": [sys.executable, str(fixture), "acp"], "timeout": 3})
+    driver = native_driver("acp", fixture="session", timeout=3)
     records = []
     def observe(context, event):
         if event["kind"] in {"native_completion", "native_completion_unknown"}:
