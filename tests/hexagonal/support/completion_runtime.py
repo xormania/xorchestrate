@@ -5,8 +5,6 @@ record layout, and the independently replaceable verification subject.
 """
 import hashlib
 import json
-import sys
-import time
 from contextlib import ExitStack, contextmanager
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -16,32 +14,18 @@ from uuid import uuid4
 
 from scripts.verification.checker import verify
 from tests.hexagonal.contracts.completion import CompletionObservation
+from tests.hexagonal.support.native import application_message, peer_options, wait_for
+from tests.hexagonal.support.native import retry as call
 from xorchestrate.adapters.bridge import SessionBridgeHost
 from xorchestrate.adapters.claude import ClaudeSessionDriver
 from xorchestrate.adapters.grok import GrokSessionDriver
 from xorchestrate.adapters.sessions import CodexSessionDriver
 from xorchestrate.composition import build
-from xorchestrate.model import Capability, Conflict
-
-FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
+from xorchestrate.model import Capability
 
 
 def await_condition(predicate, reason):
-    deadline = time.monotonic() + 12
-    while time.monotonic() < deadline:
-        if predicate():
-            return
-        time.sleep(.01)
-    raise AssertionError("fixture synchronization: " + reason)
-
-
-def call(app, action, arguments):
-    for attempt in range(8):
-        try:
-            return app.call(action, arguments)
-        except Conflict as error:
-            if not error.details.get("retry_safe") or attempt == 7:
-                raise
+    return wait_for(predicate, timeout=12, message="fixture synchronization: " + reason)
 
 
 def snapshot(app):
@@ -86,13 +70,11 @@ class ControlledCalls:
 
 class NativePeer:
     def message(self, label, gates):
-        body = {"action": "tool", "name": "invoke", "arguments": {
-            "capability": "controlled/hold", "arguments": {"label": label}}, **gates}
-        return {"text": json.dumps(body)}
+        return application_message(self.name, "invoke", {
+            "capability": "controlled/hold", "arguments": {"label": label}}, **gates)
 
     def options(self, directory):
-        return {"command": [sys.executable, str(FIXTURES / "native_progress_peer.py"), self.name],
-                "timeout": 10, "application_tools": True}
+        return peer_options(self.name, timeout=10, application_tools=True)
 
     def terminal(self, row):
         return row["observation"].get("kind") == "native_completion"
@@ -119,13 +101,8 @@ class ClaudePeer(NativePeer):
     driver = ClaudeSessionDriver
 
     def options(self, directory):
-        return {"command": [sys.executable, str(FIXTURES / "claude_native.py")],
-                "env": {"CLAUDE_STATE_DIR": str(directory / "claude")},
-                "timeout": 10, "application_tools": True, "terminal": "discard", "startup_timeout": 10}
-
-    def message(self, label, gates):
-        return {"application_call": {"action": "invoke", "arguments": {
-            "capability": "controlled/hold", "arguments": {"label": label}}}, **gates}
+        return peer_options(self.name, state=directory / "claude", timeout=10,
+                            application_tools=True, startup_timeout=10)
 
     def terminal(self, row):
         return row["observation"].get("kind") == "turn_completed"

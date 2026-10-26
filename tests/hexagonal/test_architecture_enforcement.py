@@ -220,6 +220,38 @@ def test_invalid_python_is_an_extraction_error_not_a_dependency_detection(tmp_pa
     require_finding(report, "extraction", "source.readable", "core/service.py")
 
 
+def test_declared_literal_boundary_follows_allowed_helpers_and_ignores_docstrings(tmp_path):
+    profile = subject(tmp_path)
+    profile["roles"]["core"]["forbidden_literals"] = ["transport_field"]
+    profile["roles"]["core"]["allowed_roles"].append("adapters")
+    write(tmp_path, "parcels", "core/service.py", '"""transport_field"""\nfrom ..adapters.memory import deliver\n')
+    helper = write(tmp_path, "parcels", "adapters/memory.py",
+                   '"""transport_field"""\ndef deliver(store, key):\n    """transport_field"""\n    return store.get(key)\n')
+    assert check(tmp_path, profile)["status"] == "pass"
+    helper.write_text("def deliver(store, key):\n    return store.get('transport_field')\n")
+    report = check(tmp_path, profile)
+    require_finding(report, "literal", "literals.allowed", "adapters/memory.py")
+    assert any(item.get("chain") == ["parcels.core.service", "parcels.adapters.memory"]
+               and item.get("value") == "transport_field" for item in report["findings"])
+
+
+def test_same_literal_is_legal_in_its_declared_adapter_role(tmp_path):
+    profile = subject(tmp_path)
+    profile["roles"]["core"]["forbidden_literals"] = ["transport_field"]
+    write(tmp_path, "parcels", "adapters/memory.py",
+          "class MemoryStore:\n    def get(self, key):\n        return {'transport_field': key}\n")
+    assert check(tmp_path, profile)["status"] == "pass"
+
+
+@pytest.mark.parametrize("value", ["transport_field", [None], {"transport_field": True}])
+def test_invalid_literal_policy_is_configuration_error(tmp_path, value):
+    profile = subject(tmp_path)
+    profile["roles"]["core"]["forbidden_literals"] = value
+    report = check(tmp_path, profile)
+    assert report["status"] == "error"
+    require_finding(report, "configuration", "profile.valid")
+
+
 def test_source_inspection_never_executes_the_subject(tmp_path):
     profile = subject(tmp_path)
     marker = tmp_path / "executed"

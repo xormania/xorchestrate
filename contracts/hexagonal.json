@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "id": "xorchestrate.hexagonal",
-  "version": "1",
-  "description": "Current application-owned ports, infrastructure-independent core and replaceable adapters. Composition is the trusted factory boundary. Source dependencies are distinct from runtime calls through ports.",
-  "source_roots": ["xorchestrate"],
+  "version": "3",
+  "description": "Current application-owned ports, infrastructure-independent core and replaceable adapters. Composition is the trusted factory boundary. Source dependencies are distinct from runtime calls through ports. Active live-test infrastructure follows the same dependency direction: generic test-kit ports/core, concrete execution adapters, independent evidence predicates and explicit runner composition. Shared test contracts remain independent of their subjects; support adapters own fixtures, and collected tests cannot import other collected tests.",
+  "source_roots": ["xorchestrate", "scripts/testkit", "scripts/acceptance", "scripts/verification", "scripts/architecture", "tests"],
   "roles": {
     "foundation": {
       "modules": ["xorchestrate", "xorchestrate.model", "xorchestrate.ports"],
@@ -35,6 +35,207 @@
       "modules": ["xorchestrate.__main__", "xorchestrate.bridge", "xorchestrate.cli", "xorchestrate.mcp"],
       "allowed_roles": ["foundation", "core", "adapters", "composition", "entrypoints"],
       "allowed_external": ["stdlib:*", "jsonschema", "referencing"],
+      "allow_dynamic": true
+    },
+    "testkit_foundation": {
+      "modules": ["scripts.testkit", "scripts.testkit.model", "scripts.testkit.ports"],
+      "allowed_roles": ["testkit_foundation"],
+      "allowed_external": ["__future__", "collections", "contextlib", "copy", "dataclasses", "datetime", "enum", "functools", "hashlib", "itertools", "json", "math", "re", "typing"],
+      "allow_dynamic": false,
+      "forbidden_calls": ["open", "input", "print"]
+    },
+    "testkit_core": {
+      "modules": ["scripts.testkit.core", "scripts.testkit.catalog"],
+      "allowed_roles": ["testkit_foundation", "testkit_core"],
+      "allowed_external": ["__future__", "collections", "contextlib", "copy", "dataclasses", "datetime", "enum", "functools", "hashlib", "itertools", "json", "math", "re", "typing"],
+      "allow_dynamic": false,
+      "forbidden_calls": ["open", "input", "print"]
+    },
+    "testkit_adapters": {
+      "modules": ["scripts.testkit.adapters", "scripts.testkit.adapters.command", "scripts.testkit.adapters.evidence", "scripts.testkit.adapters.clock", "scripts.testkit.adapters.tmux"],
+      "allowed_roles": ["testkit_foundation", "testkit_core", "testkit_adapters"],
+      "allowed_external": ["stdlib:*"],
+      "allow_dynamic": true
+    },
+    "testkit_configuration": {
+      "modules": ["scripts.testkit.adapters.configuration"],
+      "allowed_roles": ["testkit_foundation", "testkit_core", "testkit_adapters", "testkit_configuration", "foundation", "core", "adapters", "composition"],
+      "allowed_external": ["stdlib:*", "jsonschema", "referencing"],
+      "allow_dynamic": true
+    },
+    "verification_foundation": {
+      "modules": ["scripts.verification", "scripts.verification.model", "scripts.verification.ports"],
+      "allowed_roles": ["verification_foundation"],
+      "allowed_external": ["__future__", "collections", "contextlib", "copy", "dataclasses", "datetime", "enum", "functools", "hashlib", "itertools", "json", "math", "re", "typing"],
+      "allow_dynamic": false,
+      "forbidden_calls": ["open", "input", "print"],
+      "forbidden_literals": ["codex", "claude", "grok", "turn/started", "turn/completed", "session/update", "_x.ai/session/prompt_complete", "_x.ai/interject", "promptId", "sessionUpdate", "threadId", "turnId", "claude/PreToolUse", "grok/session/update", "codex/item/tool/call"]
+    },
+    "verification_core": {
+      "modules": ["scripts.verification.core", "scripts.verification.evidence"],
+      "allowed_roles": ["verification_foundation", "verification_core"],
+      "allowed_external": ["__future__", "collections", "contextlib", "copy", "dataclasses", "datetime", "enum", "functools", "hashlib", "itertools", "json", "math", "re", "typing"],
+      "allow_dynamic": false,
+      "forbidden_calls": ["open", "input", "print"],
+      "forbidden_literals": ["codex", "claude", "grok", "turn/started", "turn/completed", "session/update", "_x.ai/session/prompt_complete", "_x.ai/interject", "promptId", "sessionUpdate", "threadId", "turnId", "claude/PreToolUse", "grok/session/update", "codex/item/tool/call"]
+    },
+    "verification_decoders": {
+      "modules": ["scripts.verification.adapters", "scripts.verification.adapters.native"],
+      "allowed_roles": ["verification_foundation", "verification_decoders"],
+      "allowed_external": ["__future__", "collections", "contextlib", "copy", "dataclasses", "datetime", "enum", "functools", "hashlib", "itertools", "json", "math", "re", "typing"],
+      "allow_dynamic": false,
+      "forbidden_calls": ["open", "input", "print"]
+    },
+    "verification_composition": {
+      "modules": ["scripts.verification.checker", "scripts.verification.normalize"],
+      "allowed_roles": ["verification_foundation", "verification_core", "verification_decoders", "verification_composition"],
+      "allowed_external": ["__future__", "collections", "contextlib", "copy", "dataclasses", "datetime", "enum", "functools", "hashlib", "itertools", "json", "math", "re", "typing"],
+      "allow_dynamic": false,
+      "forbidden_calls": ["open", "input", "print"]
+    },
+    "verification_capture": {
+      "modules": ["scripts.verification.capture"],
+      "allowed_roles": ["verification_foundation", "verification_capture", "testkit_foundation", "testkit_core", "testkit_adapters"],
+      "allowed_external": ["stdlib:*"],
+      "allow_dynamic": true
+    },
+    "verification_fixture": {
+      "modules": ["scripts.verification.fixture"],
+      "allowed_roles": ["foundation", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "verification_fixture"],
+      "allowed_external": ["stdlib:*"],
+      "allow_dynamic": false
+    },
+    "verification_calibration": {
+      "modules": ["scripts.verification.calibration", "scripts.verification.pytest_calibration"],
+      "allowed_roles": ["verification_foundation", "verification_calibration"],
+      "allowed_external": ["stdlib:*", "pytest"],
+      "allow_dynamic": true
+    },
+    "verification_runner": {
+      "modules": ["scripts.verification.multi_harness", "scripts.verification.lifecycle"],
+      "allowed_roles": ["foundation", "core", "adapters", "composition", "entrypoints", "testkit_foundation", "testkit_core", "testkit_adapters", "testkit_configuration", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "verification_capture", "verification_runner"],
+      "allowed_external": ["stdlib:*", "jsonschema", "referencing"],
+      "allow_dynamic": true
+    },
+    "verification_entrypoints": {
+      "modules": ["scripts.verification.__main__", "scripts.verification.calibrate_suite", "scripts.verification.calibrate_state"],
+      "allowed_roles": ["verification_foundation", "verification_core", "verification_decoders", "verification_composition", "testkit_foundation", "testkit_core", "testkit_adapters", "testkit_configuration", "verification_capture", "verification_calibration", "verification_entrypoints"],
+      "allowed_external": ["stdlib:*", "pytest"],
+      "allow_dynamic": true
+    },
+    "acceptance_foundation": {
+      "modules": ["scripts.acceptance"],
+      "allowed_roles": ["acceptance_foundation"],
+      "allowed_external": ["__future__", "collections", "contextlib", "copy", "dataclasses", "datetime", "enum", "functools", "hashlib", "itertools", "json", "math", "re", "typing"],
+      "allow_dynamic": false,
+      "forbidden_calls": ["open", "input", "print"]
+    },
+    "acceptance_fixture": {
+      "modules": ["scripts.acceptance.peers"],
+      "allowed_roles": ["acceptance_foundation", "acceptance_fixture"],
+      "allowed_external": ["stdlib:*"],
+      "allow_dynamic": false
+    },
+    "acceptance_lifecycle": {
+      "modules": ["scripts.acceptance.lifecycle"],
+      "allowed_roles": ["acceptance_foundation", "acceptance_lifecycle", "testkit_foundation", "testkit_core", "testkit_adapters"],
+      "allowed_external": ["stdlib:*"],
+      "allow_dynamic": true
+    },
+    "acceptance_runner": {
+      "modules": ["scripts.acceptance.scenario"],
+      "allowed_roles": ["foundation", "core", "adapters", "composition", "entrypoints", "testkit_foundation", "testkit_core", "testkit_adapters", "testkit_configuration", "acceptance_foundation", "acceptance_fixture", "acceptance_runner"],
+      "allowed_external": ["stdlib:*", "jsonschema", "referencing"],
+      "allow_dynamic": true
+    },
+    "acceptance_entrypoints": {
+      "modules": ["scripts.acceptance.__main__"],
+      "allowed_roles": ["acceptance_foundation", "acceptance_lifecycle", "acceptance_entrypoints", "testkit_foundation", "testkit_core", "testkit_adapters"],
+      "allowed_external": ["stdlib:*"],
+      "allow_dynamic": true
+    },
+    "testkit_composition": {
+      "modules": ["scripts.testkit.composition"],
+      "allowed_roles": ["foundation", "core", "adapters", "composition", "testkit_foundation", "testkit_core", "testkit_adapters", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "testkit_composition", "testkit_pytest"],
+      "allowed_external": ["stdlib:*", "jsonschema", "referencing", "pytest"],
+      "allow_dynamic": true
+    },
+    "testkit_entrypoints": {
+      "modules": ["scripts.testkit.__main__"],
+      "allowed_roles": ["foundation", "core", "adapters", "composition", "testkit_foundation", "testkit_core", "testkit_adapters", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "testkit_composition", "testkit_entrypoints", "testkit_pytest"],
+      "allowed_external": ["stdlib:*", "jsonschema", "referencing", "pytest"],
+      "allow_dynamic": true
+    },
+    "testkit_pytest": {
+      "modules": ["scripts.testkit.adapters.pytest_plugin"],
+      "allowed_roles": ["testkit_foundation", "testkit_core", "testkit_adapters", "testkit_pytest"],
+      "allowed_external": ["stdlib:*", "pytest"],
+      "allow_dynamic": true
+    },
+    "architecture_foundation": {
+      "modules": ["scripts.architecture"],
+      "allowed_roles": ["architecture_foundation"],
+      "allowed_external": [],
+      "allow_dynamic": false,
+      "forbidden_calls": ["open", "input", "print"]
+    },
+    "architecture_core": {
+      "modules": ["scripts.architecture.core"],
+      "allowed_roles": ["architecture_foundation", "architecture_core"],
+      "allowed_external": ["__future__", "collections", "fnmatch", "hashlib", "json"],
+      "allow_dynamic": false,
+      "forbidden_calls": ["open", "input", "print"]
+    },
+    "architecture_adapters": {
+      "modules": ["scripts.architecture.python", "scripts.architecture.diagnostics"],
+      "allowed_roles": ["architecture_foundation", "architecture_core", "architecture_adapters", "foundation", "core", "adapters"],
+      "allowed_external": ["stdlib:*", "jsonschema", "referencing"],
+      "allow_dynamic": true
+    },
+    "architecture_entrypoints": {
+      "modules": ["scripts.architecture.__main__"],
+      "allowed_roles": ["architecture_foundation", "architecture_core", "architecture_adapters", "architecture_entrypoints", "foundation", "core", "adapters"],
+      "allowed_external": ["stdlib:*", "jsonschema", "referencing"],
+      "allow_dynamic": true
+    },
+    "test_contracts": {
+      "modules": ["tests.hexagonal.contracts.*"],
+      "allowed_roles": ["test_contracts"],
+      "allowed_external": ["__future__", "collections", "contextlib", "copy", "dataclasses", "datetime", "enum", "functools", "hashlib", "itertools", "json", "math", "re", "typing", "pytest"],
+      "allow_dynamic": false,
+      "forbidden_calls": ["open", "input", "print"],
+      "forbidden_literals": ["codex", "claude", "grok", "turn/started", "turn/completed", "session/update", "_x.ai/session/prompt_complete", "_x.ai/interject", "promptId", "sessionUpdate", "threadId", "turnId", "claude/PreToolUse", "grok/session/update", "codex/item/tool/call"]
+    },
+    "test_fixtures": {
+      "modules": ["tests.hexagonal.fixtures.*"],
+      "allowed_roles": ["foundation", "test_fixtures"],
+      "allowed_external": ["stdlib:*", "controlled_gates"],
+      "allow_dynamic": false,
+      "description": "Standalone protocol peer scripts use their adjacent controlled_gates module when launched directly; all fixture sources are examined in this role."
+    },
+    "test_support": {
+      "modules": ["tests.hexagonal.support.*"],
+      "allowed_roles": ["foundation", "core", "adapters", "composition", "entrypoints", "testkit_foundation", "testkit_core", "testkit_adapters", "testkit_configuration", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "verification_capture", "verification_fixture", "verification_calibration", "verification_runner", "verification_entrypoints", "acceptance_foundation", "acceptance_fixture", "acceptance_lifecycle", "acceptance_runner", "acceptance_entrypoints", "testkit_composition", "testkit_entrypoints", "architecture_foundation", "architecture_core", "architecture_adapters", "architecture_entrypoints", "test_contracts", "test_fixtures", "test_support"],
+      "allowed_external": ["stdlib:*", "pytest", "jsonschema", "referencing", "controlled_gates"],
+      "allow_dynamic": true
+    },
+    "test_calibration": {
+      "modules": ["tests.hexagonal.calibrate_work_acceptance"],
+      "allowed_roles": ["foundation", "core", "adapters", "composition", "entrypoints", "testkit_foundation", "testkit_core", "testkit_adapters", "testkit_configuration", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "verification_capture", "verification_fixture", "verification_calibration", "verification_runner", "verification_entrypoints", "acceptance_foundation", "acceptance_fixture", "acceptance_lifecycle", "acceptance_runner", "acceptance_entrypoints", "testkit_composition", "testkit_entrypoints", "architecture_foundation", "architecture_core", "architecture_adapters", "architecture_entrypoints", "test_contracts", "test_fixtures", "test_support", "test_calibration"],
+      "allowed_external": ["stdlib:*", "pytest", "jsonschema", "referencing", "controlled_gates"],
+      "allow_dynamic": true
+    },
+    "test_collection": {
+      "modules": ["tests.hexagonal.test_*"],
+      "allowed_roles": ["foundation", "core", "adapters", "composition", "entrypoints", "testkit_foundation", "testkit_core", "testkit_adapters", "testkit_configuration", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "verification_capture", "verification_fixture", "verification_calibration", "verification_runner", "verification_entrypoints", "acceptance_foundation", "acceptance_fixture", "acceptance_lifecycle", "acceptance_runner", "acceptance_entrypoints", "testkit_composition", "testkit_entrypoints", "testkit_pytest", "architecture_foundation", "architecture_core", "architecture_adapters", "architecture_entrypoints", "test_contracts", "test_fixtures", "test_support", "test_calibration"],
+      "allowed_external": ["stdlib:*", "pytest", "jsonschema", "referencing", "controlled_gates"],
+      "allow_dynamic": true,
+      "description": "Test modules compose contracts and fixture adapters. They are deliberately excluded from their own allowed roles, so no collected test may depend on another collected module."
+    },
+    "test_pytest_wiring": {
+      "modules": ["tests.conftest", "tests.hexagonal.conftest"],
+      "allowed_roles": ["foundation", "core", "adapters", "composition", "entrypoints", "testkit_foundation", "testkit_core", "testkit_adapters", "testkit_configuration", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "verification_capture", "verification_fixture", "verification_calibration", "verification_runner", "verification_entrypoints", "acceptance_foundation", "acceptance_fixture", "acceptance_lifecycle", "acceptance_runner", "acceptance_entrypoints", "testkit_composition", "testkit_entrypoints", "testkit_pytest", "architecture_foundation", "architecture_core", "architecture_adapters", "architecture_entrypoints", "test_contracts", "test_fixtures", "test_support", "test_calibration", "test_pytest_wiring"],
+      "allowed_external": ["stdlib:*", "pytest", "jsonschema", "referencing", "controlled_gates"],
       "allow_dynamic": true
     }
   }

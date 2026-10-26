@@ -41,7 +41,7 @@ def validate_profile(profile):
     for name, role in roles.items():
         if not isinstance(name, str) or not name or not isinstance(role, dict):
             raise ValueError("Roles must map nonempty names to objects.")
-        if role.keys() - {"modules", "allowed_roles", "allowed_external", "allow_dynamic", "forbidden_calls", "description"}:
+        if role.keys() - {"modules", "allowed_roles", "allowed_external", "allow_dynamic", "forbidden_calls", "forbidden_literals", "description"}:
             raise ValueError(f"Unknown fields in role {name}.")
         for field in ("modules", "allowed_roles", "allowed_external"):
             values = role.get(field)
@@ -58,6 +58,9 @@ def validate_profile(profile):
         calls = role.get("forbidden_calls", [])
         if not isinstance(calls, list) or any(not isinstance(call, str) or not call for call in calls):
             raise ValueError(f"{name}.forbidden_calls must be a list of nonempty strings.")
+        literals = role.get("forbidden_literals", [])
+        if not isinstance(literals, list) or any(not isinstance(value, str) for value in literals):
+            raise ValueError(f"{name}.forbidden_literals must be a list of strings.")
 
 
 def _allowed_external(module, patterns, stdlib_modules):
@@ -70,8 +73,9 @@ def _allowed_external(module, patterns, stdlib_modules):
 def evaluate(profile, modules, *, stdlib_modules=(), extraction_findings=()):
     """Evaluate extracted modules; return a reproducible, JSON-compatible report.
 
-    Each module record contains path, sha256, imports (target/line/kind), and
-    dynamic operations (name/line). Inputs are observations, never imported code.
+    Each module record contains path, sha256, imports (target/line/kind), named
+    operations (name/line), and string literals (value/line). Inputs are source
+    observations, never imported code; docstrings are not behavioral literals.
     """
     findings = list(extraction_findings)
     try:
@@ -133,6 +137,13 @@ def evaluate(profile, modules, *, stdlib_modules=(), extraction_findings=()):
                 continue
             visited.add(name)
             record = modules[name]
+            for literal in record.get("literals", ()):
+                if literal["value"] in rule.get("forbidden_literals", ()):
+                    key = ("literal", origin_role, name, literal["value"], literal["line"])
+                    if key not in emitted:
+                        emitted.add(key)
+                        finding("literal", "literals.allowed", "Literal is prohibited in this architectural role.",
+                                name, literal["line"], chain, role=origin_role, value=literal["value"])
             for operation in record.get("calls", ()):
                 if operation["name"] in rule.get("forbidden_calls", ()):
                     key = ("operation", origin_role, name, operation["name"], operation["line"])
@@ -191,6 +202,6 @@ def evaluate(profile, modules, *, stdlib_modules=(), extraction_findings=()):
                          "unclassified": sum(f["kind"] == "unclassified" for f in findings),
                          "ambiguous": sum(f["kind"] == "ambiguous" for f in findings),
                          "dynamic_operations": dynamic_count, "external_dependencies": sorted(external),
-                         "limitations": ["Static Python imports and named dynamic-loading operations only; not a hostile-code sandbox.",
+                         "limitations": ["Static Python imports, named operations and declared string literals only; not a hostile-code sandbox.",
                                          "External package internals and runtime-selected implementations are not traversed.",
                                          "Behavioral port contracts and composition require executable tests."]}}

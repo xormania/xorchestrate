@@ -1,39 +1,19 @@
 """Active native adapters across real process/MCP boundaries; no vendor inference."""
 import json
-import sys
 import threading
 import time
-from pathlib import Path
+from functools import partial
 
 import pytest
 
-from xorchestrate.adapters.grok import GrokSessionDriver
+from tests.hexagonal.support.native import native_driver, peer_options, wait_for
 from xorchestrate.adapters.sessions import CodexSessionDriver
-from xorchestrate.model import Capability, Conflict, OrchestrationError
+from xorchestrate.model import Capability, OrchestrationError
 
-PEER = Path(__file__).parent / 'fixtures' / 'native_progress_peer.py'
-
-
-def eventually(predicate, timeout=4):
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        try:
-            if predicate():
-                return
-        except Conflict as error:
-            # Public reads reauthorize a snapshot; concurrent callback evidence
-            # may invalidate it before commit. Only an explicit safe retry is
-            # part of this polling schedule, never an uncertain effect/error.
-            if not error.details.get("retry_safe"):
-                raise
-        time.sleep(.01)
-    assert predicate(), 'expected native observation did not arrive'
-
-
-def driver(protocol, **options):
-    cls = CodexSessionDriver if protocol == 'codex' else GrokSessionDriver
-    return cls({'command': [sys.executable, str(PEER), protocol], 'timeout': 5, 'callback_timeout': 10,
-                'turn_timeout': 10, **options})
+# These scenarios declare operational bounds; peer launch and observation
+# scheduling are shared with the other native adapter families.
+driver = partial(native_driver, callback_timeout=10, turn_timeout=10)
+eventually = partial(wait_for, timeout=4)
 
 
 @pytest.mark.parametrize('protocol', ['codex', 'grok'])
@@ -165,7 +145,7 @@ def test_native_callback_persists_trusted_evidence_through_active_composition(tm
     from xorchestrate.composition import build
     config = {'store': {'adapter': 'sqlite', 'options': {'path': str(tmp_path / 'state.sqlite')}},
               'sessions': {'native': {'adapter': protocol, 'options': {
-                  'command': [sys.executable, str(PEER), protocol], 'timeout': 5,
+                  **peer_options(protocol),
                   'application_tools': True, 'resume_supported': True}}}}
     with build(config) as runtime:
         app = runtime.application
@@ -354,7 +334,7 @@ def test_unknown_prompt_completion_is_not_idle_and_interjections_are_bounded():
 
 def test_material_configuration_identity_includes_protocol_contract():
     from xorchestrate.adapters.sessions import ACPSessionDriver
-    options = {'command': [sys.executable, str(PEER), 'codex'], 'timeout': 5}
+    options = peer_options('codex')
     codex = CodexSessionDriver(options)
     acp = ACPSessionDriver(options)
     operational = CodexSessionDriver({**options, 'timeout': 9})

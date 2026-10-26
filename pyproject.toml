@@ -17,3 +17,7 @@ xorchestrate = "xorchestrate.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["xorchestrate*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/hexagonal"]
+python_files = ["test_*.py", "*_test.py"]

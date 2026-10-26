@@ -10,74 +10,9 @@ from copy import deepcopy
 
 import pytest
 
-from scripts.verification.capture import canonical, digest
 from scripts.verification.checker import verify
 from scripts.verification.normalize import normalize
-
-
-def raw_exchange(kind="exchange"):
-    peers = ("codex", "grok")
-    sessions = {p: {"native_id": p + "-native", "session_id": p + "-app", "incarnation": p + "-epoch"}
-                for p in peers}
-    raw = {"observations": [], "messages": [], "evidence": [], "attempts": [],
-           "sessions": [{"id": sessions[peer]["session_id"], "work_id": "work", "actor_id": peer,
-                         "backend": sessions[peer]} for peer in peers]}
-    sequence = 0
-
-    def at():
-        nonlocal sequence
-        sequence += 1
-        return f"2026-10-24T00:00:{sequence:02}+00:00"
-
-    def call(peer, action, arguments, result=None, saved=None):
-        call_id = "call-" + str(sequence)
-        identity = {**sessions[peer], "call_id": call_id, "action": action}
-        def observation(kind, payload):
-            stamp = at()
-            raw["observations"].append({"id": kind + call_id, "session_id": sessions[peer]["session_id"],
-                "origin": "adapter", "stale": False, "created_at": stamp, "work_id": "work",
-                "observation": {**identity, "arguments": deepcopy(arguments), **payload}})
-        observation("native", {"kind": "native_tool_call", "source": peer})
-        arguments = {**arguments, "work_id": "work"}
-        observation("requested", {"kind": "application_tool", "phase": "requested"})
-        if saved is not None:
-            saved["created_at"] = at()
-        observation("completed", {"kind": "application_tool", "phase": "completed", "result": deepcopy(result or {})})
-
-    def message(peer, target, identifier, memory):
-        body = {"verification": {"case_id": "case", "kind": identifier, "nonce": "nonce", "memory": memory}}
-        saved = {"id": identifier, "work_id": "work", "sender": peer,
-                 "destination": {"actor": target}, "recipients": [target], "body": body}
-        raw["messages"].append(saved)
-        call(peer, "send_message", {"destination": saved["destination"], "body": body}, {"message": {"id": identifier}}, saved)
-        raw["attempts"].append({"id": "attempt-" + identifier, "message_id": identifier, "recipient": target,
-            **sessions[target], "status": "submitted", "sequence": 1, "origin": "adapter",
-            "submission": {"submitted": True}, "created_at": at(), "finished_at": at()})
-
-    message("codex", "grok", "challenge", "")
-    message("grok", "codex", "reply", "private")
-    saved = {"id": "receipt", "work_id": "work", "created_by": "codex",
-             "source": {"type": "caller", "actor": "codex"}, "result": {"verification": {"phase": "received", "case_id": "case",
-        "nonce": "nonce", "memory": "private", "peer": "grok"}}}
-    raw["evidence"].append(saved)
-    call("codex", "record_result", {"result": saved["result"]}, {"evidence": {"id": "receipt"}}, saved)
-    providers = []
-    if kind == "work_exchange":
-        providers = [{"event": "work_started", "peer": "grok", "at": "2026-10-24T00:00:00+00:00"},
-                     {"event": "work_completed", "peer": "grok", "at": "2026-10-24T00:00:59+00:00"}]
-    if kind == "busy":
-        call("grok", "invoke", {"capability": "verification/hold", "arguments": {"case_id": "case"}})
-        providers = [{"event": "hold_started", "peer": "grok", "case_id": "case", "at": "2026-10-24T00:00:00+00:00"},
-                     {"event": "hold_finished", "peer": "grok", "case_id": "case", "released": True,
-                      "at": "2026-10-24T00:00:07+00:00"}]
-    case = {"id": "case", "source": "codex", "target": "grok", "kind": kind}
-    criteria = {"required_cases": [case, {"id": "audit", "kind": "audit"}]}
-    fixture = {"batches": []}
-    bindings = {"criteria_sha256": digest(canonical(criteria)), "fixture_sha256": digest(canonical(fixture))}
-    run = {"raw_records": raw, "provider_events": providers, "mode": "protocol-fixture", "sessions": sessions,
-           "nonces": {"case": "nonce"}, "memories": {"grok": "private"}, "executed_cases": ["case", "audit"],
-           "bindings": bindings}
-    return run, criteria, bindings, fixture
+from tests.hexagonal.support.raw_evidence import raw_exchange
 
 
 def check(inputs):

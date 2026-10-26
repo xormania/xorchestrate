@@ -9,102 +9,16 @@ import pytest
 
 import scripts.verification.checker as checker
 from scripts.verification.normalize import normalize
-from tests.hexagonal.test_raw_evidence_calibration import raw_exchange
+from tests.hexagonal.contracts.callback_identity import CALLBACK_JOIN_SCENARIOS, CALLBACK_LIFECYCLE_SCENARIOS
+from tests.hexagonal.contracts.identity import assert_identity_scenario
+from tests.hexagonal.support.callback_identity import RawCallbackEvidence, callback
+from tests.hexagonal.support.raw_evidence import lifecycle_input, raw_exchange
 
 
 def assert_callback_rejected(inputs, diagnostic="callback_identity_mismatch"):
     result = checker.verify(*inputs)
     assert result["status"] == "incomplete", "IV03_CALLBACK_IDENTITY_MUST_BE_BOUND"
     assert any(case.get("assertion") == diagnostic for case in result["cases"]), result
-
-
-def callback(inputs, phase, action):
-    return next(record for record in inputs[0]["raw_records"]["observations"]
-                if record["observation"].get("phase") == phase
-                and record["observation"].get("action") == action)
-
-
-@pytest.mark.parametrize("action", ["send_message", "record_result", "invoke"])
-@pytest.mark.parametrize("phase", ["requested", "completed"])
-@pytest.mark.parametrize("field", ["native_id", "incarnation"])
-@pytest.mark.parametrize("value", ["contradictory", None, True, 1, [], "missing"])
-def test_callback_identity_is_independent_on_every_join(action, phase, field, value):
-    inputs = raw_exchange("busy")
-    assert checker.verify(*inputs)["status"] == "passed"
-    observed = callback(inputs, phase, action)["observation"]
-    if value == "missing":
-        observed.pop(field)
-    else:
-        observed[field] = value
-    assert_callback_rejected(inputs)
-
-
-@pytest.mark.parametrize("phase", ["requested", "completed"])
-@pytest.mark.parametrize("value", ["grok-app", "unrecognized-app", None, "missing"])
-def test_callback_application_session_cannot_be_replaced_or_omitted(phase, value):
-    inputs = raw_exchange()
-    assert checker.verify(*inputs)["status"] == "passed"
-    record = callback(inputs, phase, "send_message")
-    if value == "missing":
-        record.pop("session_id")
-        diagnostic = "malformed_raw_evidence"
-    else:
-        record["session_id"] = value
-        diagnostic = "callback_identity_mismatch"
-    assert_callback_rejected(inputs, diagnostic)
-
-
-@pytest.mark.parametrize("side", ["native", "requested", "completed"])
-@pytest.mark.parametrize("value", ["other-app", None, False])
-def test_explicit_nested_session_identity_cannot_be_reconciled_away(side, value):
-    inputs = raw_exchange()
-    assert checker.verify(*inputs)["status"] == "passed"
-    record = next(r for r in inputs[0]["raw_records"]["observations"] if r["id"] == side + "call-0")
-    record["observation"]["session_id"] = value
-    assert_callback_rejected(inputs, "native_call_missing_or_misbound" if side == "native"
-                             else "callback_identity_mismatch")
-
-
-@pytest.mark.parametrize("field", ["native_id", "incarnation", "actor_id", "missing-session"])
-@pytest.mark.parametrize("value", ["contradictory", None, True])
-def test_callback_must_agree_with_independent_durable_session(field, value):
-    inputs = raw_exchange()
-    assert checker.verify(*inputs)["status"] == "passed"
-    rows = inputs[0]["raw_records"]["sessions"]
-    rows[0]["backend"] = deepcopy(rows[0]["backend"])
-    if field == "missing-session":
-        rows.pop(0)
-    elif field == "actor_id":
-        rows[0][field] = value
-    else:
-        rows[0]["backend"][field] = value
-    assert_callback_rejected(inputs, "callback_session_binding")
-
-
-@pytest.mark.parametrize("phase", ["requested", "completed"])
-@pytest.mark.parametrize("value", ["other-actor", None, False])
-def test_explicit_callback_actor_is_not_replaced_by_session_actor(phase, value):
-    inputs = raw_exchange()
-    assert checker.verify(*inputs)["status"] == "passed"
-    callback(inputs, phase, "send_message")["created_by"] = value
-    assert_callback_rejected(inputs, "callback_actor_binding")
-
-
-@pytest.mark.parametrize("phase", ["requested", "completed"])
-@pytest.mark.parametrize("value", [None, False, 1, []])
-def test_callback_call_identity_requires_a_nonempty_string(phase, value):
-    inputs = raw_exchange()
-    assert checker.verify(*inputs)["status"] == "passed"
-    callback(inputs, phase, "send_message")["observation"]["call_id"] = value
-    assert_callback_rejected(inputs, "callback_call_binding")
-
-
-def test_completed_callback_cannot_substitute_for_its_missing_request():
-    inputs = raw_exchange()
-    assert checker.verify(*inputs)["status"] == "passed"
-    rows = inputs[0]["raw_records"]["observations"]
-    rows.remove(callback(inputs, "requested", "send_message"))
-    assert_callback_rejected(inputs, "callback_request_missing_or_misbound")
 
 
 def test_permitted_explicit_work_scope_and_unrelated_history_stay_valid():
@@ -150,6 +64,10 @@ def test_sustained_fault_calibrates_callback_identity_rejection(monkeypatch):
     assert checker.verify(*invalid)["status"] == "passed", "IV03_FAULT_MUST_ACTIVATE"
     with pytest.raises(AssertionError, match="^IV03_CALLBACK_IDENTITY_MUST_BE_BOUND"):
         assert_callback_rejected(invalid)
+    scenario = next(case for case in CALLBACK_JOIN_SCENARIOS
+                    if case.name == "completed-send_message-native_session-wrong")
+    with pytest.raises(AssertionError, match="IV03_INDEPENDENT_CLAIMS"):
+        assert_identity_scenario(RawCallbackEvidence, scenario, exact_diagnostic=True)
     assert activated
 
 
@@ -165,33 +83,6 @@ def test_unrelated_checker_failure_is_not_callback_detection(monkeypatch):
         assert_callback_rejected(inputs)
 
 
-def lifecycle_input(operation="resume"):
-    case = {"peer": "codex", "operation": operation, "id": "lifecycle-codex-" + operation}
-    before = {"session_id": "old-app", "native_id": "retained-native", "incarnation": "old", "ownership": "owned"}
-    after = {**before, "session_id": "new-app", "incarnation": "new"}
-    result = {"verification": {"run_id": "run", "phase": "lifecycle", "case_id": case["id"], "memory": "private"}}
-    raw = {"session": [{"id": view["session_id"], "backend": view} for view in (before, after)],
-           "operation": [{"id": "op", "status": "completed", "action": "start_session" if operation == "resume" else "reconnect_session",
-                          "result": {"session": {"id": after["session_id"]}}}],
-           "evidence": [{"id": "saved", "result": result}], "native_observation": []}
-    for side in ("native", "callback"):
-        observation = {"native_id": after["native_id"], "incarnation": after["incarnation"],
-                       "action": "record_result", "call_id": "retained-call", "arguments": {"result": result}}
-        observation.update({"kind": "native_tool_call", "source": "codex"} if side == "native" else
-                           {"phase": "completed", "result": {"evidence": {"id": "saved"}}})
-        raw["native_observation"].append({"id": side, "origin": "adapter", "stale": False,
-                                          "session_id": after["session_id"], "observation": observation})
-    lifecycle = {"before": before, "after": after, "operation_id": "op",
-                 "stale_errors": {side: {"code": "stale_connection"} for side in ("application", "adapter")},
-                 "retained_observation": {"call_id": "retained-call", "native_observation_id": "native",
-                                          "callback_observation_id": "callback", "evidence_id": "saved"}}
-    run = {"run_id": "run", "memories": {"codex": "private"},
-           "raw_records": {"sessions": raw["session"], "operations": raw["operation"],
-                           "observations": raw["native_observation"], "evidence": raw["evidence"]},
-           "lifecycle_records": [{"peer": "codex", "records": raw}]}
-    return (case, run, lifecycle), raw["native_observation"]
-
-
 def assert_lifecycle_rejected(inputs):
     rejected = False
     try:
@@ -199,18 +90,6 @@ def assert_lifecycle_rejected(inputs):
     except checker.VerificationFailure as error:
         rejected = error.assertion == "lifecycle_retained_observation_binding"
     assert rejected, "IV03_LIFECYCLE_CALLBACK_IDENTITY_MUST_BE_BOUND"
-
-
-@pytest.mark.parametrize("operation", ["resume", "reconnect"])
-@pytest.mark.parametrize("side", [0, 1])
-@pytest.mark.parametrize("value", ["other-app", None, False])
-def test_lifecycle_nested_identity_contradiction_cannot_borrow_outer_session(operation, side, value):
-    inputs, rows = lifecycle_input(operation)
-    assert checker.lifecycle_evidence(*inputs)["operation_id"] == "op"
-    rows[side]["observation"]["session_id"] = "new-app"
-    assert checker.lifecycle_evidence(*inputs)["operation_id"] == "op"
-    rows[side]["observation"]["session_id"] = value
-    assert_lifecycle_rejected(inputs)
 
 
 def test_sustained_lifecycle_fault_cannot_erase_nested_identity(monkeypatch):
@@ -229,26 +108,27 @@ def test_sustained_lifecycle_fault_cannot_erase_nested_identity(monkeypatch):
     assert checker.lifecycle_evidence(*inputs)["operation_id"] == "op", "IV03_LIFECYCLE_FAULT_MUST_ACTIVATE"
     with pytest.raises(AssertionError, match="^IV03_LIFECYCLE_CALLBACK_IDENTITY_MUST_BE_BOUND"):
         assert_lifecycle_rejected(inputs)
+    scenario = next(case for case in CALLBACK_LIFECYCLE_SCENARIOS
+                    if case.name == "callback-nested-session-wrong")
+    with pytest.raises(AssertionError, match="IV03_INDEPENDENT_CLAIMS"):
+        assert_identity_scenario(RawCallbackEvidence, scenario, exact_diagnostic=True)
     assert activated
 
 
-@pytest.mark.parametrize("operation", ["resume", "reconnect"])
-@pytest.mark.parametrize("side", ["native", "callback", "session", "evidence", "evidence-source"])
-@pytest.mark.parametrize("value", ["other-actor", None, False])
-def test_lifecycle_explicit_actor_cannot_disagree_with_qualified_callback(operation, side, value):
-    inputs, rows = lifecycle_input(operation)
-    # Absence remains acceptable where the retained schema does not claim an
-    # independent actor; an explicit contradictory actor cannot be ignored.
-    assert checker.lifecycle_evidence(*inputs)["operation_id"] == "op"
-    raw = inputs[1]["raw_records"]
-    if side in {"native", "callback"}:
-        record, field = rows[0 if side == "native" else 1], "created_by"
-    elif side == "session":
-        record, field = raw["sessions"][1], "actor_id"
-    else:
-        record, field = raw["evidence"][0], "source" if side == "evidence-source" else "created_by"
-    record[field] = {"type": "caller", "actor": "codex"} if field == "source" else "codex"
-    assert checker.lifecycle_evidence(*inputs)["operation_id"] == "op"
-    record[field] = {"type": "caller", "actor": value} if field == "source" else value
-    with pytest.raises(checker.VerificationFailure, match="^lifecycle_actor_binding$"):
-        checker.lifecycle_evidence(*inputs)
+
+
+@pytest.mark.parametrize("scenario", CALLBACK_JOIN_SCENARIOS, ids=lambda scenario: scenario.name)
+def test_callback_identity_contract(scenario):
+    assert_identity_scenario(RawCallbackEvidence, scenario, exact_diagnostic=True)
+
+
+@pytest.mark.parametrize("operation", ("resume", "reconnect"))
+@pytest.mark.parametrize("scenario", CALLBACK_LIFECYCLE_SCENARIOS, ids=lambda scenario: scenario.name)
+def test_lifecycle_callback_identity_contract(operation, scenario):
+    assert_identity_scenario(RawCallbackEvidence, scenario, operation, exact_diagnostic=True)
+
+
+@pytest.mark.parametrize("operation", ("resume", "reconnect"))
+def test_lifecycle_control_returns_the_bound_operation(operation):
+    inputs, _ = lifecycle_input(operation)
+    assert checker.lifecycle_evidence(*inputs)["operation_id"] == inputs[2]["operation_id"]

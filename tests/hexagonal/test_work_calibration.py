@@ -2,7 +2,8 @@
 from pathlib import Path
 
 import pytest
-from calibrate_work_acceptance import CONTROL, classify, execute
+
+from tests.hexagonal.calibrate_work_acceptance import CONTROL, classify, execute
 
 
 @pytest.mark.parametrize("body,control,expected", [

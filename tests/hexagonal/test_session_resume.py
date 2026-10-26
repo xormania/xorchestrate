@@ -1,21 +1,16 @@
 """Resume authorization across real native-protocol processes and durable state."""
 
-import sys
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
+from tests.hexagonal.support.native import peer_options, wait_for
 from xorchestrate.composition import build
 from xorchestrate.model import OrchestrationError
 
-FIXTURE = Path(__file__).parent / "fixtures" / "session_server.py"
-
 
 def configuration(tmp_path, protocol, storage="memory", guardrail=None):
-    options = {"command": [sys.executable, str(FIXTURE), protocol], "timeout": 10}
-    if protocol == "acp":
-        options["resume_supported"] = True
+    options = peer_options(protocol, fixture="session")
     return {
         "store": {"adapter": storage, "options": {"path": str(tmp_path / "state.sqlite")} if storage == "sqlite" else {}},
         "sessions": {"agent": {"adapter": protocol, "options": options}},
@@ -83,8 +78,5 @@ def test_authorized_resume_after_restart_binds_callbacks_to_destination(tmp_path
         assert resumed["work_id"] == target_work["id"]
         app.call("send_session", {"session_id": resumed["id"], "message": {"text": "tool"},
                                   "idempotency_key": "callback"}, actor="delegate")
-        import time
-        deadline = time.monotonic() + 2
-        while not contexts and time.monotonic() < deadline:
-            time.sleep(.01)
+        wait_for(lambda: contexts, timeout=2)
         assert contexts == [{"actor": "delegate", "delegated_by": "controller", "work_id": target_work["id"], "session_id": resumed["id"]}]

@@ -5,9 +5,9 @@ import json
 import math
 import os
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
-from uuid import uuid4
+
+from scripts.testkit.adapters.evidence import allocate_run
 
 from .lifecycle import supervise
 
@@ -27,9 +27,7 @@ def main(argv=None):
     if args.profile == "fixture" and (args.config is not None or args.driver is not None):
         parser.error("--config and --driver select native acceptance; use --profile native")
     os.umask(0o077)
-    run_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid4().hex[:12]
-    run_dir = args.output.expanduser().resolve() / run_id
-    run_dir.mkdir(parents=True, mode=0o700)
+    run_dir = allocate_run(args.output)
     command = [sys.executable, "-m", "scripts.acceptance.scenario", "--run-dir", str(run_dir),
                "--profile", args.profile, "--timeout", str(args.timeout)]
     if args.config is not None:

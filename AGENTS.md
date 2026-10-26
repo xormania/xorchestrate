@@ -87,6 +87,15 @@ evolve when that intent changes.
 
 ## Architecture and execution
 
+Tests use the shared framework described in `docs/testing-framework.md`. Put
+expected behavior in reusable contracts and concrete setup in support adapters;
+never use a collected test module as a fixture library. Reuse the existing
+application builder, store selector, native harness helpers and execution/evidence
+services. Declare the current guarantee and family for new test modules in
+`contracts/testing.json`. Preserve distinct boundary coverage and independent
+oracles; remove demonstrated duplication instead of targeting a test count.
+Historical tests remain source evidence in Git history, not active CI obligations.
+
 Aim for an elegant, coherent architecture with clear responsibilities, sound
 abstractions, separation of concerns, and appropriate design patterns. Nothing
 should be hardwired: infrastructure, behavior, and policy choices should be

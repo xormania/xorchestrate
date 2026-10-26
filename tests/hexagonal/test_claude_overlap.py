@@ -2,24 +2,15 @@
 import json
 import sys
 import threading
-import time
-from pathlib import Path
+from functools import partial
 
 import pytest
 
+from tests.hexagonal.support.native import native_driver, wait_for
 from xorchestrate.adapters.claude import ClaudeSessionDriver
 from xorchestrate.model import Capability
 
-FIXTURE = Path(__file__).parent / "fixtures" / "claude_native.py"
-
-
-def wait(predicate):
-    deadline = time.monotonic() + 5
-    while time.monotonic() < deadline:
-        if predicate():
-            return
-        time.sleep(.01)
-    raise AssertionError("native hook schedule did not complete")
+wait = partial(wait_for, message="native hook schedule did not complete")
 
 
 def assert_outstanding_is_active(status, outstanding):
@@ -27,8 +18,7 @@ def assert_outstanding_is_active(status, outstanding):
 
 
 def overlap(tmp_path, fault=False):
-    driver = ClaudeSessionDriver({"command": [sys.executable, str(FIXTURE)], "env": {"CLAUDE_STATE_DIR": str(tmp_path)},
-        "terminal": "discard", "startup_timeout": 5, "timeout": 3})
+    driver = native_driver("claude", state=tmp_path)
     entered = {name: threading.Event() for name in ("A", "B")}
     release = {name: threading.Event() for name in ("A", "B")}
     observations, finished = [], []

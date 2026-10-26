@@ -17,6 +17,7 @@ from typing import Any
 from scripts.verification.checker import verify
 from scripts.verification.normalize import normalize
 from tests.hexagonal.contracts.identity import IdentityOutcome
+from tests.hexagonal.support.raw_evidence import ObservationBuilder
 from xorchestrate.exchange import evaluate_exchange
 
 
@@ -67,10 +68,11 @@ class IdentityEvidenceAdapter:
         self.source, self.target, self.scope = source, target, scope
         self.decoders = decoders
         self.rows = {}
-        self.sequence = 0
         self.raw = {name: [] for name in ("observations", "messages", "evidence", "attempts", "sessions", "operations")}
         self.sessions = {encoding.peer: {"session_id": encoding.peer + "-application", "native_id": encoding.peer + "-native",
                                        "incarnation": encoding.peer + "-incarnation"} for encoding in (source, target)}
+        self.observations = ObservationBuilder(self.raw, self.sessions, work_id="session-work",
+                                              include_actor=True, completed_side="callback", separator="-")
         if scope == "exchange":
             self._exchange()
         elif scope == "lifecycle":
@@ -84,8 +86,7 @@ class IdentityEvidenceAdapter:
                         executed_cases=[case["id"] for case in self.cases])
 
     def _at(self):
-        self.sequence += 1
-        return f"2026-10-24T00:00:{self.sequence:02}+00:00"
+        return self.observations.at()
 
     def _session_rows(self):
         for peer, identity in self.sessions.items():
@@ -95,25 +96,8 @@ class IdentityEvidenceAdapter:
                 self.rows["session"] = row
 
     def _call(self, encoding, action, arguments, result, saved):
-        call_id = "call-" + str(self.sequence)
-        records = []
-        for side in ("native", "requested", "callback"):
-            stamp = self._at()
-            identity = {**self.sessions[encoding.peer], "call_id": call_id}
-            if side == "native":
-                observation = {**identity, **encoding.encode(action, arguments)}
-            else:
-                observation = {**identity, "kind": "application_tool", "phase": "requested" if side == "requested" else "completed",
-                               "action": action, "arguments": {**deepcopy(arguments), "work_id": "session-work"}}
-                if side == "callback":
-                    observation["result"] = deepcopy(result)
-            row = {"id": side + "-" + call_id, "session_id": identity["session_id"], "origin": "adapter", "stale": False,
-                   "created_at": stamp, "work_id": "session-work", "created_by": encoding.peer, "observation": observation}
-            self.raw["observations"].append(row)
-            records.append(row)
-            if side == "requested":
-                saved["created_at"] = self._at()
-        return dict(zip(("native", "requested", "callback"), records))
+        return self.observations.call(encoding.peer, action, arguments, result, saved,
+                                      native=encoding.encode(action, arguments))
 
     def _message(self, encoding, recipient, kind, memory):
         body = {"verification": {"run_id": "identity-run", "case_id": "exchange", "kind": kind, "nonce": "fresh-nonce", "memory": memory}}

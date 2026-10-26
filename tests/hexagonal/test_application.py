@@ -1,100 +1,22 @@
-import itertools
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import contextmanager
 from copy import deepcopy
 
 import pytest
 
-from xorchestrate.adapters.policies import ConfigurableRouting, RuleGuardrail
-from xorchestrate.adapters.storage import MemoryStore, SQLiteStore
-from xorchestrate.application import Application
+from tests.hexagonal.support.application import (
+    Evaluator,
+    Provider,
+    ResumableSessions,
+    SessionCompletionFailure,
+    Sessions,
+    WriteFailureStore,
+    application,
+    invoke,
+    resume_setup,
+)
+from xorchestrate.adapters.policies import RuleGuardrail
 from xorchestrate.model import Assessment, Capability, Conflict, OrchestrationError, Verdict
-
-
-class Provider:
-    def __init__(self, callback=None):
-        self.callback = callback
-        self.discoveries = 0
-        self.calls = []
-
-    def discover(self):
-        self.discoveries += 1
-        return [Capability("change", "Perform a change", {
-            "type": "object", "properties": {"value": {"type": "integer"}},
-            "required": ["value"], "additionalProperties": False,
-        })]
-
-    def invoke(self, name, arguments, context):
-        self.calls.append((name, deepcopy(arguments), deepcopy(context)))
-        return self.callback(name, arguments, context) if self.callback else {"value": arguments["value"]}
-
-
-class Sessions:
-    def __init__(self):
-        self.specifications = []
-        self.calls = []
-
-    def start(self, specification):
-        self.specifications.append(deepcopy(specification))
-        return {"handle": "owned-handle", "native_id": "conversation"}
-
-    def send(self, session, message):
-        self.calls.append(("send", deepcopy(session), deepcopy(message)))
-        return {"accepted": True}
-
-    def poll(self, session):
-        self.calls.append(("poll", deepcopy(session)))
-        return [{"text": "Feature checked"}]
-
-    def stop(self, session):
-        self.calls.append(("stop", deepcopy(session)))
-        return {"stopped": True}
-
-
-class ResumableSessions(Sessions):
-    def __init__(self):
-        super().__init__()
-        self.resumes = []
-
-    def resume(self, source_backend, specification):
-        self.resumes.append((deepcopy(source_backend), deepcopy(specification)))
-        return {"handle": f"resumed-{len(self.resumes)}", "opaque_identity": {"from": deepcopy(source_backend)}}
-
-
-class Evaluator:
-    def __init__(self, result):
-        self.result = result
-        self.calls = []
-
-    def assess(self, question, context):
-        self.calls.append((question, deepcopy(context)))
-        if isinstance(self.result, Exception):
-            raise self.result
-        return self.result
-
-
-def application(store=None, *, provider=None, driver=None, guardrail=None, evaluators=None, assessment=None):
-    identifiers = itertools.count(1)
-    return Application(
-        store=store if store is not None else MemoryStore(),
-        providers={"tools": provider} if provider is not None else {},
-        sessions={"agent": driver} if driver is not None else {},
-        guardrail=guardrail if guardrail is not None else RuleGuardrail(), routing=ConfigurableRouting(),
-        evaluators=evaluators or {}, clock=lambda: "2026-10-23T12:00:00Z",
-        identifiers=lambda: f"r{next(identifiers)}", assessment=assessment,
-    )
-
-
-def invoke(app, key="effect", value=1, **kwargs):
-    return app.call("invoke", {"capability": "tools/change", "arguments": {"value": value}, "idempotency_key": key, **kwargs})
-
-
-@pytest.fixture(params=["memory", "sqlite"])
-def store(request, tmp_path):
-    result = MemoryStore() if request.param == "memory" else SQLiteStore(str(tmp_path / "state.sqlite"))
-    yield result
-    result.close()
 
 
 def test_work_lifecycle_has_free_form_roles_context_and_optimistic_updates(store):
@@ -329,28 +251,6 @@ def test_concurrent_duplicate_is_not_executed_and_provider_does_not_hold_transac
     assert len(provider.calls) == 1
 
 
-class WriteFailureStore(MemoryStore):
-    def __init__(self, failed_status):
-        super().__init__()
-        self.failed_status = failed_status
-        self.failed = False
-
-    @contextmanager
-    def transaction(self):
-        store = self
-        with super().transaction() as transaction:
-            class Proxy:
-                def __getattr__(self, name):
-                    return getattr(transaction, name)
-
-                def put(self, kind, key, data, expected_version=None):
-                    if not store.failed and kind == "invocation" and data.get("status") == store.failed_status:
-                        store.failed = True
-                        raise RuntimeError("secret database connection")
-                    return transaction.put(kind, key, data, expected_version)
-            yield Proxy()
-
-
 def test_completed_effect_survives_local_commit_failure_and_can_be_applied_once():
     provider = Provider()
     app = application(WriteFailureStore("completed"), provider=provider)
@@ -431,19 +331,6 @@ def test_session_output_cannot_redirect_the_driver_handle():
     sent = app.call("send_session", {"session_id": session["id"], "message": {}, "idempotency_key": "send"})
     assert sent["output"]["backend"]["handle"] == "different-process"
     assert sent["session"]["backend"] == session["backend"]
-
-
-def resume_setup(store, driver=None):
-    driver = driver if driver is not None else ResumableSessions()
-    app = application(store, driver=driver)
-    for actor_id in ["alice", "bob"]:
-        app.call("add_actor", {"actor_id": actor_id})
-    source_work = app.call("create_work", {"goal": "Source project"})["work"]
-    destination_work = app.call("create_work", {"goal": "Destination project"})["work"]
-    source = app.call("start_session", {"driver": "agent", "specification": {}, "work_id": source_work["id"], "idempotency_key": "source"}, actor="alice")["session"]
-    arguments = {"driver": "agent", "specification": {}, "resume_session_id": source["id"],
-        "actor_id": "bob", "work_id": destination_work["id"], "idempotency_key": "resume"}
-    return app, driver, source, source_work, destination_work, arguments
 
 
 @pytest.mark.parametrize("denied_action", ["send_session", "start_session"])
@@ -622,27 +509,6 @@ def test_unknown_start_cannot_be_bound_using_caller_reconciliation_result(store,
     assert session["backend"] == {} and session["status"] == "unknown"
     app.call("resolve_operation", {"operation_id": operation["id"], "expected_version": operation["version"], "outcome": "failed", "reason": "Abandon unverified start"})
     assert app.call("list_sessions", {})["sessions"][0]["status"] == "failed"
-
-
-class SessionCompletionFailure:
-    def __init__(self, store):
-        self.store, self.armed = store, False
-
-    @contextmanager
-    def transaction(self):
-        wrapper = self
-        with self.store.transaction() as transaction:
-            class Proxy:
-                def __getattr__(self, name):
-                    return getattr(transaction, name)
-
-                def put(self, kind, key, data, expected_version=None):
-                    current = transaction.get(kind, key)
-                    if wrapper.armed and kind == "session" and current and current.data["status"] == "starting" and data.get("status") == "active":
-                        wrapper.armed = False
-                        raise RuntimeError("Simulated local completion failure")
-                    return transaction.put(kind, key, data, expected_version)
-            yield Proxy()
 
 
 def test_retained_start_receipt_can_reconcile_without_caller_backend_override(store):

@@ -9,10 +9,10 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
-from calibrate_work_acceptance import CONTROL, execute
-from calibrate_work_acceptance import classify as classify_work
 
 from scripts.verification.calibration import classify, junit_cases
+from tests.hexagonal.calibrate_work_acceptance import CONTROL, execute
+from tests.hexagonal.calibrate_work_acceptance import classify as classify_work
 
 MARKER = "EXPECTED_VIOLATION"
 TARGET = "test_probe::test_target"

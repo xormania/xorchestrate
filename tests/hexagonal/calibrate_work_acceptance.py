@@ -6,16 +6,9 @@ Every case retains an exact input snapshot, fault patch, pytest XML and raw log.
 from __future__ import annotations
 
 import argparse
-import difflib
-import hashlib
 import json
-import os
-import shutil
-import subprocess
 import sys
-import tarfile
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -105,88 +98,60 @@ def classify(exit_code, xml_path, target, assertion):
 
 
 def execute(root, output, selectors):
-    xml_path, log_path = output / "results.xml", output / "output.txt"
-    command = [sys.executable, "-m", "pytest", "-p", "_xorchestrate_calibration_observer", *selectors, "-q", "--tb=short", "--junitxml=" + str(xml_path)]
-    started = datetime.now(timezone.utc).isoformat()
-    environment = dict(os.environ)
-    checker = output / "checker"
-    checker.mkdir(parents=True, exist_ok=True)
-    observer = checker / "_xorchestrate_calibration_observer.py"
-    observer.write_bytes((ROOT / "scripts/verification/pytest_calibration.py").read_bytes())
-    environment["PYTHONPATH"] = str(checker) + os.pathsep + str(root)
-    environment["PYTHONDONTWRITEBYTECODE"] = "1"
-    output.mkdir(parents=True, exist_ok=True)
-    timed_out = False
-    try:
-        result = subprocess.run(command, cwd=root, env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=45)
-        code, content = result.returncode, result.stdout
-    except subprocess.TimeoutExpired as error:
-        code, content, timed_out = 124, error.stdout or b"", True
-    log_path.write_bytes(content)
-    record = {"command": command, "cwd": str(root), "started": started,
-        "finished": datetime.now(timezone.utc).isoformat(), "exit_code": code, "timed_out": timed_out,
-        "environment": {key: environment[key] for key in ("PYTHONPATH", "PYTHONDONTWRITEBYTECODE")},
-        "xml": str(xml_path), "log": str(log_path),
-        "assertion_observer_sha256": hashlib.sha256(observer.read_bytes()).hexdigest()}
-    (output / "command.json").write_text(json.dumps(record, indent=2) + "\n")
-    return record
+    """Compatibility receipt for the shared observed-pytest execution service."""
+    from scripts.verification.__main__ import observed_pytest
+
+    record = observed_pytest(root, output, selectors, timeout=45)
+    code = record["exit_status"]
+    return {**record, "exit_code": code if code is not None else (124 if record["status"] == "timeout" else 3),
+            "timed_out": record["status"] == "timeout", "log": record["stdout"],
+            "started": record["started_at"], "finished": record["finished_at"]}
 
 
-def main():
+def main(argv=None):
+    from scripts.verification.__main__ import calibration_workspace
+    from scripts.verification.capture import candidate_identity, verify_candidate, write_json
+
     parser = argparse.ArgumentParser()
+    parser.add_argument("--candidate", type=Path, default=ROOT)
     parser.add_argument("--output", type=Path, required=True)
-    arguments = parser.parse_args()
-    output = arguments.output.resolve()
-    output.mkdir(parents=True, exist_ok=False)
-    baseline = output / "snapshot"
-    baseline.mkdir()
-    shutil.copytree(ROOT / "xorchestrate", baseline / "xorchestrate", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
-    (baseline / "tests/hexagonal").mkdir(parents=True)
-    shutil.copyfile(ROOT / TEST, baseline / TEST)
-    shutil.copyfile(Path(__file__), baseline / "tests/hexagonal/calibrate_work_acceptance.py")
-    shutil.copyfile(ROOT / "pyproject.toml", baseline / "pyproject.toml")
-    (baseline / "scripts/verification").mkdir(parents=True)
-    shutil.copyfile(ROOT / "scripts/verification/calibration.py", baseline / "scripts/verification/calibration.py")
-    shutil.copyfile(ROOT / "scripts/verification/pytest_calibration.py", baseline / "scripts/verification/pytest_calibration.py")
-    inputs = {str(path.relative_to(baseline)): hashlib.sha256(path.read_bytes()).hexdigest()
-        for path in sorted(baseline.rglob("*")) if path.is_file()}
-    (output / "inputs.json").write_text(json.dumps(inputs, indent=2) + "\n")
-    with tarfile.open(output / "measured-snapshot.tar.gz", "w:gz") as archive:
-        archive.add(baseline, arcname="candidate")
-    source = (baseline / "xorchestrate/acceptance.py").read_text()
+    arguments = parser.parse_args(argv)
+    root, output = arguments.candidate.resolve(), arguments.output.resolve()
+    if output == root or root in output.parents:
+        parser.error("--output must be outside the candidate tree")
+    output.mkdir(parents=True, exist_ok=False, mode=0o700)
+    candidate = candidate_identity(root)
     results = []
     for case in CASES:
         case_dir = output / case["id"]
-        case_dir.mkdir()
-        mutant = case_dir / "candidate"
-        shutil.copytree(baseline, mutant)
-        target = mutant / "xorchestrate/acceptance.py"
-        if source.count(case["before"]) != 1:
-            results.append({"id": case["id"], "classification": "setup_error", "reason": "mutation_anchor_not_unique"})
-            continue
-        changed = source.replace(case["before"], case["after"], 1)
-        target.write_text(changed)
-        (case_dir / "mutation.patch").write_text("".join(difflib.unified_diff(source.splitlines(keepends=True), changed.splitlines(keepends=True),
-            fromfile="a/xorchestrate/acceptance.py", tofile="b/xorchestrate/acceptance.py")))
-        selectors = [TEST + "::" + case["test"], TEST + "::" + CONTROL]
-        if case.get("nodes"):
-            # All parameters are run. A fault must fail only its candidate-
-            # mismatch instances, while all other binding assertions remain green.
-            selectors = [TEST + "::" + case["test"] + "[" + store + "-" + node + "]"
-                for store in ("memory", "sqlite") for node in case["nodes"]] + [TEST + "::" + CONTROL]
-        passing = execute(baseline, case_dir / "control", selectors)
-        baseline_class = classify(passing["exit_code"], Path(passing["xml"]), case["test"], case["assertion"])
-        if baseline_class["classification"] != "escaped_fault":
-            results.append({"id": case["id"], "classification": baseline_class["classification"],
-                "reason": "baseline_not_clean_pass", "control": passing})
-            continue
-        mutated = execute(mutant, case_dir / "fault", selectors)
-        outcome = classify(mutated["exit_code"], Path(mutated["xml"]), case["test"], case["assertion"])
-        results.append({"id": case["id"], "assertion": case["assertion"], "control": passing, "fault": mutated, **outcome})
-    (output / "calibration.json").write_text(json.dumps({"snapshot": str(output / "measured-snapshot.tar.gz"),
-        "checker": inputs["tests/hexagonal/calibrate_work_acceptance.py"], "results": results}, indent=2) + "\n")
-    print(json.dumps({"results": [{"id": row["id"], "classification": row["classification"]} for row in results]}, indent=2))
-    return 0 if len(results) == len(CASES) and all(row["classification"] == "detected" for row in results) else 1
+        mutation = {"path": "xorchestrate/acceptance.py", "old": case["before"], "new": case["after"]}
+        try:
+            identity, baseline, mutant = calibration_workspace(root, case_dir, mutation)
+            selectors = [TEST + "::" + case["test"], TEST + "::" + CONTROL]
+            if case.get("nodes"):
+                selectors = [TEST + "::" + case["test"] + "[" + store + "-" + node + "]"
+                    for store in ("memory", "sqlite") for node in case["nodes"]] + [TEST + "::" + CONTROL]
+            passing = execute(baseline, case_dir / "control-run", selectors)
+            baseline_class = classify(passing["exit_code"], Path(passing["xml"]), case["test"], case["assertion"])
+            if baseline_class["classification"] != "escaped_fault":
+                outcome = {**baseline_class, "reason": "baseline_not_clean_pass", "control": passing}
+            else:
+                mutated = execute(mutant, case_dir / "mutant-run", selectors)
+                outcome = {**classify(mutated["exit_code"], Path(mutated["xml"]), case["test"], case["assertion"]),
+                           "control": passing, "fault": mutated}
+            results.append({"id": case["id"], "assertion": case["assertion"],
+                            "candidate_sha256": identity["content_sha256"], **outcome})
+        except Exception as error:
+            results.append({"id": case["id"], "classification": "setup_error", "error": str(error)})
+    integrity = verify_candidate(root, candidate)
+    same_candidate = all(row.get("candidate_sha256") == candidate["content_sha256"] for row in results)
+    passed = (integrity["passed"] and same_candidate and len(results) == len(CASES)
+              and all(row["classification"] == "detected" for row in results))
+    write_json(output / "calibration.json", {"candidate": candidate, "candidate_integrity": integrity,
+        "same_candidate": same_candidate, "passed": passed, "results": results})
+    print(json.dumps({"passed": passed, "results": [
+        {"id": row["id"], "classification": row["classification"]} for row in results]}, indent=2))
+    return 0 if passed else 1
 
 
 if __name__ == "__main__":

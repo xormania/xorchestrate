@@ -2,52 +2,33 @@
 import json
 import sys
 import threading
-import time
 from copy import deepcopy
 from datetime import datetime, timezone
+from functools import partial
 from itertools import permutations
-from pathlib import Path
 
 import pytest
 
 from scripts.verification.checker import VerificationFailure, check_case, completed_native_turns, verify
 from scripts.verification.multi_harness import snapshot
 from scripts.verification.normalize import normalize
-from tests.hexagonal.test_native_cache_currentness import native_runtime, retry
+from tests.hexagonal.support.completion_evidence import completion_input
+from tests.hexagonal.support.native import (
+    ControlledCallbacks as Holds,
+)
+from tests.hexagonal.support.native import (
+    application_message,
+    native_driver,
+    native_runtime,
+    retry,
+    wait_for,
+)
 from xorchestrate.adapters.grok import GrokSessionDriver
 from xorchestrate.adapters.sessions import ACPSessionDriver, CodexSessionDriver, _LiveSession
 from xorchestrate.delivery import view
 from xorchestrate.model import Capability
 
-
-def wait(predicate):
-    deadline = time.monotonic() + 8
-    while time.monotonic() < deadline:
-        if predicate():
-            return
-        time.sleep(.01)
-    raise AssertionError("controlled native schedule timed out")
-
-
-class Holds:
-    def __init__(self, labels):
-        self.entered = {label: threading.Event() for label in labels}
-        self.release = {label: threading.Event() for label in labels}
-        self.finished = []
-
-    def discover(self):
-        return [Capability("hold", "Controlled callback", {"type": "object"})]
-
-    def invoke(self, name, args, context):
-        label = args["nonce"]
-        self.entered[label].set()
-        assert self.release[label].wait(15), "test must release its callbacks"
-        self.finished.append(label)
-        return {"released": label}
-
-    def close(self):
-        for event in self.release.values():
-            event.set()
+wait = partial(wait_for, timeout=8, message='controlled native schedule timed out')
 
 
 def assert_active(status):
@@ -92,8 +73,7 @@ def composed_overlap(protocol, order, tmp_path, force_idle=False):
         try:
             for label in sorted(order):
                 args = {"capability": "holds/hold", "arguments": {"nonce": label}}
-                message = ({"application_call": {"action": "invoke", "arguments": args}} if protocol == "claude"
-                           else {"text": json.dumps({"action": "tool", "name": "invoke", "arguments": args})})
+                message = application_message(protocol, "invoke", args)
                 retry(app, "send_session", {"session_id": session["id"], "message": message, "idempotency_key": label})
                 assert holds.entered[label].wait(5)
             initial = measured("before", list(order))
@@ -291,9 +271,7 @@ def test_checker_independently_rejects_pending_operation_despite_false_terminal_
 @pytest.mark.parametrize("protocol", ["codex", "grok"])
 @pytest.mark.parametrize("order", list(permutations("ABC")))
 def test_finished_callbacks_do_not_hide_unfinished_native_turns(protocol, order, tmp_path):
-    fixture = Path(__file__).parent / "fixtures" / "native_progress_peer.py"
-    driver = {"codex": CodexSessionDriver, "grok": GrokSessionDriver}[protocol](
-        {"command": [sys.executable, str(fixture), protocol], "timeout": 5})
+    driver = native_driver(protocol)
     observations, called = [], []
     def observe(context, event):
         observations.append(event)
@@ -360,7 +338,6 @@ def test_finished_callbacks_do_not_hide_unfinished_native_turns(protocol, order,
 
 @pytest.mark.parametrize("peer", ["codex", "claude", "grok"])
 def test_unbound_native_completion_cannot_borrow_forged_idle(peer):
-    from tests.hexagonal.test_completion_evidence import completion_input
     inputs, add = completion_input(peer)
     add("native_completion", activity="idle")
     assert verify(*inputs)["status"] == "passed"
@@ -375,7 +352,6 @@ def test_unbound_native_completion_cannot_borrow_forged_idle(peer):
 
 @pytest.mark.parametrize("starts,ends,expected", [(1, 1, "passed"), (2, 2, "incomplete"), (1, 2, "incomplete")])
 def test_single_anonymous_claude_turn_control_and_ambiguous_overlap(starts, ends, expected):
-    from tests.hexagonal.test_completion_evidence import completion_input
     inputs, add = completion_input("claude")
     for _ in range(starts):
         add("turn_started")
@@ -389,7 +365,6 @@ def test_single_anonymous_claude_turn_control_and_ambiguous_overlap(starts, ends
 
 @pytest.mark.parametrize("peer", ["codex", "grok"])
 def test_submission_bound_completion_must_precede_idle_even_without_start(peer):
-    from tests.hexagonal.test_completion_evidence import completion_input
     inputs, add = completion_input(peer)
     if peer == "codex":
         add("native_submission", result={"turn": {"id": "C"}})
