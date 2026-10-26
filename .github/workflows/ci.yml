@@ -36,7 +36,7 @@
           "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/xorchestrate-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\""
         },
         {
-          "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
           "with": {
             "python-version": "3.12"
           },
@@ -58,7 +58,7 @@
           "run": "mkdir -p \"$RUNNER_TEMP/xor-static\"\ncat > \"$RUNNER_TEMP/xor-static/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"selected_suites\":[\"static\"],\"launched\":false,\"reason\":\"CI checkout, cache, interpreter or dependency setup did not succeed\"}\nJSON"
         },
         {
-          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
             "name": "static-checks-python-3.12",
@@ -87,7 +87,7 @@
           "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/xorchestrate-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\""
         },
         {
-          "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
           "with": {
             "python-version": "3.12"
           },
@@ -119,7 +119,7 @@
           "run": "mkdir -p \"$RUNNER_TEMP/xor-checks\"\ncat > \"$RUNNER_TEMP/xor-checks/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"selected_suites\":[\"tests\",\"calibration\",\"multi-harness\"],\"launched\":false,\"reason\":\"CI checkout, cache, interpreter or dependency setup did not succeed\"}\nJSON"
         },
         {
-          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
             "name": "composed-protocol-evidence",
@@ -129,7 +129,7 @@
           }
         },
         {
-          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
             "name": "framework-checks-python-3.12",
@@ -158,7 +158,7 @@
           "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/xorchestrate-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\""
         },
         {
-          "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
           "with": {
             "python-version": "3.12"
           },
@@ -180,7 +180,7 @@
           "run": "mkdir -p \"$RUNNER_TEMP/acceptance-evidence\"\ncat > \"$RUNNER_TEMP/acceptance-evidence/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"selected_suites\":[\"acceptance\"],\"launched\":false,\"reason\":\"CI checkout, cache, interpreter or dependency setup did not succeed\"}\nJSON"
         },
         {
-          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
             "name": "tmux-acceptance-evidence",
@@ -209,7 +209,7 @@
           "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/xorchestrate-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\""
         },
         {
-          "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
+          "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
           "with": {
             "python-version": "3.12"
           },
@@ -236,7 +236,7 @@
           "run": "mkdir -p \"$RUNNER_TEMP/architecture\"\ncat > \"$RUNNER_TEMP/architecture/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"launched\":false,\"reason\":\"CI checkout, cache, interpreter or dependency setup did not succeed\"}\nJSON"
         },
         {
-          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
             "name": "architecture-evidence",
