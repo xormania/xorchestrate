@@ -31,6 +31,11 @@
           "id": "checkout"
         },
         {
+          "name": "Configure external Python cache",
+          "id": "cache",
+          "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/xorchestrate-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\""
+        },
+        {
           "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
           "with": {
             "python-version": "3.12"
@@ -44,13 +49,13 @@
         },
         {
           "name": "Run shared static checks",
-          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
           "run": "python3 -m scripts.testkit run --suite static --output \"$RUNNER_TEMP/xor-static\" --check-timeout 120"
         },
         {
           "name": "Record unavailable static validation",
-          "if": "!cancelled() && (steps.checkout.outcome != 'success' || steps.python.outcome != 'success' || steps.dependencies.outcome != 'success')",
-          "run": "mkdir -p \"$RUNNER_TEMP/xor-static\"\ncat > \"$RUNNER_TEMP/xor-static/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"selected_suites\":[\"static\"],\"launched\":false,\"reason\":\"CI checkout, interpreter or dependency setup did not succeed\"}\nJSON"
+          "if": "!cancelled() && (steps.checkout.outcome != 'success' || steps.cache.outcome != 'success' || steps.python.outcome != 'success' || steps.dependencies.outcome != 'success')",
+          "run": "mkdir -p \"$RUNNER_TEMP/xor-static\"\ncat > \"$RUNNER_TEMP/xor-static/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"selected_suites\":[\"static\"],\"launched\":false,\"reason\":\"CI checkout, cache, interpreter or dependency setup did not succeed\"}\nJSON"
         },
         {
           "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
@@ -62,10 +67,7 @@
             "retention-days": 30
           }
         }
-      ],
-      "env": {
-        "PYTHONPYCACHEPREFIX": "${{ runner.temp }}/xorchestrate-python-cache"
-      }
+      ]
     },
     "application": {
       "name": "Application and adapter tests (Python 3.12)",
@@ -78,6 +80,11 @@
             "persist-credentials": false
           },
           "id": "checkout"
+        },
+        {
+          "name": "Configure external Python cache",
+          "id": "cache",
+          "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/xorchestrate-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\""
         },
         {
           "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
@@ -94,22 +101,22 @@
         {
           "name": "Run application, boundary, and subprocess integration tests",
           "run": "mkdir -p \"$RUNNER_TEMP/xor-checks\"\ngit show -s --format='%H%n%T%n%P' HEAD > \"$RUNNER_TEMP/xor-checks/identity.txt\"\npython3 -m scripts.testkit run --suite tests --output \"$RUNNER_TEMP/xor-checks/tests\" --check-timeout 600",
-          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'"
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'"
         },
         {
           "name": "Calibrate independent verification through the shared framework",
-          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
           "run": "python3 -m scripts.testkit run --suite calibration --output \"$RUNNER_TEMP/xor-checks/calibration\" --check-timeout 600"
         },
         {
           "name": "Run composed three-harness protocol acceptance",
-          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
           "run": "python3 -m scripts.testkit run --suite multi-harness --mode protocol-fixture --output \"$RUNNER_TEMP/xor-verification\" --timeout 60"
         },
         {
           "name": "Record unavailable application validation",
-          "if": "!cancelled() && (steps.checkout.outcome != 'success' || steps.python.outcome != 'success' || steps.dependencies.outcome != 'success')",
-          "run": "mkdir -p \"$RUNNER_TEMP/xor-checks\"\ncat > \"$RUNNER_TEMP/xor-checks/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"selected_suites\":[\"tests\",\"calibration\",\"multi-harness\"],\"launched\":false,\"reason\":\"CI checkout, interpreter or dependency setup did not succeed\"}\nJSON"
+          "if": "!cancelled() && (steps.checkout.outcome != 'success' || steps.cache.outcome != 'success' || steps.python.outcome != 'success' || steps.dependencies.outcome != 'success')",
+          "run": "mkdir -p \"$RUNNER_TEMP/xor-checks\"\ncat > \"$RUNNER_TEMP/xor-checks/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"selected_suites\":[\"tests\",\"calibration\",\"multi-harness\"],\"launched\":false,\"reason\":\"CI checkout, cache, interpreter or dependency setup did not succeed\"}\nJSON"
         },
         {
           "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
@@ -131,10 +138,7 @@
             "retention-days": 30
           }
         }
-      ],
-      "env": {
-        "PYTHONPYCACHEPREFIX": "${{ runner.temp }}/xorchestrate-python-cache"
-      }
+      ]
     },
     "tmux-acceptance": {
       "name": "Tmux live acceptance (protocol fixture)",
@@ -147,6 +151,11 @@
             "persist-credentials": false
           },
           "id": "checkout"
+        },
+        {
+          "name": "Configure external Python cache",
+          "id": "cache",
+          "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/xorchestrate-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\""
         },
         {
           "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
@@ -163,12 +172,12 @@
         {
           "name": "Run reusable tmux acceptance fixture",
           "run": "python3 -m scripts.testkit run --suite acceptance --mode protocol-fixture --output \"$RUNNER_TEMP/acceptance-evidence\" --timeout 120",
-          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'"
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'"
         },
         {
           "name": "Record unavailable tmux acceptance",
-          "if": "!cancelled() && (steps.checkout.outcome != 'success' || steps.python.outcome != 'success' || steps.dependencies.outcome != 'success')",
-          "run": "mkdir -p \"$RUNNER_TEMP/acceptance-evidence\"\ncat > \"$RUNNER_TEMP/acceptance-evidence/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"selected_suites\":[\"acceptance\"],\"launched\":false,\"reason\":\"CI checkout, interpreter or dependency setup did not succeed\"}\nJSON"
+          "if": "!cancelled() && (steps.checkout.outcome != 'success' || steps.cache.outcome != 'success' || steps.python.outcome != 'success' || steps.dependencies.outcome != 'success')",
+          "run": "mkdir -p \"$RUNNER_TEMP/acceptance-evidence\"\ncat > \"$RUNNER_TEMP/acceptance-evidence/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"selected_suites\":[\"acceptance\"],\"launched\":false,\"reason\":\"CI checkout, cache, interpreter or dependency setup did not succeed\"}\nJSON"
         },
         {
           "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
@@ -180,10 +189,7 @@
             "retention-days": 7
           }
         }
-      ],
-      "env": {
-        "PYTHONPYCACHEPREFIX": "${{ runner.temp }}/xorchestrate-python-cache"
-      }
+      ]
     },
     "architecture": {
       "name": "Jev architecture diagnostics",
@@ -196,6 +202,11 @@
             "persist-credentials": false
           },
           "id": "checkout"
+        },
+        {
+          "name": "Configure external Python cache",
+          "id": "cache",
+          "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/xorchestrate-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\""
         },
         {
           "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
@@ -211,7 +222,7 @@
         },
         {
           "name": "Jev architecture diagnostics",
-          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
           "env": {
             "TYPESAFE_API_KEY": "${{ secrets.TYPESAFE_API_KEY || secrets.JEV_API_KEY }}",
             "JEV_ENDPOINT": "${{ vars.JEV_ENDPOINT }}",
@@ -221,8 +232,8 @@
         },
         {
           "name": "Record unavailable diagnostics",
-          "if": "!cancelled() && (steps.checkout.outcome != 'success' || steps.python.outcome != 'success' || steps.dependencies.outcome != 'success')",
-          "run": "mkdir -p \"$RUNNER_TEMP/architecture\"\ncat > \"$RUNNER_TEMP/architecture/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"launched\":false,\"reason\":\"CI checkout, interpreter or dependency setup did not succeed\"}\nJSON"
+          "if": "!cancelled() && (steps.checkout.outcome != 'success' || steps.cache.outcome != 'success' || steps.python.outcome != 'success' || steps.dependencies.outcome != 'success')",
+          "run": "mkdir -p \"$RUNNER_TEMP/architecture\"\ncat > \"$RUNNER_TEMP/architecture/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"launched\":false,\"reason\":\"CI checkout, cache, interpreter or dependency setup did not succeed\"}\nJSON"
         },
         {
           "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
@@ -234,10 +245,7 @@
             "retention-days": 30
           }
         }
-      ],
-      "env": {
-        "PYTHONPYCACHEPREFIX": "${{ runner.temp }}/xorchestrate-python-cache"
-      }
+      ]
     }
   }
 }
