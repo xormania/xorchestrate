@@ -67,9 +67,11 @@ class RecordingRunner:
         record = run_command(argv, cwd, directory, environment=env, timeout=timeout, terminal=self.terminal)
         self.records.append({**record, "directory": str(directory)})
         stdout, stderr = (directory / "stdout.log").read_bytes(), (directory / "stderr.log").read_bytes()
-        return Result(tuple(argv), record["exit_status"] if record["exit_status"] is not None else 3,
+        return Result(tuple(argv), record["exit_status"] if record["exit_status"] is not None else (
+                          None if record["status"] == "setup_error" else 3),
                       stdout.decode("utf-8", errors="replace"), stderr.decode("utf-8", errors="replace"),
-                      time.monotonic() - started, str(cwd), raw_stdout=stdout, raw_stderr=stderr)
+                      time.monotonic() - started, str(cwd), raw_stdout=stdout, raw_stderr=stderr,
+                      launched=record["status"] != "setup_error", status=record["status"])
 
 
 def git(root, *args):

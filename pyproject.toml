@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "xorchestrate"
 version = "0.2.0"
 description = "Configurable agent orchestration through ports and adapters"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = ["jsonschema>=4.22,<5"]
 
 [project.optional-dependencies]

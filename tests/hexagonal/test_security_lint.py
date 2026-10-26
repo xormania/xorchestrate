@@ -1,15 +1,14 @@
-"""Calibrate the installed security linter against the actual CI command/config."""
+"""Calibrate shared security checks against independent unsafe/safe samples."""
 
 import json
-import shlex
-import shutil
-import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+from scripts.testkit.adapters.evidence import RecordingRunner
+from scripts.testkit.adapters.static import definitions, prepare_static
+from tests.hexagonal.support.static_checks import static_subject
+
 # These snippets are parsed by Ruff, never imported or executed.
 SAMPLES = {
     "S102": ('exec("value = 1")\n', 'import json\n\njson.loads("1")\n'),
@@ -41,31 +40,36 @@ SAMPLES = {
 
 
 class SecurityLintTests(unittest.TestCase):
-    def test_workflow_rejects_unsafe_code_in_runtime_and_nested_actions(self):
-        workflow = json.loads((ROOT / ".github/workflows/ci.yml").read_text())
-        lint = next(step for step in workflow["jobs"]["changes"]["steps"] if step.get("id") == "lint")
-        # Preserve the actual paths and flags; only replace CI's venv executable.
-        command = [sys.executable, *shlex.split(lint["run"])[1:], "--output-format", "json"]
+    def test_shared_check_rejects_unsafe_code_in_runtime_and_nested_actions(self):
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            shutil.copyfile(ROOT / "ruff.toml", root / "ruff.toml")
+            base = Path(directory)
+            root = static_subject(base / "candidate")
+            evidence = base / "evidence"
+            evidence.mkdir()
+            definition = next(check for check in definitions(directory=evidence) if check.name == "ruff")
+            runner = RecordingRunner(evidence / "commands")
+            environment = {"PYTHONPYCACHEPREFIX": str(base / "pycache")}
             expected = set()
             for prefix in ("xorchestrate", "tests/hexagonal", ".github/actions/security-probe", "scripts"):
-                (root / prefix).mkdir(parents=True)
+                (root / prefix).mkdir(parents=True, exist_ok=True)
                 for code, (unsafe, _) in SAMPLES.items():
                     path = root / prefix / (code.lower() + ".py")
                     path.write_text(unsafe)
                     expected.add((code, str(path)))
-            unsafe = subprocess.run(command, cwd=root, capture_output=True, text=True, timeout=30)
+            prepared, _ = prepare_static(definition, root=root, directory=evidence,
+                                         runner=runner, env=environment)
+            unsafe = runner.run(prepared.argv, cwd=str(root), env=environment, timeout=30)
             self.assertEqual(1, unsafe.returncode, unsafe.stdout + unsafe.stderr)
-            findings = {(item["code"], item["filename"]) for item in json.loads(unsafe.stdout)}
+            findings = {(item["code"], item["filename"]) for item in json.loads((evidence / "ruff.json").read_text())}
             self.assertLessEqual(expected, findings, f"Missing security findings: {expected - findings}")
             self.assertEqual(set(SAMPLES), {code for code, _ in findings})
             for code, path in expected:
                 Path(path).write_text(SAMPLES[code][1])
-            safe = subprocess.run(command, cwd=root, capture_output=True, text=True, timeout=30)
+            prepared, _ = prepare_static(definition, root=root, directory=evidence,
+                                         runner=runner, env=environment)
+            safe = runner.run(prepared.argv, cwd=str(root), env=environment, timeout=30)
             self.assertEqual(0, safe.returncode, safe.stdout + safe.stderr)
-            self.assertEqual([], json.loads(safe.stdout))
+            self.assertEqual([], json.loads((evidence / "ruff.json").read_text()))
 
 
 if __name__ == "__main__":

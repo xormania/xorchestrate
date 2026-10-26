@@ -13,15 +13,16 @@ the application or require tmux for ordinary CLI/MCP use.
 
 ## Run the fixture
 
-Use the repository checkout with Python 3.11 or newer and tmux installed. The
+Use the repository checkout with Python 3.12 or newer and tmux installed. The
 supervisor verifies owned process identities through Linux `/proc`; Linux and
 WSL2 are the supported hosts for this fixture. The host must permit PTYs and
 Unix-domain sockets; a restricted container can have tmux installed and still
 reject those facilities.
 
 ```bash
+export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XXXXXX")"
 python3 -m pip install -e '.[test]'
-python3 -m scripts.acceptance --output .xorchestrate/acceptance --timeout 120
+python3 -m scripts.testkit run --suite acceptance --output ../xorchestrate-acceptance --timeout 120
 ```
 
 `--output` is a parent directory. Every invocation creates a unique private run
@@ -45,7 +46,7 @@ python3 -m scripts.acceptance \
   --config /absolute/path/acceptance.json \
   --driver worker \
   --timeout 180 \
-  --output .xorchestrate/acceptance
+  --output ../xorchestrate-acceptance
 ```
 
 The selected driver must provide the application's tools to the harness. The
@@ -96,9 +97,10 @@ WORKSPACE=/absolute/path/to/xorchestrate CACHE_VOLUME=xorchestrate-fixture-home 
   bash /absolute/path/to/xorder/scripts/run-image.sh \
   ghcr.io/xormania/python-matrix@sha256:dc0da00ee10740bb20406e4a0544ed4672e6ed0fc82169c34a246ccd20f93662 \
   bash -eu -c '
+    export PYTHONPYCACHEPREFIX="$(mktemp -d /tmp/xorchestrate-pycache.XXXXXX)"
     python3.12 -m venv /tmp/xorchestrate-acceptance
     /tmp/xorchestrate-acceptance/bin/python -m pip install -e ".[test]"
-    /tmp/xorchestrate-acceptance/bin/python -m scripts.acceptance --output .xorchestrate/acceptance --timeout 120
+    /tmp/xorchestrate-acceptance/bin/python -m scripts.testkit run --suite acceptance --output /tmp/xorchestrate-acceptance-evidence --timeout 120
   '
 ```
 

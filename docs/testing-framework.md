@@ -12,13 +12,25 @@ passing an old implementation is not a prerequisite for changing Xorchestrate.
 
 ## Run the framework
 
-From a checkout with `python3 -m pip install -e '.[test]' -r .github/requirements-ci.txt`:
+Python 3.12 is the validation baseline; package support starts at 3.12 without an
+upper bound. Hosted compatibility evidence applies to the interpreter exercised.
+From a checkout, establish an external bytecode cache before starting Python,
+then install the application/test dependencies and pinned Ruff:
 
 ```bash
-# Deterministic contracts, adapters, composition and framework checks.
+export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XXXXXX")"
+python3 -m pip install -e '.[test]' -r .github/requirements-ci.txt
+
+# Ruff lint/security, current-source syntax and deterministic architecture.
+python3 -m scripts.testkit run --suite static
+
+# Cataloged behavioral tests with inventory and JUnit.
+python3 -m scripts.testkit run --suite tests
+
+# Static checks plus all behavioral tests.
 python3 -m scripts.testkit run --suite checks
 
-# A declared behavioral family, with the same collection and evidence rules.
+# Static checks plus one declared behavioral family.
 python3 -m scripts.testkit run --suite checks --family state
 
 # Prove that deliberate native, work and state faults trigger the intended assertions.
@@ -32,6 +44,23 @@ python3 -m scripts.testkit run --suite acceptance
 python3 -m scripts.testkit run
 ```
 
+The cache prefix must resolve outside the candidate and is inherited by child
+Python commands. Use a fresh prefix for each validation session. Ruff and pytest
+caches are disabled or written outside the candidate by the shared suites;
+syntax validation reads current bytes rather than trusting cached bytecode.
+Static-only execution needs Python and the pinned Ruff, without pytest discovery,
+tmux, native configuration or model credentials. `--family` filters behavioral
+tests only; it never reduces static coverage. The default composition runs each
+selected check once.
+
+Ruff and syntax validation select applicable Python files beneath `xorchestrate`,
+`scripts`, `tests` and `.github`. Historical source trees remain outside this
+scope. Ruff uses its configured/default exclusions while Git ignore rules do not
+remove files from these active roots. Syntax traversal includes ignored Python
+files. Architecture uses its explicit scope and role policy in
+`contracts/hexagonal.json`. The retained manifests describe each check's actual
+selection; an inventory of planned roots alone does not prove file coverage.
+
 `--output /path/outside/checkout` selects a reusable evidence parent; each invocation
 allocates a private run directory. `--check-timeout` bounds each deterministic or
 calibration command. `--timeout` retains the live scenario timeout. Native harness
@@ -39,12 +68,13 @@ configuration, terminal handling and authentication are described in
 [live-testkit.md](live-testkit.md). Native fixtures never establish authenticated
 vendor acceptance.
 
-Direct pytest remains supported for development and narrow calibration witnesses:
+Direct pytest remains supported for development and narrow calibration witnesses
+after the same startup environment is established. Disable its local cache:
 
 ```bash
-python3 -m pytest
-python3 -m pytest --test-family state --test-inventory ../state-inventory.json
-python3 -m pytest tests/hexagonal/test_storage.py -q
+python3 -m pytest -p no:cacheprovider
+python3 -m pytest -p no:cacheprovider --test-family state --test-inventory ../state-inventory.json
+python3 -m pytest -p no:cacheprovider tests/hexagonal/test_storage.py -q
 ```
 
 Default discovery selects only active tests. The collection plugin validates the
@@ -58,6 +88,8 @@ is an error; none receives a successful empty result.
 | Concern | Canonical owner |
 |---|---|
 | Behavioral family, guarantee and test layer | [`contracts/testing.json`](../contracts/testing.json) |
+| Static check definitions and suite membership | Shared test-kit composition and static adapter |
+| Ruff policy and pin | `ruff.toml`, `.github/requirements-ci.txt` |
 | Catalog validation and selection | `scripts/testkit/catalog.py` |
 | Pytest discovery, markers and inventory | `scripts/testkit/adapters/pytest_plugin.py` |
 | Command execution, named results, check receipts and resource ownership | `scripts/testkit/{model,ports,core}.py` and execution adapters |
@@ -112,3 +144,17 @@ This change has the following required outcomes:
 The PR binds actual results and CI artifacts to the tested revision. A family
 inventory explains what ran; JUnit and raw receipts establish its observed result.
 Passing counts alone do not establish completeness.
+
+Static evidence records effective input membership and content, including examined
+ignored/untracked files and followed symlink targets. This identity is distinct
+from the repository commit/tree and the existing calibration candidate hash.
+Source/configuration changes invalidate the affected result. Reports retain check
+IDs, readiness/preparation outcomes, tool versions, structured findings and raw
+command receipts. A check blocked before launch has an explicit setup outcome and
+does not borrow another check's command record.
+
+Structural plan errors reject the whole plan. Missing tools, selected
+configuration or check-specific preparation block only dependent checks;
+independent checks continue and the aggregate remains unsuccessful. `doctor` uses
+the same readiness definitions without launching a live harness. Native terminal
+inheritance applies to live checks; static and pytest output stays captured.

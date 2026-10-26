@@ -11,15 +11,26 @@ and model recommendations do not become policy on their own.
 
 ## Testing framework
 
-Use `python3 -m scripts.testkit run --suite checks` for deterministic testing, or
-`python3 -m scripts.testkit run` for checks, calibration and live protocol workflows.
+Use Python 3.12 for validation. Before starting Python, select a fresh cache outside
+the checkout:
+
+```bash
+export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XXXXXX")"
+python3 -m pip install -e '.[test]' -r .github/requirements-ci.txt
+python3 -m scripts.testkit run --suite static
+python3 -m scripts.testkit run --suite checks
+```
+
+`static` runs Ruff, current-source syntax validation and architecture enforcement;
+`tests` runs the cataloged behavioral tests; `checks` combines both. Use
+`python3 -m scripts.testkit run` for static checks, tests, calibration and live protocol workflows.
 Local and CI runs use the same [testing framework](docs/testing-framework.md),
 shared contracts, fixtures and evidence services. See [live tests](docs/live-testkit.md)
 for authenticated native configuration.
 
 ## Run locally
 
-Use Python 3.11 or newer. From the checkout:
+Use Python 3.12 or newer. From the checkout:
 
 ```bash
 python3 -m pip install -e .

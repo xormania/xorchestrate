@@ -8,7 +8,7 @@ from dataclasses import replace
 
 import pytest
 
-from scripts.testkit.core import CheckRecorder, ResourceScope, execute_checks
+from scripts.testkit.core import CheckRecorder, ResourceScope, execute_checks, required_inputs
 from scripts.testkit.model import Check, Result, Timeout
 
 
@@ -23,14 +23,17 @@ class Inputs:
 
 
 class Runner:
-    def __init__(self, failures=None):
+    def __init__(self, failures=None, results=None):
         self.calls = []
         self.failures = failures or {}
+        self.results = results or {}
 
     def run(self, argv, *, cwd, env, timeout):
         self.calls.append((argv, cwd, dict(env), timeout))
         if argv[0] in self.failures:
             raise self.failures[argv[0]]
+        if argv[0] in self.results:
+            return self.results[argv[0]]
         return Result(tuple(argv), 0, argv[0], "", 0.25, cwd)
 
 
@@ -39,19 +42,23 @@ GOOD = Check("first", ("tool", "one argument; untouched"), 2)
 
 @pytest.mark.parametrize("plan", [
     (), (GOOD, GOOD), (replace(GOOD, name=""),),
-    (GOOD, replace(GOOD, name="second", required=("absent",))),
+    (GOOD, replace(GOOD, name="second", required=("",))),
     (replace(GOOD, argv=()),), (replace(GOOD, argv=("",)),),
     (replace(GOOD, timeout=0),), (replace(GOOD, timeout=float("inf")),),
     (replace(GOOD, timeout=float("nan")),), (replace(GOOD, timeout=True),),
     (replace(GOOD, required=("",)),),
-], ids=["empty", "duplicate", "empty-name", "late-missing-input", "empty-command",
+    (replace(GOOD, required="path"),), (replace(GOOD, argv="tool"),),
+    (None,),
+], ids=["empty", "duplicate", "empty-name", "late-malformed-input", "empty-command",
         "empty-argument", "zero-timeout", "infinite-timeout", "nan-timeout",
-        "boolean-timeout", "empty-input"])
+        "boolean-timeout", "empty-input", "string-inputs", "string-command", "non-check"])
 def test_invalid_whole_plan_launches_nothing(plan):
-    runner = Runner()
+    runner, inputs, prepared = Runner(), Inputs(), []
     with pytest.raises(ValueError):
-        execute_checks(plan, runner=runner, inputs=Inputs(), cwd="workspace", env={})
+        execute_checks(plan, runner=runner, inputs=inputs, cwd="workspace", env={}, prepare=prepared.append)
     assert runner.calls == []
+    assert inputs.calls == []
+    assert prepared == []
 
 
 def test_every_named_check_gets_same_declared_context_once_and_retains_result():
@@ -74,13 +81,84 @@ def test_missing_command_and_timeout_remain_failed_rows_and_do_not_hide_later_ch
     checks = [Check(name, (name,), 2) for name in ("absent", "slow", "after")]
     results = dict(execute_checks(checks, runner=runner, inputs=Inputs(), cwd="workspace", env={}))
     assert list(results) == ["absent", "slow", "after"]
-    assert results["absent"].exit == 3
+    assert results["absent"].exit is None
+    assert results["absent"].launched is False and results["absent"].status == "setup_error"
     assert "FileNotFoundError" in results["absent"].stderr
     assert results["slow"].exit == 3
     assert results["slow"].stdout == "partial output"
     assert results["slow"].stderr.startswith("partial error\nTimeout:")
     assert results["slow"].duration == 2.1
+    assert results["slow"].launched is True and results["slow"].status == "timeout"
     assert results["after"].exit == 0
+
+
+@pytest.mark.parametrize("fault", ["missing-input", "preparation", "invalid-prepared",
+                                 "renamed-prepared", "new-missing-input"])
+def test_unavailable_prerequisite_or_preparation_only_blocks_owning_check(fault):
+    runner, inputs, prepared = Runner(), Inputs(), []
+    checks = tuple(Check(name, (name,), 2) for name in ("before", "affected", "after"))
+    if fault == "missing-input":
+        checks = (checks[0], replace(checks[1], required=("absent",)), checks[2])
+
+    def prepare(check):
+        prepared.append(check.name)
+        if check.name != "affected":
+            return None
+        if fault == "preparation":
+            raise OSError("unable to prepare frozen input")
+        if fault == "invalid-prepared":
+            return replace(check, argv=())
+        if fault == "renamed-prepared":
+            return replace(check, name="unexpected")
+        if fault == "new-missing-input":
+            return replace(check, required=("new-absent",))
+        return None
+
+    results = dict(execute_checks(checks, runner=runner, inputs=inputs,
+                                  cwd="workspace", env={}, prepare=prepare))
+    assert list(results) == ["before", "affected", "after"]
+    assert [call[0][0] for call in runner.calls] == ["before", "after"]
+    assert results["before"].exit == results["after"].exit == 0
+    affected = results["affected"]
+    assert affected.exit is None and affected.launched is False and affected.status == "setup_error"
+    assert affected.stderr and affected.stdout == "" and affected.duration == 0
+    assert affected.raw_stdout is None and affected.raw_stderr is None
+    assert ("affected" in prepared) == (fault != "missing-input")
+
+
+def test_preparation_resolves_command_and_selects_runner_by_stable_id():
+    captured, terminal, inputs = Runner(), Runner(), Inputs(("resolved-input",))
+    checks = (Check("captured", ("initial",), 2), Check("interactive", ("live",), 3))
+
+    def prepare(check):
+        return replace(check, argv=("resolved", "input list"), required=("resolved-input",)) if check.name == "captured" else None
+
+    results = dict(execute_checks(checks, runner=captured, inputs=inputs, cwd="workspace", env={},
+                                  prepare=prepare, runners={"interactive": terminal}))
+    assert captured.calls == [(("resolved", "input list"), "workspace", {}, 2)]
+    assert terminal.calls == [(("live",), "workspace", {}, 3)]
+    assert inputs.calls == [("workspace", "resolved-input")]
+    assert results["captured"].argv == ("resolved", "input list")
+
+
+@pytest.mark.parametrize("malformed", [None, "success", Result(("affected",), False, "", "", 0, "workspace"),
+                                      Result(("affected",), 0, "", "", 0, "workspace", launched=False),
+                                      Result(("affected",), 1, "", "", 0, "workspace", status="passed")])
+def test_malformed_runner_result_cannot_pass_or_suppress_later_checks(malformed):
+    runner = Runner(results={"affected": malformed})
+    checks = tuple(Check(name, (name,), 2) for name in ("affected", "after"))
+    results = dict(execute_checks(checks, runner=runner, inputs=Inputs(), cwd="workspace", env={}))
+    assert results["affected"].exit is None
+    assert results["affected"].status == "execution_error"
+    assert results["after"].exit == 0
+
+
+def test_readiness_probe_uses_the_same_required_inputs_as_execution():
+    inputs = Inputs(("available",))
+    check = replace(GOOD, required=("available", "missing"))
+    assert required_inputs(check, inputs=inputs, cwd="workspace") == ("missing",)
+    result = dict(execute_checks((check,), runner=Runner(), inputs=inputs, cwd="workspace", env={}))[check.name]
+    assert result.status == "setup_error" and "missing" in result.stderr
 
 
 def test_resources_close_in_reverse_order_once_despite_all_failure_types():

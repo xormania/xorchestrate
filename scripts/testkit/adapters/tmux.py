@@ -141,7 +141,9 @@ def environment(profile, run_dir):
     if profile == "native":
         result = dict(os.environ)
     else:
-        result = {name: os.environ[name] for name in ("PATH", "LANG", "LC_ALL", "LC_CTYPE", "TZ", "TERM") if name in os.environ}
+        names = ("PATH", "LANG", "LC_ALL", "LC_CTYPE", "TZ", "TERM",
+                 "PYTHONPYCACHEPREFIX", "PYTHONDONTWRITEBYTECODE")
+        result = {name: os.environ[name] for name in names if name in os.environ}
         for name, folder in (("HOME", "home"), ("XDG_CONFIG_HOME", "config"), ("XDG_CACHE_HOME", "cache"), ("XDG_DATA_HOME", "data")):
             path = run_dir / "environment" / folder
             path.mkdir(parents=True, mode=0o700)

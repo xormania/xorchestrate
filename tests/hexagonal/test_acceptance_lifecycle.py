@@ -26,14 +26,35 @@ def test_fixture_environment_does_not_inherit_authentication(tmp_path, monkeypat
     monkeypatch.setenv("ACCEPTANCE_EXAMPLE_SECRET", "do-not-forward")
     monkeypatch.setenv("TMUX", "unrelated-server")
     monkeypatch.setenv("PYTHONPATH", "unrelated-imports")
+    monkeypatch.setenv("PYTHONPYCACHEPREFIX", str(tmp_path / "external-bytecode"))
     fixture = lifecycle.environment("fixture", tmp_path)
     assert "ACCEPTANCE_EXAMPLE_SECRET" not in fixture
     assert "TMUX" not in fixture
     assert "PYTHONPATH" not in fixture
+    assert fixture["PYTHONPYCACHEPREFIX"] == str(tmp_path / "external-bytecode")
     assert Path(fixture["HOME"]).is_relative_to(tmp_path)
     native = lifecycle.environment("native", tmp_path)
     assert native["ACCEPTANCE_EXAMPLE_SECRET"] == "do-not-forward"
     assert "TMUX" not in native
+
+
+@pytest.mark.parametrize("policy", ["external", "disabled"])
+def test_fixture_child_import_keeps_bytecode_outside_source(tmp_path, monkeypatch, policy):
+    candidate = tmp_path / "candidate"
+    candidate.mkdir()
+    (candidate / "cache_probe.py").write_text("value = 1\n")
+    cache = tmp_path / "external-bytecode"
+    monkeypatch.delenv("PYTHONPYCACHEPREFIX", raising=False)
+    monkeypatch.delenv("PYTHONDONTWRITEBYTECODE", raising=False)
+    monkeypatch.setenv("PYTHONPYCACHEPREFIX" if policy == "external" else "PYTHONDONTWRITEBYTECODE",
+                       str(cache) if policy == "external" else "1")
+    completed = subprocess.run([sys.executable, "-c", "import cache_probe; assert cache_probe.value == 1"],
+                               cwd=candidate, env=lifecycle.environment("fixture", tmp_path),
+                               capture_output=True, text=True, timeout=10)
+    assert completed.returncode == 0, completed.stderr
+    assert not list(candidate.rglob("*.pyc"))
+    assert not (candidate / "__pycache__").exists()
+    assert bool(list(cache.rglob("cache_probe*.pyc"))) == (policy == "external")
 
 
 def test_reused_pid_is_never_signaled(monkeypatch):

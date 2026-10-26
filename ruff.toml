@@ -21,7 +21,3 @@ extend-select = [
     "S605",  # shell-based process APIs
     "S609",  # wildcard injection in Unix commands
 ]
-
-[lint.per-file-ignores]
-"devtools/run.py" = ["E402"]
-"devtools/tests/native_fixture.py" = ["E402"]

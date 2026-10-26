@@ -11,21 +11,25 @@ testing system alongside the product.
 
 ## Run
 
-From the checkout, install Python 3.11+ dependencies with
-`python3 -m pip install -e '.[test]' -r .github/requirements-ci.txt`. The tmux suite also needs tmux, Linux/WSL2,
-PTYs, Unix sockets and a matching `/proc` process namespace.
+Use Python 3.12 for validation. Before starting Python, select a fresh external
+cache and install the declared dependencies. The tmux suite also needs tmux,
+Linux/WSL2, PTYs, Unix sockets and a matching `/proc` process namespace.
 
 ```bash
+export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XXXXXX")"
+python3 -m pip install -e '.[test]' -r .github/requirements-ci.txt
 python3 -m scripts.testkit doctor
 python3 -m scripts.testkit run
 ```
 
-The default runs deterministic checks and calibration followed by both live suites
+The default runs static checks, behavioral tests and calibration followed by both live suites
 with real application processes and deterministic protocol peers. It does not contact vendor models. Each invocation creates a
 fresh private run under `../xorchestrate-runs/`, prints its directory and writes
 `report.json`. `--output /path/outside/checkout` changes that reusable parent.
 No manual copying of the owner brief, creation of criteria or selection of a new
-run directory is needed. The brief is copied and hash-bound for every run.
+run directory is needed. The brief is copied and hash-bound when its check is
+prepared. Unavailable live prerequisites or a missing brief block the affected
+checks while independent static/tests checks continue; the aggregate still fails.
 
 Keep one private native application config, starting from
 [`native-config.example.json`](../scripts/verification/native-config.example.json).
@@ -41,8 +45,10 @@ python3 -m scripts.testkit run --mode native --config /path/native.json --driver
 `doctor` validates selected local inputs without launching or authenticating a
 harness. Only a successful live run establishes authenticated callback behavior.
 Native launch/authentication/timeout failures remain failures; there is no fixture
-fallback. Native suite commands inherit the operator's terminal; outer command
+fallback. Native live commands inherit the operator's terminal; outer command
 records mark `terminal: inherit` and do not claim captured terminal output.
+Static and pytest checks still capture output in a native/all run. The external
+cache environment is preserved in child Python commands.
 Claude still requires the terminal/channel prerequisites described in
 [behavioral verification](behavioral-verification.md).
 
@@ -59,7 +65,7 @@ protocol runs establish application/adapter behavior, not vendor authentication.
 
 | Concern | One active owner | Consumers |
 |---|---|---|
-| Check plan, whole-plan preflight, named results | `testkit.core.execute_checks`, model/ports | Common local/CI entrypoint |
+| Structural plan validation, check-scoped readiness and named results | `testkit.core.execute_checks`, model/ports and composition | Common local/CI entrypoint |
 | Scenario receipt bookkeeping | `testkit.core.CheckRecorder` with injected clock | Acceptance and multi-harness scenarios |
 | Cleanup order and retained failures | `testkit.core.ResourceScope` | Acceptance clients, multi-harness runtime/provider, external bridge hosts |
 | Bounded command processes | `testkit.adapters.command.SubprocessRunner` | Check execution, captured checks and version probes |
@@ -76,8 +82,8 @@ depend on the checker verdict. New modules must receive an explicit role in
 [`contracts/hexagonal.json`](../contracts/hexagonal.json).
 
 ```bash
-python3 -m scripts.architecture --output ../architecture.json
-python3 -m pytest tests/hexagonal/test_testkit_*.py tests/hexagonal/test_acceptance_testkit.py -q
+python3 -m scripts.testkit run --suite static
+python3 -m pytest -p no:cacheprovider tests/hexagonal/test_testkit_*.py tests/hexagonal/test_acceptance_testkit.py -q
 ```
 
 The existing Jev diagnostic command uses the expanded deterministic report too;
@@ -95,7 +101,9 @@ adapters:
   in addition to convenient decoded text.
 - [Check definitions and full-plan validation before spawn](https://github.com/uscient/agentscient/blob/456457b9a0a9eb1ff285ee2d3e40535b6f722cdb/ops/testkit/checks.py)
   supply the injected executor. Filesystem checks and command effects moved behind
-  ports; the default live plan runs serially to keep terminal ownership clear.
+  ports. Structural validation still precedes launch; missing prerequisites now
+  produce check-scoped setup outcomes. The default live plan runs serially to keep
+  terminal ownership clear.
 - [World resource registration and reverse cleanup](https://github.com/uscient/agentscient/blob/456457b9a0a9eb1ff285ee2d3e40535b6f722cdb/ops/testkit/world.py)
   supply the shared ownership model. Cleanup drains every registered resource and
   retains failures, including explicit releases that failed earlier.

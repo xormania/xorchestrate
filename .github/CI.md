@@ -1,19 +1,25 @@
 # Validation
 
 Local and CI execution use the [testing framework](../docs/testing-framework.md).
-Install the declared application/test dependencies and the single pinned linter
-requirements file:
+Python 3.12 is the required validation baseline. Establish a fresh bytecode cache
+outside the checkout before starting Python, then install the declared
+application/test dependencies and the single pinned linter requirements file:
 
 ```bash
+export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XXXXXX")"
 python3 -m pip install -e '.[test]' -r .github/requirements-ci.txt
+python3 -m scripts.testkit run --suite static
+python3 -m scripts.testkit run --suite tests
 python3 -m scripts.testkit run --suite checks
 python3 -m scripts.testkit run --suite calibration
 python3 -m scripts.testkit run --suite multi-harness
 python3 -m scripts.testkit run --suite acceptance
 ```
 
-`python3 -m scripts.testkit run` composes all four suites. `--family NAME` selects
-one declared deterministic family. Each run gets fresh private evidence outside
+`checks` combines `static` and `tests`. The default `python3 -m scripts.testkit run`
+composes static checks, tests, calibration and both live suites once.
+`--family NAME` selects behavioral families without reducing static coverage.
+Each run gets fresh private evidence outside
 the candidate. Direct pytest is available for a focused scenario; default
 collection targets only active tests and validates `contracts/testing.json`.
 
@@ -24,11 +30,19 @@ permissions. Pull requests, pushes to master/integration and manual runs invoke:
 
 | Job | Purpose |
 |---|---|
-| Static checks | Lint and compile active product/framework/test code |
-| Application and adapter tests, Python 3.11 and 3.12 | Shared `checks` suite: declared behavioral families, pytest inventory/JUnit, deterministic architecture report |
-| Python 3.12 follow-up steps | Shared `calibration` suite and composed three-harness protocol suite |
+| Static checks, Python 3.12 | Shared `static` suite: Ruff lint/security, current-source syntax and deterministic architecture enforcement |
+| Application and adapter tests, Python 3.12 | Shared `tests` suite with declared behavioral families and pytest inventory/JUnit, then shared calibration and composed three-harness protocol suites |
 | Tmux live acceptance | Shared acceptance suite with tmux explicitly installed; private owned process cleanup is part of the receipt |
-| Hexagonal architecture | Declared dependency enforcement and optional Jev diagnostics, with retained reports |
+| Jev architecture diagnostics | Independent diagnostics-only invocation with retained advisory output |
+
+Each job configures `PYTHONPYCACHEPREFIX` in the runner's temporary directory before
+invoking Python. Static checks run once in their own job. The Jev diagnostic
+calculation remains independent and does not add a second deterministic gate.
+Application, calibration and protocol steps have explicit eligibility conditions:
+successful checkout/interpreter/dependency setup and a run that has not been
+cancelled. A suite failure does not skip the later independent suites or erase
+the original job failure. Failed setup produces an unavailable receipt instead of
+launching dependent validation. Available evidence uploads even on failure.
 
 The former historical-runtime and recovered-toolkit jobs, PHP provisioning/tests
 and historical runner have been removed. Historical test sources remain available
@@ -36,17 +50,20 @@ at their pinned source revisions and in Git history. CI does not preserve an old
 implementation as a product acceptance obligation.
 
 Security-lint calibration belongs to the catalog's architecture family and uses
-the actual CI lint command/configuration. Architecture and tmux regression tests
-run through the application matrices; their dedicated jobs no longer rerun the
-same selected pytest modules.
+the shared Ruff definition with independent expected findings. Its pinned Ruff
+dependency remains installed in the application job. Architecture and tmux
+regression tests run through the application suite; dedicated jobs do not rerun
+the same selected pytest modules.
 
 ## Evidence and limits
 
-`framework-checks-python-*` artifacts retain family/case inventories, JUnit,
-command records, deterministic architecture results and calibration reports for
-30 days. Full calibration candidate copies are excluded from artifact uploads.
+`static-checks-python-3.12` retains static reports, effective-input identities,
+structured findings and raw command receipts for 30 days.
+`framework-checks-python-3.12` retains family/case inventories, JUnit,
+command records and calibration reports for 30 days.
+Full calibration candidate copies are excluded from artifact uploads.
 Composed protocol receipts remain available for seven days; tmux uploads selected
-report/scenario receipts for seven days. Raw native configurations and terminal
+report/scenario and captured outer-command receipts for seven days. Raw native configurations and terminal
 logs are private local-run artifacts, not automatically published by CI.
 
 Deterministic fixtures require no model accounts. Authenticated native harnesses,

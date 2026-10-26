@@ -52,7 +52,7 @@
       "forbidden_calls": ["open", "input", "print"]
     },
     "testkit_adapters": {
-      "modules": ["scripts.testkit.adapters", "scripts.testkit.adapters.command", "scripts.testkit.adapters.evidence", "scripts.testkit.adapters.clock", "scripts.testkit.adapters.tmux"],
+      "modules": ["scripts.testkit.adapters", "scripts.testkit.adapters.command", "scripts.testkit.adapters.evidence", "scripts.testkit.adapters.clock", "scripts.testkit.adapters.tmux", "scripts.testkit.adapters.static", "scripts.testkit.adapters.identity", "scripts.testkit.adapters.syntax"],
       "allowed_roles": ["testkit_foundation", "testkit_core", "testkit_adapters"],
       "allowed_external": ["stdlib:*"],
       "allow_dynamic": true

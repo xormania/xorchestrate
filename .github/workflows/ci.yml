@@ -27,31 +27,48 @@
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
           "with": {
             "persist-credentials": false
-          }
+          },
+          "id": "checkout"
         },
         {
           "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
           "with": {
             "python-version": "3.12"
-          }
+          },
+          "id": "python"
         },
         {
           "name": "Install pinned linter",
-          "run": "python3 -m pip install --disable-pip-version-check -r .github/requirements-ci.txt"
+          "run": "python3 -m pip install --disable-pip-version-check -r .github/requirements-ci.txt",
+          "id": "dependencies"
         },
         {
-          "name": "Lint runtime and CI",
-          "id": "lint",
-          "run": "python3 -m ruff check xorchestrate tests .github scripts"
+          "name": "Run shared static checks",
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
+          "run": "python3 -m scripts.testkit run --suite static --output \"$RUNNER_TEMP/xor-static\" --check-timeout 120"
         },
         {
-          "name": "Compile application and fixtures",
-          "run": "python3 -m compileall -q xorchestrate tests/hexagonal scripts/testkit scripts/acceptance scripts/verification"
+          "name": "Record unavailable static validation",
+          "if": "!cancelled() && (steps.checkout.outcome != 'success' || steps.python.outcome != 'success' || steps.dependencies.outcome != 'success')",
+          "run": "mkdir -p \"$RUNNER_TEMP/xor-static\"\ncat > \"$RUNNER_TEMP/xor-static/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"selected_suites\":[\"static\"],\"launched\":false,\"reason\":\"CI checkout, interpreter or dependency setup did not succeed\"}\nJSON"
+        },
+        {
+          "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+          "if": "always()",
+          "with": {
+            "name": "static-checks-python-3.12",
+            "path": "${{ runner.temp }}/xor-static/**/*.json\n${{ runner.temp }}/xor-static/**/*.log\n${{ runner.temp }}/xor-static/**/*.txt\n!${{ runner.temp }}/xor-static/**/snapshot/**",
+            "if-no-files-found": "error",
+            "retention-days": 30
+          }
         }
-      ]
+      ],
+      "env": {
+        "PYTHONPYCACHEPREFIX": "${{ runner.temp }}/xorchestrate-python-cache"
+      }
     },
     "application": {
-      "name": "Application and adapter tests (Python ${{ matrix.python }})",
+      "name": "Application and adapter tests (Python 3.12)",
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 15,
       "steps": [
@@ -59,35 +76,44 @@
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
           "with": {
             "persist-credentials": false
-          }
+          },
+          "id": "checkout"
         },
         {
           "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
           "with": {
-            "python-version": "${{ matrix.python }}"
-          }
+            "python-version": "3.12"
+          },
+          "id": "python"
         },
         {
           "name": "Install application dependencies",
-          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]' -r .github/requirements-ci.txt"
+          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]' -r .github/requirements-ci.txt",
+          "id": "dependencies"
         },
         {
           "name": "Run application, boundary, and subprocess integration tests",
-          "run": "mkdir -p \"$RUNNER_TEMP/xor-checks\"\ngit show -s --format='%H%n%T%n%P' HEAD > \"$RUNNER_TEMP/xor-checks/identity.txt\"\npython3 -m scripts.testkit run --suite checks --output \"$RUNNER_TEMP/xor-checks/tests\" --check-timeout 600"
+          "run": "mkdir -p \"$RUNNER_TEMP/xor-checks\"\ngit show -s --format='%H%n%T%n%P' HEAD > \"$RUNNER_TEMP/xor-checks/identity.txt\"\npython3 -m scripts.testkit run --suite tests --output \"$RUNNER_TEMP/xor-checks/tests\" --check-timeout 600",
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'"
         },
         {
           "name": "Calibrate independent verification through the shared framework",
-          "if": "matrix.python == '3.12'",
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
           "run": "python3 -m scripts.testkit run --suite calibration --output \"$RUNNER_TEMP/xor-checks/calibration\" --check-timeout 600"
         },
         {
           "name": "Run composed three-harness protocol acceptance",
-          "if": "matrix.python == '3.12'",
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
           "run": "python3 -m scripts.testkit run --suite multi-harness --mode protocol-fixture --output \"$RUNNER_TEMP/xor-verification\" --timeout 60"
         },
         {
+          "name": "Record unavailable application validation",
+          "if": "!cancelled() && (steps.checkout.outcome != 'success' || steps.python.outcome != 'success' || steps.dependencies.outcome != 'success')",
+          "run": "mkdir -p \"$RUNNER_TEMP/xor-checks\"\ncat > \"$RUNNER_TEMP/xor-checks/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"selected_suites\":[\"tests\",\"calibration\",\"multi-harness\"],\"launched\":false,\"reason\":\"CI checkout, interpreter or dependency setup did not succeed\"}\nJSON"
+        },
+        {
           "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
-          "if": "always() && matrix.python == '3.12'",
+          "if": "always()",
           "with": {
             "name": "composed-protocol-evidence",
             "path": "${{ runner.temp }}/xor-verification/**",
@@ -99,20 +125,15 @@
           "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
           "if": "always()",
           "with": {
-            "name": "framework-checks-python-${{ matrix.python }}",
+            "name": "framework-checks-python-3.12",
             "path": "${{ runner.temp }}/xor-checks/**/*.json\n${{ runner.temp }}/xor-checks/**/*.xml\n${{ runner.temp }}/xor-checks/**/*.log\n${{ runner.temp }}/xor-checks/**/*.txt\n!${{ runner.temp }}/xor-checks/**/snapshot/**\n!${{ runner.temp }}/xor-checks/**/control/**\n!${{ runner.temp }}/xor-checks/**/mutant/**\n!${{ runner.temp }}/xor-checks/**/candidate/**",
             "if-no-files-found": "error",
             "retention-days": 30
           }
         }
       ],
-      "strategy": {
-        "matrix": {
-          "python": [
-            "3.11",
-            "3.12"
-          ]
-        }
+      "env": {
+        "PYTHONPYCACHEPREFIX": "${{ runner.temp }}/xorchestrate-python-cache"
       }
     },
     "tmux-acceptance": {
@@ -124,36 +145,48 @@
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
           "with": {
             "persist-credentials": false
-          }
+          },
+          "id": "checkout"
         },
         {
           "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
           "with": {
             "python-version": "3.12"
-          }
+          },
+          "id": "python"
         },
         {
           "name": "Install application and tmux",
-          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]'\nsudo apt-get update\nsudo apt-get install -y tmux"
+          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]'\nsudo apt-get update\nsudo apt-get install -y tmux",
+          "id": "dependencies"
         },
         {
           "name": "Run reusable tmux acceptance fixture",
-          "run": "python3 -m scripts.testkit run --suite acceptance --mode protocol-fixture --output \"$RUNNER_TEMP/acceptance-evidence\" --timeout 120"
+          "run": "python3 -m scripts.testkit run --suite acceptance --mode protocol-fixture --output \"$RUNNER_TEMP/acceptance-evidence\" --timeout 120",
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'"
+        },
+        {
+          "name": "Record unavailable tmux acceptance",
+          "if": "!cancelled() && (steps.checkout.outcome != 'success' || steps.python.outcome != 'success' || steps.dependencies.outcome != 'success')",
+          "run": "mkdir -p \"$RUNNER_TEMP/acceptance-evidence\"\ncat > \"$RUNNER_TEMP/acceptance-evidence/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"selected_suites\":[\"acceptance\"],\"launched\":false,\"reason\":\"CI checkout, interpreter or dependency setup did not succeed\"}\nJSON"
         },
         {
           "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
           "if": "always()",
           "with": {
             "name": "tmux-acceptance-evidence",
-            "path": "${{ runner.temp }}/acceptance-evidence/**/report.json\n${{ runner.temp }}/acceptance-evidence/**/scenario.json",
+            "path": "${{ runner.temp }}/acceptance-evidence/**/report.json\n${{ runner.temp }}/acceptance-evidence/**/scenario.json\n${{ runner.temp }}/acceptance-evidence/**/commands/**/*.json\n${{ runner.temp }}/acceptance-evidence/**/commands/**/*.log\n${{ runner.temp }}/acceptance-evidence/setup.json",
             "if-no-files-found": "error",
             "retention-days": 7
           }
         }
-      ]
+      ],
+      "env": {
+        "PYTHONPYCACHEPREFIX": "${{ runner.temp }}/xorchestrate-python-cache"
+      }
     },
     "architecture": {
-      "name": "Hexagonal architecture",
+      "name": "Jev architecture diagnostics",
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 6,
       "steps": [
@@ -161,32 +194,35 @@
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
           "with": {
             "persist-credentials": false
-          }
+          },
+          "id": "checkout"
         },
         {
           "uses": "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97",
           "with": {
             "python-version": "3.12"
-          }
+          },
+          "id": "python"
         },
         {
           "name": "Install test and diagnostic dependencies",
-          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]'"
-        },
-        {
-          "name": "Enforce declared hexagonal architecture",
-          "id": "deterministic",
-          "run": "python3 -m scripts.architecture --output \"$RUNNER_TEMP/architecture/deterministic.json\""
+          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]'",
+          "id": "dependencies"
         },
         {
           "name": "Jev architecture diagnostics",
-          "if": "always()",
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
           "env": {
             "TYPESAFE_API_KEY": "${{ secrets.TYPESAFE_API_KEY || secrets.JEV_API_KEY }}",
             "JEV_ENDPOINT": "${{ vars.JEV_ENDPOINT }}",
             "JEV_MODEL": "${{ vars.JEV_MODEL }}"
           },
           "run": "python3 -m scripts.architecture --jev-config contracts/hexagonal-jev.json --diagnostics-only --output \"$RUNNER_TEMP/architecture/diagnostics.json\""
+        },
+        {
+          "name": "Record unavailable diagnostics",
+          "if": "!cancelled() && (steps.checkout.outcome != 'success' || steps.python.outcome != 'success' || steps.dependencies.outcome != 'success')",
+          "run": "mkdir -p \"$RUNNER_TEMP/architecture\"\ncat > \"$RUNNER_TEMP/architecture/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"launched\":false,\"reason\":\"CI checkout, interpreter or dependency setup did not succeed\"}\nJSON"
         },
         {
           "uses": "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
@@ -198,7 +234,10 @@
             "retention-days": 30
           }
         }
-      ]
+      ],
+      "env": {
+        "PYTHONPYCACHEPREFIX": "${{ runner.temp }}/xorchestrate-python-cache"
+      }
     }
   }
 }
