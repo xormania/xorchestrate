@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from scripts.testkit.composition import plan
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -44,15 +46,23 @@ def test_missing_profile_fails_as_configuration_error(tmp_path):
     assert json.loads(output.read_text())["status"] == "error"
 
 
-def test_ci_retains_blocking_gate_and_independent_diagnostics():
+def test_ci_retains_blocking_gate_and_independent_diagnostics(tmp_path):
     workflow = json.loads((ROOT / ".github/workflows/ci.yml").read_text())
+    static_job = workflow["jobs"]["changes"]
+    gate = next(step for step in static_job["steps"] if "--suite static" in step.get("run", ""))
+    assert "python3 -m scripts.testkit run" in gate["run"]
+    assert not gate.get("continue-on-error") and not static_job.get("continue-on-error")
+    checks = plan(directory=tmp_path, suite="static", mode="protocol-fixture")
+    architecture = [check for check in checks if check.name == "architecture"]
+    assert len(architecture) == 1 and architecture[0].argv[1:3] == ("-m", "scripts.architecture")
+    assert not any("-m scripts.architecture" in step.get("run", "")
+                   and "--diagnostics-only" not in step["run"]
+                   for job in workflow["jobs"].values() for step in job["steps"])
     job = workflow["jobs"]["architecture"]
-    gate = next(step for step in job["steps"] if step.get("id") == "deterministic")
-    assert "python3 -m scripts.architecture" in gate["run"]
-    assert "--diagnostics-only" not in gate["run"]
-    assert not gate.get("continue-on-error") and not job.get("continue-on-error")
+    assert not job.get("needs")
     diagnostic = next(step for step in job["steps"] if step.get("name") == "Jev architecture diagnostics")
-    assert diagnostic["if"] == "always()"
+    assert "!cancelled()" in diagnostic["if"]
+    assert "steps.dependencies.outcome == 'success'" in diagnostic["if"]
     assert "--jev-config contracts/hexagonal-jev.json" in diagnostic["run"]
     assert "--diagnostics-only" in diagnostic["run"]
     assert "TYPESAFE_API_KEY" in diagnostic["env"]
