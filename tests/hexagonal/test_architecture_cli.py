@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 from scripts.testkit.composition import plan
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -66,3 +68,18 @@ def test_ci_retains_blocking_gate_and_independent_diagnostics(tmp_path):
     assert "--jev-config contracts/hexagonal-jev.json" in diagnostic["run"]
     assert "--diagnostics-only" in diagnostic["run"]
     assert "TYPESAFE_API_KEY" in diagnostic["env"]
+
+
+@pytest.mark.parametrize("static_result", ["success", "failure", "cancelled", "skipped"])
+def test_required_architecture_status_reflects_the_shared_static_result(tmp_path, static_result):
+    workflow = json.loads((ROOT / ".github/workflows/ci.yml").read_text())
+    status = workflow["jobs"]["architecture-status"]
+    assert status["name"] == "Hexagonal architecture"
+    assert status["needs"] == ["changes"] and status["if"] == "always()"
+    assert not status.get("continue-on-error")
+    step, = status["steps"]
+    assert step["env"]["STATIC_RESULT"] == "${{ needs.changes.result }}"
+    result = subprocess.run(["/bin/bash", "-e", "-c", step["run"]], cwd=tmp_path,
+                            env={"STATIC_RESULT": static_result}, capture_output=True, text=True,
+                            check=False, timeout=5)
+    assert (result.returncode == 0) == (static_result == "success"), result.stdout + result.stderr

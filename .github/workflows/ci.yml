@@ -191,6 +191,22 @@
         }
       ]
     },
+    "architecture-status": {
+      "name": "Hexagonal architecture",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 2,
+      "needs": ["changes"],
+      "if": "always()",
+      "steps": [
+        {
+          "name": "Report shared static result",
+          "env": {
+            "STATIC_RESULT": "${{ needs.changes.result }}"
+          },
+          "run": "if [ \"$STATIC_RESULT\" != success ]; then\n  echo \"Shared static suite did not pass: $STATIC_RESULT\"\n  exit 1\nfi\necho \"Shared static suite passed, including deterministic architecture enforcement\""
+        }
+      ]
+    },
     "architecture": {
       "name": "Jev architecture diagnostics",
       "runs-on": "ubuntu-24.04",
