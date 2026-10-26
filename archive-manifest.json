@@ -1,0 +1,102 @@
+{
+  "repository": "xormania/xorchestrate",
+  "date": "2026-10-26",
+  "entries": [
+    {
+      "branch": "claude/festive-euler-9nw7fm",
+      "commit": "ca8a49720f965c5e90aeb51d4317d1a2870ffb4f",
+      "tag": "archive/2026-10-26/claude/festive-euler-9nw7fm",
+      "purpose": "Historical PR1-based architecture proposal; documentation only.",
+      "tag_object": "07333cb7511f69fdedc46614614d2c94dc237735",
+      "tree": "3268ae0972063001d82ca7552a9f027cf9c6fc7f"
+    },
+    {
+      "branch": "evidence/behavioral-preservation-b0a00f1",
+      "commit": "57f01ab3c18ecfa0e062ab3e2a1fc567068dff88",
+      "tag": "archive/2026-10-26/evidence/behavioral-preservation-b0a00f1",
+      "purpose": "Behavioral-preservation implementation evidence for candidate b0a00f1.",
+      "tag_object": "c1f19fca00d817aebcea7e83fcb2b7acb46e9246",
+      "tree": "99213cf6d56ab96f356e4a9d04d586903a673619"
+    },
+    {
+      "branch": "evidence/independent-findings-ef75675",
+      "commit": "663f0634f59c5d6f6c54910c8f995a6af9e6a490",
+      "tag": "archive/2026-10-26/evidence/independent-findings-ef75675",
+      "purpose": "Repair reports and closure evidence for candidate ef75675.",
+      "tag_object": "0bf210b9b828dca44906c78288c3831934c30f12",
+      "tree": "874cb8efb97d5b494a3d192c314541b1b46b6d1d"
+    },
+    {
+      "branch": "evidence/jev-failure-correlation-40065048378-1",
+      "commit": "9dd1f434b27d41aa0297ccf120a38de1b5f90fb1",
+      "tag": "archive/2026-10-26/evidence/jev-failure-correlation-40065048378-1",
+      "purpose": "Standalone Jev run 40065048378 archive; orphan history, preserved independently.",
+      "tag_object": "0080b4bd060813ca61f01fa3b6515d04580134eb",
+      "tree": "1eebde68b364cb86aa9aae2cee64182c223bb46d"
+    },
+    {
+      "branch": "experiment/jev-failure-correlation-v1",
+      "commit": "e4886252982b0d20945e77d8a26ef88c2c541d15",
+      "tag": "archive/2026-10-26/experiment/jev-failure-correlation-v1",
+      "purpose": "Jev v1 and v2 experiment code, reports and workflows, including PR7.",
+      "tag_object": "684dd0bc960e127d22693b7ec912e2a6390edf7a",
+      "tree": "a5d9f1d77aca18c7a5540f22a0b628474fcc878a"
+    },
+    {
+      "branch": "handoff/pr6-independent-verification",
+      "commit": "ad05291f8e59fbc2bde23c50375b79b1cb1e559b",
+      "tag": "archive/2026-10-26/handoff/pr6-independent-verification",
+      "purpose": "PR6 independent-verification handoff and evidence archive parts.",
+      "tag_object": "4f16617e9dcae2a7017aca47c9f5ea4a6364d700",
+      "tree": "9e5530c3eed82b3265a350bce6b97bbc77908e83"
+    },
+    {
+      "branch": "verification/pr6-final-1fef55c",
+      "commit": "76ac27050f19bf7ac6df1633ef352f4f1808ee8d",
+      "tag": "archive/2026-10-26/verification/pr6-final-1fef55c",
+      "purpose": "Final bounded independent PR6 verification for candidate 1fef55c.",
+      "tag_object": "7dc5e2d06f603debbe98cfd52a76049e2832f4c2",
+      "tree": "bbdbcb029f201cdc1642ee763cb4f2973ab9f784"
+    },
+    {
+      "branch": "verification/pr6-independent-e565863",
+      "commit": "0f55a1a031a047b8730ef37bc6eda20e17e3cdb0",
+      "tag": "archive/2026-10-26/verification/pr6-independent-e565863",
+      "purpose": "Independent PR6 verification for candidate e565863.",
+      "tag_object": "b5617d7b7fd8863f1d8695212bfa12d2c79ad073",
+      "tree": "7adb96d3b6e87cccf8edda56914e9378e77397f6"
+    },
+    {
+      "branch": "verification/pr6-independent-ef75675",
+      "commit": "3ac2342b6655f1a30652380c85ceb55262b7ad0c",
+      "tag": "archive/2026-10-26/verification/pr6-independent-ef75675",
+      "purpose": "Independent PR6 verification for candidate ef75675.",
+      "tag_object": "772a4397b6fe86592c514e582b9b5463d9d3b06f",
+      "tree": "95623a13636c6cccbe71f0708b3840186f2bb338"
+    },
+    {
+      "branch": "verification/pr6-iv123-hexagonal-1fef55c",
+      "commit": "09f801eab7eda6f7b07715c516f45b1a6a0a656b",
+      "tag": "archive/2026-10-26/verification/pr6-iv123-hexagonal-1fef55c",
+      "purpose": "PR6 IV01\u2013IV03 and architecture verification for candidate 1fef55c.",
+      "tag_object": "c6c0269e4091e22af8715cd90242304edec32da6",
+      "tree": "dc2131843ef620ea491060db9b55835ea2ec595a"
+    },
+    {
+      "branch": "verification/pr6-iv-repairs-e565863",
+      "commit": "37547a138758fe70e6cc471b491aaab01bfc3a05",
+      "tag": "archive/2026-10-26/verification/pr6-iv-repairs-e565863",
+      "purpose": "Independent verification of PR6 IV repairs at e565863.",
+      "tag_object": "e73179d8e593890960493d18c221abf3159d1e02",
+      "tree": "bbe0f6b3798c6dd0ecf70abfe2e0bc4df3e08845"
+    },
+    {
+      "branch": "verification/pr7-independent-cfa3549",
+      "commit": "cbd2d08ff8ba832a333b90a455bb8fec1031fcb9",
+      "tag": "archive/2026-10-26/verification/pr7-independent-cfa3549",
+      "purpose": "Independent Jev v2/PR7 review, replay evidence and verification workflow.",
+      "tag_object": "6301d61c679c3a81edfabd04238d006c6beb6fef",
+      "tree": "86dc4e785b706f410d3b248cb8ba844c703092f3"
+    }
+  ]
+}
