@@ -130,6 +130,7 @@
         "tests/hexagonal/test_testkit_command.py": "adapter",
         "tests/hexagonal/test_testkit_configuration.py": "adapter",
         "tests/hexagonal/test_testkit_entrypoint.py": "composition",
+        "tests/hexagonal/test_static_checks.py": "adapter",
         "tests/hexagonal/test_testkit_integration.py": "composition",
         "tests/hexagonal/test_acceptance_testkit.py": "composition",
         "tests/hexagonal/test_test_framework.py": "framework"

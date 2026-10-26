@@ -24,7 +24,7 @@ def main(argv=None):
                    families=args.family, check_timeout=args.check_timeout)
     try:
         if args.action == "doctor":
-            result = preflight(**options)
+            result = preflight(brief=args.brief, **options)
         else:
             result = run(output=args.output, brief=args.brief, **options)
     except (OSError, ValueError, TypeError) as error:

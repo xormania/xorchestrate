@@ -7,6 +7,7 @@ providers. These adapters exercise deterministic protocol peers, not vendor auth
 from __future__ import annotations
 
 import json
+import os
 import sys
 import threading
 import time
@@ -43,7 +44,12 @@ def peer_options(protocol, *, fixture="progress", state=None, **overrides):
             options = {"command": [sys.executable, str(FIXTURES / "native_progress_peer.py"), protocol], "timeout": 5}
     else:
         raise ValueError("Unsupported test peer: " + protocol + "/" + fixture)
-    return {**options, **overrides}
+    result = {**options, **overrides}
+    cache_environment = {name: os.environ[name] for name in ("PYTHONPYCACHEPREFIX", "PYTHONDONTWRITEBYTECODE")
+                         if name in os.environ}
+    if cache_environment:
+        result["env"] = {**result.get("env", {}), **cache_environment}
+    return result
 
 
 def native_driver(protocol, *, fixture="progress", state=None, **options):

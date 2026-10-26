@@ -3,6 +3,7 @@
 import json
 import subprocess
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -10,6 +11,7 @@ import pytest
 from scripts.testkit import __main__ as cli
 from scripts.testkit import composition
 from scripts.testkit.adapters.evidence import RecordingRunner, digest
+from tests.hexagonal.support.static_checks import static_subject, write_source
 
 
 def native_configuration(tmp_path):
@@ -30,8 +32,9 @@ def test_all_plan_is_the_same_named_checks_as_individual_suites(tmp_path, mode):
     together = composition.plan(suite="all", **options)
     separately = sum((composition.plan(suite=suite, **options) for suite in composition.COMPONENT_SUITES), ())
     assert together == separately
-    assert [check.name for check in together] == ["tests", "architecture", "native-calibration", "work-calibration",
-                                                "state-calibration", "acceptance", "multi-harness"]
+    assert [check.name for check in together] == ["ruff", "syntax", "architecture", "tests", "native-calibration",
+                                                "work-calibration", "state-calibration", "acceptance", "multi-harness"]
+    assert len({check.name for check in together}) == len(together)
     acceptance, multi = together[-2:]
     assert acceptance.argv[:3] == (sys.executable, "-m", "scripts.acceptance")
     assert multi.argv[:3] == (sys.executable, "-m", "scripts.verification.multi_harness")
@@ -39,19 +42,23 @@ def test_all_plan_is_the_same_named_checks_as_individual_suites(tmp_path, mode):
     assert multi.argv[multi.argv.index("--mode") + 1] == mode
     for check in (acceptance, multi):
         assert ("--config" in check.argv) == (mode == "native")
-    frozen = tmp_path / "owner-brief.md"
-    criteria = json.loads((tmp_path / "criteria.json").read_text())
-    assert criteria["owner_basis_sha256"] == digest(frozen.read_bytes())
+    # Declaring a plan does not read the brief or prepare a selected live check.
+    assert not (tmp_path / "owner-brief.md").exists()
+    assert not (tmp_path / "criteria.json").exists()
 
 
 def test_checks_plan_selects_declared_family_and_retains_inventory(tmp_path):
     checks = composition.plan(directory=tmp_path, suite="checks", mode="protocol-fixture",
                               families=("state",), check_timeout=37)
-    assert len(checks) == 2
-    assert checks[0].argv[-2:] == ("--test-family", "state")
-    assert "--test-inventory" in checks[0].argv
-    assert checks[0].timeout == 37
-    assert checks[1].name == "architecture"
+    assert [check.name for check in checks] == ["ruff", "syntax", "architecture", "tests"]
+    tests = next(check for check in checks if check.name == "tests")
+    assert tests.argv[-2:] == ("--test-family", "state")
+    assert "--test-inventory" in tests.argv
+    assert all(check.timeout == 37 for check in checks)
+    assert checks[:3] == composition.plan(directory=tmp_path, suite="static", mode="protocol-fixture",
+                                          check_timeout=37)
+    assert (tests,) == composition.plan(directory=tmp_path, suite="tests", mode="protocol-fixture",
+                                        families=("state",), check_timeout=37)
 
 
 def test_unknown_family_is_rejected_before_any_command(tmp_path, monkeypatch):
@@ -62,6 +69,108 @@ def test_unknown_family_is_rejected_before_any_command(tmp_path, monkeypatch):
     report = composition.run(output=tmp_path, suite="checks", families=("missing-family",))
     assert report["status"] == "setup_error" and report["checks"] == []
     assert "Unknown test families" in report["error"]["diagnostic"]
+
+
+@pytest.mark.parametrize("fault", ["missing", "malformed", "unreadable"])
+def test_unavailable_catalog_with_family_blocks_tests_without_losing_static_outcomes(tmp_path, monkeypatch, fault):
+    root = static_subject(tmp_path / "candidate")
+    write_source(root, "tests/conftest.py", "")
+    write_source(root, "tests/hexagonal/test_subject.py", "VALUE = 1\n")
+    catalog = root / "contracts/testing.json"
+    if fault == "malformed":
+        catalog.write_text("{")
+    elif fault == "unreadable":
+        catalog.write_text(json.dumps({
+            "schema_version": 1, "id": "isolated-test-catalog", "roots": ["tests/hexagonal"],
+            "families": {"framework": {"guarantee": "Isolated prerequisite subject",
+                                       "modules": {"tests/hexagonal/test_subject.py": "contract"}}},
+        }))
+        original_read = Path.read_text
+
+        def unreadable_catalog(path, *args, **kwargs):
+            if path == catalog:
+                raise PermissionError("catalog-read-failure")
+            return original_read(path, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "read_text", unreadable_catalog)
+    original_plan = composition.plan
+
+    def selected_plan(**options):
+        checks = {check.name: check for check in original_plan(**options)}
+        return (checks["tests"], checks["syntax"])
+
+    monkeypatch.setattr(composition, "plan", selected_plan)
+    options = dict(root=root, suite="checks", mode="protocol-fixture", families=("framework",))
+    doctor = composition.preflight(**options)
+    assert doctor["status"] == "setup_error"
+    assert [(row["name"], row["status"]) for row in doctor["checks"]] == [
+        ("tests", "setup_error"), ("syntax", "passed"),
+    ]
+    report = composition.run(output=tmp_path / "evidence", **options)
+    assert report["status"] == "failed"
+    assert report["preflight"] == doctor
+    blocked, independent = report["checks"]
+    assert blocked["name"] == "tests" and blocked["status"] == "setup_error"
+    assert blocked["launched"] is False and blocked["exit_status"] is None
+    assert blocked["command_record"] is None and blocked["command_records"] == []
+    assert independent["name"] == "syntax" and independent["status"] == "passed"
+    assert independent["launched"] and independent["exit_status"] == 0
+    receipt = Path(independent["command_record"])
+    assert json.loads((receipt.parent / "stdout.log").read_text())["status"] == "passed"
+
+
+def test_static_doctor_needs_no_test_discovery_or_native_setup(monkeypatch):
+    from scripts.testkit.adapters import pytest_plugin
+
+    def unrelated_dependency(*args, **kwargs):
+        pytest.fail("static doctor attempted unrelated discovery or a process launch")
+
+    monkeypatch.setattr(pytest_plugin, "load_catalog", unrelated_dependency)
+    monkeypatch.setattr(subprocess, "Popen", unrelated_dependency)
+    report = composition.preflight(suite="static", mode="native")
+    assert report["status"] == "passed"
+    assert [row["name"] for row in report["checks"]] == ["ruff", "syntax", "architecture"]
+
+
+@pytest.mark.parametrize("fault", ["missing-native", "missing-brief", "preparation"])
+def test_blocked_live_check_preserves_independent_captured_result_and_own_receipt(tmp_path, monkeypatch, fault):
+    original_plan = composition.plan
+    marker = "independent-captured-result"
+
+    def selected_plan(**options):
+        checks = {check.name: check for check in original_plan(**options)}
+        independent = replace(checks["tests"], argv=(sys.executable, "-c", "print('" + marker + "')"))
+        return (checks["multi-harness"], independent)
+
+    monkeypatch.setattr(composition, "plan", selected_plan)
+    brief = tmp_path / "owner-brief.md"
+    if fault == "preparation":
+        brief.write_text("Independent owner intent\n")
+        original_read = Path.read_bytes
+
+        def unreadable_preparation(path):
+            if path == brief:
+                raise OSError("brief-read-failure")
+            return original_read(path)
+
+        monkeypatch.setattr(Path, "read_bytes", unreadable_preparation)
+    report = composition.run(output=tmp_path / "runs", suite="all",
+                             mode="native" if fault == "missing-native" else "protocol-fixture",
+                             brief=None if fault == "missing-native" else brief)
+    assert report["status"] == "failed"
+    assert [row["name"] for row in report["checks"]] == ["multi-harness", "tests"]
+    blocked, independent = report["checks"]
+    assert blocked["status"] == "setup_error" and blocked["launched"] is False
+    assert blocked["exit_status"] is None and blocked["command_record"] is None
+    assert blocked["command_records"] == []
+    if fault == "preparation":
+        assert "brief-read-failure" in blocked["reason"]
+    assert independent["status"] == "passed" and independent["launched"] is True
+    receipt = Path(independent["command_record"])
+    command = json.loads(receipt.read_text())
+    assert marker in command["command"][-1]
+    assert command["terminal"] == "capture"
+    assert (receipt.parent / "stdout.log").read_text() == marker + "\n"
 
 
 @pytest.mark.parametrize("fault", ["no_config", "tools_disabled", "missing_command", "string_command"])
@@ -84,10 +193,15 @@ def test_invalid_native_inputs_never_launch_or_fall_back(tmp_path, monkeypatch, 
     monkeypatch.setattr(RecordingRunner, "run", unexpected_launch)
     report = composition.run(output=tmp_path / "runs", suite="multi-harness", mode="native",
                              config=None if fault == "no_config" else config)
-    assert report["status"] == "setup_error"
-    assert report["mode"] == "native" and report["checks"] == []
+    assert report["status"] in {"setup_error", "failed"}
+    assert report["mode"] == "native"
+    assert len(report["checks"]) == 1
+    blocked = report["checks"][0]
+    assert blocked["name"] == "multi-harness" and blocked["status"] == "setup_error"
+    assert blocked["launched"] is False and blocked["exit_status"] is None
+    assert blocked["command_record"] is None and blocked["command_records"] == []
     directory = Path(report["directory"])
-    assert not (directory / "commands").exists()
+    assert not list(directory.rglob("command.json"))
     assert json.loads((directory / "report.json").read_text()) == report
 
 
@@ -104,7 +218,8 @@ def test_native_doctor_checks_inputs_without_authentication_or_process_launch(tm
     report = json.loads(capsys.readouterr().out)
     assert report["status"] == "passed"
     assert report["authentication"] == "verified by live callbacks only"
-    assert {check["name"] for check in report["checks"]} >= {
+    readiness = [item for check in report["checks"] for item in check["readiness"]]
+    assert {check["name"] for check in readiness} >= {
         "tmux", "codex:executable", "claude:executable", "grok:executable",
     }
 

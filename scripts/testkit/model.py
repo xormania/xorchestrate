@@ -20,16 +20,18 @@ class Check:
 @dataclass(frozen=True)
 class Result:
     argv: tuple[str, ...]
-    exit: int
+    exit: int | None
     stdout: str
     stderr: str
     duration: float
     cwd: str
     raw_stdout: bytes | None = None
     raw_stderr: bytes | None = None
+    launched: bool | None = True
+    status: str = "completed"
 
     @property
-    def returncode(self) -> int:
+    def returncode(self) -> int | None:
         """The subprocess spelling, without a second result representation."""
         return self.exit
 

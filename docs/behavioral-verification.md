@@ -41,12 +41,13 @@ for those records. Requested, discovered and executed inventories remain separat
 
 ## Reproducible deterministic checks
 
-Run from a candidate checkout with Python 3.11 or newer and its declared test
-dependencies installed:
+Run from a candidate checkout with Python 3.12 for baseline validation. Establish
+the external cache before Python starts, then install the declared dependencies:
 
 ```sh
-python -m pip install -e '.[test]'
-python -m pytest -q tests/hexagonal
+export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XXXXXX")"
+python -m pip install -e '.[test]' -r .github/requirements-ci.txt
+python -m scripts.testkit run --suite checks
 ```
 
 Keep the original owner brief and generated criteria outside that checkout. Use
