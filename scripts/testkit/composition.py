@@ -8,6 +8,7 @@ import os
 import shutil
 import sys
 from pathlib import Path
+from urllib.parse import quote
 
 from .adapters.evidence import (
     FileInputs,
@@ -20,12 +21,9 @@ from .adapters.evidence import (
 )
 from .adapters.static import STATIC_IDS
 from .core import execute_checks, required_inputs, validate_checks
-from .model import Check
+from .model import COMPONENT_SUITES, MODES, SUITES, Check
 
 ROOT = Path(__file__).resolve().parents[2]
-COMPONENT_SUITES = ("static", "tests", "calibration", "acceptance", "multi-harness")
-SUITES = (*COMPONENT_SUITES, "checks", "all")
-MODES = ("fixture", "protocol-fixture", "native")
 LIVE_IDS = ("acceptance", "multi-harness")
 
 
@@ -35,16 +33,21 @@ def _selection(suite):
     return COMPONENT_SUITES if suite == "all" else ("static", "tests") if suite == "checks" else (suite,)
 
 
-def _options(*, suite, mode, timeout, check_timeout, config, driver, families):
+def _options(*, suite, mode, timeout, check_timeout, config, driver, families, drivers=(), shutdown_grace=10.0):
     selected = _selection(suite)
     if mode not in MODES:
         raise ValueError("Unknown mode")
-    for value in (timeout, check_timeout):
+    for value in (timeout, check_timeout, shutdown_grace):
         if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
             raise ValueError("Timeout must be a positive finite number")
     if families and "tests" not in selected:
         raise ValueError("--family selects pytest families in the tests suite")
-    if mode != "native" and (config is not None or driver is not None):
+    if (not isinstance(drivers, (tuple, list)) or any(not isinstance(d, str) or not d for d in drivers)
+            or len(drivers) != len(set(drivers))):
+        raise ValueError("Acceptance drivers must be unique nonempty names")
+    if driver is not None and drivers:
+        raise ValueError("Select --driver or multiple drivers, not both")
+    if mode != "native" and (config is not None or driver is not None or drivers):
         raise ValueError("--config and --driver require native mode")
     return selected
 
@@ -65,10 +68,11 @@ def cache_environment(root):
 
 
 def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=ROOT, brief=None,
-         families=(), check_timeout=600):
+         families=(), check_timeout=600, drivers=(), shutdown_grace=10.0):
     """Pure check definitions; filesystem preparation belongs to the owning check."""
     selected = _options(suite=suite, mode=mode, timeout=timeout, check_timeout=check_timeout,
-                        config=config, driver=driver, families=families)
+                        config=config, driver=driver, families=families, drivers=drivers,
+                        shutdown_grace=shutdown_grace)
     root, directory = Path(root).resolve(), Path(directory).resolve()
     checks = []
     if "static" in selected:
@@ -90,13 +94,18 @@ def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=
             checks.append(Check(name, (sys.executable, "-m", module, *options), check_timeout,
                                 (module.replace(".", "/") + ".py",)))
     if "acceptance" in selected:
-        argv = [sys.executable, "-m", "scripts.acceptance", "--output", str(directory / "acceptance"),
-                "--profile", "native" if mode == "native" else "fixture", "--timeout", str(timeout)]
-        if config:
-            argv += ["--config", str(Path(config).expanduser().resolve())]
-            if driver:
-                argv += ["--driver", driver]
-        checks.append(Check("acceptance", tuple(argv), timeout + 60, ("scripts/acceptance/__main__.py",)))
+        for selected_driver in drivers or (driver,):
+            check_id = "acceptance:" + quote(selected_driver, safe="") if drivers else "acceptance"
+            output_name = "acceptance-" + quote(selected_driver, safe="") if drivers else "acceptance"
+            argv = [sys.executable, "-m", "scripts.acceptance", "--output", str(directory / output_name),
+                    "--profile", "native" if mode == "native" else "fixture", "--timeout", str(timeout),
+                    "--shutdown-grace", str(shutdown_grace * 0.5),
+                    "--cleanup-budget", str(shutdown_grace * 0.8)]
+            if config:
+                argv += ["--config", str(Path(config).expanduser().resolve())]
+                if selected_driver:
+                    argv += ["--driver", selected_driver]
+            checks.append(Check(check_id, tuple(argv), timeout + 60, ("scripts/acceptance/__main__.py",)))
     if "multi-harness" in selected:
         argv = [sys.executable, "-m", "scripts.verification.multi_harness", "--mode", mode,
                 "--candidate", str(root), "--brief", str(directory / "owner-brief.md"),
@@ -118,7 +127,9 @@ def _native_readiness(check, *, config, driver):
     configuration, base = load_config(Path(config).expanduser().resolve())
     if not isinstance(configuration, dict) or not isinstance(configuration.get("sessions", {}), dict):
         raise ValueError("Native configuration needs a sessions object")
-    if check.name == "acceptance" and not driver:
+    if check.name.startswith("acceptance:"):
+        driver = check.argv[check.argv.index("--driver") + 1] if "--driver" in check.argv else None
+    if (check.name == "acceptance" or check.name.startswith("acceptance:")) and not driver:
         raise ValueError("Native acceptance requires --driver")
     peers = ("codex", "claude", "grok") if check.name == "multi-harness" else (driver,)
     items = []
@@ -157,13 +168,13 @@ def readiness(check, *, root, mode, config=None, driver=None, brief=None, famili
             _, assignments = load_catalog(root)
             select_families(assignments, families)
             items.append({"name": "test_catalog", "passed": True, "modules": len(assignments)})
-        if check.name == "acceptance":
+        if check.name == "acceptance" or check.name.startswith("acceptance:"):
             binary = shutil.which("tmux")
             items.append({"name": "tmux", "passed": binary is not None, "path": binary})
         if check.name == "multi-harness":
             source = _brief(root, brief)
             items.append({"name": "owner_brief", "passed": source.is_file(), "path": str(source)})
-        if mode == "native" and check.name in LIVE_IDS:
+        if mode == "native" and (check.name in LIVE_IDS or check.name.startswith("acceptance:")):
             items.extend(_native_readiness(check, config=config, driver=driver))
     except Exception as error:
         items.append({"name": "configuration", "passed": False, "reason": str(error)})
@@ -173,11 +184,12 @@ def readiness(check, *, root, mode, config=None, driver=None, brief=None, famili
 
 
 def preflight(*, suite, mode, config=None, driver=None, timeout=180, root=ROOT,
-              families=(), check_timeout=600, brief=None):
+              families=(), check_timeout=600, brief=None, drivers=(), shutdown_grace=10.0):
     root = Path(root).resolve()
     cache_environment(root)
     checks = plan(directory=root.parent / "testkit-preflight", suite=suite, mode=mode, config=config,
-                  driver=driver, timeout=timeout, root=root, brief=brief, families=families, check_timeout=check_timeout)
+                  driver=driver, timeout=timeout, root=root, brief=brief, families=families,
+                  check_timeout=check_timeout, drivers=drivers, shutdown_grace=shutdown_grace)
     if families:
         try:
             from .adapters.pytest_plugin import load_catalog
@@ -198,29 +210,76 @@ def preflight(*, suite, mode, config=None, driver=None, timeout=180, root=ROOT,
 
 
 def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=None,
-        timeout=180, root=ROOT, brief=None, families=(), check_timeout=600):
+        timeout=180, root=ROOT, brief=None, families=(), check_timeout=600,
+        directory=None, cancellation=None, result_sink=None, shutdown_grace=10.0, drivers=()):
     root, output = Path(root).resolve(), Path(output).expanduser().resolve()
     if output == root or root in output.parents:
         raise ValueError("Run output must be outside the measured candidate")
-    directory = allocate_run(output)
+    if directory is None:
+        directory = allocate_run(output)
+    else:
+        directory = Path(directory).expanduser().resolve()
+        if directory == root or root in directory.parents:
+            raise ValueError("Run directory must be outside the measured candidate")
+        if directory.exists() and any(directory.iterdir()):
+            raise ValueError("Run directory must be new or empty")
+        directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     report = {"schema_version": 2, "suite": suite, "mode": mode, "status": "setup_error",
               "directory": str(directory), "checks": [], "runtime": {"python": sys.version}}
+    progress = {"schema_version": 1, "revision": 0, "checks": {}}
+
+    def publish(event):
+        # This composition is the only canonical result writer. The external
+        # observer receives each transition only after its checkpoint commits.
+        progress["revision"] += 1
+        event = {**event, "revision": progress["revision"]}
+        progress["last_event"] = event
+        if event["event"] == "inventory":
+            progress["selected_check_ids"] = [item["name"] for item in event["checks"]]
+            report["checks"] = [{"name": item["name"], "status": "selected",
+                                 "validation": "pending", "launched": False} for item in event["checks"]]
+        if "check" in event:
+            progress["checks"][event["check"]] = event
+            row = next((item for item in report["checks"] if item["name"] == event["check"]), None)
+            if row is not None and event["event"] != "qualified":
+                row.update({key: event[key] for key in (
+                    "status", "exit_status", "launched", "reason", "shutdown", "validation") if key in event})
+                if event["event"] == "started":
+                    row.update(status="running", launched=None)
+        write_json(directory / "progress.json", progress)
+        write_json(directory / "report.json", report)
+        if result_sink is not None:
+            result_sink(event)
+
     try:
         env = cache_environment(root)
         report["environment"] = env
         checks = plan(directory=directory, suite=suite, mode=mode, config=config, driver=driver,
-                      timeout=timeout, root=root, brief=brief, families=families, check_timeout=check_timeout)
+                      timeout=timeout, root=root, brief=brief, families=families,
+                      check_timeout=check_timeout, drivers=drivers, shutdown_grace=shutdown_grace)
         report["selected_check_ids"] = [check.name for check in checks]
         ready = preflight(suite=suite, mode=mode, config=config, driver=driver, timeout=timeout, root=root,
-                          brief=brief, families=families, check_timeout=check_timeout)
+                          brief=brief, families=families, check_timeout=check_timeout, drivers=drivers,
+                          shutdown_grace=shutdown_grace)
         write_json(directory / "preflight.json", ready)
         report["preflight"] = ready
         before = candidate_identity(root) if (root / ".git").exists() else None
+        report["candidate_validation"] = "pending" if before is not None else "not_applicable"
         if before is not None:
             write_json(directory / "candidate.json", before)
             report["candidate"] = str(directory / "candidate.json")
         runners = {check.name: RecordingRunner(directory / "commands" / check.name,
-                   terminal="inherit" if mode == "native" and check.name in LIVE_IDS else "capture") for check in checks}
+                   terminal="inherit" if mode == "native" and (
+                       check.name in LIVE_IDS or check.name.startswith("acceptance:")) else "capture",
+                   cancellation=cancellation, shutdown_grace=shutdown_grace,
+                   shutdown_target="owner" if check.name in LIVE_IDS or check.name.startswith("acceptance:") else "group",
+                   # Native presentation context belongs only to native live
+                   # wrappers. Tests/calibration may construct isolated native
+                   # subjects elsewhere and must retain their own policy.
+                   environment={"XORCHESTRATE_PROOF_DIRECTORY": ""} if (
+                       "XORCHESTRATE_PROOF_DIRECTORY" in os.environ and not (
+                           mode == "native" and (check.name in LIVE_IDS or check.name.startswith("acceptance:")))) else None)
+                   for check in checks}
         resolved, manifests = {}, {}
 
         def prepare(check):
@@ -246,8 +305,10 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
                                     "timeout": prepared.timeout, "required": list(prepared.required)}
             return prepared
 
+        report["status"] = "running"
         results = execute_checks(checks, runner=next(iter(runners.values())), runners=runners,
-                                 inputs=FileInputs(), cwd=str(root), env=env, prepare=prepare)
+                                 inputs=FileInputs(), cwd=str(root), env=env, prepare=prepare,
+                                 cancellation=cancellation, result_sink=publish)
         for name, result in results:
             runner = runners[name]
             main = next((record for record in reversed(runner.records)
@@ -256,7 +317,8 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
                    "passed" if result.exit == 0 else "failed"), "launched": result.launched,
                    "exit_status": main["exit_status"] if main else result.exit, "duration_seconds": result.duration,
                    "command_record": str(Path(main["directory"]) / "command.json") if main else None,
-                   "reason": result.stderr if result.exit != 0 else ""}
+                   "reason": result.stderr if result.exit != 0 else "",
+                   "shutdown": result.shutdown, "validation": "complete"}
             if name in manifests:
                 from .adapters.static import bind_static_report, static_manifest
 
@@ -285,7 +347,12 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
                         row.update(status="integrity_error", reason=str(error))
                 row["input_manifest"] = str(directory / (name + "-inputs.json"))
             row["command_records"] = [str(Path(record["directory"]) / "command.json") for record in runner.records]
-            report["checks"].append(row)
+            existing = next((index for index, item in enumerate(report["checks"]) if item["name"] == name), None)
+            if existing is None:
+                report["checks"].append(row)
+            else:
+                report["checks"][existing] = row
+            publish({"event": "qualified", "check": name, "result": row})
         write_json(directory / "plan.json", {"schema_version": 1, "checks": list(resolved.values()),
                    "declared": [{"name": check.name, "argv": list(check.argv), "timeout": check.timeout,
                                  "required": list(check.required)} for check in checks]})
@@ -294,10 +361,16 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
             row["status"] == "passed" for row in report["checks"]) else "failed"
         if before is not None:
             report["candidate_integrity"] = verify_candidate(root, before)
+            report["candidate_validation"] = "passed" if report["candidate_integrity"]["passed"] else "failed"
             if not report["candidate_integrity"]["passed"]:
                 report["status"] = "failed"
     except Exception as error:
         report["status"] = "failed" if report["checks"] else "setup_error"
         report["error"] = {"type": type(error).__name__, "diagnostic": str(error)}
+    except BaseException as error:
+        report["status"] = "interrupted"
+        report["error"] = {"type": type(error).__name__, "diagnostic": str(error)}
+        write_json(directory / "report.json", report)
+        raise
     write_json(directory / "report.json", report)
     return report

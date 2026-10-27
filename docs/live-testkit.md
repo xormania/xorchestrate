@@ -3,6 +3,11 @@
 The [testing framework](testing-framework.md) owns deterministic tests, calibration
 and live workflows. This page describes its live execution adapters.
 
+Use the [managed local proof workflow](managed-proofs.md) for reusable setup,
+profiles, current-terminal attachment, cancellation, collection and fresh
+repetition through `scripts/proof.sh`. The direct Python commands below remain
+available and use the same checks and evidence services.
+
 The active acceptance and multi-harness runners use `scripts.testkit` for command
 execution, resource ownership, check recording, configuration isolation and
 private evidence. These are shared implementations used inside the runners, as
@@ -45,12 +50,15 @@ python3 -m scripts.testkit run --mode native --config /path/native.json --driver
 `doctor` validates selected local inputs without launching or authenticating a
 harness. Only a successful live run establishes authenticated callback behavior.
 Native launch/authentication/timeout failures remain failures; there is no fixture
-fallback. Native live commands inherit the operator's terminal; outer command
+fallback. Direct native live commands inherit the operator's terminal; outer command
 records mark `terminal: inherit` and do not claim captured terminal output.
 Static and pytest checks still capture output in a native/all run. The external
 cache environment is preserved in child Python commands.
 Claude still requires the terminal/channel prerequisites described in
 [behavioral verification](behavioral-verification.md).
+For managed native prompts, use `start` and `attach`: the existing native launcher
+exposes an owned interactive terminal with input/output separate from MCP pipes.
+Seeing an outer worker pane alone does not establish native prompt access.
 
 Use `--suite acceptance` for tmux/MCP callbacks and persistence, or
 `--suite multi-harness` for the existing 46-case communication, controlled work

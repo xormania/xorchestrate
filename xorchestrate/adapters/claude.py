@@ -118,8 +118,17 @@ class ClaudeSessionDriver:
         if not isinstance(self.server_name, str) or not self.server_name.isidentifier():
             raise OrchestrationError("Claude MCP server_name must be an identifier.", "invalid_configuration")
         self.terminal = self.options.get("terminal", "inherit")
-        if self.terminal not in {"inherit", "discard"}:
-            raise OrchestrationError("Claude terminal must be inherit or discard.", "invalid_configuration")
+        if isinstance(self.terminal, dict):
+            if (set(self.terminal) - {"adapter", "directory", "purpose"}
+                    or self.terminal.get("adapter") != "pty"
+                    or not isinstance(self.terminal.get("directory"), str)
+                    or not self.terminal["directory"]
+                    or not isinstance(self.terminal.get("purpose", "native prompt"), str)):
+                raise OrchestrationError("Claude PTY terminal needs an adapter and private directory.", "invalid_configuration")
+            if os.name != "posix":
+                raise OrchestrationError("Claude PTY terminal requires POSIX.", "invalid_configuration")
+        elif self.terminal not in {"inherit", "discard"}:
+            raise OrchestrationError("Claude terminal must be inherit, discard or a PTY adapter.", "invalid_configuration")
         # Operational time/queue bounds do not change the selected native configuration.
         material = {key: value for key, value in self.options.items() if key not in {
             "timeout", "startup_timeout", "max_sessions", "max_events", "max_calls", "max_deliveries", "gateway_timeout", "gateway_workers", "terminal", "evidence_directory"}}
@@ -465,6 +474,13 @@ class ClaudeSessionDriver:
                     argv += [flag, ",".join(values)]
             argv += ["--", resolved.get("initial_prompt", "Await instructions from the configured Xorchestrate channel.")]
             command["args"] = argv
+            if isinstance(self.terminal, dict):
+                terminal_directory = Path(self.terminal["directory"]).expanduser().resolve() / live.incarnation
+                command["args"] = [sys.executable, str(Path(__file__).with_name("native_terminal.py")),
+                                   "--directory", str(terminal_directory), "--native-id", live.native_id,
+                                   "--incarnation", live.incarnation, "--purpose", self.terminal.get("purpose", "native prompt"),
+                                   "--", *argv]
+                live.diagnostics["terminal_descriptor"] = str(terminal_directory / "terminal.json")
             io = {} if self.terminal == "inherit" else {"stdin": subprocess.DEVNULL, "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
             live.process = subprocess.Popen(**command, **io)
             with self._lock:
@@ -493,7 +509,7 @@ class ClaudeSessionDriver:
         except BaseException:
             live.connection.transition("close")
             if live.process:
-                close_process(live.process)
+                self._close_process(live.process)
             if live.gateway:
                 live.gateway.close()
             with self._lock:
@@ -591,11 +607,23 @@ class ClaudeSessionDriver:
         with live.lock:
             live.connection.transition("close")
             live.stopped.set()
-        close_process(live.process)
+        self._close_process(live.process)
         live.gateway.close()
         with self._lock:
             self._sessions.pop(live.handle, None)
         return {"stopped": True, "native_id": live.native_id, "incarnation": live.incarnation, "ownership": "owned", "connection_state": "closed"}
+
+    def _close_process(self, process):
+        if isinstance(self.terminal, dict) and process.poll() is None:
+            # The owned helper forwards termination to its PTY child and reaps
+            # it before exiting. Give that bounded chain time to complete.
+            try:
+                process.terminate()
+            except ProcessLookupError:
+                pass
+            close_process(process, grace=3)
+        else:
+            close_process(process)
 
     def close(self):
         with self._lock:
