@@ -3,6 +3,7 @@
 import pytest
 
 from scripts.testkit.operator import decide, project
+from scripts.testkit.operator_cli import watch
 from scripts.testkit.operator_composition import prepare_run, read_json
 from tests.hexagonal.contracts.managed_operator import FINALIZATION_CASES
 from tests.hexagonal.support.managed_operator import frozen_plan, native_configuration
@@ -62,3 +63,25 @@ def test_relocated_native_snapshot_keeps_original_base_and_does_not_follow_later
     assert config["sessions"]["codex"]["options"]["cwd"] == str(source.parent / "workspace")
     assert config["store"]["options"]["path"] == str(directory / "derived" / "state.sqlite3")
     assert (directory / "inputs" / "config").read_text() == native_configuration()
+
+
+def test_watch_shows_check_transitions_while_the_run_phase_stays_running(monkeypatch, capsys):
+    from scripts.testkit import operator_cli
+
+    states = iter([
+        {"run_id": "observed", "phase": "running", "proof": "pending", "progress": {
+            "last_event": {"event": "started", "check": "syntax"}}},
+        {"run_id": "observed", "phase": "running", "proof": "pending", "progress": {
+            "last_event": {"event": "completed", "check": "syntax", "status": "failed"}}},
+        {"run_id": "observed", "phase": "running", "proof": "pending", "progress": {
+            "last_event": {"event": "qualified", "check": "tests", "result": {"status": "passed"}}}},
+        {"run_id": "observed", "phase": "finished", "proof": "failed"},
+    ])
+    monkeypatch.setattr(operator_cli.managed, "status", lambda directory: next(states))
+    monkeypatch.setattr(operator_cli.time, "sleep", lambda seconds: None)
+    assert watch("explicit-run-directory")["phase"] == "finished"
+    lines = capsys.readouterr().out.splitlines()
+    assert len(lines) == 4
+    assert "syntax started" in lines[0]
+    assert "syntax completed failed" in lines[1]
+    assert "tests qualified passed" in lines[2]

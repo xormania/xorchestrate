@@ -70,10 +70,12 @@ def settings(args):
 
 
 def _line(state):
-    progress = state.get("progress", {})
+    envelope = state.get("progress", {})
+    progress = envelope.get("last_event", envelope)
     event = progress.get("event", progress.get("phase", ""))
-    check = progress.get("check_id", progress.get("name", ""))
-    return f"{state['run_id']}  {state['phase']}  proof={state.get('proof', 'pending')}  {check} {event}".rstrip()
+    check = progress.get("check", progress.get("check_id", progress.get("name", "")))
+    status = progress.get("status", progress.get("result", {}).get("status", ""))
+    return f"{state['run_id']}  {state['phase']}  proof={state.get('proof', 'pending')}  {check} {event} {status}".rstrip()
 
 
 def watch(directory):

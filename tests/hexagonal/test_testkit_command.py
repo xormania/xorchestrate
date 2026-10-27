@@ -8,6 +8,7 @@ and bounded cleanup when a descendant holds the command's pipes.
 import json
 import os
 import pty
+import signal
 import subprocess
 import sys
 import time
@@ -18,6 +19,7 @@ import pytest
 
 from scripts.testkit.adapters.command import SubprocessRunner
 from scripts.testkit.adapters.evidence import run_command, write_json
+from scripts.testkit.adapters.tmux import alive, processes, send_signal, subreaper
 from scripts.testkit.model import Cancelled, Timeout
 
 
@@ -162,6 +164,59 @@ def test_stubborn_command_escalates_within_bound_and_preserves_timeout(tmp_path)
     assert caught.value.shutdown["forced"] is True
     assert caught.value.shutdown["reason"] == "check_timeout"
     assert caught.value.shutdown["exit_status"] < 0
+
+
+@pytest.mark.parametrize("trigger", ["timeout", "cancel"])
+@pytest.mark.parametrize("shutdown_target", ["group", "owner"])
+def test_owner_exit_does_not_hide_redirected_owned_group_survivor(tmp_path, trigger, shutdown_target):
+    child_pid_file, ready = tmp_path / "child.pid", tmp_path / "ready"
+    descendant = (
+        "import os,signal,time; from pathlib import Path; "
+        "signal.signal(signal.SIGTERM,signal.SIG_IGN); "
+        f"Path({str(child_pid_file)!r}).write_text(str(os.getpid())); time.sleep(60)"
+    )
+    owner = (
+        "import subprocess,sys,time; from pathlib import Path\n"
+        f"subprocess.Popen([sys.executable,'-c',{descendant!r}],stdin=subprocess.DEVNULL,"
+        "stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)\n"
+        f"while not Path({str(child_pid_file)!r}).exists(): time.sleep(.01)\n"
+        f"Path({str(ready)!r}).touch()\n"
+        "time.sleep(60)\n"
+    )
+    unrelated = subprocess.Popen((sys.executable, "-c", "import time; time.sleep(60)"), start_new_session=True)
+    child_pid = None
+    try:
+        with subreaper():
+            try:
+                cancellation = (lambda: "operator_stop" if ready.exists() else None) if trigger == "cancel" else None
+                receipt = run_command((sys.executable, "-c", owner), tmp_path, tmp_path / "command",
+                                      cancellation=cancellation, shutdown_grace=.1,
+                                      shutdown_target=shutdown_target, timeout=.5)
+                child_pid = int(child_pid_file.read_text())
+                shutdown = receipt["shutdown"]
+                assert receipt["status"] == ("cancelled" if trigger == "cancel" else "timeout")
+                assert shutdown["reason"] == ("operator_stop" if trigger == "cancel" else "check_timeout")
+                assert shutdown["scope"] == ("run" if trigger == "cancel" else "check")
+                assert shutdown["forced"] is True
+                assert shutdown["verified"] is True and shutdown["remaining_processes"] == []
+                observed = processes().get(child_pid)
+                assert observed is None or not alive(observed[0]), "redirected owned grandchild survived cleanup"
+                assert unrelated.poll() is None
+                assert json.loads((tmp_path / "command" / "command.json").read_text())["shutdown"] == shutdown
+            finally:
+                if child_pid is None and child_pid_file.exists():
+                    child_pid = int(child_pid_file.read_text())
+                if child_pid is not None:
+                    observed = processes().get(child_pid)
+                    if observed is not None:
+                        send_signal(observed[0], signal.SIGKILL)
+                    try:
+                        os.waitpid(child_pid, 0)
+                    except ChildProcessError:
+                        pass
+    finally:
+        unrelated.terminate()
+        unrelated.wait(timeout=5)
 
 
 def test_captured_supervisor_can_own_child_shutdown_without_duplicate_group_signals(tmp_path):
