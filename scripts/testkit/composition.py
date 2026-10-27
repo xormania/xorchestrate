@@ -272,7 +272,13 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
                    terminal="inherit" if mode == "native" and (
                        check.name in LIVE_IDS or check.name.startswith("acceptance:")) else "capture",
                    cancellation=cancellation, shutdown_grace=shutdown_grace,
-                   shutdown_target="owner" if check.name in LIVE_IDS or check.name.startswith("acceptance:") else "group")
+                   shutdown_target="owner" if check.name in LIVE_IDS or check.name.startswith("acceptance:") else "group",
+                   # Native presentation context belongs only to native live
+                   # wrappers. Tests/calibration may construct isolated native
+                   # subjects elsewhere and must retain their own policy.
+                   environment={"XORCHESTRATE_PROOF_DIRECTORY": ""} if (
+                       "XORCHESTRATE_PROOF_DIRECTORY" in os.environ and not (
+                           mode == "native" and (check.name in LIVE_IDS or check.name.startswith("acceptance:")))) else None)
                    for check in checks}
         resolved, manifests = {}, {}
 

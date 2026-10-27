@@ -63,18 +63,20 @@ class RecordingRunner:
     """The command port with private raw evidence for every executed check."""
 
     def __init__(self, directory, *, terminal="capture", cancellation=None, shutdown_grace=10.0,
-                 shutdown_target=None):
+                 shutdown_target=None, environment=None):
         self.directory = Path(directory)
         self.terminal = terminal
         self.records = []
         self.cancellation, self.shutdown_grace = cancellation, shutdown_grace
         self.shutdown_target = shutdown_target
+        self.environment = dict(environment or {})
 
     def run(self, argv, *, cwd, env, timeout):
         directory = self.directory / f"{len(self.records) + 1:02d}"
         started = time.monotonic()
         # Record only explicit overrides, never the full inherited credential env.
-        record = run_command(argv, cwd, directory, environment=env, timeout=timeout, terminal=self.terminal,
+        record = run_command(argv, cwd, directory, environment={**env, **self.environment},
+                             timeout=timeout, terminal=self.terminal,
                              cancellation=self.cancellation, shutdown_grace=self.shutdown_grace,
                              shutdown_target=self.shutdown_target)
         self.records.append({**record, "directory": str(directory)})

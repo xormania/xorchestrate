@@ -76,6 +76,48 @@ def test_multiple_acceptance_drivers_expand_without_repeating_static_checks(tmp_
     assert names.count("multi-harness") == 1
 
 
+@pytest.mark.parametrize("mode,check_name,forwarded", [
+    ("protocol-fixture", "tests", False), ("native", "tests", False),
+    ("native", "native-calibration", False), ("protocol-fixture", "multi-harness", False),
+    ("protocol-fixture", "acceptance", False), ("native", "multi-harness", True),
+    ("native", "acceptance:peer", True),
+])
+def test_managed_native_presentation_context_is_scoped_to_native_live_wrappers(
+        tmp_path, monkeypatch, mode, check_name, forwarded):
+    root = tmp_path / "candidate"
+    root.mkdir()
+    managed = tmp_path / "actual-managed-run"
+    managed.mkdir()
+    monkeypatch.setenv("XORCHESTRATE_PROOF_DIRECTORY", str(managed))
+    output = managed / "native-inputs" if forwarded else tmp_path / "independent-test-inputs"
+    observed = tmp_path / "observed.json"
+    program = (
+        "import json,os,sys; from pathlib import Path; "
+        f"sys.path.insert(0,{str(Path(__file__).resolve().parents[2])!r}); "
+        "from scripts.testkit.adapters.configuration import isolated_config; "
+        f"config=isolated_config({{'sessions':{{'peer':{{'adapter':'claude','options':{{}}}}}}}},{str(root)!r},{str(output)!r}); "
+        f"Path({str(observed)!r}).write_text(json.dumps({{'marker':os.getenv('XORCHESTRATE_PROOF_DIRECTORY'),"
+        "'terminal':config['sessions']['peer']['options'].get('terminal','inherit')}))"
+    )
+    selected = Check(check_name, (sys.executable, "-c", program), 3)
+    monkeypatch.setattr(testkit, "plan", lambda **kwargs: (selected,))
+    monkeypatch.setattr(testkit, "preflight", lambda **kwargs: {"status": "passed", "checks": []})
+    monkeypatch.setattr(testkit, "readiness", lambda *args, **kwargs: {"status": "passed", "reason": ""})
+    brief = tmp_path / "owner.md"
+    brief.write_text("Independent fixture intent\n")
+    report = testkit.run(output=tmp_path / "reports", root=root, mode=mode, brief=brief)
+    assert report["status"] == "passed", report
+    actual = json.loads(observed.read_text())
+    assert actual["marker"] == (str(managed) if forwarded else "")
+    assert isinstance(actual["terminal"], dict) is forwarded
+    assert os.environ["XORCHESTRATE_PROOF_DIRECTORY"] == str(managed)
+    receipt = json.loads(Path(report["checks"][0]["command_record"]).read_text())
+    if forwarded:
+        assert "XORCHESTRATE_PROOF_DIRECTORY" not in receipt["environment"]
+    else:
+        assert receipt["environment"]["XORCHESTRATE_PROOF_DIRECTORY"] == ""
+
+
 @pytest.mark.parametrize("cancel_during_timeout", [False, True])
 def test_real_composed_timeout_and_run_stop_have_different_scheduling_effects(tmp_path, monkeypatch,
                                                                           cancel_during_timeout):
