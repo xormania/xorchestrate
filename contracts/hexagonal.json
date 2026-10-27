@@ -45,14 +45,14 @@
       "forbidden_calls": ["open", "input", "print"]
     },
     "testkit_core": {
-      "modules": ["scripts.testkit.core", "scripts.testkit.catalog"],
+      "modules": ["scripts.testkit.core", "scripts.testkit.catalog", "scripts.testkit.operator"],
       "allowed_roles": ["testkit_foundation", "testkit_core"],
       "allowed_external": ["__future__", "collections", "contextlib", "copy", "dataclasses", "datetime", "enum", "functools", "hashlib", "itertools", "json", "math", "re", "typing"],
       "allow_dynamic": false,
       "forbidden_calls": ["open", "input", "print"]
     },
     "testkit_adapters": {
-      "modules": ["scripts.testkit.adapters", "scripts.testkit.adapters.command", "scripts.testkit.adapters.evidence", "scripts.testkit.adapters.clock", "scripts.testkit.adapters.tmux", "scripts.testkit.adapters.static", "scripts.testkit.adapters.identity", "scripts.testkit.adapters.syntax"],
+      "modules": ["scripts.testkit.adapters", "scripts.testkit.adapters.command", "scripts.testkit.adapters.evidence", "scripts.testkit.adapters.clock", "scripts.testkit.adapters.tmux", "scripts.testkit.adapters.static", "scripts.testkit.adapters.identity", "scripts.testkit.adapters.syntax", "scripts.testkit.adapters.profiles", "scripts.testkit.adapters.managed_store", "scripts.testkit.adapters.managed_process", "scripts.testkit.adapters.terminals"],
       "allowed_roles": ["testkit_foundation", "testkit_core", "testkit_adapters"],
       "allowed_external": ["stdlib:*"],
       "allow_dynamic": true
@@ -155,14 +155,14 @@
       "allow_dynamic": true
     },
     "testkit_composition": {
-      "modules": ["scripts.testkit.composition"],
-      "allowed_roles": ["foundation", "core", "adapters", "composition", "testkit_foundation", "testkit_core", "testkit_adapters", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "testkit_composition", "testkit_pytest"],
+      "modules": ["scripts.testkit.composition", "scripts.testkit.operator_composition"],
+      "allowed_roles": ["foundation", "core", "adapters", "composition", "testkit_foundation", "testkit_core", "testkit_adapters", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "testkit_composition", "testkit_pytest", "testkit_configuration"],
       "allowed_external": ["stdlib:*", "jsonschema", "referencing", "pytest"],
       "allow_dynamic": true
     },
     "testkit_entrypoints": {
-      "modules": ["scripts.testkit.__main__"],
-      "allowed_roles": ["foundation", "core", "adapters", "composition", "testkit_foundation", "testkit_core", "testkit_adapters", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "testkit_composition", "testkit_entrypoints", "testkit_pytest"],
+      "modules": ["scripts.testkit.__main__", "scripts.testkit.operator_cli"],
+      "allowed_roles": ["foundation", "core", "adapters", "composition", "testkit_foundation", "testkit_core", "testkit_adapters", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "testkit_composition", "testkit_entrypoints", "testkit_pytest", "testkit_configuration"],
       "allowed_external": ["stdlib:*", "jsonschema", "referencing", "pytest"],
       "allow_dynamic": true
     },

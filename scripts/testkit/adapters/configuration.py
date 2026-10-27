@@ -28,6 +28,16 @@ def isolated_config(config, base, directory):
             if spec.get("enabled", True) and spec.get("adapter") in BUILTINS[kind]:
                 options = spec.setdefault("options", {})
                 options["cwd"] = str((base / options.get("cwd", ".")).resolve())
+                if (kind == "sessions" and spec.get("adapter") == "claude"
+                        and options.get("terminal", "inherit") == "inherit"
+                        and os.environ.get("XORCHESTRATE_PROOF_DIRECTORY")):
+                    managed = Path(os.environ["XORCHESTRATE_PROOF_DIRECTORY"]).resolve()
+                    if not directory.is_relative_to(managed):
+                        raise ValueError("Managed native terminal evidence must belong to its run")
+                    # Explicit run-local launcher configuration, never a vendor
+                    # environment override or a second native session launch.
+                    options["terminal"] = {"adapter": "pty", "directory": str(directory / "native-terminals"),
+                                           "purpose": "Claude native prompt"}
                 if "command" in options and cache_environment:
                     # Child tools keep the validation launcher's bytecode policy
                     # without inheriting unrelated operator credentials.

@@ -20,3 +20,15 @@ class InputProbe(Protocol):
 class Clock(Protocol):
     def monotonic(self) -> float: ...
 
+
+class Cancellation(Protocol):
+    """Return a run cancellation reason, or None while scheduling may continue."""
+
+    def __call__(self) -> str | None: ...
+
+
+class ResultSink(Protocol):
+    """Persist a JSON-compatible transition before execution proceeds."""
+
+    def __call__(self, event: Mapping[str, object]) -> None: ...
+

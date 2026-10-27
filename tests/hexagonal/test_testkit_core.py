@@ -9,7 +9,7 @@ from dataclasses import replace
 import pytest
 
 from scripts.testkit.core import CheckRecorder, ResourceScope, execute_checks, required_inputs
-from scripts.testkit.model import Check, Result, Timeout
+from scripts.testkit.model import Cancelled, Check, Result, Timeout
 
 
 class Inputs:
@@ -159,6 +159,86 @@ def test_readiness_probe_uses_the_same_required_inputs_as_execution():
     assert required_inputs(check, inputs=inputs, cwd="workspace") == ("missing",)
     result = dict(execute_checks((check,), runner=Runner(), inputs=inputs, cwd="workspace", env={}))[check.name]
     assert result.status == "setup_error" and "missing" in result.stderr
+
+
+@pytest.mark.parametrize("cancel_at", ["before", "completed", "timeout-cleanup"])
+def test_run_cancellation_preserves_completed_rows_and_never_schedules_next_check(cancel_at):
+    reason = ["operator_stop" if cancel_at == "before" else None]
+    events, calls = [], []
+    checks = tuple(Check(name, (name,), 2) for name in ("first", "after"))
+
+    class ControlledRunner:
+        def run(self, argv, *, cwd, env, timeout):
+            calls.append(argv[0])
+            if cancel_at == "timeout-cleanup":
+                # The command retains its own timeout cause even when a
+                # separate run cancellation arrives during its finalizer.
+                reason[0] = "operator_stop"
+                raise Timeout(argv, cwd=cwd, timeout=timeout,
+                              shutdown={"scope": "check", "reason": "check_timeout", "forced": False})
+            return Result(tuple(argv), 0, "done", "", 0, cwd)
+
+    def sink(event):
+        events.append(event)
+        if cancel_at == "completed" and event["event"] == "completed":
+            reason[0] = "operator_stop"
+
+    rows = dict(execute_checks(checks, runner=ControlledRunner(), inputs=Inputs(), cwd="workspace", env={},
+                               cancellation=lambda: reason[0], result_sink=sink))
+    assert calls == ([] if cancel_at == "before" else ["first"])
+    assert rows["after"].status == "not_run" and rows["after"].launched is False
+    assert rows["after"].shutdown["scope"] == "run"
+    if cancel_at == "timeout-cleanup":
+        assert rows["first"].status == "timeout"
+        assert rows["first"].shutdown["reason"] == "check_timeout"
+    elif cancel_at == "completed":
+        assert rows["first"].exit == 0
+    else:
+        assert rows["first"].status == "not_run"
+    assert events[0]["event"] == "inventory"
+    assert [item["name"] for item in events[0]["checks"]] == ["first", "after"]
+    assert [event["revision"] for event in events] == list(range(1, len(events) + 1))
+
+
+def test_incremental_completed_outcome_commits_before_next_check_starts():
+    events = []
+
+    class ObserverRunner:
+        def run(self, argv, *, cwd, env, timeout):
+            if argv[0] == "after":
+                assert any(event["event"] == "completed" and event["check"] == "first" for event in events)
+            return Result(tuple(argv), 0, "", "", 0, cwd)
+
+    execute_checks(tuple(Check(name, (name,), 2) for name in ("first", "after")),
+                   runner=ObserverRunner(), inputs=Inputs(), cwd="workspace", env={}, result_sink=events.append)
+    assert [event["check"] for event in events if event["event"] == "completed"] == ["first", "after"]
+
+
+def test_failed_inventory_publication_launches_nothing():
+    runner = Runner()
+
+    def failed_sink(event):
+        raise OSError("evidence disk unavailable")
+
+    with pytest.raises(OSError, match="evidence disk"):
+        execute_checks((GOOD,), runner=runner, inputs=Inputs(), cwd="workspace", env={}, result_sink=failed_sink)
+    assert runner.calls == []
+
+
+def test_cancelled_command_retains_reason_and_cannot_report_success():
+    reason = [None]
+
+    class CancelRunner:
+        def run(self, argv, *, cwd, env, timeout):
+            reason[0] = "run_deadline"
+            raise Cancelled(argv, cwd=cwd, reason=reason[0], stdout="partial", duration=0.2,
+                            shutdown={"reason": reason[0], "scope": "run", "forced": False})
+
+    rows = dict(execute_checks((GOOD, Check("after", ("after",), 2)), runner=CancelRunner(),
+                               inputs=Inputs(), cwd="workspace", env={}, cancellation=lambda: reason[0]))
+    assert rows["first"].status == "cancelled" and rows["first"].exit is None
+    assert rows["first"].stdout == "partial" and rows["first"].shutdown["reason"] == "run_deadline"
+    assert rows["after"].status == "not_run"
 
 
 def test_resources_close_in_reverse_order_once_despite_all_failure_types():

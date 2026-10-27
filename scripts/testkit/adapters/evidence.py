@@ -8,12 +8,13 @@ import platform
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
-from ..model import Result, Timeout
+from ..model import Cancelled, Result, Timeout
 from .command import SubprocessRunner
 
 
@@ -32,10 +33,16 @@ def canonical(value):
 def write_json(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_bytes(json.dumps(value, indent=2, sort_keys=True, allow_nan=False).encode() + b"\n")
-    temporary.chmod(0o600)
-    temporary.replace(path)
+    payload = json.dumps(value, indent=2, sort_keys=True, allow_nan=False).encode() + b"\n"
+    descriptor, name = tempfile.mkstemp(prefix="." + path.name + ".", suffix=".tmp", dir=path.parent)
+    temporary = Path(name)
+    try:
+        # mkstemp creates the file privately before any payload is written.
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(payload)
+        temporary.replace(path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def allocate_run(output):
@@ -55,23 +62,37 @@ class FileInputs:
 class RecordingRunner:
     """The command port with private raw evidence for every executed check."""
 
-    def __init__(self, directory, *, terminal="capture"):
+    def __init__(self, directory, *, terminal="capture", cancellation=None, shutdown_grace=10.0,
+                 shutdown_target=None):
         self.directory = Path(directory)
         self.terminal = terminal
         self.records = []
+        self.cancellation, self.shutdown_grace = cancellation, shutdown_grace
+        self.shutdown_target = shutdown_target
 
     def run(self, argv, *, cwd, env, timeout):
         directory = self.directory / f"{len(self.records) + 1:02d}"
         started = time.monotonic()
         # Record only explicit overrides, never the full inherited credential env.
-        record = run_command(argv, cwd, directory, environment=env, timeout=timeout, terminal=self.terminal)
+        record = run_command(argv, cwd, directory, environment=env, timeout=timeout, terminal=self.terminal,
+                             cancellation=self.cancellation, shutdown_grace=self.shutdown_grace,
+                             shutdown_target=self.shutdown_target)
         self.records.append({**record, "directory": str(directory)})
         stdout, stderr = (directory / "stdout.log").read_bytes(), (directory / "stderr.log").read_bytes()
+        if record["status"] == "cancelled":
+            shutdown = record.get("shutdown") or {"scope": "run", "reason": "cancelled", "forced": False}
+            raise Cancelled(argv, cwd=cwd, reason=shutdown["reason"],
+                            stdout=stdout.decode("utf-8", errors="replace"),
+                            stderr=stderr.decode("utf-8", errors="replace"),
+                            raw_stdout=stdout, raw_stderr=stderr,
+                            duration=time.monotonic() - started, shutdown=shutdown,
+                            launched=record.get("launched", True))
         return Result(tuple(argv), record["exit_status"] if record["exit_status"] is not None else (
                           None if record["status"] == "setup_error" else 3),
                       stdout.decode("utf-8", errors="replace"), stderr.decode("utf-8", errors="replace"),
                       time.monotonic() - started, str(cwd), raw_stdout=stdout, raw_stderr=stderr,
-                      launched=record["status"] != "setup_error", status=record["status"])
+                      launched=record.get("launched", record["status"] != "setup_error"),
+                      status=record["status"], shutdown=record.get("shutdown"))
 
 
 def git(root, *args):
@@ -157,7 +178,8 @@ def bind_files(paths):
             for name, path in paths.items()}
 
 
-def run_command(command, cwd, directory, *, environment=None, timeout=300, terminal="capture"):
+def run_command(command, cwd, directory, *, environment=None, timeout=300, terminal="capture",
+                cancellation=None, shutdown_grace=10.0, shutdown_target=None):
     """Retain a private raw record. Only explicit material environment is recorded.
 
     Raw output may be sensitive. Publication/redaction is a separate operation.
@@ -170,23 +192,42 @@ def run_command(command, cwd, directory, *, environment=None, timeout=300, termi
               "environment": environment, "started_at": now(), "timeout_seconds": timeout,
               "python": sys.version, "platform": platform.platform(), "terminal": terminal, "status": "running"}
     write_json(directory / "command.json", record)
+    runner = SubprocessRunner(terminal=terminal, cancellation=cancellation, shutdown_grace=shutdown_grace,
+                              shutdown_target=shutdown_target)
+    pending_error = None
+    stdout, stderr = b"", b""
     try:
-        completed = SubprocessRunner(terminal=terminal).run(command, cwd=cwd, env={**os.environ, **environment}, timeout=timeout)
+        completed = runner.run(command, cwd=cwd, env={**os.environ, **environment}, timeout=timeout)
         stdout = completed.raw_stdout if completed.raw_stdout is not None else completed.stdout.encode()
         stderr = completed.raw_stderr if completed.raw_stderr is not None else completed.stderr.encode()
         record.update(exit_status=completed.returncode,
-                      status="passed" if completed.returncode == 0 else "failed")
-    except Timeout as exc:
+                      status="passed" if completed.returncode == 0 else "failed", launched=completed.launched)
+    except (Timeout, Cancelled) as exc:
         stdout = exc.raw_stdout if exc.raw_stdout is not None else (exc.stdout or "").encode()
         stderr = exc.raw_stderr if exc.raw_stderr is not None else (exc.stderr or "").encode()
-        record.update(exit_status=None, status="timeout")
+        record.update(exit_status=None, status="timeout" if isinstance(exc, Timeout) else "cancelled",
+                      launched=getattr(exc, "launched", True), shutdown=exc.shutdown)
     except OSError as exc:
         stdout, stderr = b"", str(exc).encode()
-        record.update(exit_status=None, status="setup_error", error=type(exc).__name__)
-    for name, content in (("stdout.log", stdout), ("stderr.log", stderr)):
-        output = directory / name
-        output.write_bytes(content)
-        output.chmod(0o600)
-    record.update(finished_at=now(), stdout_sha256=digest(stdout), stderr_sha256=digest(stderr))
-    write_json(directory / "command.json", record)
+        record.update(exit_status=None, status="setup_error", error=type(exc).__name__, launched=False)
+    except BaseException as exc:
+        pending_error = exc
+        stdout, stderr = getattr(runner, "last_output", (b"", b""))
+        record.update(exit_status=None, status="interrupted", error=type(exc).__name__,
+                      diagnostic=str(exc), shutdown=getattr(runner, "last_shutdown", None), launched=True)
+    try:
+        for name, content in (("stdout.log", stdout), ("stderr.log", stderr)):
+            output = directory / name
+            # These files are inside an exclusively allocated private directory.
+            with output.open("xb") as stream:
+                os.chmod(output, 0o600)
+                stream.write(content)
+        record.update(finished_at=now(), stdout_sha256=digest(stdout), stderr_sha256=digest(stderr))
+        write_json(directory / "command.json", record)
+    except BaseException as publication_error:
+        if pending_error is None:
+            raise
+        pending_error.add_note(f"Command receipt publication also failed: {type(publication_error).__name__}")
+    if pending_error is not None:
+        raise pending_error
     return record

@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import secrets
+import signal
 import sys
 import time
 import uuid
@@ -369,6 +370,18 @@ def main(argv=None):
         write_json(directory / name, value)
     resources = ResourceScope()
     suite = None
+    previous_handlers = {}
+
+    def interrupted(number, frame):
+        # The outer receipt retains whether this was a check deadline or a run
+        # cancellation. Here the signal only requests the existing save/finally
+        # chain; it must not guess the scheduling scope from SIGTERM.
+        for selected in previous_handlers:
+            signal.signal(selected, signal.SIG_IGN)
+        raise VerificationFailure("termination_requested")
+
+    for number in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP):
+        previous_handlers[number] = signal.signal(number, interrupted)
     try:
         runtime = build(config, base)
         resources.defer("application_runtime", runtime.close)
@@ -392,11 +405,15 @@ def main(argv=None):
         else:
             write_json(directory / "setup-failure.json", {"type": type(exc).__name__, "diagnostic": str(exc)})
     finally:
-        errors = resources.close()
-        cleanup = {"status": "failed" if errors else "passed", "errors": errors, "finished_at": now()}
-        after = verify_candidate(candidate_root, candidate)
-        write_json(directory / "candidate-after.json", after)
-        write_json(directory / "cleanup.json", cleanup)
+        try:
+            errors = resources.close()
+            cleanup = {"status": "failed" if errors else "passed", "errors": errors, "finished_at": now()}
+            after = verify_candidate(candidate_root, candidate)
+            write_json(directory / "candidate-after.json", after)
+            write_json(directory / "cleanup.json", cleanup)
+        finally:
+            for number, handler in previous_handlers.items():
+                signal.signal(number, handler)
     report_file = directory / "report.json"
     if not report_file.exists():
         return 1

@@ -28,6 +28,11 @@ Local and CI runs use the same [testing framework](docs/testing-framework.md),
 shared contracts, fixtures and evidence services. See [live tests](docs/live-testkit.md)
 for authenticated native configuration.
 
+For reusable local setup, managed terminals, cancellation, evidence collection
+and fresh repetition, use the [managed proof workflow](docs/managed-proofs.md)
+through `scripts/proof.sh`. Native proofs run locally with your configured,
+authenticated harnesses; deterministic protocol results remain separate.
+
 ## Run locally
 
 Use Python 3.12 or newer. From the checkout:

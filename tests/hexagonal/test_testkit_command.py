@@ -11,12 +11,14 @@ import pty
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
 
 from scripts.testkit.adapters.command import SubprocessRunner
-from scripts.testkit.model import Timeout
+from scripts.testkit.adapters.evidence import run_command, write_json
+from scripts.testkit.model import Cancelled, Timeout
 
 
 def test_inherit_mode_preserves_real_terminal_descriptors_and_input(tmp_path):
@@ -125,3 +127,128 @@ def test_timeout_kills_descendants_retains_output_and_does_not_wait_for_held_pip
     assert caught.value.duration >= 0.3
     time.sleep(0.9)
     assert not marker.exists(), "descendant executed after the command timeout"
+
+
+@pytest.mark.parametrize("trigger", ["timeout", "cancel"])
+def test_graceful_shutdown_reaches_finalizer_and_retains_distinct_scope(tmp_path, trigger):
+    ready, finalized = tmp_path / "ready", tmp_path / "finalized"
+    program = (
+        "import signal,time,sys; from pathlib import Path\n"
+        f"def finish(*_): Path({str(finalized)!r}).write_text('saved'); sys.exit(0)\n"
+        "signal.signal(signal.SIGTERM,finish)\n"
+        f"Path({str(ready)!r}).touch()\n"
+        "print('partial evidence',flush=True)\n"
+        "while True: time.sleep(.02)\n"
+    )
+    cancellation = (lambda: "operator_stop" if ready.exists() else None) if trigger == "cancel" else None
+    exception = Cancelled if trigger == "cancel" else Timeout
+    with pytest.raises(exception) as caught:
+        SubprocessRunner(cancellation=cancellation, shutdown_grace=1).run(
+            (sys.executable, "-c", program), cwd=tmp_path, env={}, timeout=0.5)
+    assert finalized.read_text() == "saved"
+    assert "partial evidence" in caught.value.stdout
+    assert caught.value.shutdown["forced"] is False
+    assert caught.value.shutdown["scope"] == ("run" if trigger == "cancel" else "check")
+    assert caught.value.shutdown["reason"] == ("operator_stop" if trigger == "cancel" else "check_timeout")
+
+
+def test_stubborn_command_escalates_within_bound_and_preserves_timeout(tmp_path):
+    program = "import signal,time; signal.signal(signal.SIGTERM,signal.SIG_IGN); print('ready',flush=True); time.sleep(20)"
+    started = time.monotonic()
+    with pytest.raises(Timeout) as caught:
+        SubprocessRunner(shutdown_grace=0.1).run(
+            (sys.executable, "-c", program), cwd=tmp_path, env={}, timeout=0.3)
+    assert time.monotonic() - started < 2
+    assert caught.value.shutdown["forced"] is True
+    assert caught.value.shutdown["reason"] == "check_timeout"
+    assert caught.value.shutdown["exit_status"] < 0
+
+
+def test_captured_supervisor_can_own_child_shutdown_without_duplicate_group_signals(tmp_path):
+    count = tmp_path / "child-signals"
+    child = (
+        "import signal,time,sys; from pathlib import Path\n"
+        "observed=[]\n"
+        f"def finish(*_): observed.append(1); Path({str(count)!r}).write_text(str(len(observed))); time.sleep(.15); sys.exit(0)\n"
+        "signal.signal(signal.SIGTERM,finish)\n"
+        "while True: time.sleep(.01)\n"
+    )
+    owner = (
+        "import signal,subprocess,sys,time\n"
+        f"child=subprocess.Popen([sys.executable,'-c',{child!r}])\n"
+        "def finish(*_): time.sleep(.05); child.terminate(); child.wait(); sys.exit(0)\n"
+        "signal.signal(signal.SIGTERM,finish)\n"
+        "while True: time.sleep(.01)\n"
+    )
+    with pytest.raises(Timeout) as caught:
+        SubprocessRunner(shutdown_target="owner", shutdown_grace=1).run(
+            (sys.executable, "-c", owner), cwd=tmp_path, env={}, timeout=.5)
+    assert count.read_text() == "1"
+    assert caught.value.shutdown["forced"] is False
+
+
+def test_recorded_cancellation_preserves_partial_bytes_and_final_receipt(tmp_path):
+    ready = tmp_path / "ready"
+    program = f"from pathlib import Path; import time; print('saved',flush=True); Path({str(ready)!r}).touch(); time.sleep(20)"
+    directory = tmp_path / "command"
+    receipt = run_command((sys.executable, "-c", program), tmp_path, directory,
+                          cancellation=lambda: "run_deadline" if ready.exists() else None, timeout=5)
+    assert receipt["status"] == "cancelled" and receipt["finished_at"]
+    assert receipt["shutdown"]["reason"] == "run_deadline"
+    assert receipt["shutdown"]["scope"] == "run"
+    assert (directory / "stdout.log").read_bytes() == b"saved\n"
+    assert json.loads((directory / "command.json").read_text()) == receipt
+
+
+def test_command_interruption_keeps_receipt_and_reaches_child_finalizer(tmp_path):
+    finalized = tmp_path / "finalized"
+    directory = tmp_path / "receipt"
+    program = (
+        "import signal,time,sys; from pathlib import Path\n"
+        f"def finish(*_): Path({str(finalized)!r}).touch(); sys.exit(0)\n"
+        "signal.signal(signal.SIGTERM,finish)\n"
+        "while True: time.sleep(.02)\n"
+    )
+    helper = (
+        "import _thread,threading,sys\n"
+        "from scripts.testkit.adapters.evidence import run_command\n"
+        "timer=threading.Timer(.4,_thread.interrupt_main); timer.start()\n"
+        "try:\n"
+        f" run_command((sys.executable,'-c',{program!r}),{str(tmp_path)!r},{str(directory)!r},timeout=10)\n"
+        "except KeyboardInterrupt: pass\n"
+        "finally: timer.cancel()\n"
+    )
+    subprocess.run((sys.executable, "-c", helper), cwd=Path(__file__).resolve().parents[2], check=True, timeout=5)
+    assert finalized.exists()
+    receipt = json.loads((directory / "command.json").read_text())
+    assert receipt["status"] == "interrupted" and receipt["error"] == "KeyboardInterrupt"
+    assert receipt["finished_at"] and receipt["shutdown"]["forced"] is False
+
+
+def test_atomic_writer_has_no_shared_temporary_file_under_concurrent_publications(tmp_path):
+    path = tmp_path / "result.json"
+
+    def publish(index):
+        write_json(path, {"index": index, "payload": "x" * 10000})
+        # Every visible generation is complete, regardless of writer ordering.
+        assert len(json.loads(path.read_text())["payload"]) == 10000
+
+    with ThreadPoolExecutor(max_workers=8) as workers:
+        list(workers.map(publish, range(50)))
+    assert json.loads(path.read_text())["index"] in range(50)
+    assert path.stat().st_mode & 0o777 == 0o600
+    assert list(tmp_path.iterdir()) == [path]
+
+
+def test_interrupted_atomic_publication_preserves_previous_committed_json(tmp_path, monkeypatch):
+    path = tmp_path / "result.json"
+    write_json(path, {"generation": 1})
+
+    def fail_replace(source, destination):
+        raise OSError("publication interrupted")
+
+    monkeypatch.setattr(Path, "replace", fail_replace)
+    with pytest.raises(OSError, match="publication interrupted"):
+        write_json(path, {"generation": 2})
+    assert json.loads(path.read_text()) == {"generation": 1}
+    assert list(tmp_path.iterdir()) == [path]

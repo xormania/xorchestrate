@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ctypes
 import json
+import math
 import os
 import shlex
 import shutil
@@ -156,8 +157,13 @@ def environment(profile, run_dir):
     return result
 
 
-def supervise(command, run_dir, *, profile="fixture", timeout=120, cwd=None, tmux=None, grace=10):
+def supervise(command, run_dir, *, profile="fixture", timeout=120, cwd=None, tmux=None, grace=10,
+              cleanup_budget=None):
     """Run one worker, retaining private diagnostics and an exportable receipt."""
+    if cleanup_budget is not None and (isinstance(cleanup_budget, bool)
+            or not isinstance(cleanup_budget, (int, float)) or not math.isfinite(cleanup_budget)
+            or cleanup_budget <= 0):
+        raise ValueError("cleanup budget must be a positive finite number")
     run_dir = Path(run_dir).resolve()
     run_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
     started = time.monotonic()
@@ -173,25 +179,38 @@ def supervise(command, run_dir, *, profile="fixture", timeout=120, cwd=None, tmu
     server_log = None
     socket = None
     binary = tmux or shutil.which("tmux")
+    cleanup_deadline = None
+
+    def remaining(bound):
+        if cleanup_deadline is None:
+            return bound
+        available = cleanup_deadline - time.monotonic()
+        if available <= 0:
+            raise subprocess.TimeoutExpired("owned cleanup", cleanup_budget)
+        return min(bound, available)
 
     def interrupt(number, frame):
         interrupted.append(number)
 
     def control(*arguments, check=True):
         response = subprocess.run([binary, "-N", "-S", str(socket), "-f", os.devnull, *arguments],
-                                  cwd=cwd, env=env, capture_output=True, text=True, timeout=3)
+                                  cwd=cwd, env=env, capture_output=True, text=True, timeout=remaining(3))
         if check and response.returncode:
             raise AcceptanceFailure("tmux_control_failed")
         return response
 
     def observe_wait(duration):
         deadline = time.monotonic() + duration
+        if cleanup_deadline is not None:
+            deadline = min(deadline, cleanup_deadline)
         while time.monotonic() < deadline:
             tracker.observe()
             tracker.reap(exclude=(process.pid,))
-            time.sleep(0.02)
+            time.sleep(min(0.02, max(0, deadline - time.monotonic())))
 
     def finish():
+        nonlocal cleanup_deadline
+        cleanup_deadline = time.monotonic() + cleanup_budget if cleanup_budget is not None else None
         errors = []
         forced = False
         if tracker:
@@ -200,6 +219,8 @@ def supervise(command, run_dir, *, profile="fixture", timeout=120, cwd=None, tmu
             try:
                 send_signal(worker, signal.SIGTERM)
                 deadline = time.monotonic() + grace
+                if cleanup_deadline is not None:
+                    deadline = min(deadline, cleanup_deadline)
                 while alive(worker) and time.monotonic() < deadline:
                     observe_wait(0.05)
             except OSError:
@@ -209,7 +230,7 @@ def supervise(command, run_dir, *, profile="fixture", timeout=120, cwd=None, tmu
                 capture = control("capture-pane", "-p", "-t", "acceptance:0.0", "-S", "-2000", check=False)
                 (run_dir / "pane.txt").write_text(capture.stdout, encoding="utf-8")
                 control("kill-server", check=False)
-                process.wait(timeout=3)
+                process.wait(timeout=remaining(3))
             except (OSError, subprocess.TimeoutExpired):
                 errors.append("tmux_shutdown")
         if tracker:
@@ -226,7 +247,7 @@ def supervise(command, run_dir, *, profile="fixture", timeout=120, cwd=None, tmu
                 observe_wait(min(grace, 1))
         if process:
             try:
-                process.wait(timeout=3)
+                process.wait(timeout=remaining(3))
             except subprocess.TimeoutExpired:
                 errors.append("server_reap")
         if tracker:
@@ -234,9 +255,12 @@ def supervise(command, run_dir, *, profile="fixture", timeout=120, cwd=None, tmu
             survivors = tracker.observe()
         else:
             survivors = []
+        if cleanup_deadline is not None and time.monotonic() >= cleanup_deadline:
+            errors.append("cleanup_deadline")
         report["cleanup"] = {"verified": not errors and not survivors,
                              "forced": forced, "remaining_processes": len(survivors),
-                             "observed_processes": len(tracker.known) if tracker else 0, "errors": sorted(set(errors))}
+                             "observed_processes": len(tracker.known) if tracker else 0, "errors": sorted(set(errors)),
+                             "budget_seconds": cleanup_budget, "scenario_grace_seconds": grace}
 
     try:
         if not binary:
@@ -274,6 +298,15 @@ def supervise(command, run_dir, *, profile="fixture", timeout=120, cwd=None, tmu
                 tracker.observe()
                 attach = shlex.join([binary, "-S", str(socket), "attach-session", "-t", "acceptance"])
                 write_json(run_dir / "session.json", {"attach": attach, "worker_pid": worker_pid})
+                boot_id = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+                owner = processes()[os.getpid()][0]
+                write_json(run_dir / "terminal.json", {
+                    "schema_version": 1, "kind": "tmux", "purpose": "acceptance worker",
+                    "owner": {"pid": owner.pid, "started": owner.started, "boot_id": boot_id, "uid": os.getuid()},
+                    "server": {"pid": server_identity.pid, "started": server_identity.started,
+                               "boot_id": boot_id, "uid": os.getuid()},
+                    "socket": str(socket), "session": "acceptance", "pane": "acceptance:0.0",
+                })
                 print(f"Attach while running: {attach}", flush=True)
                 while True:
                     tracker.observe()

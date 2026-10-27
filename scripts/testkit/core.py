@@ -12,8 +12,8 @@ import math
 from collections.abc import Callable, Mapping, Sequence
 from contextlib import contextmanager
 
-from .model import Check, Result, Timeout
-from .ports import Clock, CommandRunner, InputProbe
+from .model import Cancelled, Check, Result, Timeout
+from .ports import Cancellation, Clock, CommandRunner, InputProbe, ResultSink
 
 
 def validate_checks(checks: Sequence[Check]) -> tuple[Check, ...]:
@@ -47,7 +47,9 @@ def required_inputs(check: Check, *, inputs: InputProbe, cwd: str) -> tuple[str,
 def execute_checks(checks: Sequence[Check], *, runner: CommandRunner,
                    inputs: InputProbe, cwd: str, env: Mapping[str, str],
                    prepare: Callable[[Check], Check | None] | None = None,
-                   runners: Mapping[str, CommandRunner] | None = None):
+                   runners: Mapping[str, CommandRunner] | None = None,
+                   cancellation: Cancellation | None = None,
+                   result_sink: ResultSink | None = None):
     """Validate structure once, then retain each check's independent outcome.
 
     Readiness and preparation failures belong only to the affected check and
@@ -56,7 +58,30 @@ def execute_checks(checks: Sequence[Check], *, runner: CommandRunner,
     """
     checks = validate_checks(checks)
     results = []
+    revision = 0
+
+    def publish(event, **values):
+        nonlocal revision
+        revision += 1
+        if result_sink is not None:
+            result_sink({"event": event, "revision": revision, **values})
+
+    def retain(check, result):
+        results.append((check.name, result))
+        publish("completed", check=check.name, status=result.status,
+                exit_status=result.exit, launched=result.launched,
+                reason=result.stderr if result.exit != 0 else "",
+                shutdown=result.shutdown, validation="pending")
+
+    publish("inventory", checks=[{"name": c.name, "argv": list(c.argv),
+                                 "timeout": c.timeout, "required": list(c.required)} for c in checks])
     for check in checks:
+        reason = cancellation() if cancellation is not None else None
+        if reason:
+            retain(check, Result(tuple(check.argv), None, "", str(reason), 0.0, str(cwd),
+                                 launched=False, status="not_run",
+                                 shutdown={"scope": "run", "reason": str(reason), "forced": False}))
+            continue
         try:
             missing = required_inputs(check, inputs=inputs, cwd=cwd)
             if missing:
@@ -72,11 +97,30 @@ def execute_checks(checks: Sequence[Check], *, runner: CommandRunner,
                         if missing:
                             raise ValueError(f"required inputs absent: {list(missing)}")
                     check = prepared
+        except Cancelled as exc:
+            result = Result(tuple(check.argv), None, exc.stdout, exc.stderr or str(exc),
+                            exc.duration, str(cwd), raw_stdout=exc.raw_stdout,
+                            raw_stderr=exc.raw_stderr, launched=exc.launched,
+                            status="cancelled", shutdown=exc.shutdown)
+            publish("readiness", check=check.name, status="cancelled")
+            retain(check, result)
+            continue
         except Exception as exc:
             result = Result(tuple(check.argv), None, "", f"{type(exc).__name__}: {exc}\n", 0.0, str(cwd),
                             launched=False, status="setup_error")
-            results.append((check.name, result))
+            publish("readiness", check=check.name, status="setup_error", reason=result.stderr)
+            retain(check, result)
             continue
+        publish("readiness", check=check.name, status="passed")
+        # Preparation may itself run bounded probes. A request arriving there
+        # must prevent the main command as well as every subsequent check.
+        reason = cancellation() if cancellation is not None else None
+        if reason:
+            retain(check, Result(tuple(check.argv), None, "", str(reason), 0.0, str(cwd),
+                                 launched=False, status="not_run",
+                                 shutdown={"scope": "run", "reason": str(reason), "forced": False}))
+            continue
+        publish("started", check=check.name, argv=list(check.argv), launched=None, phase="launch_requested")
         try:
             selected_runner = runners.get(check.name, runner) if runners is not None else runner
             result = selected_runner.run(check.argv, cwd=cwd, env=env, timeout=check.timeout)
@@ -90,19 +134,23 @@ def execute_checks(checks: Sequence[Check], *, runner: CommandRunner,
             if result.status == "passed" and result.exit != 0:
                 raise ValueError("a successful outcome requires a zero process exit")
         except Exception as exc:
-            stdout = exc.stdout if isinstance(exc, Timeout) else ""
-            stderr = exc.stderr if isinstance(exc, Timeout) else ""
-            duration = exc.duration if isinstance(exc, Timeout) else 0.0
+            interrupted = isinstance(exc, (Timeout, Cancelled))
+            stdout = exc.stdout if interrupted else ""
+            stderr = exc.stderr if interrupted else ""
+            duration = exc.duration if interrupted else 0.0
             diagnostic = f"{type(exc).__name__}: {exc}\n"
             timeout = isinstance(exc, Timeout)
+            cancelled = isinstance(exc, Cancelled)
             setup = isinstance(exc, OSError) and not timeout
             result = Result(tuple(check.argv), 3 if timeout else None,
                             stdout, stderr + diagnostic, duration, str(cwd),
-                            raw_stdout=exc.raw_stdout if isinstance(exc, Timeout) else None,
-                            raw_stderr=exc.raw_stderr if isinstance(exc, Timeout) else None,
-                            launched=True if timeout else False if setup else None,
-                            status="timeout" if timeout else "setup_error" if setup else "execution_error")
-        results.append((check.name, result))
+                            raw_stdout=exc.raw_stdout if interrupted else None,
+                            raw_stderr=exc.raw_stderr if interrupted else None,
+                            launched=exc.launched if cancelled else True if timeout else False if setup else None,
+                            status="timeout" if timeout else "cancelled" if cancelled else (
+                                "setup_error" if setup else "execution_error"),
+                            shutdown=exc.shutdown if interrupted else None)
+        retain(check, result)
     return results
 
 
