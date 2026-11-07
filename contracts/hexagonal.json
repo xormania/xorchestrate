@@ -14,8 +14,8 @@
     },
     "core": {
       "modules": ["xorchestrate.activity", "xorchestrate.application", "xorchestrate.delivery", "xorchestrate.exchange", "xorchestrate.lifecycles", "xorchestrate.outcomes", "xorchestrate.schema", "xorchestrate.state"],
-      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "telemetry"],
-      "allowed_external": ["__future__", "collections", "contextlib", "copy", "dataclasses", "hashlib", "json", "jsonschema", "referencing", "types", "typing", "base64", "re"],
+      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "telemetry", "telemetry_views"],
+      "allowed_external": ["math", "__future__", "collections", "contextlib", "copy", "dataclasses", "hashlib", "json", "jsonschema", "referencing", "types", "typing", "base64", "re"],
       "allow_dynamic": false,
       "forbidden_calls": ["open", "input", "print"]
     },
@@ -37,27 +37,35 @@
     },
     "telemetry": {
       "modules": ["xorchestrate.telemetry"],
-      "allowed_roles": ["foundation", "telemetry"],
-      "allowed_external": ["__future__", "base64", "copy", "hashlib", "json", "re", "dataclasses", "typing"],
+      "allowed_roles": ["foundation", "telemetry", "telemetry_views"],
+      "allowed_external": ["math", "__future__", "base64", "copy", "hashlib", "json", "re", "dataclasses", "typing"],
       "allow_dynamic": false,
       "forbidden_calls": ["open", "input", "print"],
       "description": "Pure observation protection and authorized telemetry views; storage and transport remain adapters."
     },
+    "telemetry_views": {
+      "modules": ["xorchestrate.telemetry_views"],
+      "allowed_roles": ["foundation", "telemetry_views"],
+      "allowed_external": ["__future__", "copy", "json", "math"],
+      "allow_dynamic": false,
+      "forbidden_calls": ["open", "input", "print"],
+      "description": "Pure versioned projections consume authorized observations without storage, capture or authority decisions."
+    },
     "adapters": {
       "modules": ["xorchestrate.adapters", "xorchestrate.adapters.*"],
-      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "adapters", "telemetry"],
+      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "adapters", "telemetry", "telemetry_views"],
       "allowed_external": ["stdlib:*", "jsonschema", "referencing", "agent_telemetry"],
       "allow_dynamic": true
     },
     "composition": {
       "modules": ["xorchestrate.composition"],
-      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "adapters", "composition", "telemetry"],
+      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "adapters", "composition", "telemetry", "telemetry_views"],
       "allowed_external": ["stdlib:*", "jsonschema", "referencing", "agent_telemetry"],
       "allow_dynamic": true
     },
     "entrypoints": {
       "modules": ["xorchestrate.__main__", "xorchestrate.bridge", "xorchestrate.cli", "xorchestrate.mcp"],
-      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "adapters", "composition", "entrypoints", "telemetry"],
+      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "adapters", "composition", "entrypoints", "telemetry", "telemetry_views"],
       "allowed_external": ["stdlib:*", "jsonschema", "referencing", "agent_telemetry"],
       "allow_dynamic": true
     },
@@ -83,7 +91,7 @@
     },
     "testkit_configuration": {
       "modules": ["scripts.testkit.adapters.configuration"],
-      "allowed_roles": ["testkit_foundation", "testkit_core", "testkit_adapters", "testkit_configuration", "foundation", "core", "work_acceptance", "inspection", "adapters", "composition", "telemetry"],
+      "allowed_roles": ["testkit_foundation", "testkit_core", "testkit_adapters", "testkit_configuration", "foundation", "core", "work_acceptance", "inspection", "adapters", "composition", "telemetry", "telemetry_views"],
       "allowed_external": ["stdlib:*", "jsonschema", "referencing", "agent_telemetry"],
       "allow_dynamic": true
     },
@@ -137,7 +145,7 @@
     },
     "verification_runner": {
       "modules": ["scripts.verification.multi_harness", "scripts.verification.lifecycle"],
-      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "adapters", "composition", "entrypoints", "testkit_foundation", "testkit_core", "testkit_adapters", "testkit_configuration", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "verification_capture", "verification_runner", "telemetry"],
+      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "adapters", "composition", "entrypoints", "testkit_foundation", "testkit_core", "testkit_adapters", "testkit_configuration", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "verification_capture", "verification_runner", "telemetry", "telemetry_views"],
       "allowed_external": ["stdlib:*", "jsonschema", "referencing", "agent_telemetry"],
       "allow_dynamic": true
     },
@@ -168,7 +176,7 @@
     },
     "acceptance_runner": {
       "modules": ["scripts.acceptance.scenario"],
-      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "adapters", "composition", "entrypoints", "testkit_foundation", "testkit_core", "testkit_adapters", "testkit_configuration", "acceptance_foundation", "acceptance_fixture", "acceptance_runner", "telemetry"],
+      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "adapters", "composition", "entrypoints", "testkit_foundation", "testkit_core", "testkit_adapters", "testkit_configuration", "acceptance_foundation", "acceptance_fixture", "acceptance_runner", "telemetry", "telemetry_views"],
       "allowed_external": ["stdlib:*", "jsonschema", "referencing", "agent_telemetry"],
       "allow_dynamic": true
     },
@@ -180,13 +188,13 @@
     },
     "testkit_composition": {
       "modules": ["scripts.testkit.composition", "scripts.testkit.operator_composition"],
-      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "adapters", "composition", "testkit_foundation", "testkit_core", "testkit_adapters", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "testkit_composition", "testkit_pytest", "testkit_configuration", "telemetry"],
+      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "adapters", "composition", "testkit_foundation", "testkit_core", "testkit_adapters", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "testkit_composition", "testkit_pytest", "testkit_configuration", "telemetry", "telemetry_views"],
       "allowed_external": ["stdlib:*", "jsonschema", "referencing", "pytest", "agent_telemetry"],
       "allow_dynamic": true
     },
     "testkit_entrypoints": {
       "modules": ["scripts.testkit.__main__", "scripts.testkit.operator_cli"],
-      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "adapters", "composition", "testkit_foundation", "testkit_core", "testkit_adapters", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "testkit_composition", "testkit_entrypoints", "testkit_pytest", "testkit_configuration", "telemetry"],
+      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "adapters", "composition", "testkit_foundation", "testkit_core", "testkit_adapters", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "testkit_composition", "testkit_entrypoints", "testkit_pytest", "testkit_configuration", "telemetry", "telemetry_views"],
       "allowed_external": ["stdlib:*", "jsonschema", "referencing", "pytest", "agent_telemetry"],
       "allow_dynamic": true
     },
@@ -212,13 +220,13 @@
     },
     "architecture_adapters": {
       "modules": ["scripts.architecture.python", "scripts.architecture.diagnostics"],
-      "allowed_roles": ["architecture_foundation", "architecture_core", "architecture_adapters", "telemetry", "foundation", "core", "work_acceptance", "inspection", "adapters"],
+      "allowed_roles": ["architecture_foundation", "architecture_core", "architecture_adapters", "telemetry", "telemetry_views", "foundation", "core", "work_acceptance", "inspection", "adapters"],
       "allowed_external": ["stdlib:*", "jsonschema", "referencing"],
       "allow_dynamic": true
     },
     "architecture_entrypoints": {
       "modules": ["scripts.architecture.__main__"],
-      "allowed_roles": ["architecture_foundation", "architecture_core", "architecture_adapters", "architecture_entrypoints", "telemetry", "foundation", "core", "work_acceptance", "inspection", "adapters"],
+      "allowed_roles": ["architecture_foundation", "architecture_core", "architecture_adapters", "architecture_entrypoints", "telemetry", "telemetry_views", "foundation", "core", "work_acceptance", "inspection", "adapters"],
       "allowed_external": ["stdlib:*", "jsonschema", "referencing"],
       "allow_dynamic": true
     },
@@ -239,26 +247,26 @@
     },
     "test_support": {
       "modules": ["tests.hexagonal.support.*"],
-      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "adapters", "composition", "entrypoints", "testkit_foundation", "testkit_core", "testkit_adapters", "testkit_configuration", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "verification_capture", "verification_fixture", "verification_calibration", "verification_runner", "verification_entrypoints", "acceptance_foundation", "acceptance_fixture", "acceptance_lifecycle", "acceptance_runner", "acceptance_entrypoints", "testkit_composition", "testkit_entrypoints", "architecture_foundation", "architecture_core", "architecture_adapters", "architecture_entrypoints", "test_contracts", "test_fixtures", "test_support", "telemetry"],
+      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "adapters", "composition", "entrypoints", "testkit_foundation", "testkit_core", "testkit_adapters", "testkit_configuration", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "verification_capture", "verification_fixture", "verification_calibration", "verification_runner", "verification_entrypoints", "acceptance_foundation", "acceptance_fixture", "acceptance_lifecycle", "acceptance_runner", "acceptance_entrypoints", "testkit_composition", "testkit_entrypoints", "architecture_foundation", "architecture_core", "architecture_adapters", "architecture_entrypoints", "test_contracts", "test_fixtures", "test_support", "telemetry", "telemetry_views"],
       "allowed_external": ["stdlib:*", "pytest", "jsonschema", "referencing", "controlled_gates", "agent_telemetry"],
       "allow_dynamic": true
     },
     "test_calibration": {
       "modules": ["tests.hexagonal.calibrate_work_acceptance"],
-      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "adapters", "composition", "entrypoints", "testkit_foundation", "testkit_core", "testkit_adapters", "testkit_configuration", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "verification_capture", "verification_fixture", "verification_calibration", "verification_runner", "verification_entrypoints", "acceptance_foundation", "acceptance_fixture", "acceptance_lifecycle", "acceptance_runner", "acceptance_entrypoints", "testkit_composition", "testkit_entrypoints", "architecture_foundation", "architecture_core", "architecture_adapters", "architecture_entrypoints", "test_contracts", "test_fixtures", "test_support", "test_calibration", "telemetry"],
+      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "adapters", "composition", "entrypoints", "testkit_foundation", "testkit_core", "testkit_adapters", "testkit_configuration", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "verification_capture", "verification_fixture", "verification_calibration", "verification_runner", "verification_entrypoints", "acceptance_foundation", "acceptance_fixture", "acceptance_lifecycle", "acceptance_runner", "acceptance_entrypoints", "testkit_composition", "testkit_entrypoints", "architecture_foundation", "architecture_core", "architecture_adapters", "architecture_entrypoints", "test_contracts", "test_fixtures", "test_support", "test_calibration", "telemetry", "telemetry_views"],
       "allowed_external": ["stdlib:*", "pytest", "jsonschema", "referencing", "controlled_gates", "agent_telemetry"],
       "allow_dynamic": true
     },
     "test_collection": {
       "modules": ["tests.hexagonal.test_*"],
-      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "adapters", "composition", "entrypoints", "testkit_foundation", "testkit_core", "testkit_adapters", "testkit_configuration", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "verification_capture", "verification_fixture", "verification_calibration", "verification_runner", "verification_entrypoints", "acceptance_foundation", "acceptance_fixture", "acceptance_lifecycle", "acceptance_runner", "acceptance_entrypoints", "testkit_composition", "testkit_entrypoints", "testkit_pytest", "architecture_foundation", "architecture_core", "architecture_adapters", "architecture_entrypoints", "test_contracts", "test_fixtures", "test_support", "test_calibration", "telemetry"],
+      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "adapters", "composition", "entrypoints", "testkit_foundation", "testkit_core", "testkit_adapters", "testkit_configuration", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "verification_capture", "verification_fixture", "verification_calibration", "verification_runner", "verification_entrypoints", "acceptance_foundation", "acceptance_fixture", "acceptance_lifecycle", "acceptance_runner", "acceptance_entrypoints", "testkit_composition", "testkit_entrypoints", "testkit_pytest", "architecture_foundation", "architecture_core", "architecture_adapters", "architecture_entrypoints", "test_contracts", "test_fixtures", "test_support", "test_calibration", "telemetry", "telemetry_views"],
       "allowed_external": ["stdlib:*", "pytest", "jsonschema", "referencing", "controlled_gates", "agent_telemetry"],
       "allow_dynamic": true,
       "description": "Test modules compose contracts and fixture adapters. They are deliberately excluded from their own allowed roles, so no collected test may depend on another collected module."
     },
     "test_pytest_wiring": {
       "modules": ["tests.conftest", "tests.hexagonal.conftest"],
-      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "adapters", "composition", "entrypoints", "testkit_foundation", "testkit_core", "testkit_adapters", "testkit_configuration", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "verification_capture", "verification_fixture", "verification_calibration", "verification_runner", "verification_entrypoints", "acceptance_foundation", "acceptance_fixture", "acceptance_lifecycle", "acceptance_runner", "acceptance_entrypoints", "testkit_composition", "testkit_entrypoints", "testkit_pytest", "architecture_foundation", "architecture_core", "architecture_adapters", "architecture_entrypoints", "test_contracts", "test_fixtures", "test_support", "test_calibration", "test_pytest_wiring", "telemetry"],
+      "allowed_roles": ["foundation", "core", "work_acceptance", "inspection", "adapters", "composition", "entrypoints", "testkit_foundation", "testkit_core", "testkit_adapters", "testkit_configuration", "verification_foundation", "verification_core", "verification_decoders", "verification_composition", "verification_capture", "verification_fixture", "verification_calibration", "verification_runner", "verification_entrypoints", "acceptance_foundation", "acceptance_fixture", "acceptance_lifecycle", "acceptance_runner", "acceptance_entrypoints", "testkit_composition", "testkit_entrypoints", "testkit_pytest", "architecture_foundation", "architecture_core", "architecture_adapters", "architecture_entrypoints", "test_contracts", "test_fixtures", "test_support", "test_calibration", "test_pytest_wiring", "telemetry", "telemetry_views"],
       "allowed_external": ["stdlib:*", "pytest", "jsonschema", "referencing", "controlled_gates", "agent_telemetry"],
       "allow_dynamic": true
     }

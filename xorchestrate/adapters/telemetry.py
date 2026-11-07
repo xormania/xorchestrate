@@ -10,6 +10,7 @@ import base64
 import hashlib
 import json
 import threading
+import time
 from copy import deepcopy
 from dataclasses import asdict
 from pathlib import Path
@@ -20,7 +21,7 @@ from ..telemetry import canonical, protect
 
 _OPTIONS = {"profile", "project_id", "dataset_id", "collector_id", "producer_id", "runtime_root",
             "database", "artifact_root", "export_root", "capture_lock_timeout_ms", "known_secrets",
-            "artifact_threshold_bytes", "sources"}
+            "artifact_threshold_bytes", "sources", "operational", "snapshot_timeout"}
 
 
 def _configuration(message):
@@ -71,6 +72,12 @@ class UnavailableTelemetry:
     def read_payload(self, *args, **kwargs):
         raise OrchestrationError("Telemetry capture is unavailable.", "telemetry_unavailable")
 
+    def snapshot(self, *args, **kwargs):
+        raise OrchestrationError("Telemetry capture is unavailable.", "telemetry_unavailable")
+
+    verify = restore = snapshot
+    snapshot_source = bundle_source = snapshot
+
     def close(self):
         pass
 
@@ -93,7 +100,7 @@ class LocalTelemetry:
             raise _configuration("Telemetry known_secrets must be explicit nonempty strings.")
         self._secrets = tuple(secrets)
         if "profile" in options:
-            if options.keys() - {"profile", "known_secrets", "artifact_threshold_bytes", "sources", "export_root"}:
+            if options.keys() - {"profile", "known_secrets", "artifact_threshold_bytes", "sources", "export_root", "operational", "snapshot_timeout"}:
                 raise _configuration("Telemetry profile and inline storage settings cannot be combined.")
             from agent_telemetry.config import load_config
             profile = load_config(options["profile"])
@@ -123,6 +130,10 @@ class LocalTelemetry:
         if self.path == self.artifact_root or self.path.is_relative_to(self.artifact_root) or self.artifact_root.is_relative_to(self.path):
             raise _configuration("Telemetry database and artifacts cannot overlap.")
         self.export_root = _contained(self.root, options.get("export_root", "exports"), "export_root")
+        self.snapshot_timeout = options.get("snapshot_timeout", 5.0)
+        if (isinstance(self.snapshot_timeout, bool) or not isinstance(self.snapshot_timeout, (int, float))
+                or not 0 < self.snapshot_timeout <= 3600):
+            raise _configuration("Telemetry snapshot deadline must be between 0 and 3600 seconds.")
         self.artifact_threshold = options.get("artifact_threshold_bytes", 65536)
         if type(self.artifact_threshold) is not int or self.artifact_threshold < 1:
             raise _configuration("Telemetry artifact threshold must be a positive byte count.")
@@ -134,10 +145,20 @@ class LocalTelemetry:
         self._lock = threading.Lock()
         self._failures = 0
         self._closed = False
+        self._operational = self._operational_dispatch = None
+        self._operational_issue = None
         self.artifacts = FileArtifactStore(self.artifact_root) if artifacts_enabled else None
         repository = SQLiteRepository.initialize(self.path, dataset_id=self.dataset_id,
                                                 collector_id=self.collector_id, timeout_ms=self.timeout_ms)
         repository.close()
+        if options.get("operational") is not None:
+            try:
+                self._configure_operational(options["operational"])
+            except Exception:
+                # Optional transport configuration has a separate health state;
+                # it cannot disable the independently configured local corpus.
+                self._operational = self._operational_dispatch = None
+                self._operational_issue = "configuration_unavailable"
 
     def new_id(self):
         return uuid4().hex
@@ -146,18 +167,74 @@ class LocalTelemetry:
         with self._lock:
             self._failures += 1
 
+    def _configure_operational(self, options):
+        if (not isinstance(options, dict) or options.keys() - {"adapter", "endpoint", "timeout", "capacity",
+                "trace_sample_rate", "max_pending", "max_bytes", "drain_timeout"}):
+            raise _configuration("Invalid operational telemetry settings.")
+        from .jsonrpc import TelemetryDispatch
+        from .telemetry_export import LocalOperationalSink, ObservationSignals, OperationalExporter, OtlpOperationalSink
+
+        rate = options.get("trace_sample_rate", 1.0)
+        if isinstance(rate, bool) or not isinstance(rate, (int, float)) or not 0 <= rate <= 1:
+            raise _configuration("Invalid operational trace sampling rate.")
+        adapter = options.get("adapter", "local")
+        if adapter == "local":
+            sink = LocalOperationalSink(capacity=options.get("capacity", 1000))
+        elif adapter == "otlp":
+            sink = OtlpOperationalSink(options.get("endpoint", ""), timeout=options.get("timeout", 1.0))
+        else:
+            raise _configuration("Unknown operational telemetry adapter.")
+
+        def sampled(signal):
+            if signal.get("kind") != "span":
+                return True
+            identity = signal.get("event_id") or ""
+            return int(hashlib.sha256(identity.encode()).hexdigest()[:8], 16) / 2**32 < rate
+
+        self._operational = ObservationSignals(OperationalExporter(sink, sample=sampled))
+        def observe(item):
+            result = self._operational.observe(**item)
+            return {"status": "recorded" if result.get("status") == "observed" else "unavailable",
+                    "receipt": None, "boundary": "operational_signals"}
+
+        self._operational_dispatch = TelemetryDispatch(observe, {
+            "max_telemetry_pending": options.get("max_pending", 64),
+            "max_telemetry_bytes": options.get("max_bytes", 8 * 1024 * 1024),
+            "telemetry_drain_timeout": options.get("drain_timeout", 0.05),
+        })
+
+    def _operational_observation(self, event_type, context, response, duration, observed_monotonic):
+        if self._operational_dispatch is None:
+            return
+        try:
+            # Queue only operational links; source payloads never enter this
+            # asynchronous transport or its pending-memory budget.
+            scope = protect(context, self._secrets)
+            scope = {key: scope[key] for key in ("attempt_id", "parent_attempt_id", "native_call_id", "operation_id",
+                     "session_id", "run_id") if isinstance(scope.get(key), str)}
+            self._operational_dispatch({"event_type": event_type, "context": scope,
+                "receipt": response.get("receipt"), "capture_status": response.get("status", "unknown"),
+                "capture_duration_ms": duration, "observed_monotonic": observed_monotonic})
+        except Exception:
+            # Operational queue failure cannot alter the collector's receipt.
+            pass
+
     def record(self, event_type, payload, context, *, event_id=None, basis="observed", completeness="complete",
                reason=None, cursor=None, links=()):
         repository = None
+        started = time.monotonic()
+        response = {"status": "unavailable", "receipt": None}
         try:
             if self._closed:
-                return {"status": "unavailable", "receipt": None, "reason": "collector_closed"}
+                response = {"status": "unavailable", "receipt": None, "reason": "collector_closed"}
+                return response
             protected, scope = protect(payload, self._secrets), protect(context, self._secrets)
             if not isinstance(scope, dict):
                 raise ValueError("observation context must be an object")
             source = event_type.partition(".")[0]
             if self._source_filter is not None and source not in self._source_filter:
-                return {"status": "disabled", "receipt": None, "reason": "source_disabled"}
+                response = {"status": "disabled", "receipt": None, "reason": "source_disabled"}
+                return response
             with self._lock:
                 self._sources.setdefault(source, {"configured": False, "observed": False, "coverage": "unknown"})
             flat = {key: deepcopy(scope[key]) for key in ("actor", "action", "work_id", "session_id", "operation_id",
@@ -198,16 +275,18 @@ class LocalTelemetry:
             return response
         except Exception as error:
             self._health({})
-            return {"status": "unavailable", "receipt": None,
+            response = {"status": "unavailable", "receipt": None,
                     "reason": getattr(error, "code", "capture_error") if isinstance(getattr(error, "code", None), str) else "capture_error"}
+            return response
         finally:
             if repository is not None:
                 try:
                     repository.close()
                 except Exception:
                     self._health({})
+            self._operational_observation(event_type, context, response, (time.monotonic() - started) * 1000, started)
 
-    def _view(self, row, *, hydrate=True):
+    def _view(self, row, *, hydrate=True, artifact_store=None):
         row = deepcopy(row)
         payload = json.loads(row["payload_json"])
         source = json.loads(row.get("source_json", "{}"))
@@ -221,9 +300,10 @@ class LocalTelemetry:
             if not isinstance(payload, dict) or payload.get("_telemetry_payload") != storage:
                 raise OrchestrationError("Telemetry payload storage metadata differs.", "artifact_integrity")
             if hydrate:
-                if self.artifacts is None:
+                store = artifact_store if artifact_store is not None else self.artifacts
+                if store is None:
                     raise OrchestrationError("Telemetry artifact is unavailable.", "artifact_integrity")
-                payload = json.loads(self.artifacts.read(self._artifact_type(**storage)))
+                payload = json.loads(store.read(self._artifact_type(**storage)))
             else:
                 payload = {"read_action": "telemetry_payload", "event_id": row["event_id"], **storage}
                 row["payload_storage"] = storage
@@ -236,10 +316,11 @@ class LocalTelemetry:
         row.pop("context_json", None)
         return row
 
-    def view_observation(self, row):
-        return self._view(row)
+    def view_observation(self, row, *, hydrate=True, artifact_store=None):
+        return self._view(row, hydrate=hydrate, artifact_store=artifact_store)
 
-    def query(self, *, after=0, limit=100, event_type=None, work_id=None, session_id=None, operation_id=None):
+    def query(self, *, after=0, limit=100, event_type=None, work_id=None, session_id=None, operation_id=None,
+              run_id=None, attempt_id=None):
         if type(after) is not int or after < 0 or type(limit) is not int or not 1 <= limit <= 1000:
             raise OrchestrationError("Invalid telemetry query bounds.", "invalid_query")
         repository = self._repository_type.inspect(self.path)
@@ -253,7 +334,8 @@ class LocalTelemetry:
                     cursor = row["sequence"]
                     item = self._view(row, hydrate=False)
                     if all(value is None or item["context"].get(key) == value for key, value in
-                           (("work_id", work_id), ("session_id", session_id), ("operation_id", operation_id))):
+                           (("work_id", work_id), ("session_id", session_id), ("operation_id", operation_id),
+                            ("run_id", run_id), ("attempt_id", attempt_id))):
                         result.append(item)
                         if len(result) == limit:
                             break
@@ -274,7 +356,7 @@ class LocalTelemetry:
         finally:
             repository.close()
 
-    def resolve_scope(self, row):
+    def resolve_scope(self, row, *, database_path=None):
         """Resolve a pre-creation request through its retained completed attempt.
 
         This join adds authority context only; it never invents a committed
@@ -284,7 +366,7 @@ class LocalTelemetry:
         attempt = context.get("attempt_id")
         if not attempt or row.get("event_type") != "application.requested":
             return None
-        repository = self._repository_type.inspect(self.path)
+        repository = self._repository_type.inspect(database_path if database_path is not None else self.path)
         try:
             candidates = repository.db.execute(
                 "SELECT observation FROM events WHERE project_id=? AND event_type=? "
@@ -310,6 +392,12 @@ class LocalTelemetry:
         with self._lock:
             result.update(status="closed" if self._closed else "ready", sources=deepcopy(self._sources),
                           capture_failures=self._failures, configuration_identity=self.configuration_identity)
+        if self._operational is not None:
+            result["operational"] = {**self._operational.status(), "status": "ready",
+                                     "dispatch": self._operational_dispatch.health()}
+        elif self._operational_issue is not None:
+            result["operational"] = {"status": "unavailable", "reason": self._operational_issue,
+                                     "corpus_coverage": "independent"}
         return result
 
     def read_payload(self, event_id, digest=None, offset=0, limit=65536):
@@ -358,5 +446,59 @@ class LocalTelemetry:
             raise _configuration("Telemetry destination must be inside the configured export root.")
         return candidate
 
+    def snapshot(self, destination, *, authorize=None, receipt=False):
+        from .telemetry_snapshot import SnapshotError, bundle_receipt, create_snapshot, invalidate_bundle
+        try:
+            path = self.destination(destination)
+            manifest = create_snapshot(self.path, self.artifacts, path,
+                                       authorize=authorize, backup_timeout=self.snapshot_timeout)
+            if not receipt:
+                return manifest
+            try:
+                return bundle_receipt(path, manifest, authorize=authorize)
+            except BaseException:
+                invalidate_bundle(path)
+                raise
+        except PermissionError as error:
+            raise OrchestrationError("The complete bundle closure is not authorized.", "denied") from error
+        except (SnapshotError, OSError) as error:
+            raise OrchestrationError("Telemetry snapshot could not be completed and verified.", "telemetry_integrity") from error
+
+    def verify(self, destination, *, authorize=None, receipt=False):
+        from .telemetry_snapshot import SnapshotError, bundle_receipt, verify_bundle
+        try:
+            path = self.destination(destination)
+            manifest = verify_bundle(path, authorize=authorize)
+            return bundle_receipt(path, manifest, authorize=authorize) if receipt else manifest
+        except PermissionError as error:
+            raise OrchestrationError("The complete bundle closure is not authorized.", "denied") from error
+        except (SnapshotError, OSError) as error:
+            raise OrchestrationError("Telemetry bundle verification failed.", "telemetry_integrity") from error
+
+    def restore(self, bundle, destination, *, authorize=None, receipt=False):
+        from .telemetry_snapshot import SnapshotError, bundle_receipt, invalidate_bundle, restore_bundle
+        try:
+            path = self.destination(destination)
+            restored = restore_bundle(self.destination(bundle), path, authorize=authorize)
+            if not receipt:
+                return restored
+            try:
+                compact = bundle_receipt(path, restored["manifest"], authorize=authorize)
+                return {**compact, "database_path": restored["database_path"], "artifact_root": restored["artifact_root"]}
+            except BaseException:
+                invalidate_bundle(path)
+                raise
+        except PermissionError as error:
+            raise OrchestrationError("The complete bundle closure is not authorized.", "denied") from error
+        except (SnapshotError, OSError) as error:
+            raise OrchestrationError("Telemetry bundle restore could not be completed and verified.", "telemetry_integrity") from error
+
+    def bundle_source(self, destination):
+        from agent_telemetry.artifacts import FileArtifactStore
+        path = self.destination(destination)
+        return {"database_path": path / "telemetry.sqlite3", "artifact_store": FileArtifactStore(path / "artifacts")}
+
     def close(self):
         self._closed = True
+        if self._operational_dispatch is not None:
+            self._operational_dispatch.close()

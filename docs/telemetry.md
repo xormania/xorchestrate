@@ -108,3 +108,97 @@ evidence; useful telemetry does not depend on manufacturing such a result.
 - [Telemetry reference and research](https://chatgpt.com/library?file_id=libfile_442a72f860b081919c1ffc4836679e18&account_id=personal)
 - [Scope and requirements](https://chatgpt.com/library?file_id=libfile_b8e13c37c7a081918768e2e9571b54ef&account_id=personal)
 
+
+## Preserve and investigate an episode
+
+The preservation layer adds public snapshot, verification, restore and comparison
+operations. Destinations are new children of the configured export root; existing
+bundles are never overwritten:
+
+```sh
+python3 -m xorchestrate --config examples/telemetry.json call telemetry_snapshot --json '{"destination":"episode-1"}'
+python3 -m xorchestrate --config examples/telemetry.json call telemetry_verify --json '{"destination":"episode-1"}'
+python3 -m xorchestrate --config examples/telemetry.json call telemetry_restore --json '{"bundle":"episode-1","destination":"episode-1-restored"}'
+```
+
+Snapshot creation uses SQLite's completed backup result to derive the cutoff,
+event count, source cursors and artifact closure. Verification reads the closed
+database and checks the retained artifact bytes. Current authorization covers the
+actual bundle closure for all three operations, including artifact-backed typed
+results. Failure leaves an incomplete receipt and does not advertise a successful
+preservation result.
+
+Public bundle responses are compact receipts with counts and an exact saved
+manifest reference (path, SHA-256 and byte length). The complete manifest remains
+in the bundle even when its link closure exceeds a normal MCP response frame.
+
+Multi-record reads detect configured guardrail replacement and the built-in rule
+guardrail's configuration revision. A custom guardrail whose decisions change
+in place can expose `authority_revision()` for the same check. An unversioned
+external policy has no coherent revision signal in the existing evaluate-only
+port; per-record checks do not establish an atomic external-policy snapshot.
+
+The bundle is independently inspectable in a fresh directory without the original
+live WAL/SHM or absolute artifact paths. It preserves the telemetry corpus;
+Xorchestrate's authoritative orchestration database has its separate owner.
+Artifact APIs currently buffer one full object in memory. No streaming-blob
+guarantee or power-loss qualification is implied.
+
+`telemetry_usage` provides versioned interpretation of identified actual source
+counters and keeps raw observations. Native transcript reingestion does not charge
+the same explicitly identified message twice. Missing counter categories remain
+unknown. Cost remains unknown until a suitable price schedule is selected.
+
+`telemetry_compare` requires explicit baseline/candidate work or run selectors.
+Its default reported-trial cohort is `trial.result`, `run.result` and
+`candidate.result`. Explicitly selecting an assessment population does not turn
+it into accepted work. The response identifies its population, source cutoff,
+denominators, unknown outcomes and conditions; an empty cohort is inconclusive.
+Large analysis responses use exact payload references or request a smaller page.
+
+## Producer coverage and optional operational export
+
+Producer observers use ordered bounded queues. Queue admission is deferred
+capture, not a durable receipt. Source health/drain APIs distinguish pending work,
+capacity, rejected captures and observer failure. Protocol input/output deadlines
+remain independent of optional observers.
+
+Codex/Grok capture the exposed protocol stream. Claude additionally ingests the
+exact transcript path supplied by its native hook, with session/path checks,
+complete-record acknowledgment and bounded consumed-prefix continuity
+verification. Ingestion runs on hooks, polling, status and stopping; it does not
+scan the host or start a background transcript-search service. A new driver
+incarnation reingests the exact session file under a fresh source generation.
+
+The table separates implemented boundaries, deterministic fixture coverage and
+authenticated qualification. Fixture results do not establish installed vendor
+behavior; each pending witness follows the [local qualification workflow](managed-proofs.md).
+Protected protocol frames retain only bytes available within the configured
+[transport bounds](../xorchestrate/adapters/jsonrpc.py), rather than every native
+field or callback.
+The [native tool fixtures](../tests/hexagonal/test_native_producer_capture.py)
+exercise preservation of token-shaped arguments; authenticated usage accounting
+remains pending.
+
+| Source | Implemented capture boundary | Usage and source position | Deterministic fixture evidence | Authenticated witness | Remaining coverage gaps |
+| --- | --- | --- | --- | --- | --- |
+| [Codex](../xorchestrate/adapters/sessions.py) | Serialized JSON-RPC requests, bounded stdout frames and drained stderr; emitted notification, tool/permission, turn and settings observations. | Exposed usage payloads retained; no Codex-specific normalized counter semantics. Frame ranges and request/session/incarnation links; no file cursor. | [Native identity/context/tool observations](../tests/hexagonal/test_native_producer_capture.py); [transport failures/bounds](../tests/hexagonal/test_producer_capture.py). | Pending installed/authenticated Codex run. | No separate transcript reader or verified native usage total; unexposed fields remain unknown. |
+| [Claude](../xorchestrate/adapters/claude.py) | Gateway-delivered hook packets, emitted semantic observations and protected records from the exact hook-selected session JSONL file. | Transcript usage uses `overwrite` with a stable message ID, otherwise `unknown`; [normalization](../xorchestrate/telemetry_views.py) preserves raw fields. Acknowledged complete records advance the live cursor; tails wait and changed prefixes create a gap/new generation. | [Hook identity/tool observations](../tests/hexagonal/test_native_producer_capture.py); [source checks, acknowledgment, tails, rotation, rewrites and bounded verification](../tests/hexagonal/test_transcript_producer_capture.py). | Pending installed/authenticated Claude Code run. | Missing/rejected sources stay explicit. Terminal/debug output is outside this transcript source; a new driver incarnation reingests from zero. |
+| [Grok](../xorchestrate/adapters/grok.py) | ACP/JSON-RPC frames and drained stderr through the [shared session transport](../xorchestrate/adapters/sessions.py); emitted session-update, tool/permission, interjection, completion and configuration observations. | Exposed usage payloads retained; no Grok-specific normalized counter semantics. Frame ranges and native session/incarnation/prompt links; no file cursor. | [Native identity/context/tool observations](../tests/hexagonal/test_native_producer_capture.py); [shared transport failures/bounds](../tests/hexagonal/test_producer_capture.py). | Pending installed/authenticated Grok Build run. | No separate transcript reader or verified native usage total; unexposed provider state remains unknown. |
+| [Evaluator](../xorchestrate/adapters/evaluation.py) | TypeSafe serialized HTTP inputs, bounded response/error bodies and validation; tool-evaluator arguments/results plus its configured [CLI/MCP provider](../xorchestrate/adapters/capabilities.py). | Valid TypeSafe usage is `incremental` per fresh attempt; missing usage stays absent. Response ranges identify observed prefixes and known/unknown total length. Tool results have no universal usage-counter semantics. | [Local HTTP/process errors, bounds and credential treatment](../tests/hexagonal/test_producer_capture.py); [fixture-provider usage through public normalization](../tests/hexagonal/test_telemetry_workflow.py). | Pending authenticated live-provider witness. | [Local fixtures](../tests/hexagonal/support/producer_capture.py) establish adapter behavior, not internal provider accounting, hidden context or service latency. |
+
+An optional `operational` object inside local telemetry options selects
+`{"adapter":"local"}` for bounded in-process diagnostics or explicitly selects an
+OTLP/HTTP endpoint. `trace_sample_rate` affects operational spans only. Remote
+export uses its own bounded dispatch; a blocked endpoint does not block the
+observed action or remove durable local observations. No endpoint is inferred or
+contacted by the default configuration.
+
+The OTLP mapping pins protocol version 1.11.1 and Xorchestrate's own finite
+operational names. It exports safe metadata, capture quantities and observed
+request/terminal timing. It does not claim to expose a model's hidden reasoning,
+all native context, or an unobserved service's internal latency.
+
+Remote publication to a data branch, lakeFS, MLflow or OCFL remains a selected
+deployment adapter rather than a default destination. This delivery supplies a
+verified portable local bundle and a replaceable publication boundary.
