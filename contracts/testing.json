@@ -146,7 +146,8 @@
     "telemetry": {
       "guarantee": "Telemetry capture, queries, preservation and optional export retain scoped evidence, gaps and original action outcomes.",
       "modules": {
-        "tests/hexagonal/test_telemetry.py": "composition"
+        "tests/hexagonal/test_telemetry.py": "composition",
+        "tests/hexagonal/test_telemetry_review.py": "composition"
       }
     }
   }

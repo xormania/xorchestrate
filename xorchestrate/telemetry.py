@@ -114,8 +114,22 @@ class TelemetryViews:
             if arguments.get(key):
                 self.authorize(read_action, current)
         payload = row.get("payload")
-        if isinstance(payload, dict) and isinstance(payload.get("arguments"), dict):
-            target = self.context(actor, payload["arguments"])
+        application_envelope = row.get("event_type") in {
+            "application.requested", "application.completed", "application.failed"}
+        execution = payload
+        if application_envelope and row.get("payload_storage"):
+            # A descriptor does not carry the typed invocation's source scope.
+            # Authorize the outer resource first, then inspect the retained
+            # application envelope without publishing its hydrated content.
+            original = self.sink.get_event(row["event_id"])
+            if original is None:
+                raise OrchestrationError("Telemetry source changed during inspection.", "conflict")
+            execution = original.get("payload")
+        if isinstance(execution, dict) and isinstance(execution.get("arguments"), dict):
+            if application_envelope:
+                target = self.projector._execution(actor, execution, {}, scope.get("actor", actor))
+            else:
+                target = self.context(actor, execution["arguments"])
             self.authorize(action, target)
             if target.get("work"):
                 self.authorize("get_work", target)
@@ -144,6 +158,10 @@ class TelemetryViews:
         return visible
 
     def events(self, arguments, actor, action="telemetry_events"):
+        return self._event_page(arguments, actor, action)[0]
+
+    def _event_page(self, arguments, actor, action, *, scan_limit=10000):
+        """Return a byte-bounded page with private raw-scan accounting."""
         sink = self._configured()
         limit = arguments.get("limit", 100)
         budget = arguments.get("max_bytes", 262144)
@@ -154,24 +172,35 @@ class TelemetryViews:
         if cutoff is None:
             cutoff = sink.status().get("max_sequence", 0) or 0
         filters = {key: arguments[key] for key in ("event_type", "work_id", "session_id", "operation_id") if key in arguments}
+        complete = cursor >= cutoff
 
         def page(items, position):
             return {"events": items, "next_after": position, "cutoff": cutoff,
-                    "scan_limited": scanned >= 10000 and position < cutoff, "projection_version": 1}
+                    "scan_limited": scanned >= scan_limit and not complete,
+                    "complete": complete, "projection_version": 1}
 
         page_full = False
-        while len(visible) < limit and scanned < 10000 and not page_full:
-            rows = sink.query(after=cursor, limit=min(1000, 10000 - scanned), **filters)
-            if not rows or rows[0]["sequence"] > cutoff:
-                break
-            reached_cutoff = False
-            for row in rows:
+        while len(visible) < limit and scanned < scan_limit and not page_full and not complete:
+            batch_limit = min(1000, scan_limit - scanned)
+            scanner = getattr(sink, "scan", None)
+            if callable(scanner):
+                batch = scanner(after=cursor, limit=batch_limit, **filters)
+                rows = batch["events"]
+                batch_cursor, examined, exhausted = batch["next_after"], batch["scanned"], batch["exhausted"]
+            else:
+                rows = sink.query(after=cursor, limit=batch_limit, **filters)
+                batch_cursor = rows[-1]["sequence"] if rows else cursor
+                examined, exhausted = len(rows), len(rows) < batch_limit
+            if not 0 <= examined <= batch_limit or (not exhausted and batch_cursor <= cursor):
+                raise OrchestrationError("Telemetry source did not provide bounded scan progress.", "invalid_query")
+            scanned += examined
+            consumed = True
+            for index, row in enumerate(rows):
                 if row["sequence"] > cutoff:
-                    reached_cutoff = True
+                    cursor, complete, consumed = cutoff, True, False
                     break
                 previous = cursor
                 cursor = row["sequence"]
-                scanned += 1
                 try:
                     item, basis = self.inspect(row, actor, action)
                 except OrchestrationError as error:
@@ -186,35 +215,50 @@ class TelemetryViews:
                         # budget. Fail explicitly rather than truncate identity.
                         raise OrchestrationError("Telemetry event envelope exceeds the selected page budget.", "invalid_query")
                     cursor = previous
-                    scanned -= 1
-                    page_full = True
+                    page_full, consumed = True, False
                     break
                 visible.append(item)
                 contexts.extend(basis)
                 if len(visible) == limit:
+                    consumed = index == len(rows) - 1
                     break
-            if reached_cutoff or cursor >= cutoff or len(rows) < 1000:
-                break
+            if consumed:
+                cursor = min(max(cursor, batch_cursor), cutoff)
+                complete = exhausted or cursor >= cutoff
         self._verify(contexts)
-        return page(visible, cursor)
+        return page(visible, cursor), scanned, contexts
 
     def status(self, actor):
         sink = self._configured()
-        observed = self.events({"limit": 1000}, actor, "telemetry_status")["events"]
         state = sink.status()
         # Dataset-wide counts and cursor positions can reveal denied membership.
         result = {key: deepcopy(state[key]) for key in ("status", "reason", "schema_version",
                   "capture_failures", "publication", "configuration_identity") if key in state}
         sources = {name: {"configured": True, "observed": False, "coverage": "unknown"}
                    for name, source in state.get("sources", {}).items() if source.get("configured")}
-        for row in observed:
-            name = row["event_type"].partition(".")[0]
-            source = sources.setdefault(name, {"configured": False})
-            source.update(observed=True, coverage="observed", last_event_id=row["event_id"])
+        count, cursor, scanned, last_capture, complete = 0, 0, 0, None, False
+        contexts = []
+        cutoff = state.get("max_sequence", 0) or 0
+        while not complete and scanned < 10000:
+            page, examined, basis = self._event_page({"after": cursor, "cutoff": cutoff, "limit": 1000},
+                                                   actor, "telemetry_status", scan_limit=10000 - scanned)
+            scanned += examined
+            contexts.extend(basis)
+            for row in page["events"]:
+                count += 1
+                last_capture = row.get("captured_at")
+                name = row["event_type"].partition(".")[0]
+                source = sources.setdefault(name, {"configured": False})
+                source.update(observed=True, coverage="observed", last_event_id=row["event_id"])
+            complete = page["complete"]
+            if page["next_after"] <= cursor and not complete:
+                break
+            cursor = page["next_after"]
+        self._verify(contexts)
         result["sources"] = sources
-        result.update(event_count=len(observed), visible_event_count=len(observed), coverage="observed" if observed else "unknown",
-                      last_capture=observed[-1].get("captured_at") if observed else None,
-                      count_complete=len(observed) < 1000)
+        result.update(event_count=count, visible_event_count=count, coverage="observed" if count else "unknown",
+                      last_capture=last_capture, count_complete=complete,
+                      last_capture_complete=complete, source_coverage_complete=complete)
         return result
 
     def payload(self, arguments, actor):
@@ -254,7 +298,7 @@ class TelemetryViews:
         return result
 
     def usage(self, arguments, actor):
-        events = self.events({**arguments, "limit": min(arguments.get("limit", 1000), 1000)}, actor, "telemetry_usage")
+        events = self._analysis_page(arguments, actor, "telemetry_usage")
         measurements = []
 
         def visit(value, path):
@@ -275,5 +319,41 @@ class TelemetryViews:
             if measurements:
                 samples.append({"event_id": row["event_id"], "sequence": row["sequence"],
                                 "context": row["context"], "measurements": measurements})
-        return {"samples": samples, "next_after": events["next_after"], "normalization": "raw-v1",
-                "cost": None, "cost_status": "unknown", "totals_status": "not_normalized"}
+        self._verify(events["_contexts"])
+        result = {"samples": samples, "next_after": events["next_after"], "cutoff": events["cutoff"],
+                  "complete": events["complete"], "scan_limited": events["scan_limited"], "normalization": "raw-v1",
+                  "cost": None, "cost_status": "unknown", "totals_status": "not_normalized"}
+        return self._bounded_analysis(result, arguments.get("max_bytes", 262144))
+
+    def _analysis_page(self, arguments, actor, action):
+        """Hydrate authorized descriptors, then authorize their typed closure."""
+        sink = self._configured()
+        page = self.events({**arguments, "limit": min(arguments.get("limit", 1000), 1000)}, actor, action)
+        hydrated, contexts = [], []
+        for row in page["events"]:
+            if row.get("payload_storage") or row.get("payload_available"):
+                original = sink.get_event(row["event_id"])
+                if original is None:
+                    raise OrchestrationError("Telemetry source changed during analysis.", "conflict")
+                row = original
+            row, basis = self.inspect(row, actor, action)
+            contexts.extend(basis)
+            hydrated.append(row)
+        self._verify(contexts)
+        return {**page, "events": hydrated, "_contexts": contexts}
+
+    @staticmethod
+    def _bounded_analysis(result, budget):
+        if len(canonical(result).encode()) <= budget:
+            return result
+        result = deepcopy(result)
+        raw = result.pop("raw_observations", [])
+        result["raw_observations_omitted"] = True
+        result["source_references"] = [{"event_id": row["event_id"], "read_action": "telemetry_payload"} for row in raw]
+        if len(canonical(result).encode()) > budget:
+            result["samples"] = [{"event_id": item["event_id"], "sequence": item["sequence"],
+                                   "measurements_omitted": True, "read_action": "telemetry_payload"}
+                                  for item in result.get("samples", [])]
+        if len(canonical(result).encode()) > budget:
+            raise OrchestrationError("Telemetry analysis exceeds the selected budget; select a smaller page.", "invalid_query")
+        return result

@@ -47,6 +47,17 @@ class TelemetrySink(Protocol):
     def close(self) -> None: ...
 
 
+class TelemetryScanner(TelemetrySink, Protocol):
+    """Optional raw-batch accounting for filtered observation reads.
+
+    A scan returns matching ``events``, raw ``next_after`` and ``scanned``
+    progress, and ``exhausted``. At most ``limit`` repository rows may be read,
+    including rows rejected by resource filters. Empty matches may advance.
+    """
+
+    def scan(self, *, after: int = 0, limit: int = 100, **filters: object) -> JSON: ...
+
+
 class CapabilityProvider(Protocol):
     def discover(self) -> list[Capability]: ...
     def invoke(self, name: str, arguments: JSON, context: JSON) -> JSON:
