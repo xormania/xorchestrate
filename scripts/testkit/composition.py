@@ -128,7 +128,7 @@ def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=
     for story in story_selection:
         for selected_driver in (drivers or (driver,)) if mode == "native" else (None,):
             name = "story:" + story.id + (":" + quote(selected_driver, safe="") if selected_driver else "")
-            argv = [sys.executable, "-m", "scripts.acceptance", "--output", str(directory / name),
+            argv = [sys.executable, "-m", "scripts.acceptance", "--output", str(directory / quote(name, safe="")),
                     "--profile", "native" if mode == "native" else "fixture", "--story", story.id,
                     "--timeout", str(timeout), "--shutdown-grace", str(shutdown_grace * 0.5),
                     "--cleanup-budget", str(shutdown_grace * 0.8)]
@@ -298,7 +298,7 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
         if before is not None:
             write_json(directory / "candidate.json", before)
             report["candidate"] = str(directory / "candidate.json")
-        runners = {check.name: RecordingRunner(directory / "commands" / check.name,
+        runners = {check.name: RecordingRunner(directory / "commands" / quote(check.name, safe=""),
                    terminal="inherit" if mode == "native" and (
                        live_check(check.name)) else "capture",
                    cancellation=cancellation, shutdown_grace=shutdown_grace,

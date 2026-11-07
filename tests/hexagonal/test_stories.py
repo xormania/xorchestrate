@@ -23,6 +23,9 @@ def test_selected_story_is_a_tmux_supervised_check_with_retained_bounds(tmp_path
     assert argv[argv.index("--max-sessions") + 1] == "1"
     assert argv[argv.index("--max-turns") + 1] == "2"
     assert argv[argv.index("--max-tool-calls") + 1] == "30"
+    # Logical IDs stay readable, but evidence must survive portable artifact archives.
+    assert checks[0].name == "story:coordination"
+    assert ":" not in argv[argv.index("--output") + 1].removeprefix(str(tmp_path))
 
 
 @pytest.mark.parametrize("stories,mode", [(("missing-story",), "protocol-fixture"),
