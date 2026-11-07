@@ -33,9 +33,10 @@ def test_all_plan_is_the_same_named_checks_as_individual_suites(tmp_path, mode):
     separately = sum((composition.plan(suite=suite, **options) for suite in composition.COMPONENT_SUITES), ())
     assert together == separately
     assert [check.name for check in together] == ["ruff", "syntax", "architecture", "tests", "native-calibration",
-                                                "work-calibration", "state-calibration", "acceptance", "multi-harness"]
+                                                "work-calibration", "state-calibration", "acceptance", "multi-harness"] + [
+                                                    c.name for c in composition.plan(suite="stories", **options)]
     assert len({check.name for check in together}) == len(together)
-    acceptance, multi = together[-2:]
+    acceptance, multi = (next(c for c in together if c.name == name) for name in ("acceptance", "multi-harness"))
     assert acceptance.argv[:3] == (sys.executable, "-m", "scripts.acceptance")
     assert multi.argv[:3] == (sys.executable, "-m", "scripts.verification.multi_harness")
     assert acceptance.argv[acceptance.argv.index("--profile") + 1] == ("native" if mode == "native" else "fixture")
@@ -258,3 +259,4 @@ def test_recording_runner_retains_raw_failure_and_missing_executable(tmp_path, m
     assert [record["status"] for record in runner.records] == ["failed", "setup_error"]
     assert runner.records[0]["exit_status"] == 7
     assert runner.records[1]["exit_status"] is None
+

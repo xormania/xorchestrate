@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from scripts.testkit.adapters.evidence import allocate_run
+from scripts.testkit.stories import select_stories, validate_limits
 
 from .lifecycle import supervise
 
@@ -18,12 +19,22 @@ def main(argv=None):
     parser.add_argument("--profile", choices=("fixture", "native"), default="fixture")
     parser.add_argument("--config", type=Path, help="Trusted application configuration for native acceptance")
     parser.add_argument("--driver", help="Configured session driver for native acceptance")
+    parser.add_argument("--story", help="Select one versioned tmux story")
+    parser.add_argument("--max-sessions", type=int, default=2, help="Maximum harness start requests")
+    parser.add_argument("--max-turns", type=int, default=4, help="Maximum harness message submissions")
+    parser.add_argument("--max-tool-calls", type=int, default=5000, help="Maximum controller MCP tool requests")
     parser.add_argument("--timeout", type=float, default=120)
     parser.add_argument("--shutdown-grace", type=float, default=10,
                         help="Bounded scenario finalization before owned escalation")
     parser.add_argument("--cleanup-budget", type=float,
                         help="Internal total cleanup bound when nested beneath a command owner")
     args = parser.parse_args(argv)
+    try:
+        validate_limits(max_sessions=args.max_sessions, max_turns=args.max_turns, max_tool_calls=args.max_tool_calls)
+        if args.story:
+            select_stories((args.story,), mode=args.profile)
+    except ValueError as error:
+        parser.error(str(error))
     if not math.isfinite(args.timeout) or args.timeout <= 0:
         parser.error("--timeout must be a positive finite number")
     for name, value in (("--shutdown-grace", args.shutdown_grace), ("--cleanup-budget", args.cleanup_budget)):
@@ -38,7 +49,11 @@ def main(argv=None):
     os.umask(0o077)
     run_dir = allocate_run(args.output)
     command = [sys.executable, "-m", "scripts.acceptance.scenario", "--run-dir", str(run_dir),
-               "--profile", args.profile, "--timeout", str(args.timeout)]
+               "--profile", args.profile, "--timeout", str(args.timeout),
+               "--max-sessions", str(args.max_sessions), "--max-turns", str(args.max_turns),
+               "--max-tool-calls", str(args.max_tool_calls)]
+    if args.story:
+        command.extend(("--story", args.story))
     if args.config is not None:
         command.extend(("--config", str(args.config.expanduser().resolve()), "--driver", args.driver))
     root = Path(__file__).resolve().parents[2]
@@ -50,3 +65,4 @@ def main(argv=None):
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

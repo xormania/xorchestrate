@@ -71,6 +71,9 @@ a model. Missing prerequisites are reported against their dependent checks;
 independent selected checks can still run. A malformed plan is rejected before
 execution. Use `--suite static` for checks that need no native client or tmux.
 
+For selectable story batteries, execution limits and automated tmux scenarios,
+see [local stories](local-stories.md). The same managed controls below apply.
+
 ## Run and inspect
 
 Use the foreground command for deterministic development or CI:
@@ -284,3 +287,4 @@ Keep implementation, deterministic verification, local native measurement and
 review states separate. For this delivery, request one Codex review and one Codex
 Security review per PR after its checks are green, resolve their findings, and
 leave merging to xor.
+

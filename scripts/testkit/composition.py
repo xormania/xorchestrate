@@ -22,9 +22,14 @@ from .adapters.evidence import (
 from .adapters.static import STATIC_IDS
 from .core import execute_checks, required_inputs, validate_checks
 from .model import COMPONENT_SUITES, MODES, SUITES, Check
+from .stories import select_stories, validate_limits
 
 ROOT = Path(__file__).resolve().parents[2]
 LIVE_IDS = ("acceptance", "multi-harness")
+
+
+def live_check(name):
+    return name in LIVE_IDS or name.startswith(("acceptance:", "story:"))
 
 
 def _selection(suite):
@@ -68,11 +73,16 @@ def cache_environment(root):
 
 
 def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=ROOT, brief=None,
-         families=(), check_timeout=600, drivers=(), shutdown_grace=10.0):
+         families=(), check_timeout=600, drivers=(), shutdown_grace=10.0,
+         stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000):
     """Pure check definitions; filesystem preparation belongs to the owning check."""
     selected = _options(suite=suite, mode=mode, timeout=timeout, check_timeout=check_timeout,
                         config=config, driver=driver, families=families, drivers=drivers,
                         shutdown_grace=shutdown_grace)
+    limits = validate_limits(max_sessions=max_sessions, max_turns=max_turns, max_tool_calls=max_tool_calls)
+    if stories and "stories" not in selected:
+        raise ValueError("--story requires a suite containing stories")
+    story_selection = select_stories(stories, mode) if "stories" in selected else ()
     root, directory = Path(root).resolve(), Path(directory).resolve()
     checks = []
     if "static" in selected:
@@ -115,6 +125,21 @@ def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=
             argv += ["--config", str(Path(config).expanduser().resolve())]
         checks.append(Check("multi-harness", tuple(argv), timeout * 64 + 60,
                             ("scripts/verification/multi_harness.py",)))
+    for story in story_selection:
+        for selected_driver in (drivers or (driver,)) if mode == "native" else (None,):
+            name = "story:" + story.id + (":" + quote(selected_driver, safe="") if selected_driver else "")
+            argv = [sys.executable, "-m", "scripts.acceptance", "--output", str(directory / name),
+                    "--profile", "native" if mode == "native" else "fixture", "--story", story.id,
+                    "--timeout", str(timeout), "--shutdown-grace", str(shutdown_grace * 0.5),
+                    "--cleanup-budget", str(shutdown_grace * 0.8)]
+            for key, value in limits.items():
+                argv += ["--" + key.replace("_", "-"), str(value)]
+            if config:
+                argv += ["--config", str(Path(config).expanduser().resolve())]
+            if selected_driver:
+                argv += ["--driver", selected_driver]
+            checks.append(Check(name, tuple(argv), timeout + shutdown_grace + 10,
+                                ("scripts/acceptance/__main__.py", "scripts/acceptance/scenario.py")))
     return validate_checks(checks)
 
 
@@ -127,9 +152,9 @@ def _native_readiness(check, *, config, driver):
     configuration, base = load_config(Path(config).expanduser().resolve())
     if not isinstance(configuration, dict) or not isinstance(configuration.get("sessions", {}), dict):
         raise ValueError("Native configuration needs a sessions object")
-    if check.name.startswith("acceptance:"):
+    if check.name.startswith(("acceptance:", "story:")):
         driver = check.argv[check.argv.index("--driver") + 1] if "--driver" in check.argv else None
-    if (check.name == "acceptance" or check.name.startswith("acceptance:")) and not driver:
+    if (check.name == "acceptance" or check.name.startswith(("acceptance:", "story:"))) and not driver:
         raise ValueError("Native acceptance requires --driver")
     peers = ("codex", "claude", "grok") if check.name == "multi-harness" else (driver,)
     items = []
@@ -168,13 +193,13 @@ def readiness(check, *, root, mode, config=None, driver=None, brief=None, famili
             _, assignments = load_catalog(root)
             select_families(assignments, families)
             items.append({"name": "test_catalog", "passed": True, "modules": len(assignments)})
-        if check.name == "acceptance" or check.name.startswith("acceptance:"):
+        if check.name == "acceptance" or check.name.startswith(("acceptance:", "story:")):
             binary = shutil.which("tmux")
             items.append({"name": "tmux", "passed": binary is not None, "path": binary})
         if check.name == "multi-harness":
             source = _brief(root, brief)
             items.append({"name": "owner_brief", "passed": source.is_file(), "path": str(source)})
-        if mode == "native" and (check.name in LIVE_IDS or check.name.startswith("acceptance:")):
+        if mode == "native" and live_check(check.name):
             items.extend(_native_readiness(check, config=config, driver=driver))
     except Exception as error:
         items.append({"name": "configuration", "passed": False, "reason": str(error)})
@@ -184,12 +209,14 @@ def readiness(check, *, root, mode, config=None, driver=None, brief=None, famili
 
 
 def preflight(*, suite, mode, config=None, driver=None, timeout=180, root=ROOT,
-              families=(), check_timeout=600, brief=None, drivers=(), shutdown_grace=10.0):
+              families=(), check_timeout=600, brief=None, drivers=(), shutdown_grace=10.0,
+              stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000):
     root = Path(root).resolve()
     cache_environment(root)
     checks = plan(directory=root.parent / "testkit-preflight", suite=suite, mode=mode, config=config,
                   driver=driver, timeout=timeout, root=root, brief=brief, families=families,
-                  check_timeout=check_timeout, drivers=drivers, shutdown_grace=shutdown_grace)
+                  check_timeout=check_timeout, drivers=drivers, shutdown_grace=shutdown_grace,
+                  stories=stories, max_sessions=max_sessions, max_turns=max_turns, max_tool_calls=max_tool_calls)
     if families:
         try:
             from .adapters.pytest_plugin import load_catalog
@@ -211,7 +238,8 @@ def preflight(*, suite, mode, config=None, driver=None, timeout=180, root=ROOT,
 
 def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=None,
         timeout=180, root=ROOT, brief=None, families=(), check_timeout=600,
-        directory=None, cancellation=None, result_sink=None, shutdown_grace=10.0, drivers=()):
+        directory=None, cancellation=None, result_sink=None, shutdown_grace=10.0, drivers=(),
+        stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000):
     root, output = Path(root).resolve(), Path(output).expanduser().resolve()
     if output == root or root in output.parents:
         raise ValueError("Run output must be outside the measured candidate")
@@ -256,11 +284,13 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
         report["environment"] = env
         checks = plan(directory=directory, suite=suite, mode=mode, config=config, driver=driver,
                       timeout=timeout, root=root, brief=brief, families=families,
-                      check_timeout=check_timeout, drivers=drivers, shutdown_grace=shutdown_grace)
+                      check_timeout=check_timeout, drivers=drivers, shutdown_grace=shutdown_grace,
+                      stories=stories, max_sessions=max_sessions, max_turns=max_turns, max_tool_calls=max_tool_calls)
         report["selected_check_ids"] = [check.name for check in checks]
         ready = preflight(suite=suite, mode=mode, config=config, driver=driver, timeout=timeout, root=root,
                           brief=brief, families=families, check_timeout=check_timeout, drivers=drivers,
-                          shutdown_grace=shutdown_grace)
+                          shutdown_grace=shutdown_grace, stories=stories, max_sessions=max_sessions,
+                          max_turns=max_turns, max_tool_calls=max_tool_calls)
         write_json(directory / "preflight.json", ready)
         report["preflight"] = ready
         before = candidate_identity(root) if (root / ".git").exists() else None
@@ -270,15 +300,15 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
             report["candidate"] = str(directory / "candidate.json")
         runners = {check.name: RecordingRunner(directory / "commands" / check.name,
                    terminal="inherit" if mode == "native" and (
-                       check.name in LIVE_IDS or check.name.startswith("acceptance:")) else "capture",
+                       live_check(check.name)) else "capture",
                    cancellation=cancellation, shutdown_grace=shutdown_grace,
-                   shutdown_target="owner" if check.name in LIVE_IDS or check.name.startswith("acceptance:") else "group",
+                   shutdown_target="owner" if live_check(check.name) else "group",
                    # Native presentation context belongs only to native live
                    # wrappers. Tests/calibration may construct isolated native
                    # subjects elsewhere and must retain their own policy.
                    environment={"XORCHESTRATE_PROOF_DIRECTORY": ""} if (
                        "XORCHESTRATE_PROOF_DIRECTORY" in os.environ and not (
-                           mode == "native" and (check.name in LIVE_IDS or check.name.startswith("acceptance:")))) else None)
+                           mode == "native" and (live_check(check.name)))) else None)
                    for check in checks}
         resolved, manifests = {}, {}
 
@@ -374,3 +404,4 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
         raise
     write_json(directory / "report.json", report)
     return report
+

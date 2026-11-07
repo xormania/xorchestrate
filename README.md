@@ -33,6 +33,13 @@ and fresh repetition, use the [managed proof workflow](docs/managed-proofs.md)
 through `scripts/proof.sh`. Native proofs run locally with your configured,
 authenticated harnesses; deterministic protocol results remain separate.
 
+Tmux is the terminal automation layer for local story verification. List the
+[selectable stories](docs/local-stories.md) with `./scripts/proof.sh stories`,
+preview their limits with `./scripts/proof.sh plan --suite stories`, and run an
+owned battery with `./scripts/proof.sh start --suite stories --detach`.
+Use `--story ID` to select scenarios and set per-story session, turn-submission
+and controller-request limits alongside the existing deadlines.
+
 ## Run locally
 
 Use Python 3.12 or newer. From the checkout:
@@ -160,3 +167,4 @@ its roles, path ceilings, evaluator prerequisites, and delivery policies are not
 requirements for the current application. There is no automatic migration of its
 state or a claim of feature parity. Reuse is deliberate, with original license
 notices and [extraction provenance](docs/extraction.md) retained.
+

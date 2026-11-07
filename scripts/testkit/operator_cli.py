@@ -14,8 +14,9 @@ from . import operator_composition as managed
 from .adapters import profiles, terminals
 from .composition import MODES, ROOT, SUITES
 from .operator import FINISHED
+from .stories import STORIES, select_stories, validate_limits
 
-ACTIONS = ("setup", "doctor", "run", "start", "list", "status", "watch", "attach", "wait", "stop", "close", "collect")
+ACTIONS = ("setup", "doctor", "run", "start", "list", "status", "watch", "attach", "wait", "stop", "close", "collect", "stories", "plan")
 
 
 def parser():
@@ -29,6 +30,10 @@ def parser():
     value.add_argument("--config", type=Path)
     value.add_argument("--driver", action="append", help="Native acceptance driver; repeat to select several")
     value.add_argument("--family", action="append", help="Declared behavioral family; repeatable")
+    value.add_argument("--story", action="append", help="Story ID; repeat to select an ordered battery")
+    value.add_argument("--max-sessions", type=int, help="Session-start requests admitted per story")
+    value.add_argument("--max-turns", type=int, help="Harness turn submissions admitted per story")
+    value.add_argument("--max-tool-calls", type=int, help="Public controller tool requests admitted per story")
     value.add_argument("--brief", type=Path)
     value.add_argument("--timeout", type=float)
     value.add_argument("--check-timeout", type=float)
@@ -43,7 +48,7 @@ def parser():
 
 def overrides(args):
     result = {}
-    for field in ("suite", "mode", "config", "brief", "timeout", "check_timeout", "run_timeout", "shutdown_grace", "output"):
+    for field in ("suite", "mode", "config", "brief", "timeout", "check_timeout", "run_timeout", "shutdown_grace", "output", "max_sessions", "max_turns", "max_tool_calls"):
         item = getattr(args, field)
         if item is not None:
             result[field] = str(item.expanduser().resolve()) if isinstance(item, Path) else item
@@ -51,6 +56,8 @@ def overrides(args):
         result["drivers"] = args.driver
     if args.family is not None:
         result["families"] = args.family
+    if args.story is not None:
+        result["stories"] = args.story
     return result
 
 
@@ -64,6 +71,7 @@ def settings(args):
         return profiles.load_profile(args.profile, root=ROOT, overrides=explicit)
     return {"suite": "all", "mode": "protocol-fixture", "drivers": [], "families": [],
             "config": None, "brief": str(ROOT / "docs/implementation/owner-brief.md"),
+            "stories": [], "max_sessions": 2, "max_turns": 4, "max_tool_calls": 5000,
             "timeout": 180, "check_timeout": 600, "shutdown_grace": 10, "run_timeout": None,
             "output": str(ROOT.parent / "xorchestrate-runs"), "interpreter": sys.executable,
             "root": str(ROOT), **explicit}
@@ -170,7 +178,13 @@ def main(argv=None, *, direct_runner, preflight):
             raise ValueError("--target belongs to attach")
         if args.source and args.action != "start":
             raise ValueError("--from creates a fresh managed start")
-        if args.action in {"status", "watch", "attach", "wait", "stop", "close", "collect"}:
+        if args.action == "stories":
+            if args.directory or args.profile or args.source or overrides(args):
+                raise ValueError("stories lists the catalog without execution options")
+            result = {"status": "passed", "stories": [
+                {"id": s.id, "version": s.version, "modes": list(s.modes), "description": s.description}
+                for s in STORIES]}
+        elif args.action in {"status", "watch", "attach", "wait", "stop", "close", "collect"}:
             if args.directory is None:
                 raise ValueError("This command requires the explicit run directory printed by start")
             if args.profile or args.source or overrides(args):
@@ -213,7 +227,23 @@ def main(argv=None, *, direct_runner, preflight):
             if args.source and args.action != "start":
                 raise ValueError("--from creates a fresh managed start")
             options = settings(args)
-            if args.action == "doctor":
+            if args.action == "plan":
+                managed.validate_limits(options)
+                checks = managed.check_plan(directory=Path(options["output"]) / "planned", root=ROOT,
+                                            shutdown_grace=options["shutdown_grace"],
+                                            **managed.execution_options(options))
+                selected = select_stories(options.get("stories", ()), options["mode"]) if options["suite"] in {"stories", "all"} else ()
+                limits = validate_limits(**{key: options[key] for key in ("max_sessions", "max_turns", "max_tool_calls")})
+                count = sum(check.name.startswith("story:") for check in checks)
+                result = {"status": "passed", "mode": options["mode"],
+                          "stories": [{"id": s.id, "version": s.version} for s in selected],
+                          "checks": [{"name": c.name, "timeout": c.timeout, "argv": list(c.argv)} for c in checks],
+                          "story_limits": limits, "story_attempts": count,
+                          "battery_story_limits": {key: value * count for key, value in limits.items()},
+                          "maximum_check_seconds": sum(c.timeout for c in checks),
+                          "run_timeout": options.get("run_timeout"), "tokens": "unknown",
+                          "limit_scope": "per-story controller requests; native internal calls and tokens are not counted"}
+            elif args.action == "doctor":
                 result = preflight(root=ROOT, shutdown_grace=options["shutdown_grace"], **managed.execution_options(options))
                 if args.profile:
                     environment = profiles.doctor(args.profile, root=ROOT, overrides=overrides(args))
@@ -237,3 +267,4 @@ def main(argv=None, *, direct_runner, preflight):
     except (OSError, ValueError, TypeError, RuntimeError, subprocess.SubprocessError) as error:
         print(json.dumps({"status": "setup_error", "type": type(error).__name__, "diagnostic": str(error)}), flush=True)
         return 1
+
