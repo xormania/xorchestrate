@@ -175,6 +175,11 @@
           "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'"
         },
         {
+          "name": "Run selectable tmux story battery",
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
+          "run": "python3 -m scripts.testkit run --suite stories --mode protocol-fixture --output \"$RUNNER_TEMP/acceptance-evidence/stories\" --timeout 60 --run-timeout 240 --max-sessions 2 --max-turns 4 --max-tool-calls 5000"
+        },
+        {
           "name": "Record unavailable tmux acceptance",
           "if": "!cancelled() && (steps.checkout.outcome != 'success' || steps.cache.outcome != 'success' || steps.python.outcome != 'success' || steps.dependencies.outcome != 'success')",
           "run": "mkdir -p \"$RUNNER_TEMP/acceptance-evidence\"\ncat > \"$RUNNER_TEMP/acceptance-evidence/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"selected_suites\":[\"acceptance\"],\"launched\":false,\"reason\":\"CI checkout, cache, interpreter or dependency setup did not succeed\"}\nJSON"
@@ -195,7 +200,9 @@
       "name": "Hexagonal architecture",
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 2,
-      "needs": ["changes"],
+      "needs": [
+        "changes"
+      ],
       "if": "always()",
       "steps": [
         {
