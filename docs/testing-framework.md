@@ -40,6 +40,10 @@ python3 -m scripts.testkit run --suite calibration
 python3 -m scripts.testkit run --suite multi-harness
 python3 -m scripts.testkit run --suite acceptance
 
+# Selectable, bounded scenarios in owned tmux terminals.
+python3 -m scripts.testkit stories
+python3 -m scripts.testkit run --suite stories --story work-acceptance --timeout 60
+
 # Everything above, using the same composed checks.
 python3 -m scripts.testkit run
 ```
@@ -82,6 +86,9 @@ complete module catalog even for a selected family, then records selected cases,
 deselections and outcomes. Explicit subsets are reported as subsets. An empty
 selection, missing declared module, duplicate ownership or unclassified module
 is an error; none receives a successful empty result.
+
+See [selectable local stories](local-stories.md) for the story catalog, bounded
+controller requests, native callback selection and managed tmux automation.
 
 ## Ownership
 
@@ -158,3 +165,4 @@ configuration or check-specific preparation block only dependent checks;
 independent checks continue and the aggregate remains unsuccessful. `doctor` uses
 the same readiness definitions without launching a live harness. Native terminal
 inheritance applies to live checks; static and pytest output stays captured.
+

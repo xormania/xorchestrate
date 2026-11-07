@@ -10,9 +10,10 @@ def client_factory(monkeypatch):
     closed = []
 
     class Client:
-        def __init__(self, config, deadline, actor):
+        def __init__(self, config, deadline, actor, *, budget):
             self.name = config
             self.failure = None
+            self.budget = budget
 
         def close(self):
             closed.append(self.name)
@@ -29,6 +30,7 @@ def test_scenario_drains_all_clients_after_one_close_fails(tmp_path, client_fact
     broken = scenario.client("broken")
     broken.failure = RuntimeError("shutdown failed")
     scenario.client("last")
+    assert all(client.budget is scenario.budget for client in scenario.clients)
 
     with pytest.raises(acceptance.AcceptanceFailure, match="runtime_cleanup_failed"):
         scenario.cleanup()
@@ -45,6 +47,7 @@ def test_failed_explicit_close_remains_failure_while_other_clients_are_cleaned(t
     scenario = acceptance.Scenario(tmp_path, 1, "native")
     scenario.client("remaining")
     broken = scenario.client("broken")
+    assert all(client.budget is scenario.budget for client in scenario.clients)
     broken.failure = RuntimeError("shutdown failed")
 
     with pytest.raises(acceptance.AcceptanceFailure, match="runtime_cleanup_failed"):
@@ -63,3 +66,4 @@ def test_exportable_check_receipt_redacts_unexpected_exception_text(tmp_path):
             raise RuntimeError("private launch configuration")
     assert scenario.checks[0]["failure"] == {"type": "RuntimeError", "code": "scenario_error"}
     assert scenario.checks[0]["status"] == "failed"
+

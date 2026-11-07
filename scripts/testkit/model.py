@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-COMPONENT_SUITES = ("static", "tests", "calibration", "acceptance", "multi-harness")
+COMPONENT_SUITES = ("static", "tests", "calibration", "acceptance", "multi-harness", "stories")
 SUITES = (*COMPONENT_SUITES, "checks", "all")
 MODES = ("fixture", "protocol-fixture", "native")
 
@@ -68,4 +68,5 @@ class Cancelled(RuntimeError):
         self.raw_stdout, self.raw_stderr, self.shutdown = raw_stdout, raw_stderr, shutdown
         self.launched = launched
         super().__init__(f"run cancelled: {self.reason}")
+
 
