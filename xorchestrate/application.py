@@ -16,6 +16,7 @@ from typing import Any, Callable
 
 from .acceptance import ACCEPTANCE_ACTIONS, AcceptanceMixin
 from .delivery import DELIVERY_ACTIONS, DeliveryMixin
+from .inspection import InspectionProjector
 from .lifecycles import DURABLE_LIFECYCLES, default_definitions
 from .model import JSON, Assessment, Capability, Conflict, OrchestrationError, Record
 from .outcomes import before_effect, effect_outcome
@@ -185,6 +186,7 @@ class Application(AcceptanceMixin, DeliveryMixin):
         except OrchestrationError as error:
             raise OrchestrationError("Invalid assessment configuration.", "invalid_configuration", error.details) from error
         self.assessment = deepcopy(assessment if assessment is not None else {})
+        self.inspection = InspectionProjector(store, self._context, self._authorize, self._verify_context)
 
     def describe(self) -> list[Capability]:
         return [Capability(name, spec.description, deepcopy(spec.input_schema), deepcopy(spec.annotations)) for name, spec in _ACTIONS.items()]
@@ -384,7 +386,7 @@ class Application(AcceptanceMixin, DeliveryMixin):
             return {"work": _view(record)}
 
     def _get_work(self, args: JSON, actor: str, context: JSON) -> JSON:
-        return self._inspect_snapshot("get_work", actor, context, lambda tx: self._work_snapshot(tx, args["work_id"]))
+        return self.inspection.inspect_snapshot("get_work", actor, context, lambda tx: self._work_snapshot(tx, args["work_id"]))
 
     def _work_snapshot(self, tx: Transaction, work_id: str) -> JSON:
         work = self._require(tx, "work", work_id)
@@ -869,7 +871,7 @@ class Application(AcceptanceMixin, DeliveryMixin):
                 "pending_operation": operation.key if status == "unknown" else None}, operation.data["actor"])
 
     def _get_operation(self, args: JSON, actor: str, context: JSON) -> JSON:
-        return self._inspect_snapshot("get_operation", actor, context,
+        return self.inspection.inspect_snapshot("get_operation", actor, context,
             lambda tx: {"operation": _view(self._require(tx, "operation", args["operation_id"]))})
 
     def _resolve_operation(self, args: JSON, actor: str, context: JSON) -> JSON:
@@ -968,3 +970,4 @@ class Application(AcceptanceMixin, DeliveryMixin):
         with self.store.transaction() as tx:
             self._verify_context(tx, context)
             return {"events": tx.events(args.get("after", 0), args.get("limit", 100))}
+

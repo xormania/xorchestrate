@@ -39,6 +39,15 @@ flowchart TD
 | Session selection / delivery scheduling / retry / receipt | Replaceable routing-to-native-delivery responsibilities | Conflating submission, receipt, response, completion and acceptance |
 | Composition and input adapters | Trusted configuration, adapter lifetime, CLI/MCP encoding and identity | Domain-specific project practices |
 
+Public inspection is shared by work, acceptance, delivery and native-history
+reads. `InspectionProjector` owns typed record projection, nested historical
+results and freshness revalidation through the store and explicit context,
+authorization and validation callbacks. It receives no application facade or
+delivery/acceptance workflow; authorization uses the application's current
+guardrail. Projection copies leave trusted stored records and receipt-policy
+inputs unchanged. Caller/provider payloads remain opaque outside declared
+application-owned envelopes.
+
 The core is usable with supplied ports without importing SQLite, subprocesses,
 MCP machinery, or the historical runtime. Memory and SQLite stores exercise the
 same contract. External capabilities can be added through discovery, without
@@ -314,3 +323,4 @@ The deterministic full suite and local native procedure use the active
 composition and retain requested coverage separately from measured coverage.
 Protocol fixtures do not establish authenticated vendor behavior. Native
 acceptance and independent review have their own explicit states.
+

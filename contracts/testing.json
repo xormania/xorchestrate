@@ -67,6 +67,7 @@
         "tests/hexagonal/test_work_acceptance.py": "contract",
         "tests/hexagonal/test_assessment_inputs.py": "contract",
         "tests/hexagonal/test_assessment_inspection_contract.py": "contract",
+        "tests/hexagonal/test_inspection_contract.py": "contract",
         "tests/hexagonal/test_inspection_history.py": "contract",
         "tests/hexagonal/test_completion_contracts.py": "contract",
         "tests/hexagonal/test_completion_evidence.py": "contract",
@@ -143,3 +144,4 @@
     }
   }
 }
+

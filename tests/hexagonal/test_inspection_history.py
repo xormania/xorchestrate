@@ -109,7 +109,7 @@ def test_current_work_aggregates_use_the_same_record_policy(history, action):
 
 
 def test_known_bad_historical_session_omission_is_detected(history, monkeypatch):
-    from xorchestrate.delivery import _INSPECTION_RESULTS
+    from xorchestrate.inspection import _INSPECTION_RESULTS
 
     _, work, _, _ = history
     record_history(history, "get_work", {"work_id": work})
@@ -135,7 +135,7 @@ def test_unrelated_history_projection_error_is_not_detection(history, monkeypatc
     def unavailable(*args, **kwargs):
         raise TimeoutError("unrelated projection dependency")
 
-    monkeypatch.setattr(app, "_inspection_result", unavailable)
+    monkeypatch.setattr(app.inspection, "project_result", unavailable)
     with pytest.raises(TimeoutError, match="unrelated projection dependency"):
         assert_projected(inspect(history))
 
@@ -428,7 +428,7 @@ def test_known_bad_provider_binding_omission_is_detected(history, monkeypatch):
         assert PUBLIC in json.dumps(callbacks)
 
     assert_scope()
-    previous = app._inspection_context
+    previous = app.inspection.record_context
 
     def omit_binding(actor, kind, record, cache=None):
         context = previous(actor, kind, record, cache)
@@ -437,9 +437,9 @@ def test_known_bad_provider_binding_omission_is_detected(history, monkeypatch):
                 context.pop(key, None)
         return context
 
-    monkeypatch.setattr(app, "_inspection_context", omit_binding)
-    monkeypatch.setattr(app, "_inspection_execution", lambda actor, payload, cache, executing_actor:
-        app._inspection_basis(actor, payload["arguments"], cache))
+    monkeypatch.setattr(app.inspection, "record_context", omit_binding)
+    monkeypatch.setattr(app.inspection, "_execution", lambda actor, payload, cache, executing_actor:
+        app.inspection._basis(actor, payload["arguments"], cache))
     with pytest.raises(AssertionError, match="^IV01_PROVIDER_SCOPE(?:\\n|$)"):
         assert_scope()
     with pytest.raises(OrchestrationError) as denied:
@@ -455,7 +455,7 @@ def test_unrelated_provider_scope_error_is_not_detection(history, monkeypatch):
     def unavailable(*args, **kwargs):
         raise TimeoutError("unrelated provider scope dependency")
 
-    monkeypatch.setattr(app, "_inspection_execution", unavailable)
+    monkeypatch.setattr(app.inspection, "_execution", unavailable)
     with pytest.raises(TimeoutError, match="unrelated provider scope dependency"):
         callbacks = [row["result"] for row in inspect(history)["calls"] if row["action"] == "invoke"]
         assert SECRET not in json.dumps(callbacks), "IV01_PROVIDER_SCOPE"
@@ -511,3 +511,4 @@ def test_conflicting_operation_key_cannot_supply_another_requests_inspection_sco
     assert any(row["call_id"] == "public-" + action for row in visible["calls"])
     app.guardrail = RuleGuardrail()
     assert inspect(history) == before
+
