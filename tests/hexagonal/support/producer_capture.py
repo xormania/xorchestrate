@@ -77,9 +77,10 @@ def process_options(mode, **extra):
 
 
 class HttpFixture:
-    def __init__(self, body, status=200, delay=0):
-        self.body, self.status, self.delay = body, status, delay
+    def __init__(self, body, status=200, delay=0, chunk_delay=None):
+        self.body, self.status, self.delay, self.chunk_delay = body, status, delay, chunk_delay
         self.requests = []
+        self.stop = threading.Event()
         fixture = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -93,7 +94,14 @@ class HttpFixture:
                 if fixture.delay:
                     time.sleep(fixture.delay)
                 try:
-                    self.wfile.write(fixture.body)
+                    if fixture.chunk_delay is None:
+                        self.wfile.write(fixture.body)
+                    else:
+                        for byte in fixture.body:
+                            if fixture.stop.wait(fixture.chunk_delay):
+                                break
+                            self.wfile.write(bytes([byte]))
+                            self.wfile.flush()
                 except (BrokenPipeError, ConnectionResetError):
                     pass
 
@@ -108,6 +116,7 @@ class HttpFixture:
         return self
 
     def __exit__(self, *unused):
+        self.stop.set()
         self.server.shutdown()
         self.server.server_close()
         self.thread.join(timeout=2)

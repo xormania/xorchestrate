@@ -100,6 +100,7 @@ class _ProcessSessions:
     jsonrpc = True
     resumable = False
     contract_version = "native-session-v1"
+    application_callback_methods = ()
 
     def __init__(self, options: JSON, request_handler: Callable | None = None):
         self.options = _object(options, "Session options", "invalid_configuration")
@@ -255,7 +256,8 @@ class _ProcessSessions:
             live = _LiveSession(context=context, activity_model=ActivityState(self._state_engine))
             live.process = JsonLineProcess(self.options, lambda method, params: self._request(live, method, params), jsonrpc=self.jsonrpc,
                                            notification_handler=lambda method, params: self._notification(live, method, params),
-                                           telemetry_observer=self._telemetry_observer, telemetry_context=capture_origin({**context, "incarnation": live.incarnation}))
+                                           telemetry_observer=self._telemetry_observer, telemetry_context=capture_origin({**context, "incarnation": live.incarnation}),
+                                           application_callback_methods=self.application_callback_methods if callable(getattr(self, "_application_callback", None)) else ())
             return live
         except BaseException:
             with self._lock:
@@ -501,6 +503,7 @@ class CodexSessionDriver(_NativeSessions):
     """
 
     protocol = "codex"
+    application_callback_methods = ("item/tool/call",)
     jsonrpc = False
     resumable = True
 

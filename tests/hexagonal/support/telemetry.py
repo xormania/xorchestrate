@@ -248,7 +248,14 @@ class Fixture:
                 "context": {"work_id": public if index == horizon else private}}
                 for index in range(after + 1, min(after + limit, horizon) + 1)]
 
+        def scan(*, after=0, limit=100, **filters):
+            rows = query(after=after, limit=limit, **filters)
+            cursor = rows[-1]["sequence"] if rows else after
+            return {"events": rows, "next_after": cursor, "scanned": len(rows),
+                "exhausted": cursor >= horizon}
+
         sink.query = query
+        sink.scan = scan
         sink.status = lambda: {**original_status(), "max_sequence": horizon}
 
     def existing_scope(self, kind):

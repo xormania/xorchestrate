@@ -230,7 +230,8 @@ class Episode:
     @contextmanager
     def revoke_baseline_after_candidate_query(self, baseline, candidate):
         telemetry = self.runtime.application.telemetry
-        original = telemetry.query
+        reader = "scan" if callable(getattr(telemetry, "scan", None)) else "query"
+        original = getattr(telemetry, reader)
         state = {"revoked": False}
 
         def query(**arguments):
@@ -240,7 +241,7 @@ class Episode:
                 state["revoked"] = True
             return result
 
-        with patch.object(telemetry, "query", side_effect=query):
+        with patch.object(telemetry, reader, side_effect=query):
             yield state
 
     @contextmanager

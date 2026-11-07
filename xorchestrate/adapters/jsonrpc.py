@@ -541,7 +541,7 @@ class JsonLineProcess:
 
     def __init__(self, options: dict, request_handler: Callable | None = None, *,
                  jsonrpc: bool = True, notification_handler: Callable | None = None,
-                 telemetry_observer=None, telemetry_context=None):
+                 telemetry_observer=None, telemetry_context=None, application_callback_methods=()):
         self.timeout = positive_number(options, "timeout", 30)
         self.shutdown_timeout = positive_number(options, "shutdown_timeout", 0.2)
         self.callback_timeout = positive_number(options, "callback_timeout", self.timeout)
@@ -554,6 +554,12 @@ class JsonLineProcess:
         self.max_callback_history = positive_integer(options, "max_callback_history", 4096)
         worker_count = positive_integer(options, "callback_workers", 8)
         self.handler = request_handler
+        if (isinstance(application_callback_methods, str) or
+                any(not isinstance(method, str) or not method for method in application_callback_methods)):
+            raise OrchestrationError("Application callback methods must be explicit trusted method names.", "invalid_configuration")
+        # Selected by the owning adapter, never inferred from a provider's JSON
+        # result shape. Generic callbacks retain their ordinary wire capture.
+        self.application_callback_methods = frozenset(application_callback_methods)
         self.notification_handler = notification_handler
         self.jsonrpc = jsonrpc
         self._state = threading.RLock()
@@ -686,7 +692,8 @@ class JsonLineProcess:
                         raise OrchestrationError("Subprocess callback queue exceeded its bound.", "provider_protocol") from exc
                     return
             if answer is not None:
-                self._write(answer, time.monotonic() + self.timeout)
+                self._write(answer, time.monotonic() + self.timeout,
+                            callback_method=packet["method"] if packet["method"] in self.application_callback_methods else None)
             return
         identifier = packet.get("id")
         if type(identifier) is not int or ("result" in packet) == ("error" in packet):
@@ -740,7 +747,8 @@ class JsonLineProcess:
                         raise OrchestrationError("Subprocess callback history exceeded its byte bound.", "provider_protocol")
                     self._callback_bytes += size
                     self._callbacks[key]["answer"] = answer
-                self._write(answer, time.monotonic() + self.timeout)
+                self._write(answer, time.monotonic() + self.timeout,
+                            callback_method=packet["method"] if packet["method"] in self.application_callback_methods else None)
             except BaseException as exc:
                 if not self._closed:
                     self._fail(exc)
@@ -749,14 +757,27 @@ class JsonLineProcess:
                 timer.cancel()
                 self._callback_queue.task_done()
 
-    def _write(self, message: dict, deadline: float, context=None):
+    def _write(self, message: dict, deadline: float, context=None, *, callback_method=None):
         with self._state:
             if self._closed:
                 raise self._unavailable("not_started")
         data = encode_json(message) + b"\n"
-        observe_wire(self.telemetry_observer, "process.request", data[:self.max_frame + 1],
-                     self.telemetry_context if context is None else context, secrets=self.telemetry_secrets,
-                     complete=len(data) <= self.max_frame + 1, total_bytes=len(data), phase="serialized")
+        origin = self.telemetry_context if context is None else context
+        if callback_method is not None:
+            # The application's semantic/native observations retain typed
+            # results. A second opaque encoding cannot inherit the source
+            # session's grant to every resource embedded in that result.
+            observe_telemetry(self.telemetry_observer, "process.request", {
+                "representation": "suppressed", "captured_bytes": 0, "source_bytes": len(data),
+                "total_bytes": len(data), "range_start": 0, "range_end": 0, "phase": "serialized",
+                "direction": "callback_response", "request_id": message.get("id"),
+                "callback_method": callback_method, "provenance": "application-capable-callback-v1",
+            }, origin, secrets=self.telemetry_secrets, completeness="suppressed",
+                reason="callback_response_requires_typed_observation")
+        else:
+            observe_wire(self.telemetry_observer, "process.request", data[:self.max_frame + 1],
+                         origin, secrets=self.telemetry_secrets, complete=len(data) <= self.max_frame + 1,
+                         total_bytes=len(data), phase="serialized")
         if len(data) > self.max_frame:
             raise OrchestrationError("Request exceeds the configured frame bound.", "invalid_request", {"outcome": "not_started"})
         if not self._write_slots.acquire(timeout=max(0, deadline - time.monotonic())):

@@ -1,0 +1,830 @@
+{
+  "kind": "codex-review-followup-evidence",
+  "date": "2026-11-07",
+  "scope": "Seven published findings on Xorchestrate PR18 and PR19; checkpoints overlap and are not additive.",
+  "reports": {
+    "foundation_initial_author": {
+      "receipt": "foundation-review/author-report.json",
+      "sha256": "94b62bca1deb4ac410ab7b97d9a41ce952524d1ac72463c0be00be74cc5f8015",
+      "content": {
+        "author": "collector_tests independent test author; no production edits",
+        "red_source_commit": "1baed033ae093df9158ba51f866f0d92400dc0b3",
+        "red_source_tree": "bdc7e1657b4cb2170e73a98a81955293a6a833cf",
+        "green_production_commit": "d3c3a59f396a093e37e1bf27069d402861b853a7",
+        "test_commit": "dc4d386bd04ee947b3e4e4ed84184e5210cdd915",
+        "final_tree": "873aa4ae55e4a200ebf9c488623f068b1da11dd0",
+        "red": {
+          "tests": 31,
+          "failures": 31,
+          "errors": 0,
+          "seconds": 4.59
+        },
+        "green": {
+          "tests": 71,
+          "failures": 0,
+          "errors": 0,
+          "seconds": 9.32
+        },
+        "command": "python -m pytest -p no:cacheprovider tests/hexagonal/test_telemetry_review.py tests/hexagonal/test_telemetry.py -q --test-inventory <outside candidate> --junitxml <outside candidate>",
+        "coverage": [
+          "24 practical invocation-source authority variants: inline/artifact, provider/capability, events/payload, completed/actually denied/missing provider; source work remains inspectable.",
+          "Authorized artifact-backed raw usage includes zero and unknown quantities.",
+          "21-event inline byte-cut fixture proves status count/latest/later-source completeness across pages.",
+          "Sparse work/session/operation filters use independent donor repository row counts against10000raw-row budget and eventual continuation; no timing oracle.",
+          "Existing40 foundation cases retained; denied-prefix fixture implements explicit scan progress seam."
+        ],
+        "red_assertion_excerpts": [
+          "E           AssertionError: TELEMETRY_REQUEST_ARGUMENTS_MUST_RESPECT_CURRENT_PROVIDER_CAPABILITY_AUTHORITY",
+          "E           AssertionError: TELEMETRY_REQUEST_PAYLOAD_MUST_RESPECT_CURRENT_PROVIDER_CAPABILITY_AUTHORITY",
+          "E           AssertionError: TELEMETRY_RESOURCE_FILTER_MUST_NOT_HIDE_UNBOUNDED_REPOSITORY_SCANS",
+          "E           AssertionError: TELEMETRY_STATUS_LATEST_CAPTURE_MUST_NOT_BE_THE_FIRST_BYTE_PAGE_TAIL",
+          "E           AssertionError: TELEMETRY_STATUS_MUST_NOT_LABEL_A_BYTE_TRUNCATED_PREFIX_AS_COMPLETE_COUNT",
+          "E           AssertionError: TELEMETRY_STATUS_SOURCE_COVERAGE_MUST_INCLUDE_LATER_AUTHORIZED_PAGES",
+          "E       AssertionError: TELEMETRY_USAGE_MUST_INCLUDE_AUTHORIZED_ARTIFACT_BACKED_OBSERVATIONS"
+        ],
+        "source_sha256": {
+          "xorchestrate/telemetry.py": "d2fdb876a0f10ff59d4f74aafa15f7b8d5df2433c98834b7dd67e5a2ff70125e",
+          "xorchestrate/adapters/telemetry.py": "862e93e4774e4bd2808522270511ac2a8df88cdc7b05f7dfe9e78d3e08d63758",
+          "xorchestrate/ports.py": "a2676588b849bd9c9f09df252963302fc8009d3b457b636d884c8918bf7b6fce"
+        },
+        "evidence": {
+          "red.log": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/foundation-review/red.log",
+            "sha256": "991ecdcc6c750aea18ae91589619e8d48cf93037286748badde226041433c262"
+          },
+          "red.xml": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/foundation-review/red.xml",
+            "sha256": "5980524ce13909b2bba38d30752116f6b7a1b795e051e7c6e67b2949bfa13193"
+          },
+          "red-inventory.json": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/foundation-review/red-inventory.json",
+            "sha256": "f8b9b5509319968ad05e4f5ef9ee271c4f80523611030ff5d3e07eac81a61c3a"
+          },
+          "green.log": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/foundation-review/green.log",
+            "sha256": "0352030b1f098d88efd4ff478bcff622de12de545f26f20e162bd9b601d683ff"
+          },
+          "green.xml": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/foundation-review/green.xml",
+            "sha256": "03dd2cdeecb476797eacc8b6abf7bbd9193b37579fb25a16e5ed638f67ba8fb2"
+          },
+          "green-inventory.json": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/foundation-review/green-inventory.json",
+            "sha256": "607f303c4c7dd9da733c724dc37517227160a4f89c15a296aacdb7c24aba93b6"
+          }
+        },
+        "qualification": "Normal shared catalog plugin; deterministic injected source fixtures. No authenticated native or final stacked revision claim."
+      }
+    },
+    "foundation_followup_author": {
+      "receipt": "foundation-review/followup-author-report.json",
+      "sha256": "24deb557613ccb50c339e03e445cf942825cb3f5106e4ee2c8b98d9c2afe0ceb",
+      "content": {
+        "author": "collector_tests independent test author; no production edits",
+        "red_source_commit": "dc4d386bd04ee947b3e4e4ed84184e5210cdd915",
+        "red_source_tree": "873aa4ae55e4a200ebf9c488623f068b1da11dd0",
+        "green_production_commit": "17b30d07f6c8fd443c54595015fbd61722a6c686",
+        "test_commit": "6ed3a9a3d6f6759f4ef714e7403496e66f9c415a",
+        "final_tree": "8aeefea2a6472b10d148246f0298d97b19f1c4c3",
+        "usage_red": {
+          "tests": 2,
+          "failures": 2,
+          "errors": 0,
+          "seconds": 0.26
+        },
+        "forged_scope_red": {
+          "tests": 8,
+          "failures": 8,
+          "errors": 0,
+          "seconds": 0.54,
+          "selection": "Detached exact baseline source with final authored test modules."
+        },
+        "green": {
+          "tests": 81,
+          "failures": 0,
+          "errors": 0,
+          "seconds": 10.38
+        },
+        "coverage": [
+          "Default262144 and explicit65536 usage view budgets on a valid retained350k rawusagecontainer. Oversizedview must return bounded exactsource reference or explicit invalid_query; complete authorized raw JSON reconstructed in bounded ranges.",
+          "8 forgedoperation scope variants (inline/artifact, provider/capability, events/payload). A real allowed tools/change operation exists; malformed private/change + foreignoperation_id is actually invalid_arguments and executes no extra effect.",
+          "All previous31 review cases + original40 retained for81 total."
+        ],
+        "evidence": {
+          "usage-bound-red.log": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/foundation-review/usage-bound-red.log",
+            "sha256": "4b6b81653489f4093d42ca752a2a1578b770d1dc2313e386be2d0d1ac34d4e36"
+          },
+          "usage-bound-red.xml": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/foundation-review/usage-bound-red.xml",
+            "sha256": "93ffe699217c7283a4e29887bc34b8bf50b3b13b87722c00020bce5a8b9aba51"
+          },
+          "usage-bound-red-inventory.json": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/foundation-review/usage-bound-red-inventory.json",
+            "sha256": "a1235617808f20a098152a91614366fdb842f8d3044ba44a7a9d9451391f3c44"
+          },
+          "forged-operation-exact-red.log": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/foundation-review/forged-operation-exact-red.log",
+            "sha256": "ed5e99e143fd68ac90ded7b63247e61d131180f17024a27b3466ab95546dbbd5"
+          },
+          "forged-operation-exact-red.xml": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/foundation-review/forged-operation-exact-red.xml",
+            "sha256": "07faab438d2bb0880abf4de03d031fa841d15c2577982f5fa1406503d5796079"
+          },
+          "forged-operation-exact-red-inventory.json": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/foundation-review/forged-operation-exact-red-inventory.json",
+            "sha256": "cb5ee99a5f419059a30d96df3513e5c9bdd0350555c36c1e15bc9516c5ba2e08"
+          },
+          "followup-green.log": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/foundation-review/followup-green.log",
+            "sha256": "9d630fb699b1f9200e4650ba1a9a1473a02a0266a6394a348fc0f2a8f2f789a0"
+          },
+          "followup-green.xml": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/foundation-review/followup-green.xml",
+            "sha256": "5b9fbae4de876c72c8fd42217de458ba75e441c68857b7889de4505a868551fb"
+          },
+          "followup-green-inventory.json": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/foundation-review/followup-green-inventory.json",
+            "sha256": "859a012bc888848937b6fb2916a9da95459fad2d20f30efd6f60afa6f4ac5602"
+          }
+        },
+        "source_sha256": {
+          "xorchestrate/inspection.py": "dbe9c089e3054c306e19caa753d345aa016c367951141175b913b79f6388abb8",
+          "xorchestrate/telemetry.py": "ff459a79a1d9e9022eeb6e30626b4d3168ef68cecd24640cc94865516ec9a988"
+        },
+        "test_sha256": {
+          "tests/hexagonal/contracts/telemetry_review.py": "53b8afa0a141474ca99600764d320185b623617b349dce81e82ed9d363adba71",
+          "tests/hexagonal/support/telemetry_review.py": "cf31fafb2d1d0c52bdfec804b500e3e7fc31273160f2e533a272239f4b116616",
+          "tests/hexagonal/test_telemetry_review.py": "47ca573611396d9e20ab7177893aefd2007d2372d3563da5bb38c09919d4e0c4"
+        },
+        "ruff": "3 changed test modules pass",
+        "qualification": "Normal shared catalog plugin; no final stacked revision claim."
+      }
+    },
+    "foundation_reviewer": {
+      "receipt": "foundation-review/reviewer-final.json",
+      "sha256": "232214725d152146f91ebc0ab718cf8985ac7e910f42c5d9e511e1f4130eba68",
+      "content": {
+        "role": "independent adversarial reviewer",
+        "scope": "Targeted original four Codex foundation repairs plus the two confirmed same-scope followups; no general audit",
+        "candidate_commit": "6ed3a9a3d6f6759f4ef714e7403496e66f9c415a",
+        "candidate_tree": "8aeefea2a6472b10d148246f0298d97b19f1c4c3",
+        "production_commit": "17b30d07f6c8fd443c54595015fbd61722a6c686",
+        "clean_worktree": true,
+        "source_sha256": {
+          "xorchestrate/telemetry.py": "ff459a79a1d9e9022eeb6e30626b4d3168ef68cecd24640cc94865516ec9a988",
+          "xorchestrate/adapters/telemetry.py": "862e93e4774e4bd2808522270511ac2a8df88cdc7b05f7dfe9e78d3e08d63758",
+          "xorchestrate/ports.py": "a2676588b849bd9c9f09df252963302fc8009d3b457b636d884c8918bf7b6fce",
+          "xorchestrate/inspection.py": "dbe9c089e3054c306e19caa753d345aa016c367951141175b913b79f6388abb8"
+        },
+        "independent_replay": {
+          "passed": 41,
+          "failures": 0,
+          "errors": 0,
+          "elapsed_seconds": 5.29,
+          "command": "PYTHONPATH=<candidate>:<pinned-collector> <inspection-python> -m pytest tests/hexagonal/test_telemetry_review.py -q --tb=short",
+          "log": "reviewer-final-pytest.log",
+          "log_sha256": "6b1ca4734c2dcd666e1adaf33461ecbac9e59d68bf3cb86bd921114abfe9f458"
+        },
+        "specific_repro_replay": {
+          "usage_budget_65536": {
+            "json_bytes": 333,
+            "sample_count": 1,
+            "sample": {
+              "event_id": "large-valid-usage",
+              "sequence": 1,
+              "measurements_omitted": true,
+              "read_action": "telemetry_payload"
+            }
+          },
+          "malformed_invoke_outcome": "invalid_arguments",
+          "malformed_request_visible": false
+        },
+        "specific_repro_sha256": "a453807ff079c743d4dc66053a74532ca3374df1c08f32ec07d83c7d51773c97",
+        "separate_author_receipt": "followup-author-report.json",
+        "separate_author_receipt_sha256": "24deb557613ccb50c339e03e445cf942825cb3f5106e4ee2c8b98d9c2afe0ceb",
+        "reviewed_properties": [
+          "Typed application invoke source scope is resolved before exposing inline or retained request content; supplied unsupported operation_id cannot replace actual request source scope.",
+          "Artifact-backed usage is hydrated, remains authorized and has a bounded public response with explicit source retrieval when measurements are omitted.",
+          "Status follows byte continuations and reports incomplete count/latest/source coverage when its total raw scan allowance is exhausted.",
+          "Local scan exposes bounded raw progress distinct from matching rows; sparse resource filters can continue without false EOF and byte cutoff retains the unconsumed matching row."
+        ],
+        "remaining_findings": [],
+        "qualification": "No further confirmed defect found within this bounded foundation repair review. Combined-stack resolution and existing PR21 current-policy guards are a separate pending phase."
+      }
+    },
+    "producer_author": {
+      "receipt": "capture/pr19-test-author-receipt.json",
+      "sha256": "34c01ee918e350747e84ecb48917765a4a5dc756ce627b94d2b10415ca7e6df3",
+      "content": {
+        "agent": "/root/capture_tests",
+        "baseline_commit": "910b798f717b7b70b4f1bcb3a7029406d843689e",
+        "baseline_result": "5 failed,41 deselected,0 errors in2.88s",
+        "candidate_clean": true,
+        "candidate_commit": "80c7c977b2a6360da96cf2f83d60e9f4c72474cc",
+        "candidate_result": "51 passed in11.01s",
+        "file_sha256": {
+          "tests/hexagonal/support/producer_capture.py": "2ee3becbce1b8b8352b73a4d7b266b62b11fdee7c91b6f7e9566e63339640fea",
+          "tests/hexagonal/test_producer_capture.py": "047b9b4adfa4fd55f3f80b8b4cdc4bfc807844af0865f0792739138538fe6466",
+          "tests/hexagonal/test_transcript_producer_capture.py": "ceddf2ca79152c8baf86b389446c22e57651f0df61e7e36782b86e223dda9602",
+          "xorchestrate/adapters/claude.py": "c8da29025ede95f8b9eb074ffd5d1dda77cbdc4e75f324291d402ccd27fc0ba4",
+          "xorchestrate/adapters/evaluation.py": "3d0f8ed2774785bcf12730c6e10271eb1ebda1fff4626fa306416e91d98f2be7"
+        },
+        "green_command": "PYTHONPATH=/workspace/scratch/7c8bb4d2a697/donor-cce PYTHONPYCACHEPREFIX=/workspace/scratch/7c8bb4d2a697/evidence/capture/pr19-exact-pycache /workspace/scratch/913f839fa00b/inspection-venv/bin/python -m pytest -q tests/hexagonal/test_producer_capture.py tests/hexagonal/test_native_producer_capture.py tests/hexagonal/test_transcript_producer_capture.py",
+        "green_log": "pr19-producer-exact-green.log",
+        "product_repair_commit": "56b547ec0f9cfb6b812e53a7a48e401e4b0c7821",
+        "production_edits": false,
+        "red_candidate_test_bytes_identical": true,
+        "red_command": "PYTHONPATH=/workspace/scratch/7c8bb4d2a697/donor-cce PYTHONPYCACHEPREFIX=/workspace/scratch/7c8bb4d2a697/evidence/capture/pr19-red-pycache /workspace/scratch/913f839fa00b/inspection-venv/bin/python -m pytest -q tests/hexagonal/test_producer_capture.py tests/hexagonal/test_transcript_producer_capture.py -k \"disabled_capture_does_not_read or trickle_diagnostics or consumed_prefix_verification_progresses or midprefix\"",
+        "red_log": "pr19-final-tests-red.log",
+        "red_source_unchanged": true,
+        "role": "independent test author",
+        "ruff": "3 changedtest/support modules pass",
+        "scope": [
+          "disabled HTTP error diagnostic body never read",
+          "real HTTP429 trickle body cannot extend original deadline; bounded partial source retained",
+          "multi-pass consumedprefix verification progresses under append before each poll",
+          "same-inode equal-length already-verified middle-prefix rewrite detected while file keeps growing",
+          "same-inode longer already-verified middle-prefix rewrite detected while file keeps growing",
+          "growth continuity explicitly unconfirmed, quiet whole-prefix recheck clears uncertainty without false gap"
+        ],
+        "test_commits": [
+          "4e28ed8",
+          "80c7c977b2a6360da96cf2f83d60e9f4c72474cc"
+        ]
+      }
+    },
+    "producer_reviewer": {
+      "receipt": "producer-review/pr19-repair-receipt.json",
+      "sha256": "4800054b9180d1d7a3385fe1f8ebd27ef8bc4803c37d61a10dedbc004aaeed1f",
+      "content": {
+        "reviewer": "collector_tests; independent of repair implementation and producer test author",
+        "reviewed_production_commit": "56b547ec0f9cfb6b812e53a7a48e401e4b0c7821",
+        "reviewed_scope": [
+          "xorchestrate/adapters/claude.py",
+          "xorchestrate/adapters/evaluation.py"
+        ],
+        "source_sha256": {
+          "xorchestrate/adapters/claude.py": "c8da29025ede95f8b9eb074ffd5d1dda77cbdc4e75f324291d402ccd27fc0ba4",
+          "xorchestrate/adapters/evaluation.py": "3d0f8ed2774785bcf12730c6e10271eb1ebda1fff4626fa306416e91d98f2be7"
+        },
+        "review_result": "No actionable findings in bounded two-file repair diff.",
+        "reviewed_properties": [
+          "Disabled optional capture skips HTTPError diagnostic body reads, preserving original known failure path.",
+          "Enabled HTTPError diagnostics reuse original absolute request deadline and remaining socket time; unavailable bounded socket path stops safely. read1 preferred; read(1) fallback avoids internal multi-read trickle extension.",
+          "Same-inode growing transcript preserves bounded prefix verification progress while explicitly labels continuity unconfirmed.",
+          "Bounded tail admission is followed by required full-prefix recheck; quiet source can clear uncertainty, rewritten consumed bytes create gap/new generation.",
+          "Existing identity/size mismatch and exact-session controls retained; no hash/key exposed by new metadata."
+        ],
+        "qualification": "Source review only for this receipt; no broad rerun. Independent producer test author RED/GREEN proof referenced separately.",
+        "independent_test_author_receipt": "/workspace/scratch/7c8bb4d2a697/evidence/capture/pr19-test-author-receipt.json"
+      }
+    },
+    "callback_author": {
+      "receipt": "callback-review-author-final.json",
+      "sha256": "4aaa5d39476a0cbf4844ce9d791550f23ac269b8d0269e4376e80caa01129982",
+      "content": {
+        "test_author": "/root/preserve_tests",
+        "implementation_author": "/root/preserve_impl",
+        "production_edits_by_test_author": false,
+        "test_commits": [
+          "364a4ad",
+          "3b85f9d",
+          "3c89f68"
+        ],
+        "catalog_commit": "2953146d6d24779ec0b98c5d4754d77765d10023",
+        "baseline_source": "2953146d6d24779ec0b98c5d4754d77765d10023",
+        "baseline_source_tree": "bbc9aec41803107db3a000b51b754d5963444802",
+        "baseline_preparation": "git archive2953146 into isolated checkout; only the three final independent test files copied; normal shared catalog plugin enabled.",
+        "baseline_production_sha256": {
+          "xorchestrate/adapters/jsonrpc.py": "6d5daa4ce7fcc9eeed25c0a2fa60f0c6aca0c8502b414788e92d657949b50a8a",
+          "xorchestrate/adapters/sessions.py": "6a4d814fae60406733a04b66b0beb88dab31fef1b6d6d64b1ca2483a7b50f610",
+          "xorchestrate/telemetry.py": "56b40302c8514e9e2f8806ea0b061d10679e4fa3501cc2143a6ba89ac14d95f3"
+        },
+        "final_test_file_sha256": {
+          "tests/hexagonal/contracts/telemetry_callback_review.py": "3a11c9052009e3488cf8eb976ef787ebc0b2373df1d613c6fa8a6270a997d1d8",
+          "tests/hexagonal/support/telemetry_callback_review.py": "7cde9e121344552386077eadc4017e728f53315242b698ea92399c475979a4a7",
+          "tests/hexagonal/test_telemetry_callback_review.py": "ba6b593489c7a4d87d1197521fae72c25f4ac06c7a004af28116633c44de07a4"
+        },
+        "identical_test_bytes_in_red_and_green": true,
+        "green_candidate_head": "3c89f6899e2ce3f37b1113cdc17307dd93ae3208",
+        "green_candidate_tree": "314d486d64757fecd77ce1f409c8ae558f1e9099",
+        "green_production_sha256": {
+          "xorchestrate/adapters/jsonrpc.py": "725c8493fdc8e081b73c9a9c49b1e87d78f72e08223dbbd736a267f0a00a7e64",
+          "xorchestrate/adapters/sessions.py": "58185a73ff8fd8918c00aab1a0bc6888b4c95eeac789ce2b4a8a0c18a44ec55e",
+          "xorchestrate/telemetry.py": "56b40302c8514e9e2f8806ea0b061d10679e4fa3501cc2143a6ba89ac14d95f3"
+        },
+        "green_worktree_diff": "",
+        "command": "PYTHONPATH=<candidate-or-isolated-baseline>:<pinned CCE84229bb> PYTHONPYCACHEPREFIX=<outside candidate> inspection-python -m pytest -p no:cacheprovider tests/hexagonal/test_telemetry_callback_review.py -q --tb=short",
+        "red": {
+          "failed": 7,
+          "passed": 3,
+          "errors": 0,
+          "path": "/workspace/scratch/7c8bb4d2a697/evidence/callback-review-red-adapter-boundary.log",
+          "sha256": "f14dcc4adbd51e86d20958e9c7afde7f52e8447bb3edc5e496cfcc9fcb5a0d37",
+          "summary": "7 failed, 3 passed, 1 warning in 9.60s",
+          "assertion_excerpts": [
+            "E   AssertionError: CALLBACK_WIRE_DUPLICATE_MUST_NOT_BYPASS_CURRENT_NESTED_RESOURCE_AUTHORIZATION",
+            "E   AssertionError: CALLBACK_SUPPRESSION_MUST_BE_A_DURABLE_EXPLICIT_OBSERVATION"
+          ]
+        },
+        "green": {
+          "passed": 10,
+          "failed": 0,
+          "errors": 0,
+          "path": "/workspace/scratch/7c8bb4d2a697/evidence/callback-review-green-adapter-boundary.log",
+          "sha256": "df0ddf3f0f0adb721bc5a4095ed6a0124adf0923d49c23a1ff6d1566f281da29",
+          "summary": "10 passed, 1 warning in 9.31s",
+          "assertion_excerpts": []
+        },
+        "covered_properties": [
+          "Real configured native Codex subprocess peer emits actual application get_work/invoke callback; original protocol result retained unchanged.",
+          "Current observer authorization permits outer work/session but denies returned nested work or provider; six variants cover events, projected artifact payload and original artifact digest.",
+          "Owner public typed payload exactly equals actual callback reply; rich semantic capture remains.",
+          "Two opaque provider controls preserve legitimate provider content whose keys resemble application records.",
+          "Application callback duplicate wire gap is durably retained with valid suppressed completeness, explicit reason, zero retained range and exact independently reconstructed protocol frame byte count.",
+          "Unregistered arbitrary callback uses existing transport_failure_server actual subprocess; opaque raw wire capture remains."
+        ],
+        "limitations": [
+          "Deterministic native peer, not authenticated vendor/model qualification.",
+          "Source_bytes oracle reconstructs documented compact ASCII JSON line from actual native peer reply id/result; peer fixture retains structured reply rather than original stdin bytes.",
+          "Initial8case provider canary reused separately allowedwork content; superseded by isolated-provider canary and final exact10case source-matched receipt.",
+          "Full bundle closure qualification is a separate existing-boundary control owned by root after stack integration; not claimed as additional RED here."
+        ],
+        "prior_checkpoint": {
+          "receipt": "callback-review-author.json",
+          "sha256": "aeb17c748d52ae65271048c3cc083115d30d9cb0743ae45dacdab5bad14f6b61",
+          "note": "Original10case red/green run before representation decoder moved to support; unchanged production. Retained as prior checkpoint."
+        },
+        "architecture": {
+          "path": "/workspace/scratch/7c8bb4d2a697/evidence/callback-review-architecture.json",
+          "sha256": "c444498acdb290414dfe48397bf5548dba086fefba14f7877899e7de2c56d43f",
+          "status": "pass",
+          "summary": {
+            "findings": 0,
+            "modules": 210
+          },
+          "note": "No policy or allowlist change; decoding moved into support adapter, contract retains content comparison oracle."
+        },
+        "qualification_delta": "Only test representation handling moved from pure contract to support. Same content/comparison oracles, final10cases re-run baseline and repair; production files unchanged."
+      }
+    },
+    "callback_reviewer": {
+      "receipt": "producer-review/pr19-callback-repair-receipt.json",
+      "sha256": "c2277b9152fc2033abc6b023cc8ed3f42befc6ed7a30e0adb6712df95e519157",
+      "content": {
+        "actionable_findings": [],
+        "evidence_sha256": {
+          "pr19-callback-independent-green.log": "0b251ea1b99f5656d1c9882fd08c75e900ed8419ce6a2d10e5429c707e2d50d4",
+          "pr19-callback-probes.log": "13bc360bbac02043c7c9f7ac13854f01d6ea5aee1466d3b80faa2c6fe9327c1a",
+          "pr19-callback-probes.py": "e370ccf4f4380a6a25a6a9e2b631b13de89ce0c856e3cab3d1cc90a9467a2422"
+        },
+        "final_test_checkpoint": "3c89f6899e2ce3f37b1113cdc17307dd93ae3208",
+        "final_test_representation_delta": {
+          "author_receipt": "/workspace/scratch/7c8bb4d2a697/evidence/callback-review-author-final.json",
+          "author_requalification": "Exact final test bytes: isolated old baseline 7 failed/3 controls; candidate 10 passed; Ruff passed and architecture zero findings.",
+          "description": "Identical reversible base64/JSON decoding moved from pure contract to support fixture.expand; generic helper supplies decoded packets. Content comparisons/oracle unchanged; no product changes.",
+          "destination": "3c89f6899e2ce3f37b1113cdc17307dd93ae3208",
+          "reviewed": true,
+          "source": "3b85f9d5e38dc807f7b62e7062ca3881748b6add"
+        },
+        "final_test_sha256": {
+          "tests/hexagonal/contracts/telemetry_callback_review.py": "3a11c9052009e3488cf8eb976ef787ebc0b2373df1d613c6fa8a6270a997d1d8",
+          "tests/hexagonal/support/telemetry_callback_review.py": "7cde9e121344552386077eadc4017e728f53315242b698ea92399c475979a4a7",
+          "tests/hexagonal/test_telemetry_callback_review.py": "ba6b593489c7a4d87d1197521fae72c25f4ac06c7a004af28116633c44de07a4"
+        },
+        "implementation_author": "/root/preserve_impl",
+        "independent_existing_test_checkpoint": "3b85f9d5e38dc807f7b62e7062ca3881748b6add",
+        "independent_existing_tests": {
+          "checkpoint": "3b85f9d5e38dc807f7b62e7062ca3881748b6add",
+          "log": "/workspace/scratch/7c8bb4d2a697/evidence/producer-review/pr19-callback-independent-green.log",
+          "result": "10 passed, 0 failed in 8.71s"
+        },
+        "limitations": [
+          "Deterministic local protocol/native fixtures; no authenticated vendor/model witness.",
+          "Method-level registration conservatively withholds application-capable callback reply duplicates; it does not infer ownership from arbitrary result shapes.",
+          "Review covers outbound callback-response duplication, registration, replay, and write behavior; no claim of all native fields/callbacks or blanket protocol authority.",
+          "Foundation authorization/closure and subsequent integration changes are qualified separately."
+        ],
+        "post_review_integrated_head_at_receipt": "4514125e39a9d1010a19c129665c9f5b849db912",
+        "post_review_integration_note": "Root merged foundation repairs after this scoped review; unchanged reviewed producer source and final test bytes verified. Foundation integration qualification remains separately owned.",
+        "production_commit": "e2a4a3b435307962fd7dfc3f3a32946e03486ca4",
+        "production_or_test_edits_by_reviewer": false,
+        "production_source_sha256": {
+          "xorchestrate/adapters/jsonrpc.py": "725c8493fdc8e081b73c9a9c49b1e87d78f72e08223dbbd736a267f0a00a7e64",
+          "xorchestrate/adapters/sessions.py": "58185a73ff8fd8918c00aab1a0bc6888b4c95eeac789ce2b4a8a0c18a44ec55e"
+        },
+        "production_tree": "62b9770666a2dd2c7b46e5935753fe529175ee24",
+        "result": "No actionable findings in the bounded review.",
+        "reviewer": "/root/capture_impl",
+        "reviewer_subprocess_probes": {
+          "passed": 8,
+          "results": [
+            {
+              "callback_effect_count": 1,
+              "health_failed": 0,
+              "passed": true,
+              "probe": "initial_and_cached_rpc_replay_suppress_both_but_keep_exact_wire",
+              "reply_observations": 2
+            },
+            {
+              "callback_effect_count": 1,
+              "health_failed": 0,
+              "passed": true,
+              "probe": "unregistered_generic_callback_initial_and_replay_keep_raw_wire",
+              "reply_observations": 0
+            },
+            {
+              "callback_effect_count": 1,
+              "health_failed": 8,
+              "passed": true,
+              "probe": "optional_observer_exception_does_not_change_callback_or_replay",
+              "reply_observations": 2
+            },
+            {
+              "callback_effect_count": 1,
+              "health_failed": 0,
+              "passed": true,
+              "probe": "blocked_optional_observer_does_not_hold_callback_or_replay",
+              "reply_observations": 2
+            },
+            {
+              "callback_effect_count": 1,
+              "health_failed": 0,
+              "passed": true,
+              "probe": "registered_oversized_reply_preserves_unknown_outcome_and_one_effect",
+              "reply_observations": 1
+            },
+            {
+              "callback_effect_count": 1,
+              "health_failed": 0,
+              "passed": true,
+              "probe": "registered_broken_input_preserves_unknown_outcome_and_one_effect",
+              "reply_observations": 1
+            },
+            {
+              "passed": true,
+              "probe": "codex_registration_lifecycle_unbound"
+            },
+            {
+              "passed": true,
+              "probe": "codex_registration_lifecycle_application_bound"
+            }
+          ]
+        },
+        "scope": "Callback-response telemetry repair in jsonrpc.py and sessions.py only; no general audit.",
+        "source_review": [
+          "Explicit constructor registration defaults empty and becomes an immutable frozenset; no callback result-shape inference.",
+          "Codex registers item/tool/call only when the application callback is bound before launch; late binding remains rejected.",
+          "Initial callback worker and cached transport replay both select the same registered-method suppression path.",
+          "Suppression retains serialized source byte count, zero retained range, valid suppressed completeness and explicit reason; no reversible wire content or raw digest.",
+          "Actual protocol encoding/write bounds and effect count remain unchanged; phase serialized does not claim delivery.",
+          "Rich typed native result observations remain available through existing application authorization/projection; generic unregistered callback wire capture remains."
+        ],
+        "working_tree_at_initial_review_and_final_receipt": "clean"
+      }
+    },
+    "combined_callback_bundle": {
+      "receipt": "callback-bundle-qualification.json",
+      "sha256": "8449989be0331dca0008345900c4ad2c61d7daf6b1016fe0c25a5af87a0d2eb3",
+      "content": {
+        "kind": "manual-actual-callback-public-bundle-qualification",
+        "test_author": "/root/preserve_tests",
+        "production_edits": false,
+        "new_collected_test_module": false,
+        "new_red_claim": false,
+        "source_before": {
+          "commit": "12f2c70fcb123cecec6a13482b382a7e09d41dd4",
+          "tree": "3194c713a28dfdf8af0fc081d260cb7483cf173b",
+          "source_sha256": {
+            "xorchestrate/telemetry.py": "df80d833ace35187fef59b947a56ceb1c9a1ad5aa921cc2e11762fd8e15c1423",
+            "xorchestrate/application.py": "598df5776c8c8cf929bb0c4ccd05664e443714a9788239fa1822af48ef7aa52f",
+            "xorchestrate/adapters/telemetry.py": "9deec181ac0b8dd545d232b89251800ddec9dd5bf89752ee0a8f22ac88acfc50",
+            "xorchestrate/adapters/telemetry_snapshot.py": "49bf3cec8df6511a4579d13bf7296c6071997e0792820372425e6896c8f15932",
+            "xorchestrate/adapters/jsonrpc.py": "725c8493fdc8e081b73c9a9c49b1e87d78f72e08223dbbd736a267f0a00a7e64",
+            "xorchestrate/adapters/sessions.py": "58185a73ff8fd8918c00aab1a0bc6888b4c95eeac789ce2b4a8a0c18a44ec55e",
+            "tests/hexagonal/contracts/telemetry_callback_review.py": "3a11c9052009e3488cf8eb976ef787ebc0b2373df1d613c6fa8a6270a997d1d8",
+            "tests/hexagonal/support/telemetry_callback_review.py": "7cde9e121344552386077eadc4017e728f53315242b698ea92399c475979a4a7",
+            "tests/hexagonal/test_telemetry_callback_review.py": "ba6b593489c7a4d87d1197521fae72c25f4ac06c7a004af28116633c44de07a4"
+          }
+        },
+        "cases": [
+          {
+            "resource": "work",
+            "owner_snapshot_receipt": {
+              "status": "complete",
+              "format": "xorchestrate-telemetry-bundle-v1",
+              "bundle_id": "6ea2ab4f02b2dd81bf0b3a6f020d640d67e0bc8cdcae59c0391d43669c893008",
+              "completeness": "complete",
+              "source_cutoff": 53,
+              "event_count": 53,
+              "artifact_count": 38,
+              "unavailable_artifact_count": 0,
+              "unresolved_link_count": 0,
+              "manifest_reference": {
+                "path": "/tmp/xor-callback-bundle-wg2ln953/work/corpus/exports/work-authorized/manifest.json",
+                "sha256": "43679afdb1afa46d218c551d6beb0649c313c2fdcc86f99820b3b7565e221e9d",
+                "size_bytes": 7317,
+                "media_type": "application/json"
+              }
+            },
+            "observer_allowed_verify_before_restriction": true,
+            "closure": {
+              "event_count": 53,
+              "captured_artifacts": 38,
+              "database_sha256": "0ef15cd9be3eaae02c738951dcddcdd54a8a6ca1c13f8669319bc02e1c7326ba",
+              "manifest_sha256": "43679afdb1afa46d218c551d6beb0649c313c2fdcc86f99820b3b7565e221e9d",
+              "typed_callback_event_id": "d48941f51cc849fa8d0f31d11b464441",
+              "typed_payload_digest": "a27b0a9cccf9792b4ea26ef08695c84066d18f4f365b10277fbe8d7825092a7c",
+              "typed_result_equals_actual_protocol_reply": true,
+              "sidecars_absent": true
+            },
+            "restricted_before_read": [
+              {
+                "action": "telemetry_snapshot",
+                "error": "denied",
+                "destination_database_absent": true
+              },
+              {
+                "action": "telemetry_verify",
+                "error": "denied",
+                "destination_database_absent": null
+              },
+              {
+                "action": "telemetry_restore",
+                "error": "denied",
+                "destination_database_absent": true
+              }
+            ],
+            "revoked_during_read": [
+              {
+                "action": "telemetry_snapshot",
+                "error": "denied",
+                "destination_database_absent": true,
+                "revoked_during_actual_artifact_verify": true
+              },
+              {
+                "action": "telemetry_verify",
+                "error": "denied",
+                "destination_database_absent": null,
+                "revoked_during_actual_artifact_verify": true
+              },
+              {
+                "action": "telemetry_restore",
+                "error": "denied",
+                "destination_database_absent": true,
+                "revoked_during_actual_artifact_verify": true
+              }
+            ],
+            "live_artifacts_physically_unavailable": true,
+            "live_get_event_guarded_against_use": true,
+            "bundle_artifact_read_roots": [
+              "/tmp/xor-callback-bundle-wg2ln953/work/corpus/exports/work-authorized/artifacts",
+              "/tmp/xor-callback-bundle-wg2ln953/work/corpus/exports/work-owner-restored/artifacts"
+            ],
+            "owner_verify_restore_verify_with_live_artifacts_unavailable": "passed",
+            "restricted_with_live_artifacts_unavailable": [
+              {
+                "action": "telemetry_verify",
+                "error": "denied",
+                "destination_database_absent": null
+              },
+              {
+                "action": "telemetry_restore",
+                "error": "denied",
+                "destination_database_absent": true
+              }
+            ],
+            "owner_restore_exact_manifest_database_artifact_closure": true
+          },
+          {
+            "resource": "provider",
+            "owner_snapshot_receipt": {
+              "status": "complete",
+              "format": "xorchestrate-telemetry-bundle-v1",
+              "bundle_id": "fb0673e181f4df841cccc0a5ad62ec4b3f97f674ad89a7c8f8ad7c90ae694b1a",
+              "completeness": "complete",
+              "source_cutoff": 53,
+              "event_count": 53,
+              "artifact_count": 38,
+              "unavailable_artifact_count": 0,
+              "unresolved_link_count": 0,
+              "manifest_reference": {
+                "path": "/tmp/xor-callback-bundle-wg2ln953/provider/corpus/exports/provider-authorized/manifest.json",
+                "sha256": "d1883f8d87a8c8d0d5de4a98065cf20b0db07cc34c26809f8a598bb71aa0e209",
+                "size_bytes": 7318,
+                "media_type": "application/json"
+              }
+            },
+            "observer_allowed_verify_before_restriction": true,
+            "closure": {
+              "event_count": 53,
+              "captured_artifacts": 38,
+              "database_sha256": "8d26a082349ce517969da09718ae0a3bb0d0fa09ad9899d973e40915584237b7",
+              "manifest_sha256": "d1883f8d87a8c8d0d5de4a98065cf20b0db07cc34c26809f8a598bb71aa0e209",
+              "typed_callback_event_id": "84dedb7888474027bcde1a6ed61dcb33",
+              "typed_payload_digest": "1202619916259cf1aa7e3fa18e5624fb73ab1209e168cbcb6b7132d57a691dc6",
+              "typed_result_equals_actual_protocol_reply": true,
+              "sidecars_absent": true
+            },
+            "restricted_before_read": [
+              {
+                "action": "telemetry_snapshot",
+                "error": "denied",
+                "destination_database_absent": true
+              },
+              {
+                "action": "telemetry_verify",
+                "error": "denied",
+                "destination_database_absent": null
+              },
+              {
+                "action": "telemetry_restore",
+                "error": "denied",
+                "destination_database_absent": true
+              }
+            ],
+            "revoked_during_read": [
+              {
+                "action": "telemetry_snapshot",
+                "error": "denied",
+                "destination_database_absent": true,
+                "revoked_during_actual_artifact_verify": true
+              },
+              {
+                "action": "telemetry_verify",
+                "error": "denied",
+                "destination_database_absent": null,
+                "revoked_during_actual_artifact_verify": true
+              },
+              {
+                "action": "telemetry_restore",
+                "error": "denied",
+                "destination_database_absent": true,
+                "revoked_during_actual_artifact_verify": true
+              }
+            ],
+            "live_artifacts_physically_unavailable": true,
+            "live_get_event_guarded_against_use": true,
+            "bundle_artifact_read_roots": [
+              "/tmp/xor-callback-bundle-wg2ln953/provider/corpus/exports/provider-authorized/artifacts",
+              "/tmp/xor-callback-bundle-wg2ln953/provider/corpus/exports/provider-owner-restored/artifacts"
+            ],
+            "owner_verify_restore_verify_with_live_artifacts_unavailable": "passed",
+            "restricted_with_live_artifacts_unavailable": [
+              {
+                "action": "telemetry_verify",
+                "error": "denied",
+                "destination_database_absent": null
+              },
+              {
+                "action": "telemetry_restore",
+                "error": "denied",
+                "destination_database_absent": true
+              }
+            ],
+            "owner_restore_exact_manifest_database_artifact_closure": true
+          }
+        ],
+        "limitations": [
+          "Deterministic actual native subprocess/application callback fixture, not authenticated vendor/model qualification.",
+          "This qualifies existing public bundle closure behavior after the reviewed callback repair; it is not an additional baseline RED.",
+          "Native driver closed after returning actual callback reply so source capture is quiescent; bundle cutoff still derives from completed SQLite backup."
+        ],
+        "status": "passed",
+        "source_after": {
+          "commit": "60cb0287ae171874a5afc49894774b930cd811bc",
+          "tree": "791ff978b4d5e3f66c27f3382f59f2b38604e132",
+          "source_sha256": {
+            "xorchestrate/telemetry.py": "df80d833ace35187fef59b947a56ceb1c9a1ad5aa921cc2e11762fd8e15c1423",
+            "xorchestrate/application.py": "598df5776c8c8cf929bb0c4ccd05664e443714a9788239fa1822af48ef7aa52f",
+            "xorchestrate/adapters/telemetry.py": "9deec181ac0b8dd545d232b89251800ddec9dd5bf89752ee0a8f22ac88acfc50",
+            "xorchestrate/adapters/telemetry_snapshot.py": "49bf3cec8df6511a4579d13bf7296c6071997e0792820372425e6896c8f15932",
+            "xorchestrate/adapters/jsonrpc.py": "725c8493fdc8e081b73c9a9c49b1e87d78f72e08223dbbd736a267f0a00a7e64",
+            "xorchestrate/adapters/sessions.py": "58185a73ff8fd8918c00aab1a0bc6888b4c95eeac789ce2b4a8a0c18a44ec55e",
+            "tests/hexagonal/contracts/telemetry_callback_review.py": "3a11c9052009e3488cf8eb976ef787ebc0b2373df1d613c6fa8a6270a997d1d8",
+            "tests/hexagonal/support/telemetry_callback_review.py": "7cde9e121344552386077eadc4017e728f53315242b698ea92399c475979a4a7",
+            "tests/hexagonal/test_telemetry_callback_review.py": "ba6b593489c7a4d87d1197521fae72c25f4ac06c7a004af28116633c44de07a4"
+          }
+        },
+        "source_files_unchanged": true
+      }
+    },
+    "combined_bundle_source": {
+      "receipt": "qualification/combined-bundle-source-probe.json",
+      "sha256": "273c8bb74746e4376321b7e89890b1be0f9e699177e8e691229d54c450237cc1",
+      "content": {
+        "live_artifacts_absent": true,
+        "verify_after_live_artifacts_removed": "complete",
+        "restore_after_live_artifacts_removed": "complete",
+        "fresh_bundle_artifacts_valid": true,
+        "current_source_rule_verify": "denied"
+      }
+    },
+    "combined_reviewer": {
+      "receipt": "qualification/combined-review-final.json",
+      "sha256": "0c587368d3e3372d575e1379cbb4f28ce63a7a94898438ed8f04560992540382",
+      "content": {
+        "role": "independent adversarial reviewer; original workflow test author, no production edits",
+        "scope": "Final combined resolver of targeted foundation, callback confidentiality, transcript liveness and failed-HTTP diagnostic deadline repairs; no general audit",
+        "integrated_production_commit": "12f2c70fcb123cecec6a13482b382a7e09d41dd4",
+        "integrated_tree": "3194c713a28dfdf8af0fc081d260cb7483cf173b",
+        "final_test_commit": "60cb0287ae171874a5afc49894774b930cd811bc",
+        "final_test_tree": "791ff978b4d5e3f66c27f3382f59f2b38604e132",
+        "production_unchanged_since_integrated_commit": true,
+        "source_sha256": {
+          "xorchestrate/telemetry.py": "df80d833ace35187fef59b947a56ceb1c9a1ad5aa921cc2e11762fd8e15c1423",
+          "xorchestrate/adapters/telemetry.py": "9deec181ac0b8dd545d232b89251800ddec9dd5bf89752ee0a8f22ac88acfc50",
+          "xorchestrate/inspection.py": "dbe9c089e3054c306e19caa753d345aa016c367951141175b913b79f6388abb8",
+          "xorchestrate/adapters/jsonrpc.py": "725c8493fdc8e081b73c9a9c49b1e87d78f72e08223dbbd736a267f0a00a7e64",
+          "xorchestrate/adapters/sessions.py": "58185a73ff8fd8918c00aab1a0bc6888b4c95eeac789ce2b4a8a0c18a44ec55e",
+          "xorchestrate/adapters/claude.py": "c8da29025ede95f8b9eb074ffd5d1dda77cbdc4e75f324291d402ccd27fc0ba4",
+          "xorchestrate/adapters/evaluation.py": "3d0f8ed2774785bcf12730c6e10271eb1ebda1fff4626fa306416e91d98f2be7",
+          "xorchestrate/application.py": "598df5776c8c8cf929bb0c4ccd05664e443714a9788239fa1822af48ef7aa52f",
+          "xorchestrate/adapters/policies.py": "0b09ade749b06ed5d2e9e346a72d6bfffffd658184859dac8edbfd7123a22695",
+          "xorchestrate/adapters/telemetry_snapshot.py": "49bf3cec8df6511a4579d13bf7296c6071997e0792820372425e6896c8f15932",
+          "xorchestrate/ports.py": "a2676588b849bd9c9f09df252963302fc8009d3b457b636d884c8918bf7b6fce"
+        },
+        "copied_reviewed_file_identities": "combined-file-identity.json",
+        "copied_reviewed_file_identities_sha256": "a16ba12865292acb5ed3977648c7ab1162ca691d85babf093217d6d50f65b58e",
+        "preserved_prior_full_authority_identities": "combined-preservation-identity.json",
+        "preserved_prior_full_authority_identities_sha256": "409b9ce1f78588cd83cddc756a003b28a1d0105e5ee4089c613a17946892e9d8",
+        "manual_resolver_review": [
+          "Catalog retains the union of prior full and reviewed producer/foundation telemetry modules.",
+          "Bounded raw scan retains full-stack run_id/attempt_id selectors and raw progress accounting.",
+          "Status retains operational health and independent-export reporting while using bounded multi-page count/latest/source truth flags.",
+          "Usage retains normalized quantities and bounded analysis, verifies hydrated contexts and bases population completeness on actual page completeness.",
+          "Descriptor inspection uses the selected source loader; bundle authorizer supplies bundle artifact bytes and bundle DB scope resolution, preserving typed source authority without live artifact dependencies.",
+          "Existing public read policy revision guard, comparison union reauthorization and bundle finalizer remain intact.",
+          "Callback suppression is selected by trusted owning-adapter method registration, applies to writes answering those callbacks, emits explicit gap metadata, and preserves generic/opaque wire semantics.",
+          "Producer transcript growth progress and HTTP diagnostic deadline source files match independently reviewed producer bytes exactly."
+        ],
+        "bundle_loader_actual_probe": {
+          "live_artifacts_absent": true,
+          "verify_after_live_artifacts_removed": "complete",
+          "restore_after_live_artifacts_removed": "complete",
+          "fresh_bundle_artifacts_valid": true,
+          "current_source_rule_verify": "denied"
+        },
+        "bundle_loader_actual_probe_sha256": "273c8bb74746e4376321b7e89890b1be0f9e699177e8e691229d54c450237cc1",
+        "workflow_fixture_change": {
+          "commit": "60cb0287ae171874a5afc49894774b930cd811bc",
+          "path": "tests/hexagonal/support/telemetry_workflow.py",
+          "changes": "Select actual scan when present, otherwise query; unchanged late-revocation and denial assertions.",
+          "same_final_test_sha256_on_baseline_and_candidate": {
+            "tests/hexagonal/contracts/telemetry_workflow.py": "f9f63a48ec205ce3afccccca89d01eca52f2480dbc1b711684ff1f2eac626b2f",
+            "tests/hexagonal/support/telemetry_workflow.py": "00df81f33cd5f09c15ceecc63382b0fdb2dd338da25d12ce450a8613f5353886",
+            "tests/hexagonal/test_telemetry_workflow.py": "2c6e61863894edeafbf7693b6d82d3dcc6fb8c24bf715eb79891295dcc759d4f"
+          },
+          "baseline_commit": "b0be6f9907f0b5fb5df459be8d3e845af327e336",
+          "baseline_log": "scan-seam-exact-red.log",
+          "baseline_log_sha256": "526c93a4bbbace750cbb9340a1071ac802d1d15c895e6f1719b69e364192eabf",
+          "baseline_result": {
+            "failed": 1,
+            "deselected": 17,
+            "errors": 0,
+            "seconds": 0.28
+          },
+          "candidate_log": "scan-seam-public-green.log",
+          "candidate_log_sha256": "acf5200106b6dd8c3d2eb5d0f2f05b9dcdee0a10b710e5ee1df2b1fdf195973d",
+          "candidate_result": {
+            "passed": 18,
+            "failures": 0,
+            "errors": 0,
+            "seconds": 12.2
+          },
+          "ruff": "owned changed support module passes"
+        },
+        "reused_integrated_checks": {
+          "inventory_path": "/workspace/scratch/7c8bb4d2a697/evidence/review-full-inventory.json",
+          "inventory_sha256": "c3c92e5183790a9c394fea86d7b8f2cdd870373766f736e2de98a19675147beb",
+          "callback_cases_passed": 10,
+          "root_prior_result": "209 passed, 4 subtests passed, one fixture precondition failure subsequently repaired and replayed by independent author; no aggregate 210-GREEN claim from that prior run"
+        },
+        "remaining_confirmed_findings": [],
+        "conclusion": "Qualified for the scoped final integration review; no further confirmed defect found. Publication and final CI qualification remain root-owned."
+      }
+    }
+  },
+  "final_local_integration": {
+    "candidate": "73b0cf7df46ea16a3040558513920407a22d5168",
+    "tests_passed": 210,
+    "subtests_passed": 4,
+    "duration_seconds": 40.88,
+    "exit_code": 0,
+    "artifacts": {
+      "review-full-final-tests.log": {
+        "sha256": "8d3547f607e039850c396899aa8b761442a99d1f432b0af5853f584b29ccc732",
+        "size_bytes": 981
+      },
+      "review-full-final-inventory.json": {
+        "sha256": "21e399d210ddf70b266b72fe37698af00d4b69098aae53266ad77b070cf7f6da",
+        "size_bytes": 108507
+      },
+      "review-full-final-junit.xml": {
+        "sha256": "caf48cef15d8cc083d0455cedd9bff7b9e4b0c7ee1d4721e8e4f1df4cffd0f4d",
+        "size_bytes": 35982
+      }
+    }
+  }
+}

@@ -6,6 +6,7 @@ import os
 import threading
 import time
 import unittest
+import urllib.error
 from unittest.mock import patch
 
 from tests.hexagonal.contracts.producer_capture import (
@@ -117,6 +118,64 @@ class EvaluatorProducerCaptureTests(unittest.TestCase):
         self.assertEqual(retained_bytes(event), b'{"error":"fixture-rate-limit"}')
         self.assertEqual(event["payload"]["http_status"], 429)
         assert_validation(recorder.snapshot(), "unavailable", "evaluation_unavailable")
+
+    def test_disabled_capture_does_not_read_known_http_failure_body(self):
+        class Body:
+            reads = 0
+
+            def read(self, count=-1):
+                self.reads += 1
+                return b"diagnostic" if self.reads == 1 else b""
+
+            read1 = read
+
+            def close(self):
+                pass
+
+        body = Body()
+        failure = urllib.error.HTTPError("http://127.0.0.1/evaluate", 429, "fixture rate limit",
+                                         {"Content-Length": "10"}, body)
+
+        class Opener:
+            def open(self, *args, **kwargs):
+                raise failure
+
+        with HttpFixture(b"") as fixture, patch("urllib.request.build_opener", return_value=Opener()):
+            adapter = evaluator(fixture.options(), None)
+            try:
+                with self.assertRaises(OrchestrationError) as caught:
+                    adapter.assess("Inspect", {})
+            finally:
+                adapter.close()
+        self.assertEqual(caught.exception.code, "evaluation_unavailable")
+        self.assertEqual(caught.exception.details["status"], 429)
+        self.assertEqual(body.reads, 0, "disabled capture must return the known HTTP failure without diagnostic-body reads")
+
+    def test_http_error_trickle_diagnostics_cannot_extend_failure_deadline(self):
+        recorder = Recorder()
+        body = b"failure-detail " * 3
+        with HttpFixture(body, status=429, chunk_delay=.025) as fixture:
+            adapter = evaluator(fixture.options(timeout=.08), recorder)
+            try:
+                started = time.monotonic()
+                with self.assertRaises(OrchestrationError) as caught:
+                    adapter.assess("Inspect", {})
+                elapsed = time.monotonic() - started
+            finally:
+                adapter.close()
+        self.assertEqual(caught.exception.code, "evaluation_unavailable")
+        self.assertEqual(caught.exception.details["status"], 429)
+        self.assertLess(elapsed, .5,
+                        "a trickle faster than each socket timeout must not keep a known HTTP failure alive for its entire body")
+        self.assertEqual(len(fixture.requests), 1, "diagnostic capture must not retry the failed evaluation")
+        event = require_event(recorder.snapshot(), "evaluator.response")
+        retained = retained_bytes(event)
+        self.assertTrue(retained, "available diagnostic bytes should be retained within the original deadline")
+        self.assertTrue(body.startswith(retained))
+        self.assertLess(len(retained), len(body))
+        self.assertEqual(event["completeness"], "partial")
+        self.assertEqual(event["payload"]["total_bytes"], len(body))
+        self.assertEqual(event["payload"]["http_status"], 429)
 
     def test_oversize_response_is_partial_with_exact_observed_prefix(self):
         recorder = Recorder()
