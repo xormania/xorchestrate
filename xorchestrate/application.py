@@ -34,10 +34,12 @@ from .ports import (
     RoutingPolicy,
     SessionDriver,
     StateStore,
+    TelemetrySink,
     Transaction,
 )
 from .schema import validate
 from .state import StateEngine
+from .telemetry import TelemetryViews, record_observation
 
 _STRING = {"type": "string", "minLength": 1}
 _OBJECT = {"type": "object"}
@@ -129,6 +131,23 @@ _ACTIONS = {
 
 _ACTIONS.update(ACCEPTANCE_ACTIONS)
 _ACTIONS.update(DELIVERY_ACTIONS)
+_TELEMETRY_QUERY = {
+    "after": {"type": "integer", "minimum": 0},
+    "cutoff": {"type": "integer", "minimum": 0},
+    "max_bytes": {"type": "integer", "minimum": 256, "maximum": 1048576},
+    "limit": {"type": "integer", "minimum": 1, "maximum": 1000},
+    "event_type": _STRING, "work_id": _STRING, "session_id": _STRING, "operation_id": _STRING,
+}
+_ACTIONS.update({
+    "telemetry_status": _spec("Inspect optional capture health and authorized source coverage.", {}, read=True),
+    "telemetry_events": _spec("Read bounded authorized observations with source provenance.", _TELEMETRY_QUERY, read=True),
+    "telemetry_usage": _spec("Read raw usage observations without inventing absent totals or prices.", _TELEMETRY_QUERY, read=True),
+    "telemetry_payload": _spec("Read a bounded payload belonging to an authorized observation.", {
+        "event_id": _STRING, "digest": _STRING, "offset": {"type": "integer", "minimum": 0},
+        "limit": {"type": "integer", "minimum": 1, "maximum": 1048576},
+    }, ("event_id",), read=True),
+
+})
 for _lifecycle_action in ("attach_session", "reconnect_session"):
     _ACTIONS[_lifecycle_action] = deepcopy(_ACTIONS["start_session"])
 _ACTIONS["detach_session"] = deepcopy(_ACTIONS["stop_session"])
@@ -157,6 +176,7 @@ class Application(DeliveryMixin):
         evaluators: dict[str, Evaluator], clock: Clock, identifiers: Identifier,
         assessment: JSON | None = None, acceptance=None, session_selection=None,
         delivery_scheduler=None, retry_policy=None, receipt_policy=None, session_fallbacks=None, provider_configurations=None, evaluator_configurations=None, state_engine=None,
+        telemetry: TelemetrySink | None = None,
     ):
         self.store = store
         self.state_engine = StateEngine(default_definitions()) if state_engine is None else state_engine
@@ -179,6 +199,7 @@ class Application(DeliveryMixin):
         self.evaluator_configurations = deepcopy(evaluator_configurations or {})
         self.clock = clock
         self.identifiers = identifiers
+        self.telemetry = telemetry
         try:
             validate(assessment if assessment is not None else {}, {
                 "type": "object", "additionalProperties": False, "properties": {
@@ -205,6 +226,78 @@ class Application(DeliveryMixin):
         return [Capability(name, spec.description, deepcopy(spec.input_schema), deepcopy(spec.annotations)) for name, spec in _ACTIONS.items()]
 
     def call(self, action: str, arguments: JSON, actor: str = "owner", *, native_context=None, replay_only=False) -> JSON:
+        if self.telemetry is None or (isinstance(action, str) and action.startswith("telemetry_")):
+            return self._call(action, arguments, actor, native_context=native_context, replay_only=replay_only)
+        scope = {"actor": actor, "action": action}
+        try:
+            scope["attempt_id"] = self.telemetry.new_id()
+        except Exception:
+            pass
+        if isinstance(arguments, dict):
+            scope.update({key: arguments[key] for key in ("work_id", "session_id", "operation_id") if arguments.get(key)})
+        if isinstance(native_context, dict):
+            scope.update({key: native_context[key] for key in ("session_id", "native_id", "incarnation", "native_call_id")
+                          if native_context.get(key)})
+        self.record_observation("application.requested", {"action": action, "arguments": arguments}, scope)
+        try:
+            result = self._call(action, arguments, actor, native_context=native_context,
+                                replay_only=replay_only, capture_context=scope)
+        except BaseException as error:
+            self.record_observation("application.failed", {"action": action, "arguments": arguments,
+                "error": {"type": type(error).__name__, "code": getattr(error, "code", None)}},
+                self._capture_context(scope, arguments, actor))
+            raise
+        self.record_observation("application.completed", {"action": action, "arguments": arguments, "result": result},
+                                self._capture_context(scope, arguments, actor, result))
+        return result
+
+    def _capture_context(self, scope, arguments, actor, result=None):
+        scope = deepcopy(scope)
+        try:
+            if isinstance(result, dict):
+                if isinstance(result.get("work"), dict):
+                    scope["work_id"] = result["work"]["id"]
+                if isinstance(result.get("session"), dict):
+                    session = result["session"]
+                    scope.update(session_id=session["id"], work_id=session.get("work_id"))
+                    scope.update({key: session.get("backend", {})[key] for key in ("native_id", "incarnation")
+                                  if session.get("backend", {}).get(key)})
+            if isinstance(arguments, dict) and "idempotency_key" in arguments:
+                operation_id = _digest([actor, arguments["idempotency_key"]])
+                with self.store.transaction() as tx:
+                    operation = tx.get("operation", operation_id)
+                if operation is not None:
+                    scope["operation_id"] = operation_id
+                    if operation.data.get("work_id"):
+                        scope["work_id"] = operation.data["work_id"]
+        except Exception:
+            # Enrichment is optional, just like capture itself.
+            pass
+        return scope
+
+    def record_observation(self, event_type, payload, context, **metadata):
+        return record_observation(self.telemetry, event_type, payload, context, **metadata)
+
+    def _telemetry_views(self):
+        return TelemetryViews(self.telemetry, self.store, self._context, self._authorize,
+                              self._verify_context, self.inspection)
+
+    def _telemetry_status(self, arguments, actor, context):
+        if self.telemetry is None:
+            return {"status": "disabled", "coverage": "unknown", "event_count": 0, "sources": {}, "publication": "unknown"}
+        return self._telemetry_views().status(actor)
+
+    def _telemetry_events(self, arguments, actor, context):
+        return self._telemetry_views().events(arguments, actor)
+
+    def _telemetry_payload(self, arguments, actor, context):
+        return self._telemetry_views().payload(arguments, actor)
+
+    def _telemetry_usage(self, arguments, actor, context):
+        return self._telemetry_views().usage(arguments, actor)
+
+    def _call(self, action: str, arguments: JSON, actor: str = "owner", *, native_context=None, replay_only=False,
+              capture_context=None) -> JSON:
         with before_effect():
             if action not in _ACTIONS:
                 raise OrchestrationError(f"Unknown action: {action}", "unknown_action")
@@ -217,6 +310,8 @@ class Application(DeliveryMixin):
             if action in {"start_session", "attach_session", "reconnect_session"} and "resume" in arguments["specification"]:
                 raise OrchestrationError("Session identity is reserved; use resume_session_id to reference an application session.", "invalid_arguments")
             context = self._context(actor, arguments)
+            if capture_context is not None:
+                context.update({key: capture_context[key] for key in ("attempt_id", "run_id") if capture_context.get(key)})
             if native_context is not None:
                 context["native_source"] = deepcopy(native_context)
                 with self.store.transaction() as tx:

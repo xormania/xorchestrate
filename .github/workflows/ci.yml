@@ -94,8 +94,21 @@
           "id": "python"
         },
         {
+          "name": "Install pinned Python runtime manager",
+          "uses": "astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9",
+          "with": {
+            "version": "0.13.7",
+            "enable-cache": false
+          }
+        },
+        {
+          "name": "Prepare Python with fixed SQLite WAL support",
+          "id": "telemetry-python",
+          "run": "uv python install 3.12.16\nuv venv --seed --python 3.12.16 \"$RUNNER_TEMP/xor-telemetry-python\"\necho \"$RUNNER_TEMP/xor-telemetry-python/bin\" >> \"$GITHUB_PATH\""
+        },
+        {
           "name": "Install application dependencies",
-          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]' -r .github/requirements-ci.txt",
+          "run": "python3 -m pip install --disable-pip-version-check -e '.[test,telemetry]' -r .github/requirements-ci.txt",
           "id": "dependencies"
         },
         {

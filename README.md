@@ -16,7 +16,7 @@ the checkout:
 
 ```bash
 export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XXXXXX")"
-python3 -m pip install -e '.[test]' -r .github/requirements-ci.txt
+python3 -m pip install -e '.[test,telemetry]' -r .github/requirements-ci.txt
 python3 -m scripts.testkit run --suite static
 python3 -m scripts.testkit run --suite checks
 ```
@@ -123,6 +123,12 @@ See [the architecture and contracts](docs/hexagonal-architecture.md),
 supported behavior and limits. The deterministic tests use real subprocess
 boundaries with fixture servers; they do not establish authenticated vendor or
 Jev endpoint acceptance.
+
+## Telemetry
+
+Configure optional durable agent-work capture, authorized evidence reads and source
+health through the [active telemetry guide](docs/telemetry.md). The shared collector
+is installed with the `telemetry` extra; basic orchestration works without it.
 
 ## Live acceptance fixture
 
