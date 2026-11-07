@@ -42,7 +42,9 @@
         "tests/hexagonal/test_native_sessions.py": "adapter",
         "tests/hexagonal/test_claude_sessions.py": "adapter",
         "tests/hexagonal/test_session_resume.py": "adapter",
-        "tests/hexagonal/test_claude_overlap.py": "adapter"
+        "tests/hexagonal/test_claude_overlap.py": "adapter",
+        "tests/hexagonal/test_native_producer_capture.py": "adapter",
+        "tests/hexagonal/test_transcript_producer_capture.py": "adapter"
       }
     },
     "bridge": {
@@ -95,7 +97,8 @@
       "modules": {
         "tests/hexagonal/test_jsonrpc.py": "adapter",
         "tests/hexagonal/test_transports.py": "adapter",
-        "tests/hexagonal/test_transport_progress.py": "adapter"
+        "tests/hexagonal/test_transport_progress.py": "adapter",
+        "tests/hexagonal/test_producer_capture.py": "adapter"
       }
     },
     "verification": {

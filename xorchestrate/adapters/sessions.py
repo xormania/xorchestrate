@@ -22,7 +22,18 @@ from ..model import JSON, Capability, OrchestrationError
 from ..outcomes import before_effect, effect_outcome
 from ..ports import ApplicationToolCallback
 from ..schema import check_schema, validate
-from .jsonrpc import JsonLineProcess, command_options, decode_json, encode_json, positive_integer
+from .jsonrpc import (
+    JsonLineProcess,
+    TelemetryDispatch,
+    capture_origin,
+    command_options,
+    decode_json,
+    encode_json,
+    observe_telemetry,
+    positive_integer,
+    telemetry_dispatch,
+    telemetry_secrets,
+)
 
 
 def _object(value: Any, name: str, code: str = "invalid_request") -> JSON:
@@ -105,11 +116,12 @@ class _ProcessSessions:
         self._lock = threading.RLock()
         self._closed = False
         self._observer = None
+        self._telemetry_observer = None
         self._application_replay = None
         self._state_engine = activity_engine()
         self.configuration_snapshot_id = hashlib.sha256(encode_json(self.options, sort_keys=True)).hexdigest()
         operational = {"timeout", "turn_timeout", "callback_timeout", "callback_workers", "shutdown_timeout",
-                       "gateway_timeout", "gateway_workers", "observation_timeout", "allow_configuration_change_on_resume"}
+                       "gateway_timeout", "gateway_workers", "observation_timeout", "allow_configuration_change_on_resume", "telemetry_drain_timeout"}
         material = {key: value for key, value in self.options.items() if key not in operational and not key.startswith("max_")}
         self.configuration_id = hashlib.sha256(encode_json({"protocol": self.protocol,
             "contract_version": self.contract_version, "options": material}, sort_keys=True)).hexdigest()
@@ -121,6 +133,22 @@ class _ProcessSessions:
             if self._sessions or self._starting:
                 raise OrchestrationError("Bind observers before starting sessions.", "conflict")
             self._observer = observer
+
+    def bind_telemetry(self, observer) -> None:
+        if observer is not None and not callable(observer):
+            raise OrchestrationError("Telemetry observer must be callable.", "invalid_configuration")
+        with self._lock:
+            if self._sessions or self._starting:
+                raise OrchestrationError("Bind telemetry before starting sessions.", "conflict")
+            self._telemetry_observer = telemetry_dispatch(observer, self.options)
+
+    def telemetry_health(self):
+        observer = self._telemetry_observer
+        return observer.health() if isinstance(observer, TelemetryDispatch) else {"status": "disabled"}
+
+    def drain_telemetry(self, timeout=None):
+        observer = self._telemetry_observer
+        return observer.drain(timeout) if isinstance(observer, TelemetryDispatch) else {"status": "disabled"}
 
     def bind_state_engine(self, engine) -> None:
         """Select transition behavior before any native resource is created."""
@@ -141,6 +169,9 @@ class _ProcessSessions:
     def _observation(self, live: _LiveSession, kind: str, **fields) -> JSON:
         event = {"kind": kind, "source": self.protocol, "native_id": live.native_id,
                  "incarnation": live.incarnation, "at": datetime.now(timezone.utc).isoformat(), **deepcopy(fields)}
+        observe_telemetry(self._telemetry_observer, "native." + kind, event,
+                          {**live.context, "native_id": live.native_id, "incarnation": live.incarnation},
+                          secrets=telemetry_secrets(self.options) if self._telemetry_observer is not None else ())
         if self._observer and live.native_id is not None:
             self._observer(deepcopy(live.context), deepcopy(event))
         return event
@@ -223,7 +254,8 @@ class _ProcessSessions:
             context = _object(specification.get("context", {}), "Session context")
             live = _LiveSession(context=context, activity_model=ActivityState(self._state_engine))
             live.process = JsonLineProcess(self.options, lambda method, params: self._request(live, method, params), jsonrpc=self.jsonrpc,
-                                           notification_handler=lambda method, params: self._notification(live, method, params))
+                                           notification_handler=lambda method, params: self._notification(live, method, params),
+                                           telemetry_observer=self._telemetry_observer, telemetry_context=capture_origin({**context, "incarnation": live.incarnation}))
             return live
         except BaseException:
             with self._lock:
@@ -341,6 +373,8 @@ class _ProcessSessions:
             live.closed = True
             live.process.close()
             self._observation(live, "session_disconnected", ownership="owned")
+        if isinstance(self._telemetry_observer, TelemetryDispatch):
+            self._telemetry_observer.close()
 
 
 class JSONRPCSessionDriver(_ProcessSessions):
