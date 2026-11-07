@@ -38,6 +38,7 @@ def test_live_test_tooling_is_classified_and_passes_the_shared_policy():
     assert roles["tests.hexagonal.test_identity_contracts"] == "test_collection"
     assert roles["scripts.architecture.core"] == "architecture_core"
     assert roles["xorchestrate.inspection"] == "inspection"
+    assert roles["xorchestrate.acceptance"] == "work_acceptance"
     assert report["coverage"]["classified"] == report["coverage"]["modules"]
 
 
@@ -74,6 +75,22 @@ def test_inspection_cannot_depend_on_workflows_or_processes(subject, dependency,
     report = check(subject, PROFILE)
     assert report["status"] == "violation"
     assert any(item["rule_id"] == rule and item.get("module") == "xorchestrate.inspection"
+               and item.get("target") == dependency for item in report["findings"]), report["findings"]
+
+
+@pytest.mark.parametrize("dependency,rule", [
+    ("xorchestrate.application", "dependencies.allowed"),
+    ("xorchestrate.delivery", "dependencies.allowed"),
+    ("xorchestrate.inspection", "dependencies.allowed"),
+    ("xorchestrate.adapters.storage", "dependencies.allowed"),
+    ("subprocess", "dependencies.external"),
+])
+def test_acceptance_cannot_depend_on_its_host_or_infrastructure(subject, dependency, rule):
+    path = subject / "xorchestrate/acceptance.py"
+    path.write_text(path.read_text() + "\nimport " + dependency + "\n")
+    report = check(subject, PROFILE)
+    assert report["status"] == "violation"
+    assert any(item["rule_id"] == rule and item.get("module") == "xorchestrate.acceptance"
                and item.get("target") == dependency for item in report["findings"]), report["findings"]
 
 

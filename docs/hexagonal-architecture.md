@@ -48,6 +48,18 @@ guardrail. Projection copies leave trusted stored records and receipt-policy
 inputs unchanged. Caller/provider payloads remain opaque outside declared
 application-owned envelopes.
 
+`WorkAcceptance` owns requirements, candidates, contributions, measurements and
+acceptance decisions. The application delegates those use cases to the component
+and supplies storage, the existing transaction-aware record mutations, authority
+revalidation and an invocation callback through `Application.call("invoke", ...)`.
+Live suppliers expose the current acceptance policy and material configuration
+identities, including changes during evaluation. Shared assessment input-binding
+calculations are pure functions used by both assessment and acceptance. Public
+acceptance reads compose the component's transactional view with the inspection
+projector in the application; acceptance imports neither its host nor projection,
+delivery or infrastructure. Measurement replay and result reconciliation retain
+their existing operation evidence and never launch another effect implicitly.
+
 The core is usable with supplied ports without importing SQLite, subprocesses,
 MCP machinery, or the historical runtime. Memory and SQLite stores exercise the
 same contract. External capabilities can be added through discovery, without

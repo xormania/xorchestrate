@@ -316,7 +316,7 @@ class DeliveryMixin:
                 self._verify_context(tx, current)
             if action_name == "accept_work":
                 with self.store.transaction() as tx:
-                    state = self._work_acceptance_view(tx, arguments["work_id"])
+                    state = self.work_acceptance.view(tx, arguments["work_id"])
                     decision = next((row for row in state["acceptance_history"] if row["id"] == replay["acceptance"]["id"]), None)
                     if not decision or not decision["current"] or state["acceptance_history"][-1]["id"] != decision["id"]:
                         raise OrchestrationError("The retained acceptance decision no longer applies; request a fresh decision.", "acceptance_stale")
