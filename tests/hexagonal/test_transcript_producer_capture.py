@@ -188,6 +188,80 @@ class TranscriptProducerCaptureTests(unittest.TestCase):
                              for event in events_of(self.recorder.snapshot(), "native.transcript_source")),
                          "a verified ordinary append must not invent a source-generation gap")
 
+    def test_consumed_prefix_verification_progresses_while_each_poll_has_an_append(self):
+        initial = b"".join(self.line("initial-%02d" % index) for index in range(6))
+        self.source.write_bytes(initial)
+        self.hook()
+        first_source = self.transcript_events()[0]["payload"]["source_id"]
+        self.assertEqual(self.source_event()["payload"]["cursor"], len(initial))
+        self.driver.max_transcript_bytes = len(self.line("appended-00")) * 2 + 8
+        self.assertGreater(len(initial), self.driver.max_transcript_bytes * 2)
+        for index in range(12):
+            with self.source.open("ab") as stream:
+                stream.write(self.line("appended-%02d" % index))
+            self.poll()
+        events = self.transcript_events()
+        markers = [event["payload"]["entry"]["marker"] for event in events]
+        self.assertEqual(markers.count("appended-00"), 1,
+                         "ordinary append before every bounded pass must not starve ingestion behind a fixed consumed prefix")
+        self.assertEqual({event["payload"]["source_id"] for event in events}, {first_source})
+        self.assertFalse(any(event["payload"]["status"] == "gap"
+                             for event in events_of(self.recorder.snapshot(), "native.transcript_source")),
+                         "continuous ordinary appends must not be misreported as a replacement generation")
+        self.assertTrue(any(event["payload"].get("continuity") == "unconfirmed_during_growth"
+                            for event in events if event["payload"]["entry"]["marker"].startswith("appended-")),
+                        "bounded progress during growth must retain its non-atomic continuity qualification")
+        prior_statuses = len(events_of(self.recorder.snapshot(), "native.transcript_source"))
+        # Finish the in-flight growing-source pass, then allow a fresh quiet
+        # recheck of the now-fixed source, plus bounded tail admission.
+        quiet_passes = 2 * (self.source.stat().st_size // self.driver.max_transcript_bytes + 2) + 2
+        for _ in range(quiet_passes):
+            self.poll()
+        quiet_statuses = events_of(self.recorder.snapshot(), "native.transcript_source")[prior_statuses:]
+        self.assertTrue(any(event["payload"].get("continuity") == "verified_prefix" for event in quiet_statuses),
+                        "stopped writes must permit the required complete prefix recheck to clear growth uncertainty")
+        self.assertFalse(any(event["payload"]["status"] == "gap" for event in quiet_statuses))
+
+    def test_equal_size_midprefix_rewrite_during_verification_is_detected_despite_appends(self):
+        self.assert_in_progress_prefix_rewrite_detected("changed-01")
+
+    def test_longer_midprefix_rewrite_during_verification_is_detected_despite_appends(self):
+        self.assert_in_progress_prefix_rewrite_detected("changed-01-with-extra-content")
+
+    def assert_in_progress_prefix_rewrite_detected(self, replacement_marker):
+        lines = [self.line("initial-%02d" % index) for index in range(6)]
+        initial = b"".join(lines)
+        self.source.write_bytes(initial)
+        inode = self.source.stat().st_ino
+        self.hook()
+        original_source = self.transcript_events()[0]["payload"]["source_id"]
+        self.driver.max_transcript_bytes = max(map(len, lines)) * 3 + 16
+        appended = self.line("tail-before-rewrite")
+        with self.source.open("ab") as stream:
+            stream.write(appended)
+        self.poll()
+        self.assertEqual(self.source_event()["payload"]["cursor"], len(initial))
+        self.assertEqual(self.source_event()["payload"]["reason"], "prefix_verification_pending")
+        # Rewrite an already checked middle record while retaining the inode.
+        # Equal-length changes must not hide behind a carried partial hash;
+        # longer changes must not splice the old byte offset into a new record.
+        lines[1] = self.line(replacement_marker)
+        self.source.write_bytes(b"".join(lines) + appended)
+        self.assertEqual(self.source.stat().st_ino, inode)
+        for index in range(16):
+            with self.source.open("ab") as stream:
+                stream.write(self.line("tail-after-rewrite-%02d" % index))
+            self.poll()
+        replacement_events = [event for event in self.transcript_events()
+                              if event["payload"]["source_id"] != original_source]
+        self.assertTrue(replacement_events,
+                        "a rewritten consumed prefix must establish a new generation even while the file keeps growing")
+        self.assertEqual(replacement_events[0]["payload"]["range_start"], 0)
+        markers = [event["payload"].get("entry", {}).get("marker") for event in replacement_events]
+        self.assertIn(replacement_marker, markers, "replacement records must be reread from their own generation")
+        self.assertTrue(any(event["payload"]["status"] == "gap"
+                            for event in events_of(self.recorder.snapshot(), "native.transcript_source")))
+
     def assert_source_rewrite_is_detected(self, marker):
         original, replacement = self.line("old-marker"), self.line(marker)
         self.source.write_bytes(original)

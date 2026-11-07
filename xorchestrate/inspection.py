@@ -185,6 +185,10 @@ class InspectionProjector:
         arguments = payload["arguments"]
         scope_arguments = dict(arguments)
         if payload.get("action") in {"invoke", "run_measurement"}:
+            # These actions do not accept an operation selector. Only their
+            # typed result or a matching reservation can establish that binding,
+            # including when an invalid request was retained before validation.
+            scope_arguments.pop("operation_id", None)
             result = payload.get("result", {})
             if isinstance(result, dict):
                 resource = result.get("invocation", result.get("measurement", {}))

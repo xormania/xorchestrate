@@ -6,6 +6,7 @@ import http.client
 import json
 import math
 import os
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -234,7 +235,7 @@ class TypeSafeEvaluator(_TelemetryEvaluator):
         captured = bytearray()
         response_observed = False
 
-        def read_response(response):
+        def read_response(response, deadline=None):
             nonlocal response_observed
             maximum = self.limits["max_response_bytes"]
             status = getattr(response, "status", getattr(response, "code", None))
@@ -250,9 +251,33 @@ class TypeSafeEvaluator(_TelemetryEvaluator):
             try:
                 # read1 exposes each available body block before a later timeout;
                 # a fallback supports the same small response interface as before.
-                read = getattr(response, "read1", response.read)
+                read_one = getattr(response, "read1", None)
+                read = read_one if callable(read_one) else response.read
                 while len(captured) <= maximum:
-                    block = read(min(65536, maximum + 1 - len(captured)))
+                    if deadline is not None:
+                        remaining = deadline - time.monotonic()
+                        if remaining <= 0:
+                            reason = "capture_deadline"
+                            raise TimeoutError("Assessment diagnostic capture deadline reached")
+                        # urllib's HTTPError wraps an HTTPResponse. Bound its
+                        # next socket read by the one original request deadline,
+                        # rather than granting every body chunk a fresh timeout.
+                        stream = response
+                        for _ in range(3):
+                            raw = getattr(stream, "raw", None)
+                            connection = getattr(raw, "_sock", None)
+                            if connection is not None:
+                                connection.settimeout(remaining)
+                                break
+                            stream = getattr(stream, "fp", None)
+                        else:
+                            reason = "capture_deadline_unavailable"
+                            raise TimeoutError("Assessment diagnostic read cannot be bounded")
+                    count = min(65536, maximum + 1 - len(captured))
+                    # A read(n) fallback may internally wait for n bytes across
+                    # many successful socket reads. One byte keeps that fallback
+                    # within the next remaining-time timeout as well.
+                    block = read(1 if deadline is not None and not callable(read_one) else count)
                     if not block:
                         complete = True
                         if total is None:
@@ -266,7 +291,7 @@ class TypeSafeEvaluator(_TelemetryEvaluator):
                 reason = "interrupted"
                 raise
             except (OSError, urllib.error.URLError, http.client.HTTPException, ValueError):
-                reason = "read_interrupted"
+                reason = reason or "read_interrupted"
                 raise
             finally:
                 response_observed = True
@@ -275,13 +300,15 @@ class TypeSafeEvaluator(_TelemetryEvaluator):
                              reason=reason, http_status=status, model=self.model)
             return bytes(captured)
 
+        deadline = time.monotonic() + self.timeout
         try:
             with urllib.request.build_opener(_NoRedirect()).open(request, timeout=self.timeout) as response:
                 body = read_response(response)
         except urllib.error.HTTPError as error:
             status = error.code
             try:
-                read_response(error)
+                if observer is not None:
+                    read_response(error, deadline)
             except (OSError, urllib.error.URLError, http.client.HTTPException, ValueError):
                 pass
             finally:

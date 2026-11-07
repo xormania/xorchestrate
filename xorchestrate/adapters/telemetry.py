@@ -240,26 +240,29 @@ class LocalTelemetry:
         return self._view(row)
 
     def query(self, *, after=0, limit=100, event_type=None, work_id=None, session_id=None, operation_id=None):
+        return self.scan(after=after, limit=limit, event_type=event_type, work_id=work_id,
+                         session_id=session_id, operation_id=operation_id)["events"]
+
+    def scan(self, *, after=0, limit=100, event_type=None, work_id=None, session_id=None, operation_id=None):
+        """Filter one bounded repository batch, retaining its raw continuation.
+
+        Resource matches can be sparse. An empty matching batch is distinct
+        from exhausting the repository, and must not hide an unbounded scan
+        inside the application's read budget.
+        """
         if type(after) is not int or after < 0 or type(limit) is not int or not 1 <= limit <= 1000:
             raise OrchestrationError("Invalid telemetry query bounds.", "invalid_query")
         repository = self._repository_type.inspect(self.path)
-        result, cursor = [], after
         try:
-            while len(result) < limit:
-                rows = repository.query(project_id=self.project_id, event_type=event_type, after=cursor, limit=1000)
-                if not rows:
-                    break
-                for row in rows:
-                    cursor = row["sequence"]
-                    item = self._view(row, hydrate=False)
-                    if all(value is None or item["context"].get(key) == value for key, value in
-                           (("work_id", work_id), ("session_id", session_id), ("operation_id", operation_id))):
-                        result.append(item)
-                        if len(result) == limit:
-                            break
-                if len(rows) < 1000:
-                    break
-            return result
+            rows = repository.query(project_id=self.project_id, event_type=event_type, after=after, limit=limit)
+            result = []
+            for row in rows:
+                item = self._view(row, hydrate=False)
+                if all(value is None or item["context"].get(key) == value for key, value in
+                       (("work_id", work_id), ("session_id", session_id), ("operation_id", operation_id))):
+                    result.append(item)
+            return {"events": result, "next_after": rows[-1]["sequence"] if rows else after,
+                    "scanned": len(rows), "exhausted": len(rows) < limit}
         finally:
             repository.close()
 

@@ -237,6 +237,7 @@ class ClaudeSessionDriver:
     def _transcript_status(self, live, status, reason=None, **fields):
         self._capture(live, "native.transcript_source", {"status": status, "cursor": live.transcript["cursor"],
                       "source_id": live.transcript["source_id"], "source_version": "claude-transcript-jsonl-v1",
+                      "continuity": live.transcript.get("continuity", "initial_source"),
                       "native_id": live.native_id, "incarnation": live.incarnation, "reason": reason, **fields})
         if isinstance(self._telemetry_observer, TelemetryDispatch):
             self._telemetry_observer.drain()
@@ -280,17 +281,29 @@ class ClaudeSessionDriver:
                         # published or persisted as credential-derived metadata.
                         empty = hmac.new(os.urandom(32), digestmod=hashlib.sha256)
                         source.update(identity=identity, cursor=0, source_id=uuid.uuid4().hex,
-                                      hasher=empty.copy(), empty_hasher=empty, verification=None)
+                                      hasher=empty.copy(), empty_hasher=empty, verification=None,
+                                      recheck_required=False, tail_pending=False, continuity="initial_source")
 
                     if source["identity"] != identity or info.st_size < source["cursor"]:
                         new_generation("source_rotated_or_truncated")
-                    elif source["modified"] != modified and source["cursor"]:
+                    elif (source["modified"] != modified or source.get("recheck_required")) and source["cursor"] and not source.get("tail_pending"):
                         verification = source["verification"]
-                        if verification is None or verification["modified"] != modified:
+                        if verification is not None and verification["modified"] != modified:
+                            if info.st_size > verification["size"]:
+                                # Appends beyond the frozen committed cursor do
+                                # not erase progress. This is not an atomic file
+                                # snapshot: recheck the whole prefix again after
+                                # allowing a bounded tail pass to make progress.
+                                verification.update(modified=modified, size=info.st_size, concurrent_growth=True)
+                                source["continuity"] = "unconfirmed_during_growth"
+                            else:
+                                verification = None
+                        if verification is None:
                             # A fresh keyed empty state is retained alongside
                             # the committed rolling state for bounded rechecks.
                             empty = source["empty_hasher"].copy()
-                            verification = {"modified": modified, "offset": 0, "hasher": empty}
+                            verification = {"modified": modified, "size": info.st_size, "offset": 0,
+                                            "hasher": empty, "concurrent_growth": False}
                             source["verification"] = verification
                         stream.seek(verification["offset"])
                         while verification["offset"] < source["cursor"] and remaining:
@@ -303,16 +316,28 @@ class ClaudeSessionDriver:
                             remaining -= len(block)
                         if source["cursor"]:
                             current = os.fstat(stream.fileno())
-                            if (current.st_mtime_ns, current.st_ctime_ns) != modified:
-                                source["verification"] = None
-                                self._transcript_status(live, "partial", "source_changed_during_verification")
-                                return
+                            current_modified = (current.st_mtime_ns, current.st_ctime_ns)
+                            if current_modified != modified:
+                                if current.st_size > info.st_size:
+                                    modified = current_modified
+                                    verification.update(modified=modified, size=current.st_size, concurrent_growth=True)
+                                    source["continuity"] = "unconfirmed_during_growth"
+                                else:
+                                    source["verification"] = None
+                                    self._transcript_status(live, "partial", "source_changed_during_verification")
+                                    return
                             if verification["offset"] < source["cursor"]:
                                 self._transcript_status(live, "partial", "prefix_verification_pending",
                                                         verified_prefix_bytes=verification["offset"])
                                 return
                             if not hmac.compare_digest(verification["hasher"].digest(), source["hasher"].digest()):
                                 new_generation("consumed_prefix_changed")
+                            else:
+                                source["recheck_required"] = verification["concurrent_growth"]
+                                source["tail_pending"] = verification["concurrent_growth"]
+                                source["continuity"] = "unconfirmed_during_growth" if verification["concurrent_growth"] else "verified_prefix"
+                                if verification["concurrent_growth"]:
+                                    self._transcript_status(live, "partial", "continuity_unconfirmed_during_growth")
                             source["verification"] = None
                     source["modified"] = modified
                     stream.seek(source["cursor"])
@@ -320,6 +345,7 @@ class ClaudeSessionDriver:
                         offset = stream.tell()
                         line = stream.readline(min(self.max_transcript_frame + 1, remaining))
                         if not line:
+                            source["tail_pending"] = False
                             self._transcript_status(live, "captured", source_bytes=info.st_size)
                             return
                         remaining -= len(line)
@@ -349,12 +375,14 @@ class ClaudeSessionDriver:
                         accepted = observe_wire(self._telemetry_observer, "native.transcript", line, origin, secrets=secrets,
                                                 range_start=offset, source_id=source["source_id"], source_version="claude-transcript-jsonl-v1",
                                                 parser_version="xorchestrate-json-v1", parser_status=parser_status, entry=entry,
+                                                continuity=source.get("continuity", "initial_source"),
                                                 native_id=live.native_id, incarnation=live.incarnation, event_id=event_id, acknowledge=True)
                         if not accepted:
                             self._transcript_status(live, "partial", "capture_unavailable")
                             return
                         source["cursor"] = offset + len(line)
                         source["hasher"].update(line)
+                        source["tail_pending"] = False
                         if isinstance(self._telemetry_observer, TelemetryDispatch):
                             self._telemetry_observer.release(event_id)
                         if isinstance(entry, dict):
