@@ -69,7 +69,7 @@
       "forbidden_calls": ["open", "input", "print"]
     },
     "testkit_core": {
-      "modules": ["scripts.testkit.core", "scripts.testkit.catalog", "scripts.testkit.operator"],
+      "modules": ["scripts.testkit.core", "scripts.testkit.catalog", "scripts.testkit.operator", "scripts.testkit.stories"],
       "allowed_roles": ["testkit_foundation", "testkit_core"],
       "allowed_external": ["__future__", "collections", "contextlib", "copy", "dataclasses", "datetime", "enum", "functools", "hashlib", "itertools", "json", "math", "re", "typing"],
       "allow_dynamic": false,
