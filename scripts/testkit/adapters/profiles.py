@@ -17,11 +17,12 @@ import sys
 from pathlib import Path
 
 from ..model import MODES, SUITES
+from ..stories import select_stories, validate_limits
 from .evidence import write_json
 
 FIELDS = frozenset({"schema_version", "suite", "mode", "drivers", "families", "config", "brief",
                     "timeout", "check_timeout", "run_timeout", "shutdown_grace", "output",
-                    "environment", "interpreter"})
+                    "environment", "interpreter", "stories", "max_sessions", "max_turns", "max_tool_calls"})
 PATH_FIELDS = ("config", "brief", "output", "environment", "interpreter")
 
 
@@ -54,7 +55,8 @@ def load_profile(path, *, root, overrides=None):
     if unknown:
         raise ValueError("Unknown profile fields: " + ", ".join(sorted(unknown)))
     values = {"schema_version": 1, "suite": "all", "mode": "protocol-fixture", "drivers": [],
-              "families": [], "config": None, "brief": str(root / "docs/implementation/owner-brief.md"),
+              "families": [], "stories": [], "max_sessions": 2, "max_turns": 4, "max_tool_calls": 5000,
+              "config": None, "brief": str(root / "docs/implementation/owner-brief.md"),
               "timeout": 180, "check_timeout": 600, "run_timeout": None, "shutdown_grace": 10,
               "output": "runs", "environment": "environment", "interpreter": None,
               **source, **overrides}
@@ -64,6 +66,12 @@ def load_profile(path, *, root, overrides=None):
         raise ValueError("Unknown profile suite or mode")
     values["drivers"] = _strings(values["drivers"], "drivers")
     values["families"] = _strings(values["families"], "families")
+    values["stories"] = _strings(values["stories"], "stories")
+    validate_limits(**{name: values[name] for name in ("max_sessions", "max_turns", "max_tool_calls")})
+    if values["stories"] and values["suite"] not in {"stories", "all"}:
+        raise ValueError("stories require a suite containing stories")
+    if values["suite"] in {"stories", "all"}:
+        select_stories(values["stories"], values["mode"])
     for name in ("timeout", "check_timeout", "shutdown_grace", "run_timeout"):
         number = values[name]
         if name == "run_timeout" and number is None:
@@ -126,7 +134,8 @@ def _setup(profile_path, *, root, install):
     created = False
     if not profile_path.exists():
         defaults = {"schema_version": 1, "mode": "protocol-fixture", "suite": "all",
-                    "drivers": ["codex"], "families": [], "config": "native.json",
+                    "drivers": ["codex"], "families": [], "stories": [],
+                    "max_sessions": 2, "max_turns": 4, "max_tool_calls": 5000, "config": "native.json",
                     "brief": str(root / "docs/implementation/owner-brief.md"), "timeout": 180,
                     "check_timeout": 600, "run_timeout": None, "shutdown_grace": 10,
                     "output": "runs", "environment": "environment"}
@@ -192,7 +201,7 @@ def doctor(profile_path, *, root, overrides=None):
     except (OSError, ValueError, subprocess.SubprocessError) as error:
         observations.append({"name": "interpreter", "passed": False, "path": interpreter,
                              "reason": str(error)})
-    if profile["suite"] in {"acceptance", "all"}:
+    if profile["suite"] in {"acceptance", "stories", "all"}:
         observations.append({"name": "tmux", "passed": shutil.which("tmux") is not None,
                              "path": shutil.which("tmux")})
     return {"status": "passed" if all(item["passed"] for item in observations if item.get("required", True)) else "setup_error",
@@ -248,3 +257,4 @@ if __name__ == "__main__":
     except (OSError, ValueError, subprocess.SubprocessError) as error:
         print(f"proof bootstrap: {error}", file=sys.stderr)
         raise SystemExit(2) from None
+
