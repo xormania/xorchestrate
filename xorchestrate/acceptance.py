@@ -9,8 +9,10 @@ from __future__ import annotations
 import hashlib
 import json
 from copy import deepcopy
+from typing import Callable
 
-from .model import Capability, Conflict, OrchestrationError
+from .model import JSON, Capability, Conflict, OrchestrationError, Record
+from .ports import AcceptancePolicy, Clock, StateStore, Transaction
 
 
 def _hash(value):
@@ -101,10 +103,103 @@ def _observation(raw):
     return raw.get("measurement") if isinstance(raw, dict) and isinstance(raw.get("measurement"), dict) else None
 
 
-class AcceptanceMixin:
-    """Use cases sharing the application's store and authorization boundary."""
+def assessment_configuration_identity(assessment, evaluator_configurations):
+    """Bind inference configuration only when an assessment is consumed.
 
-    def _set_requirements(self, args, actor, context):
+    Mechanical measurement applicability does not depend on an evaluator
+    that was neither selected nor used as acceptance evidence.
+    """
+    configuration = {"triage": assessment.get("triage"), "escalate": assessment.get("escalate"),
+        "confidence_threshold": assessment.get("confidence_threshold", 0.8),
+        "uncertain_outcomes": assessment.get("uncertain_outcomes", ["uncertain", "borderline", "review"]),
+        "work_input_fields": assessment.get("work_input_fields")}
+    selected = {name for name in (configuration["triage"], configuration["escalate"]) if name}
+    identities = evaluator_configurations
+    return _hash({"assessment": configuration, "evaluators": {name: identities.get(name) for name in sorted(selected)}})
+
+def assessment_work_input(work, assessment):
+    """Select supplied work fields; display metadata is excluded by default.
+
+    A deployment may explicitly consume title or bookkeeping fields through
+    work_input_fields. Selected fields then participate in freshness too.
+    """
+    if work is None:
+        return None
+    selected = assessment.get("work_input_fields")
+    if selected is None:
+        selected = work.keys() - {"title", "version", "created_at", "updated_at"}
+    return {key: deepcopy(work[key]) for key in selected if key in work}
+
+def assessment_input_binding(context, assessment):
+    """Bind the material records supplied to inference, not all store state.
+
+    The question and request context are immutable parts of the assessment;
+    this identity tracks the mutable records on which that assessment relies.
+    Evidence digests retain provenance/content without recursively embedding
+    earlier assessments. Requirement/measurement/configuration identities have
+    their own existing acceptance binding.
+    """
+    return {"work": assessment_work_input(context.get("work"), assessment),
+        "inputs": deepcopy(context.get("inputs", {})), "context": deepcopy(context.get("context", {})),
+        "actor_record": deepcopy(context.get("actor_record")),
+        "evidence": sorted([[item["id"], item["version"], _hash(item)]
+            for item in context.get("evidence", [])]),
+        "contributions": sorted([[item["id"], item["version"], _hash(item)]
+            for item in (context.get("acceptance_basis") or {}).get("contributions", [])])}
+
+
+def _require(tx: Transaction, kind: str, key: str) -> Record:
+    record = tx.get(kind, key)
+    if record is None:
+        raise OrchestrationError(f"Unknown {kind}: {key}", "not_found")
+    return record
+
+
+class WorkAcceptance:
+    """Acceptance use cases composed from storage, mutations and authority.
+
+    Configuration suppliers are live: replacing policy or material settings must
+    affect later decisions and the rechecks made during an in-flight decision.
+    The invocation callback retains the application's authorized effect boundary.
+    """
+
+    def __init__(
+        self, store: StateStore, *, clock: Clock,
+        verify_authorization: Callable[[Transaction, JSON], None],
+        create: Callable[..., Record], transition: Callable[..., Record], emit: Callable[..., None],
+        invoke: Callable[[JSON, str], JSON], policy: Callable[[], AcceptancePolicy | None],
+        assessment_configuration: Callable[[], JSON],
+        provider_configurations: Callable[[], JSON], evaluator_configurations: Callable[[], JSON],
+    ):
+        self.store = store
+        self.clock = clock
+        self._verify_context = verify_authorization
+        self._create = create
+        self._transition = transition
+        self._event = emit
+        self._invoke = invoke
+        self._policy = policy
+        self._assessment_configuration = assessment_configuration
+        self._provider_configurations = provider_configurations
+        self._evaluator_configurations = evaluator_configurations
+
+    @property
+    def acceptance(self):
+        return self._policy()
+
+    @property
+    def assessment(self):
+        return self._assessment_configuration()
+
+    @property
+    def provider_configurations(self):
+        return self._provider_configurations()
+
+    @property
+    def evaluator_configurations(self):
+        return self._evaluator_configurations()
+
+    def set_requirements(self, args, actor, context):
         outcomes, checks = args["outcomes"], args["checks"]
         if any(not key for key in outcomes) or any(not key for key in checks):
             raise OrchestrationError("Outcome and check identifiers must be nonempty.")
@@ -125,7 +220,7 @@ class AcceptanceMixin:
             self._event(tx, "requirements.revised", actor, work_id=args["work_id"], revision=record.version, identity=data["identity"])
             return {"requirements": _view(record)}
 
-    def _set_candidate(self, args, actor, context):
+    def set_candidate(self, args, actor, context):
         with self.store.transaction() as tx:
             self._verify_context(tx, context)
             current = tx.get("candidate", args["work_id"])
@@ -138,22 +233,22 @@ class AcceptanceMixin:
             self._event(tx, "candidate.selected", actor, work_id=args["work_id"], revision=record.version)
             return {"candidate": _view(record)}
 
-    def _create_contribution(self, args, actor, context):
+    def create_contribution(self, args, actor, context):
         with self.store.transaction() as tx:
             self._verify_context(tx, context)
-            basis = self._require(tx, "requirements", args["work_id"])
+            basis = _require(tx, "requirements", args["work_id"])
             if set(args["outcomes"]) - set(basis.data["outcomes"]):
                 raise OrchestrationError("Contribution refers to an undeclared outcome.", "unknown_outcome")
             record = self._create(tx, "contribution", actor, {**args, "status": "open", "requirement_revision": basis.version})
             return {"contribution": _view(record)}
 
-    def _update_contribution(self, args, actor, context):
+    def update_contribution(self, args, actor, context):
         with self.store.transaction() as tx:
             self._verify_context(tx, context)
-            current = self._require(tx, "contribution", args["contribution_id"])
+            current = _require(tx, "contribution", args["contribution_id"])
             if current.data["work_id"] != args["work_id"]:
                 raise OrchestrationError("Contribution belongs to another work item.", "wrong_scope")
-            basis = self._require(tx, "requirements", args["work_id"])
+            basis = _require(tx, "requirements", args["work_id"])
             if set(args["changes"].get("outcomes", [])) - set(basis.data["outcomes"]):
                 raise OrchestrationError("Contribution refers to an undeclared outcome.", "unknown_outcome")
             record = tx.put("contribution", current.key, {**current.data, **deepcopy(args["changes"])}, args["expected_version"])
@@ -169,50 +264,6 @@ class AcceptanceMixin:
             raise OrchestrationError("Acceptance policy must expose its material configuration identity.", "configuration_error")
         return identity
 
-    def _assessment_configuration_identity(self):
-        """Bind inference configuration only when an assessment is consumed.
-
-        Mechanical measurement applicability does not depend on an evaluator
-        that was neither selected nor used as acceptance evidence.
-        """
-        configuration = {"triage": self.assessment.get("triage"), "escalate": self.assessment.get("escalate"),
-            "confidence_threshold": self.assessment.get("confidence_threshold", 0.8),
-            "uncertain_outcomes": self.assessment.get("uncertain_outcomes", ["uncertain", "borderline", "review"]),
-            "work_input_fields": self.assessment.get("work_input_fields")}
-        selected = {name for name in (configuration["triage"], configuration["escalate"]) if name}
-        identities = getattr(self, "evaluator_configurations", {})
-        return _hash({"assessment": configuration, "evaluators": {name: identities.get(name) for name in sorted(selected)}})
-
-    def _assessment_work_input(self, work):
-        """Select supplied work fields; display metadata is excluded by default.
-
-        A deployment may explicitly consume title or bookkeeping fields through
-        work_input_fields. Selected fields then participate in freshness too.
-        """
-        if work is None:
-            return None
-        selected = self.assessment.get("work_input_fields")
-        if selected is None:
-            selected = work.keys() - {"title", "version", "created_at", "updated_at"}
-        return {key: deepcopy(work[key]) for key in selected if key in work}
-
-    def _assessment_input_binding(self, context):
-        """Bind the material records supplied to inference, not all store state.
-
-        The question and request context are immutable parts of the assessment;
-        this identity tracks the mutable records on which that assessment relies.
-        Evidence digests retain provenance/content without recursively embedding
-        earlier assessments. Requirement/measurement/configuration identities have
-        their own existing acceptance binding.
-        """
-        return {"work": self._assessment_work_input(context.get("work")),
-            "inputs": deepcopy(context.get("inputs", {})), "context": deepcopy(context.get("context", {})),
-            "actor_record": deepcopy(context.get("actor_record")),
-            "evidence": sorted([[item["id"], item["version"], _hash(item)]
-                for item in context.get("evidence", [])]),
-            "contributions": sorted([[item["id"], item["version"], _hash(item)]
-                for item in (context.get("acceptance_basis") or {}).get("contributions", [])])}
-
     def _current_assessment_input_binding(self, tx, assessment):
         work_id = assessment.data.get("work_id")
         work = tx.get("work", work_id) if work_id else None
@@ -224,11 +275,11 @@ class AcceptanceMixin:
             and not (item.data.get("source", {}).get("type") == "assessment"
                 and item.data["source"].get("assessment_id") == assessment.key)]
         contributions = [_view(item) for item in tx.list("contribution") if item.data.get("work_id") == work_id]
-        return self._assessment_input_binding({"work": _view(work) if work else None,
+        return assessment_input_binding({"work": _view(work) if work else None,
             "inputs": deepcopy(work.data.get("inputs", {})) if work else {},
             "context": deepcopy(work.data.get("context", {})) if work else {},
             "actor_record": _view(actor) if actor else None, "evidence": evidence,
-            "acceptance_basis": {"contributions": contributions}})
+            "acceptance_basis": {"contributions": contributions}}, self.assessment)
 
     def _assessment_inputs_current(self, tx, assessment):
         return _same(assessment.data.get("input_binding"), self._current_assessment_input_binding(tx, assessment))
@@ -243,7 +294,7 @@ class AcceptanceMixin:
         snapshot = {"requirements": _view(requirements) if requirements else None,
             "candidate": _view(candidate) if candidate else None, "measurements": measurements,
             "operations": operations, "policy_identity": self._policy_identity(),
-            "assessment_configuration_identity": self._assessment_configuration_identity(),
+            "assessment_configuration_identity": assessment_configuration_identity(self.assessment, self.evaluator_configurations),
             "provider_configurations": self._measurement_providers(requirements.data if requirements else None)}
         snapshot["binding"] = self._acceptance_binding(snapshot)
         snapshot["issues"], snapshot["coverage"] = self._measurement_issues(snapshot)
@@ -263,13 +314,13 @@ class AcceptanceMixin:
         configured = getattr(self, "provider_configurations", {})
         return {name: configured.get(name) for name in sorted(names)}
 
-    def _acceptance_context(self, work_id):
+    def context(self, work_id):
         with self.store.transaction() as tx:
             snapshot = self._acceptance_snapshot(tx, work_id)
             snapshot["contributions"] = [_view(item) for item in tx.list("contribution") if item.data["work_id"] == work_id]
             return snapshot
 
-    def _verify_acceptance_context(self, tx, context):
+    def verify_context(self, tx, context):
         """Fence requirement/candidate changes after configured authorization."""
         previous = context.get("acceptance_basis")
         if previous is None:
@@ -348,7 +399,7 @@ class AcceptanceMixin:
                 issues.append({"code": "outcome_uncovered", "outcome": outcome})
         return issues, coverage
 
-    def _run_measurement(self, args, actor, context):
+    def run_measurement(self, args, actor, context):
         key = _hash([actor, "measurement", args["measurement_key"]])
         fingerprint = _hash(args)
         with self.store.transaction() as tx:
@@ -365,8 +416,8 @@ class AcceptanceMixin:
                         "raw_response": deepcopy(raw), "raw_digest": _hash(raw), "finished_at": self.clock()}, actor)
                     self._event(tx, "measurement.recovered", actor, work_id=args["work_id"], measurement_id=key)
                 return {"measurement": _view(existing), "replayed": True}
-            requirement = self._require(tx, "requirements", args["work_id"])
-            candidate = self._require(tx, "candidate", args["work_id"])
+            requirement = _require(tx, "requirements", args["work_id"])
+            candidate = _require(tx, "candidate", args["work_id"])
             check = requirement.data["checks"].get(args["check_id"])
             if check is None:
                 raise OrchestrationError("Unknown required check.", "unknown_check")
@@ -385,13 +436,13 @@ class AcceptanceMixin:
                 "request_binding": binding, "operation_id": operation_id, "status": "pending", "sequence": sequence,
             }, key)
         try:
-            result = self.call("invoke", {"work_id": args["work_id"], "capability": check["capability"],
+            result = self._invoke({"work_id": args["work_id"], "capability": check["capability"],
                 "arguments": {"measurement": binding, "arguments": deepcopy(args.get("arguments", {}))},
-                "idempotency_key": invoke_key}, actor=actor)
+                "idempotency_key": invoke_key}, actor)
             raw = result["invocation"]["result"]
         except Exception as error:
             with self.store.transaction() as tx:
-                current = self._require(tx, "measurement", key)
+                current = _require(tx, "measurement", key)
                 operation = tx.get("operation", operation_id)
                 uncertain = operation is not None and operation.data["status"] in {"pending", "unknown", "completed_unapplied"}
                 self._transition(tx, current, "uncertain" if uncertain else "fail",
@@ -401,7 +452,7 @@ class AcceptanceMixin:
             raise
         try:
             with self.store.transaction() as tx:
-                current = self._require(tx, "measurement", key)
+                current = _require(tx, "measurement", key)
                 record = self._transition(tx, current, "complete", {**current.data, "status": "completed", "raw_response": deepcopy(raw),
                     "raw_digest": _hash(raw), "finished_at": self.clock()}, actor)
                 self._event(tx, "measurement.completed", actor, work_id=args["work_id"], measurement_id=key, operation_id=operation_id)
@@ -413,13 +464,13 @@ class AcceptanceMixin:
                 "result_unapplied", {"measurement_id": key, "operation_id": operation_id,
                 "outcome": "completed", "external_result": deepcopy(raw)}) from error
 
-    def _accept_work(self, args, actor, context):
+    def accept_work(self, args, actor, context):
         if getattr(self, "acceptance", None) is None:
             raise OrchestrationError("No acceptance policy is configured.", "acceptance_unavailable")
         with self.store.transaction() as tx:
             self._verify_context(tx, context)
             snapshot = self._acceptance_snapshot(tx, args["work_id"])
-            assessment = self._require(tx, "assessment", args["assessment_id"]) if args.get("assessment_id") else None
+            assessment = _require(tx, "assessment", args["assessment_id"]) if args.get("assessment_id") else None
         if assessment:
             snapshot["assessment"] = _view(assessment)
             if assessment.data.get("work_id") != args["work_id"] or assessment.data.get("acceptance_binding") != snapshot["binding"]:
@@ -441,7 +492,7 @@ class AcceptanceMixin:
             if current["binding"] != snapshot["binding"]:
                 raise Conflict("Acceptance dependencies changed during the decision.")
             if assessment:
-                latest = self._require(tx, "assessment", assessment.key)
+                latest = _require(tx, "assessment", assessment.key)
                 if not _same(self._current_assessment_input_binding(tx, latest), assessment_inputs):
                     raise Conflict("Assessment inputs changed during the decision.")
                 if (latest.version != assessment.version
@@ -457,7 +508,7 @@ class AcceptanceMixin:
             self._event(tx, "work.accepted" if accepted else "work.acceptance_rejected", actor, work_id=args["work_id"], decision_id=record.key)
             return {"acceptance": _view(record), "current": True}
 
-    def _work_acceptance_view(self, tx, work_id):
+    def view(self, tx, work_id):
         snapshot = self._acceptance_snapshot(tx, work_id)
         decisions = sorted((_view(item) for item in tx.list("acceptance_decision") if item.data["work_id"] == work_id), key=lambda item: item["sequence"])
         for item in decisions:
@@ -474,8 +525,4 @@ class AcceptanceMixin:
             "measurements": snapshot["measurements"], "acceptance_history": decisions,
             "accepted": bool(latest and latest["current"] and latest["accepted"]),
             "contributions": [_view(item) for item in tx.list("contribution") if item.data["work_id"] == work_id]}
-
-    def _get_acceptance(self, args, actor, context):
-        return self.inspection.inspect_snapshot("get_acceptance", actor, context,
-            lambda tx: self._work_acceptance_view(tx, args["work_id"]))
 

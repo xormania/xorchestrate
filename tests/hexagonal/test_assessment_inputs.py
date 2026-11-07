@@ -161,7 +161,7 @@ def test_known_bad_stale_input_fault_is_detected_by_intended_assertion(configure
     def ignore_input_changes(tx, assessment):
         calls.append(assessment.key)
         return True
-    monkeypatch.setattr(app, "_assessment_inputs_current", ignore_input_changes)
+    monkeypatch.setattr(app.work_acceptance, "_assessment_inputs_current", ignore_input_changes)
     # The faulty subject remains faulty. Only the outer calibration passes.
     assert accept(app, work, old)["accepted"]
     with pytest.raises(AssertionError, match="^F05_MATERIAL_ASSESSMENT_INPUTS_MUST_REMAIN_CURRENT"):
@@ -277,3 +277,4 @@ def test_material_json_type_changes_do_not_compare_as_equal(configured, field, b
     fresh = assess(app, work)
     assert fresh["conclusion"]["outcome"] == "reject"
     assert not accept(app, work, fresh)["accepted"]
+

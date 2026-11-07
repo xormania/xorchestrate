@@ -14,7 +14,12 @@ from copy import deepcopy
 from dataclasses import asdict
 from typing import Any, Callable
 
-from .acceptance import ACCEPTANCE_ACTIONS, AcceptanceMixin
+from .acceptance import (
+    ACCEPTANCE_ACTIONS,
+    WorkAcceptance,
+    assessment_input_binding,
+    assessment_work_input,
+)
 from .delivery import DELIVERY_ACTIONS, DeliveryMixin
 from .inspection import InspectionProjector
 from .lifecycles import DURABLE_LIFECYCLES, default_definitions
@@ -143,7 +148,7 @@ def _error_message(error: Exception) -> str:
     return str(error) if isinstance(error, OrchestrationError) else f"External operation did not return a verified result ({type(error).__name__})."
 
 
-class Application(AcceptanceMixin, DeliveryMixin):
+class Application(DeliveryMixin):
     """Transport-independent orchestration; construction performs no I/O."""
 
     def __init__(
@@ -187,6 +192,14 @@ class Application(AcceptanceMixin, DeliveryMixin):
             raise OrchestrationError("Invalid assessment configuration.", "invalid_configuration", error.details) from error
         self.assessment = deepcopy(assessment if assessment is not None else {})
         self.inspection = InspectionProjector(store, self._context, self._authorize, self._verify_context)
+        self.work_acceptance = WorkAcceptance(
+            store, clock=lambda: self.clock(), verify_authorization=self._verify_context,
+            create=self._create, transition=self._transition, emit=self._event,
+            invoke=lambda arguments, actor: self.call("invoke", arguments, actor),
+            policy=lambda: self.acceptance, assessment_configuration=lambda: self.assessment,
+            provider_configurations=lambda: self.provider_configurations,
+            evaluator_configurations=lambda: self.evaluator_configurations,
+        )
 
     def describe(self) -> list[Capability]:
         return [Capability(name, spec.description, deepcopy(spec.input_schema), deepcopy(spec.annotations)) for name, spec in _ACTIONS.items()]
@@ -283,7 +296,7 @@ class Application(AcceptanceMixin, DeliveryMixin):
         if operation and operation.data.get("capability"):
             context.update({"capability": deepcopy(operation.data["capability"]),
                 "provider": operation.data["arguments"]["capability"].partition("/")[0]})
-        context["acceptance_basis"] = self._acceptance_context(work.key) if work else None
+        context["acceptance_basis"] = self.work_acceptance.context(work.key) if work else None
         return context
 
     def _resume_context(self, actor: str, session_id: str) -> JSON:
@@ -349,7 +362,7 @@ class Application(AcceptanceMixin, DeliveryMixin):
             current_evidence = {(item.key, item.version) for item in tx.list("evidence") if item.data.get("work_id") == work["id"]}
             if current_evidence != previous_evidence:
                 raise Conflict("Authorization evidence changed; evaluate the current state before retrying.", retry_safe=True)
-        self._verify_acceptance_context(tx, context)
+        self.work_acceptance.verify_context(tx, context)
         if context.get("resume_source"):
             self._verify_context(tx, context["resume_source"])
 
@@ -391,7 +404,7 @@ class Application(AcceptanceMixin, DeliveryMixin):
     def _work_snapshot(self, tx: Transaction, work_id: str) -> JSON:
         work = self._require(tx, "work", work_id)
         result = {"work": _view(work)}
-        result.update(self._work_acceptance_view(tx, work.key))
+        result.update(self.work_acceptance.view(tx, work.key))
         for kind, plural in (("assignment", "assignments"), ("evidence", "evidence"), ("session", "sessions")):
             result[plural] = [_view(r) for r in tx.list(kind) if r.data.get("work_id") == work.key]
         return result
@@ -901,6 +914,28 @@ class Application(AcceptanceMixin, DeliveryMixin):
             self._event(tx, "operation.resolved", actor, operation_id=operation.key, outcome=args["outcome"])
             return {"operation": _view(record)}
 
+    def _set_requirements(self, args, actor, context):
+        return self.work_acceptance.set_requirements(args, actor, context)
+
+    def _set_candidate(self, args, actor, context):
+        return self.work_acceptance.set_candidate(args, actor, context)
+
+    def _create_contribution(self, args, actor, context):
+        return self.work_acceptance.create_contribution(args, actor, context)
+
+    def _update_contribution(self, args, actor, context):
+        return self.work_acceptance.update_contribution(args, actor, context)
+
+    def _run_measurement(self, args, actor, context):
+        return self.work_acceptance.run_measurement(args, actor, context)
+
+    def _accept_work(self, args, actor, context):
+        return self.work_acceptance.accept_work(args, actor, context)
+
+    def _get_acceptance(self, args, actor, context):
+        return self.inspection.inspect_snapshot("get_acceptance", actor, context,
+            lambda tx: self.work_acceptance.view(tx, args["work_id"]))
+
     def _assess(self, args: JSON, actor: str, context: JSON) -> JSON:
         triage = self.assessment.get("triage")
         if not triage:
@@ -911,8 +946,8 @@ class Application(AcceptanceMixin, DeliveryMixin):
         # Display titles and write bookkeeping must not silently become material
         # evaluator inputs. Everything supplied from mutable work/evidence is
         # bound to its observed content and rechecked when consumed.
-        evaluation_context["work"] = self._assessment_work_input(context.get("work"))
-        input_binding = self._assessment_input_binding(evaluation_context)
+        evaluation_context["work"] = assessment_work_input(context.get("work"), self.assessment)
+        input_binding = assessment_input_binding(evaluation_context, self.assessment)
         evaluations = []
         first = self.evaluators[triage].assess(args["question"], deepcopy(evaluation_context))
         self._validate_assessment(first)

@@ -65,6 +65,7 @@
       "guarantee": "Completion and assessment require current, correctly bound evidence without losing owner goals or conflating turn completion with accepted work.",
       "modules": {
         "tests/hexagonal/test_work_acceptance.py": "contract",
+        "tests/hexagonal/test_work_acceptance_component.py": "contract",
         "tests/hexagonal/test_assessment_inputs.py": "contract",
         "tests/hexagonal/test_assessment_inspection_contract.py": "contract",
         "tests/hexagonal/test_inspection_contract.py": "contract",
