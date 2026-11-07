@@ -476,5 +476,6 @@ class AcceptanceMixin:
             "contributions": [_view(item) for item in tx.list("contribution") if item.data["work_id"] == work_id]}
 
     def _get_acceptance(self, args, actor, context):
-        return self._inspect_snapshot("get_acceptance", actor, context,
+        return self.inspection.inspect_snapshot("get_acceptance", actor, context,
             lambda tx: self._work_acceptance_view(tx, args["work_id"]))
+

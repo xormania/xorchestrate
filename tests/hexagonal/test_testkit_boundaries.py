@@ -37,6 +37,7 @@ def test_live_test_tooling_is_classified_and_passes_the_shared_policy():
     assert roles["tests.hexagonal.support.identity_evidence"] == "test_support"
     assert roles["tests.hexagonal.test_identity_contracts"] == "test_collection"
     assert roles["scripts.architecture.core"] == "architecture_core"
+    assert roles["xorchestrate.inspection"] == "inspection"
     assert report["coverage"]["classified"] == report["coverage"]["modules"]
 
 
@@ -59,6 +60,21 @@ def test_new_live_test_module_requires_an_explicit_architectural_role(subject):
     assert report["status"] == "violation"
     assert any(item["rule_id"] == "coverage.classification"
                and item.get("module") == "scripts.testkit.unclassified" for item in report["findings"])
+
+
+@pytest.mark.parametrize("dependency,rule", [
+    ("xorchestrate.application", "dependencies.allowed"),
+    ("xorchestrate.delivery", "dependencies.allowed"),
+    ("xorchestrate.acceptance", "dependencies.allowed"),
+    ("subprocess", "dependencies.external"),
+])
+def test_inspection_cannot_depend_on_workflows_or_processes(subject, dependency, rule):
+    path = subject / "xorchestrate/inspection.py"
+    path.write_text(path.read_text() + "\nimport " + dependency + "\n")
+    report = check(subject, PROFILE)
+    assert report["status"] == "violation"
+    assert any(item["rule_id"] == rule and item.get("module") == "xorchestrate.inspection"
+               and item.get("target") == dependency for item in report["findings"]), report["findings"]
 
 
 def test_native_decoder_cannot_depend_on_the_verdict_it_supplies(subject):
@@ -105,3 +121,4 @@ def test_shared_invariants_cannot_inline_native_wire_decoding(subject, module):
     assert report["status"] == "violation"
     assert any(item["rule_id"] == "literals.allowed" and item.get("module") == module
                and item.get("value") == "promptId" for item in report["findings"]), report["findings"]
+

@@ -45,11 +45,11 @@ class Fixture:
             evaluators={"review": self.evaluator}, clock=lambda: "2026-10-24T00:00:00Z",
             identifiers=lambda: f"record-{next(identifiers)}", assessment=assessment)
         if fault == "omit_assessment_projection":
-            self.app._inspection_assessment_binding = lambda *args: []
+            self.app.inspection._assessment_binding = lambda *args: []
         elif fault == "unrelated_error":
             def unavailable(*args):
                 raise TimeoutError("unrelated inspection failure")
-            self.app._inspection_assessment_binding = unavailable
+            self.app.inspection._assessment_binding = unavailable
 
     def close(self):
         self.store.close()
@@ -108,3 +108,4 @@ class Fixture:
                 return original.evaluate(action, context)
 
         self.app.guardrail = ChangingPolicy()
+
