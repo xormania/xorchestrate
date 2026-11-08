@@ -108,3 +108,10 @@ def report_mutation_contract(subject, report, mutation):
     except AssertionError:
         return
     raise AssertionError("PERFORMANCE_INDEPENDENT_ORACLE_MUST_REJECT_FALSE_SUCCESS_REPORTS")
+
+
+def output_guard_contract(subject, route):
+    observed = subject.probe_inside_output(route)
+    assert observed["rejected"], "PERFORMANCE_OUTPUT_INSIDE_SELECTED_SOURCE_MUST_BE_REJECTED_BEFORE_IDENTITY_OR_WORK"
+    assert observed["calls"] == [], "PERFORMANCE_INVALID_OUTPUT_MUST_NOT_START_SOURCE_SEALING_OR_WORKLOADS"
+    assert observed["manifest_unchanged"], "PERFORMANCE_INVALID_OUTPUT_MUST_NOT_REPLACE_THE_MEASURED_PROJECT_MANIFEST"

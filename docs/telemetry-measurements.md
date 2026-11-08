@@ -74,14 +74,23 @@ imported collector Python files were sealed separately before and after the run.
 All seals and the local commit/tree remained unchanged. Python was 3.12.14 with
 linked SQLite 3.53.1; the collector pin was
 [`84229bb7497547d2db91d02a4633ccb3867f740b`](https://github.com/xormania/cce/tree/84229bb7497547d2db91d02a4633ccb3867f740b/tools/telemetry).
-The exact procedure SHA256 is
+The measured procedure SHA256 is
 `a99c843d0a28a6dfd8f6e9d88b187cd3ea0c573d605e9d003bd1f0abb25d78d5`;
 the [raw dataset](telemetry-evidence/calibration-2026-11-08.json) SHA256 is
 `e6d928db90fec8a3aabca0c8da414a474db25a6c5aee714e233aa21aa409a9eb`.
 These source and runtime observations are recorded in its `source_before`,
 `source_after`, `collector_dependency_before` and `collector_dependency_after`
 entries. A later documentation commit or reconstructed upstream Git history
-does not change the production and procedure file hashes measured here.
+does not change the production and procedure file hashes measured here. The
+[exact measured procedure](https://github.com/xormania/xorchestrate/blob/382c943fd424720af72aa38620db666704b121e3/docs/telemetry-evidence/measure_overhead.py)
+is retained at that historical remote commit. The
+[current procedure with its updated output guard](telemetry-evidence/measure_overhead.py)
+additionally rejects any output path resolving inside the candidate checkout
+before sealing sources or running workloads. That admission-only repair has
+SHA256 `29458bcbe079bda2f7a00d5caddf84f0c4c85152e9f48199d1c966d3cc098f12`;
+the timed workflow implementation and retained dataset are unchanged. The
+[verification receipt](telemetry-evidence/read-calibration-verification-2026-11-08.json)
+records the separate test, calibration, static-check and review checkpoints.
 
 The independent [measurement contract](../tests/hexagonal/contracts/telemetry_measurements.py)
 and [support adapter](../tests/hexagonal/support/telemetry_measurements.py) use tiny

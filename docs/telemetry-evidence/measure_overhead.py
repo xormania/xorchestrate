@@ -350,8 +350,8 @@ def measure_read_trial(directory, *, trial=0, count=8, payload_bytes=65536, cont
 def main():
     """Run the original capture cases and three bounded public-read trials."""
     destination = Path(os.environ["TELEMETRY_CALIBRATION_OUTPUT"]).resolve()
-    if destination == Path(__file__).resolve() or destination.is_relative_to(ROOT / "xorchestrate"):
-        raise ValueError("calibration output cannot replace measured source")
+    if destination.is_relative_to(ROOT):
+        raise ValueError("calibration output must be outside the candidate checkout")
     started = datetime.now(timezone.utc).isoformat()
     before, dependency_before = identity(), dependency_identity()
     trials = measure_capture_trials()

@@ -1,0 +1,581 @@
+{
+  "schema_version": 1,
+  "status": "qualified within the stated scope before draft publication",
+  "scope": "Finite extension of the existing capture calibration to actual public query, exact payload, snapshot, verify and restore workflows; no performance thresholds or product optimization.",
+  "baseline": {
+    "upstream": "xormania/xorchestrate@f270e29b9263e1c44ba7c182a21abdd74e5c3ba9",
+    "local_exact_source": "2e659a3798e5e633dd493391f940bdfa916f7932"
+  },
+  "local_revision_checkpoints": {
+    "procedure": "52158b161be4b628bf1de2c8f6c79d07c0d48f72",
+    "independent_tests_and_measured_revision": "b7192f12122b9c3404a04b7279df1356177fb3ea",
+    "documented_dataset_and_initial_review": "88eecc2ee0a10394cdd5cd6fd950c78fc98d7f77",
+    "output_guard": "59aaefae2591f43d9efbd2f1bc342c6d49dfaa8b",
+    "final_tests": "63e47bc5563a8d3a160f72cc77d8527aac510a49",
+    "receipt_parent_before_documentation_commit": "63e47bc5563a8d3a160f72cc77d8527aac510a49"
+  },
+  "publication_mapping": {
+    "historical_measured_content_remote_commit": "382c943fd424720af72aa38620db666704b121e3",
+    "historical_measured_content_remote_tree": "ee0a1cb09017d1e97e768d896c7cd59b438033ef",
+    "measured_procedure_url": "https://github.com/xormania/xorchestrate/blob/382c943fd424720af72aa38620db666704b121e3/docs/telemetry-evidence/measure_overhead.py",
+    "final_remote_head_at_receipt_creation": null,
+    "note": "Local validation commit IDs and exact file hashes are distinct from remote history. Remote382c943 retains the measured historical procedure and dataset; a later remote child carries the independently validated output guard, tests and receipt. No final remote head or hosted CI outcome is claimed by this pre-publication receipt."
+  },
+  "reports": {
+    "initial_semantic_baseline_red": {
+      "artifact": "r3-performance-tests/baseline-author-receipt.json",
+      "sha256": "cc9d78aa6222dafba2f319de89297542b4b617fbfe060a0c611aacfee0d4ba5a",
+      "content": {
+        "agent": "collector_tests independent measurement validation author",
+        "upstream_baseline": "f270e29b9263e1c44ba7c182a21abdd74e5c3ba9",
+        "legacy_source_before": {
+          "commit": "2e659a3798e5e633dd493391f940bdfa916f7932",
+          "tree": "8de7c885703e7cb8a7045919b8e601a28489b6ef"
+        },
+        "legacy_source_after": {
+          "commit": "7b2702cfe50136384b5adc6d630fda9d8b415546",
+          "tree": "4cd8bb1d96ccf6b5bddb40ec520e7552a09a4fb8"
+        },
+        "production_source_unchanged": true,
+        "legacy_trial_count": 21,
+        "legacy_completed_create_work": 372,
+        "baseline_red": "1 failed,6 deselected,0 errors in11.79s",
+        "assertion": "PERFORMANCE_REPORT_MUST_MEASURE_ACTUAL_PUBLIC_READ_OPERATIONS",
+        "missing_operations": [
+          "telemetry_events",
+          "telemetry_payload",
+          "telemetry_snapshot",
+          "telemetry_verify",
+          "telemetry_restore"
+        ],
+        "baseline_selection": "Explicit isolated positive subset --noconftest, because catalog entry was pending at launch. Baseline executed original finite procedure once; candidate CI must use normal catalog.",
+        "original_procedure_sha256": "67517eb36430f3ac87d7c3998aef6a6090725a522c33427f536effd9d0b4fb86",
+        "files": {
+          "baseline-red.log": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/r3-performance-tests/baseline-red.log",
+            "sha256": "5bc9667cddf15005f2f8071ec49321fbaf38c26e0b254198394fd37bcfec53af"
+          },
+          "baseline-red.xml": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/r3-performance-tests/baseline-red.xml",
+            "sha256": "f62f3a18d61515e73ed20cabc2d5af24847abe3cd1eb3d418e38064b864efe73"
+          },
+          "legacy-baseline-report.json": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/r3-performance-tests/legacy-baseline-report.json",
+            "sha256": "1b4d178c8bd20e00685345016bfc377d5ce5e4e312d50e5b5e1344d166e86e40"
+          }
+        }
+      }
+    },
+    "independent_test_author_before_guard": {
+      "artifact": "r3-performance-tests/author-report.json",
+      "sha256": "2a68aa6520b8b618e6bb6529aa4473b227ce15aed42c1f4f2b72e2cbc408819b",
+      "checkpoint_tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "seconds": 10.63,
+      "procedure_commit": "52158b161be4b628bf1de2c8f6c79d07c0d48f72",
+      "test_commit": "b7192f12122b9c3404a04b7279df1356177fb3ea",
+      "note": "Earlier GREEN is separate from the initial baseline RED and from the final nine-case receipt below; no final-byte claim is made for the earlier RED."
+    },
+    "red_byte_identity_limit": "The initial missing-populations RED preceded later config/path/live-byte assertions in contract/support. Its result is not claimed to bind all final test bytes; the recorded three hashes bind the candidate GREEN.",
+    "manual_calibration": {
+      "repository_artifact": "docs/telemetry-evidence/calibration-2026-11-08.json",
+      "sha256": "e6d928db90fec8a3aabca0c8da414a474db25a6c5aee714e233aa21aa409a9eb",
+      "measured_local_commit": "b7192f12122b9c3404a04b7279df1356177fb3ea",
+      "measured_local_tree": "267113b0217402a931bdd861e8f0ee1e940514f7",
+      "measured_procedure_sha256": "a99c843d0a28a6dfd8f6e9d88b187cd3ea0c573d605e9d003bd1f0abb25d78d5",
+      "source_unchanged": true,
+      "commit_tree_unchanged": true,
+      "collector_dependency_unchanged": true,
+      "collector_pin": "84229bb7497547d2db91d02a4633ccb3867f740b",
+      "collector_version": "0.1.0",
+      "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+      "sqlite": "3.53.1",
+      "capture_trials": 21,
+      "read_trials": 3,
+      "timed_read_workflows": 36,
+      "successful_public_read_calls": 273,
+      "source_seal_locations": [
+        "/source_before",
+        "/source_after",
+        "/collector_dependency_before",
+        "/collector_dependency_after"
+      ],
+      "interpretation_limits": [
+        "Finite fixture calibration, not a performance SLO, regression verdict or production recommendation.",
+        "Python tracemalloc measures traced allocations, not total process RSS.",
+        "Wall/CPU include public-call response serialization, page/range assembly and workload correctness checks.",
+        "Process CPU includes all threads; concurrent Work host processes can influence elapsed time.",
+        "First-pass and repeat-pass are fixed ordering labels; OS page cache is uncontrolled and neither is a cold-cache claim.",
+        "Each public call opens its configured physical donor connection; repeating a workflow does not retain a warm connection.",
+        "The writer-reservation probe holds BEGIN IMMEDIATE without uncommitted rows; it does not assert that WAL readers block.",
+        "Returned-byte throughput counts canonical JSON public responses, not decoded payload or copied bundle bytes.",
+        "The failed exporter is a local HTTP503 fixture; no authenticated model execution occurs.",
+        "The temporary fixture corpora and bundles are removed after each manual trial; raw trial measurements and receipt identities are retained."
+      ],
+      "manual_output_artifact": "/workspace/scratch/7c8bb4d2a697/evidence/r3-performance-calibration-2026-11-08.json",
+      "manual_output_was_outside_selected_checkout": true,
+      "retained_raw_dataset_is_byte_identical_to_manual_output": true
+    },
+    "initial_adversarial_review": {
+      "artifact": "qualification/r3-performance-review-receipt.json",
+      "sha256": "c7f00bcaf690f965b66317895adae37b04d64bdb5f8a754c1e756734147edeb4",
+      "content": {
+        "reviewer": "/root/qualification independent adversarial reviewer; no procedure/product/test edits",
+        "scope": "Frozen performance procedure, independently authored seven tests, actual recorded dataset, calculations/report and source/dependency seals; no general audit or full calibration rerun",
+        "candidate_commit": "88eecc2ee0a10394cdd5cd6fd950c78fc98d7f77",
+        "candidate_tree": "735f525cac77f044a6ee4ebe33c52e940156cc41",
+        "clean_worktree": true,
+        "baseline_local": "2e659a3798e5e633dd493391f940bdfa916f7932",
+        "baseline_upstream": "f270e29b9263e1c44ba7c182a21abdd74e5c3ba9",
+        "production_diff_from_baseline": "",
+        "file_sha256": {
+          "contracts/testing.json": "61e3a9859009f3908424e0b67ff0a98973331aa0dab6bd4f15bbf2ece3cf482b",
+          "docs/telemetry-evidence/measure_overhead.py": "a99c843d0a28a6dfd8f6e9d88b187cd3ea0c573d605e9d003bd1f0abb25d78d5",
+          "docs/telemetry-evidence/calibration-2026-11-08.json": "e6d928db90fec8a3aabca0c8da414a474db25a6c5aee714e233aa21aa409a9eb",
+          "docs/telemetry-measurements.md": "8b34dfcef8cbfb0779855df37f347adc0c1b124d6352c3b7bc128bae405eb117",
+          "tests/hexagonal/contracts/telemetry_measurements.py": "2c6f7022b87cb6d989455c7d5f8f094dd7a072d95bcd57d0234f9c188e244ca8",
+          "tests/hexagonal/support/telemetry_measurements.py": "bf4b3a90bf648ff5129f967e448f387c40783f6ce59f912db7d5321dea8b73e2",
+          "tests/hexagonal/test_telemetry_measurements.py": "5a0844d370110b6b446cfad3a51e66e181b62dd088b7f6e76560490614c95542"
+        },
+        "independent_tests": {
+          "passed": 7,
+          "failures": 0,
+          "errors": 0,
+          "seconds": 12.5,
+          "command": "PYTHONPATH=<candidate>:<pinned-collector> PYTHONPYCACHEPREFIX=<outside-candidate> <inspection-python> -m pytest -p no:cacheprovider -q tests/hexagonal/test_telemetry_measurements.py --junitxml=<outside-candidate>/r3-performance-review.xml",
+          "log": "r3-performance-review.log",
+          "log_sha256": "59e08acee4b667999d555a93045dc7444fe7c8cde44c82384eefaeffa96fee9d",
+          "junit": "r3-performance-review.xml",
+          "junit_sha256": "1ae0bbe0f9e534bc964c1b51676c45f637903732367dc123120e8aab05580c9c"
+        },
+        "verified_dataset_properties": [
+          "Exact supplied procedure and dataset SHA256s match frozen candidate.",
+          "Recomputed all seven capture summaries and twelve public workflow/pass summaries, including wall/CPU/allocation medians and per-call/returned-byte throughput.",
+          "Recomputed36workflows and273successful public API calls from primitive samples.",
+          "Each declared read trial has32observations, zero capture failures,16queried completions and131499 independently known payload bytes with matching SHA256.",
+          "Reported live corpus1728840bytes, bundle1699741bytes, total five copies8498705bytes match retained per-trial records.",
+          "Before/after production, pyproject, procedure and collector dependency file hashes are equal and match reviewed current bytes; local source commit/tree seals are unchanged.",
+          "Report distinguishes workflow timing from per-call latency, uncontrolled page-cache ordering from cold-cache claims, traced allocations from RSS, canonical-response throughput from bundle-copy throughput, and real writer reservation from general contention penalties.",
+          "Actual tiny public-operation tests verify independent call ledgers, source rows/artifacts and exact original argument/result payloads; injected invalid work and altered reports are rejected. No timing threshold or SLO is asserted."
+        ],
+        "recorded_calibration_source": "b7192f12122b9c3404a04b7279df1356177fb3ea",
+        "recorded_calibration_tree": "267113b0217402a931bdd861e8f0ee1e940514f7",
+        "finding": {
+          "status": "confirmed; accepted by root for narrow guard repair",
+          "location": "measure_overhead.py main(): output destination guard and post-seal write order",
+          "consequence": "Caller-selected output ROOT/pyproject.toml is allowed although measured. The final identity is taken before destination.write_text, which can overwrite that manifest while reporting valid:true. Normal documented outside-candidate output is unaffected.",
+          "reproducer": "r3-performance-output-guard-probe.json",
+          "reproducer_sha256": "cb8e7f8d1732d3f16bb40020a0f179aa2676354609bdfa3718f38a975e522c2b",
+          "reproducer_boundary": "Actual main output guard/write ordering, isolated temporary dummy manifest and ROOT. Measurement and identity functions stubbed to finite synthetic unit values; no candidate edits and no timing-calibration claim.",
+          "agreed_repair": "Reject every output destination inside candidate ROOT before identity/workload execution; independent RED authored separately; re-review guard delta only. Historical dataset remains evidence for its recorded procedure."
+        },
+        "conclusion": "Recorded measurements/calculations and seven narrow tests qualified at this exact source. Publication review pending the one accepted output guard repair and its targeted independent validation."
+      }
+    },
+    "output_guard_repair": {
+      "status": "resolved with independent RED before repair and targeted GREEN afterward",
+      "local_procedure_commit": "59aaefae2591f43d9efbd2f1bc342c6d49dfaa8b",
+      "current_procedure_sha256": "29458bcbe079bda2f7a00d5caddf84f0c4c85152e9f48199d1c966d3cc098f12",
+      "delta": "Reject any resolved output path inside the selected ROOT before source identity or workloads. All timed functions and main body after admission remain unchanged.",
+      "red_log": {
+        "artifact": "r3-performance-tests/output-guard-red.log",
+        "sha256": "608a8907682e4ce5543f4092939711e759bcdbf2f15906fd58290e8689857e66"
+      },
+      "red_junit": {
+        "artifact": "r3-performance-tests/output-guard-red.xml",
+        "sha256": "3de30ce61f5403b79afb58978f2738a1be9c8f47749b8c314b50c53d5da3c067"
+      }
+    },
+    "final_adversarial_supplement": {
+      "artifact": "qualification/r3-performance-guard-review-supplement.json",
+      "sha256": "01513442c2ce7f208375af02212ecbdfb25aa6909c31405fb80d7a303e75979b",
+      "content": {
+        "reviewer": "/root/qualification independent adversarial reviewer; no source/test edits",
+        "scope": "Final output admission guard delta only; reuse prior88ee exact-source performance review for unchanged measurement logic, calculations and dataset. No full calibration rerun.",
+        "reviewed_procedure_commit": "59aaefae2591f43d9efbd2f1bc342c6d49dfaa8b",
+        "head_at_review": "63e47bc5563a8d3a160f72cc77d8527aac510a49",
+        "head_tree_at_review": "3f6ec6a12640e622abb9ac0ae00bb5668522fdd7",
+        "worktree_status_at_review": "M docs/telemetry-measurements.md\n?? docs/telemetry-evidence/read-calibration-verification-2026-11-08.json",
+        "working_copy_is_committed_procedure": true,
+        "qualification_boundary": "Pending author-owned test/doc changes are bound by hashes below; this receipt does not claim a clean committed final repository tree.",
+        "current_procedure_sha256": "29458bcbe079bda2f7a00d5caddf84f0c4c85152e9f48199d1c966d3cc098f12",
+        "historical_measured_procedure_sha256": "a99c843d0a28a6dfd8f6e9d88b187cd3ea0c573d605e9d003bd1f0abb25d78d5",
+        "historical_remote_procedure": "https://github.com/xormania/xorchestrate/blob/382c943fd424720af72aa38620db666704b121e3/docs/telemetry-evidence/measure_overhead.py",
+        "historical_remote_independently_fetched_sha256": "a99c843d0a28a6dfd8f6e9d88b187cd3ea0c573d605e9d003bd1f0abb25d78d5",
+        "unchanged_dataset_sha256": "e6d928db90fec8a3aabca0c8da414a474db25a6c5aee714e233aa21aa409a9eb",
+        "prior_review_receipt": "r3-performance-review-receipt.json",
+        "prior_review_receipt_sha256": "c7f00bcaf690f965b66317895adae37b04d64bdb5f8a754c1e756734147edeb4",
+        "guard_review": [
+          "Resolved destination is rejected whenever it is relative to the resolved candidate ROOT, including ROOT itself, before timestamp/source identity or any workload.",
+          "Direct project manifest and an outside directory symlink into the selected checkout both exercise the real entrypoint and are rejected before identity; isolated manifest bytes remain unchanged.",
+          "Independent allowed external-path entrypoint control reaches source identity and deliberately stops there; no workload or output write is performed.",
+          "AST comparison confirms every other procedure function and main() body after its admission guard are identical to the measured historical procedure.",
+          "Updated measurement doc distinguishes exact historicala99procedure from current29458guard source and does not relabel the unchanged dataset as a new calibration."
+        ],
+        "test_sha256": {
+          "tests/hexagonal/contracts/telemetry_measurements.py": "2bae5b7668644c68972e02488f65199a201d023ebc037f7dd20a6a9df120b0d9",
+          "tests/hexagonal/support/telemetry_measurements.py": "b65f0a16def629402938c83b78e9811cc98d831c26fd1657cade847ad05a05ac",
+          "tests/hexagonal/test_telemetry_measurements.py": "f6669c0beb5c4c91fab7f474ce4eb6a6149756cb80d0ce97979f2711a4396e15"
+        },
+        "reviewed_doc_sha256": "120769acfcff05f51c173fe8a734a88788789a05d93a51ad49bae23b973cf62c",
+        "independent_guard_tests": {
+          "passed": 2,
+          "deselected": 7,
+          "failures": 0,
+          "errors": 0,
+          "seconds": 0.15,
+          "command": "PYTHONPATH=<candidate>:<pinned-collector> PYTHONPYCACHEPREFIX=<outside-candidate> <inspection-python> -m pytest -p no:cacheprovider -q tests/hexagonal/test_telemetry_measurements.py -k output_cannot_replace --junitxml=<outside-candidate>/r3-performance-guard-review.xml",
+          "log": "r3-performance-guard-review.log",
+          "log_sha256": "c687196a0d6207778e214bed97c3021c032411f1d7aa3adff1ea7984cfa6b351",
+          "junit": "r3-performance-guard-review.xml",
+          "junit_sha256": "b71323d9899b0c5d4f2183ff0ec8a6413e5c68f3308712bcf848c3e5bf59c633"
+        },
+        "independent_external_output_control": {
+          "purpose": "Actual main guard admission positive control; stop at source identity so no workload/timing is rerun",
+          "external_output_passed_admission": true,
+          "source_identity_reached": true,
+          "output_not_written": true,
+          "procedure_sha256": "29458bcbe079bda2f7a00d5caddf84f0c4c85152e9f48199d1c966d3cc098f12"
+        },
+        "independent_external_output_control_sha256": "09fb744152aca4abfb44304f8eb4edfacae4cf8e8544014e78b2e860c7e3fed2",
+        "accepted_finding": "Resolved for the agreed selected-checkout output admission scope. Caller-selected direct/symlink paths inside ROOT cannot reach the previous measured-manifest overwrite path.",
+        "remaining_confirmed_findings": [],
+        "conclusion": "Guard delta qualified before draft publication. Earlier measurement evidence remains tied to the historicala99procedure and recorded source, not a fresh execution of the hardened wrapper."
+      }
+    },
+    "seven_case_fault_red_matrix": {
+      "artifact": "r3-performance-tests/red-proof/matrix.json",
+      "sha256": "44aac7c3db1320874c54efa426340a2a8f445bf9b6f69f3172f5f9a414a7d75a",
+      "mechanism": "One-off external pytest plugin uses runtime-only explicit procedure/oracle seams; no candidate file edits and no full calibration.",
+      "candidate_files_unchanged": true,
+      "final_file_sha256": {
+        "tests/hexagonal/contracts/telemetry_measurements.py": "2bae5b7668644c68972e02488f65199a201d023ebc037f7dd20a6a9df120b0d9",
+        "tests/hexagonal/support/telemetry_measurements.py": "b65f0a16def629402938c83b78e9811cc98d831c26fd1657cade847ad05a05ac",
+        "tests/hexagonal/test_telemetry_measurements.py": "f6669c0beb5c4c91fab7f474ce4eb6a6149756cb80d0ce97979f2711a4396e15",
+        "docs/telemetry-evidence/measure_overhead.py": "29458bcbe079bda2f7a00d5caddf84f0c4c85152e9f48199d1c966d3cc098f12"
+      },
+      "external_plugin_sha256": "fbd7ab6218697144806013ada6abc25435b0d0a6fc3d94b7384dfe11ae35b500",
+      "cases": [
+        {
+          "case": "legacy-report",
+          "nodeid": "tests/hexagonal/test_telemetry_measurements.py::test_public_measurements_complete_declared_work_and_exact_evidence",
+          "tests": 1,
+          "failures": 1,
+          "errors": 0,
+          "normal_catalog": true,
+          "expected_assertion": "PERFORMANCE_REPORT_MUST_MEASURE_ACTUAL_PUBLIC_READ_OPERATIONS",
+          "log_sha256": "babcea3752b1cab9c03cc41a4a106dff60bf42ea6546e3b7f1730a26cea64792",
+          "fault_artifact": "r3-performance-tests/red-proof/legacy-report.json",
+          "fault_artifact_sha256": "9a3f1dcea77893666c6837aabaf13dc63ed6e96b7633c9e1467f27d403a9c5c9",
+          "fault_description": "valid capture-only report omits all five public-read populations"
+        },
+        {
+          "case": "empty-query",
+          "nodeid": "tests/hexagonal/test_telemetry_measurements.py::test_invalid_public_work_cannot_produce_a_valid_benchmark_success[empty-query]",
+          "tests": 1,
+          "failures": 1,
+          "errors": 0,
+          "normal_catalog": true,
+          "expected_assertion": "PERFORMANCE_INVALID_OR_INCOMPLETE_WORK_MUST_NOT_BE_REPORTED_AS_VALID_MEASUREMENT",
+          "log_sha256": "52aa53f094f37fd98c349df6746300461eb56a74e288664c988f5e71981cbe3e",
+          "fault_artifact": "r3-performance-tests/red-proof/empty-query.json",
+          "fault_artifact_sha256": "543ddab8c5aaeb3db64730f83fc74158119fb43adac534f62aae0796c6f3ee7d",
+          "fault_description": "procedure masks actually rejected work as valid benchmark success",
+          "injected_control": "empty-query",
+          "fault_injected": true,
+          "rejected_exception_type": "AssertionError"
+        },
+        {
+          "case": "corrupt-artifact",
+          "nodeid": "tests/hexagonal/test_telemetry_measurements.py::test_invalid_public_work_cannot_produce_a_valid_benchmark_success[corrupt-artifact]",
+          "tests": 1,
+          "failures": 1,
+          "errors": 0,
+          "normal_catalog": true,
+          "expected_assertion": "PERFORMANCE_INVALID_OR_INCOMPLETE_WORK_MUST_NOT_BE_REPORTED_AS_VALID_MEASUREMENT",
+          "log_sha256": "bafac48c30e580831a039d8ddbd84be41b5d55ae50371a181e704ab0296250da",
+          "fault_artifact": "r3-performance-tests/red-proof/corrupt-artifact.json",
+          "fault_artifact_sha256": "5c7fb454f48f9c412cdf03ca5d668e65dba789236d7a226ae7f40ff5c2577b45",
+          "fault_description": "procedure masks actually rejected work as valid benchmark success",
+          "injected_control": "corrupt-artifact",
+          "fault_injected": true,
+          "rejected_exception_type": "OrchestrationError"
+        },
+        {
+          "case": "failed-snapshot",
+          "nodeid": "tests/hexagonal/test_telemetry_measurements.py::test_invalid_public_work_cannot_produce_a_valid_benchmark_success[failed-snapshot]",
+          "tests": 1,
+          "failures": 1,
+          "errors": 0,
+          "normal_catalog": true,
+          "expected_assertion": "PERFORMANCE_INVALID_OR_INCOMPLETE_WORK_MUST_NOT_BE_REPORTED_AS_VALID_MEASUREMENT",
+          "log_sha256": "3bd2fd01240c1cab5f4dee5c5de5ffbb1f2ee2681e9f9b434eaa469023a0ed5f",
+          "fault_artifact": "r3-performance-tests/red-proof/failed-snapshot.json",
+          "fault_artifact_sha256": "45dbc593701535a6ce6203e29d3759056e6c03053e229fb40ba8d601ece95d9c",
+          "fault_description": "procedure masks actually rejected work as valid benchmark success",
+          "injected_control": "failed-snapshot",
+          "fault_injected": true,
+          "rejected_exception_type": "OrchestrationError"
+        },
+        {
+          "case": "query",
+          "nodeid": "tests/hexagonal/test_telemetry_measurements.py::test_independent_oracle_rejects_false_success_reports[query]",
+          "tests": 1,
+          "failures": 1,
+          "errors": 0,
+          "normal_catalog": true,
+          "expected_assertion": "PERFORMANCE_INDEPENDENT_ORACLE_MUST_REJECT_FALSE_SUCCESS_REPORTS",
+          "log_sha256": "a7432e825eea010b330df7f4b0fb6f336e40df39d82e3d27be1b202f22f943a8",
+          "fault_artifact": "r3-performance-tests/red-proof/query.json",
+          "fault_artifact_sha256": "6373fb10d90ece5c9e031b717d96a41dae9f7205675c6ff70d85c1114a30ce9c",
+          "fault_description": "one targeted reported-result check omitted from independent oracle",
+          "omitted_property_assertion": "PERFORMANCE_QUERY_MUST_COMPLETE_THE_DECLARED_NONEMPTY_EVENT_POPULATION",
+          "remaining_check": "result[\"event_count\"] == 4"
+        },
+        {
+          "case": "digest",
+          "nodeid": "tests/hexagonal/test_telemetry_measurements.py::test_independent_oracle_rejects_false_success_reports[digest]",
+          "tests": 1,
+          "failures": 1,
+          "errors": 0,
+          "normal_catalog": true,
+          "expected_assertion": "PERFORMANCE_INDEPENDENT_ORACLE_MUST_REJECT_FALSE_SUCCESS_REPORTS",
+          "log_sha256": "1837236a65b00ccfe38be52d55faa3e42f6b756aeffe93f3aeffb46dce2f24fa",
+          "fault_artifact": "r3-performance-tests/red-proof/digest.json",
+          "fault_artifact_sha256": "60d566d45e6332e007dae23fe2635e2d027992ca6497c7441a10323e7b3c6ec9",
+          "fault_description": "one targeted reported-result check omitted from independent oracle",
+          "omitted_property_assertion": "PERFORMANCE_PAYLOAD_MUST_MATCH_INDEPENDENT_ORIGINAL_ARGUMENTS_AND_RESULT",
+          "remaining_check": "result[\"event_id\"] == validation[\"payload_event_id\"] and result[\"size_bytes\"] == len(payload_bytes)"
+        },
+        {
+          "case": "population",
+          "nodeid": "tests/hexagonal/test_telemetry_measurements.py::test_independent_oracle_rejects_false_success_reports[population]",
+          "tests": 1,
+          "failures": 1,
+          "errors": 0,
+          "normal_catalog": true,
+          "expected_assertion": "PERFORMANCE_INDEPENDENT_ORACLE_MUST_REJECT_FALSE_SUCCESS_REPORTS",
+          "log_sha256": "29306b9dcad6d588fa0d80af2cd1258e62a498e0b4f55cbc87147e4ab3234158",
+          "fault_artifact": "r3-performance-tests/red-proof/population.json",
+          "fault_artifact_sha256": "c74e85b6f64923df53b05e55dcdd517fb24eef88f358b13ff8699f0621cf4f29",
+          "fault_description": "one targeted reported-result check omitted from independent oracle",
+          "omitted_property_assertion": "PERFORMANCE_OPERATION_POPULATION_MUST_COUNT_ACTUAL_SUCCESSFUL_API_CALLS",
+          "remaining_check": "len(actual) > 0"
+        }
+      ]
+    },
+    "static_after_guard": {
+      "artifact": "r3-performance-guard-static/20261108T065312Z-b3ccd21a3f29/report.json",
+      "sha256": "1b87886bd23d3d3f1fdb101d9ce5207ad6b987549ef720e85ed297dab4c1b57f",
+      "candidate_recorded_commit": "59aaefae2591f43d9efbd2f1bc342c6d49dfaa8b",
+      "candidate_integrity": {
+        "actual": "9691b14a9e59293ca7f634e5ccd661578684e26839735cbd447a08a364392648",
+        "changed_paths": [],
+        "deleted": [],
+        "expected": "9691b14a9e59293ca7f634e5ccd661578684e26839735cbd447a08a364392648",
+        "passed": true
+      },
+      "status": "passed",
+      "final_procedure_and_test_hashes_match_static_candidate": true,
+      "checks": [
+        {
+          "name": "ruff",
+          "status": "passed",
+          "exit_status": 0,
+          "validation": "complete",
+          "input_integrity": {
+            "after": "13a2f391cd21973cef438d990f2341be4fc3169333f27ffd5b5d6d78710e390a",
+            "before": "13a2f391cd21973cef438d990f2341be4fc3169333f27ffd5b5d6d78710e390a",
+            "passed": true
+          },
+          "findings": 0,
+          "tool_report_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "name": "syntax",
+          "status": "passed",
+          "exit_status": 0,
+          "validation": "complete",
+          "input_integrity": {
+            "after": "06d30100b905b2fab1df69d35ede14b3d4dd694ad856798d009ce8f6e1652806",
+            "before": "06d30100b905b2fab1df69d35ede14b3d4dd694ad856798d009ce8f6e1652806",
+            "passed": true
+          },
+          "findings": 0,
+          "tool_report_sha256": "9326bb92224d42ebd9f1733cfee578e37ce8aadbd7fbeea42d566e132a4a369f"
+        },
+        {
+          "name": "architecture",
+          "status": "passed",
+          "exit_status": 0,
+          "validation": "complete",
+          "input_integrity": {
+            "after": "9404f5bbd8251583e1edf91ece37bae6fb6e159ca96e5a792914510035f952d3",
+            "before": "9404f5bbd8251583e1edf91ece37bae6fb6e159ca96e5a792914510035f952d3",
+            "passed": true
+          },
+          "findings": 0,
+          "tool_report_sha256": "6cb548c9b19aa8551c71601f16196ccb3bf121dcf7e710043f70ceddf281dd7c"
+        }
+      ],
+      "reuse_boundary": "Final committed procedure and test bytes match this static snapshot; later changes are documentation/receipt only."
+    },
+    "final_independent_test_author": {
+      "artifact": "r3-performance-tests/final-red-green-receipt.json",
+      "sha256": "04c53991f2a600378a0f6e6f42a60470c4475ecce7b34091f27f97b82d050d3a",
+      "content": {
+        "test_commit": "63e47bc5563a8d3a160f72cc77d8527aac510a49",
+        "tree": "3f6ec6a12640e622abb9ac0ae00bb5668522fdd7",
+        "procedure_commit": "59aaefae2591f43d9efbd2f1bc342c6d49dfaa8b",
+        "test_sha256": {
+          "tests/hexagonal/contracts/telemetry_measurements.py": "2bae5b7668644c68972e02488f65199a201d023ebc037f7dd20a6a9df120b0d9",
+          "tests/hexagonal/support/telemetry_measurements.py": "b65f0a16def629402938c83b78e9811cc98d831c26fd1657cade847ad05a05ac",
+          "tests/hexagonal/test_telemetry_measurements.py": "f6669c0beb5c4c91fab7f474ce4eb6a6149756cb80d0ce97979f2711a4396e15"
+        },
+        "procedure_sha256": "29458bcbe079bda2f7a00d5caddf84f0c4c85152e9f48199d1c966d3cc098f12",
+        "same_final_test_contract_original_baseline": {
+          "tests": 1,
+          "failures": 1,
+          "errors": 0,
+          "seconds": 9.78,
+          "source_commit": "2e659a3798e5e633dd493391f940bdfa916f7932",
+          "upstream_active_source": "f270e29b9263e1c44ba7c182a21abdd74e5c3ba9",
+          "source_tree": "8de7c885703e7cb8a7045919b8e601a28489b6ef",
+          "production_source_unchanged_output_observed": true,
+          "all_three_test_files_byte_identical_to_final": true,
+          "assertion": "PERFORMANCE_REPORT_MUST_MEASURE_ACTUAL_PUBLIC_READ_OPERATIONS",
+          "selection_note": "Explicit isolated subset because original baseline has no catalog entry for the later module.",
+          "command": "PYTHONPATH=/workspace/scratch/7c8bb4d2a697/donor-cce PYTHONPYCACHEPREFIX=/workspace/scratch/7c8bb4d2a697/evidence/pycache-r3-performance-tests /workspace/scratch/913f839fa00b/inspection-venv/bin/python -m pytest --noconftest -p no:cacheprovider tests/hexagonal/test_telemetry_measurements.py::test_public_measurements_complete_declared_work_and_exact_evidence -q --junitxml=/workspace/scratch/7c8bb4d2a697/evidence/r3-performance-tests/same-final-contract-baseline-red.xml",
+          "raw_report_note": "The fresh temporary raw replay JSON was cleaned by pytest; retained stdout/traceback and JUnit are the replay proof. The earlier original-source raw legacy report is retained separately, without an identical-test-byte claim for that earlier checkpoint."
+        },
+        "seven_case_red_matrix": {
+          "path": "/workspace/scratch/7c8bb4d2a697/evidence/r3-performance-tests/red-proof/matrix.json",
+          "sha256": "44aac7c3db1320874c54efa426340a2a8f445bf9b6f69f3172f5f9a414a7d75a",
+          "cases": 7,
+          "tests_failed_at_intended_assertion": 7,
+          "errors": 0,
+          "normal_catalog": true
+        },
+        "matrix_meaning": "Each exact original collectedcase fails its intendedassertion under one narrow runtime-only fault. Three actualinvalidwork rejection exceptions are wrongly labeled valid by a planted procedurefault; three oracle self-tests detect omission of only targetIDs/digest/population check. No candidatefiles edited for these faults.",
+        "output_guard_red": {
+          "tests": 2,
+          "failures": 2,
+          "errors": 0,
+          "seconds": 0.28,
+          "procedure_before_fix": "88eecc2ee0a10394cdd5cd6fd950c78fc98d7f77",
+          "scope": "Direct insideROOT pyproject and outside symlink resolvinginside; actualmain reaches identitysentinel under oldguard; no workload/write."
+        },
+        "final_green": {
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "seconds": 10.5,
+          "normal_catalog": true,
+          "command": "PYTHONPATH=/workspace/scratch/7c8bb4d2a697/donor-cce PYTHONPYCACHEPREFIX=/workspace/scratch/7c8bb4d2a697/evidence/pycache-r3-performance-tests /workspace/scratch/913f839fa00b/inspection-venv/bin/python -m pytest -p no:cacheprovider tests/hexagonal/test_telemetry_measurements.py -q --test-inventory=/workspace/scratch/7c8bb4d2a697/evidence/r3-performance-tests/final-green-inventory.json --junitxml=/workspace/scratch/7c8bb4d2a697/evidence/r3-performance-tests/final-green.xml"
+        },
+        "evidence": {
+          "same-final-contract-baseline-red.log": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/r3-performance-tests/same-final-contract-baseline-red.log",
+            "sha256": "ea513cd118fdae8602140bba9c94d983f240982e37e697b845614e70ba014772"
+          },
+          "same-final-contract-baseline-red.xml": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/r3-performance-tests/same-final-contract-baseline-red.xml",
+            "sha256": "abb539445d90a78bd57a7fce9a85debc086715dbfecca677f74cd65be79e9501"
+          },
+          "output-guard-red.log": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/r3-performance-tests/output-guard-red.log",
+            "sha256": "608a8907682e4ce5543f4092939711e759bcdbf2f15906fd58290e8689857e66"
+          },
+          "output-guard-red.xml": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/r3-performance-tests/output-guard-red.xml",
+            "sha256": "3de30ce61f5403b79afb58978f2738a1be9c8f47749b8c314b50c53d5da3c067"
+          },
+          "output-guard-red-inventory.json": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/r3-performance-tests/output-guard-red-inventory.json",
+            "sha256": "ace7989f68178da474bf96d4dd27da0c34b3d4ae7b566458227597dff356daff"
+          },
+          "final-green.log": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/r3-performance-tests/final-green.log",
+            "sha256": "1bf507faf1609617aa57e4ab817c75d779ddfce5cb0c24b111d47b00427ffb02"
+          },
+          "final-green.xml": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/r3-performance-tests/final-green.xml",
+            "sha256": "879faf81e5e068dbcd9a353ac8381c9b8129e17e1ca4244ac93aedbf007b0e01"
+          },
+          "final-green-inventory.json": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/r3-performance-tests/final-green-inventory.json",
+            "sha256": "3a3db259d23dfb68b87e24d82c3458d82e0ddafcae2596d926b5481ba7110f59"
+          }
+        },
+        "qualification": "No full109second recalibration. Original finite capture-only baseline repeated once for identical finaltestbytes; finite injected-fault matrix and final tiny correctness suite only. Guard-only procedure change is separate from the historical measured run."
+      }
+    },
+    "static_before_guard": {
+      "artifact": "r3-performance-static/20261108T063635Z-0a4694060805/report.json",
+      "sha256": "16b2118f01cf9bd5c7e6c58c001ba5b2264245dc8d7a90846d2bd1d79a59c28b",
+      "status": "passed",
+      "note": "Historical pre-guard checkpoint; final effective input integrity is retained in static_after_guard."
+    }
+  },
+  "artifact_availability": "Repository artifacts are retained with this change. External artifact names and SHA256 values identify the local validation receipts without implying their workspace paths are portable or hosted CI results.",
+  "validation_summary": {
+    "initial_baseline_red": {
+      "tests": 1,
+      "failures": 1,
+      "errors": 0,
+      "deselected": 6,
+      "seconds": 11.79,
+      "scope": "Actual original finite capture report lacked all five new public-operation populations; final-byte binding is provided by the later replay."
+    },
+    "same_final_test_baseline_red": {
+      "tests": 1,
+      "failures": 1,
+      "errors": 0,
+      "seconds": 9.78,
+      "source_commit": "2e659a3798e5e633dd493391f940bdfa916f7932",
+      "upstream_active_source": "f270e29b9263e1c44ba7c182a21abdd74e5c3ba9",
+      "all_three_test_files_byte_identical_to_final": true,
+      "assertion": "PERFORMANCE_REPORT_MUST_MEASURE_ACTUAL_PUBLIC_READ_OPERATIONS"
+    },
+    "final_case_fault_red_matrix": {
+      "cases": 7,
+      "intended_assertion_failures": 7,
+      "errors": 0,
+      "mechanism": "Each exact original collectedcase fails its intendedassertion under one narrow runtime-only fault. Three actualinvalidwork rejection exceptions are wrongly labeled valid by a planted procedurefault; three oracle self-tests detect omission of only targetIDs/digest/population check. No candidatefiles edited for these faults."
+    },
+    "output_guard_red": {
+      "tests": 2,
+      "failures": 2,
+      "errors": 0,
+      "seconds": 0.28,
+      "procedure_before_fix": "88eecc2ee0a10394cdd5cd6fd950c78fc98d7f77",
+      "scope": "Direct insideROOT pyproject and outside symlink resolvinginside; actualmain reaches identitysentinel under oldguard; no workload/write."
+    },
+    "final_green": {
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "seconds": 10.5,
+      "normal_catalog": true
+    },
+    "shared_static_checks": {
+      "passed": 3,
+      "failures": 0,
+      "current_procedure_and_test_bytes_match_recorded_static_candidate": true
+    },
+    "adversarial_review": {
+      "initial_confirmed_finding": "Selected-checkout output could overwrite measured pyproject.toml after source sealing.",
+      "repair_disposition": "Resolved by rejecting all resolved in-checkout outputs before identity/workload; separately validated and reviewed.",
+      "remaining_confirmed_findings": []
+    }
+  },
+  "final_file_sha256": {
+    "tests/hexagonal/contracts/telemetry_measurements.py": "2bae5b7668644c68972e02488f65199a201d023ebc037f7dd20a6a9df120b0d9",
+    "tests/hexagonal/support/telemetry_measurements.py": "b65f0a16def629402938c83b78e9811cc98d831c26fd1657cade847ad05a05ac",
+    "tests/hexagonal/test_telemetry_measurements.py": "f6669c0beb5c4c91fab7f474ce4eb6a6149756cb80d0ce97979f2711a4396e15",
+    "docs/telemetry-evidence/measure_overhead.py": "29458bcbe079bda2f7a00d5caddf84f0c4c85152e9f48199d1c966d3cc098f12",
+    "docs/telemetry-evidence/calibration-2026-11-08.json": "e6d928db90fec8a3aabca0c8da414a474db25a6c5aee714e233aa21aa409a9eb",
+    "docs/telemetry-measurements.md": "120769acfcff05f51c173fe8a734a88788789a05d93a51ad49bae23b973cf62c"
+  }
+}

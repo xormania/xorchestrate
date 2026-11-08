@@ -88,6 +88,35 @@ class Measurement:
     def completed_calls(self):
         return [row for row in self.calls if "result" in row]
 
+    def probe_inside_output(self, route):
+        selected = self.directory / "selected-source"
+        selected.mkdir()
+        manifest = selected / "pyproject.toml"
+        content = b'[project]\nname = "independent-selected-source"\n'
+        manifest.write_bytes(content)
+        destination = manifest
+        if route == "symlink":
+            alias = self.directory / "outside-output-alias"
+            alias.symlink_to(selected, target_is_directory=True)
+            destination = alias / "pyproject.toml"
+        calls = []
+
+        def forbidden():
+            calls.append("identity")
+            raise RuntimeError("Output guard allowed source sealing to begin")
+
+        rejected = False
+        with patch.object(self.module, "ROOT", selected), \
+                patch.object(self.module, "identity", side_effect=forbidden), \
+                patch.dict(os.environ, {"TELEMETRY_CALIBRATION_OUTPUT": str(destination)}):
+            try:
+                self.module.main()
+            except ValueError:
+                rejected = True
+            except RuntimeError:
+                pass
+        return {"rejected": rejected, "calls": calls, "manifest_unchanged": manifest.read_bytes() == content}
+
     def _corrupt_artifact(self, sink):
         source = sink.snapshot_source()
         rows = read_database(source["database_path"])

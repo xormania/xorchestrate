@@ -5,6 +5,7 @@ import pytest
 from tests.hexagonal.contracts.telemetry_measurements import (
     completed_measurements_contract,
     invalid_work_contract,
+    output_guard_contract,
     report_mutation_contract,
 )
 from tests.hexagonal.support.telemetry_measurements import Measurement
@@ -31,3 +32,8 @@ def test_invalid_public_work_cannot_produce_a_valid_benchmark_success(measuremen
 @pytest.mark.parametrize("mutation", ["query", "digest", "population"])
 def test_independent_oracle_rejects_false_success_reports(measurement, mutation):
     report_mutation_contract(measurement, measurement.run(), mutation)
+
+
+@pytest.mark.parametrize("route", ["direct", "symlink"])
+def test_measurement_output_cannot_replace_selected_source(measurement, route):
+    output_guard_contract(measurement, route)
