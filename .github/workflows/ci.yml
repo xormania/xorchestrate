@@ -4,8 +4,7 @@
     "pull_request": {},
     "push": {
       "branches": [
-        "master",
-        "integration/hexagonal"
+        "master"
       ]
     },
     "workflow_dispatch": {}

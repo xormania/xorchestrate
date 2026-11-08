@@ -345,7 +345,7 @@ python3 devtools/run.py init \
 
 `init` enables managed workspaces, default installed Symfony tools/checks and the
 default sibling `../wt-ag/` worktree directory. Work orders integrate their jobs
-before final delivery into `dev`. Configure the [GitHub rules](../.github/CI.md#github-settings)
+before final delivery into `dev`. Configure the [GitHub rules](../.github/CI.md)
 for both PR destinations before local acceptance. `init` also enables the
 separate Serena image. It does not start models. It refuses to replace an existing
 team. For an existing team, edit its private `team.json`; see

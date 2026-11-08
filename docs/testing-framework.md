@@ -136,7 +136,7 @@ frozen acceptance threshold.
 
 ## Consolidation and completion evidence
 
-This change has the following required outcomes:
+The test-framework consolidation (PR #12) established the following outcomes:
 
 | Outcome | Verification |
 |---|---|
@@ -148,7 +148,7 @@ This change has the following required outcomes:
 | Framework architecture stays enforced | Generic dependency and forbidden-literal controls reject test-to-test imports, support-to-test imports, impure shared contracts and decoder-to-verdict dependencies |
 | Existing live behavior remains observable | Full active suites, 46-case multi-harness run and 11-check tmux scenario retain their original behavioral assertions and cleanup receipts |
 
-The PR binds actual results and CI artifacts to the tested revision. A family
+CI binds actual results and artifacts to the tested revision. A family
 inventory explains what ran; JUnit and raw receipts establish its observed result.
 Passing counts alone do not establish completeness.
 

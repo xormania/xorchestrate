@@ -180,7 +180,7 @@ those verification states explicit in the evidence handoff.
 ## Deterministic verification
 
 ```bash
-python -m pytest tests/hexagonal/test_work_acceptance.py tests/hexagonal/test_work_calibration.py tests/hexagonal/test_boundaries.py -q
+python -m pytest -p no:cacheprovider --test-family work-acceptance --test-family verification --test-family architecture -q
 python tests/hexagonal/calibrate_work_acceptance.py --output .xorchestrate/calibration/UNIQUE_RUN
 ```
 

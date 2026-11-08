@@ -71,10 +71,9 @@ The measured local Git commit was
 Production file hashes before and after calibration are sealed in the raw
 dataset. They were unchanged, as was the local commit/tree identity. Collector
 dependency file hashes were recorded once after the workload; the procedure
-does not claim a separate before/after collector dependency check. The published
-PR commit can have a different Git identity when reconstructed on its actual
-upstream parent; the recorded file hashes identify the measured production
-content.
+does not claim a separate before/after collector dependency check. The merged
+commit can have a different Git identity from the measured local commit; the
+recorded file hashes identify the measured production content.
 
 The collector source pin is
 [`84229bb7497547d2db91d02a4633ccb3867f740b`](https://github.com/xormania/cce/tree/84229bb7497547d2db91d02a4633ccb3867f740b/tools/telemetry).

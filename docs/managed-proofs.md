@@ -284,7 +284,7 @@ renewed qualification rather than attaching a new hash to older evidence.
 | C15 | Reviewable delivery | Matching final identities, exact reproduction commands, external results table, seven-schedule dispositions and checksummed historical source. |
 
 Keep implementation, deterministic verification, local native measurement and
-review states separate. For this delivery, request one Codex review and one Codex
-Security review per PR after its checks are green, resolve their findings, and
-leave merging to xor.
+review states separate. The original delivery (PR #14) requested one Codex review
+and one Codex Security review after its checks were green; reviews are not an
+automatic gate, and merging remains xor's decision.
 
