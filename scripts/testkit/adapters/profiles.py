@@ -18,12 +18,14 @@ from pathlib import Path
 
 from ..model import MODES, SUITES
 from ..stories import select_stories, validate_limits
+from .configuration import local_capture
 from .evidence import write_json
 
 FIELDS = frozenset({"schema_version", "suite", "mode", "drivers", "families", "config", "brief",
                     "timeout", "check_timeout", "run_timeout", "shutdown_grace", "output",
-                    "environment", "interpreter", "stories", "max_sessions", "max_turns", "max_tool_calls"})
+                    "environment", "interpreter", "stories", "max_sessions", "max_turns", "max_tool_calls", "project"})
 PATH_FIELDS = ("config", "brief", "output", "environment", "interpreter")
+PROJECT_TOOLS = {"rust": ("rustc", "cargo"), "python": ("python3",), "php": ("php", "composer")}
 
 
 def _external(path, root, name):
@@ -56,7 +58,7 @@ def load_profile(path, *, root, overrides=None):
         raise ValueError("Unknown profile fields: " + ", ".join(sorted(unknown)))
     values = {"schema_version": 1, "suite": "all", "mode": "protocol-fixture", "drivers": [],
               "families": [], "stories": [], "max_sessions": 2, "max_turns": 4, "max_tool_calls": 5000,
-              "config": None, "brief": str(root / "docs/implementation/owner-brief.md"),
+              "config": None, "project": None, "brief": str(root / "docs/implementation/owner-brief.md"),
               "timeout": 180, "check_timeout": 600, "run_timeout": None, "shutdown_grace": 10,
               "output": "runs", "environment": "environment", "interpreter": None,
               **source, **overrides}
@@ -93,6 +95,14 @@ def load_profile(path, *, root, overrides=None):
         if values[name] is None:
             raise ValueError(f"{name} must be configured")
         _external(values[name], root, name)
+    if values["project"] is not None:
+        project = values["project"]
+        if (not isinstance(project, dict) or project.keys() - {"path", "language", "requires"}
+                or not isinstance(project.get("path"), str) or not project["path"]
+                or project.get("language") not in PROJECT_TOOLS):
+            raise ValueError("project requires a path, rust/python/php language and optional executable requirements")
+        values["project"] = {**project, "path": str((path.parent / Path(project["path"]).expanduser()).resolve()),
+                             "requires": _strings(project.get("requires", PROJECT_TOOLS[project["language"]]), "project.requires")}
     if values["interpreter"] is None:
         values["interpreter"] = str(Path(values["environment"]) / "bin/python")
     _external(values["interpreter"], root, "interpreter")
@@ -109,9 +119,20 @@ def load_profile(path, *, root, overrides=None):
 
 
 def _interpreter_details(interpreter):
-    command = [str(interpreter), "-c", "import importlib.util,json,sys; print(json.dumps({'version':list(sys.version_info[:3]),"
-               "'virtual':sys.prefix != sys.base_prefix,'executable':sys.executable,"
-               "'dependencies':{n:importlib.util.find_spec(n) is not None for n in ('jsonschema','pytest','ruff')}}))"]
+    program = """import importlib.util,json,sqlite3,sys
+dependencies={name:importlib.util.find_spec(name) is not None for name in ('jsonschema','pytest','ruff','agent_telemetry')}
+collector={'status':'unavailable','sqlite_version':sqlite3.sqlite_version}
+if dependencies['agent_telemetry']:
+    try:
+        from agent_telemetry.sqlite import require_sqlite
+        require_sqlite()
+        collector['status']='ready'
+    except Exception as error:
+        collector['reason']=getattr(error,'code','collector_unavailable')
+print(json.dumps({'version':list(sys.version_info[:3]),'virtual':sys.prefix!=sys.base_prefix,
+                  'executable':sys.executable,'dependencies':dependencies,'collector':collector}))
+"""
+    command = [str(interpreter), "-c", program]
     result = subprocess.run(command, capture_output=True, text=True, timeout=15, check=True)
     details = json.loads(result.stdout)
     if details.get("version", []) < [3, 12]:
@@ -119,7 +140,7 @@ def _interpreter_details(interpreter):
     return details
 
 
-def setup(profile_path, *, root, install=True):
+def setup(profile_path, *, root, install=True, overrides=None):
     """Create once, preserve existing settings, and install only when requested."""
     root, profile_path = Path(root).resolve(), Path(profile_path).expanduser().resolve()
     _external(profile_path, root, "profile")
@@ -127,10 +148,10 @@ def setup(profile_path, *, root, install=True):
     with (profile_path.parent / (profile_path.name + ".setup.lock")).open("a+b") as lock:
         os.chmod(lock.name, 0o600)
         fcntl.flock(lock, fcntl.LOCK_EX)
-        return _setup(profile_path, root=root, install=install)
+        return _setup(profile_path, root=root, install=install, overrides=overrides)
 
 
-def _setup(profile_path, *, root, install):
+def _setup(profile_path, *, root, install, overrides=None):
     created = False
     if not profile_path.exists():
         defaults = {"schema_version": 1, "mode": "protocol-fixture", "suite": "all",
@@ -145,6 +166,12 @@ def _setup(profile_path, *, root, install):
             json.dump(defaults, stream, indent=2)
             stream.write("\n")
         created = True
+    if overrides:
+        # Explicit operator selections may update the reusable profile. The
+        # application's native config and authentication remain untouched.
+        load_profile(profile_path, root=root, overrides=overrides)
+        source = json.loads(profile_path.read_text(encoding="utf-8"))
+        write_json(profile_path, {**source, **overrides})
     profile = load_profile(profile_path, root=root)
     workspace = _external(profile_path.parent / "workspace", root, "workspace")
     workspace.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -152,7 +179,11 @@ def _setup(profile_path, *, root, install):
     if not native_config.exists():
         template = json.loads((root / "scripts/verification/native-config.example.json").read_text(encoding="utf-8"))
         for specification in template.get("sessions", {}).values():
-            specification.setdefault("options", {})["cwd"] = str(workspace)
+            specification.setdefault("options", {})["cwd"] = profile["project"]["path"] if profile.get("project") else str(workspace)
+        # Storage is allocated in each managed run, rather than binding every
+        # future run to a shared external corpus in this reusable template.
+        template["telemetry"] = {"adapter": "local", "options": {
+            "project_id": local_capture(profile_path.parent, project=workspace)["options"]["project_id"]}}
         write_json(native_config, template)
     environment = Path(profile["environment"])
     interpreter = Path(profile["interpreter"])
@@ -169,7 +200,12 @@ def _setup(profile_path, *, root, install):
     if install:
         if not details["virtual"]:
             raise ValueError("Refusing dependency installation into a global interpreter; configure a virtual environment")
-        command = [str(interpreter), "-m", "pip", "install", "-e", str(root) + "[test]",
+        source = json.loads(profile_path.read_text(encoding="utf-8"))
+        chosen = (profile_path.parent / Path(source.get("config") or "native.json").expanduser()).resolve()
+        native = json.loads(chosen.read_text(encoding="utf-8"))
+        capture = native.get("telemetry")
+        extras = "test,telemetry" if capture is None or capture.get("enabled", True) and capture.get("adapter") == "local" else "test"
+        command = [str(interpreter), "-m", "pip", "install", "-e", str(root) + "[" + extras + "]",
                    "-r", str(root / ".github/requirements-ci.txt")]
         subprocess.run(command, check=True, timeout=600)
         receipts.append(command)
@@ -195,15 +231,37 @@ def doctor(profile_path, *, root, overrides=None):
             required_dependencies.add("ruff")
         if profile["suite"] in {"all", "checks", "tests"}:
             required_dependencies.add("pytest")
-        for name, available in details["dependencies"].items():
+        if profile["mode"] == "native" and profile.get("config"):
+            configuration = json.loads(Path(profile["config"]).read_text(encoding="utf-8"))
+            capture = configuration.get("telemetry")
+            if capture is None or capture.get("enabled", True) and capture.get("adapter") == "local":
+                required_dependencies.add("agent_telemetry")
+        for name in sorted(set(details["dependencies"]) | required_dependencies):
+            if name == "agent_telemetry" and name not in required_dependencies:
+                continue
+            available = details["dependencies"].get(name, False)
             observations.append({"name": name, "passed": available, "required": name in required_dependencies,
                                  "observation_interpreter": interpreter})
+        if "agent_telemetry" in required_dependencies and details["dependencies"].get("agent_telemetry"):
+            collector = details.get("collector", {})
+            observations.append({"name": "telemetry_sqlite", "passed": collector.get("status") == "ready", "required": True,
+                "version": collector.get("sqlite_version"), "reason": collector.get("reason"),
+                "needed": "Select a Python runtime with the CCE-required SQLite WAL fix (for example uv Python 3.12.16); rerun setup and doctor.",
+                "observation_interpreter": interpreter})
     except (OSError, ValueError, subprocess.SubprocessError) as error:
         observations.append({"name": "interpreter", "passed": False, "path": interpreter,
                              "reason": str(error)})
     if profile["suite"] in {"acceptance", "stories", "all"}:
         observations.append({"name": "tmux", "passed": shutil.which("tmux") is not None,
                              "path": shutil.which("tmux")})
+    project = profile.get("project")
+    if project is not None:
+        observations.append({"name": "project", "passed": Path(project["path"]).is_dir(),
+                             "path": project["path"], "language": project["language"]})
+        for executable in project["requires"]:
+            resolved = shutil.which(executable) if "/" not in executable else str(Path(project["path"]) / executable)
+            observations.append({"name": "project:" + executable, "passed": bool(resolved) and Path(resolved).is_file()
+                                 and os.access(resolved, os.X_OK), "path": resolved, "language": project["language"]})
     return {"status": "passed" if all(item["passed"] for item in observations if item.get("required", True)) else "setup_error",
             "profile": profile, "readiness": observations, "authentication": "not probed"}
 
@@ -235,7 +293,7 @@ def bootstrap(argv=None, *, root=None):
         interpreter = profile["interpreter"]
         if action == "doctor" and not Path(interpreter).is_file():
             interpreter = None
-    elif action in {"status", "watch", "attach", "wait", "stop", "close", "collect"}:
+    elif action in {"status", "watch", "attach", "wait", "stop", "close", "collect", "verify"}:
         source_run = next((argument for argument in argv[1:] if not argument.startswith("-")), None)
     if interpreter is None and source_run is not None:
         saved = json.loads((Path(source_run).expanduser().resolve() / "plan.json").read_text(encoding="utf-8"))

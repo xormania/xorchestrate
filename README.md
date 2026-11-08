@@ -33,6 +33,8 @@ For reusable local setup, managed terminals, cancellation, evidence collection
 and fresh repetition, use the [managed proof workflow](docs/managed-proofs.md)
 through `scripts/proof.sh`. Native proofs run locally with your configured,
 authenticated harnesses; deterministic protocol results remain separate.
+The [local live telemetry guide](docs/local-live-telemetry.md) gives one-command
+Rust/Python/PHP profile setup, attended tmux controls and postrun verification.
 
 Tmux is the terminal automation layer for local story verification. List the
 [selectable stories](docs/local-stories.md) with `./scripts/proof.sh stories`,

@@ -1,6 +1,9 @@
 target-version = "py312"
 line-length = 120
 
+[lint.isort]
+known-first-party = ["xorchestrate"]
+
 [lint]
 select = ["E4", "E7", "E9", "F", "I"]
 # Reviewed security checks; keep policy explicit when the pinned Ruff changes.

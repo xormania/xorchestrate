@@ -16,7 +16,7 @@ from .composition import MODES, ROOT, SUITES
 from .operator import FINISHED
 from .stories import STORIES, select_stories, validate_limits
 
-ACTIONS = ("setup", "doctor", "run", "start", "list", "status", "watch", "attach", "wait", "stop", "close", "collect", "stories", "plan")
+ACTIONS = ("setup", "doctor", "run", "start", "list", "status", "watch", "attach", "wait", "stop", "close", "collect", "verify", "stories", "plan")
 
 
 def parser():
@@ -24,6 +24,8 @@ def parser():
     value.add_argument("action", choices=ACTIONS)
     value.add_argument("directory", nargs="?", type=Path, help="Explicit managed run directory")
     value.add_argument("--profile", type=Path)
+    value.add_argument("--project", type=Path, help="Project workspace used by the selected native drivers")
+    value.add_argument("--language", choices=tuple(profiles.PROJECT_TOOLS), help="Selected project prerequisite defaults")
     value.add_argument("--from", dest="source", type=Path, help="Start fresh from saved plan/input snapshots")
     value.add_argument("--suite", choices=SUITES)
     value.add_argument("--mode", choices=MODES)
@@ -58,6 +60,10 @@ def overrides(args):
         result["families"] = args.family
     if args.story is not None:
         result["stories"] = args.story
+    if args.project is not None or args.language is not None:
+        if args.project is None or args.language is None:
+            raise ValueError("Select --project and --language together")
+        result["project"] = {"path": str(args.project.expanduser().resolve()), "language": args.language}
     return result
 
 
@@ -184,7 +190,7 @@ def main(argv=None, *, direct_runner, preflight):
             result = {"status": "passed", "stories": [
                 {"id": s.id, "version": s.version, "modes": list(s.modes), "description": s.description}
                 for s in STORIES]}
-        elif args.action in {"status", "watch", "attach", "wait", "stop", "close", "collect"}:
+        elif args.action in {"status", "watch", "attach", "wait", "stop", "close", "collect", "verify"}:
             if args.directory is None:
                 raise ValueError("This command requires the explicit run directory printed by start")
             if args.profile or args.source or overrides(args):
@@ -197,14 +203,18 @@ def main(argv=None, *, direct_runner, preflight):
                 result = watch(args.directory)
             elif args.action == "attach":
                 result = attach(args.directory, args.target)
+            elif args.action == "verify":
+                from .adapters.native_evidence import verify_run
+
+                result = verify_run(args.directory)
             else:
                 result = managed.control(args.directory, args.action)
         elif args.action == "setup":
             if not args.profile:
                 raise ValueError("setup requires --profile PATH")
-            if args.directory or overrides(args):
-                raise ValueError("setup takes only the reusable profile path")
-            result = profiles.setup(args.profile, root=ROOT)
+            if args.directory:
+                raise ValueError("setup takes a reusable profile path and explicit selections")
+            result = profiles.setup(args.profile, root=ROOT, overrides=overrides(args))
         elif args.action == "list":
             if not args.profile:
                 raise ValueError("list requires --profile PATH")
@@ -261,6 +271,8 @@ def main(argv=None, *, direct_runner, preflight):
             print(json.dumps(result), flush=True)
         if args.action == "wait":
             return 0 if result.get("outcome") == "passed" else 1
+        if args.action == "verify":
+            return 0 if result.get("status") in {"verified", "disabled", "not_applicable"} else 1
         if args.action in {"run", "doctor", "setup"}:
             return 0 if result.get("status") == "passed" else 1
         return 0

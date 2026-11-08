@@ -65,7 +65,7 @@ def protocol_config(root, state):
 def prepare_config(config, base, directory, mode, fixture=FIXTURE, candidate_root=ROOT):
     if mode == "protocol-fixture" and not config:
         config = protocol_config(candidate_root, directory / "peer-state")
-    config = isolated_config(config, base, directory)
+    config = isolated_config(config, base, directory, capture=mode == "native")
     if mode == "fixture":
         config["sessions"] = {peer: {"adapter": "scripts.verification.fixture:SyntheticSessionDriver",
             "options": {"peer": peer, "application_tools": True}} for peer in PEERS}

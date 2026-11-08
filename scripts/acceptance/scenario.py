@@ -223,7 +223,7 @@ def native_config(source, directory, driver):
     selected = config.get("sessions", {}).get(driver)
     require(isinstance(selected, dict) and selected.get("enabled", True) is True, "native_driver_unavailable")
     require(selected.get("options", {}).get("application_tools") is True, "native_application_tools_required")
-    return isolated_config(config, base, directory)
+    return isolated_config(config, base, directory, capture=True)
 
 
 def callback_receipt(scenario, client, driver, work_id, actor, nonce):

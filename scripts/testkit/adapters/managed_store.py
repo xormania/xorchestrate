@@ -291,7 +291,7 @@ class ManagedStore:
             write_json(manifest_path, manifest)
         return manifest
 
-    def collect(self, generation=None):
+    def collect(self, generation=None, *, supplemental=None):
         """Export one committed generation without holding a lock during ZIP work."""
         with self._lock():
             current = self.read_state()
@@ -331,6 +331,14 @@ class ManagedStore:
                    "status": "partial" if any(item["status"] != "included" for item in inventory) else "completed",
                    "inventory": inventory, "native_diagnostics": "not captured; mutable/raw artifacts remain private",
                    "redaction": "sensitive keys/known assignment syntax filtered; sensitive prose may remain"}
+        if supplemental is not None:
+            supplement = supplemental(self.directory, output)
+            metadata = supplement.get("metadata", {})
+            if not isinstance(metadata, dict) or set(metadata) & set(receipt):
+                raise ValueError("Collection supplement cannot replace the managed receipt")
+            receipt.update(metadata)
+            if supplement.get("status") == "partial":
+                receipt["status"] = "partial"
         safe_plan = {key: plan[key] for key in ("schema_version", "suite", "mode", "driver", "drivers", "families",
                                                "timeout", "check_timeout", "run_timeout") if key in plan}
         payloads["state.json"] = json.dumps(_redact(state), indent=2, sort_keys=True).encode() + b"\n"

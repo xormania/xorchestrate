@@ -18,6 +18,7 @@ from .adapters.configuration import isolated_config
 from .adapters.evidence import candidate_identity, digest, now, write_json
 from .adapters.managed_process import ManagedWorker, observed_alive
 from .adapters.managed_store import ManagedStore, owner_alive
+from .adapters.native_evidence import collection_supplement
 from .adapters.tmux import subreaper
 from .composition import ROOT, preflight, run
 from .composition import plan as check_plan
@@ -54,6 +55,7 @@ def execution_options(plan):
 def prepare_run(settings, *, parent=None):
     """Freeze reusable inputs before launching; fresh effects always get fresh IDs."""
     settings = dict(settings)
+    config_source_base = settings.pop("config_source_base", None)
     validate_limits(settings)
     root = Path(settings.get("root", ROOT)).resolve()
     output = Path(settings["output"]).expanduser().resolve()
@@ -88,16 +90,18 @@ def prepare_run(settings, *, parent=None):
         except OSError as error:
             # Unavailable check inputs remain check-scoped readiness failures.
             snapshot_errors[name] = type(error).__name__
+    if "config" in snapshots and config_source_base is not None:
+        snapshots["config"]["source_base"] = config_source_base
     if snapshots:
         write_json(directory / "inputs" / "manifest.json", snapshots)
     if "brief" in snapshots:
         settings["brief"] = snapshots["brief"]["path"]
     if "config" in snapshots:
-        source = Path(settings["config"])
         settings["config"] = snapshots["config"]["path"]
         try:
             configuration = read_json(snapshots["config"]["path"])
-            resolved = isolated_config(configuration, source.parent, directory / "derived")
+            resolved = isolated_config(configuration, snapshots["config"]["source_base"], directory / "derived", capture=settings.get("mode") == "native",
+                                       project=settings.get("project"))
             target = directory / "inputs" / "native-effective.json"
             write_json(target, resolved)
             settings["config"] = str(target)
@@ -166,7 +170,7 @@ def control(directory, action):
         return {"status": "already_finished", "outcome": state.get("outcome", "failed")}
     if not owner_alive(state.get("owner")):
         if action == "collect":
-            return store.collect()
+            return store.collect(supplemental=collection_supplement)
         if action == "close" and state.get("phase") in FINISHED:
             if observed_alive(state.get("terminal", {}).get("server")):
                 raise RuntimeError("Supervisor is gone; retained terminal cleanup is unverified")
@@ -266,7 +270,7 @@ def supervise(directory):
                         else:
                             store.complete_request(identifier, {"status": "error", "diagnostic": "Run is still active"})
                     else:
-                        futures[identifier] = exports.submit(store.collect)
+                        futures[identifier] = exports.submit(store.collect, supplemental=collection_supplement)
                 if reason and not finalized:
                     changes = decide(state, "stop", reason=reason)
                     if changes:
@@ -311,7 +315,7 @@ def supervise(directory):
                         store.publish({"artifacts": store.bind_artifacts(files), "report": str(path),
                                        "completed_at": now()})
                         try:
-                            collection = store.collect()
+                            collection = store.collect(supplemental=collection_supplement)
                         except Exception as error:
                             collection = {"status": "error", "diagnostic": str(error)}
                         final_state = store.publish(decide(store.read_state(), "finalized", collection=collection))
@@ -346,9 +350,16 @@ def supervise(directory):
 
 def repeat_settings(directory, overrides):
     prior = read_json(Path(directory) / "plan.json")
-    allowed = (*RUN_FIELDS, "output", "shutdown_grace", "run_timeout")
+    allowed = (*RUN_FIELDS, "output", "shutdown_grace", "run_timeout", "project")
     settings = {name: prior[name] for name in allowed if name in prior}
     settings.update(overrides)
+    if "config" not in overrides:
+        snapshot = prior.get("input_snapshots", {}).get("config")
+        if snapshot:
+            saved = Path(snapshot["path"])
+            if digest(saved.read_bytes()) != snapshot["sha256"]:
+                raise ValueError("Saved configuration snapshot differs from its recorded input")
+            settings.update(config=str(saved), config_source_base=snapshot["source_base"])
     settings.update(root=str(ROOT), interpreter=sys.executable)
     return settings
 
