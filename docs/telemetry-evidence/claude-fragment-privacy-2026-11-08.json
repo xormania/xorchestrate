@@ -1,0 +1,151 @@
+{
+  "baseline": "xormania/xorchestrate@f270e29b9263e1c44ba7c182a21abdd74e5c3ba9",
+  "scope": "Unclassifiable Claude transcript fragments; overlapping checkpoints are not additive.",
+  "reports": {
+    "independent_tests": {
+      "receipt": "capture/r3-privacy-test-author-receipt.json",
+      "sha256": "20fd9a4d567a43f4f2d90727093a1a2d1dde797c07d71562a8c9e70dc7e44359",
+      "content": {
+        "agent": "/root/capture_tests",
+        "baseline_result": "7 failed,1 passed,16 deselected,0 errors in4.91s",
+        "candidate_clean": true,
+        "candidate_commit": "b75fc07f8b655b3e44f4bc2fec8fcd0629f0fa0a",
+        "candidate_result": "24 passed in12.25s",
+        "candidate_tree": "ae989abfa20ee6a349ffd50c8b5b4486901d04d2",
+        "file_sha256": {
+          "tests/hexagonal/contracts/producer_capture.py": "f2100c70c12adb064a59902c57cf2fbee83da656c1b121233c1330e4cdd294d9",
+          "tests/hexagonal/support/transcript_privacy.py": "3614f11dab9ef2cc99e2a04c82df541e5bf5bdb4e69389b1fee785ae51dd2884",
+          "tests/hexagonal/test_transcript_producer_capture.py": "3b365206d0a4414a5bbba7802290f62089a6e20b00cebdc4c089345bbf7cdd5c",
+          "xorchestrate/adapters/claude.py": "5f28cb6f8c8659a27d4ee30704954084c7eeb0ef5ab8bfedede749c2f96060bc"
+        },
+        "green_command": "PYTHONPATH=/workspace/scratch/7c8bb4d2a697/r3-privacy:/workspace/scratch/7c8bb4d2a697/donor-cce PYTHONPYCACHEPREFIX=/workspace/scratch/7c8bb4d2a697/evidence/capture/r3-privacy-pycache /workspace/scratch/913f839fa00b/inspection-venv/bin/python -m pytest -q tests/hexagonal/test_transcript_producer_capture.py",
+        "green_log": "r3-privacy-transcript-green.log",
+        "local_exact_baseline": "2e659a3798e5e633dd493391f940bdfa916f7932",
+        "policy_checkpoint": {
+          "accepted_policy": "Unclassifiable partial/malformed records are explicit non-reversible gaps regardless current application catalog; resumed historical replies may be unattributed.",
+          "initial_log": "r3-privacy-initial-red.log",
+          "legacy_control": "Raw unbound ordinary partial source was retained at baseline; initial provisional control passed.",
+          "replacement_controls": "Unbound historical private tool-result fragment fails on baseline; complete ordinary opaque source remains exact after classification."
+        },
+        "production_edits": false,
+        "red_candidate_test_bytes_identical": true,
+        "red_command": "PYTHONPATH=/workspace/scratch/7c8bb4d2a697/r3-privacy-red:/workspace/scratch/7c8bb4d2a697/donor-cce PYTHONPYCACHEPREFIX=/workspace/scratch/7c8bb4d2a697/evidence/capture/r3-privacy-red-pycache /workspace/scratch/913f839fa00b/inspection-venv/bin/python -m pytest -q tests/hexagonal/test_transcript_producer_capture.py -k \"partial_application_result or partial_unattributed_result or read_bound_application_result or frame_bound_application_result or malformed_application_enabled or unbound_partial_historical or complete_ordinary_source or completed_suppression_leaves\"",
+        "red_log": "r3-privacy-final-tests-red.log",
+        "red_source_unchanged": true,
+        "remote_baseline": "xormania/xorchestrate@f270e29",
+        "role": "independent privacy test author",
+        "ruff": "3 changedtest/contract/support modules pass",
+        "scope": [
+          "partial application reply never retained before classification",
+          "partial unattributed reply never retained before classification",
+          "read-bound and frame-bound prefixes carry only explicit byte ranges and parser gap",
+          "malformed complete record becomes an acknowledged positioned gap",
+          "incomplete records do not advance committed cursor",
+          "unbound historical private reply withheld despite current catalog absence",
+          "actual Claude driver/local collector/artifacts/public event and exact payload reads retain no older fragment after LF completes and suppresses result",
+          "complete ordinary opaque source and known non-application builtin output remain rich exact content"
+        ],
+        "test_commit": "0193e8159df5ee7496e68dc8a1feee885d6119cb"
+      }
+    },
+    "adversarial_review": {
+      "receipt": "qualification/r3-privacy-review-receipt.json",
+      "sha256": "3cb416483851abd3191c2d6827aa1d24628e7d9f1ec54675d05afb41f82d7567",
+      "content": {
+        "reviewer": "/root/qualification independent adversarial reviewer; no source/test edits",
+        "scope": "Known unfinished/read-bound/frame-bound/malformed Claude transcript fragment privacy vectors, cursors, bounds, source provenance and complete ordinary-record preservation; no general audit",
+        "upstream_baseline": "xormania/xorchestrate@f270e29b9263e1c44ba7c182a21abdd74e5c3ba9",
+        "exact_local_baseline": "2e659a3798e5e633dd493391f940bdfa916f7932",
+        "reviewed_product_commit": "b75fc07f8b655b3e44f4bc2fec8fcd0629f0fa0a",
+        "reviewed_candidate_tree": "ae989abfa20ee6a349ffd50c8b5b4486901d04d2",
+        "independent_test_commit": "0193e8159df5ee7496e68dc8a1feee885d6119cb",
+        "clean_worktree": true,
+        "file_sha256": {
+          "tests/hexagonal/contracts/producer_capture.py": "f2100c70c12adb064a59902c57cf2fbee83da656c1b121233c1330e4cdd294d9",
+          "tests/hexagonal/support/transcript_privacy.py": "3614f11dab9ef2cc99e2a04c82df541e5bf5bdb4e69389b1fee785ae51dd2884",
+          "tests/hexagonal/test_transcript_producer_capture.py": "3b365206d0a4414a5bbba7802290f62089a6e20b00cebdc4c089345bbf7cdd5c",
+          "xorchestrate/adapters/claude.py": "5f28cb6f8c8659a27d4ee30704954084c7eeb0ef5ab8bfedede749c2f96060bc"
+        },
+        "accepted_policy": "Withhold unclassifiable fragments regardless current application binding; keep explicit byte/range/parser metadata, no raw fragment hash/content. Partial cursor remains pending; complete malformed LF record advances only after acknowledged gap; complete ordinary records stay rich and exact.",
+        "reviewed_properties": [
+          "Partial, frame-limited and read-budget-limited data take the metadata-only gap branch before JSON classification or wire capture, independent of current tool binding.",
+          "The gap helper uses fragment bytes only for their length; it does not pass content, parsed entries or raw-content digests to optional capture.",
+          "Incomplete branch retains existing read bounds, emits explicit source range/status and returns without committing the source cursor.",
+          "Complete malformed records use stable source/offset event identity and the existing acknowledgment gate; failed acknowledgment returns without cursor advancement.",
+          "Complete ordinary valid records still use exact observe_wire capture. Existing complete tool-result classification, session/path checks, usage semantics, source generation/continuity logic and protocol callbacks are unchanged.",
+          "Suppressed classified application results preserve their existing application-capable-callback provenance; unclassified records use explicit unclassified-transcript provenance.",
+          "Separate-author real driver/local collector/artifact/public payload case checks that adding LF cannot leave an earlier immutable raw private fragment readable."
+        ],
+        "ast_change_check": {
+          "changed_existing_methods": [
+            "_capture_transcript"
+          ],
+          "added_methods": [
+            "_transcript_privacy_gap"
+          ],
+          "other_existing_methods_identical": 32
+        },
+        "independent_green": {
+          "command": "PYTHONPATH=<candidate>:<pinned-collector> PYTHONPYCACHEPREFIX=<outside-candidate> <inspection-python> -m pytest -q tests/hexagonal/test_transcript_producer_capture.py --junitxml=<outside-candidate>/r3-privacy-review.xml",
+          "passed": 24,
+          "failures": 0,
+          "errors": 0,
+          "seconds": 27.82,
+          "log": "r3-privacy-review.log",
+          "log_sha256": "227ea230bb5fbbe62cab14ffefcdd649ba2e4db348e8b8dceb4ba02f3e7c6bcf",
+          "junit": "r3-privacy-review.xml",
+          "junit_sha256": "aa489b0ebf0d2a23db18dcc71ac21be9ea1f310c217ca293943f32ba6f51f119"
+        },
+        "separate_author_receipt": "/workspace/scratch/7c8bb4d2a697/evidence/capture/r3-privacy-test-author-receipt.json",
+        "separate_author_receipt_sha256": "20fd9a4d567a43f4f2d90727093a1a2d1dde797c07d71562a8c9e70dc7e44359",
+        "separate_author_red_result": "7 semantic failures,1 preservation control pass on unchanged exact baseline; final test bytes identical across RED/GREEN",
+        "remaining_confirmed_findings": [],
+        "conclusion": "Qualified within the approved known-vector privacy repair scope before draft publication; no production or test changes requested by reviewer."
+      }
+    },
+    "ordinary_preservation_fault_control": {
+      "receipt": "capture/r3-privacy-ordinary-preservation-mutant-receipt.json",
+      "sha256": "299fbe3e9f71f89471368ed96345e31f4b8301e1aecc2d74fafbcdc49e4d0209",
+      "content": {
+        "agent": "/root/capture_tests",
+        "counting_note": "The ordinary preservation control correctly passed the historical baseline. Its red proof uses a separate blanket-loss fault; do not report it as an eighth historical privacy leak.",
+        "fault": "Only in a detached isolated worktree, pass empty bytes instead of the complete ordinary transcript line to observe_wire; preserve parsed entry and original control unchanged.",
+        "fault_changed_files": [
+          "xorchestrate/adapters/claude.py"
+        ],
+        "fault_patch": "r3-privacy-ordinary-preservation-mutant.patch",
+        "fault_patch_sha256": "c8f51d4de2d5a4c2e72a9747d8f1cf733f5fab0c3b871df65ece44f7ad605ddc",
+        "fault_source_sha256": "1136c27b87c2e3c1ff7072ef73a840468446efdd3fce77287f8089d3c969cc21",
+        "published_checkout_clean": true,
+        "published_commit": "c5eda76f9206d7ec833b74048501628e1a98352d",
+        "published_production_edits": false,
+        "published_tree": "493de489d04d78c30a4ae268086bebaf926c309d",
+        "red_command": "PYTHONPATH=/workspace/scratch/7c8bb4d2a697/r3-privacy-preservation-mutant:/workspace/scratch/7c8bb4d2a697/donor-cce PYTHONPYCACHEPREFIX=/workspace/scratch/7c8bb4d2a697/evidence/capture/r3-privacy-mutant-pycache /workspace/scratch/913f839fa00b/inspection-venv/bin/python -m pytest -q tests/hexagonal/test_transcript_producer_capture.py::TranscriptProducerCaptureTests::test_complete_ordinary_source_preserves_opaque_provider_fields",
+        "red_log": "r3-privacy-ordinary-preservation-mutant-red.log",
+        "red_log_sha256": "8db5531be75254a39cb2455a240aed3069e4c7c5c55f56b38ecd9505b8462fc2",
+        "red_result": {
+          "errors": 0,
+          "failed": 1,
+          "failure": "AssertionError at test line119: retained_bytes(event) is empty instead of the original complete ordinary JSONL record.",
+          "seconds": 0.77
+        },
+        "scope": "Single existing ordinary opaque-record preservation control; isolated fault proof only.",
+        "test_edits": false,
+        "test_node": "tests/hexagonal/test_transcript_producer_capture.py::TranscriptProducerCaptureTests::test_complete_ordinary_source_preserves_opaque_provider_fields",
+        "unchanged_green": {
+          "file_sha256": {
+            "tests/hexagonal/contracts/producer_capture.py": "f2100c70c12adb064a59902c57cf2fbee83da656c1b121233c1330e4cdd294d9",
+            "tests/hexagonal/support/transcript_privacy.py": "3614f11dab9ef2cc99e2a04c82df541e5bf5bdb4e69389b1fee785ae51dd2884",
+            "tests/hexagonal/test_transcript_producer_capture.py": "3b365206d0a4414a5bbba7802290f62089a6e20b00cebdc4c089345bbf7cdd5c",
+            "xorchestrate/adapters/claude.py": "5f28cb6f8c8659a27d4ee30704954084c7eeb0ef5ab8bfedede749c2f96060bc"
+          },
+          "receipt": "r3-privacy-test-author-receipt.json",
+          "receipt_sha256": "20fd9a4d567a43f4f2d90727093a1a2d1dde797c07d71562a8c9e70dc7e44359",
+          "rerun_required": false,
+          "result": "24 passed in12.25s",
+          "source_and_test_hashes_match_published": true
+        }
+      }
+    }
+  }
+}

@@ -5,9 +5,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from tests.hexagonal.contracts.producer_capture import events_of, require_event
+from tests.hexagonal.contracts.producer_capture import assert_transcript_gap, events_of, require_event
 from tests.hexagonal.support.native import native_driver
 from tests.hexagonal.support.producer_capture import Recorder, assert_protected, bind_if_supported, retained_bytes
+from tests.hexagonal.support.transcript_privacy import TranscriptPrivacyFixture
 from xorchestrate.model import Capability
 
 
@@ -90,6 +91,34 @@ class TranscriptProducerCaptureTests(unittest.TestCase):
         self.assertEqual([event["payload"]["entry"]["marker"] for event in events], ["first", "second"])
         self.assertEqual(events[1]["payload"]["range_start"], len(first))
         self.assertEqual(self.source_event()["payload"]["cursor"], len(first + second))
+
+    def test_unbound_partial_historical_tool_result_keeps_gap_until_complete(self):
+        private = "HISTORICAL-UNBOUND-PARTIAL-TOOL-RESULT-CANARY"
+        original = self.line("historical result", type="user", message={"role": "user", "content": [
+            {"type": "tool_result", "tool_use_id": "historical-never-observed",
+             "content": [{"type": "text", "text": private}]}]})
+        self.source.write_bytes(original[:-1])
+        self.hook()
+        tail = require_event(self.recorder.snapshot(), "native.transcript_tail")
+        assert_protected(self.recorder.snapshot(), private)
+        assert_transcript_gap(tail, source_bytes=len(original) - 1, range_start=0,
+                              total_bytes=len(original) - 1, parser_status="incomplete")
+        self.assertEqual(self.source_event()["payload"]["cursor"], 0)
+        with self.source.open("ab") as stream:
+            stream.write(b"\n")
+        self.poll()
+        assert_protected(self.recorder.snapshot(), private)
+        self.assertEqual(self.transcript_events()[0]["completeness"], "suppressed")
+        self.assertEqual(self.source_event()["payload"]["cursor"], len(original))
+
+    def test_complete_ordinary_source_preserves_opaque_provider_fields(self):
+        original = self.line("ordinary opaque provider data", result={"action": "get_work", "work": {"id": "opaque"}})
+        self.source.write_bytes(original)
+        self.hook()
+        event = self.transcript_events()[0]
+        self.assertEqual(retained_bytes(event), original)
+        self.assertEqual(event["payload"]["entry"]["result"], {"action": "get_work", "work": {"id": "opaque"}})
+        self.assertEqual(self.source_event()["payload"]["cursor"], len(original))
 
     def test_wrong_session_filename_is_not_read(self):
         other = self.root / "another-session.jsonl"
@@ -331,6 +360,87 @@ class TranscriptApplicationToolResultTests(unittest.TestCase):
 
     def result(self, call_id, text):
         return {"type": "tool_result", "tool_use_id": call_id, "content": [{"type": "text", "text": text}]}
+
+    def tool_use(self):
+        return self.record("assistant", {"type": "tool_use", "id": "app-call", "name": "mcp__xorchestrate__get_work",
+                                         "input": {"work_id": "private"}})
+
+    def assert_partial_result_is_gap(self, call_id):
+        first = self.tool_use()
+        result = self.record("user", self.result(call_id, self.secret))
+        content = first + result[:-1]
+        self.capture(content)
+        assert_protected(self.recorder.snapshot(), self.secret)
+        tail = require_event(self.recorder.snapshot(), "native.transcript_tail")
+        assert_transcript_gap(tail, source_bytes=len(result) - 1, range_start=len(first),
+                              total_bytes=len(content), parser_status="incomplete")
+        status = require_event(self.recorder.snapshot(), "native.transcript_source")["payload"]
+        self.assertEqual(status["status"], "partial")
+        self.assertEqual(status["cursor"], len(first), "incomplete records cannot advance the committed source cursor")
+        with self.source.open("ab") as stream:
+            stream.write(b"\n")
+        self.driver.poll(self.session)
+        self.assertTrue(self.driver.drain_telemetry(timeout=1))
+        assert_protected(self.recorder.snapshot(), self.secret)
+        complete = require_event(self.recorder.snapshot(), "native.transcript")
+        self.assertEqual(complete["completeness"], "suppressed")
+        self.assertEqual(require_event(self.recorder.snapshot(), "native.transcript_source")["payload"]["cursor"],
+                         len(first + result))
+
+    def test_partial_application_result_is_gap_before_and_after_appending_newline(self):
+        self.assert_partial_result_is_gap("app-call")
+
+    def test_partial_unattributed_result_is_gap_before_and_after_appending_newline(self):
+        self.assert_partial_result_is_gap("never-observed")
+
+    def test_read_bound_application_result_prefix_cannot_retain_private_content(self):
+        first = self.tool_use()
+        result = self.record("user", self.result("app-call", self.secret + " padding" * 100))
+        observed = result.index(self.secret.encode()) + len(self.secret) + 8
+        self.driver.max_transcript_bytes = len(first) + observed
+        self.capture(first + result)
+        assert_protected(self.recorder.snapshot(), self.secret)
+        tail = require_event(self.recorder.snapshot(), "native.transcript_tail")
+        assert_transcript_gap(tail, source_bytes=observed, range_start=len(first),
+                              total_bytes=len(first + result), parser_status="incomplete")
+        self.assertEqual(require_event(self.recorder.snapshot(), "native.transcript_source")["payload"]["cursor"], len(first))
+
+    def test_frame_bound_application_result_prefix_cannot_retain_private_content(self):
+        first = self.tool_use()
+        result = self.record("user", self.result("app-call", self.secret + " padding" * 100))
+        self.driver.max_transcript_frame = max(len(first), result.index(self.secret.encode()) + len(self.secret) + 8)
+        self.capture(first + result)
+        assert_protected(self.recorder.snapshot(), self.secret)
+        tail = require_event(self.recorder.snapshot(), "native.transcript_tail")
+        assert_transcript_gap(tail, source_bytes=self.driver.max_transcript_frame + 1, range_start=len(first),
+                              total_bytes=len(first + result), parser_status="incomplete")
+        self.assertEqual(require_event(self.recorder.snapshot(), "native.transcript_source")["payload"]["cursor"], len(first))
+
+    def test_malformed_application_enabled_record_keeps_only_explicit_gap(self):
+        first = self.tool_use()
+        malformed = self.record("user", self.result("app-call", self.secret))[:-1] + b" broken-json\n"
+        self.capture(first + malformed)
+        assert_protected(self.recorder.snapshot(), self.secret)
+        event = require_event(self.recorder.snapshot(), "native.transcript")
+        assert_transcript_gap(event, source_bytes=len(malformed), range_start=len(first),
+                              total_bytes=len(first + malformed), parser_status="invalid")
+        self.assertEqual(require_event(self.recorder.snapshot(), "native.transcript_source")["payload"]["cursor"],
+                         len(first + malformed), "acknowledged complete malformed records may advance only with an explicit gap")
+
+    def test_completed_suppression_leaves_no_earlier_partial_reply_in_public_payload_reads(self):
+        subject = TranscriptPrivacyFixture(self.root / "composed")
+        try:
+            subject.capture_partial()
+            subject.complete_record()
+            rows = subject.public_reads()
+            self.assertTrue(any(row["event_type"] == "native.transcript_tail" for row in rows),
+                            "the earlier partial source observation must remain in the immutable corpus")
+            self.assertTrue(any(row["event_type"] == "native.transcript" and
+                                row["payload"].get("representation") == "suppressed" for row in rows),
+                            "the complete application result must exercise the existing suppression path")
+            assert_protected(rows, subject.secret)
+        finally:
+            subject.close()
 
     def test_application_and_unattributed_tool_results_are_explicit_gaps(self):
         builtin = "ordinary builtin tool output"

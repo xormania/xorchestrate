@@ -213,6 +213,15 @@ verification. Ingestion runs on hooks, polling, status and stopping; it does not
 scan the host or start a background transcript-search service. A new driver
 incarnation reingests the exact session file under a fresh source generation.
 
+Partial, read-bound and malformed transcript records cannot safely establish
+nested tool-result authority. They retain explicit suppressed source/range/parser
+metadata without reversible content or a content digest. Partial records remain
+pending; complete malformed records advance only after that gap is acknowledged.
+Once a complete record can be classified, ordinary non-application content keeps
+its protected bytes and application/unattributed tool replies keep their existing
+typed-observation policy. Completing a private reply must not leave an earlier
+readable fragment behind, including after resuming with no current tool catalog.
+
 The table separates implemented boundaries, deterministic fixture coverage and
 authenticated qualification. Fixture results do not establish installed vendor
 behavior; each pending witness follows the [local qualification workflow](managed-proofs.md).
