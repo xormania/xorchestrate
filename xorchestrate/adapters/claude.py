@@ -88,6 +88,8 @@ class _ClaudeLive:
                                                      "source_id": None, "modified": None,
                                                      "hasher": None, "verification": None})
     transcript_lock: threading.RLock = field(default_factory=threading.RLock)
+    # Native tool-use names seen in this session's transcript, by call ID.
+    transcript_tools: dict = field(default_factory=dict)
     telemetry_context: dict = field(default_factory=dict)
 
     def __post_init__(self):
@@ -372,11 +374,29 @@ class ClaudeSessionDriver:
                         origin = live.telemetry_context or {**live.context, "native_id": live.native_id, "incarnation": live.incarnation}
                         secrets = telemetry_secrets(self.options)
                         event_id = "claude-transcript:" + source["source_id"] + ":" + str(offset)
-                        accepted = observe_wire(self._telemetry_observer, "native.transcript", line, origin, secrets=secrets,
-                                                range_start=offset, source_id=source["source_id"], source_version="claude-transcript-jsonl-v1",
-                                                parser_version="xorchestrate-json-v1", parser_status=parser_status, entry=entry,
-                                                continuity=source.get("continuity", "initial_source"),
-                                                native_id=live.native_id, incarnation=live.incarnation, event_id=event_id, acknowledge=True)
+                        withheld = self._withheld_tool_results(live, entry) if parser_status == "valid" else None
+                        if withheld:
+                            # Application tool replies embed resources with their
+                            # own current authorization. Typed application
+                            # observations retain them; this outer-session copy
+                            # keeps only an explicit, non-reversible gap.
+                            accepted = observe_telemetry(self._telemetry_observer, "native.transcript", {
+                                "representation": "suppressed", "captured_bytes": 0, "source_bytes": len(line),
+                                "total_bytes": info.st_size, "range_start": offset, "range_end": offset + len(line),
+                                "source_id": source["source_id"], "source_version": "claude-transcript-jsonl-v1",
+                                "parser_version": "xorchestrate-json-v1", "parser_status": parser_status,
+                                "continuity": source.get("continuity", "initial_source"),
+                                "native_id": live.native_id, "incarnation": live.incarnation,
+                                "direction": "callback_response", "tool_results": withheld,
+                                "provenance": "application-capable-callback-v1",
+                            }, origin, secrets=secrets, completeness="suppressed",
+                                reason="callback_response_requires_typed_observation", event_id=event_id, acknowledge=True)
+                        else:
+                            accepted = observe_wire(self._telemetry_observer, "native.transcript", line, origin, secrets=secrets,
+                                                    range_start=offset, source_id=source["source_id"], source_version="claude-transcript-jsonl-v1",
+                                                    parser_version="xorchestrate-json-v1", parser_status=parser_status, entry=entry,
+                                                    continuity=source.get("continuity", "initial_source"),
+                                                    native_id=live.native_id, incarnation=live.incarnation, event_id=event_id, acknowledge=True)
                         if not accepted:
                             self._transcript_status(live, "partial", "capture_unavailable")
                             return
@@ -402,6 +422,42 @@ class ClaudeSessionDriver:
             self._transcript_status(live, "unavailable", "source_unreadable")
         except BaseException:
             self._transcript_status(live, "unavailable", "capture_failed")
+
+    def _withheld_tool_results(self, live, entry):
+        """Return tool results this outer-session record must not retain.
+
+        Results of application tools, and results whose originating tool use
+        was never observed, cannot be attributed to a non-application tool.
+        """
+        if not isinstance(entry, dict):
+            return []
+        message = entry.get("message") if isinstance(entry.get("message"), dict) else entry
+        content = message.get("content")
+        blocks = [block for block in content if isinstance(block, dict)] if isinstance(content, list) else []
+        prefix = "mcp__" + self.server_name + "__"
+        for block in blocks:
+            if (block.get("type") == "tool_use" and isinstance(block.get("id"), str)
+                    and isinstance(block.get("name"), str) and len(live.transcript_tools) < self.max_calls):
+                live.transcript_tools.setdefault(block["id"], block["name"])
+        withheld = []
+        results = [block for block in blocks if block.get("type") == "tool_result"]
+        if "toolUseResult" in entry and not results:
+            results = [{"tool_use_id": None}]
+        for block in results:
+            call_id = block.get("tool_use_id")
+            with live.lock:
+                hooked = live.calls.get(call_id) if isinstance(call_id, str) else None
+            tool = live.transcript_tools.get(call_id) if isinstance(call_id, str) else None
+            if hooked is not None:
+                action = hooked.get("action")
+            elif tool is not None:
+                action = tool[len(prefix):] if tool.startswith(prefix) else None
+            else:
+                withheld.append({"call_id": call_id if isinstance(call_id, str) else None, "classification": "unattributed"})
+                continue
+            if action in self._capabilities:
+                withheld.append({"call_id": call_id, "action": action, "classification": "application_tool"})
+        return withheld
 
     def _schedule_transcript(self, live, selected=None):
         if isinstance(self._telemetry_observer, TelemetryDispatch):

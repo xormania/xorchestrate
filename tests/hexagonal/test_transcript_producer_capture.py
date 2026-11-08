@@ -8,6 +8,7 @@ from pathlib import Path
 from tests.hexagonal.contracts.producer_capture import events_of, require_event
 from tests.hexagonal.support.native import native_driver
 from tests.hexagonal.support.producer_capture import Recorder, assert_protected, bind_if_supported, retained_bytes
+from xorchestrate.model import Capability
 
 
 class TranscriptProducerCaptureTests(unittest.TestCase):
@@ -293,3 +294,67 @@ class TranscriptProducerCaptureTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TranscriptApplicationToolResultTests(unittest.TestCase):
+    """Outer-session transcript capture cannot carry nested application results."""
+
+    secret = "NESTED-TRANSCRIPT-TOOL-RESULT-CANARY"
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix="xor-transcript-tools-")
+        self.root = Path(self.temporary.name)
+        self.recorder = Recorder()
+        self.driver = native_driver("claude", state=self.root / "state")
+        bind_if_supported(self.driver, self.recorder)
+        self.driver.bind_application_tools([Capability("get_work", "Read work", {"type": "object"})],
+                                           lambda *args: {})
+        self.session = self.driver.start({"context": {"session_id": "app-session", "work_id": "work-one"}})
+        self.live = self.driver._get(self.session)
+        self.source = self.root / (self.session["native_id"] + ".jsonl")
+
+    def tearDown(self):
+        self.driver.close()
+        self.temporary.cleanup()
+
+    def record(self, kind, *blocks, **fields):
+        entry = {"sessionId": self.session["native_id"], "type": kind,
+                 "message": {"role": kind, "content": list(blocks)}, **fields}
+        return (json.dumps(entry) + "\n").encode()
+
+    def capture(self, content):
+        self.source.write_bytes(content)
+        self.driver._hook(self.live, {"hook_event_name": "SessionStart", "session_id": self.session["native_id"],
+            "model": "fixture-model", "transcript_path": str(self.source)})
+        self.assertTrue(self.driver.drain_telemetry(timeout=1))
+        return events_of(self.recorder.snapshot(), "native.transcript")
+
+    def result(self, call_id, text):
+        return {"type": "tool_result", "tool_use_id": call_id, "content": [{"type": "text", "text": text}]}
+
+    def test_application_and_unattributed_tool_results_are_explicit_gaps(self):
+        builtin = "ordinary builtin tool output"
+        lines = [
+            self.record("assistant", {"type": "tool_use", "id": "app-call", "name": "mcp__xorchestrate__get_work",
+                                      "input": {"work_id": "private"}}),
+            self.record("user", self.result("app-call", self.secret), toolUseResult={"goal": self.secret}),
+            self.record("user", self.result("never-observed", self.secret)),
+            self.record("assistant", {"type": "tool_use", "id": "builtin-call", "name": "Bash", "input": {}}),
+            self.record("user", self.result("builtin-call", builtin)),
+        ]
+        events = self.capture(b"".join(lines))
+        self.assertEqual(len(events), len(lines))
+        self.assertNotIn(self.secret, json.dumps(events), "TRANSCRIPT_TOOL_RESULT_MUST_NOT_BYPASS_NESTED_AUTHORIZATION")
+        suppressed = [event for event in events if event["payload"].get("representation") == "suppressed"]
+        self.assertEqual([item["classification"] for event in suppressed for item in event["payload"]["tool_results"]],
+                         ["application_tool", "unattributed"])
+        for event in suppressed:
+            self.assertEqual(event["completeness"], "suppressed")
+            self.assertEqual(event["reason"], "callback_response_requires_typed_observation")
+            self.assertEqual(event["payload"]["captured_bytes"], 0)
+            self.assertFalse({"content", "encoding", "entry"} & event["payload"].keys())
+        self.assertEqual([event["payload"]["source_bytes"] for event in suppressed], [len(lines[1]), len(lines[2])])
+        retained = [retained_bytes(event) for event in events if event["payload"].get("encoding") == "base64"]
+        self.assertIn(lines[4], retained, "Non-application tool results keep ordinary protected capture")
+        self.assertEqual(require_event(self.recorder.snapshot(), "native.transcript_source")["payload"]["cursor"],
+                         sum(map(len, lines)), "Suppressed records still advance the committed source cursor")
