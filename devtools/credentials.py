@@ -73,9 +73,3 @@ def configured_values(directory):
 
     return tuple(value for reference in credential_references(directory)
                  for value in credential_values({"credential": reference}))
-
-
-def redact(value, connection):
-    from .telemetry import clean
-
-    return clean(value, secrets=credential_values(connection))

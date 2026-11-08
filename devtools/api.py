@@ -459,7 +459,7 @@ class API:
             if development_configured(self.store):
                 allowed |= set(groups["work_order_framework"])
         if scope is None:
-            allowed -= {"conclude", "restart_xo"}
+            allowed -= {"conclude"}
         current = {row["name"]: row for row in command_capabilities(spec, role)}
         rows = [current.get(row["name"], row) for row in TOOLS if row["name"] in allowed]
         if "work_assess" in allowed:

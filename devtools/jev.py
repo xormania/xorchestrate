@@ -28,8 +28,6 @@ from .telemetry import clean
 
 DEFAULTS = defaults()
 MODEL = DEFAULTS["model"]
-MAX_REQUEST = DEFAULTS["transport"]["max_request_bytes"]
-MAX_RESPONSE = DEFAULTS["transport"]["max_response_bytes"]
 
 
 class JevUnavailable(Failure):
