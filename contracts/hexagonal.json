@@ -212,13 +212,13 @@
     },
     "architecture_adapters": {
       "modules": ["scripts.architecture.python", "scripts.architecture.diagnostics"],
-      "allowed_roles": ["architecture_foundation", "architecture_core", "architecture_adapters", "foundation", "core", "work_acceptance", "inspection", "adapters"],
+      "allowed_roles": ["architecture_foundation", "architecture_core", "architecture_adapters", "telemetry", "foundation", "core", "work_acceptance", "inspection", "adapters"],
       "allowed_external": ["stdlib:*", "jsonschema", "referencing"],
       "allow_dynamic": true
     },
     "architecture_entrypoints": {
       "modules": ["scripts.architecture.__main__"],
-      "allowed_roles": ["architecture_foundation", "architecture_core", "architecture_adapters", "architecture_entrypoints", "foundation", "core", "work_acceptance", "inspection", "adapters"],
+      "allowed_roles": ["architecture_foundation", "architecture_core", "architecture_adapters", "architecture_entrypoints", "telemetry", "foundation", "core", "work_acceptance", "inspection", "adapters"],
       "allowed_external": ["stdlib:*", "jsonschema", "referencing"],
       "allow_dynamic": true
     },

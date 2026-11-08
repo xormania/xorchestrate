@@ -6,6 +6,7 @@ import http.client
 import json
 import math
 import os
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -13,6 +14,57 @@ from dataclasses import asdict
 
 from ..model import JSON, Assessment, OrchestrationError
 from ..ports import CapabilityProvider
+from .jsonrpc import TelemetryDispatch, capture_origin, observe_telemetry, observe_wire, telemetry_dispatch
+
+
+class _TelemetryEvaluator:
+    def bind_telemetry(self, observer):
+        if observer is not None and not callable(observer):
+            raise OrchestrationError("Telemetry observer must be callable.", "invalid_configuration")
+        previous = getattr(self, "_telemetry_observer", None)
+        if isinstance(previous, TelemetryDispatch):
+            previous.close()
+        self._telemetry_observer = telemetry_dispatch(observer)
+
+    def telemetry_health(self):
+        observer = getattr(self, "_telemetry_observer", None)
+        return observer.health() if isinstance(observer, TelemetryDispatch) else {"status": "disabled"}
+
+    def drain_telemetry(self, timeout=None):
+        observer = getattr(self, "_telemetry_observer", None)
+        return observer.drain(timeout) if isinstance(observer, TelemetryDispatch) else {"status": "disabled"}
+
+    def close(self):
+        observer = getattr(self, "_telemetry_observer", None)
+        if isinstance(observer, TelemetryDispatch):
+            observer.close()
+
+    def assess(self, question: str, context: JSON) -> Assessment:
+        origin = capture_origin(context)
+        observer = getattr(self, "_telemetry_observer", None)
+        credential = os.environ.get(self.credential_env, "") if getattr(self, "credential_env", None) else ""
+        secrets = (credential,) if credential else ()
+        try:
+            source_credentials = getattr(getattr(self, "provider", None), "telemetry_credentials", None)
+            if callable(source_credentials):
+                secrets += tuple(source_credentials())
+        except BaseException:
+            observe_telemetry(observer, "evaluator.capture_suppressed", {}, {"attempt_id": origin["attempt_id"]},
+                              completeness="suppressed", reason="credential_filter_unavailable")
+            observer = None
+        try:
+            try:
+                result = self._assess(question, context, observer, origin, secrets)
+            except BaseException as error:
+                code = getattr(error, "code", "evaluation_unavailable")
+                status = "unavailable" if code == "evaluation_unavailable" else "invalid"
+                observe_telemetry(observer, "evaluator.validation", {"status": status, "code": code}, origin, secrets=secrets)
+                raise
+            observe_telemetry(observer, "evaluator.validation", {"status": "valid", "assessment": asdict(result)}, origin, secrets=secrets)
+            return result
+        finally:
+            if isinstance(observer, TelemetryDispatch):
+                observer.drain()
 
 
 def _invalid(message: str) -> OrchestrationError:
@@ -49,7 +101,7 @@ def checked_assessment(value: object) -> Assessment:
                       tuple(value.get("evidence", [])), value.get("details", {}))
 
 
-class ToolEvaluator:
+class ToolEvaluator(_TelemetryEvaluator):
     """Ask an operator-selected capability to assess a question and its context.
 
     CLI providers return the Assessment object directly. MCP providers may return
@@ -72,22 +124,24 @@ class ToolEvaluator:
         self.capability = capability
         self.arguments = json.loads(_json(arguments, "invalid_configuration"))
 
-    def assess(self, question: str, context: JSON) -> Assessment:
+    def _assess(self, question: str, context: JSON, observer, origin, secrets) -> Assessment:
         if not isinstance(question, str) or not question.strip() or not isinstance(context, dict):
             raise OrchestrationError("Assessment requires a question and an object context.")
         arguments = json.loads(_json({**self.arguments, "question": question, "context": context}))
+        observe_wire(observer, "evaluator.request", _json(arguments), origin, secrets=secrets, total_bytes=len(_json(arguments)), phase="serialized")
         try:
             matches = [item for item in self.provider.discover() if item.name == self.capability]
             if len(matches) != 1:
                 raise OrchestrationError("Assessment capability was not uniquely discovered.", "not_found")
             result = self.provider.invoke(self.capability, arguments, {
-                "purpose": "assessment", "capability": asdict(matches[0]),
+                **(origin if observer is not None else {}), "purpose": "assessment", "capability": asdict(matches[0]),
             })
         except OrchestrationError as error:
             raise OrchestrationError("The assessment capability did not return a result.", "evaluation_unavailable",
                                      {"cause": error.code}) from None
         except (OSError, TimeoutError):
             raise OrchestrationError("The assessment capability is unavailable.", "evaluation_unavailable") from None
+        observe_telemetry(observer, "evaluator.result", {"result": result}, origin, secrets=secrets)
         if not isinstance(result, dict):
             raise _invalid("Assessment capability must return an object.")
         if result.get("isError"):
@@ -105,16 +159,12 @@ class ToolEvaluator:
                 raise _invalid("Assessment capability returned invalid JSON text.") from None
         return checked_assessment(result)
 
-    def close(self) -> None:
-        pass
-
-
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, request, fp, code, message, headers, newurl):
         return None
 
 
-class TypeSafeEvaluator:
+class TypeSafeEvaluator(_TelemetryEvaluator):
     """TypeSafe choice assessment using an explicitly configured model and rubric.
 
     The wire format follows the reusable TypeSafe integration in the imported
@@ -160,7 +210,7 @@ class TypeSafeEvaluator:
         self.endpoint, self.model, self.timeout, self.credential_env = endpoint, model, timeout, credential
         self.criteria = json.loads(_json(criteria, "invalid_configuration"))
 
-    def assess(self, question: str, context: JSON) -> Assessment:
+    def _assess(self, question: str, context: JSON, observer, origin, secrets) -> Assessment:
         if not isinstance(question, str) or not question.strip() or not isinstance(context, dict):
             raise OrchestrationError("Assessment requires a question and an object context.")
         credential = os.environ.get(self.credential_env, "") if self.credential_env else ""
@@ -168,6 +218,9 @@ class TypeSafeEvaluator:
             raise OrchestrationError("The configured assessment credential is unavailable.", "evaluation_unavailable", {"cause": "credentials_unavailable"})
         payload = _json({"model": self.model, "state": context,
                          "questions": {"assessment": {"type": "choice", "instructions": question, "criteria": self.criteria}}})
+        observe_wire(observer, "evaluator.request", payload[:self.limits["max_request_bytes"] + 1], origin, secrets=secrets,
+                     complete=len(payload) <= self.limits["max_request_bytes"] + 1, total_bytes=len(payload),
+                     phase="serialized", model=self.model)
         # Never echo credentials into model inputs, evidence or error details.
         if credential and credential in payload.decode("utf-8"):
             raise OrchestrationError("Assessment input contains the configured credential.", "invalid_request")
@@ -179,14 +232,92 @@ class TypeSafeEvaluator:
                 raise OrchestrationError("The configured assessment credential is invalid.", "evaluation_unavailable")
             headers["Authorization"] = "Bearer " + credential
         request = urllib.request.Request(self.endpoint, data=payload, headers=headers, method="POST")
+        captured = bytearray()
+        response_observed = False
+
+        def read_response(response, deadline=None):
+            nonlocal response_observed
+            maximum = self.limits["max_response_bytes"]
+            status = getattr(response, "status", getattr(response, "code", None))
+            total = None
+            try:
+                length = response.headers.get("Content-Length")
+                if length is not None and str(length).isdigit():
+                    total = int(length)
+            except (AttributeError, ValueError, TypeError):
+                pass
+            reason = None
+            complete = False
+            try:
+                # read1 exposes each available body block before a later timeout;
+                # a fallback supports the same small response interface as before.
+                read_one = getattr(response, "read1", None)
+                read = read_one if callable(read_one) else response.read
+                while len(captured) <= maximum:
+                    if deadline is not None:
+                        remaining = deadline - time.monotonic()
+                        if remaining <= 0:
+                            reason = "capture_deadline"
+                            raise TimeoutError("Assessment diagnostic capture deadline reached")
+                        # urllib's HTTPError wraps an HTTPResponse. Bound its
+                        # next socket read by the one original request deadline,
+                        # rather than granting every body chunk a fresh timeout.
+                        stream = response
+                        for _ in range(3):
+                            raw = getattr(stream, "raw", None)
+                            connection = getattr(raw, "_sock", None)
+                            if connection is not None:
+                                connection.settimeout(remaining)
+                                break
+                            stream = getattr(stream, "fp", None)
+                        else:
+                            reason = "capture_deadline_unavailable"
+                            raise TimeoutError("Assessment diagnostic read cannot be bounded")
+                    count = min(65536, maximum + 1 - len(captured))
+                    # A read(n) fallback may internally wait for n bytes across
+                    # many successful socket reads. One byte keeps that fallback
+                    # within the next remaining-time timeout as well.
+                    block = read(1 if deadline is not None and not callable(read_one) else count)
+                    if not block:
+                        complete = True
+                        if total is None:
+                            total = len(captured)
+                        break
+                    captured.extend(block)
+                if len(captured) > maximum:
+                    reason = "response_limit"
+            except http.client.IncompleteRead as error:
+                captured.extend(error.partial[:max(0, maximum + 1 - len(captured))])
+                reason = "interrupted"
+                raise
+            except (OSError, urllib.error.URLError, http.client.HTTPException, ValueError):
+                reason = reason or "read_interrupted"
+                raise
+            finally:
+                response_observed = True
+                observe_wire(observer, "evaluator.response", bytes(captured), origin, secrets=secrets,
+                             complete=complete and len(captured) <= maximum, total_bytes=total,
+                             reason=reason, http_status=status, model=self.model)
+            return bytes(captured)
+
+        deadline = time.monotonic() + self.timeout
         try:
             with urllib.request.build_opener(_NoRedirect()).open(request, timeout=self.timeout) as response:
-                body = response.read(self.limits["max_response_bytes"] + 1)
+                body = read_response(response)
         except urllib.error.HTTPError as error:
             status = error.code
-            error.close()
+            try:
+                if observer is not None:
+                    read_response(error, deadline)
+            except (OSError, urllib.error.URLError, http.client.HTTPException, ValueError):
+                pass
+            finally:
+                error.close()
             raise OrchestrationError("The assessment provider returned an HTTP error.", "evaluation_unavailable", {"status": status}) from None
         except (OSError, urllib.error.URLError, http.client.HTTPException, ValueError):
+            if not response_observed:
+                observe_wire(observer, "evaluator.response", bytes(captured), origin, secrets=secrets,
+                             complete=False, reason="connection_unavailable", model=self.model)
             raise OrchestrationError("The assessment provider could not be reached.", "evaluation_unavailable") from None
         if len(body) > self.limits["max_response_bytes"]:
             raise _invalid("Assessment response exceeds the configured response budget.")
@@ -216,7 +347,7 @@ class TypeSafeEvaluator:
             if not isinstance(usage, dict) or any(type(usage.get(k)) is not int or usage[k] < 0 for k in ("input_tokens", "output_tokens")):
                 raise _invalid("Assessment provider returned invalid usage data.")
             details["usage"] = {key: usage[key] for key in ("input_tokens", "output_tokens")}
+            observe_telemetry(observer, "evaluator.usage", {"usage": usage, "counter_semantics": "incremental",
+                              "usage_stream_id": origin["attempt_id"], "source_version": "typesafe-choice-v1"},
+                              origin, secrets=secrets, event_id="evaluator-usage:" + origin["attempt_id"])
         return checked_assessment({"outcome": answer["choice"], "confidence": answer["confidence"], "details": details})
-
-    def close(self) -> None:
-        pass

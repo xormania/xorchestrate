@@ -7,11 +7,13 @@ Adapted from the native mechanism in xormania/multi-harness-proof at
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import os
 import queue
 import re
 import shlex
+import stat
 import subprocess
 import sys
 import threading
@@ -27,7 +29,20 @@ from ..activity import ActivityState, NativeConnection, activity_engine
 from ..model import OrchestrationError
 from ..outcomes import before_effect, effect_outcome
 from ..schema import check_schema, validate
-from .jsonrpc import close_process, command_options, decode_json, encode_json, positive_integer, positive_number
+from .jsonrpc import (
+    TelemetryDispatch,
+    capture_origin,
+    close_process,
+    command_options,
+    decode_json,
+    encode_json,
+    observe_telemetry,
+    observe_wire,
+    positive_integer,
+    positive_number,
+    telemetry_dispatch,
+    telemetry_secrets,
+)
 from .native_gateway import LocalGateway
 
 
@@ -69,6 +84,13 @@ class _ClaudeLive:
     completed_turns: set = field(default_factory=set)
     active_tools: set = field(init=False)
     connection: NativeConnection = field(init=False)
+    transcript: dict = field(default_factory=lambda: {"path": None, "cursor": 0, "identity": None,
+                                                     "source_id": None, "modified": None,
+                                                     "hasher": None, "verification": None})
+    transcript_lock: threading.RLock = field(default_factory=threading.RLock)
+    # Native tool-use names seen in this session's transcript, by call ID.
+    transcript_tools: dict = field(default_factory=dict)
+    telemetry_context: dict = field(default_factory=dict)
 
     def __post_init__(self):
         self.connection = NativeConnection(self.activity_model.engine, self.incarnation)
@@ -106,6 +128,8 @@ class ClaudeSessionDriver:
         self.max_events = positive_integer(self.options, "max_events", 10000)
         self.max_calls = positive_integer(self.options, "max_calls", 10000)
         self.max_deliveries = positive_integer(self.options, "max_deliveries", 1024)
+        self.max_transcript_bytes = positive_integer(self.options, "max_transcript_bytes", 4 * 1024 * 1024)
+        self.max_transcript_frame = positive_integer(self.options, "max_transcript_frame_bytes", 1024 * 1024)
         self.request_parameters = self.options.get("request_parameters", {"type": "object", "additionalProperties": False})
         check_schema(self.request_parameters)
         self.launch = _object(self.options.get("launch", {}), "Claude launch settings")
@@ -131,7 +155,8 @@ class ClaudeSessionDriver:
             raise OrchestrationError("Claude terminal must be inherit, discard or a PTY adapter.", "invalid_configuration")
         # Operational time/queue bounds do not change the selected native configuration.
         material = {key: value for key, value in self.options.items() if key not in {
-            "timeout", "startup_timeout", "max_sessions", "max_events", "max_calls", "max_deliveries", "gateway_timeout", "gateway_workers", "terminal", "evidence_directory"}}
+            "timeout", "startup_timeout", "max_sessions", "max_events", "max_calls", "max_deliveries", "gateway_timeout", "gateway_workers", "terminal", "evidence_directory",
+            "telemetry_drain_timeout", "max_telemetry_pending", "max_telemetry_bytes", "max_transcript_bytes", "max_transcript_frame_bytes"}}
         self.configuration_id = _digest({"adapter": "claude-channel-v1", "options": material})
         self._instance = uuid.uuid4().hex
         self._lock = threading.RLock()
@@ -139,6 +164,7 @@ class ClaudeSessionDriver:
         self._starting = 0
         self._closed = False
         self._observer = None
+        self._telemetry_observer = None
         self._callback = None
         self._application_replay = None
         self._capabilities = {}
@@ -155,6 +181,22 @@ class ClaudeSessionDriver:
             if self._sessions or self._starting:
                 raise OrchestrationError("Bind observers before launching sessions.", "conflict")
             self._observer = observer
+
+    def bind_telemetry(self, observer):
+        if observer is not None and not callable(observer):
+            raise OrchestrationError("Telemetry observer must be callable.", "invalid_configuration")
+        with self._lock:
+            if self._sessions or self._starting:
+                raise OrchestrationError("Bind telemetry before launching sessions.", "conflict")
+            self._telemetry_observer = telemetry_dispatch(observer, self.options)
+
+    def telemetry_health(self):
+        observer = self._telemetry_observer
+        return observer.health() if isinstance(observer, TelemetryDispatch) else {"status": "disabled"}
+
+    def drain_telemetry(self, timeout=None):
+        observer = self._telemetry_observer
+        return observer.drain(timeout) if isinstance(observer, TelemetryDispatch) else {"status": "disabled"}
 
     def bind_application_tools(self, capabilities, callback):
         with self._lock:
@@ -179,6 +221,7 @@ class ClaudeSessionDriver:
     def _emit(self, live, kind, source, **fields):
         event = {"kind": kind, "at": datetime.now(timezone.utc).isoformat(), "source": source,
                  "native_id": live.native_id, "incarnation": live.incarnation, **deepcopy(fields)}
+        self._capture(live, "native." + kind, event)
         with live.lock:
             if len(live.events) >= self.max_events:
                 live.failure = OrchestrationError("Claude observation bound reached; evidence may not be dropped.", "observation_overflow")
@@ -187,6 +230,238 @@ class ClaudeSessionDriver:
         if self._observer:
             self._observer(deepcopy(live.context), deepcopy(event))
         return event
+
+    def _capture(self, live, event_type, payload, **metadata):
+        origin = live.telemetry_context or {**live.context, "native_id": live.native_id, "incarnation": live.incarnation}
+        return observe_telemetry(self._telemetry_observer, event_type, payload, origin,
+                                 secrets=telemetry_secrets(self.options) if self._telemetry_observer is not None else (), **metadata)
+
+    def _transcript_status(self, live, status, reason=None, **fields):
+        self._capture(live, "native.transcript_source", {"status": status, "cursor": live.transcript["cursor"],
+                      "source_id": live.transcript["source_id"], "source_version": "claude-transcript-jsonl-v1",
+                      "continuity": live.transcript.get("continuity", "initial_source"),
+                      "native_id": live.native_id, "incarnation": live.incarnation, "reason": reason, **fields})
+        if isinstance(self._telemetry_observer, TelemetryDispatch):
+            self._telemetry_observer.drain()
+
+    def _capture_transcript(self, live, selected=None):
+        """Tail only this hook-selected session, adapting the proof capture donor.
+
+        The cursor crosses complete protected records only after observer
+        acknowledgment. A partial final record remains available for the next
+        hook/poll. No directory discovery or historical launcher is involved.
+        """
+        if self._telemetry_observer is None:
+            return
+        try:
+            with live.transcript_lock:
+                source = live.transcript
+                if selected is not None:
+                    path = Path(selected) if isinstance(selected, str) else None
+                    if (path is None or not path.is_absolute() or path.name != live.native_id + ".jsonl"
+                            or source["path"] is not None and path != source["path"]):
+                        self._transcript_status(live, "rejected", "session_path_mismatch")
+                        return
+                    source["path"] = path
+                if source["path"] is None:
+                    self._transcript_status(live, "unavailable", "transcript_path_not_exposed")
+                    return
+                descriptor = os.open(source["path"], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+                with os.fdopen(descriptor, "rb") as stream:
+                    info = os.fstat(stream.fileno())
+                    if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid():
+                        self._transcript_status(live, "rejected", "unsafe_source_file")
+                        return
+                    identity = (info.st_dev, info.st_ino)
+                    modified = (info.st_mtime_ns, info.st_ctime_ns)
+                    remaining = self.max_transcript_bytes
+
+                    def new_generation(reason):
+                        if source["identity"] is not None:
+                            self._transcript_status(live, "gap", reason, previous_cursor=source["cursor"])
+                        # Continuity fingerprints are ephemeral, keyed and never
+                        # published or persisted as credential-derived metadata.
+                        empty = hmac.new(os.urandom(32), digestmod=hashlib.sha256)
+                        source.update(identity=identity, cursor=0, source_id=uuid.uuid4().hex,
+                                      hasher=empty.copy(), empty_hasher=empty, verification=None,
+                                      recheck_required=False, tail_pending=False, continuity="initial_source")
+
+                    if source["identity"] != identity or info.st_size < source["cursor"]:
+                        new_generation("source_rotated_or_truncated")
+                    elif (source["modified"] != modified or source.get("recheck_required")) and source["cursor"] and not source.get("tail_pending"):
+                        verification = source["verification"]
+                        if verification is not None and verification["modified"] != modified:
+                            if info.st_size > verification["size"]:
+                                # Appends beyond the frozen committed cursor do
+                                # not erase progress. This is not an atomic file
+                                # snapshot: recheck the whole prefix again after
+                                # allowing a bounded tail pass to make progress.
+                                verification.update(modified=modified, size=info.st_size, concurrent_growth=True)
+                                source["continuity"] = "unconfirmed_during_growth"
+                            else:
+                                verification = None
+                        if verification is None:
+                            # A fresh keyed empty state is retained alongside
+                            # the committed rolling state for bounded rechecks.
+                            empty = source["empty_hasher"].copy()
+                            verification = {"modified": modified, "size": info.st_size, "offset": 0,
+                                            "hasher": empty, "concurrent_growth": False}
+                            source["verification"] = verification
+                        stream.seek(verification["offset"])
+                        while verification["offset"] < source["cursor"] and remaining:
+                            block = stream.read(min(65536, source["cursor"] - verification["offset"], remaining))
+                            if not block:
+                                new_generation("consumed_prefix_unavailable")
+                                break
+                            verification["hasher"].update(block)
+                            verification["offset"] += len(block)
+                            remaining -= len(block)
+                        if source["cursor"]:
+                            current = os.fstat(stream.fileno())
+                            current_modified = (current.st_mtime_ns, current.st_ctime_ns)
+                            if current_modified != modified:
+                                if current.st_size > info.st_size:
+                                    modified = current_modified
+                                    verification.update(modified=modified, size=current.st_size, concurrent_growth=True)
+                                    source["continuity"] = "unconfirmed_during_growth"
+                                else:
+                                    source["verification"] = None
+                                    self._transcript_status(live, "partial", "source_changed_during_verification")
+                                    return
+                            if verification["offset"] < source["cursor"]:
+                                self._transcript_status(live, "partial", "prefix_verification_pending",
+                                                        verified_prefix_bytes=verification["offset"])
+                                return
+                            if not hmac.compare_digest(verification["hasher"].digest(), source["hasher"].digest()):
+                                new_generation("consumed_prefix_changed")
+                            else:
+                                source["recheck_required"] = verification["concurrent_growth"]
+                                source["tail_pending"] = verification["concurrent_growth"]
+                                source["continuity"] = "unconfirmed_during_growth" if verification["concurrent_growth"] else "verified_prefix"
+                                if verification["concurrent_growth"]:
+                                    self._transcript_status(live, "partial", "continuity_unconfirmed_during_growth")
+                            source["verification"] = None
+                    source["modified"] = modified
+                    stream.seek(source["cursor"])
+                    while remaining:
+                        offset = stream.tell()
+                        line = stream.readline(min(self.max_transcript_frame + 1, remaining))
+                        if not line:
+                            source["tail_pending"] = False
+                            self._transcript_status(live, "captured", source_bytes=info.st_size)
+                            return
+                        remaining -= len(line)
+                        if not line.endswith(b"\n") or len(line) > self.max_transcript_frame:
+                            observe_wire(self._telemetry_observer, "native.transcript_tail", line,
+                                         live.telemetry_context, secrets=telemetry_secrets(self.options), complete=False,
+                                         range_start=offset, total_bytes=info.st_size, reason="partial_tail_or_read_bound",
+                                         source_id=source["source_id"], source_version="claude-transcript-jsonl-v1",
+                                         parser_status="incomplete", cursor=source["cursor"])
+                            self._transcript_status(live, "partial", "partial_tail" if offset + len(line) >= info.st_size else "read_bound",
+                                                    observed_range_start=offset, observed_range_end=offset + len(line), source_bytes=info.st_size)
+                            return
+                        parser_status, entry = "valid", None
+                        try:
+                            entry = decode_json(line)
+                        except OrchestrationError:
+                            parser_status = "invalid"
+                        if isinstance(entry, dict):
+                            if any(entry.get(key) is not None and entry[key] != live.native_id for key in ("sessionId", "session_id")):
+                                self._transcript_status(live, "rejected", "record_session_mismatch")
+                                return
+                        elif parser_status == "valid":
+                            parser_status = "invalid"
+                        origin = live.telemetry_context or {**live.context, "native_id": live.native_id, "incarnation": live.incarnation}
+                        secrets = telemetry_secrets(self.options)
+                        event_id = "claude-transcript:" + source["source_id"] + ":" + str(offset)
+                        withheld = self._withheld_tool_results(live, entry) if parser_status == "valid" else None
+                        if withheld:
+                            # Application tool replies embed resources with their
+                            # own current authorization. Typed application
+                            # observations retain them; this outer-session copy
+                            # keeps only an explicit, non-reversible gap.
+                            accepted = observe_telemetry(self._telemetry_observer, "native.transcript", {
+                                "representation": "suppressed", "captured_bytes": 0, "source_bytes": len(line),
+                                "total_bytes": info.st_size, "range_start": offset, "range_end": offset + len(line),
+                                "source_id": source["source_id"], "source_version": "claude-transcript-jsonl-v1",
+                                "parser_version": "xorchestrate-json-v1", "parser_status": parser_status,
+                                "continuity": source.get("continuity", "initial_source"),
+                                "native_id": live.native_id, "incarnation": live.incarnation,
+                                "direction": "callback_response", "tool_results": withheld,
+                                "provenance": "application-capable-callback-v1",
+                            }, origin, secrets=secrets, completeness="suppressed",
+                                reason="callback_response_requires_typed_observation", event_id=event_id, acknowledge=True)
+                        else:
+                            accepted = observe_wire(self._telemetry_observer, "native.transcript", line, origin, secrets=secrets,
+                                                    range_start=offset, source_id=source["source_id"], source_version="claude-transcript-jsonl-v1",
+                                                    parser_version="xorchestrate-json-v1", parser_status=parser_status, entry=entry,
+                                                    continuity=source.get("continuity", "initial_source"),
+                                                    native_id=live.native_id, incarnation=live.incarnation, event_id=event_id, acknowledge=True)
+                        if not accepted:
+                            self._transcript_status(live, "partial", "capture_unavailable")
+                            return
+                        source["cursor"] = offset + len(line)
+                        source["hasher"].update(line)
+                        source["tail_pending"] = False
+                        if isinstance(self._telemetry_observer, TelemetryDispatch):
+                            self._telemetry_observer.release(event_id)
+                        if isinstance(entry, dict):
+                            message = entry.get("message") if isinstance(entry.get("message"), dict) else entry
+                            usage = message.get("usage")
+                            if isinstance(usage, dict):
+                                message_id = message.get("id")
+                                observe_telemetry(self._telemetry_observer, "native.usage", {"usage": usage,
+                                                  "counter_semantics": "overwrite" if isinstance(message_id, str) and message_id else "unknown",
+                                                  "usage_stream_id": live.native_id + ":" + message_id if isinstance(message_id, str) and message_id else None,
+                                                  "source_id": source["source_id"], "source_version": "claude-transcript-jsonl-v1",
+                                                  "source_event_id": event_id}, origin, secrets=secrets, event_id=event_id + ":usage")
+                    self._transcript_status(live, "partial", "read_bound", source_bytes=info.st_size)
+        except FileNotFoundError:
+            self._transcript_status(live, "unavailable", "source_missing")
+        except (OSError, ValueError, TypeError):
+            self._transcript_status(live, "unavailable", "source_unreadable")
+        except BaseException:
+            self._transcript_status(live, "unavailable", "capture_failed")
+
+    def _withheld_tool_results(self, live, entry):
+        """Return tool results this outer-session record must not retain.
+
+        Results of application tools, and results whose originating tool use
+        was never observed, cannot be attributed to a non-application tool.
+        """
+        if not isinstance(entry, dict):
+            return []
+        message = entry.get("message") if isinstance(entry.get("message"), dict) else entry
+        content = message.get("content")
+        blocks = [block for block in content if isinstance(block, dict)] if isinstance(content, list) else []
+        prefix = "mcp__" + self.server_name + "__"
+        for block in blocks:
+            if (block.get("type") == "tool_use" and isinstance(block.get("id"), str)
+                    and isinstance(block.get("name"), str) and len(live.transcript_tools) < self.max_calls):
+                live.transcript_tools.setdefault(block["id"], block["name"])
+        withheld = []
+        results = [block for block in blocks if block.get("type") == "tool_result"]
+        if "toolUseResult" in entry and not results:
+            results = [{"tool_use_id": None}]
+        for block in results:
+            call_id = block.get("tool_use_id")
+            with live.lock:
+                hooked = live.calls.get(call_id) if isinstance(call_id, str) else None
+            tool = live.transcript_tools.get(call_id) if isinstance(call_id, str) else None
+            if hooked is not None:
+                action = hooked.get("action")
+            elif tool is not None:
+                action = tool[len(prefix):] if tool.startswith(prefix) else None
+            else:
+                withheld.append({"call_id": call_id if isinstance(call_id, str) else None, "classification": "unattributed"})
+                continue
+            if action in self._capabilities:
+                withheld.append({"call_id": call_id, "action": action, "classification": "application_tool"})
+        return withheld
+
+    def _schedule_transcript(self, live, selected=None):
+        if isinstance(self._telemetry_observer, TelemetryDispatch):
+            self._telemetry_observer.schedule(lambda: self._capture_transcript(live, selected))
 
     def _verify_native(self, live, native_id):
         if native_id != live.native_id:
@@ -201,8 +476,10 @@ class ClaudeSessionDriver:
             return self._hook_locked(live, packet)
 
     def _hook_locked(self, live, packet):
+        self._capture(live, "native.hook", {"native_id": live.native_id, "incarnation": live.incarnation, "packet": packet})
         packet = _object(packet, "Native hook")
         self._verify_native(live, packet.get("session_id"))
+        self._schedule_transcript(live, packet.get("transcript_path"))
         name = packet.get("hook_event_name")
         source = "claude/" + str(name)
         self._emit(live, "native_session", source)
@@ -429,6 +706,7 @@ class ClaudeSessionDriver:
             self._starting += 1
         live = _ClaudeLive(_object(specification.get("context", {}), "Trusted session context"), source["native_id"] if source else str(uuid.uuid4()),
                            activity_model=ActivityState(self._state_engine))
+        live.telemetry_context = capture_origin({**live.context, "native_id": live.native_id, "incarnation": live.incarnation})
         live.settings = {"requested": requested, "resolved": resolved,
                          "observed": {"model": None, "effort": None}, "precedence": "trusted_configuration"}
         if source and source.get("configuration_id") != self.configuration_id:
@@ -570,6 +848,7 @@ class ClaudeSessionDriver:
 
     def poll(self, session):
         live = self._get(session)
+        self._schedule_transcript(live)
         with live.lock:
             result = list(live.events)
             live.events.clear()
@@ -581,6 +860,7 @@ class ClaudeSessionDriver:
         if (not live or session.get("instance") != self._instance or session.get("incarnation") != live.incarnation
                 or session.get("native_id") != live.native_id or session.get("protocol") != self.protocol):
             raise OrchestrationError("Claude connection receipt is stale or invalid.", "session_unavailable", {"outcome": "not_started"})
+        self._schedule_transcript(live)
         with live.lock:
             if live.process.poll() is not None and live.connection.state != "closed":
                 live.connection.transition("disconnect")
@@ -608,6 +888,7 @@ class ClaudeSessionDriver:
             live.connection.transition("close")
             live.stopped.set()
         self._close_process(live.process)
+        self._schedule_transcript(live)
         live.gateway.close()
         with self._lock:
             self._sessions.pop(live.handle, None)
@@ -631,3 +912,5 @@ class ClaudeSessionDriver:
             sessions = [self._receipt(live) for live in self._sessions.values()]
         for session in sessions:
             self.stop(session)
+        if isinstance(self._telemetry_observer, TelemetryDispatch):
+            self._telemetry_observer.close()
