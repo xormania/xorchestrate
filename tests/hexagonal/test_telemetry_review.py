@@ -7,6 +7,7 @@ from tests.hexagonal.contracts.telemetry_review import (
     bounded_usage_contract,
     byte_limited_status_contract,
     invocation_disclosure_contract,
+    operation_disclosure_contract,
     sparse_filter_contract,
 )
 from tests.hexagonal.support.telemetry_review import ReviewFixture
@@ -29,6 +30,16 @@ def test_requested_invocation_arguments_keep_current_source_authority(tmp_path, 
     subject = ReviewFixture(tmp_path, artifact_threshold_bytes=512 if storage == "artifact" else 65536)
     try:
         invocation_disclosure_contract(subject, state, selector, boundary)
+    finally:
+        subject.close()
+
+
+@pytest.mark.parametrize("boundary", ["events", "payload"])
+@pytest.mark.parametrize("storage", ["inline", "artifact"])
+def test_requested_invocation_arguments_keep_current_operation_reads(tmp_path, boundary, storage):
+    subject = ReviewFixture(tmp_path, artifact_threshold_bytes=512 if storage == "artifact" else 65536)
+    try:
+        operation_disclosure_contract(subject, boundary)
     finally:
         subject.close()
 

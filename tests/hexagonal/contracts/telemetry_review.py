@@ -18,6 +18,21 @@ def invocation_disclosure_contract(subject, state, selector, boundary):
             "TELEMETRY_REQUEST_PAYLOAD_MUST_RESPECT_CURRENT_PROVIDER_CAPABILITY_AUTHORITY"
 
 
+def operation_disclosure_contract(subject, boundary):
+    event_id, canary, _address, work, outcome = subject.invocation("completed")
+    assert outcome == "completed"
+    subject.deny_operation_reads()
+    assert subject.work_readable(work), "The operation restriction must remain distinct from work visibility"
+    assert subject.operation_denied(event_id), "The fixture must deny direct operation reads"
+    if boundary == "events":
+        rows = subject.events(event_type="application.requested", work_id=work, actor="observer")
+        assert canary not in json.dumps(rows), "TELEMETRY_REQUEST_ARGUMENTS_MUST_RESPECT_CURRENT_OPERATION_READS"
+        assert all(row["event_id"] != event_id for row in rows)
+    else:
+        assert subject.payload_denied(event_id, actor="observer"), \
+            "TELEMETRY_REQUEST_PAYLOAD_MUST_RESPECT_CURRENT_OPERATION_READS"
+
+
 def artifact_usage_contract(subject):
     subject.capture_artifact_usage()
     result = subject.usage(event_type="fixture.retained_usage")
