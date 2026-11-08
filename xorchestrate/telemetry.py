@@ -131,8 +131,12 @@ class TelemetryViews:
             else:
                 target = self.context(actor, execution["arguments"])
             self.authorize(action, target)
-            if target.get("work"):
-                self.authorize("get_work", target)
+            # The outer row may already carry work scope, so the derived
+            # target needs the same per-resource read checks as the row.
+            for key, read_action in (("work", "get_work"), ("operation", "get_operation"),
+                                     ("session", "native_observations")):
+                if target.get(key):
+                    self.authorize(read_action, target)
             contexts.append(target)
         if isinstance(payload, dict) and isinstance(payload.get("result"), dict):
             payload["result"], nested = self.projector.project_result(action, actor, payload.get("action"), payload["result"], {})
