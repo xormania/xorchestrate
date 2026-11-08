@@ -24,7 +24,7 @@ from concurrent.futures import TimeoutError as FutureTimeout
 from copy import deepcopy
 from typing import Any
 
-from ..model import OrchestrationError
+from ..model import OrchestrationError, unique_keys
 
 _CREDENTIAL_NAME = re.compile(r"(?:api.?key|authorization|password|credential|private.?key|access.?token|refresh.?token|(?:^|_)token$|secret)", re.I)
 _INCOMPLETE_CREDENTIAL = re.compile(
@@ -349,19 +349,11 @@ def encode_json(value: Any, *, sort_keys: bool = False) -> bytes:
 
 
 def decode_json(data: bytes) -> Any:
-    def unique_pairs(pairs):
-        result = {}
-        for key, value in pairs:
-            if key in result:
-                raise ValueError("Duplicate JSON property")
-            result[key] = value
-        return result
-
     def invalid_constant(_):
         raise ValueError("Non-finite JSON number")
 
     try:
-        value = json.loads(data.decode("utf-8"), object_pairs_hook=unique_pairs, parse_constant=invalid_constant)
+        value = json.loads(data.decode("utf-8"), object_pairs_hook=unique_keys("Duplicate JSON property"), parse_constant=invalid_constant)
         # The parser can also produce infinity from a syntactically valid
         # exponent such as 1e999; parse_constant alone cannot reject that case.
         json.dumps(value, allow_nan=False)
