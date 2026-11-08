@@ -1,16 +1,22 @@
 """Selected environment facts around existing setup and doctor services."""
 
+import hashlib
 import inspect
 import json
 import shlex
+import sqlite3
 import sys
 from copy import deepcopy
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from scripts.testkit.adapters import profiles
 from scripts.testkit.adapters.configuration import isolated_config
+from scripts.testkit.adapters.managed_store import ManagedStore
+from scripts.testkit.adapters.native_evidence import collection_supplement
 from tests.hexagonal.support.managed_profiles import ROOT, profile_file, run_shell, shell_subject
+from xorchestrate.composition import build
 
 
 class LocalNativeReadiness:
@@ -179,4 +185,102 @@ class LocalNativeReadiness:
         before = plan.read_bytes()
         result = run_shell(script, ["verify", str(run)], cache=self.root / "external cache")
         return result.returncode, marker.read_text() if marker.exists() else "", before == plan.read_bytes()
+
+    def _repeat_settings(self, policy):
+        workspace = self.profile.parent / "relative workspace"
+        workspace.mkdir()
+        configuration = {"sessions": {self.expected_driver: {"adapter": "codex", "options": {
+            "command": [sys.executable], "cwd": "relative workspace", "application_tools": True}}}}
+        policies = {"local-default": {"adapter": "local", "options": {"project_id": "chosen-project"}},
+            "shared-root": {"adapter": "local", "options": {"runtime_root": "../operator shared corpus",
+                "project_id": "chosen-project", "dataset_id": "chosen-dataset", "collector_id": "chosen-collector"}},
+            "profile": {"adapter": "local", "options": {"profile": "../operator-capture.toml"}},
+            "custom": {"adapter": "operator.capture:Factory", "options": {"opaque": "../operator-selected"}},
+            "disabled": {"enabled": False}}
+        if policy in policies:
+            configuration["telemetry"] = policies[policy]
+        self.native.write_text(json.dumps(configuration, indent=2))
+        values = json.loads(self.profile.read_text())
+        values.update(brief=None, output=str(self.root / "prepared native runs"))
+        self.profile.write_text(json.dumps(values))
+        settings = profiles.load_profile(self.profile, root=ROOT)
+        expected = deepcopy(configuration.get("telemetry"))
+        if policy == "shared-root":
+            expected["options"]["runtime_root"] = str(self.root / "operator shared corpus")
+        if policy == "profile":
+            expected["options"]["profile"] = str(self.root / "operator-capture.toml")
+        return settings, expected, str(workspace), self.native.read_bytes()
+
+    @staticmethod
+    def _corpus_files(root):
+        return {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
+            for path in root.rglob("*") if path.is_file()}
+
+    @staticmethod
+    def _populate_repeat(configuration, label):
+        with build(configuration, ROOT) as runtime:
+            runtime.application.call("create_work", {"goal": "actual repeat corpus " + label})
+            sink = runtime.application.telemetry
+            database = sink.path
+            corpus = sink.root
+        with sqlite3.connect(database.as_uri() + "?mode=ro", uri=True) as connection:
+            count = connection.execute("SELECT COUNT(*) FROM events").fetchone()[0]
+        assert count > 0, "repeat witness needs actual captured application records"
+        return corpus, count
+
+    def repeat_capture(self, policy, *, prepare, repeat, damage_second=False):
+        settings, expected, workspace, raw = self._repeat_settings(policy)
+        directories, configurations, descriptors, collections, counts, pipeline = [], [], [], [], [], []
+        first_files = None
+        first_corpus = None
+        changed = b'{"operator_live_file_changed":true}'
+        for number in range(3):
+            if number:
+                settings = repeat(directories[-1], {})
+                pipeline.append("repeat_settings")
+            directory = prepare(settings, **({"parent": directories[-1]} if number else {}))
+            pipeline.append("prepare_run")
+            directories.append(directory)
+            plan = json.loads((directory / "plan.json").read_text())
+            configuration = json.loads(Path(plan["config"]).read_text())
+            if damage_second and number == 1:
+                configuration["telemetry"] = {"adapter": "local", "options": {"runtime_root": "wrong-policy"}}
+                Path(plan["config"]).write_text(json.dumps(configuration))
+            configurations.append(configuration)
+            descriptors.append(json.loads((directory / "derived" / "telemetry-runtime.json").read_text()))
+            if policy in {"absent", "local-default"}:
+                corpus, count = self._populate_repeat(configuration, str(number))
+                counts.append(count)
+                if number == 0:
+                    first_corpus = corpus
+                    first_files = self._corpus_files(corpus)
+                collection = ManagedStore(directory).collect(supplemental=collection_supplement)
+                collections.append(collection["telemetry"]["status"])
+            if number == 0:
+                self.native.write_bytes(changed)
+        plans = [json.loads((directory / "plan.json").read_text()) for directory in directories]
+        return {"public_pipeline": pipeline, "selected_checks": [plan["selected_check_ids"] for plan in plans],
+            "cwd_preserved": all(item["sessions"][self.expected_driver]["options"]["cwd"] == workspace for item in configurations),
+            "capture_options": [item.get("telemetry", {}).get("options", {}) for item in configurations],
+            "original_file_edit_retained": self.native.read_bytes() == changed,
+            "owned_descriptors": all(item["status"] == "configured" and item["runtime_root"] == str(directory / "derived" / "telemetry")
+                for item, directory in zip(descriptors, directories, strict=True)),
+            "collection_status": collections, "source_event_counts": counts,
+            "first_corpus_unchanged": first_corpus is not None and first_files == self._corpus_files(first_corpus),
+            "original_recipe_reused": all(Path(plan["input_snapshots"]["config"]["path"]).read_bytes() == raw for plan in plans),
+            "operator_policy_preserved": all(item.get("telemetry") == expected for item in configurations),
+            "withholding_preserved": all(item["status"] == ("disabled" if policy == "disabled" else "external") and item.get("reason")
+                for item in descriptors), "prepared_runs": [str(path) for path in directories]}
+
+    def repeat_with_changed_snapshot(self, *, prepare, repeat):
+        settings, _, _, _ = self._repeat_settings("absent")
+        directory = prepare(settings)
+        plan = json.loads((directory / "plan.json").read_text())
+        Path(plan["input_snapshots"]["config"]["path"]).write_text("changed frozen operator input")
+        try:
+            repeated = repeat(directory, {})
+            prepare(repeated, parent=directory)
+        except (ValueError, OSError):
+            return True
+        return False
 

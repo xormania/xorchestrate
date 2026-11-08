@@ -114,6 +114,13 @@ ambiguous native effect or inherit the old verdict. `wait` reports proof plus re
 collection; `verify` reports telemetry byte closure separately.
 [Sources: managed controls](../scripts/testkit/operator_composition.py), [store](../scripts/testkit/adapters/managed_store.py), [telemetry supplement](../scripts/testkit/adapters/native_evidence.py).
 
+Repeats derive generated capture from the saved operator-input snapshot and its
+original configuration directory; an explicit `--config` selects a new input.
+For a repeat already created with the earlier storage-reuse bug, use the original
+saved run or pass `--config` with the intended operator policy. That earlier
+repeat may have saved an effective configuration as its input; stored history is
+not rewritten automatically.
+
 ## What is retained
 
 The printed run directory is the single private evidence location. Newly

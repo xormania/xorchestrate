@@ -70,6 +70,7 @@ def collect_native_evidence(directory, output):
         if source.is_relative_to(directory / "exports"):
             continue
         entry = {"source": str(source), "source_completion": "unknown", "status": "unavailable"}
+        created = []
         try:
             selected = _json(source)
             if selected.get("schema_version") != 1:
@@ -90,12 +91,13 @@ def collect_native_evidence(directory, output):
                 seen.add(identity)
                 from agent_telemetry.artifacts import FileArtifactStore
 
-                from xorchestrate.adapters.telemetry_snapshot import create_snapshot, restore_bundle
+                from xorchestrate.adapters.telemetry_snapshot import create_snapshot, invalidate_bundle, restore_bundle
 
                 name = hashlib.sha256(str(source.relative_to(directory)).encode()).hexdigest()[:24]
                 bundle = output / "bundles" / name
                 restored = output / "restored" / name
                 manifest = create_snapshot(database, FileArtifactStore(artifacts), bundle)
+                created.append(bundle)
                 for key in ("dataset_id", "collector_id"):
                     if manifest["source"][key] != selected.get(key):
                         raise ValueError("Capture lineage differs from its runtime declaration")
@@ -103,6 +105,7 @@ def collect_native_evidence(directory, output):
                 if projects and projects != [selected.get("project_id")]:
                     raise ValueError("Capture contains a different project")
                 restored_result = restore_bundle(bundle, restored)
+                created.append(restored)
                 if restored_result["manifest"] != manifest:
                     raise ValueError("Restored evidence identity differs")
                 entry.update(status="verified", bundle=str(bundle), restored=str(restored),
@@ -112,6 +115,10 @@ def collect_native_evidence(directory, output):
                     event_count=manifest["source"]["event_count"], completeness=manifest["completeness"],
                     dataset_id=manifest["source"]["dataset_id"], collector_id=manifest["source"]["collector_id"])
         except Exception as error:
+            # Helpers clean their own partial failures. Only successfully
+            # created copies belong to this descriptor's rejection cleanup.
+            for rejected in created:
+                invalidate_bundle(rejected)
             # Do not relay source payloads or arbitrary credential-bearing
             # exception text into the operator's public result.
             entry.update(status="unavailable", reason=type(error).__name__)

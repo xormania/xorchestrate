@@ -2,6 +2,7 @@
 
 import pytest
 
+from scripts.testkit.operator_composition import prepare_run, repeat_settings
 from tests.hexagonal.contracts.local_native_collection import index_population_contract, native_collection_contract
 from tests.hexagonal.contracts.local_native_readiness import (
     default_capture_contract,
@@ -10,6 +11,8 @@ from tests.hexagonal.contracts.local_native_readiness import (
     project_language_contract,
     project_override_contract,
     public_setup_contract,
+    repeat_capture_contract,
+    repeat_snapshot_integrity_contract,
     saved_verify_interpreter_contract,
     selected_capture_dependency_contract,
     selected_config_install_contract,
@@ -89,4 +92,13 @@ def test_public_verify_rejects_omitted_saved_index_entries_with_archive_intact(t
         index_population_contract(subject, mutation)
     finally:
         subject.close()
+
+
+@pytest.mark.parametrize("policy", ["absent", "local-default", "shared-root", "profile", "custom", "disabled"])
+def test_native_repeat_uses_fresh_capture_and_preserves_operator_policy_through_saved_inputs(readiness, policy):
+    repeat_capture_contract(readiness, policy, prepare=prepare_run, repeat=repeat_settings)
+
+
+def test_native_repeat_rejects_a_changed_saved_operator_input_snapshot(readiness):
+    repeat_snapshot_integrity_contract(readiness, prepare=prepare_run, repeat=repeat_settings)
 

@@ -127,3 +127,29 @@ def saved_verify_interpreter_contract(subject):
     assert selected == "selectedselected", "PUBLIC_VERIFY_MUST_USE_SAVED_RUN_INTERPRETER"
     assert unchanged
 
+
+def repeat_capture_contract(subject, policy, *, prepare, repeat):
+    observed = subject.repeat_capture(policy, prepare=prepare, repeat=repeat)
+    assert observed["public_pipeline"] == ["prepare_run", "repeat_settings", "prepare_run", "repeat_settings", "prepare_run"]
+    assert observed["selected_checks"] and all(observed["selected_checks"])
+    assert observed["cwd_preserved"], "NATIVE_REPEAT_MUST_RETAIN_ORIGINAL_RELATIVE_WORKSPACE_BASE"
+    assert observed["original_file_edit_retained"]
+    if policy in {"absent", "local-default"}:
+        options = observed["capture_options"]
+        assert len({item["runtime_root"] for item in options}) == 3, \
+            "NATIVE_REPEAT_DEFAULT_CAPTURE_MUST_USE_A_FRESH_RUN_OWNED_ROOT"
+        for key in ("dataset_id", "collector_id"):
+            assert len({item[key] for item in options}) == 3, "NATIVE_REPEAT_MUST_ALLOCATE_FRESH_CAPTURE_IDENTITIES"
+        assert observed["owned_descriptors"] and observed["collection_status"] == ["verified"] * 3, \
+            "NATIVE_REPEAT_DEFAULT_CORPUS_MUST_REMAIN_ELIGIBLE_FOR_OWNED_COLLECTION"
+        assert observed["first_corpus_unchanged"], "NATIVE_REPEAT_MUST_NOT_APPEND_TO_THE_PREVIOUS_RUN_CORPUS"
+        assert observed["original_recipe_reused"], "NATIVE_REPEAT_MUST_REUSE_FROZEN_OPERATOR_INPUT_NOT_PRIOR_EFFECTIVE_CONFIG"
+    else:
+        assert observed["operator_policy_preserved"], "NATIVE_REPEAT_MUST_PRESERVE_EXPLICIT_OPERATOR_CAPTURE_POLICY"
+        assert observed["withholding_preserved"], "NATIVE_REPEAT_MUST_KEEP_EXTERNAL_OR_DISABLED_CAPTURE_GAPS_EXPLICIT"
+
+
+def repeat_snapshot_integrity_contract(subject, *, prepare, repeat):
+    assert subject.repeat_with_changed_snapshot(prepare=prepare, repeat=repeat), \
+        "NATIVE_REPEAT_MUST_REJECT_CHANGED_FROZEN_INPUT_WITHOUT_EFFECTIVE_CONFIG_FALLBACK"
+

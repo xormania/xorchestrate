@@ -55,6 +55,7 @@ def execution_options(plan):
 def prepare_run(settings, *, parent=None):
     """Freeze reusable inputs before launching; fresh effects always get fresh IDs."""
     settings = dict(settings)
+    config_source_base = settings.pop("config_source_base", None)
     validate_limits(settings)
     root = Path(settings.get("root", ROOT)).resolve()
     output = Path(settings["output"]).expanduser().resolve()
@@ -89,16 +90,17 @@ def prepare_run(settings, *, parent=None):
         except OSError as error:
             # Unavailable check inputs remain check-scoped readiness failures.
             snapshot_errors[name] = type(error).__name__
+    if "config" in snapshots and config_source_base is not None:
+        snapshots["config"]["source_base"] = config_source_base
     if snapshots:
         write_json(directory / "inputs" / "manifest.json", snapshots)
     if "brief" in snapshots:
         settings["brief"] = snapshots["brief"]["path"]
     if "config" in snapshots:
-        source = Path(settings["config"])
         settings["config"] = snapshots["config"]["path"]
         try:
             configuration = read_json(snapshots["config"]["path"])
-            resolved = isolated_config(configuration, source.parent, directory / "derived", capture=settings.get("mode") == "native",
+            resolved = isolated_config(configuration, snapshots["config"]["source_base"], directory / "derived", capture=settings.get("mode") == "native",
                                        project=settings.get("project"))
             target = directory / "inputs" / "native-effective.json"
             write_json(target, resolved)
@@ -351,6 +353,13 @@ def repeat_settings(directory, overrides):
     allowed = (*RUN_FIELDS, "output", "shutdown_grace", "run_timeout", "project")
     settings = {name: prior[name] for name in allowed if name in prior}
     settings.update(overrides)
+    if "config" not in overrides:
+        snapshot = prior.get("input_snapshots", {}).get("config")
+        if snapshot:
+            saved = Path(snapshot["path"])
+            if digest(saved.read_bytes()) != snapshot["sha256"]:
+                raise ValueError("Saved configuration snapshot differs from its recorded input")
+            settings.update(config=str(saved), config_source_base=snapshot["source_base"])
     settings.update(root=str(ROOT), interpreter=sys.executable)
     return settings
 

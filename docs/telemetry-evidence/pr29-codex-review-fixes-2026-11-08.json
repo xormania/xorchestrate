@@ -1,0 +1,617 @@
+{
+  "baseline": {
+    "equivalent_local_source": "9d3705d772fc2bcb3be0acbc9e4ab421f73810b1",
+    "published_head": "75df4ddb68fb4062a3a11331a544b4cde07e8573",
+    "published_tree": "85748819735d5f6284ed7cae924cac0f8ba623f1"
+  },
+  "changed_file_sha256": {
+    "contracts/testing.json": "b447430c26d9b94240d4f89ff13409a3140a6ce4cdf46e7158471eb94160929e",
+    "docs/local-live-telemetry.md": "d090f912c2b8d2966e5e724f21355aa84f7d3153b9856505806aa98f63defadf",
+    "scripts/testkit/adapters/native_evidence.py": "93cefb235ca19c312315daeac6ea95d744d78922ad499813cbdb45534df887a7",
+    "scripts/testkit/operator_composition.py": "decd168966dc999130e91550fbb71acaf63e6a6cfdaaf256258ad8be04e4f1ab",
+    "tests/hexagonal/contracts/local_native_cleanup.py": "ad9ba68af53bf8d5472135238e0a42c5bea4ecf7cf04a62cf916192d31c995ff",
+    "tests/hexagonal/contracts/local_native_readiness.py": "adc42f20027295654a47335adca403cc643411440f530b8b2c32036bb2600a74",
+    "tests/hexagonal/support/local_native_cleanup.py": "d09f14cb8886e306d351b8a55b65001084f2d659fd11710f831e6532a3e9d332",
+    "tests/hexagonal/support/local_native_readiness.py": "8790b05db41ad041a5419e14f5ba0bb73c0b49bd284ffc3a23164a2d28f60582",
+    "tests/hexagonal/test_local_native_cleanup.py": "0a70c3bc6ce68ecfeb9807df75960090e0f24678199470833a848ae8f897d500",
+    "tests/hexagonal/test_local_native_readiness.py": "9498986ae423da755b78f4a2b1f2b8cccef92a6422ee61edcf1976774bffb2c1"
+  },
+  "coordinator_combined_validation": {
+    "errors": 0,
+    "evidence": [
+      {
+        "path": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-fixes-combined.log",
+        "sha256": "2f71715c0046a41a17fbe041a67efdb2e933455d718605f6f7a92bb5ddc6eff9"
+      },
+      {
+        "path": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-fixes-combined.xml",
+        "sha256": "b55a0cf4b7d2585ee766ba10356ca68dc68f2c57567d1526f6e4f12c59693697"
+      },
+      {
+        "path": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-fixes-combined-inventory.json",
+        "sha256": "b90ea984b459b58075e2de7864bed618626db716d29b38f10370d083a0e4551a"
+      }
+    ],
+    "failures": 0,
+    "scope": "37 native readiness/repeat cases, 5 collection cleanup cases and 17 existing static-check cases",
+    "seconds": 13.191,
+    "skips": 0,
+    "tests": 59
+  },
+  "findings": [
+    {
+      "comment_id": 4505503340,
+      "repair": "Repeat from the frozen original operator input, verify its digest, and retain its original path base. Generated default storage is fresh; explicit config overrides use their own base and selected policies remain intact.",
+      "thread_id": "PRRT_kwDOVUInEM60--pC"
+    },
+    {
+      "comment_id": 4505503343,
+      "repair": "Track only snapshot/restore destinations successfully created by this descriptor attempt; invalidate those destinations if later lineage, project or restored-identity checks reject release. Existing source data, earlier exports and other accepted descriptors are outside cleanup ownership.",
+      "thread_id": "PRRT_kwDOVUInEM60--pD"
+    }
+  ],
+  "fresh_adversarial_review": {
+    "path": "/workspace/scratch/7c8bb4d2a697/evidence/qualification/pr29-targeted-repair-review.json",
+    "report": {
+      "actual_override_control": {
+        "explicit_operator_lineage_preserved": true,
+        "operator_composition_sha256": "decd168966dc999130e91550fbb71acaf63e6a6cfdaaf256258ad8be04e4f1ab",
+        "override_capture_root_is_new_base": true,
+        "override_cwd_is_new_base": true,
+        "override_omits_prior_internal_base": true,
+        "override_snapshot_base_is_new_base": true,
+        "prior_effective_config_unchanged": true,
+        "prior_plan_unchanged": true,
+        "purpose": "Actual prepare_run/repeat_settings public pipeline with an explicitly overridden config; no sessions or vendors launched"
+      },
+      "actual_override_control_sha256": "ec299f706c120c1068d42f1774001ca66401888b2560756553ea575d813042da",
+      "baseline_local": "9d3705d772fc2bcb3be0acbc9e4ab421f73810b1",
+      "baseline_published_equivalent_reported_by_root": "75df4d",
+      "clean_worktree": true,
+      "combined_command": "PYTHONPATH=<candidate>:<pinned-collector> PYTHONPYCACHEPREFIX=<outside-candidate> <inspection-python> -m pytest -p no:cacheprovider -q tests/hexagonal/test_local_native_cleanup.py tests/hexagonal/test_local_native_readiness.py --junitxml=<outside-candidate>/pr29-combined-review.xml",
+      "conclusion": "Both targeted repairs qualified before push. No further source/test changes requested. Root owns remote byte matching, final checks, hosted CI and resolving the two review threads afterward.",
+      "independent_test_source_commit": "2e46ee2325105754d4409f1fb3ecb745f9da3a86",
+      "independent_tests": {
+        "cleanup": {
+          "errors": 0,
+          "failures": 0,
+          "junit": "pr29-cleanup-review.xml",
+          "junit_sha256": "7ab53830cd40e08d9822c49f9569e3c7a319f80b6fe7c6add1e4a0a17e86e826",
+          "log": "pr29-cleanup-review.log",
+          "log_sha256": "e932b6e599b7c66cb2aaafdd6bc9c8d029294ae772910afebee5f4a990fae2e9",
+          "passed": 11,
+          "seconds": 3.51
+        },
+        "combined": {
+          "errors": 0,
+          "failures": 0,
+          "junit": "pr29-combined-review.xml",
+          "junit_sha256": "e3fc6b24f7eb870ec6cc1e9231cd7cee8c061bb9df8119d36f5be05e1a457e45",
+          "log": "pr29-combined-review.log",
+          "log_sha256": "4d8e615f68331e1a7a373b6acaf7772326f66e35c4e0255c9fe6c48f92d150c7",
+          "passed": 42,
+          "seconds": 13.95
+        },
+        "repeat": {
+          "errors": 0,
+          "failures": 0,
+          "junit": "pr29-repeat-review.xml",
+          "junit_sha256": "ec522ee1291a63980a5586a12fb661d01deea90ea1c92fafcab575bc921482df",
+          "log": "pr29-repeat-review.log",
+          "log_sha256": "d02417f5b18243442ef3ecfcbc7fdf2b8b5466c08221d2f8b0d1ccc35a07a558",
+          "passed": 7,
+          "seconds": 1.58
+        }
+      },
+      "post_test_delta": "77f531b adds only the reviewed historical-repeat documentation footnote; source and test bytes unchanged. No post-doc-commit rerun claim.",
+      "product_commits": {
+        "cleanup": "fbff76be5002b502f169449e358bf15e0b4ddc81",
+        "repeat": "d5afe838cdfdab63c88d70418932d530b580ca0a"
+      },
+      "remaining_confirmed_findings": [],
+      "reviewed_doc": {
+        "assessment": "Accurate accepted bounded limitation: already-broken historical repeats may have saved effective configuration as input. Use original saved run or explicit --config; no heuristic migration or history rewrite is claimed.",
+        "path": "docs/local-live-telemetry.md",
+        "sha256": "d090f912c2b8d2966e5e724f21355aa84f7d3153b9856505806aa98f63defadf"
+      },
+      "reviewed_head": "77f531b8020d239941b0eb385f802f5bb7e75833",
+      "reviewed_properties": [
+        "repeat_settings chooses the immutable saved raw operator input when config is not overridden and rejects a changed snapshot by SHA before preparation.",
+        "prepare_run retains original source_base across the second and third saved input snapshots, rederives default run-owned roots and dataset/collector IDs, preserves explicit operator capture policy and does not rewrite prior history.",
+        "A new --config uses its own base and explicitly chosen capture root/IDs; actual independent prepare/repeat/prepare control verifies this and unchanged prior plan/effective bytes.",
+        "Rejected-copy ownership is reset per descriptor and includes only destinations returned successfully by create_snapshot/restore_bundle. Existing collision/failure cleanup stays with the shared preservation helpers.",
+        "Only owned new copies are invalidated on later dataset/collector/project/restore-identity rejection; source corpus, prior exports and another legitimate same-run source remain intact.",
+        "Real binary artifact/SQLite/restore/archive fixtures verify rejected database, sidecar and artifact bytes are absent; accepted copies retain independently checked rows/digests/lengths.",
+        "Unavailable/gap reporting and native_acceptance=not_established_by_telemetry remain separate from managed proof/native outcome."
+      ],
+      "reviewed_tree": "cf63ad42a5f776c5f52f91b92a42e07935e5229f",
+      "reviewer": "/root/qualification independent adversarial reviewer; no production or test edits",
+      "scope": "Only the two PR29 findings: repeated default capture provenance/corpus ownership and newly rejected native evidence cleanup. No general audit, vendor calls, GitHub posts or thread mutations.",
+      "separate_author_receipts": {
+        "cleanup": {
+          "path": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/author-report.json",
+          "proof": "4 exact baseline rejection failures and1 passing healthy control; a separate destructive-output fault is detected by healthy preservation control. Final RED/GREEN test bytes identical.",
+          "sha256": "1f1b091b88119e5884bc2bfda6b1e9b188d138def1c5ad871268fb7c512162f9"
+        },
+        "repeat": {
+          "path": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-repeat/author-final.json",
+          "proof": "3 exact baseline semantic failures and4 passing policy controls;4 separate intentional policy-publication faults detected by those controls. Actual three-run repair witness changes counts2,4,6 to2,2,2 with three owned corpora/lineages and unchanged first corpus.",
+          "sha256": "f0f4491adb9945e1aa006bdca87f5614c54d06963f28a4ca650c12646134ecca"
+        }
+      },
+      "source_sha256": {
+        "scripts/testkit/adapters/native_evidence.py": "93cefb235ca19c312315daeac6ea95d744d78922ad499813cbdb45534df887a7",
+        "scripts/testkit/operator_composition.py": "decd168966dc999130e91550fbb71acaf63e6a6cfdaaf256258ad8be04e4f1ab"
+      },
+      "test_commits": {
+        "cleanup": "3651d9d3cf4da682853457f52ca25cb90708bc1c",
+        "repeat": "2e46ee2325105754d4409f1fb3ecb745f9da3a86"
+      },
+      "test_count_note": "The combined42 includes targeted repeat7 and cleanup5 plus existing readiness/collection controls. Targeted counts overlap and are not additive.",
+      "test_sha256": {
+        "tests/hexagonal/contracts/local_native_cleanup.py": "ad9ba68af53bf8d5472135238e0a42c5bea4ecf7cf04a62cf916192d31c995ff",
+        "tests/hexagonal/contracts/local_native_readiness.py": "adc42f20027295654a47335adca403cc643411440f530b8b2c32036bb2600a74",
+        "tests/hexagonal/support/local_native_cleanup.py": "d09f14cb8886e306d351b8a55b65001084f2d659fd11710f831e6532a3e9d332",
+        "tests/hexagonal/support/local_native_readiness.py": "8790b05db41ad041a5419e14f5ba0bb73c0b49bd284ffc3a23164a2d28f60582",
+        "tests/hexagonal/test_local_native_cleanup.py": "0a70c3bc6ce68ecfeb9807df75960090e0f24678199470833a848ae8f897d500",
+        "tests/hexagonal/test_local_native_readiness.py": "9498986ae423da755b78f4a2b1f2b8cccef92a6422ee61edcf1976774bffb2c1"
+      }
+    },
+    "sha256": "944bda26e2288c7c7b97250254de8119c2516510855243e1464482b8a8b583c7"
+  },
+  "limitations": [
+    "No authenticated vendor invocation was needed or claimed for these data/lifecycle fixes.",
+    "An already-created broken repeat can have saved an earlier effective configuration as its operator input. Historical inputs are not heuristically rewritten; repeat from the original saved run or pass --config with the intended policy.",
+    "Local artifact paths identify retained validation evidence and are not claimed as hosted downloads. The reports and hashes are preserved here; hosted CI artifacts are linked from the PR."
+  ],
+  "publication": {
+    "note": "Remote parent is the published baseline above; later PR metadata and inline repair replies bind the final published head and hosted run. This receipt does not claim an outcome that had not occurred when created.",
+    "remote_head_at_receipt_creation": null,
+    "thread_resolution_at_receipt_creation": "pending publication and successful hosted CI"
+  },
+  "red_green_summary": {
+    "baseline_positive_controls": 5,
+    "baseline_semantic_failures": 7,
+    "final_new_cases_passed": 12,
+    "new_cases": 12,
+    "note": "Repeat: 3 original-source failures plus 4 passing policy controls, each separately fault-calibrated. Cleanup: 4 original-source failures plus 1 healthy control, separately fault-calibrated. These are not twelve historical production failures.",
+    "positive_controls_detecting_narrow_faults": 5
+  },
+  "schema_version": 1,
+  "scope": "PR29 Codex repeat-capture provenance and rejected-copy cleanup repairs",
+  "separate_authors": {
+    "cleanup": {
+      "path": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/author-report.json",
+      "report": {
+        "agent": "collector_tests; independent test author, no production edits/native calls",
+        "diagnostic_note": "First healthy-fault attempt surfaced a helper SQLite missing-file exception; added one availability check in newtestsupport, then replayed all RED/GREEN evidence using final identical bytes. Initial log retained as healthy-fault-initial-diagnostic.log.",
+        "evidence": {
+          "green-inventory.json": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/green-inventory.json",
+            "sha256": "37c0fad79f39d01c522edfaf91f7c884a906bb507678d26376be06b16aa44f19"
+          },
+          "green.log": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/green.log",
+            "sha256": "4df4fcd75237e91797cc264eb411176ae80f7dceb9a7d59589e74ef739e41f49"
+          },
+          "green.xml": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/green.xml",
+            "sha256": "d265415d43421d7f2f0078bb1cddc88ebac61e0b5e24af43ddf82723be59861d"
+          },
+          "healthy-fault-red-inventory.json": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/healthy-fault-red-inventory.json",
+            "sha256": "67104076852769b1863f8ef87926696ccf2703645dcae02f2c1832d86275abb8"
+          },
+          "healthy-fault-red.json": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/healthy-fault-red.json",
+            "sha256": "8066ab8b7a558d1347a74c59c1b209f45a8232af14a3e21a8da53fe4f63a2083"
+          },
+          "healthy-fault-red.log": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/healthy-fault-red.log",
+            "sha256": "041a5f4ef11a5ef1cea52320b2e5bd916a4ffe78e0b3dbfdabee900055be6cc1"
+          },
+          "healthy-fault-red.xml": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/healthy-fault-red.xml",
+            "sha256": "46c8cc77f4e3ff20f69d7110e8cb6d8e32a05cfd5d1a9f63a402599ccb3e8dc8"
+          },
+          "identical-red-inventory.json": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/identical-red-inventory.json",
+            "sha256": "f2477b150250519fb731ee19570f4f56ec09994af3b9cc7072d51e68c5bc7bcc"
+          },
+          "identical-red.log": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/identical-red.log",
+            "sha256": "a54ec537fca072ea5e3be8b46dd8e452f2f68a76dca8e0b3634a1718ab2148b2"
+          },
+          "identical-red.xml": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/identical-red.xml",
+            "sha256": "e77e6fb2e0c09725166edc8be00ac317bb4c80de7342fa6454e0b994e7c89a74"
+          },
+          "red-inventory.json": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/red-inventory.json",
+            "sha256": "f2477b150250519fb731ee19570f4f56ec09994af3b9cc7072d51e68c5bc7bcc"
+          },
+          "red.log": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/red.log",
+            "sha256": "7017720698c2764d5997f1100d68b26691bd2998e4de7b2bed35a0494f2088b5"
+          },
+          "red.xml": {
+            "path": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/red.xml",
+            "sha256": "22e4e0b230852c4794028064c89db4986018c5534d753516d1edce4abe0823fe"
+          }
+        },
+        "green": {
+          "command": "PYTHONPATH=/workspace/scratch/7c8bb4d2a697/donor-cce PYTHONPYCACHEPREFIX=/workspace/scratch/7c8bb4d2a697/evidence/pycache-native-cleanup /workspace/scratch/913f839fa00b/inspection-venv/bin/python -m pytest -p no:cacheprovider tests/hexagonal/test_local_native_cleanup.py -q --test-inventory <green-inventory.json> --junitxml <green.xml>",
+          "errors": 0,
+          "exact_invocation": {
+            "argv": [
+              "/workspace/scratch/913f839fa00b/inspection-venv/bin/python",
+              "-m",
+              "pytest",
+              "-p",
+              "no:cacheprovider",
+              "tests/hexagonal/test_local_native_cleanup.py",
+              "-q",
+              "--test-inventory",
+              "/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/green-inventory.json",
+              "--junitxml=/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/green.xml"
+            ],
+            "cwd": "/workspace/scratch/7c8bb4d2a697/r3-native",
+            "environment": {
+              "PYTHONPATH": "/workspace/scratch/7c8bb4d2a697/donor-cce",
+              "PYTHONPYCACHEPREFIX": "/workspace/scratch/7c8bb4d2a697/evidence/pycache-native-cleanup"
+            }
+          },
+          "failures": 0,
+          "normal_catalog": true,
+          "seconds": 0.74,
+          "tests": 5
+        },
+        "identical_test_bytes_red_green": true,
+        "limits": "Controlled local source fixtures only; no authenticated native run, no actual provider or terminal calls, no general threat audit.",
+        "original_source_local": "9d3705d772fc2bcb3be0acbc9e4ab421f73810b1",
+        "positive_control_red": {
+          "assertion": "NATIVE_ACCEPTED_SOURCE_MUST_KEEP_VALID_BUNDLE_AND_RESTORED_BYTE_CLOSURE",
+          "case": "healthy",
+          "command": "PYTHONPATH=/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/proof:/workspace/scratch/7c8bb4d2a697/donor-cce PYTHONPYCACHEPREFIX=/workspace/scratch/7c8bb4d2a697/evidence/pycache-native-cleanup NATIVE_CLEANUP_ROOT=/workspace/scratch/7c8bb4d2a697/r3-native NATIVE_CLEANUP_RECEIPT=/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/healthy-fault-red.json /workspace/scratch/913f839fa00b/inspection-venv/bin/python -m pytest -p no:cacheprovider -p native_cleanup_red_proof tests/hexagonal/test_local_native_cleanup.py::test_local_collection_removes_only_newly_rejected_byte_copies[healthy] -q --test-inventory <healthy-fault-red-inventory.json> --junitxml <healthy-fault-red.xml>",
+          "errors": 0,
+          "exact_invocation": {
+            "argv": [
+              "/workspace/scratch/913f839fa00b/inspection-venv/bin/python",
+              "-m",
+              "pytest",
+              "-p",
+              "no:cacheprovider",
+              "-p",
+              "native_cleanup_red_proof",
+              "tests/hexagonal/test_local_native_cleanup.py::test_local_collection_removes_only_newly_rejected_byte_copies[healthy]",
+              "-q",
+              "--test-inventory",
+              "/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/healthy-fault-red-inventory.json",
+              "--junitxml=/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/healthy-fault-red.xml"
+            ],
+            "cwd": "/workspace/scratch/7c8bb4d2a697/r3-native",
+            "environment": {
+              "NATIVE_CLEANUP_RECEIPT": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/healthy-fault-red.json",
+              "NATIVE_CLEANUP_ROOT": "/workspace/scratch/7c8bb4d2a697/r3-native",
+              "PYTHONPATH": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/proof:/workspace/scratch/7c8bb4d2a697/donor-cce",
+              "PYTHONPYCACHEPREFIX": "/workspace/scratch/7c8bb4d2a697/evidence/pycache-native-cleanup"
+            }
+          },
+          "failures": 1,
+          "fault": "Runtime-only collector wrapper removes the accepted primary bundle DB only after second collection, leaving actual prior valid export intact.",
+          "plugin": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/proof/native_cleanup_red_proof.py",
+          "plugin_sha256": "0f4ce3f84bcd0181da597c92a2e3c98fc7336d6d483e9ee52bc6133f0868df02",
+          "seconds": 0.3,
+          "tests": 1
+        },
+        "production_repair_commit": "fbff76be5002b502f169449e358bf15e0b4ddc81",
+        "red": {
+          "assertion": "NATIVE_REJECTED_COPY_MUST_NOT_RETAIN_DATABASE_BYTES",
+          "cases": [
+            "dataset_id",
+            "collector_id",
+            "project_id",
+            "restored-identity"
+          ],
+          "command": "PYTHONPATH=/workspace/scratch/7c8bb4d2a697/donor-cce PYTHONPYCACHEPREFIX=/workspace/scratch/7c8bb4d2a697/evidence/pycache-native-cleanup /workspace/scratch/913f839fa00b/inspection-venv/bin/python -m pytest -p no:cacheprovider tests/hexagonal/test_local_native_cleanup.py -q --test-inventory <identical-red-inventory.json> --junitxml <identical-red.xml>",
+          "errors": 0,
+          "exact_invocation": {
+            "argv": [
+              "/workspace/scratch/913f839fa00b/inspection-venv/bin/python",
+              "-m",
+              "pytest",
+              "-p",
+              "no:cacheprovider",
+              "tests/hexagonal/test_local_native_cleanup.py",
+              "-q",
+              "--test-inventory",
+              "/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/identical-red-inventory.json",
+              "--junitxml=/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/identical-red.xml"
+            ],
+            "cwd": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-cleanup-tests/baseline",
+            "environment": {
+              "PYTHONPATH": "/workspace/scratch/7c8bb4d2a697/donor-cce",
+              "PYTHONPYCACHEPREFIX": "/workspace/scratch/7c8bb4d2a697/evidence/pycache-native-cleanup"
+            }
+          },
+          "failures": 4,
+          "healthy_baseline_control_passed": true,
+          "seconds": 0.83,
+          "tests": 5
+        },
+        "red_source_commit": "f4b167a2d7bbb1786c36038914be9398d09c179c",
+        "red_source_note": "Catalog-only addition atop original production; finaltestbytes copied to detached source and normal catalog used.",
+        "ruff": "All3newtestmodules pass",
+        "source_sha256": {
+          "scripts/testkit/adapters/native_evidence.py": "93cefb235ca19c312315daeac6ea95d744d78922ad499813cbdb45534df887a7"
+        },
+        "test_commit": "3651d9d3cf4da682853457f52ca25cb90708bc1c",
+        "test_sha256": {
+          "tests/hexagonal/contracts/local_native_cleanup.py": "ad9ba68af53bf8d5472135238e0a42c5bea4ecf7cf04a62cf916192d31c995ff",
+          "tests/hexagonal/support/local_native_cleanup.py": "d09f14cb8886e306d351b8a55b65001084f2d659fd11710f831e6532a3e9d332",
+          "tests/hexagonal/test_local_native_cleanup.py": "0a70c3bc6ce68ecfeb9807df75960090e0f24678199470833a848ae8f897d500"
+        },
+        "verified_properties": [
+          "Actual CCE source DB and captured binary artifact retained; dataset/collector/project mismatches produce explicit gap.",
+          "Post-restore rejection follows an actual successful restore before returned identity is changed by test fixture.",
+          "New rejected DB/sidecars/artifact payloads absent; binarycanary absent from current output including decompressed ZIP members; incomplete markers never claim complete.",
+          "Every source byte hash remains identical; prior valid export bytes remain identical; second legitimate same-run source and its current bundle/restored byte closure remain valid.",
+          "Healthy source snapshots/restores preserve DB rows, manifest digest and artifact byte digests/lengths; telemetry does not establish native acceptance."
+        ]
+      },
+      "sha256": "1f1b091b88119e5884bc2bfda6b1e9b188d138def1c5ad871268fb7c512162f9"
+    },
+    "repeat": {
+      "path": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-repeat/author-final.json",
+      "report": {
+        "affected_family": {
+          "errors": 0,
+          "passed": 37,
+          "summary": "37 passed, 1 warning in 6.85s"
+        },
+        "all7_new_cases_have_red": true,
+        "architecture": {
+          "status": "pass",
+          "summary": {
+            "findings": 0,
+            "modules": 241
+          }
+        },
+        "baseline_commit": "9d3705d772fc2bcb3be0acbc9e4ab421f73810b1",
+        "baseline_control_cases": [
+          "test_native_repeat_uses_fresh_capture_and_preserves_operator_policy_through_saved_inputs[shared-root]",
+          "test_native_repeat_uses_fresh_capture_and_preserves_operator_policy_through_saved_inputs[profile]",
+          "test_native_repeat_uses_fresh_capture_and_preserves_operator_policy_through_saved_inputs[custom]",
+          "test_native_repeat_uses_fresh_capture_and_preserves_operator_policy_through_saved_inputs[disabled]"
+        ],
+        "baseline_failure_cases": [
+          "test_native_repeat_uses_fresh_capture_and_preserves_operator_policy_through_saved_inputs[absent]",
+          "test_native_repeat_uses_fresh_capture_and_preserves_operator_policy_through_saved_inputs[local-default]",
+          "test_native_repeat_rejects_a_changed_saved_operator_input_snapshot"
+        ],
+        "baseline_production_sha256": {
+          "scripts/testkit/adapters/configuration.py": "d3f07d594c6656a39aa9798e3bd62d022085cfe49047e9c407799543c7b2ace7",
+          "scripts/testkit/operator_composition.py": "f38c54cdd33d8a748a0194de03b94ba96adb449663830ae845224e2ef37206d1"
+        },
+        "candidate_production_sha256": {
+          "scripts/testkit/adapters/configuration.py": "d3f07d594c6656a39aa9798e3bd62d022085cfe49047e9c407799543c7b2ace7",
+          "scripts/testkit/operator_composition.py": "decd168966dc999130e91550fbb71acaf63e6a6cfdaaf256258ad8be04e4f1ab"
+        },
+        "evidence": {
+          "architecture.json": {
+            "sha256": "0ee395bf909f14f3dd96398811d09ca5688d5993fb4ef9069965dca38675816f"
+          },
+          "architecture.log": {
+            "sha256": "23861d1a7381cc44c49506a556d50ff4b84809a280b3d99767949132073c9c4f"
+          },
+          "baseline-workflow.json": {
+            "sha256": "1b1c6274efdc5bfb28054f9ba6b71f6a39f85776dce6d15835bd9fd55ebfc40b"
+          },
+          "baseline-workflow.log": {
+            "sha256": "ba67cfe95b4a4cecef6c62516032900b21a03e2b1b55a94281eed60241b7644a"
+          },
+          "candidate-workflow.json": {
+            "sha256": "bf09db7990f1e8a42ecd5a81a7a06aede1650e93a8857d189fbe2b8dd853fb31"
+          },
+          "candidate-workflow.log": {
+            "sha256": "855bbf0b00dacce7b8eff1ade69c877f91572165189d30c5a1e62fd763747dff"
+          },
+          "control-faults.json": {
+            "sha256": "f0d009400d48f344e9ed03a253c6d11ed648b007619446faa2145ae668fe471b"
+          },
+          "control-faults.log": {
+            "sha256": "faccc38df0242455e21234359002414825618bc6ea56a31d7cdda06237608a46"
+          },
+          "control-faults.py": {
+            "sha256": "bd73d3f141f2715f8b36bb3cdcda43ed619dba945c476a3ad16408b98b67ca64"
+          },
+          "existing-green.log": {
+            "sha256": "c2cc6d3a14a0b6dbabe2b8e8eb858759b0e66a6b74d5d9b68603b060a18ec586"
+          },
+          "green-all-inventory.json": {
+            "sha256": "b89ba27cac4a8bda8f3ae43dc52d584ae1d3b431934f032b7aefde46772aa2f8"
+          },
+          "green-all.log": {
+            "sha256": "ee79f77b7e97948a040058bef98f3c2f61558128a62c07ec0374fe487712e048"
+          },
+          "green-all.xml": {
+            "sha256": "f5b3f96387e4e5136344d66d376083d076b2bc28666d13046a1cd56c5bccc221"
+          },
+          "green.log": {
+            "sha256": "5f8b9bb36ca11b65b84a2278c1c1fbe0d6f0f58b01c9041aa6ba3c2e68037c34"
+          },
+          "green.xml": {
+            "sha256": "16939b83652ef29386033e4d0f30eca91e22e63e9b823daba027f53b123e0024"
+          },
+          "red-inventory.json": {
+            "sha256": "bee1f16859f5d0672b4ec0e229f3b4aa81788b360c85506c2b1f385b89690df7"
+          },
+          "red.log": {
+            "sha256": "99c0b3d73afa7c40e161998a684ddfd2b89b7b0c6f3192cdd17a7eb55ef81a1d"
+          },
+          "red.xml": {
+            "sha256": "ae4ba3867c014734db85acd770fb0d6cb774780bee6779c40ac010bf92daf595"
+          },
+          "workflow-witness.py": {
+            "sha256": "0304563a1054b846645c7e9f270abf2946836cbffd948d2d2df7b0251dbe84e6"
+          }
+        },
+        "green": {
+          "errors": 0,
+          "passed": 7,
+          "summary": "7 passed, 30 deselected, 1 warning in 1.19s"
+        },
+        "identical_red_green_test_bytes": true,
+        "intentional_faults": {
+          "candidate_product_edits": false,
+          "detected": 4,
+          "kind": "intentional isolated output-artifact fault",
+          "results": [
+            {
+              "assertion": "NATIVE_REPEAT_MUST_PRESERVE_EXPLICIT_OPERATOR_CAPTURE_POLICY",
+              "fault": "Second prepared effective configuration altered after actual publication; frozen input and actual prepare/repeat functions unchanged",
+              "policy": "shared-root",
+              "status": "detected"
+            },
+            {
+              "assertion": "NATIVE_REPEAT_MUST_PRESERVE_EXPLICIT_OPERATOR_CAPTURE_POLICY",
+              "fault": "Second prepared effective configuration altered after actual publication; frozen input and actual prepare/repeat functions unchanged",
+              "policy": "profile",
+              "status": "detected"
+            },
+            {
+              "assertion": "NATIVE_REPEAT_MUST_PRESERVE_EXPLICIT_OPERATOR_CAPTURE_POLICY",
+              "fault": "Second prepared effective configuration altered after actual publication; frozen input and actual prepare/repeat functions unchanged",
+              "policy": "custom",
+              "status": "detected"
+            },
+            {
+              "assertion": "NATIVE_REPEAT_MUST_PRESERVE_EXPLICIT_OPERATOR_CAPTURE_POLICY",
+              "fault": "Second prepared effective configuration altered after actual publication; frozen input and actual prepare/repeat functions unchanged",
+              "policy": "disabled",
+              "status": "detected"
+            }
+          ],
+          "status": "passed"
+        },
+        "limitations": [
+          "Actual saved-run preparation, preflight, application capture and owned collection; no native/model process launched or authenticated-native claim.",
+          "Four policy controls have intentional output-publication faults, not mislabeled baseline product failures. Actual prepare/repeat functions remain unchanged in those controls.",
+          "The broad37-case result overlaps seven targeted cases; counts are not additive.",
+          "Other PR29 author owns cleanup module; no changes to its files by this test author."
+        ],
+        "production_edits": false,
+        "published_equivalent_reported_by_coordinator": "75df4d",
+        "qualification_binding": "GREEN executed against source bytes beforecommit; exact recorded operator source SHA matches finalproductcommit d5afe838; tests-only commit2e46 retained separately. No rerun claim aftercommit.",
+        "qualified_production_commit": "d5afe838cdfdab63c88d70418932d530b580ca0a",
+        "red": {
+          "errors": 0,
+          "failed": 3,
+          "junit_sha256": "ae4ba3867c014734db85acd770fb0d6cb774780bee6779c40ac010bf92daf595",
+          "log_sha256": "99c0b3d73afa7c40e161998a684ddfd2b89b7b0c6f3192cdd17a7eb55ef81a1d",
+          "passed": 4,
+          "summary": "3 failed, 4 passed, 30 deselected, 1 warning in 2.75s"
+        },
+        "test_author": "/root/preserve_tests",
+        "test_commit": "2e46ee2325105754d4409f1fb3ecb745f9da3a86",
+        "test_sha256": {
+          "tests/hexagonal/contracts/local_native_readiness.py": "adc42f20027295654a47335adca403cc643411440f530b8b2c32036bb2600a74",
+          "tests/hexagonal/support/local_native_readiness.py": "8790b05db41ad041a5419e14f5ba0bb73c0b49bd284ffc3a23164a2d28f60582",
+          "tests/hexagonal/test_local_native_readiness.py": "9498986ae423da755b78f4a2b1f2b8cccef92a6422ee61edcf1976774bffb2c1"
+        },
+        "workflow_after": {
+          "actual_application_event_counts_after_each_run": [
+            2,
+            2,
+            2
+          ],
+          "collection_status": [
+            "verified",
+            "verified",
+            "verified"
+          ],
+          "cwd_preserved": true,
+          "first_corpus_unchanged": true,
+          "native_processes_launched": 0,
+          "operator_composition_sha256": "decd168966dc999130e91550fbb71acaf63e6a6cfdaaf256258ad8be04e4f1ab",
+          "operator_live_file_edit_preserved": true,
+          "original_recipe_reused": true,
+          "prepared_runs": 3,
+          "unique_collectors": 3,
+          "unique_corpus_roots": 3,
+          "unique_datasets": 3,
+          "workflow": [
+            "prepare_run",
+            "repeat_settings",
+            "prepare_run",
+            "repeat_settings",
+            "prepare_run"
+          ]
+        },
+        "workflow_before": {
+          "actual_application_event_counts_after_each_run": [
+            2,
+            4,
+            6
+          ],
+          "collection_status": [
+            "verified",
+            "partial",
+            "partial"
+          ],
+          "cwd_preserved": true,
+          "first_corpus_unchanged": false,
+          "native_processes_launched": 0,
+          "operator_composition_sha256": "f38c54cdd33d8a748a0194de03b94ba96adb449663830ae845224e2ef37206d1",
+          "operator_live_file_edit_preserved": true,
+          "original_recipe_reused": false,
+          "prepared_runs": 3,
+          "unique_collectors": 1,
+          "unique_corpus_roots": 1,
+          "unique_datasets": 1,
+          "workflow": [
+            "prepare_run",
+            "repeat_settings",
+            "prepare_run",
+            "repeat_settings",
+            "prepare_run"
+          ]
+        }
+      },
+      "sha256": "f0f4491adb9945e1aa006bdca87f5614c54d06963f28a4ca650c12646134ecca"
+    }
+  },
+  "shared_static": {
+    "candidate_integrity": {
+      "actual": "16e59510368a64363b10cd2ac626fe58ee93c1f1a31e3f4d3640bbc26baba25d",
+      "changed_paths": [],
+      "deleted": [],
+      "expected": "16e59510368a64363b10cd2ac626fe58ee93c1f1a31e3f4d3640bbc26baba25d",
+      "passed": true
+    },
+    "checks": [
+      {
+        "name": "ruff",
+        "status": "passed"
+      },
+      {
+        "name": "syntax",
+        "status": "passed"
+      },
+      {
+        "name": "architecture",
+        "status": "passed"
+      }
+    ],
+    "report": {
+      "path": "/workspace/scratch/7c8bb4d2a697/evidence/pr29-fixes-static/20261108T082029Z-b30ce1d4cd74/report.json",
+      "sha256": "ba33511e495e4cc7bee3b3c0c61783881db8b1142217e34366d11b2679d6b1d2"
+    }
+  },
+  "status_at_creation": "Locally verified and independently reviewed before publication; final hosted CI and thread resolution are recorded on the PR.",
+  "validation_checkpoint": {
+    "head": "77f531b8020d239941b0eb385f802f5bb7e75833",
+    "tree": "cf63ad42a5f776c5f52f91b92a42e07935e5229f",
+    "worktree_clean": true
+  }
+}
