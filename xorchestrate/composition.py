@@ -13,7 +13,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from .application import Application
-from .model import OrchestrationError
+from .model import OrchestrationError, unique_keys
 
 BUILTINS = {
     "telemetry": {"local": "xorchestrate.adapters.telemetry:LocalTelemetry"},
@@ -43,18 +43,9 @@ def _reject_constant(value):
     raise ValueError(f"Non-finite JSON constant: {value}")
 
 
-def _unique_object(pairs):
-    result = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError(f"Duplicate JSON key: {key}")
-        result[key] = value
-    return result
-
-
 def read_json(text):
     try:
-        value = json.loads(text, parse_constant=_reject_constant, object_pairs_hook=_unique_object)
+        value = json.loads(text, parse_constant=_reject_constant, object_pairs_hook=unique_keys("Duplicate JSON key: {key}"))
         json.dumps(value, allow_nan=False)
         return value
     except (ValueError, TypeError, RecursionError) as exc:

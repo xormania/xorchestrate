@@ -11,7 +11,7 @@ import json
 from copy import deepcopy
 from typing import Callable
 
-from .model import JSON, Capability, Conflict, OrchestrationError, Record
+from .model import JSON, Capability, Conflict, OrchestrationError, Record, unique_keys
 from .ports import AcceptancePolicy, Clock, StateStore, Transaction
 
 
@@ -26,15 +26,6 @@ def _view(record):
 def _same(left, right):
     # Python equality conflates JSON booleans with numbers.
     return _hash(left) == _hash(right)
-
-
-def _unique(pairs):
-    result = {}
-    for key, value in pairs:
-        if key in result:
-            raise ValueError("Duplicate measurement field")
-        result[key] = value
-    return result
 
 
 def _invalid_constant(value):
@@ -97,7 +88,7 @@ def _observation(raw):
         if not isinstance(blocks, list) or len(blocks) != 1 or not isinstance(blocks[0], dict) or blocks[0].get("type") != "text":
             return None
         try:
-            raw = json.loads(blocks[0]["text"], object_pairs_hook=_unique, parse_constant=_invalid_constant)
+            raw = json.loads(blocks[0]["text"], object_pairs_hook=unique_keys("Duplicate measurement field"), parse_constant=_invalid_constant)
         except (KeyError, ValueError, TypeError, RecursionError):
             return None
     return raw.get("measurement") if isinstance(raw, dict) and isinstance(raw.get("measurement"), dict) else None

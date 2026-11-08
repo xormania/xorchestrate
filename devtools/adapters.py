@@ -17,20 +17,27 @@ NAME = re.compile(r"[a-z][a-z0-9_-]{0,79}")
 IMPLEMENTATION = re.compile(r"[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*:[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*", re.ASCII)
 
 
-def registry():
-    def distinct(pairs):
+def unique_keys(message):
+    """Return a JSON object_pairs_hook that rejects duplicate keys.
+
+    ``message`` may reference the duplicated name as ``{key}``.
+    """
+    def hook(pairs):
         result = {}
         for key, value in pairs:
             if key in result:
-                raise ValueError("Adapter manifest contains duplicate keys.")
+                raise ValueError(message.format(key=key))
             result[key] = value
         return result
+    return hook
 
+
+def registry():
     def finite(value):
         raise ValueError("Adapter manifest must contain finite JSON values.")
 
     try:
-        document = json.loads(MANIFEST.read_text(), object_pairs_hook=distinct, parse_constant=finite)
+        document = json.loads(MANIFEST.read_text(), object_pairs_hook=unique_keys("Adapter manifest contains duplicate keys."), parse_constant=finite)
     except (OSError, ValueError):
         raise ValueError("The adapter manifest must be readable JSON.") from None
     if (not isinstance(document, dict) or document.keys() != {"version", "adapters"}

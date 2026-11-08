@@ -22,6 +22,7 @@ from urllib.parse import urlsplit
 
 from .adapters import names as adapter_names
 from .adapters import registry as adapter_registry
+from .adapters import unique_keys
 from .failures import CATEGORIES
 from .jev_config import validate_entry, validate_question, validate_questions
 from .recovery_actions import PLACEHOLDERS, substitute, validate_templates
@@ -310,17 +311,10 @@ def validate(value, *, references=True):
 
 def _read(path):
     """Reject duplicate keys instead of silently picking a contradictory declaration."""
-    def pairs(items):
-        result = {}
-        for name, value in items:
-            if name in result:
-                raise ValueError("Duplicate configuration field: " + name)
-            result[name] = value
-        return result
     try:
         if path.stat().st_size > 512 * 1024:
             raise ValueError("Configuration exceeds its 512 KiB budget")
-        return json.loads(path.read_text(), object_pairs_hook=pairs,
+        return json.loads(path.read_text(), object_pairs_hook=unique_keys("Duplicate configuration field: {key}"),
                           parse_constant=lambda _: (_ for _ in ()).throw(ValueError("Non-finite configuration number")))
     except (OSError, UnicodeError, json.JSONDecodeError, RecursionError):
         raise ValueError("The operator must supply a readable valid configuration JSON file") from None
