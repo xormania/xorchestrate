@@ -102,6 +102,50 @@
         "remaining_confirmed_findings": [],
         "conclusion": "Qualified within the approved known-vector privacy repair scope before draft publication; no production or test changes requested by reviewer."
       }
+    },
+    "ordinary_preservation_fault_control": {
+      "receipt": "capture/r3-privacy-ordinary-preservation-mutant-receipt.json",
+      "sha256": "299fbe3e9f71f89471368ed96345e31f4b8301e1aecc2d74fafbcdc49e4d0209",
+      "content": {
+        "agent": "/root/capture_tests",
+        "counting_note": "The ordinary preservation control correctly passed the historical baseline. Its red proof uses a separate blanket-loss fault; do not report it as an eighth historical privacy leak.",
+        "fault": "Only in a detached isolated worktree, pass empty bytes instead of the complete ordinary transcript line to observe_wire; preserve parsed entry and original control unchanged.",
+        "fault_changed_files": [
+          "xorchestrate/adapters/claude.py"
+        ],
+        "fault_patch": "r3-privacy-ordinary-preservation-mutant.patch",
+        "fault_patch_sha256": "c8f51d4de2d5a4c2e72a9747d8f1cf733f5fab0c3b871df65ece44f7ad605ddc",
+        "fault_source_sha256": "1136c27b87c2e3c1ff7072ef73a840468446efdd3fce77287f8089d3c969cc21",
+        "published_checkout_clean": true,
+        "published_commit": "c5eda76f9206d7ec833b74048501628e1a98352d",
+        "published_production_edits": false,
+        "published_tree": "493de489d04d78c30a4ae268086bebaf926c309d",
+        "red_command": "PYTHONPATH=/workspace/scratch/7c8bb4d2a697/r3-privacy-preservation-mutant:/workspace/scratch/7c8bb4d2a697/donor-cce PYTHONPYCACHEPREFIX=/workspace/scratch/7c8bb4d2a697/evidence/capture/r3-privacy-mutant-pycache /workspace/scratch/913f839fa00b/inspection-venv/bin/python -m pytest -q tests/hexagonal/test_transcript_producer_capture.py::TranscriptProducerCaptureTests::test_complete_ordinary_source_preserves_opaque_provider_fields",
+        "red_log": "r3-privacy-ordinary-preservation-mutant-red.log",
+        "red_log_sha256": "8db5531be75254a39cb2455a240aed3069e4c7c5c55f56b38ecd9505b8462fc2",
+        "red_result": {
+          "errors": 0,
+          "failed": 1,
+          "failure": "AssertionError at test line119: retained_bytes(event) is empty instead of the original complete ordinary JSONL record.",
+          "seconds": 0.77
+        },
+        "scope": "Single existing ordinary opaque-record preservation control; isolated fault proof only.",
+        "test_edits": false,
+        "test_node": "tests/hexagonal/test_transcript_producer_capture.py::TranscriptProducerCaptureTests::test_complete_ordinary_source_preserves_opaque_provider_fields",
+        "unchanged_green": {
+          "file_sha256": {
+            "tests/hexagonal/contracts/producer_capture.py": "f2100c70c12adb064a59902c57cf2fbee83da656c1b121233c1330e4cdd294d9",
+            "tests/hexagonal/support/transcript_privacy.py": "3614f11dab9ef2cc99e2a04c82df541e5bf5bdb4e69389b1fee785ae51dd2884",
+            "tests/hexagonal/test_transcript_producer_capture.py": "3b365206d0a4414a5bbba7802290f62089a6e20b00cebdc4c089345bbf7cdd5c",
+            "xorchestrate/adapters/claude.py": "5f28cb6f8c8659a27d4ee30704954084c7eeb0ef5ab8bfedede749c2f96060bc"
+          },
+          "receipt": "r3-privacy-test-author-receipt.json",
+          "receipt_sha256": "20fd9a4d567a43f4f2d90727093a1a2d1dde797c07d71562a8c9e70dc7e44359",
+          "rerun_required": false,
+          "result": "24 passed in12.25s",
+          "source_and_test_hashes_match_published": true
+        }
+      }
     }
   }
 }
