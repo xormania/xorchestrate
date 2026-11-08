@@ -352,11 +352,13 @@ class ClaudeSessionDriver:
                             return
                         remaining -= len(line)
                         if not line.endswith(b"\n") or len(line) > self.max_transcript_frame:
-                            observe_wire(self._telemetry_observer, "native.transcript_tail", line,
-                                         live.telemetry_context, secrets=telemetry_secrets(self.options), complete=False,
-                                         range_start=offset, total_bytes=info.st_size, reason="partial_tail_or_read_bound",
-                                         source_id=source["source_id"], source_version="claude-transcript-jsonl-v1",
-                                         parser_status="incomplete", cursor=source["cursor"])
+                            # Ownership fields may follow private content in an
+                            # unfinished JSON object. Even an unbound current
+                            # driver may be reading historical application tool
+                            # results. Retain the range until it can be classified.
+                            self._transcript_privacy_gap(live, line, offset, info.st_size, "incomplete",
+                                reason="transcript_fragment_requires_classification",
+                                event_type="native.transcript_tail", acknowledge=False)
                             self._transcript_status(live, "partial", "partial_tail" if offset + len(line) >= info.st_size else "read_bound",
                                                     observed_range_start=offset, observed_range_end=offset + len(line), source_bytes=info.st_size)
                             return
@@ -375,22 +377,17 @@ class ClaudeSessionDriver:
                         secrets = telemetry_secrets(self.options)
                         event_id = "claude-transcript:" + source["source_id"] + ":" + str(offset)
                         withheld = self._withheld_tool_results(live, entry) if parser_status == "valid" else None
-                        if withheld:
+                        if parser_status != "valid":
+                            accepted = self._transcript_privacy_gap(live, line, offset, info.st_size, parser_status,
+                                reason="transcript_record_requires_classification", event_id=event_id)
+                        elif withheld:
                             # Application tool replies embed resources with their
                             # own current authorization. Typed application
                             # observations retain them; this outer-session copy
                             # keeps only an explicit, non-reversible gap.
-                            accepted = observe_telemetry(self._telemetry_observer, "native.transcript", {
-                                "representation": "suppressed", "captured_bytes": 0, "source_bytes": len(line),
-                                "total_bytes": info.st_size, "range_start": offset, "range_end": offset + len(line),
-                                "source_id": source["source_id"], "source_version": "claude-transcript-jsonl-v1",
-                                "parser_version": "xorchestrate-json-v1", "parser_status": parser_status,
-                                "continuity": source.get("continuity", "initial_source"),
-                                "native_id": live.native_id, "incarnation": live.incarnation,
-                                "direction": "callback_response", "tool_results": withheld,
-                                "provenance": "application-capable-callback-v1",
-                            }, origin, secrets=secrets, completeness="suppressed",
-                                reason="callback_response_requires_typed_observation", event_id=event_id, acknowledge=True)
+                            accepted = self._transcript_privacy_gap(live, line, offset, info.st_size, parser_status,
+                                reason="callback_response_requires_typed_observation", tool_results=withheld,
+                                event_id=event_id)
                         else:
                             accepted = observe_wire(self._telemetry_observer, "native.transcript", line, origin, secrets=secrets,
                                                     range_start=offset, source_id=source["source_id"], source_version="claude-transcript-jsonl-v1",
@@ -422,6 +419,27 @@ class ClaudeSessionDriver:
             self._transcript_status(live, "unavailable", "source_unreadable")
         except BaseException:
             self._transcript_status(live, "unavailable", "capture_failed")
+
+    def _transcript_privacy_gap(self, live, line, offset, total_bytes, parser_status, *, reason,
+                                event_type="native.transcript", event_id=None, tool_results=None, acknowledge=True):
+        """Retain observed positions without a reversible unclassified record."""
+        source = live.transcript
+        payload = {"representation": "suppressed", "captured_bytes": 0, "source_bytes": len(line),
+                   "total_bytes": total_bytes, "range_start": offset, "range_end": offset + len(line),
+                   "source_id": source["source_id"], "source_version": "claude-transcript-jsonl-v1",
+                   "parser_version": "xorchestrate-json-v1", "parser_status": parser_status,
+                   "continuity": source.get("continuity", "initial_source"),
+                   "native_id": live.native_id, "incarnation": live.incarnation,
+                   "provenance": "unclassified-transcript-record-v1"}
+        if event_type == "native.transcript_tail":
+            payload["cursor"] = source["cursor"]
+        if tool_results:
+            payload.update(direction="callback_response", tool_results=tool_results,
+                           provenance="application-capable-callback-v1")
+        origin = live.telemetry_context or {**live.context, "native_id": live.native_id, "incarnation": live.incarnation}
+        return observe_telemetry(self._telemetry_observer, event_type, payload, origin,
+                                 secrets=telemetry_secrets(self.options), completeness="suppressed", reason=reason,
+                                 event_id=event_id, acknowledge=acknowledge)
 
     def _withheld_tool_results(self, live, entry):
         """Return tool results this outer-session record must not retain.

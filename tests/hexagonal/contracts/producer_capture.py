@@ -42,3 +42,19 @@ def assert_validation(events, status, code=None):
     if code is not None:
         assert event["payload"]["code"] == code
     return event
+
+
+def assert_transcript_gap(event, *, source_bytes, range_start, total_bytes, parser_status):
+    """A classified evidence gap retains position without reversible content."""
+    payload = event["payload"]
+    assert event["completeness"] == "suppressed"
+    assert isinstance(event.get("reason"), str) and event["reason"]
+    assert payload["representation"] == "suppressed"
+    assert payload["captured_bytes"] == 0
+    assert payload["source_bytes"] == source_bytes
+    assert payload["range_start"] == range_start
+    assert payload["range_end"] == range_start + source_bytes
+    assert payload["total_bytes"] == total_bytes
+    assert payload["parser_status"] == parser_status
+    assert payload["source_id"] and payload["source_version"]
+    assert not {"content", "encoding", "entry", "digest", "sha256"} & payload.keys()
