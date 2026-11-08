@@ -24,6 +24,13 @@ extraction. Adapted files are identified; new repository documentation and CI ar
 listed separately. Existing notices, including `devtools/PROVENANCE-LICENSE`, are
 retained. The manifest records provenance, not a requirement to leave code frozen.
 
+The manifest records the extraction as performed at its pinned revisions and is
+not updated afterwards. Later moves and removals are not reflected: for example,
+the historical tests were removed and the imported `.agents/skills/` files were
+moved to `reference/imported-agent-skills/`, so many destinations no longer exist
+or have since changed. Use Git history for the current location and content of
+an imported file.
+
 ## Reuse map
 
 | Capability | Active implementation | Earlier material retained for reuse |
