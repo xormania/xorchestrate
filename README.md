@@ -11,7 +11,8 @@ and model recommendations do not become policy on their own.
 
 ## Testing framework
 
-Use Python 3.12 for validation. Before starting Python, select a fresh cache outside
+Use Python 3.12 for validation; the telemetry tests also need a Python whose SQLite
+has the WAL fix (CI uses uv-installed Python 3.12.16). Before starting Python, select a fresh cache outside
 the checkout:
 
 ```bash
@@ -23,7 +24,7 @@ python3 -m scripts.testkit run --suite checks
 
 `static` runs Ruff, current-source syntax validation and architecture enforcement;
 `tests` runs the cataloged behavioral tests; `checks` combines both. Use
-`python3 -m scripts.testkit run` for static checks, tests, calibration and live protocol workflows.
+`python3 -m scripts.testkit run` for every component suite: static checks, tests, calibration, live protocol workflows and stories.
 Local and CI runs use the same [testing framework](docs/testing-framework.md),
 shared contracts, fixtures and evidence services. See [live tests](docs/live-testkit.md)
 for authenticated native configuration.
@@ -151,8 +152,9 @@ protocol peers and needs no model account. A configured native profile verifies
 a real harness's application-tool callback. See [live acceptance](docs/live-acceptance.md)
 for both profiles, observation, and cleanup behavior.
 
-The complete behavioral-preservation procedure and evidence are indexed in the
-[implementation handoff](docs/implementation/HANDOFF.md). Authenticated native
+The historical behavioral-preservation procedure for the hexagonal rework is
+recorded in the [implementation handoff](docs/implementation/HANDOFF.md); current
+validation uses the [testing framework](docs/testing-framework.md). Authenticated native
 acceptance is an explicit local run; protocol fixtures cannot supply that result.
 
 ## Source layout

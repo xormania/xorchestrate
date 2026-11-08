@@ -1,7 +1,8 @@
 # Hexagonal architecture enforcement
 
-The deterministic `Hexagonal architecture` CI job enforces the current application
-contract. Jev supplies separate diagnostics locally and in CI. A diagnostic result
+The deterministic architecture check in the `Static checks` CI job enforces the
+current application contract; the `Hexagonal architecture` job only reports that
+job's outcome under its existing required status name. Jev supplies separate diagnostics locally and in CI. A diagnostic result
 cannot clear a deterministic violation. Discoveries do not automatically create
 requirements or modify the contract.
 

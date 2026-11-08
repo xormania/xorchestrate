@@ -1,8 +1,7 @@
 # Contributing
 
-Create a branch from the integration branch for the current effort and target that
-branch in the PR. The hexagonal rework uses `integration/hexagonal`; the owner
-decides when it is ready for `master`. Keep each PR coherent and describe the
+Create a branch from `master` and target `master` in the PR. The owner decides
+when a change is ready to merge. Keep each PR coherent and describe the
 resulting behavior, validation evidence, and unavailable checks. Follow the current
 review and merge authorization for the effort.
 

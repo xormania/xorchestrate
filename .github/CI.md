@@ -1,13 +1,14 @@
 # Validation
 
 Local and CI execution use the [testing framework](../docs/testing-framework.md).
-Python 3.12 is the required validation baseline. Establish a fresh bytecode cache
+Python 3.12 is the required validation baseline; the telemetry tests also need a
+Python whose SQLite has the WAL fix (CI uses uv-installed Python 3.12.16). Establish a fresh bytecode cache
 outside the checkout before starting Python, then install the declared
 application/test dependencies and the single pinned linter requirements file:
 
 ```bash
 export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XXXXXX")"
-python3 -m pip install -e '.[test]' -r .github/requirements-ci.txt
+python3 -m pip install -e '.[test,telemetry]' -r .github/requirements-ci.txt
 python3 -m scripts.testkit run --suite static
 python3 -m scripts.testkit run --suite tests
 python3 -m scripts.testkit run --suite checks
@@ -17,7 +18,8 @@ python3 -m scripts.testkit run --suite acceptance
 ```
 
 `checks` combines `static` and `tests`. The default `python3 -m scripts.testkit run`
-composes static checks, tests, calibration and both live suites once.
+composes every component suite once: static checks, tests, calibration, both live
+suites and `stories`.
 `--family NAME` selects behavioral families without reducing static coverage.
 Each run gets fresh private evidence outside
 the candidate. Direct pytest is available for a focused scenario; default
@@ -26,13 +28,13 @@ collection targets only active tests and validates `contracts/testing.json`.
 ## CI jobs
 
 CI runs on GitHub-hosted Ubuntu. Pinned actions have read-only repository
-permissions. Pull requests, pushes to master/integration and manual runs invoke:
+permissions. Pull requests, pushes to master and manual runs invoke:
 
 | Job | Purpose |
 |---|---|
-| Static checks, Python 3.12 | Shared `static` suite: Ruff lint/security, current-source syntax and deterministic architecture enforcement |
-| Application and adapter tests, Python 3.12 | Shared `tests` suite with declared behavioral families and pytest inventory/JUnit, then shared calibration and composed three-harness protocol suites |
-| Tmux live acceptance | Shared acceptance suite with tmux explicitly installed; private owned process cleanup is part of the receipt |
+| Static checks | Shared `static` suite: Ruff lint/security, current-source syntax and deterministic architecture enforcement |
+| Application and adapter tests (Python 3.12) | Shared `tests` suite with declared behavioral families and pytest inventory/JUnit, then shared calibration and composed three-harness protocol suites |
+| Tmux live acceptance (protocol fixture) | Shared acceptance suite with tmux explicitly installed; private owned process cleanup is part of the receipt |
 | Jev architecture diagnostics | Independent diagnostics-only invocation with retained advisory output |
 | Hexagonal architecture | Retains the existing required status name and reports the shared static job's outcome; it does not rerun validation |
 

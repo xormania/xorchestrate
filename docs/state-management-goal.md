@@ -6,7 +6,7 @@ Integrate reusable state management into Xorchestrate's active live-agent archit
 
 This work does not reinstate Agentscient's retired conductor, dispatch, hand-grant or assignment workflow. Historical code supplies reusable mechanisms and failure witnesses. Current owner direction and the live-communication architecture govern their use.
 
-Base: `a2ebb03f35402309500456b37099f978c51a94a9` on `master`. Delivery: a draft PR to `master`, with an exact-candidate evidence report. The owner controls merge and any deferral. No item below is declared deferred.
+Base: `a2ebb03f35402309500456b37099f978c51a94a9` on `master`. This goal was delivered and merged to `master` through PR #11 with an exact-candidate evidence report. The owner controls merge and any deferral. No item below is declared deferred.
 
 ## Required completion
 
@@ -52,5 +52,5 @@ The transaction port gains an explicit rollback-only operation so a failed requi
 
 Keep the baseline and final candidate separate. Record test collection/execution, skips, errors and intended assertion failures honestly. This host's unavailable capabilities are verified in hosted CI rather than relabelled as passing local evidence. Authenticated vendor execution and scripted protocol evidence are different claims.
 
-Completion requires every S1–S8 outcome to be evidenced against the integrated candidate and the PR to remain draft. If a requirement is unmet, it remains open with the actual reason. No automatic additional general review cycle or unilateral deferral is part of this goal.
+Completion required every S1–S8 outcome to be evidenced against the integrated candidate before the owner's merge decision. If a requirement is unmet, it remains open with the actual reason. No automatic additional general review cycle or unilateral deferral is part of this goal.
 

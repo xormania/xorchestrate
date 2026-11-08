@@ -22,13 +22,13 @@ Linux/WSL2, PTYs, Unix sockets and a matching `/proc` process namespace.
 
 ```bash
 export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XXXXXX")"
-python3 -m pip install -e '.[test]' -r .github/requirements-ci.txt
+python3 -m pip install -e '.[test,telemetry]' -r .github/requirements-ci.txt
 python3 -m scripts.testkit doctor
 python3 -m scripts.testkit run
 ```
 
-The default runs static checks, behavioral tests and calibration followed by both live suites
-with real application processes and deterministic protocol peers. It does not contact vendor models. Each invocation creates a
+The default runs every component suite: static checks, behavioral tests and calibration
+followed by both live suites and the `stories` battery, with real application processes and deterministic protocol peers. It does not contact vendor models. Each invocation creates a
 fresh private run under `../xorchestrate-runs/`, prints its directory and writes
 `report.json`. `--output /path/outside/checkout` changes that reusable parent.
 No manual copying of the owner brief, creation of criteria or selection of a new
@@ -115,10 +115,10 @@ adapters:
 - [World resource registration and reverse cleanup](https://github.com/uscient/agentscient/blob/456457b9a0a9eb1ff285ee2d3e40535b6f722cdb/ops/testkit/world.py)
   supply the shared ownership model. Cleanup drains every registered resource and
   retains failures, including explicit releases that failed earlier.
-- [Existing Xorchestrate ownership supervisor](https://github.com/xormania/xorchestrate/blob/b9a42685b229c88ff9e23c7f708cf7b49a1dc096/scripts/acceptance/lifecycle.py)
+- [Existing Xorchestrate ownership supervisor](../scripts/acceptance/lifecycle.py)
   retains PID/start identity checks, pidfd signaling and orphan adoption. It moved
   intact behind the kit adapter instead of reverting to older process scans.
-- [Existing candidate/evidence capture](https://github.com/xormania/xorchestrate/blob/b9a42685b229c88ff9e23c7f708cf7b49a1dc096/scripts/verification/capture.py)
+- [Existing candidate/evidence capture](../scripts/verification/capture.py)
   retains dirty/untracked input identity and exact command output. The old module
   reexports the shared implementation. Checker identity now includes kit sources.
 

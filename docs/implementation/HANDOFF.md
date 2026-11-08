@@ -1,13 +1,19 @@
 # Xorchestrate implementation handoff
 
-This branch implements the complete scope of the supplied
+> **Historical record.** This handoff describes the hexagonal rework as it was
+> prepared for review on the former `integration/hexagonal` branch, which has since
+> been merged and removed. Commands, paths and evidence references below reflect
+> that point in time. For current validation use the
+> [testing framework](../testing-framework.md) and [CI](../../.github/CI.md).
+
+This branch implemented the complete scope of the supplied
 [owner brief](owner-brief.md), sections 2–10. It is prepared for review; no merge
 or release has been performed. The baseline is
 `30254fd0f184b7e31aa7e0896347429004933ed4` on `integration/hexagonal`.
 
-The exact measured candidate and run outcomes are in the accompanying
-[`evidence/final-manifest.json`](evidence/final-manifest.json), and every requirement
-is mapped in [`evidence/requirement-matrix.md`](evidence/requirement-matrix.md).
+The exact measured candidate and run outcomes were recorded in an accompanying
+`evidence/final-manifest.json`, and every requirement was mapped in
+`evidence/requirement-matrix.md`; neither file is retained in this repository.
 The evidence publication commit may contain documentation/evidence additions after
 the measured code commit. Check out the **candidate commit named in that manifest**
 when reproducing its content hash; keep the evidence publication checkout separate.
