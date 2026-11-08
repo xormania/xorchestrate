@@ -28,6 +28,23 @@ An MCP client launches that command, initializes the connection, and uses
 `tools/list` and `tools/call`. The application tool names and schemas are the same
 ones shown by CLI `describe`.
 
+## Local telemetry
+
+`telemetry.json` adds the optional `local` telemetry adapter to SQLite work
+tracking. It retains application, native, capability, evaluator and process
+observations in a local corpus whose `runtime_root` resolves against this
+directory to `../../xorchestrate-telemetry-state`, outside the checkout. Change
+`project_id`, `dataset_id` and `collector_id` for your deployment. It requires the
+optional collector extra:
+
+```bash
+python3 -m pip install -e '.[telemetry]'
+python3 -m xorchestrate --config examples/telemetry.json call telemetry_status --json '{}'
+```
+
+See [active telemetry](../docs/telemetry.md) for runtime requirements, options and
+the `telemetry_*` operations.
+
 ## Connecting tools, a worker, and optional assessment
 
 `connected.json` is an executable-dependent template. Its external entries are

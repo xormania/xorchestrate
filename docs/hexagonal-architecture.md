@@ -89,6 +89,8 @@ The top-level sections are:
 | Section | Selection |
 | --- | --- |
 | `store` | One state-store adapter and its `options` |
+| `state_engine` | Lifecycle state engine; built-in `declared` (default) accepts `definitions` and `guards` options |
+| `telemetry` | Optional observation collector; built-in `local`, absent by default |
 | `providers` | Named capability providers, each with `adapter` and `options` |
 | `sessions` | Named session drivers, each with `adapter` and `options` |
 | `guardrail` | An enforcement adapter and its options |
@@ -108,6 +110,14 @@ built-in adapters assembled by composition. Disabled named entries (`enabled:
 false`) are not activated. Configuration is read for the assembled application;
 unrelated historical source edits do not invalidate ongoing work or retained
 results. Restart with the intended configuration to activate a change.
+
+Telemetry is an optional output port. When the `telemetry` section is absent or
+`enabled: false`, no collector is constructed. The `local` adapter bridges
+application, native, capability, evaluator and process observations to the shared
+`agent_telemetry` collector (the `telemetry` installation extra). A failed
+construction yields a visible unavailable state rather than preventing unrelated
+work, and capture failure does not change the observed action's result. See
+[active telemetry](telemetry.md) for options and the `telemetry_*` operations.
 
 Configuration is trusted execution input. It selects commands and installed code;
 it is not accepted from provider output. Tool arguments carry operation data,

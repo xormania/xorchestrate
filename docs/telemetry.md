@@ -34,6 +34,54 @@ python3 -m xorchestrate --config examples/telemetry.json call telemetry_events -
 Use the persistent `run` or MCP `serve` interface for native sessions. The same
 application operations are available through both input adapters.
 
+## Configuration options
+
+The top-level `telemetry` section takes `adapter` (built-in `local`), `options`
+and an optional boolean `enabled`. When the section is absent or `enabled` is
+`false`, no collector is constructed. If construction fails, the application
+continues with an explicit unavailable telemetry state. Unknown option names are
+rejected.
+
+| Option | Default | Validation and meaning |
+| --- | --- | --- |
+| `runtime_root` | required unless `profile` | Corpus root, resolved against the configuration directory; no symbolic-link components. |
+| `project_id`, `dataset_id`, `collector_id` | required unless `profile` | Nonempty text identities for the collector lineage. |
+| `producer_id` | `xorchestrate` | Nonempty text. |
+| `database` | `events.sqlite3` | Relative path inside `runtime_root`; no `..` or symbolic links. |
+| `artifact_root` | `artifacts` | Relative path inside `runtime_root`; cannot overlap `database`. |
+| `capture_lock_timeout_ms` | `250` | Integer from 0 to 60000. |
+| `profile` | none | Shared `agent_telemetry` profile path, resolved against the configuration directory. It supplies the root, paths, identities and lock wait, so it cannot be combined with the preceding options. |
+| `export_root` | `exports` | Relative path inside the runtime root; snapshot and restore destinations are new children of it. |
+| `snapshot_timeout` | `5.0` | Seconds; greater than 0 and at most 3600. |
+| `artifact_threshold_bytes` | `65536` | Positive integer; larger payloads are stored as content-addressed artifacts. |
+| `known_secrets` | `[]` | List of nonempty strings redacted from payloads and context; excluded from the configuration identity. |
+| `sources` | `application`, `native`, `capability`, `evaluator`, `process` | List of source names reported as configured. When set explicitly, observations from other sources are not recorded (`source_disabled`). |
+| `operational` | none | Optional operational-signal export; see below. |
+
+The `operational` object accepts only these fields:
+
+| Field | Default | Validation and meaning |
+| --- | --- | --- |
+| `adapter` | `local` | `local` keeps a bounded in-process signal buffer; `otlp` exports OTLP/HTTP JSON. |
+| `endpoint` | none | Required for `otlp`: an `http` or `https` base URL with a host and no query, fragment or user information. A trailing `/` is removed and `/v1/traces`, `/v1/metrics` or `/v1/logs` is appended per signal. |
+| `timeout` | `1.0` | `otlp` request timeout in seconds; greater than 0 and at most 60. No retry. |
+| `capacity` | `1000` | `local` buffer size (positive integer); the oldest signal is dropped when full. |
+| `trace_sample_rate` | `1.0` | Number from 0 to 1; applies to spans only. |
+| `max_pending` | `64` | Positive integer bound on queued operational observations. |
+| `max_bytes` | `8388608` | Positive integer bound on queued operational bytes. |
+| `drain_timeout` | `0.05` | Positive number of seconds to wait for queued observations to drain. |
+
+An invalid `operational` object marks operational export unavailable in
+`telemetry_status`; it does not disable the local corpus.
+
+## Operations
+
+The application exposes these telemetry operations: `telemetry_status`,
+`telemetry_events`, `telemetry_usage`, `telemetry_compare`, `telemetry_payload`,
+`telemetry_snapshot`, `telemetry_verify` and `telemetry_restore`. The operator
+tools with similar names in the historical [`devtools/` runtime](runtime-telemetry.md)
+are distinct.
+
 ## Capture and reads
 
 Collection retains rich semantic inputs/results after explicit credential
@@ -62,10 +110,9 @@ count. Existing required operation/receipt/acceptance recording keeps its curren
 failure semantics. Invalid or unavailable optional telemetry remains visible
 through status; it does not silently grant permission or retry an external action.
 
-## Three-PR delivery
+## Capability layers
 
-The implementation is divided into independently reviewable changes, with
-dependent application integrations stacked as needed:
+Telemetry currently provides:
 
 1. **Foundation:** active collection, optional composition, immutable context,
    current-authorized reads, payload retention and source/capture health.
@@ -74,10 +121,8 @@ dependent application integrations stacked as needed:
 3. **Preservation and observability:** verified snapshots/restore, analysis views,
    operational signals and explicit optional OTLP export.
 
-Each PR is opened as a draft only after an adversarial sub-agent review.
-Independent test authors retain behavioral baseline failures and candidate passing
-evidence. The ordinary shared test-kit and hosted CI remain the execution owners.
-The implementation does not create a new scheduler or a second proof runner.
+Its tests run through the ordinary shared test-kit and hosted CI; telemetry does
+not add a scheduler or a second proof runner.
 
 ## Native qualification and first workload
 
@@ -105,8 +150,6 @@ evidence; useful telemetry does not depend on manufacturing such a result.
 - [SQLite online backup](https://www.sqlite.org/backup.html)
 - [Existing application architecture](hexagonal-architecture.md)
 - [Shared testing framework](testing-framework.md)
-- [Telemetry reference and research](https://chatgpt.com/library?file_id=libfile_442a72f860b081919c1ffc4836679e18&account_id=personal)
-- [Scope and requirements](https://chatgpt.com/library?file_id=libfile_b8e13c37c7a081918768e2e9571b54ef&account_id=personal)
 
 
 ## Preserve and investigate an episode
@@ -187,9 +230,10 @@ remains pending.
 | [Grok](../xorchestrate/adapters/grok.py) | ACP/JSON-RPC frames and drained stderr through the [shared session transport](../xorchestrate/adapters/sessions.py); emitted session-update, tool/permission, interjection, completion and configuration observations. | Exposed usage payloads retained; no Grok-specific normalized counter semantics. Frame ranges and native session/incarnation/prompt links; no file cursor. | [Native identity/context/tool observations](../tests/hexagonal/test_native_producer_capture.py); [shared transport failures/bounds](../tests/hexagonal/test_producer_capture.py). | Pending installed/authenticated Grok Build run. | No separate transcript reader or verified native usage total; unexposed provider state remains unknown. |
 | [Evaluator](../xorchestrate/adapters/evaluation.py) | TypeSafe serialized HTTP inputs, bounded response/error bodies and validation; tool-evaluator arguments/results plus its configured [CLI/MCP provider](../xorchestrate/adapters/capabilities.py). | Valid TypeSafe usage is `incremental` per fresh attempt; missing usage stays absent. Response ranges identify observed prefixes and known/unknown total length. Tool results have no universal usage-counter semantics. | [Local HTTP/process errors, bounds and credential treatment](../tests/hexagonal/test_producer_capture.py); [fixture-provider usage through public normalization](../tests/hexagonal/test_telemetry_workflow.py). | Pending authenticated live-provider witness. | [Local fixtures](../tests/hexagonal/support/producer_capture.py) establish adapter behavior, not internal provider accounting, hidden context or service latency. |
 
-An optional `operational` object inside local telemetry options selects
-`{"adapter":"local"}` for bounded in-process diagnostics or explicitly selects an
-OTLP/HTTP endpoint. `trace_sample_rate` affects operational spans only. Remote
+The optional [`operational` object](#configuration-options) inside local
+telemetry options selects `{"adapter":"local"}` for bounded in-process diagnostics
+or `{"adapter":"otlp","endpoint":"<base URL>"}` for OTLP/HTTP export.
+`trace_sample_rate` affects operational spans only. Remote
 export uses its own bounded dispatch; a blocked endpoint does not block the
 observed action or remove durable local observations. No endpoint is inferred or
 contacted by the default configuration.
@@ -200,5 +244,5 @@ request/terminal timing. It does not claim to expose a model's hidden reasoning,
 all native context, or an unobserved service's internal latency.
 
 Remote publication to a data branch, lakeFS, MLflow or OCFL remains a selected
-deployment adapter rather than a default destination. This delivery supplies a
-verified portable local bundle and a replaceable publication boundary.
+deployment adapter rather than a default destination. Telemetry currently
+provides a verified portable local bundle and a replaceable publication boundary.
