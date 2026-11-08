@@ -1,0 +1,451 @@
+{
+  "authors": {
+    "combined_validation": "root",
+    "fresh_adversarial_review": "capture_impl",
+    "implementation": "preserve_impl",
+    "independent_tests": "preserve_tests"
+  },
+  "capture_boundary": {
+    "explicit_shared_or_custom_policy": "retained for execution; no automatic foreign/shared corpus archive",
+    "native_acceptance": "not_established_by_telemetry",
+    "private_archive_boundary": "JSON diagnostics are redacted; credentials/configurations, foreign histories and unclassified raw logs are excluded from the shareable archive policy. Permitted prose still needs operator review before sharing.",
+    "scope": "permitted exposed run-owned corpus and existing owned diagnostics",
+    "source_completion": "unknown",
+    "terminal_boundary": "Owned tmux worker/dashboard remains the managed control layer. Existing Claude PTY and bounded pane captures are retained only where exposed; Codex/Grok protocol pipes are not native TUI approval windows. Unrecorded PTY bytes remain a gap."
+  },
+  "combined_validation": {
+    "artifacts": [
+      {
+        "sha256": "3be49a28b95dc806d804ff86cab6ef0de8dd529c3e383981e5bb84aa28bc76c3",
+        "source_log": "r3-native-combined.log"
+      },
+      {
+        "sha256": "830fac8357e0b576943cb8d79546db7de078d5ee2f4e4443165b3302f94fa129",
+        "source_log": "r3-native-combined.xml"
+      },
+      {
+        "sha256": "2d214c17838ebc5f7f76fa6f05143c9487917f84aba9dca1b00fdc17b7a06225",
+        "source_log": "r3-native-combined-inventory.json"
+      }
+    ],
+    "duration_seconds": 18.006,
+    "errors": 0,
+    "failed": 0,
+    "modules": [
+      "tests/hexagonal/test_local_native_readiness.py",
+      "tests/hexagonal/test_transcript_producer_capture.py"
+    ],
+    "native_cases": 30,
+    "output": "54 passed, 1 warning in 18.01s",
+    "passed": 54,
+    "skipped": 0,
+    "source": "f6d189dd9f11e0604809eca7c87c4754ba0b90a1",
+    "transcript_cases": 24
+  },
+  "date": "2026-11-08",
+  "existing_regressions": {
+    "command": "python -m pytest -q tests/hexagonal/test_managed_profiles.py tests/hexagonal/test_managed_store.py",
+    "errors": 0,
+    "evidence_boundary": "Observed implementation terminal output; no separate raw log was retained for this checkpoint. Not described as a post-privacy full-suite run.",
+    "failed": 0,
+    "output": "35 passed, 1 warning in 5.64s",
+    "passed": 35,
+    "source_stage": "native source sealed before privacy merge; source files equal native production hashes above",
+    "test_sha256": {
+      "tests/hexagonal/test_managed_profiles.py": "e27de529161d86c7fbed04b6e4d20fc1072e66bf58e2f68a580b359c9bbc07d7",
+      "tests/hexagonal/test_managed_store.py": "668cf8bbb0d93d6a007a02b56e80d074f46c56e6a99ed1f7ed129b26d9cd6c25"
+    }
+  },
+  "fresh_review": {
+    "actionable_findings": [],
+    "candidate": "f6d189dd9f11e0604809eca7c87c4754ba0b90a1",
+    "independent_targeted_tests": {
+      "command": "inspection-python -m pytest -p no:cacheprovider -q tests/hexagonal/test_local_native_readiness.py",
+      "log": "/workspace/scratch/7c8bb4d2a697/evidence/r3-native-review-targeted.log",
+      "log_sha256": "bee41c172d840a860cbddc50565e72360f1204c68ed853b519e802ae68d3a610",
+      "result": "30 passed, 0 failed in 5.70s"
+    },
+    "limits": [
+      "This is deterministic local setup/collection and source review, not authenticated native-vendor or model qualification.",
+      "tmux is absent in the reviewer cloud PATH. No new actual tmux or vendor prompt interaction is claimed; existing unchanged lifecycle proof is reused within its original scope.",
+      "Project-language doctor observations are prerequisites, not framework/product assertions; real local approval interaction remains host/client-specific.",
+      "Byte closure does not establish every upstream source completed or native task acceptance; source_completion remains unknown.",
+      "Saved-index consistency checks detect omitted or mismatched local metadata/closure; no signed authenticity or hostile same-user isolation guarantee is claimed."
+    ],
+    "production_or_test_edits": false,
+    "receipt": {
+      "sha256": "b3ff9fb496c31e4e4584e6036635549f4c8fbafd1127fed6e0e7a1b959a12e3d",
+      "source_log": "r3-native-adversarial-review.json"
+    },
+    "resolved_dispositions": [
+      {
+        "consequence": "A selected enabled collector could be omitted, or explicit disabled selection could trigger an unnecessary optional install.",
+        "finding": "Setup telemetry dependency selection read hardcoded native.json instead of the profile-selected configuration.",
+        "resolution": "Setup reads the selected reusable profile config for dependency extras; independent enabled/disabled inverse controls cover it."
+      },
+      {
+        "finding": "Saved-run verify interpreter selection required explicit inclusion in bootstrap controls.",
+        "resolution": "Final bootstrap includes verify; actual proof.sh control verifies selected interpreter invocation. This was reconciled during implementation, not reported as a remaining frozen defect."
+      },
+      {
+        "finding": "External saved index could lose all or some source entries while unchanged archive still declared the complete population, yet verification returned verified.",
+        "pre_fix_actual_result": "Two actual run-owned CCE corpora collected; external entries 0/2 and 1/2 both returned verified with archive hash unchanged.",
+        "pre_fix_source_sha256": "f15abde8b583168062e8351a9c33ce8b03c6c5502020bd4d4b2a7c9c7ed76121",
+        "resolution": "Verified status requires a verified source and required archive; archive hash and exactly one bounded archived index are verified, and external index matches archived index except archive_sha256."
+      },
+      {
+        "finding": "Repeat guide wording needed to qualify fresh default identities when explicit shared/custom lineage is preserved.",
+        "resolution": "Final guide distinguishes default run-local identities from explicitly selected shared/custom lineage."
+      }
+    ],
+    "result": "No remaining actionable findings in the bounded final native review.",
+    "reviewer": "/root/capture_impl",
+    "scope": "Fresh bounded review of local native readiness/setup/project selection, existing tmux operator integration, run-owned telemetry supplement/verify/repeat and their documentation; no general audit.",
+    "static_review": {
+      "combined_tests_reused_from_root": "54 combined privacy/native tests pass, no errors/skips, 18.006s; no independent rerun claim.",
+      "relative_doc_links_checked": 29,
+      "ruff": "All 13 changed Python files pass.",
+      "shared_static_reported_result": "3 checks pass; candidate integrity true, changed/deleted empty.",
+      "shared_static_reused_from_root": "/workspace/scratch/7c8bb4d2a697/evidence/r3-native-final-static/20261108T070326Z-f451671b8f26/report.json"
+    },
+    "tree": "0b8b8b277b4a1a5964d466ba724fc97b7cdb6edf",
+    "two_corpus_probes": {
+      "path": "/workspace/scratch/7c8bb4d2a697/evidence/r3-native-adversarial-probes.json",
+      "results": {
+        "candidate": "f6d189dd9f11e0604809eca7c87c4754ba0b90a1",
+        "probes": [
+          {
+            "archive_unchanged": true,
+            "external_index_entries": 0,
+            "reasons": [
+              "verified_index_has_no_verified_sources",
+              "archive_index_unavailable"
+            ],
+            "saved_archive_entries": 2,
+            "variant": "empty",
+            "verifier_status": "partial"
+          },
+          {
+            "archive_unchanged": true,
+            "external_index_entries": 1,
+            "reasons": [
+              "archive_index_unavailable"
+            ],
+            "saved_archive_entries": 2,
+            "variant": "subset",
+            "verifier_status": "partial"
+          },
+          {
+            "native_acceptance": "not_established_by_telemetry",
+            "original_absolute_export_path_absent": true,
+            "source_completion": "unknown",
+            "variant": "relocated_unmodified_collection",
+            "verified_sources": 2,
+            "verifier_status": "verified"
+          }
+        ],
+        "proof_unchanged": true,
+        "source_corpus_unchanged": true
+      },
+      "sha256": "dd5bd9e7f107303308804e5accb469d67944dba08b406ac9f8296f92fb323456"
+    }
+  },
+  "independent_tests": {
+    "author_receipt": {
+      "sha256": "61331664e2d5972dd3fc30dcb3ce64b527b1cd5ade0948bf94dc9ed3ec9f6092",
+      "source_log": "r3-native-author-final.json"
+    },
+    "baseline": {
+      "errors": 0,
+      "failed": 27,
+      "passed": 3,
+      "summary": "=================== 27 failed, 3 passed, 1 warning in 1.90s ===================="
+    },
+    "baseline_pass_controls": {
+      "detected": 3,
+      "kind": "bounded-control-fault-receipt",
+      "native_vendor_claim": false,
+      "results": [
+        {
+          "assertion": "SETUP_MUST_PRESERVE_EXPLICIT_DISABLED_CAPTURE_AND_OPERATOR_SETTINGS",
+          "candidate_source_edits": false,
+          "case": "test_setup_preserves_explicit_disabled_capture_and_operator_configuration",
+          "kind": "intentional adapter-seam fault",
+          "status": "detected"
+        },
+        {
+          "assertion": "EXPLICIT_DISABLED_CAPTURE_MUST_NOT_REQUIRE_OPTIONAL_COLLECTOR",
+          "candidate_source_edits": false,
+          "case": "test_doctor_requires_collector_only_for_selected_enabled_capture[False]",
+          "kind": "intentional adapter-seam fault",
+          "status": "detected"
+        },
+        {
+          "assertion": "SETUP_DEPENDENCIES_MUST_FOLLOW_SELECTED_CONFIGURATION_CAPTURE_POLICY",
+          "candidate_source_edits": false,
+          "case": "test_setup_installs_capture_dependency_for_selected_config_not_hardcoded_native_file[False]",
+          "kind": "intentional adapter-seam fault",
+          "status": "detected"
+        }
+      ],
+      "scope": "Three controls that passed original2e659 baseline; actual unchanged assertion must detect wrong temporary-subject adapter behavior. Not claimed original baseline production failures.",
+      "status": "passed"
+    },
+    "baseline_pass_test_ids_equal_fault_detected_test_ids": true,
+    "green": {
+      "errors": 0,
+      "passed": 30,
+      "summary": "30 passed, 1 warning in 5.49s"
+    },
+    "log_and_inventory_sha256": {
+      "r3-native-control-faults.json": {
+        "sha256": "9014fa452e30d0026ec3695656d8e113ed26f2abd7f5b2ac9ef7e0a2e0e4acfc"
+      },
+      "r3-native-final-architecture.json": {
+        "sha256": "087f3b1127a454ca4c754f373cc8f1108e6308e2c04141a4571c8a738e6bd33f"
+      },
+      "r3-native-final-baseline-red.log": {
+        "sha256": "89ecf06447b5ca923975baf5342f236459aea3a37fc30ed6c4838fd3cb9531fc"
+      },
+      "r3-native-final-baseline-red.xml": {
+        "sha256": "f4f85ce86ce50f9a6d0f727cee9334b079afbc8c7ff254e3ae08f5e0d4dc6dfd"
+      },
+      "r3-native-final-green-inventory.json": {
+        "sha256": "ba89687f0cd6c24b648d08da9227a220a6e7afed9bdee6449ed530c99dfba241"
+      },
+      "r3-native-final-green.log": {
+        "sha256": "eb9d293e78603569ed2e7c942c7c38307b184cfa5e94c744eb23c644a73ce6ef"
+      },
+      "r3-native-final-green.xml": {
+        "sha256": "c65c3041de368efa7d9e78f0901e121380f3f8096a49401b02bea6ddc66600db"
+      },
+      "r3-native-index-population-red-inventory.json": {
+        "sha256": "5f9d5ec5af4a474097cb88cf0cd3b70b3657e8faa614813aa5345f7e58bc329a"
+      },
+      "r3-native-index-population-red.log": {
+        "sha256": "7299c5563ff36e4727ad1a7dc9de4f0ee254b32c4a3ec8a18dea177f8345e2b7"
+      },
+      "r3-native-sqlite-red.log": {
+        "sha256": "81a9a8ea996e4fab7d050d25c012717fa38dca029bdc18dcc6e53ad138eac90a"
+      },
+      "r3-native-targeted-red-receipts.json": {
+        "sha256": "d1ec64f095bda3251bd90b667c31293aac5b782edd687942cba44a2a1d3d8a1a"
+      }
+    },
+    "red_mapping": {
+      "test_doctor_checks_only_selected_project_language_and_native_clients[php]": "original isolated baseline behavioral/configuration failure",
+      "test_doctor_checks_only_selected_project_language_and_native_clients[python]": "original isolated baseline behavioral/configuration failure",
+      "test_doctor_checks_only_selected_project_language_and_native_clients[rust]": "original isolated baseline behavioral/configuration failure",
+      "test_doctor_requires_collector_only_for_selected_enabled_capture[False]": "bounded injected adapter fault, unchanged intended assertion detected",
+      "test_doctor_requires_collector_only_for_selected_enabled_capture[True]": "original isolated baseline behavioral/configuration failure",
+      "test_explicit_project_requirements_replace_language_defaults": "original isolated baseline behavioral/configuration failure",
+      "test_managed_collection_preserves_corpus_and_exposes_selected_source_gaps[corrupt]": "original isolated baseline behavioral/configuration failure",
+      "test_managed_collection_preserves_corpus_and_exposes_selected_source_gaps[disabled]": "original isolated baseline behavioral/configuration failure",
+      "test_managed_collection_preserves_corpus_and_exposes_selected_source_gaps[external]": "original isolated baseline behavioral/configuration failure",
+      "test_managed_collection_preserves_corpus_and_exposes_selected_source_gaps[healthy]": "original isolated baseline behavioral/configuration failure",
+      "test_managed_collection_preserves_corpus_and_exposes_selected_source_gaps[lineage]": "original isolated baseline behavioral/configuration failure",
+      "test_managed_collection_preserves_corpus_and_exposes_selected_source_gaps[missing]": "original isolated baseline behavioral/configuration failure",
+      "test_managed_native_capture_is_per_run_and_preserves_explicit_policy[absent]": "original isolated baseline behavioral/configuration failure",
+      "test_managed_native_capture_is_per_run_and_preserves_explicit_policy[custom]": "original isolated baseline behavioral/configuration failure",
+      "test_managed_native_capture_is_per_run_and_preserves_explicit_policy[disabled]": "original isolated baseline behavioral/configuration failure",
+      "test_managed_native_capture_is_per_run_and_preserves_explicit_policy[inline]": "original isolated baseline behavioral/configuration failure",
+      "test_managed_native_capture_is_per_run_and_preserves_explicit_policy[local-default]": "original isolated baseline behavioral/configuration failure",
+      "test_managed_native_capture_is_per_run_and_preserves_explicit_policy[profile]": "original isolated baseline behavioral/configuration failure",
+      "test_missing_selected_project_prerequisite_is_explicit_without_launch": "original isolated baseline behavioral/configuration failure",
+      "test_new_native_setup_enables_durable_capture_without_source_filter": "original isolated baseline behavioral/configuration failure",
+      "test_public_setup_accepts_selected_native_project_without_changing_existing_operator_settings": "original isolated baseline behavioral/configuration failure",
+      "test_public_verify_rejects_omitted_saved_index_entries_with_archive_intact[empty]": "original isolated baseline behavioral/configuration failure",
+      "test_public_verify_rejects_omitted_saved_index_entries_with_archive_intact[subset]": "original isolated baseline behavioral/configuration failure",
+      "test_public_verify_uses_saved_run_interpreter_through_real_bootstrap": "original isolated baseline behavioral/configuration failure",
+      "test_selected_interpreter_reports_collector_and_sqlite_compatibility[compatible]": "original isolated baseline behavioral/configuration failure",
+      "test_selected_interpreter_reports_collector_and_sqlite_compatibility[incompatible]": "original isolated baseline behavioral/configuration failure",
+      "test_selected_interpreter_reports_collector_and_sqlite_compatibility[missing]": "original isolated baseline behavioral/configuration failure",
+      "test_setup_installs_capture_dependency_for_selected_config_not_hardcoded_native_file[False]": "bounded injected adapter fault, unchanged intended assertion detected",
+      "test_setup_installs_capture_dependency_for_selected_config_not_hardcoded_native_file[True]": "original isolated baseline behavioral/configuration failure",
+      "test_setup_preserves_explicit_disabled_capture_and_operator_configuration": "bounded injected adapter fault, unchanged intended assertion detected"
+    },
+    "same_five_test_files_on_original_baseline": true,
+    "targeted_index_red": {
+      "archive_bytes_unchanged": true,
+      "assertion": "PUBLIC_VERIFY_MUST_REJECT_OMITTED_ARCHIVED_INDEX_POPULATION",
+      "cases": [
+        "empty saved entries",
+        "subset omission from two actual captured corpora"
+      ],
+      "pre_fix_inventory": {
+        "sha256": "5f9d5ec5af4a474097cb88cf0cd3b70b3657e8faa614813aa5345f7e58bc329a",
+        "source_log": "r3-native-index-population-red-inventory.json"
+      },
+      "source_sha256": "f15abde8b583168062e8351a9c33ce8b03c6c5502020bd4d4b2a7c9c7ed76121",
+      "summary": "2 failed, 28 deselected, 1 warning in 2.31s"
+    }
+  },
+  "limitations": [
+    "Local controlled readiness/corpus/CLI evidence only; actual cloud Codex inference not established. No additional model attempt made.",
+    "CLI setup test uses actual shell/bootstrap/selected interpreter, with pip subprocess suppressed because the selected environment is already ready; no cold network-install claim.",
+    "SQLite negative executes actual selected child probe with controlled3.44.0 version facts; compatible case uses real3.53.1 and actual pinned require_sqlite.",
+    "Original baseline new-module subset bypasses collection plugin because old catalog lacks futuremodule; final GREEN uses normal complete catalog plugin.",
+    "Postrun corpus is captured from actual local application actions, not authenticated vendor sessions. Telemetry verification cannot establish native/product acceptance.",
+    "Entire collection relocation positive belongs to independent reviewer manual receipt; test suite verifies exact fresh bundle restore.",
+    "Separate agents are independent implementation/test/review sessions, not independent human accounts.",
+    "The documentation/evidence commit follows tested and reviewed source; the exact source/test seals identify that checkpoint. Hosted CI and final publication identity belong to the PR description.",
+    "No new overhead calibration or substantive Rust/Python/PHP application acceptance is claimed by the readiness profile."
+  ],
+  "native_environment_probe": {
+    "evidence": {
+      "sha256": "39623d55587469bb680693b58ac5789ebb93cd67cec2efa390a283a01d6a1123",
+      "source_log": "discovery.json"
+    },
+    "interpretation": "Login metadata is not service readiness. No model inference was requested; bounded initialization was unavailable. Actual installed-harness acceptance must be established on the operator local host.",
+    "observations": {
+      "authentication_readiness": "not established by login status alone",
+      "codex_version": "0.167.0-alpha.4",
+      "composer_available": false,
+      "credentials_collected": false,
+      "docker_available": false,
+      "environment_status_tool": "not exposed",
+      "initialize_probe": {
+        "model_inference_requested": false,
+        "requested_method": "initialize",
+        "status": "no initialization response; product adapter provider_unavailable",
+        "timeout_seconds": 30
+      },
+      "login_status": "Logged in using ChatGPT",
+      "php_available": false,
+      "qualification": "not qualified",
+      "recorded_at": "2026-11-08T06:28:51.534592+00:00",
+      "startup_diagnostic": {
+        "process_alive_until_owned_termination": true,
+        "stderr_bytes": 0,
+        "stdout_bytes": 0,
+        "wait_seconds": 5
+      },
+      "startup_network_policy": "/etc/codex/network-policy.json absent",
+      "tmux_available": false
+    }
+  },
+  "publication": {
+    "binding": "The publication coordinator records exact final remote parent/head, draft PR and hosted CI in the PR description; no unknown remote identity is inferred here.",
+    "final_remote_head": null,
+    "planned_base_branch": "feat/telemetry-fragment-privacy",
+    "planned_parent_remote_head": "99357e5013bd4da0b002dcf9457227b07ba72bbb",
+    "status": "not published at receipt preparation"
+  },
+  "reuse_sources": {
+    "agentscient_current": "https://github.com/xormania/agentscient/tree/a3693e7a707a3b332ce5da410ce7d0cfea78d6a2",
+    "guide": "../local-live-telemetry.md",
+    "multi_harness_poc": "https://github.com/xormania/multi-harness-proof/tree/ad294398501ed119a436db54eca784be2fb10e76"
+  },
+  "schema": "xorchestrate-local-live-verification-v1",
+  "scope": "Local operator readiness, permitted run-owned telemetry preservation and current privacy repair. Checkpoint counts overlap and are not summed; none is an authenticated native/model or product-acceptance result.",
+  "shared_static": {
+    "candidate_integrity": {
+      "actual": "a3fdbfd5a0a3e2e158cbf89f977f4a1e0eaa1f3271725d90511e06d651028ae8",
+      "changed_paths": [],
+      "deleted": [],
+      "expected": "a3fdbfd5a0a3e2e158cbf89f977f4a1e0eaa1f3271725d90511e06d651028ae8",
+      "passed": true
+    },
+    "checks": [
+      {
+        "exit_status": 0,
+        "integrity": {
+          "after": "9d2a66e7133085fb1278f6b8800bbd341beff4b9415c43f6eb7f6d5ac179d039",
+          "before": "9d2a66e7133085fb1278f6b8800bbd341beff4b9415c43f6eb7f6d5ac179d039",
+          "passed": true
+        },
+        "name": "ruff",
+        "status": "passed",
+        "tool_report": {
+          "effective_input_sha256": "9d2a66e7133085fb1278f6b8800bbd341beff4b9415c43f6eb7f6d5ac179d039",
+          "findings": 0,
+          "path": "/workspace/scratch/7c8bb4d2a697/evidence/r3-native-final-static/20261108T070326Z-f451671b8f26/ruff.json",
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+          "status": "passed"
+        },
+        "validation": "complete"
+      },
+      {
+        "exit_status": 0,
+        "integrity": {
+          "after": "1ff0bc061cc0c25c86456fc69dc37b1755ec64a983b0c35d3bdd48c7f8906dd2",
+          "before": "1ff0bc061cc0c25c86456fc69dc37b1755ec64a983b0c35d3bdd48c7f8906dd2",
+          "passed": true
+        },
+        "name": "syntax",
+        "status": "passed",
+        "tool_report": {
+          "effective_input_sha256": "1ff0bc061cc0c25c86456fc69dc37b1755ec64a983b0c35d3bdd48c7f8906dd2",
+          "findings": 0,
+          "path": "/workspace/scratch/7c8bb4d2a697/evidence/r3-native-final-static/20261108T070326Z-f451671b8f26/syntax.json",
+          "sha256": "8de0bc10fac1d1410fca3f5d384625f9cb8ac79260e1a32f3618e0134c8aa631",
+          "status": "passed"
+        },
+        "validation": "complete"
+      },
+      {
+        "exit_status": 0,
+        "integrity": {
+          "after": "50823af2857fc2c330f90d86de67451ab3883af29f8f75ac431e5bc62b84f507",
+          "before": "50823af2857fc2c330f90d86de67451ab3883af29f8f75ac431e5bc62b84f507",
+          "passed": true
+        },
+        "name": "architecture",
+        "status": "passed",
+        "tool_report": {
+          "architecture_contract_sha256": "93f5f3005856ed3413067bfbd3d9c52a7087255a032b320cd3a014280d1f7b9f",
+          "architecture_source_sha256": "796d10b78d97140f924b15264b0b17e115adaf016d14d36bcc84613c6f3b5b4e",
+          "checker_sha256": "7e4ea4a338910213dc5e7dc0a7223aaee671265ee0eab8f0c8fc0a8fe8d93a6f",
+          "effective_input_sha256": "50823af2857fc2c330f90d86de67451ab3883af29f8f75ac431e5bc62b84f507",
+          "findings": 0,
+          "path": "/workspace/scratch/7c8bb4d2a697/evidence/r3-native-final-static/20261108T070326Z-f451671b8f26/architecture.json",
+          "sha256": "9fa7acc82f74a71927a39a2f305f0ddc90543ebd181e6ea0203d84b9233e5440",
+          "status": "passed"
+        },
+        "validation": "complete"
+      }
+    ],
+    "log": {
+      "sha256": "38d8ca07b0cd28d6ffbba7c44782fe2a98c7c02adcffbd6cd75805c08b94736b",
+      "source_log": "r3-native-final-static.log"
+    },
+    "source": "f6d189dd9f11e0604809eca7c87c4754ba0b90a1",
+    "status": "passed",
+    "suite": "static"
+  },
+  "source": {
+    "active_local_baseline": "2e659a3798e5e633dd493391f940bdfa916f7932",
+    "collector_dependency": "84229bb7497547d2db91d02a4633ccb3867f740b",
+    "combined_reviewed_source": "f6d189dd9f11e0604809eca7c87c4754ba0b90a1",
+    "combined_tree": "0b8b8b277b4a1a5964d466ba724fc97b7cdb6edf",
+    "native_production_and_guide_freeze": "5d3bd7cd19d6ac7c322fb906208f50346ce67519",
+    "native_production_sha256": {
+      "scripts/acceptance/scenario.py": "4f3636c58864beda9420098e4d2cf8026b26e6ce50ec6674e704748903659e94",
+      "scripts/testkit/adapters/configuration.py": "d3f07d594c6656a39aa9798e3bd62d022085cfe49047e9c407799543c7b2ace7",
+      "scripts/testkit/adapters/managed_store.py": "7b71c901a46f2f8e7845f724589522898d41040aafe4f9885b42c56d2b7dbd21",
+      "scripts/testkit/adapters/native_evidence.py": "3083b63b4850b72d03f33ee30717b55c328d703615367c9ef62c2d1ce7564082",
+      "scripts/testkit/adapters/profiles.py": "af7e5232ab6dbc7c3a0903ec8f83f64ca4d79f92c273fcad4d5b284252fb7c89",
+      "scripts/testkit/operator_cli.py": "9b01707064999a3945fed3a207b28cc2bbbe5787908eb41111428eceb9479957",
+      "scripts/testkit/operator_composition.py": "f38c54cdd33d8a748a0194de03b94ba96adb449663830ae845224e2ef37206d1",
+      "scripts/verification/multi_harness.py": "ccd7992c7b9879c9e569ff1c99266494c05a609a7d701c65993e4fd2139f040a"
+    },
+    "native_seals_unchanged_after_privacy_merge": true,
+    "native_test_freeze": "41291b7e5b1d8934ccae9570b14b139da2af5bef",
+    "native_test_sha256": {
+      "tests/hexagonal/contracts/local_native_collection.py": "7e0bab5a6abf746265a9e9b6508449ae37d6e4fbc86dc26b0a7264c775ba26ce",
+      "tests/hexagonal/contracts/local_native_readiness.py": "0aa717b2ead7b618b606aad899ba68ab2b53f6549b0a3a6d06c42407ce239661",
+      "tests/hexagonal/support/local_native_collection.py": "929aa3347acd777f360d98a4df0e54c425a315e334bcab2b81f744a199306b37",
+      "tests/hexagonal/support/local_native_readiness.py": "114ba600f737eb6b2aa3248149a793f6527417d1987ae21c1ea822bc071dc4e7",
+      "tests/hexagonal/test_local_native_readiness.py": "d17d838b72c1d750d9c3085efc8a76b4c5927266aa90dfa45e003640829dd7ce"
+    },
+    "privacy_local_base": "c077ecffae29cee038e7b96d1519d451e03ec28e",
+    "reviewed_document_and_contract_sha256": {
+      "README.md": "70e15156cba424b2c519e4b550934dbbf7583bcad1fcce2a2551cba053b63b8b",
+      "contracts/hexagonal.json": "e1e123a61055ac130e98e794f08390e808a84c728c20ff0ceaa07325cd7d9496",
+      "contracts/testing.json": "5c2f64b0a518daa2382a326808a4ac7466d408ac6f071d57ed5268f2102d9a0f",
+      "docs/local-live-telemetry.md": "2c5431d5206c8c785a7750c3d86bf1257a6777fed983bbde4520deff184219b1",
+      "docs/managed-proofs.md": "a10ed355967c79ae335988fa2d28c1d46c29433fe2f5985ef5ee094c279706c2"
+    },
+    "upstream_baseline": "f270e29b9263e1c44ba7c182a21abdd74e5c3ba9"
+  }
+}

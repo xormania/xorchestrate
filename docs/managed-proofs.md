@@ -15,8 +15,9 @@ their results pending until that run produces the required observations.
 
 Use Python 3.12 or newer. Managed terminal and acceptance workflows also require
 Linux or WSL2, tmux, PTYs, Unix sockets and a readable `/proc` in the same process
-namespace. Native mode additionally needs the configured Codex, Claude Code and
-Grok Build installations and your normal local authentication.
+namespace. Native mode additionally needs the selected installed harness and
+your normal local authentication. For the attended tmux workflow, project
+selection and retained telemetry, see [local live telemetry](local-live-telemetry.md).
 
 From the checkout:
 
@@ -26,8 +27,9 @@ From the checkout:
 ./scripts/proof.sh run --profile "$HOME/.config/xorchestrate/proof.json"
 ```
 
-Setup installs the repository's declared application/test dependencies into the
-configured external environment. It creates a private `native.json` template and
+Setup installs the repository's declared application/test dependencies and the
+telemetry extra when the selected native configuration uses local capture into
+the configured external environment. It creates a private `native.json` template and
 workspace beside the profile once, and preserves existing profiles and reusable
 native configuration. The launcher establishes the external Python bytecode
 cache before imports and propagates it to child checks. Keep the environment,
@@ -70,6 +72,11 @@ cooperative interruption and this overall deadline without a dashboard.
 a model. Missing prerequisites are reported against their dependent checks;
 independent selected checks can still run. A malformed plan is rejected before
 execution. Use `--suite static` for checks that need no native client or tmux.
+
+For selected local capture it checks the collector in the selected interpreter,
+including the shared package's actual SQLite compatibility check. An importable
+collector alone is insufficient. Use a runtime with the required SQLite WAL fix,
+such as uv Python 3.12.16, when doctor reports that requirement.
 
 For selectable story batteries, execution limits and automated tmux scenarios,
 see [local stories](local-stories.md). The same managed controls below apply.
@@ -199,11 +206,25 @@ it does not treat surviving native work as an expected dashboard resource.
 It exports redacted JSON receipts/events from a committed evidence generation and
 records the inventory and exclusions. Raw logs, private input/configuration
 snapshots and mutable native diagnostics remain private and are excluded by the
-export policy; the bundle is not an atomic snapshot of every process. Native PTY
-output is retained privately with an 8 MiB cap. Collection does not rewrite
+export policy; the bundle is not an atomic snapshot of every process. Where the
+existing PTY adapter owns a native terminal, its output is retained privately
+with an 8 MiB cap. Protocol traces and exposed transcript observations supply
+other capture; absent terminal bytes remain a gap. Collection does not rewrite
 canonical proof results or upload anything. A failed export remains visible and
 can be retried without overwriting an earlier archive. Review exports before
 sharing: bounded redaction cannot guarantee removal of sensitive prose.
+
+Finalization automatically supplements that JSON archive with a private
+`telemetry-index.json` and, for verified run-owned sources, `telemetry.zip`.
+Manual `collect` creates another collection attempt. It snapshots through the
+product preservation adapter, verifies artifact closure and restores a fresh
+location. Explicit external/shared capture settings remain selected, but are not
+automatically copied into this run's archive. Disabled, missing, corrupt and
+unavailable sources have explicit entries or gaps. `verify RUN_DIRECTORY`
+rechecks the latest saved collection with its saved interpreter. Its telemetry
+status describes retained byte closure; `source_completion` remains unknown and
+the separate proof/native verdict is not promoted by a valid bundle. See the
+[capture inventory](local-live-telemetry.md#what-is-retained) before sharing it.
 
 `start --from` starts a new run from saved selection and input snapshots, with
 explicit overrides if requested. It uses current source and tools and records

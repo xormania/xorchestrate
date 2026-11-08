@@ -303,7 +303,6 @@
         "scripts.testkit.adapters.static",
         "scripts.testkit.adapters.identity",
         "scripts.testkit.adapters.syntax",
-        "scripts.testkit.adapters.profiles",
         "scripts.testkit.adapters.managed_store",
         "scripts.testkit.adapters.managed_process",
         "scripts.testkit.adapters.terminals"
@@ -320,7 +319,9 @@
     },
     "testkit_configuration": {
       "modules": [
-        "scripts.testkit.adapters.configuration"
+        "scripts.testkit.adapters.configuration",
+        "scripts.testkit.adapters.profiles",
+        "scripts.testkit.adapters.native_evidence"
       ],
       "allowed_roles": [
         "testkit_foundation",
