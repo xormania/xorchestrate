@@ -4,6 +4,10 @@
 > `devtools/`. Its roles, defaults, restrictions, and setup procedures are not
 > requirements of the current Xorchestrate application. Start with the
 > [current architecture](hexagonal-architecture.md) and [README](../README.md).
+>
+> Current application telemetry is documented in [telemetry.md](telemetry.md); the
+> devtools operator `telemetry_events` and `telemetry_usage` operations described
+> here are distinct from the application operations of the same names.
 
 The private state directory retains `live.sqlite3` events and
 `telemetry/<member>.jsonl` communications. Captures are append-only across restarts;
