@@ -78,3 +78,12 @@ create requirements from findings. See
 [architecture enforcement](../docs/architecture-enforcement.md).
 
 CI neither requests reviews nor merges branches. xor controls those decisions.
+
+## Telemetry runtime
+
+Application CI installs the optional pinned CCE collector through `.[test,telemetry]`.
+It selects uv 0.13.7 / Python 3.12.16 for the collector's fixed SQLite WAL requirement.
+Static checks remain independent of this extra. The existing application test-kit
+collects the declared telemetry families alongside the current behavior suites.
+Optional collector/exporter failure does not replace the application's required
+effect, receipt or acceptance recording. See [the active guide](../docs/telemetry.md).

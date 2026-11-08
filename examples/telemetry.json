@@ -1,0 +1,13 @@
+{
+  "store": {"adapter": "sqlite", "options": {"path": "../.xorchestrate/state.sqlite3"}},
+  "telemetry": {
+    "adapter": "local",
+    "options": {
+      "runtime_root": "../../xorchestrate-telemetry-state",
+      "project_id": "example-project",
+      "dataset_id": "agent-work",
+      "collector_id": "local",
+      "artifact_threshold_bytes": 65536
+    }
+  }
+}

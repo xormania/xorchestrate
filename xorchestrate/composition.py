@@ -16,6 +16,7 @@ from .application import Application
 from .model import OrchestrationError
 
 BUILTINS = {
+    "telemetry": {"local": "xorchestrate.adapters.telemetry:LocalTelemetry"},
     "state_engine": {"declared": "xorchestrate.adapters.state:ConfiguredStateEngine"},
     "store": {"memory": "xorchestrate.adapters.storage:MemoryStore", "sqlite": "xorchestrate.adapters.storage:SQLiteStore"},
     "providers": {"mcp": "xorchestrate.adapters.capabilities:StdioMCPProvider", "cli": "xorchestrate.adapters.capabilities:CLIProvider"},
@@ -141,6 +142,10 @@ def build(config=None, base_dir=None):
             if kind == "store" and adapter == "sqlite":
                 path = options.get("path", ".xorchestrate/state.sqlite3")
                 options["path"] = path if path == ":memory:" else str((base_dir / path).resolve())
+            if kind == "telemetry" and adapter == "local":
+                for field in ("profile", "runtime_root"):
+                    if isinstance(options.get(field), str):
+                        options[field] = str(base_dir / options[field])
             module, name = target.split(":", 1)
             factory = getattr(importlib.import_module(module), name)
             resource = factory(options, providers) if kind == "evaluators" and adapter == "tool" else factory(options)
@@ -173,6 +178,17 @@ def build(config=None, base_dir=None):
         return result
 
     try:
+        telemetry = None
+        specification = config.get("telemetry")
+        if specification is not None and not (isinstance(specification, dict) and specification.get("enabled") is False):
+            try:
+                telemetry = construct("telemetry", specification)
+            except Exception:
+                # Optional diagnostics must not prevent unrelated work. Keep a
+                # safe explicit state; source exceptions may contain credentials.
+                from .adapters.telemetry import UnavailableTelemetry
+                telemetry = UnavailableTelemetry()
+                resources.append(telemetry)
         state_engine = construct("state_engine", config.get("state_engine", {"adapter": "declared"}))
         store = construct("store", config.get("store", {"adapter": "sqlite"}))
         providers.update(collection("providers"))
@@ -193,7 +209,18 @@ def build(config=None, base_dir=None):
             session_fallbacks=config.get("session_fallbacks"), provider_configurations=provider_configurations,
             evaluator_configurations=evaluator_configurations,
             state_engine=state_engine,
+            telemetry=telemetry,
         )
+        def capture(event):
+            if isinstance(event, dict):
+                return application.record_observation(event.get("event_type", "process.observation"),
+                    event.get("payload", {}), event.get("context", {}),
+                    **{key: event[key] for key in ("event_id", "basis", "completeness", "reason") if key in event})
+            return None
+        for resource in (*providers.values(), *sessions.values(), *evaluators.values()):
+            bind_telemetry = getattr(resource, "bind_telemetry", None)
+            if callable(bind_telemetry) and telemetry is not None:
+                bind_telemetry(capture)
         for name, driver in sessions.items():
             bind_state_engine = getattr(driver, "bind_state_engine", None)
             if callable(bind_state_engine):

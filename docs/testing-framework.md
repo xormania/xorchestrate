@@ -19,7 +19,7 @@ then install the application/test dependencies and pinned Ruff:
 
 ```bash
 export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XXXXXX")"
-python3 -m pip install -e '.[test]' -r .github/requirements-ci.txt
+python3 -m pip install -e '.[test,telemetry]' -r .github/requirements-ci.txt
 
 # Ruff lint/security, current-source syntax and deterministic architecture.
 python3 -m scripts.testkit run --suite static

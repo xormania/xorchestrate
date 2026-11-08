@@ -242,6 +242,14 @@ class DeliveryMixin:
             return {"delivery": view(updated)}
 
     def observe_native(self, driver_name, context, observation):
+        retained = self._observe_native(driver_name, context, observation)
+        self.record_observation("native." + str(retained["observation"].get("kind", "observation")),
+            retained["observation"], {**context, "driver": driver_name, "work_id": retained.get("work_id"),
+                "session_id": retained["session_id"], "native_id": retained["observation"].get("native_id"),
+                "incarnation": retained["observation"].get("incarnation")}, event_id="native:" + retained["id"])
+        return retained
+
+    def _observe_native(self, driver_name, context, observation):
         """Trusted driver boundary. Never exposed as an application action."""
         context, observation = deepcopy(context), deepcopy(observation)
         session_id = context.get("session_id")
