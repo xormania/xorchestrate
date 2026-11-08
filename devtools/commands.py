@@ -379,9 +379,6 @@ class Commands:
         self._capability("orchestrate")
         return Planning(self).assign(work)
 
-    def restart_xo(self, reason):
-        raise ValueError("XO session repair requires the trusted operator's session tools.")
-
     def steer(self, action, work=None, direction=None, role=None, assignment=None, **fields):
         from .planning import Planning, execution_current, writer_available
 
