@@ -38,7 +38,7 @@ Provenance checks verified all **1,297 final candidate inputs**, all **1,079 ind
 
 Fresh GitHub queries confirmed all six jobs of [CI run 40051248630](https://github.com/xormania/xorchestrate/actions/runs/40051248630) succeeded. Freshly retrieved Python 3.11/3.12 logs each report 598 tests and 164 subtests passed. The independently fetched synthetic merge `cdd84694c50b1c639caafae82067e9d0688f8b80` has the candidate's exact tree and expected parents. This verifies integration identity rather than relying on separate branch passes.
 
-These checks support recoverability and reported-run identity. They do not establish that an oracle is correct or that arbitrary fabricated raw traces would be honest. See [provenance report](../review/tracks/evidence_provenance/REPORT.md) and the package's `review/identity/` and `review/baseline/protocol/` records.
+These checks support recoverability and reported-run identity. They do not establish that an oracle is correct or that arbitrary fabricated raw traces would be honest. See the review package's provenance report (`review/tracks/evidence_provenance/REPORT.md`, not in this repository) and the package's `review/identity/` and `review/baseline/protocol/` records.
 
 ## Requirement matrix
 
