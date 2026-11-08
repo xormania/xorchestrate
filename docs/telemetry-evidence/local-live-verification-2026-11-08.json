@@ -13,6 +13,153 @@
     "source_completion": "unknown",
     "terminal_boundary": "Owned tmux worker/dashboard remains the managed control layer. Existing Claude PTY and bounded pane captures are retained only where exposed; Codex/Grok protocol pipes are not native TUI approval windows. Unrecorded PTY bytes remain a gap."
   },
+  "ci_follow_up": {
+    "cause": "Ruff inferred xorchestrate as third-party in the deliberately reduced launcher/cache candidate, which contains only a minimal product subject. The same native_evidence import block passed in the complete product tree but raised I001 in that fixture.",
+    "hosted_ci_before_repair": {
+      "artifact_sha256": "509d53a9d8d5c5012f3a6c9c6b18e0706e8ac220415ff13c5060ba02246544d1",
+      "artifact_url": "https://github.com/xormania/xorchestrate/actions/runs/42457607658/artifacts/13608089119",
+      "cases": 4813,
+      "draft_pr": "https://github.com/xormania/xorchestrate/pull/29",
+      "errors": 0,
+      "failed": 1,
+      "failed_case": "tests/hexagonal/test_static_checks.py::test_documented_launcher_keeps_cold_and_warm_cache_outputs_external",
+      "head_prefix": "79aafb3",
+      "junit_member": "tests/20261108T070935Z-6b4b9b3709cf/tests.xml",
+      "junit_sha256": "9e58100c9c10558411b311a4feb87d11b7275c117a655ff52120e2ced604b668",
+      "native_cases_passed": 30,
+      "skipped": 0
+    },
+    "independent_delta_review": {
+      "actionable_findings": [],
+      "active_diagnostic_controls": "Isolated import block: old config I001, explicit classification zero. Deliberately bad import order plus eval still produces I001 and S307.",
+      "assessment": [
+        "xorchestrate is the repository product package: pyproject.toml declares project name xorchestrate and packages include xorchestrate*. Explicit first-party classification is appropriate even when an isolated test deliberately omits product submodules.",
+        "The isolated fixture copies the real testkit plus minimal xorchestrate subject. The unchanged native_evidence local imports separate external agent_telemetry from repository xorchestrate. Without explicit classification Ruff treats both imports as external in this reduced filesystem and raises I001.",
+        "The change keeps import sorting active and preserves all selected security rules, ignores and path coverage. It stabilizes the expected import section rather than excluding a file or suppressing a diagnostic.",
+        "Independent actual-isolated-file before/after Ruff checks produced I001 then zero findings. A deliberately bad import order plus eval after the change still produced I001 and S307.",
+        "No product or test edits occurred in this repair; all eight native production and five test files retain the previous reviewed byte hashes."
+      ],
+      "diagnostic_probe_receipt": {
+        "path": "/workspace/scratch/7c8bb4d2a697/evidence/r3-native-ci-review-probes.json",
+        "sha256": "baaec82e7262c72b947a0c70f6c1ab26001fef7a7c1fedaba4ef498445631536"
+      },
+      "independent_existing_launcher_green": {
+        "errors": 0,
+        "failed": 0,
+        "nodeid": "tests/hexagonal/test_static_checks.py::test_documented_launcher_keeps_cold_and_warm_cache_outputs_external",
+        "passed": 1,
+        "receipt": {
+          "path": "/workspace/scratch/7c8bb4d2a697/evidence/r3-native-ci-review-targeted.xml",
+          "sha256": "f9f2d48f63260d566cc5ed46e2c664ad876461fef2e8c55738640ceeb1d7461e"
+        },
+        "seconds": 2.29
+      },
+      "limits": [
+        "This supplements the previous bounded native review; it does not repeat the native test matrix or introduce a general audit.",
+        "The reviewed local regression and author static receipts are green. Hosted CI for this new head remains pending until the parent publishes and runs it.",
+        "Existing limitations about authenticated native harness qualification, native approval interfaces and unknown source completion remain unchanged."
+      ],
+      "receipt": {
+        "sha256": "8503ff78fee615489956ad3d472adbd6559d102e23b0cbb905d49c39b762361b",
+        "source_log": "r3-native-ci-review-supplement.json"
+      },
+      "result": "No actionable findings in bounded CI configuration delta review",
+      "reviewer": "capture_impl (independent reviewer of native source and this configuration repair)",
+      "reviewer_product_or_test_mutations": false
+    },
+    "local_exact_existing_regression_red": {
+      "diagnostic": "I001: scripts/testkit/adapters/native_evidence.py local import block",
+      "errors": 0,
+      "failed": 1,
+      "junit_sha256": "37300b19c44c3f55b83bfdd2731c1c186af2611c82fb685e767b79ae57c6ba99",
+      "receipt": {
+        "sha256": "e82c97efbd78befa29db583767cab21b419220f7912c161c3bfae1ca22c758bc",
+        "source_log": "r3-native-ci-config-red.json"
+      },
+      "source": "1f9f7cc7f18e287202d4cdaa02f0c63ecdde8534",
+      "summary": "1 failed, 1 warning in 1.46s"
+    },
+    "native_matrix_not_repeated": "All eight product-source and five native-test hashes match the previous reviewed checkpoint. Hosted initial native30 passed; this config-only follow-up reruns the directly affected existing module and shared static checks.",
+    "native_source_and_test_seals_unchanged": true,
+    "parent_local_commit": "1f9f7cc7f18e287202d4cdaa02f0c63ecdde8534",
+    "publication": "The repaired remote head and hosted CI rerun are pending at this documentation checkpoint; the publication coordinator binds the resulting exact head/run in the PR description.",
+    "repair": {
+      "added_lines": 3,
+      "after_sha256": "98039b244af8716e77b66820d3d38e0ee40c2e3f4f41c44fd63ed898a2a420ab",
+      "all_other_configuration_identical": true,
+      "before_sha256": "b27692cb15f2631cddd3bd09cdafd022a3132d7321bf653a4578ccbc3d7c4280",
+      "known_first_party": [
+        "xorchestrate"
+      ],
+      "only_path": "ruff.toml",
+      "removed_lines": 0
+    },
+    "reviewed_config_commit": "99c7fa99baf62d048d5885774fdb3054bb970584",
+    "reviewed_config_tree": "7cccb3558462c3e1e6499556220e2ed7cfcaeb56",
+    "scope": "Explicit package classification only; no product/test edits, exclusions, disabled rules or cache-assertion changes.",
+    "shared_static_green": {
+      "candidate_integrity": {
+        "actual": "55c5291e4420cc1091477f6e67a9536b9c31169991c19072fe8daaf8be722f0e",
+        "changed_paths": [],
+        "deleted": [],
+        "expected": "55c5291e4420cc1091477f6e67a9536b9c31169991c19072fe8daaf8be722f0e",
+        "passed": true
+      },
+      "checks": [
+        {
+          "integrity": {
+            "after": "b4e627b839bec519565b1c5adedb14fdd6cb5756a4c07cd42bd426efef7da90b",
+            "before": "b4e627b839bec519565b1c5adedb14fdd6cb5756a4c07cd42bd426efef7da90b",
+            "passed": true
+          },
+          "name": "ruff",
+          "status": "passed"
+        },
+        {
+          "integrity": {
+            "after": "1ff0bc061cc0c25c86456fc69dc37b1755ec64a983b0c35d3bdd48c7f8906dd2",
+            "before": "1ff0bc061cc0c25c86456fc69dc37b1755ec64a983b0c35d3bdd48c7f8906dd2",
+            "passed": true
+          },
+          "name": "syntax",
+          "status": "passed"
+        },
+        {
+          "integrity": {
+            "after": "50823af2857fc2c330f90d86de67451ab3883af29f8f75ac431e5bc62b84f507",
+            "before": "50823af2857fc2c330f90d86de67451ab3883af29f8f75ac431e5bc62b84f507",
+            "passed": true
+          },
+          "name": "architecture",
+          "status": "passed"
+        }
+      ],
+      "log": {
+        "sha256": "f8878565f4944689adf38f39489b9136a194d6a9fd2e76eff12f43ef67efa979",
+        "source_log": "r3-native-ci-config-static.log"
+      },
+      "report": {
+        "sha256": "06d3d8a67a6578bed5c8e6401223d10ac9630591ba78b2333956cec54a1dfa9b",
+        "source_log": "report.json"
+      },
+      "status": "passed"
+    },
+    "unchanged_existing_static_module_green": {
+      "duration_seconds": 4.82,
+      "errors": 0,
+      "failed": 0,
+      "junit": {
+        "sha256": "63f52507c842b1926bb0a288b830916bb339efed2fc2a5649896a852f840aeed",
+        "source_log": "r3-native-ci-config-green.xml"
+      },
+      "log": {
+        "sha256": "9296a87a1f65f100941a898a4e91777f29559b5a9699633ed4011de64f6fdf55",
+        "source_log": "r3-native-ci-config-green.log"
+      },
+      "passed": 17,
+      "test_sha256": "19c977c1b868dbc75ba951824380d57d57da3b00166176b95a488a5701399dd4"
+    }
+  },
   "combined_validation": {
     "artifacts": [
       {
@@ -418,6 +565,7 @@
     "collector_dependency": "84229bb7497547d2db91d02a4633ccb3867f740b",
     "combined_reviewed_source": "f6d189dd9f11e0604809eca7c87c4754ba0b90a1",
     "combined_tree": "0b8b8b277b4a1a5964d466ba724fc97b7cdb6edf",
+    "lint_config_follow_up": "99c7fa99baf62d048d5885774fdb3054bb970584",
     "native_production_and_guide_freeze": "5d3bd7cd19d6ac7c322fb906208f50346ce67519",
     "native_production_sha256": {
       "scripts/acceptance/scenario.py": "4f3636c58864beda9420098e4d2cf8026b26e6ce50ec6674e704748903659e94",
