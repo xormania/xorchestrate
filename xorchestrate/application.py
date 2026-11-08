@@ -39,7 +39,7 @@ from .ports import (
 )
 from .schema import validate
 from .state import StateEngine
-from .telemetry import TelemetryViews, record_observation
+from .telemetry import TelemetryViews, dispatch_pressure, record_observation
 
 _STRING = {"type": "string", "minLength": 1}
 _OBJECT = {"type": "object"}
@@ -137,16 +137,28 @@ _TELEMETRY_QUERY = {
     "max_bytes": {"type": "integer", "minimum": 256, "maximum": 1048576},
     "limit": {"type": "integer", "minimum": 1, "maximum": 1000},
     "event_type": _STRING, "work_id": _STRING, "session_id": _STRING, "operation_id": _STRING,
+    "run_id": _STRING, "attempt_id": _STRING,
 }
 _ACTIONS.update({
     "telemetry_status": _spec("Inspect optional capture health and authorized source coverage.", {}, read=True),
     "telemetry_events": _spec("Read bounded authorized observations with source provenance.", _TELEMETRY_QUERY, read=True),
-    "telemetry_usage": _spec("Read raw usage observations without inventing absent totals or prices.", _TELEMETRY_QUERY, read=True),
+    "telemetry_usage": _spec("Normalize identified usage while retaining raw quantities and unknown prices.", _TELEMETRY_QUERY, read=True),
+    "telemetry_compare": _spec("Compare explicitly selected reported result populations with denominators and evidence limits.", {
+        **{key: value for key, value in _TELEMETRY_QUERY.items() if key in {"after", "cutoff", "limit", "max_bytes"}},
+        "baseline_run_id": _STRING, "candidate_run_id": _STRING, "baseline_work_id": _STRING, "candidate_work_id": _STRING,
+        "event_types": {"type": "array", "minItems": 1, "items": _STRING}, "unit": _STRING,
+        "passed_outcomes": {"type": "array", "items": _STRING}, "failed_outcomes": {"type": "array", "items": _STRING},
+    }, read=True),
     "telemetry_payload": _spec("Read a bounded payload belonging to an authorized observation.", {
         "event_id": _STRING, "digest": _STRING, "offset": {"type": "integer", "minimum": 0},
         "limit": {"type": "integer", "minimum": 1, "maximum": 1048576},
     }, ("event_id",), read=True),
-
+    "telemetry_snapshot": _spec("Export a verified snapshot after authorizing the complete evidence closure.",
+        {"destination": _STRING}, ("destination",)),
+    "telemetry_verify": _spec("Verify a local bundle under current authority for its complete evidence closure.",
+        {"destination": _STRING}, ("destination",), read=True),
+    "telemetry_restore": _spec("Restore an authorized verified bundle into a fresh configured destination.",
+        {"bundle": _STRING, "destination": _STRING}, ("bundle", "destination")),
 })
 for _lifecycle_action in ("attach_session", "reconnect_session"):
     _ACTIONS[_lifecycle_action] = deepcopy(_ACTIONS["start_session"])
@@ -225,10 +237,22 @@ class Application(DeliveryMixin):
     def describe(self) -> list[Capability]:
         return [Capability(name, spec.description, deepcopy(spec.input_schema), deepcopy(spec.annotations)) for name, spec in _ACTIONS.items()]
 
-    def call(self, action: str, arguments: JSON, actor: str = "owner", *, native_context=None, replay_only=False) -> JSON:
+    def call(self, action: str, arguments: JSON, actor: str = "owner", *, native_context=None, replay_only=False,
+             telemetry_run_id=None) -> JSON:
+        if telemetry_run_id is not None and (not isinstance(telemetry_run_id, str) or not telemetry_run_id):
+            raise OrchestrationError("Telemetry run identity must be nonempty text.", "invalid_arguments")
         if self.telemetry is None or (isinstance(action, str) and action.startswith("telemetry_")):
-            return self._call(action, arguments, actor, native_context=native_context, replay_only=replay_only)
+            guarded = action in {"telemetry_events", "telemetry_status", "telemetry_payload", "telemetry_usage"}
+            authority = self._telemetry_authority() if guarded else None
+            result = self._call(action, arguments, actor, native_context=native_context, replay_only=replay_only)
+            if guarded and self._telemetry_authority() != authority:
+                raise OrchestrationError("Telemetry authority changed during the read.", "conflict")
+            return result
         scope = {"actor": actor, "action": action}
+        if telemetry_run_id is not None:
+            # This is trusted host-supplied correlation, never a tool-result
+            # instruction or an extra field inferred from caller action JSON.
+            scope["run_id"] = telemetry_run_id
         try:
             scope["attempt_id"] = self.telemetry.new_id()
         except Exception:
@@ -280,12 +304,31 @@ class Application(DeliveryMixin):
 
     def _telemetry_views(self):
         return TelemetryViews(self.telemetry, self.store, self._context, self._authorize,
-                              self._verify_context, self.inspection)
+                              self._verify_context, self.inspection, self._telemetry_authority)
+
+    def _telemetry_authority(self):
+        policy = self.guardrail
+        revision = getattr(policy, "authority_revision", None)
+        return id(policy), revision() if callable(revision) else None
 
     def _telemetry_status(self, arguments, actor, context):
         if self.telemetry is None:
             return {"status": "disabled", "coverage": "unknown", "event_count": 0, "sources": {}, "publication": "unknown"}
-        return self._telemetry_views().status(actor)
+        result = self._telemetry_views().status(actor)
+        health = {}
+        for kind, resources in (("providers", self.providers), ("sessions", self.sessions), ("evaluators", self.evaluators)):
+            selected = {}
+            for name, resource in resources.items():
+                report = getattr(resource, "telemetry_health", None)
+                if callable(report):
+                    try:
+                        selected[name] = dispatch_pressure(report())
+                    except Exception:
+                        selected[name] = {"status": "unavailable", "coverage": "unknown"}
+            if selected:
+                health[kind] = selected
+        result["source_dispatch"] = health
+        return result
 
     def _telemetry_events(self, arguments, actor, context):
         return self._telemetry_views().events(arguments, actor)
@@ -295,6 +338,27 @@ class Application(DeliveryMixin):
 
     def _telemetry_usage(self, arguments, actor, context):
         return self._telemetry_views().usage(arguments, actor)
+
+    def _telemetry_compare(self, arguments, actor, context):
+        return self._telemetry_views().comparison(arguments, actor)
+
+    def _telemetry_snapshot(self, arguments, actor, context):
+        views = self._telemetry_views()
+        sink = views._configured()
+        authorize = views.bundle_authorizer(actor, "telemetry_snapshot", sink.snapshot_source())
+        return sink.snapshot(arguments["destination"], authorize=authorize, receipt=True)
+
+    def _telemetry_verify(self, arguments, actor, context):
+        views = self._telemetry_views()
+        sink = views._configured()
+        authorize = views.bundle_authorizer(actor, "telemetry_verify", sink.bundle_source(arguments["destination"]))
+        return sink.verify(arguments["destination"], authorize=authorize, receipt=True)
+
+    def _telemetry_restore(self, arguments, actor, context):
+        views = self._telemetry_views()
+        sink = views._configured()
+        authorize = views.bundle_authorizer(actor, "telemetry_restore", sink.bundle_source(arguments["bundle"]))
+        return sink.restore(arguments["bundle"], arguments["destination"], authorize=authorize, receipt=True)
 
     def _call(self, action: str, arguments: JSON, actor: str = "owner", *, native_context=None, replay_only=False,
               capture_context=None) -> JSON:

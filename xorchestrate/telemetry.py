@@ -78,27 +78,43 @@ def record_observation(sink, event_type, payload, context, **metadata):
         return {"status": "unavailable", "receipt": None, "reason": "capture_error"}
 
 
+def dispatch_pressure(value):
+    """Expose bounded pipeline health without corpus membership or identities."""
+    if not isinstance(value, dict):
+        return {"status": "unavailable", "coverage": "unknown"}
+    result = {key: value[key] for key in ("pending", "pending_bytes", "capacity", "max_bytes", "rejected",
+              "failed", "source_failed") if type(value.get(key)) is int and value[key] >= 0}
+    if type(value.get("closed")) is bool:
+        result["closed"] = value["closed"]
+    if value.get("coverage") in {"gap", "pending", "observed", "unobserved", "unknown"}:
+        result["coverage"] = value["coverage"]
+    if value.get("status") in {"disabled", "unavailable"}:
+        result["status"] = value["status"]
+    return result
+
+
 class TelemetryViews:
     """Read through explicit current-authorization and projection callbacks."""
 
-    def __init__(self, sink, store, context, authorize, verify, projector):
+    def __init__(self, sink, store, context, authorize, verify, projector, authority=None):
         self.sink = sink
         self.store = store
         self.context = context
         self.authorize = authorize
         self.verify = verify
         self.projector = projector
+        self.authority = authority if authority is not None else (lambda: None)
 
     def _configured(self):
         if self.sink is None:
             raise OrchestrationError("Telemetry capture is not configured.", "telemetry_unavailable")
         return self.sink
 
-    def inspect(self, row, actor, action):
+    def inspect(self, row, actor, action, *, resolve_scope=None, load_observation=None):
         row = deepcopy(row)
         scope = row.get("context", {})
         if not any(scope.get(key) for key in ("work_id", "session_id", "operation_id")):
-            resolve = getattr(self.sink, "resolve_scope", None)
+            resolve = resolve_scope if resolve_scope is not None else getattr(self.sink, "resolve_scope", None)
             resolved = resolve(row) if callable(resolve) else None
             if resolved:
                 scope = {**scope, **resolved}
@@ -121,7 +137,8 @@ class TelemetryViews:
             # A descriptor does not carry the typed invocation's source scope.
             # Authorize the outer resource first, then inspect the retained
             # application envelope without publishing its hydrated content.
-            original = self.sink.get_event(row["event_id"])
+            load = load_observation if load_observation is not None else self.sink.get_event
+            original = load(row["event_id"])
             if original is None:
                 raise OrchestrationError("Telemetry source changed during inspection.", "conflict")
             execution = original.get("payload")
@@ -175,7 +192,7 @@ class TelemetryViews:
         cutoff = arguments.get("cutoff")
         if cutoff is None:
             cutoff = sink.status().get("max_sequence", 0) or 0
-        filters = {key: arguments[key] for key in ("event_type", "work_id", "session_id", "operation_id") if key in arguments}
+        filters = {key: arguments[key] for key in ("event_type", "work_id", "session_id", "operation_id", "run_id", "attempt_id") if key in arguments}
         complete = cursor >= cutoff
 
         def page(items, position):
@@ -260,6 +277,12 @@ class TelemetryViews:
             cursor = page["next_after"]
         self._verify(contexts)
         result["sources"] = sources
+        if isinstance(state.get("operational"), dict):
+            operational = state["operational"]
+            result["operational"] = {"configured": True, "corpus_coverage": "independent",
+                                     "status": operational.get("status", "unknown"),
+                                     "dispatch": dispatch_pressure(operational.get("dispatch")),
+                                     "export_failures": operational.get("failures", 0)}
         result.update(event_count=count, visible_event_count=count, coverage="observed" if count else "unknown",
                       last_capture=last_capture, count_complete=complete,
                       last_capture_complete=complete, source_coverage_complete=complete)
@@ -302,6 +325,8 @@ class TelemetryViews:
         return result
 
     def usage(self, arguments, actor):
+        from .telemetry_views import usage_summary
+
         events = self._analysis_page(arguments, actor, "telemetry_usage")
         measurements = []
 
@@ -324,10 +349,17 @@ class TelemetryViews:
                 samples.append({"event_id": row["event_id"], "sequence": row["sequence"],
                                 "context": row["context"], "measurements": measurements})
         self._verify(events["_contexts"])
-        result = {"samples": samples, "next_after": events["next_after"], "cutoff": events["cutoff"],
-                  "complete": events["complete"], "scan_limited": events["scan_limited"], "normalization": "raw-v1",
-                  "cost": None, "cost_status": "unknown", "totals_status": "not_normalized"}
-        return self._bounded_analysis(result, arguments.get("max_bytes", 262144))
+        normalized = usage_summary(events["events"])
+        # Retained observations are exact payload reads; an analysis response is
+        # a bounded projection with explicit source references when content is
+        # too large to inline. The legacy raw sample view remains available.
+        normalized.update(samples=samples, next_after=events["next_after"], cutoff=events["cutoff"],
+                          scan_limited=events["scan_limited"], complete=events["complete"],
+                          normalization=normalized["normalization_version"],
+                          cost=None, cost_status="unknown", totals_status="normalized" if normalized["source_event_ids"] else "unknown",
+                          population={"basis": "authorized returned page", "after": arguments.get("after", 0),
+                                      "complete": events["complete"]})
+        return self._bounded_analysis(normalized, arguments.get("max_bytes", 262144))
 
     def _analysis_page(self, arguments, actor, action):
         """Hydrate authorized descriptors, then authorize their typed closure."""
@@ -346,6 +378,31 @@ class TelemetryViews:
         self._verify(contexts)
         return {**page, "events": hydrated, "_contexts": contexts}
 
+    def _revalidate_analysis_union(self, pages, actor, action):
+        """Reauthorize every returned row after all population reads finish."""
+        def validate():
+            contexts = [context for page in pages for context in page["_contexts"]]
+            for page in pages:
+                for row in page["events"]:
+                    current, basis = self.inspect(row, actor, action)
+                    if current.get("payload") != row.get("payload"):
+                        # A smaller projection would silently change the cohort
+                        # after its measures and denominators were calculated.
+                        raise OrchestrationError("Comparison authority changed during the population reads.", "denied")
+                    contexts.extend(basis)
+            self._verify(contexts)
+
+        self._consistent_authorization(validate)
+
+    def _consistent_authorization(self, validate):
+        """Use one stable configured policy revision for the complete closure."""
+        for _ in range(2):
+            before = self.authority()
+            validate()
+            if self.authority() == before:
+                return
+        raise OrchestrationError("Telemetry authority changed during closure authorization.", "conflict")
+
     @staticmethod
     def _bounded_analysis(result, budget):
         if len(canonical(result).encode()) <= budget:
@@ -361,3 +418,64 @@ class TelemetryViews:
         if len(canonical(result).encode()) > budget:
             raise OrchestrationError("Telemetry analysis exceeds the selected budget; select a smaller page.", "invalid_query")
         return result
+
+    def comparison(self, arguments, actor):
+        from .telemetry_views import compare_runs
+
+        shared = {key: arguments[key] for key in ("after", "cutoff", "limit", "max_bytes") if key in arguments}
+        populations = []
+        pages = []
+        for side in ("baseline", "candidate"):
+            selected = {key: arguments[side + "_" + key] for key in ("run_id", "work_id") if side + "_" + key in arguments}
+            if not selected:
+                raise OrchestrationError("Each comparison population needs an explicit work or run selector.", "invalid_arguments")
+            page = self._analysis_page({**shared, **selected}, actor, "telemetry_compare")
+            populations.append(page["events"])
+            pages.append(page)
+        declared = {key: arguments[key] for key in ("event_types", "unit", "passed_outcomes", "failed_outcomes") if key in arguments}
+        result = compare_runs(*populations, **declared)
+        result.update(next_after={"baseline": pages[0]["next_after"], "candidate": pages[1]["next_after"]},
+                      cutoff={"baseline": pages[0]["cutoff"], "candidate": pages[1]["cutoff"]},
+                      population_scope="authorized returned pages")
+        bounded = self._bounded_analysis(result, arguments.get("max_bytes", 262144))
+        self._revalidate_analysis_union(pages, actor, "telemetry_compare")
+        return bounded
+
+    def bundle_authorizer(self, actor, action, source):
+        """Bind authorization to actual source bytes and current typed records."""
+        sink = self._configured()
+        rows, proofs = {}, {}
+
+        def resolve(row):
+            return sink.resolve_scope(row, database_path=source["database_path"])
+
+        def authorize(row):
+            if row.get("context", {}).get("project_id") != sink.project_id:
+                raise OrchestrationError("The bundle belongs to another configured project.", "denied")
+            envelope = sink.view_observation(row, hydrate=False)
+            _, contexts = self.inspect(envelope, actor, action, resolve_scope=resolve,
+                                       load_observation=lambda _: sink.view_observation(
+                                           row, artifact_store=source["artifact_store"]))
+            self._verify(contexts)
+            original = sink.view_observation(row, artifact_store=source["artifact_store"])
+            visible, nested = self.inspect(original, actor, action, resolve_scope=resolve)
+            if visible.get("payload") != original.get("payload"):
+                raise OrchestrationError("The complete bundle closure is not visible.", "denied")
+            self._verify([*contexts, *nested])
+            rows[row["event_id"]] = deepcopy(row)
+            for proof in (*contexts, *nested):
+                proofs.setdefault(hashlib.sha256(canonical(proof).encode()).digest(), proof)
+            return True
+
+        def finalize():
+            def validate():
+                # Retain the entire observed closure, rather than only the last
+                # row's decision. A later policy change invalidates earlier rows.
+                for row in list(rows.values()):
+                    authorize(row)
+                self._verify(list(proofs.values()))
+
+            self._consistent_authorization(validate)
+
+        authorize.finalize = finalize
+        return authorize

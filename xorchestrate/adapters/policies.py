@@ -121,6 +121,11 @@ class RuleGuardrail:
         reason = "; ".join(rule["reason"] for rule in deciding if rule.get("reason")) or self.reason
         return Verdict(effect == "allow", reason, effect == "review", {"rule_ids": [rule["id"] for rule in deciding]})
 
+    def authority_revision(self):
+        """Identify the trusted configuration used by a multi-record read."""
+        return json.dumps({"default": self.default, "rules": self.rules, "reason": self.reason},
+                          sort_keys=True, separators=(",", ":"), allow_nan=False)
+
 
 class ConfigurableRouting:
     """Resolve explicit people, free-form roles and free-form graph relationships.
