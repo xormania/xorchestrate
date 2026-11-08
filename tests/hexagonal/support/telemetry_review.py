@@ -56,6 +56,20 @@ class ReviewFixture(Fixture):
         value = address.partition("/")[0] if selector == "providers" else address
         self.app.guardrail = RuleGuardrail({"rules": [{"actors": ["observer"], selector: [value], "effect": "deny"}]})
 
+    def deny_operation_reads(self):
+        self.app.guardrail = RuleGuardrail({"rules": [{"actors": ["observer"], "actions": ["get_operation"],
+            "effect": "deny"}]})
+
+    def operation_denied(self, event_id):
+        retained = self.app.telemetry.get_event(event_id)
+        operation = self.app.inspection._execution("owner", retained["payload"], {}, "owner").get("operation")
+        assert operation, "The completed invocation must resolve its operation"
+        try:
+            self.app.call("get_operation", {"operation_id": operation["id"]}, actor="observer")
+        except OrchestrationError as error:
+            return error.code == "denied"
+        return False
+
     def work_readable(self, work):
         return self.app.call("get_work", {"work_id": work}, actor="observer")["work"]["id"] == work
 
