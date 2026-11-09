@@ -9,7 +9,9 @@ import ast
 import hashlib
 import importlib.util
 import sys
+import threading
 import tokenize
+from collections import OrderedDict
 from io import BytesIO
 from pathlib import Path
 
@@ -30,9 +32,16 @@ def _qualified_name(node, aliases):
     return ".".join([aliases.get(node.id, node.id), *parts]) if isinstance(node, ast.Name) else None
 
 
-def _extract(name, tree, names, packages):
-    package = name if name in packages else name.rpartition(".")[0]
-    edges, dynamic, calls, literals = set(), set(), set(), set()
+def _observe(name, is_package, tree):
+    """Return the facts one module's source determines, independent of its neighbours.
+
+    The result depends only on the module name, whether it is a package
+    initializer and the parsed source, so it can be reused for identical bytes
+    at the same relative path. Membership-dependent edges are kept as
+    candidates and resolved by ``_link`` against the examined module set.
+    """
+    package = name if is_package else name.rpartition(".")[0]
+    edges, candidates, dynamic, calls, literals = set(), set(), set(), set(), set()
     docstrings = {id(node.body[0].value) for node in ast.walk(tree)
                   if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
                   and node.body and isinstance(node.body[0], ast.Expr)
@@ -57,8 +66,7 @@ def _extract(name, tree, names, packages):
             target = "." * node.level + (node.module or "")
             target = importlib.util.resolve_name(target, package) if node.level else target
             edges.add((target, node.lineno, "import"))
-            edges.update((target + "." + alias.name, node.lineno, "import") for alias in node.names
-                         if target + "." + alias.name in names)
+            candidates.update((target + "." + alias.name, node.lineno, "import") for alias in node.names)
             for alias in node.names:
                 if alias.name in DYNAMIC_OPERATIONS and target.split(".")[0] in DYNAMIC_MODULES:
                     dynamic.add((target + "." + alias.name, node.lineno))
@@ -71,14 +79,63 @@ def _extract(name, tree, names, packages):
             called = _qualified_name(node.func, aliases)
             if called:
                 calls.add((called, node.lineno))
+    return (frozenset(edges), frozenset(candidates), tuple(sorted(dynamic)),
+            tuple(sorted(calls)), tuple(sorted(literals)))
+
+
+def _link(name, observation, names, packages):
+    """Complete one module's observation against the examined module set."""
+    base, candidates, dynamic, calls, literals = observation
+    edges = set(base)
+    edges.update(edge for edge in candidates if edge[0] in names)
     for target, line, _ in (*edges, (name, 0, "initializer")):
         bits = target.split(".")
         edges.update((".".join(bits[:i]), line, "initializer") for i in range(1, len(bits))
                      if ".".join(bits[:i]) in packages)
     return ([{"target": target, "line": line, "kind": kind} for target, line, kind in sorted(edges)],
-            [{"name": operation, "line": line} for operation, line in sorted(dynamic)],
-            [{"name": operation, "line": line} for operation, line in sorted(calls)],
-            [{"value": value, "line": line} for value, line in sorted(literals)])
+            [{"name": operation, "line": line} for operation, line in dynamic],
+            [{"name": operation, "line": line} for operation, line in calls],
+            [{"value": value, "line": line} for value, line in literals])
+
+
+class ObservationCache:
+    """Bounded, process-local memo of per-module observations.
+
+    Keys are (relative path, content sha256): the relative path fixes the module
+    name and package status, the digest fixes the source. Values are immutable,
+    so reports built from them cannot alter later results. Unreadable or
+    unresolvable sources are never stored and are re-examined every time.
+    """
+
+    def __init__(self, limit=4096):
+        self.limit = limit
+        self._entries = OrderedDict()
+        self._lock = threading.Lock()
+
+    def get(self, key):
+        with self._lock:
+            value = self._entries.get(key)
+            if value is not None:
+                self._entries.move_to_end(key)
+            return value
+
+    def put(self, key, value):
+        with self._lock:
+            self._entries[key] = value
+            self._entries.move_to_end(key)
+            while len(self._entries) > self.limit:
+                self._entries.popitem(last=False)
+
+    def clear(self):
+        with self._lock:
+            self._entries.clear()
+
+    def __len__(self):
+        with self._lock:
+            return len(self._entries)
+
+
+OBSERVATIONS = ObservationCache()
 
 
 def check(root: Path, profile: dict) -> dict:
@@ -88,7 +145,7 @@ def check(root: Path, profile: dict) -> dict:
     except (ValueError, TypeError):
         return evaluate(profile, {})
     root = Path(root).resolve()
-    modules, trees, packages, errors, seen = {}, {}, set(), [], set()
+    modules, sources, packages, errors, seen = {}, {}, set(), [], set()
 
     def error(path, message, line=None):
         item = {"rule_id": "source.readable", "kind": "extraction", "path": path, "message": message}
@@ -128,19 +185,29 @@ def check(root: Path, profile: dict) -> dict:
                 continue
             try:
                 raw = path.read_bytes()
-                encoding, _ = tokenize.detect_encoding(BytesIO(raw).readline)
-                source = raw.decode(encoding)
-                modules[name] = {"path": relative, "sha256": hashlib.sha256(raw).hexdigest(),
+                sha256 = hashlib.sha256(raw).hexdigest()
+                observed = OBSERVATIONS.get((relative, sha256))
+                if observed is None:
+                    encoding, _ = tokenize.detect_encoding(BytesIO(raw).readline)
+                    text = raw.decode(encoding)
+                modules[name] = {"path": relative, "sha256": sha256,
                                  "imports": [], "dynamic": [], "calls": [], "literals": []}
-                trees[name] = ast.parse(source, filename=relative)
+                # A parsed tree, or the cached observation of these exact bytes.
+                sources[name] = observed if observed is not None else ast.parse(text, filename=relative)
                 if is_package:
                     packages.add(name)
             except (OSError, UnicodeError, SyntaxError) as exc:
                 error(relative, f"Cannot parse source: {exc}", getattr(exc, "lineno", None))
-    for name, tree in sorted(trees.items()):
+    for name, source in sorted(sources.items()):
+        record = modules[name]
         try:
-            (modules[name]["imports"], modules[name]["dynamic"], modules[name]["calls"],
-             modules[name]["literals"]) = _extract(name, tree, modules, packages)
+            if isinstance(source, ast.AST):
+                observed = _observe(name, name in packages, source)
+                OBSERVATIONS.put((record["path"], record["sha256"]), observed)
+            else:
+                observed = source
+            (record["imports"], record["dynamic"], record["calls"],
+             record["literals"]) = _link(name, observed, modules, packages)
         except (ValueError, ImportError) as exc:
-            error(modules[name]["path"], f"Cannot resolve source imports: {exc}")
+            error(record["path"], f"Cannot resolve source imports: {exc}")
     return evaluate(profile, modules, stdlib_modules=sys.stdlib_module_names, extraction_findings=errors)
