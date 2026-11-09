@@ -37,7 +37,9 @@
         {
           "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
           "with": {
-            "python-version": "3.12"
+            "python-version": "3.12",
+            "cache": "pip",
+            "cache-dependency-path": ".github/requirements-ci.txt"
           },
           "id": "python"
         },
@@ -88,7 +90,9 @@
         {
           "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
           "with": {
-            "python-version": "3.12"
+            "python-version": "3.12",
+            "cache": "pip",
+            "cache-dependency-path": "pyproject.toml\n.github/requirements-ci.txt"
           },
           "id": "python"
         },
@@ -152,7 +156,9 @@
         {
           "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
           "with": {
-            "python-version": "3.12"
+            "python-version": "3.12",
+            "cache": "pip",
+            "cache-dependency-path": "pyproject.toml"
           },
           "id": "python"
         },
@@ -218,13 +224,15 @@
         {
           "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
           "with": {
-            "python-version": "3.12"
+            "python-version": "3.12",
+            "cache": "pip",
+            "cache-dependency-path": "pyproject.toml"
           },
           "id": "python"
         },
         {
           "name": "Install application and tmux",
-          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]'\nsudo apt-get update\nsudo apt-get install -y tmux",
+          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]'\nif ! command -v tmux >/dev/null 2>&1; then\n  sudo apt-get update\n  sudo apt-get install -y tmux\nfi\ntmux -V",
           "id": "dependencies"
         },
         {
@@ -292,7 +300,9 @@
         {
           "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
           "with": {
-            "python-version": "3.12"
+            "python-version": "3.12",
+            "cache": "pip",
+            "cache-dependency-path": "pyproject.toml"
           },
           "id": "python"
         },
