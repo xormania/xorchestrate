@@ -10,7 +10,7 @@ CODE_PATHS = (
     "xorchestrate/README.md", "pyproject.toml", "ruff.toml", ".gitignore", "docs/implementation/owner-brief.md",
     "README.txt", "docs", "/README.md", "docs/../xorchestrate/model.py", "",
 )
-HEAVY_JOBS = ("application", "tmux-acceptance", "architecture")
+HEAVY_JOBS = ("application", "verification", "tmux-acceptance", "architecture")
 ALWAYS_JOBS = ("changes", "architecture-status")
 CLASSIFIER_JOB = "paths"
 

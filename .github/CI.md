@@ -100,7 +100,7 @@ before the heavy jobs are skipped:
 The job output is
 `steps.guard.outputs.force == 'false' && steps.classify.outputs.code || 'true'`.
 It is `false` only when the guard ran and allowed classification and the
-classifier reported `false`. The application, tmux acceptance and Jev
+classifier reported `false`. The application, verification, tmux acceptance and Jev
 diagnostics jobs declare `needs: paths` and the job-level condition
 `!cancelled() && needs.paths.outputs.code != 'false'`. If either step fails or
 emits nothing, they still run. Static checks and the `Hexagonal architecture` status
