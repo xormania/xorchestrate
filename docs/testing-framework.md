@@ -197,6 +197,20 @@ CI binds actual results and artifacts to the tested revision. A family
 inventory explains what ran; JUnit and raw receipts establish its observed result.
 Passing counts alone do not establish completeness.
 
+The shared `tests` check qualifies the pytest inventory before reporting success.
+Its catalog identity, module/family ownership, selected case identities, outcomes
+and aggregate counts must agree with the requested selection and native exit.
+Sharded runs use the same family and weighted-module selector as pytest; their
+recorded shard identity and selected modules must match the requested shard.
+Missing or inconsistent evidence makes a successful process an `evidence_error`;
+the original process exit and command receipt remain available. A nonzero native
+outcome remains failed even when its partial inventory also needs diagnosis.
+At least one selected case must pass, and no selected case may be failed or
+unexecuted in a successful run. Mixed passes and explicit skips retain separate
+counts; a run containing only skips cannot establish behavioral verification.
+This checks that execution evidence supports the reported result. Independent
+assertions and deliberate fault witnesses still establish what the tests detect.
+
 Static evidence records effective input membership and content, including examined
 ignored/untracked files and followed symlink targets. This identity is distinct
 from the repository commit/tree and the existing calibration candidate hash.
