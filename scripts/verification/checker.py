@@ -14,7 +14,6 @@ from .model import digest as digest
 from .model import require as require
 
 PEERS = ("codex", "claude", "grok")
-ORIGINS = {peer: decoder.origin for peer, decoder in default_decoders().items()}
 identity_matches = core.identity_matches
 arguments_match = core.arguments_match
 expected_work = core.expected_work

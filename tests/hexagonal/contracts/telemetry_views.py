@@ -133,36 +133,6 @@ class TelemetryViewsContract:
         self.assertEqual(self.views.usage_summary(independent_project)["quantities"]["input_tokens"], 20,
                          "a stable native stream identifier cannot merge unrelated projects")
 
-    def test_timeline_pages_keep_their_cutoff_when_new_events_arrive(self):
-        events = [self.observation(f"e{number}", number, {"number": number}) for number in range(1, 6)]
-        events.reverse()
-        first = self.views.timeline(events, after=2, limit=2, cutoff=5)
-        self.assertEqual([row["sequence"] for row in first["events"]], [3, 4])
-        self.assertEqual(first["next_after"], 4)
-        self.assertEqual(first["source_cutoff"], 5)
-        self.assertTrue(first["projection_version"])
-        later = self.views.timeline(events + [self.observation("e6", 6, {"number": 6})], after=first["next_after"], limit=2, cutoff=first["source_cutoff"])
-        self.assertEqual([row["sequence"] for row in later["events"]], [5])
-        self.assertEqual(later["source_cutoff"], 5)
-
-    def test_timeline_payload_limit_returns_an_explicit_omission_without_mutation(self):
-        event = self.observation("large", 1, {"text": "large-private-text" * 1000})
-        before = deepcopy(event)
-        page = self.views.timeline([event], max_bytes=1024)
-        self.assertLessEqual(len(json.dumps(page).encode()), 1400, "bounded event payload must not escape through the projection")
-        self.assertEqual(len(page["events"]), 1)
-        stub = page["events"][0]
-        self.assertEqual(stub["event_id"], "large")
-        self.assertTrue(stub["payload_omitted"])
-        self.assertGreater(stub["payload_size_bytes"], 1024)
-        self.assertNotIn("large-private-text", json.dumps(stub))
-        self.assertEqual(event, before)
-
-    def test_timeline_preserves_unresolved_relation_targets(self):
-        event = self.observation("one", 1, {}, links=[["caused_by", "missing-event"]])
-        page = self.views.timeline([event])
-        self.assertIn("missing-event", json.dumps(page["unresolved_links"]))
-
     def test_empty_comparison_is_inconclusive_and_retains_denominators(self):
         candidate = [self.observation("pass", 1, {"outcome": "passed", "conditions": {"fixture": "v1"}}, event_type="trial.result")]
         result = self.views.compare_runs([], candidate)

@@ -155,6 +155,7 @@
         "tests/hexagonal/test_telemetry.py": "composition",
         "tests/hexagonal/test_telemetry_bundle_receipts.py": "composition",
         "tests/hexagonal/test_telemetry_preservation.py": "adapter",
+        "tests/hexagonal/test_telemetry_publication.py": "adapter",
         "tests/hexagonal/test_telemetry_views.py": "contract",
         "tests/hexagonal/test_telemetry_workflow.py": "composition",
         "tests/hexagonal/test_telemetry_callback_review.py": "composition",

@@ -161,51 +161,6 @@ def usage_summary(events):
             "unit": "token", "cost": {"status": "unknown", "reason": "no_rate_card"}}
 
 
-def timeline(events, after=0, limit=100, cutoff=None, max_bytes=65536):
-    """Return a bounded collector-order page with a stable explicit cutoff.
-
-    Collector order is an observation order, not a claim of producer causality.
-    Oversized payloads are represented by exact source references, never sliced
-    strings that could be mistaken for complete source material.
-    """
-    if (type(after) is not int or after < 0 or type(limit) is not int or not 1 <= limit <= 1000
-            or type(max_bytes) is not int or max_bytes < 256
-            or (cutoff is not None and (type(cutoff) is not int or cutoff < 0))):
-        raise ValueError("invalid telemetry page bounds")
-    ordered = _ordered(events)
-    source_cutoff = _cutoff(ordered) if cutoff is None else cutoff
-    candidates = [event for event in ordered if after < event.get("sequence", 0) <= source_cutoff]
-    result = []
-    used = 2
-    for event in candidates[:limit]:
-        encoded = json.dumps(event, separators=(",", ":"), ensure_ascii=False).encode()
-        if len(encoded) + used + 1 > max_bytes:
-            if result:
-                break
-            event = {"event_id": event.get("event_id"), "sequence": event.get("sequence"),
-                     "payload_omitted": True, "payload_size_bytes": len(encoded),
-                     "payload_reference": {"event_id": event.get("event_id"), "digest": event.get("digest")}}
-            encoded = json.dumps(event, separators=(",", ":"), ensure_ascii=False).encode()
-            if len(encoded) + used + 1 > max_bytes:
-                # Very long source identities are not safe to inline either.
-                event = {"sequence": event.get("sequence"), "payload_omitted": True,
-                         "payload_size_bytes": len(encoded), "reference_by_sequence": True}
-                encoded = json.dumps(event, separators=(",", ":"), ensure_ascii=False).encode()
-        result.append(event)
-        used += len(encoded) + 1
-    next_after = result[-1]["sequence"] if len(result) < len(candidates) and result else None
-    unresolved = []
-    known_ids = {event.get("event_id") for event in ordered if event.get("sequence", 0) <= source_cutoff}
-    for event in result:
-        for link in event.get("links", []):
-            relation, target = ((link.get("relation"), link.get("target_id")) if isinstance(link, dict) else link)
-            if target not in known_ids:
-                unresolved.append({"event_id": event.get("event_id"), "relation": relation, "target_id": target})
-    return {"events": result, "next_after": next_after, "source_cutoff": source_cutoff,
-            "projection_version": PROJECTION_VERSION, "relation_basis": "collector_sequence",
-            "unresolved_links": unresolved, "payload_bytes": used}
-
-
 def compare_runs(baseline, candidate, *, event_types=("trial.result", "run.result", "candidate.result"),
                  unit="reported_trial_result", passed_outcomes=("passed",), failed_outcomes=("failed",)):
     """Describe an explicitly declared result population, never incidental logs.
