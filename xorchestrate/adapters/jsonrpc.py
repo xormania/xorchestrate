@@ -1,7 +1,7 @@
 """Bounded subprocess transport shared by out-of-process adapters.
 
-The JSON-lines framing follows the same public protocol as the legacy
-``devtools/rpc.py``; this implementation has no dependency on that runtime.
+The JSON-lines framing follows the same public protocol as the historical
+Agentscient runtime transport; this implementation has no dependency on it.
 Commands come exclusively from operator configuration, never remote metadata.
 """
 

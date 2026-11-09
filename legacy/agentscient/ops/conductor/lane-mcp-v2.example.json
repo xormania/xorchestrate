@@ -1,9 +1,0 @@
-{
-  "version": 2,
-  "dispatch_store": null,
-  "job_ids": [],
-  "monitor_state": null,
-  "consumer": "conductor",
-  "usage_rollout": null,
-  "job_registry": null
-}

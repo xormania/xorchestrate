@@ -167,8 +167,8 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 class TypeSafeEvaluator(_TelemetryEvaluator):
     """TypeSafe choice assessment using an explicitly configured model and rubric.
 
-    The wire format follows the reusable TypeSafe integration in the imported
-    Agentscient devtools/jev.py. No imported defaults, role policy, retries, model
+    The wire format follows the reusable TypeSafe integration in the historical
+    Agentscient runtime. No imported defaults, role policy, retries, model
     naming restrictions or credential machinery are retained.
     """
 
