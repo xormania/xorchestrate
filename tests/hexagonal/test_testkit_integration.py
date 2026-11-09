@@ -77,7 +77,7 @@ def test_multiple_acceptance_drivers_expand_without_repeating_static_checks(tmp_
 
 
 @pytest.mark.parametrize("mode,check_name,forwarded", [
-    ("protocol-fixture", "tests", False), ("native", "tests", False),
+    ("protocol-fixture", "probe", False), ("native", "probe", False),
     ("native", "native-calibration", False), ("protocol-fixture", "multi-harness", False),
     ("protocol-fixture", "acceptance", False), ("native", "multi-harness", True),
     ("native", "acceptance:peer", True),
