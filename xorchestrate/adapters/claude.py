@@ -25,31 +25,14 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
-from ..activity import ActivityState, NativeConnection, activity_engine
+from ..activity import ActivityState, NativeConnection
 from ..model import OrchestrationError
 from ..outcomes import before_effect, effect_outcome
 from ..schema import check_schema, validate
-from .jsonrpc import (
-    TelemetryDispatch,
-    capture_origin,
-    close_process,
-    command_options,
-    decode_json,
-    encode_json,
-    observe_telemetry,
-    observe_wire,
-    positive_integer,
-    positive_number,
-    telemetry_dispatch,
-    telemetry_secrets,
-)
 from .native_gateway import LocalGateway
-
-
-def _object(value, name):
-    if not isinstance(value, dict):
-        raise OrchestrationError(f"{name} must be an object.", details={"outcome": "not_started"})
-    return decode_json(encode_json(value))
+from .process import close_process, command_options, decode_json, encode_json, positive_integer, positive_number
+from .session_base import ApplicationToolDriver, json_object
+from .telemetry_capture import TelemetryDispatch, capture_origin, observe_telemetry, observe_wire
 
 
 def _digest(value):
@@ -98,12 +81,12 @@ class _ClaudeLive:
         self.active_tools = self.activity_model.set("callback")
 
 
-class ClaudeSessionDriver:
+class ClaudeSessionDriver(ApplicationToolDriver):
     protocol = "claude"
     resumable = True
 
     def __init__(self, options):
-        self.options = _object(options, "Claude options")
+        self.options = json_object(options, "Claude options")
         command_options(self.options)
         self.timeout = positive_number(self.options, "timeout", 30)
         self.startup_timeout = positive_number(self.options, "startup_timeout", 120)
@@ -115,10 +98,10 @@ class ClaudeSessionDriver:
         self.max_transcript_frame = positive_integer(self.options, "max_transcript_frame_bytes", 1024 * 1024)
         self.request_parameters = self.options.get("request_parameters", {"type": "object", "additionalProperties": False})
         check_schema(self.request_parameters)
-        self.launch = _object(self.options.get("launch", {}), "Claude launch settings")
+        self.launch = json_object(self.options.get("launch", {}), "Claude launch settings")
         if set(self.launch) - {"model", "effort", "permission_mode", "tools", "allowed_tools", "disallowed_tools", "system_prompt", "initial_prompt"}:
             raise OrchestrationError("Unknown Claude launch setting.", "invalid_configuration")
-        self.permissions = _object(self.options.get("permissions", {}), "Claude permissions")
+        self.permissions = json_object(self.options.get("permissions", {}), "Claude permissions")
         if any(value not in {"allow", "deny", "ask", "defer"} for value in self.permissions.values()):
             raise OrchestrationError("Claude native permissions must be allow, deny, ask or defer.", "invalid_configuration")
         self.server_name = self.options.get("server_name", "xorchestrate")
@@ -141,65 +124,7 @@ class ClaudeSessionDriver:
             "timeout", "startup_timeout", "max_sessions", "max_events", "max_calls", "max_deliveries", "gateway_timeout", "gateway_workers", "terminal", "evidence_directory",
             "telemetry_drain_timeout", "max_telemetry_pending", "max_telemetry_bytes", "max_transcript_bytes", "max_transcript_frame_bytes"}}
         self.configuration_id = _digest({"adapter": "claude-channel-v1", "options": material})
-        self._instance = uuid.uuid4().hex
-        self._lock = threading.RLock()
-        self._sessions = {}
-        self._starting = 0
-        self._closed = False
-        self._observer = None
-        self._telemetry_observer = None
-        self._callback = None
-        self._application_replay = None
-        self._capabilities = {}
-        self._state_engine = activity_engine()
-
-    def bind_state_engine(self, engine):
-        with self._lock:
-            if self._sessions or self._starting:
-                raise OrchestrationError("Bind state handling before launching sessions.", "conflict")
-            self._state_engine = engine
-
-    def bind_observer(self, observer):
-        with self._lock:
-            if self._sessions or self._starting:
-                raise OrchestrationError("Bind observers before launching sessions.", "conflict")
-            self._observer = observer
-
-    def bind_telemetry(self, observer):
-        if observer is not None and not callable(observer):
-            raise OrchestrationError("Telemetry observer must be callable.", "invalid_configuration")
-        with self._lock:
-            if self._sessions or self._starting:
-                raise OrchestrationError("Bind telemetry before launching sessions.", "conflict")
-            self._telemetry_observer = telemetry_dispatch(observer, self.options)
-
-    def telemetry_health(self):
-        observer = self._telemetry_observer
-        return observer.health() if isinstance(observer, TelemetryDispatch) else {"status": "disabled"}
-
-    def drain_telemetry(self, timeout=None):
-        observer = self._telemetry_observer
-        return observer.drain(timeout) if isinstance(observer, TelemetryDispatch) else {"status": "disabled"}
-
-    def bind_application_tools(self, capabilities, callback):
-        with self._lock:
-            if self._sessions or self._starting:
-                raise OrchestrationError("Bind application tools before launching sessions.", "conflict")
-            self._capabilities = {item.name: deepcopy(item) for item in capabilities}
-            self._callback = callback
-
-    def bind_application_replay(self, callback):
-        if not callable(callback):
-            raise OrchestrationError("Application replay validator must be callable.", "invalid_configuration")
-        with self._lock:
-            if self._sessions or self._starting:
-                raise OrchestrationError("Bind replay validation before starting sessions.", "conflict")
-            self._application_replay = callback
-
-    def _activity(self, live):
-        """Called under live.lock; a completion only retires its own work."""
-        live.activity = live.activity_model.activity
-        return live.activity
+        super().__init__()
 
     def _emit(self, live, kind, source, **fields):
         event = {"kind": kind, "at": datetime.now(timezone.utc).isoformat(), "source": source,
@@ -217,7 +142,7 @@ class ClaudeSessionDriver:
     def _capture(self, live, event_type, payload, **metadata):
         origin = live.telemetry_context or {**live.context, "native_id": live.native_id, "incarnation": live.incarnation}
         return observe_telemetry(self._telemetry_observer, event_type, payload, origin,
-                                 secrets=telemetry_secrets(self.options) if self._telemetry_observer is not None else (), **metadata)
+                                 secrets=self._telemetry_credentials(), **metadata)
 
     def _transcript_status(self, live, status, reason=None, **fields):
         self._capture(live, "native.transcript_source", {"status": status, "cursor": live.transcript["cursor"],
@@ -357,7 +282,7 @@ class ClaudeSessionDriver:
                         elif parser_status == "valid":
                             parser_status = "invalid"
                         origin = live.telemetry_context or {**live.context, "native_id": live.native_id, "incarnation": live.incarnation}
-                        secrets = telemetry_secrets(self.options)
+                        secrets = self._telemetry_credentials()
                         event_id = "claude-transcript:" + source["source_id"] + ":" + str(offset)
                         withheld = self._withheld_tool_results(live, entry) if parser_status == "valid" else None
                         if parser_status != "valid":
@@ -421,7 +346,7 @@ class ClaudeSessionDriver:
                            provenance="application-capable-callback-v1")
         origin = live.telemetry_context or {**live.context, "native_id": live.native_id, "incarnation": live.incarnation}
         return observe_telemetry(self._telemetry_observer, event_type, payload, origin,
-                                 secrets=telemetry_secrets(self.options), completeness="suppressed", reason=reason,
+                                 secrets=self._telemetry_credentials(), completeness="suppressed", reason=reason,
                                  event_id=event_id, acknowledge=acknowledge)
 
     def _withheld_tool_results(self, live, entry):
@@ -456,7 +381,7 @@ class ClaudeSessionDriver:
             else:
                 withheld.append({"call_id": call_id if isinstance(call_id, str) else None, "classification": "unattributed"})
                 continue
-            if action in self._capabilities:
+            if action in self._application_tools:
                 withheld.append({"call_id": call_id, "action": action, "classification": "application_tool"})
         return withheld
 
@@ -478,7 +403,7 @@ class ClaudeSessionDriver:
 
     def _hook_locked(self, live, packet):
         self._capture(live, "native.hook", {"native_id": live.native_id, "incarnation": live.incarnation, "packet": packet})
-        packet = _object(packet, "Native hook")
+        packet = json_object(packet, "Native hook")
         self._verify_native(live, packet.get("session_id"))
         self._schedule_transcript(live, packet.get("transcript_path"))
         name = packet.get("hook_event_name")
@@ -499,7 +424,7 @@ class ClaudeSessionDriver:
             action = tool[len(prefix):] if tool.startswith(prefix) else None
             fingerprint = _digest([tool, arguments])
             decision = self.permissions.get(tool, self.permissions.get("*", "defer"))
-            if action in self._capabilities:
+            if action in self._application_tools:
                 decision = self.permissions.get("application_tools", decision)
             with live.lock:
                 previous = live.calls.get(call_id)
@@ -514,14 +439,14 @@ class ClaudeSessionDriver:
                     if len(live.calls) >= self.max_calls:
                         raise OrchestrationError("Claude native call bound reached.", "observation_overflow")
                     live.calls[call_id] = {"fingerprint": fingerprint, "action": action, "arguments": deepcopy(arguments), "used": False, "decision": decision}
-                    if action in self._capabilities:
+                    if action in self._application_tools:
                         live.pending_calls.append(call_id)
                         if decision != "deny":
                             live.active_tools.add(call_id)
                     prompt = packet.get("prompt_id")
                     if isinstance(prompt, str) and prompt:
                         live.active_turns.add(prompt)
-                    elif (action not in self._capabilities and not live.active_turns
+                    elif (action not in self._application_tools and not live.active_turns
                           and not live.activity_model.active("anonymous_turn")):
                         live.activity_model.begin_anonymous("anonymous_turn")
                 self._activity(live)
@@ -574,9 +499,9 @@ class ClaudeSessionDriver:
     def _tool(self, live, payload):
         with before_effect():
             name, arguments = payload.get("name"), payload.get("arguments", {})
-            if name not in self._capabilities or self._callback is None:
+            if name not in self._application_tools or self._application_callback is None:
                 raise OrchestrationError("Unknown application tool.", "unknown_action")
-            arguments = _object(arguments, "Native tool arguments")
+            arguments = json_object(arguments, "Native tool arguments")
             # Composition validates after injecting trusted work/idempotency context.
             mcp_id = payload.get("mcp_request_id")
             if isinstance(mcp_id, bool) or not isinstance(mcp_id, (str, int)):
@@ -617,7 +542,7 @@ class ClaudeSessionDriver:
                 return replay["result"]
         returned = False
         try:
-            result = self._callback(name, deepcopy(arguments), trusted, json.dumps([live.native_id, live.incarnation, matched]))
+            result = self._application_callback(name, deepcopy(arguments), trusted, json.dumps([live.native_id, live.incarnation, matched]))
             returned = True
             with live.lock:
                 live.mcp_calls[mcp_key].update({"result": deepcopy(result), "effect_outcome": "completed"})
@@ -657,7 +582,7 @@ class ClaudeSessionDriver:
             raise live.failure
         if action == "tools/list":
             return {"tools": [{"name": item.name, "description": item.description, "inputSchema": item.input_schema}
-                              for item in self._capabilities.values()]}
+                              for item in self._application_tools.values()]}
         if action == "tools/call":
             return self._tool(live, payload)
         if action == "initialized":
@@ -691,11 +616,11 @@ class ClaudeSessionDriver:
                 "diagnostics": deepcopy(live.diagnostics)}
 
     def _launch(self, specification, source=None):
-        specification = _object(specification, "Claude specification")
+        specification = json_object(specification, "Claude specification")
         if "resume" in specification:
             raise OrchestrationError("Resume requires an adapter-issued source receipt.", details={"outcome": "not_started"})
         retained = source.get("settings", {}).get("requested", {}) if source else {}
-        requested = _object(specification.get("parameters", retained), "Claude parameters")
+        requested = json_object(specification.get("parameters", retained), "Claude parameters")
         validate(requested, self.request_parameters)
         if set(requested) - set(self.launch) - {"model", "effort", "system_prompt", "initial_prompt"}:
             raise OrchestrationError("Undelegated Claude launch parameter.", details={"outcome": "not_started"})
@@ -707,7 +632,7 @@ class ClaudeSessionDriver:
             if self._closed or len(self._sessions) + self._starting >= self.max_sessions:
                 raise OrchestrationError("Claude session capacity unavailable.", "session_capacity", {"outcome": "not_started"})
             self._starting += 1
-        live = _ClaudeLive(_object(specification.get("context", {}), "Trusted session context"), source["native_id"] if source else str(uuid.uuid4()),
+        live = _ClaudeLive(json_object(specification.get("context", {}), "Trusted session context"), source["native_id"] if source else str(uuid.uuid4()),
                            activity_model=ActivityState(self._state_engine))
         live.telemetry_context = capture_origin({**live.context, "native_id": live.native_id, "incarnation": live.incarnation})
         live.settings = {"requested": requested, "resolved": resolved,
@@ -804,7 +729,7 @@ class ClaudeSessionDriver:
         return self._launch(specification)
 
     def resume(self, source_backend, specification):
-        source_backend = _object(source_backend, "Claude resume source")
+        source_backend = json_object(source_backend, "Claude resume source")
         if source_backend.get("protocol") != self.protocol or not isinstance(source_backend.get("native_id"), str) or not source_backend["native_id"]:
             raise OrchestrationError("Invalid Claude resume source.", "session_identity", {"outcome": "not_started"})
         replacement = self._launch(specification, source_backend)
@@ -815,12 +740,7 @@ class ClaudeSessionDriver:
         return replacement
 
     def _get(self, session):
-        session = _object(session, "Claude session handle")
-        with self._lock:
-            live = self._sessions.get(session.get("handle"))
-        if (not live or session.get("instance") != self._instance or session.get("native_id") != live.native_id
-                or session.get("incarnation") != live.incarnation or session.get("protocol") != self.protocol):
-            raise OrchestrationError("Claude connection receipt is stale or invalid.", "session_unavailable", {"outcome": "not_started"})
+        live = self._owned(session)
         if live.failure:
             raise live.failure
         if live.stopped.is_set() or live.process.poll() is not None:
@@ -829,7 +749,7 @@ class ClaudeSessionDriver:
 
     def send(self, session, message):
         live = self._get(session)
-        message = _object(message, "Claude message")
+        message = json_object(message, "Claude message")
         delivery_id = uuid.uuid4().hex
         with live.lock:
             if len(live.deliveries) >= self.max_deliveries:
@@ -858,11 +778,7 @@ class ClaudeSessionDriver:
         return result
 
     def status(self, session):
-        with self._lock:
-            live = self._sessions.get(session.get("handle"))
-        if (not live or session.get("instance") != self._instance or session.get("incarnation") != live.incarnation
-                or session.get("native_id") != live.native_id or session.get("protocol") != self.protocol):
-            raise OrchestrationError("Claude connection receipt is stale or invalid.", "session_unavailable", {"outcome": "not_started"})
+        live = self._owned(session)
         self._schedule_transcript(live)
         with live.lock:
             if live.process.poll() is not None and live.connection.state != "closed":
@@ -872,21 +788,12 @@ class ClaudeSessionDriver:
                 "connection_state": connection, "activity": "unknown" if live.failure else live.activity,
                 "settings": deepcopy(live.settings)}
 
-    def detach(self, session):
-        # Owned stdin/channel children cannot survive their adapter. The external
-        # bridge's detach contract keeps its native host alive instead.
-        return {**self.stop(session), "detached": True, "connection_state": "disconnected"}
-
     def reconnect(self, source_backend, specification):
         return self.resume(source_backend, specification)
 
     def stop(self, session):
         # Stop remains available when observation failure made normal calls unusable.
-        with self._lock:
-            live = self._sessions.get(session.get("handle"))
-        if (not live or session.get("instance") != self._instance or session.get("incarnation") != live.incarnation
-                or session.get("native_id") != live.native_id or session.get("protocol") != self.protocol):
-            raise OrchestrationError("Claude connection receipt is stale or invalid.", "session_unavailable", {"outcome": "not_started"})
+        live = self._owned(session)
         with live.lock:
             live.connection.transition("close")
             live.stopped.set()
@@ -915,5 +822,4 @@ class ClaudeSessionDriver:
             sessions = [self._receipt(live) for live in self._sessions.values()]
         for session in sessions:
             self.stop(session)
-        if isinstance(self._telemetry_observer, TelemetryDispatch):
-            self._telemetry_observer.close()
+        self._close_telemetry()

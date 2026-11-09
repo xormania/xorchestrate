@@ -92,7 +92,7 @@ def test_claude_channel_delivery_during_outstanding_callback_and_unrelated_sessi
             assert release.wait(5)
         return {"accepted": True}
 
-    driver.bind_application_tools(list(driver._capabilities.values()), callback)
+    driver.bind_application_tools(list(driver._application_tools.values()), callback)
     first = driver.start({})
     second = driver.start({})
     try:

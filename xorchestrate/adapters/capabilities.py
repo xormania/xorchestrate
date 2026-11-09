@@ -15,22 +15,15 @@ from __future__ import annotations
 import copy
 import threading
 import time
+from contextlib import contextmanager
 from dataclasses import asdict
 
 from .. import __version__
 from ..model import Capability, OrchestrationError
 from ..schema import check_schema, validate
-from .jsonrpc import (
-    JsonLineProcess,
-    TelemetryDispatch,
-    command_options,
-    encode_json,
-    positive_integer,
-    positive_number,
-    run_json_process,
-    telemetry_dispatch,
-    telemetry_secrets,
-)
+from .jsonrpc import JsonLineProcess, run_json_process
+from .process import command_options, encode_json, positive_integer, positive_number
+from .telemetry_capture import TelemetrySource, telemetry_secrets
 
 
 def _definitions(items, *, mcp: bool, maximum: int) -> tuple[list[Capability], dict]:
@@ -113,7 +106,7 @@ def _content_blocks(content):
             raise OrchestrationError("MCP tool returned invalid content blocks.", "provider_protocol", {"outcome": "unknown"})
 
 
-class CLIProvider:
+class CLIProvider(TelemetrySource):
     """Manifest- or command-discovered tools using an operator-configured argv."""
 
     def __init__(self, options: dict):
@@ -131,24 +124,10 @@ class CLIProvider:
         self._outputs: dict = {}
         self._has_snapshot = False
         self._snapshot_lock = threading.RLock()
-        self._telemetry_observer = None
-
-    def bind_telemetry(self, observer):
-        if observer is not None and not callable(observer):
-            raise OrchestrationError("Telemetry observer must be callable.", "invalid_configuration")
-        self._telemetry_observer = telemetry_dispatch(observer, self.options)
-
-    def telemetry_health(self):
-        observer = self._telemetry_observer
-        return observer.health() if isinstance(observer, TelemetryDispatch) else {"status": "disabled"}
 
     def telemetry_credentials(self):
         """Source-local treatment for semantic consumers of this provider."""
         return telemetry_secrets(self.options)
-
-    def drain_telemetry(self, timeout=None):
-        observer = self._telemetry_observer
-        return observer.drain(timeout) if isinstance(observer, TelemetryDispatch) else {"status": "disabled"}
 
     def _open(self):
         if self._closed:
@@ -200,11 +179,10 @@ class CLIProvider:
 
     def close(self) -> None:
         self._closed = True
-        if isinstance(self._telemetry_observer, TelemetryDispatch):
-            self._telemetry_observer.close()
+        self._close_telemetry()
 
 
-class StdioMCPProvider:
+class StdioMCPProvider(TelemetrySource):
     """MCP stdio tool discovery/calls, with no catalog or role assumptions."""
 
     # Protocol compatibility, not project policy. Implemented features are the
@@ -230,26 +208,16 @@ class StdioMCPProvider:
         self._observed_capabilities: dict[str, Capability] = {}
         self._observed_outputs: dict = {}
         self._snapshot_lock = threading.RLock()
-        self._telemetry_observer = None
 
-    def bind_telemetry(self, observer):
-        if observer is not None and not callable(observer):
-            raise OrchestrationError("Telemetry observer must be callable.", "invalid_configuration")
+    @contextmanager
+    def _telemetry_binding(self):
         with self._snapshot_lock:
             if self._client is not None:
                 raise OrchestrationError("Bind telemetry before connecting the provider.", "conflict")
-            self._telemetry_observer = telemetry_dispatch(observer, self.options)
-
-    def telemetry_health(self):
-        observer = self._telemetry_observer
-        return observer.health() if isinstance(observer, TelemetryDispatch) else {"status": "disabled"}
+            yield
 
     def telemetry_credentials(self):
         return telemetry_secrets(self.options)
-
-    def drain_telemetry(self, timeout=None):
-        observer = self._telemetry_observer
-        return observer.drain(timeout) if isinstance(observer, TelemetryDispatch) else {"status": "disabled"}
 
     def _remaining(self, deadline: float) -> float:
         remaining = deadline - time.monotonic()
@@ -412,5 +380,4 @@ class StdioMCPProvider:
     def close(self) -> None:
         self._closed = True
         self._disconnect()
-        if isinstance(self._telemetry_observer, TelemetryDispatch):
-            self._telemetry_observer.close()
+        self._close_telemetry()
