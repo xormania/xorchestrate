@@ -32,7 +32,7 @@ from ..activity import activity_engine
 from ..model import OrchestrationError
 from ..outcomes import before_effect, effect_outcome
 from ..ports import ApplicationToolSessionDriver, SessionDriver
-from .jsonrpc import decode_json, positive_number
+from .process import decode_json, positive_number
 
 
 def _copy(value):

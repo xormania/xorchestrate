@@ -14,34 +14,16 @@ from dataclasses import asdict
 
 from ..model import JSON, Assessment, OrchestrationError
 from ..ports import CapabilityProvider
-from .jsonrpc import TelemetryDispatch, capture_origin, observe_telemetry, observe_wire, telemetry_dispatch
+from .telemetry_capture import TelemetryDispatch, TelemetrySource, capture_origin, observe_telemetry, observe_wire
 
 
-class _TelemetryEvaluator:
-    def bind_telemetry(self, observer):
-        if observer is not None and not callable(observer):
-            raise OrchestrationError("Telemetry observer must be callable.", "invalid_configuration")
-        previous = getattr(self, "_telemetry_observer", None)
-        if isinstance(previous, TelemetryDispatch):
-            previous.close()
-        self._telemetry_observer = telemetry_dispatch(observer)
-
-    def telemetry_health(self):
-        observer = getattr(self, "_telemetry_observer", None)
-        return observer.health() if isinstance(observer, TelemetryDispatch) else {"status": "disabled"}
-
-    def drain_telemetry(self, timeout=None):
-        observer = getattr(self, "_telemetry_observer", None)
-        return observer.drain(timeout) if isinstance(observer, TelemetryDispatch) else {"status": "disabled"}
-
+class _TelemetryEvaluator(TelemetrySource):
     def close(self):
-        observer = getattr(self, "_telemetry_observer", None)
-        if isinstance(observer, TelemetryDispatch):
-            observer.close()
+        self._close_telemetry()
 
     def assess(self, question: str, context: JSON) -> Assessment:
         origin = capture_origin(context)
-        observer = getattr(self, "_telemetry_observer", None)
+        observer = self._telemetry_observer
         credential = os.environ.get(self.credential_env, "") if getattr(self, "credential_env", None) else ""
         secrets = (credential,) if credential else ()
         try:

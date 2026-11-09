@@ -18,6 +18,7 @@ from uuid import uuid4
 
 from ..model import OrchestrationError
 from ..telemetry import canonical, protect
+from .telemetry_capture import TelemetryDispatch
 
 _OPTIONS = {"profile", "project_id", "dataset_id", "collector_id", "producer_id", "runtime_root",
             "database", "artifact_root", "export_root", "capture_lock_timeout_ms", "known_secrets",
@@ -176,7 +177,6 @@ class LocalTelemetry:
         if (not isinstance(options, dict) or options.keys() - {"adapter", "endpoint", "timeout", "capacity",
                 "trace_sample_rate", "max_pending", "max_bytes", "drain_timeout"}):
             raise _configuration("Invalid operational telemetry settings.")
-        from .jsonrpc import TelemetryDispatch
         from .telemetry_export import LocalOperationalSink, ObservationSignals, OperationalExporter, OtlpOperationalSink
 
         rate = options.get("trace_sample_rate", 1.0)

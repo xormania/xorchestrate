@@ -146,7 +146,7 @@ def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=
 def _native_readiness(check, *, config, driver):
     if config is None:
         raise ValueError("Native mode requires --config; no fixture fallback")
-    from xorchestrate.adapters.jsonrpc import command_options
+    from xorchestrate.adapters.process import command_options
     from xorchestrate.composition import BUILTINS, load_config
 
     configuration, base = load_config(Path(config).expanduser().resolve())

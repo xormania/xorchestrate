@@ -13,13 +13,14 @@ import uuid
 from collections import deque
 from copy import deepcopy
 
-from ..model import Capability, OrchestrationError
+from ..model import OrchestrationError
 from ..outcomes import before_effect, effect_outcome
-from .jsonrpc import encode_json
-from .sessions import ACPSessionDriver, _identifier, _object
+from .process import encode_json
+from .session_base import ApplicationToolDriver, json_object, native_identifier
+from .sessions import ACPSessionDriver
 
 
-class GrokSessionDriver(ACPSessionDriver):
+class GrokSessionDriver(ACPSessionDriver, ApplicationToolDriver):
     protocol = "grok"
 
     def _native_prompt_started(self, live, prompt):
@@ -53,26 +54,15 @@ class GrokSessionDriver(ACPSessionDriver):
 
     def __init__(self, options):
         super().__init__(options)
-        self._application_tools = {}
-        self._application_callback = None
         self.server_name = self.options.get("application_server", "xorchestrate")
         if not isinstance(self.server_name, str) or not self.server_name or "__" in self.server_name:
             raise OrchestrationError("Grok application_server must be an unambiguous name.", "invalid_configuration")
-        self.permissions = _object(self.options.get("native_permissions", {}), "Native permissions", "invalid_configuration")
+        self.permissions = json_object(self.options.get("native_permissions", {}), "Native permissions", "invalid_configuration")
         if self.permissions.get("default", "deny") not in {"allow", "deny"}:
             raise OrchestrationError("Grok native permission default must be allow or deny.", "invalid_configuration")
         for key in ("allow", "deny"):
             if not isinstance(self.permissions.get(key, []), list) or any(not isinstance(x, str) for x in self.permissions.get(key, [])):
                 raise OrchestrationError("Native permission lists must contain tool names.", "invalid_configuration")
-
-    def bind_application_tools(self, capabilities, callback):
-        if not callable(callback) or not isinstance(capabilities, list) or any(not isinstance(c, Capability) for c in capabilities):
-            raise OrchestrationError("Application tools require descriptors and callback.", "invalid_configuration")
-        with self._lock:
-            if self._sessions or self._starting:
-                raise OrchestrationError("Bind tools before starting sessions.", "conflict")
-            self._application_tools = {c.name: deepcopy(c) for c in capabilities}
-            self._application_callback = callback
 
     def _tool_name(self, wire):
         if not isinstance(wire, str):
@@ -83,7 +73,7 @@ class GrokSessionDriver(ACPSessionDriver):
         return None
 
     def _tool_observation(self, update):
-        meta = _object(update.get("_meta", {}), "Grok tool metadata", "provider_protocol")
+        meta = json_object(update.get("_meta", {}), "Grok tool metadata", "provider_protocol")
         identity = meta.get("x.ai/tool")
         wire = update.get("title")
         basis = "exact ACP title"
@@ -108,7 +98,7 @@ class GrokSessionDriver(ACPSessionDriver):
             name = self._tool_name(args["tool_name"])
             if not name:
                 return "native_action", wire, args, basis
-            return "native_tool_call", name, _object(args["tool_input"], "Tool input", "provider_protocol"), basis
+            return "native_tool_call", name, json_object(args["tool_input"], "Tool input", "provider_protocol"), basis
         name = self._tool_name(wire)
         return ("native_tool_call" if name else "native_action", name or wire, args, basis)
 
@@ -141,7 +131,7 @@ class GrokSessionDriver(ACPSessionDriver):
                 live.settings["observed"][kind] = deepcopy(update)
             if kind == "tool_call":
                 event_kind, action, args, basis = self._tool_observation(update)
-                call_id = _identifier(update.get("toolCallId"), "native tool call ID")
+                call_id = native_identifier(update.get("toolCallId"), "native tool call ID")
                 signature = hashlib.sha256(encode_json([event_kind, action, args], sort_keys=True)).hexdigest()
                 previous = state["calls"].get(call_id)
                 if previous and previous["signature"] != signature:
@@ -222,7 +212,7 @@ class GrokSessionDriver(ACPSessionDriver):
                 return {}
             if action != "tools/call":
                 raise OrchestrationError("Unsupported Grok gateway action.", "unsupported_method")
-            name, arguments = payload.get("name"), _object(payload.get("arguments", {}), "Tool arguments")
+            name, arguments = payload.get("name"), json_object(payload.get("arguments", {}), "Tool arguments")
             if name not in self._application_tools or self._application_callback is None:
                 raise OrchestrationError("Unknown application tool.", "unknown_action")
             if live.native_id is None:
@@ -305,7 +295,7 @@ class GrokSessionDriver(ACPSessionDriver):
                 live.gateway = LocalGateway(lambda action, payload: self._gateway(live, action, payload), self.options)
                 server = {"name": self.server_name, **live.gateway.mcp_spec(), "env": []}
                 params["mcpServers"] = [*params.get("mcpServers", []), server]
-            result = _object(live.process.request("initialize", self.initialize), "Grok initialization", "provider_protocol")
+            result = json_object(live.process.request("initialize", self.initialize), "Grok initialization", "provider_protocol")
             capabilities = result.get("agentCapabilities", {})
             methods = [m.get("id") for m in result.get("authMethods", [])]
             authentication = self.authentication
@@ -321,10 +311,10 @@ class GrokSessionDriver(ACPSessionDriver):
                     raise OrchestrationError("Grok did not advertise session loading.", "unsupported_operation", {"outcome": "not_started"})
                 live.native_id = resume
                 params["sessionId"] = resume
-                result = _object(live.process.request("session/load", params), "Grok load result", "provider_protocol")
+                result = json_object(live.process.request("session/load", params), "Grok load result", "provider_protocol")
             else:
-                result = _object(live.process.request("session/new", params), "Grok start result", "provider_protocol")
-                live.native_id = _identifier(result.get("sessionId"))
+                result = json_object(live.process.request("session/new", params), "Grok start result", "provider_protocol")
+                live.native_id = native_identifier(result.get("sessionId"))
             live.settings = {"requested": requested,
                              "resolved": {**{k: v for k, v in params.items() if k != "mcpServers"},
                                           "launch_command": deepcopy(self.options["command"])},
@@ -345,7 +335,7 @@ class GrokSessionDriver(ACPSessionDriver):
         return self.deliver(session, message)
 
     def deliver(self, session, message):
-        message = _object(message, "Delivery envelope")
+        message = json_object(message, "Delivery envelope")
         live = self._get(session)
         with live.lock:
             busy = live.activity_model.activity == "active"
@@ -357,7 +347,7 @@ class GrokSessionDriver(ACPSessionDriver):
         if not busy:
             return super().send(session, message)
         try:
-            result = _object(live.process.request("_x.ai/interject", {"sessionId": live.native_id,
+            result = json_object(live.process.request("_x.ai/interject", {"sessionId": live.native_id,
                 "text": message.get("text", encode_json(message).decode()), "interjectionId": ident}), "Grok interjection result", "provider_protocol")
         except Exception as error:
             with live.lock:

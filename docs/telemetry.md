@@ -224,7 +224,7 @@ readable fragment behind, including after resuming with no current tool catalog.
 The table separates implemented boundaries, deterministic fixture coverage and
 authenticated qualification. Fixture results do not establish installed vendor
 behavior; each pending witness follows the [local qualification workflow](managed-proofs.md).
-Protected protocol frames retain only bytes available within the configured
+Protected protocol frames ([shared capture](../xorchestrate/adapters/telemetry_capture.py)) retain only bytes available within the configured
 [transport bounds](../xorchestrate/adapters/jsonrpc.py), rather than every native
 field or callback.
 The [native tool fixtures](../tests/hexagonal/test_native_producer_capture.py)

@@ -7,394 +7,27 @@ Commands come exclusively from operator configuration, never remote metadata.
 
 from __future__ import annotations
 
-import base64
-import json
-import math
-import os
 import queue
-import re
-import signal
 import subprocess
 import threading
 import time
-import uuid
 from collections.abc import Callable
 from concurrent.futures import Future
-from concurrent.futures import TimeoutError as FutureTimeout
 from copy import deepcopy
 from typing import Any
 
-from ..model import OrchestrationError, unique_keys
-
-_CREDENTIAL_NAME = re.compile(r"(?:api.?key|authorization|password|credential|private.?key|access.?token|refresh.?token|(?:^|_)token$|secret)", re.I)
-_INCOMPLETE_CREDENTIAL = re.compile(
-    r'''(?ix)(["']?(?:authorization|password|passwd|secret|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|private[_-]?key)["']?\s*[:=]\s*)(["'])([^"']*)\Z''')
-
-
-class TelemetryDispatch:
-    """One ordered optional worker; admission is never a durable receipt.
-
-    Count and byte pressure are bounded independently. Health is read directly,
-    so a broken collector is not needed to report its own failures. Transcript
-    readers may request bounded acknowledgment and retry a stable event ID.
-    """
-
-    def __init__(self, observer, options=None):
-        options = options or {}
-        self.observer = observer
-        self.capacity = positive_integer(options, "max_telemetry_pending", 64)
-        self.maximum = positive_integer(options, "max_telemetry_bytes", 8 * 1024 * 1024)
-        self.drain_timeout = positive_number(options, "telemetry_drain_timeout", 0.05)
-        self._condition = threading.Condition()
-        self._queue = queue.Queue(maxsize=self.capacity + 1)
-        self._pending = 0
-        self._bytes = 0
-        self._closed = False
-        self._receipts = {}
-        self._counts = {"admitted": 0, "completed": 0, "failed": 0, "rejected": 0,
-                        "source_recorded": 0, "source_failed": 0}
-        self._thread = threading.Thread(target=self._work, daemon=True)
-        self._thread.start()
-
-    def _submit(self, event, retain_ack=False):
-        identifier = event.get("event_id") if retain_ack else None
-        with self._condition:
-            if identifier in self._receipts:
-                return self._receipts[identifier]
-            try:
-                size = len(encode_json(event))
-            except BaseException:
-                self._counts["rejected"] += 1
-                return None
-            if self._closed or self._pending >= self.capacity or self._bytes + size > self.maximum:
-                self._counts["rejected"] += 1
-                return None
-            if retain_ack and len(self._receipts) >= self.capacity:
-                self._counts["rejected"] += 1
-                return None
-            future = Future()
-            if identifier is not None:
-                self._receipts[identifier] = future
-            self._pending += 1
-            self._bytes += size
-            self._counts["admitted"] += 1
-            self._queue.put_nowait((event, future, size))
-            return future
-
-    def __call__(self, event):
-        if threading.current_thread() is self._thread:
-            return self._nested(event)
-        future = self._submit(event)
-        return {"status": "deferred" if future is not None else "unavailable", "receipt": None,
-                "reason": "queued" if future is not None else "dispatch_pressure_or_closed"}
-
-    def capture(self, event):
-        if threading.current_thread() is self._thread:
-            return self._nested(event)
-        future = self._submit(event, retain_ack=True)
-        if future is None:
-            return {"status": "unavailable", "reason": "dispatch_pressure_or_closed"}
-        try:
-            return future.result(timeout=self.drain_timeout)
-        except FutureTimeout:
-            return {"status": "deferred", "reason": "awaiting_capture_ack"}
-
-    def release(self, event_id):
-        with self._condition:
-            self._receipts.pop(event_id, None)
-
-    def _nested(self, event):
-        try:
-            result = self.observer(event)
-            if result is None:
-                result = {"status": "recorded", "receipt": None, "boundary": "observer_return"}
-        except BaseException:
-            result = {"status": "unavailable", "reason": "observer_failed"}
-        with self._condition:
-            success = isinstance(result, dict) and result.get("status") in {"recorded", "duplicate"}
-            self._counts["source_recorded" if success else "source_failed"] += 1
-        return result
-
-    def schedule(self, callback):
-        """Run bounded source ingestion on the optional worker, off protocol IO."""
-        with self._condition:
-            if self._closed or self._pending >= self.capacity:
-                self._counts["rejected"] += 1
-                return False
-            self._pending += 1
-            self._counts["admitted"] += 1
-            self._queue.put_nowait((callback, Future(), 0))
-            return True
-
-    def _work(self):
-        while True:
-            item = self._queue.get()
-            if item is None:
-                return
-            event, future, size = item
-            try:
-                result = event() if callable(event) else self.observer(event)
-                if result is None:
-                    result = {"status": "recorded", "receipt": None, "boundary": "observer_return"}
-            except BaseException:
-                result = {"status": "unavailable", "reason": "observer_failed"}
-            with self._condition:
-                success = isinstance(result, dict) and result.get("status") in {"recorded", "duplicate"}
-                self._counts["completed" if success else "failed"] += 1
-                identifier = event.get("event_id") if isinstance(event, dict) else None
-                if not success and self._receipts.get(identifier) is future:
-                    self._receipts.pop(identifier, None)
-                future.set_result(result)
-                self._pending -= 1
-                self._bytes -= size
-                self._condition.notify_all()
-
-    def drain(self, timeout=None):
-        if threading.current_thread() is self._thread:
-            return self.health()
-        duration = self.drain_timeout if timeout is None else positive_number({"timeout": timeout}, "timeout", self.drain_timeout)
-        deadline = time.monotonic() + duration
-        with self._condition:
-            while self._pending:
-                remaining = deadline - time.monotonic()
-                if remaining <= 0:
-                    break
-                self._condition.wait(remaining)
-            return self.health()
-
-    def health(self):
-        with self._condition:
-            return {**self._counts, "pending": self._pending, "pending_bytes": self._bytes,
-                    "capacity": self.capacity, "max_bytes": self.maximum, "closed": self._closed,
-                    "coverage": "gap" if self._counts["rejected"] or self._counts["failed"] or self._counts["source_failed"] else "pending" if self._pending else "observed" if self._counts["admitted"] else "unobserved"}
-
-    def close(self):
-        with self._condition:
-            if not self._closed:
-                self._closed = True
-                self._queue.put_nowait(None)
-        return self.drain()
-
-
-def telemetry_dispatch(observer, options=None):
-    return observer if observer is None or isinstance(observer, TelemetryDispatch) else TelemetryDispatch(observer, options)
-
-
-def capture_origin(value=None) -> dict:
-    """Detach origin data; transport attempts never use mutable current selection."""
-    try:
-        context = deepcopy(value) if isinstance(value, dict) else {}
-        if context.get("attempt_id"):
-            context["parent_attempt_id"] = context["attempt_id"]
-        context["attempt_id"] = uuid.uuid4().hex
-        return context
-    except BaseException:
-        return {"attempt_id": uuid.uuid4().hex}
-
-
-def telemetry_secrets(options: dict) -> tuple[str, ...]:
-    """Inspect only credentials explicitly made available to this source process."""
-    try:
-        environment = command_options(options)["env"]
-        return tuple(value for key, value in environment.items() if value and _CREDENTIAL_NAME.search(key))
-    except BaseException:
-        return ()
-
-
-def observe_telemetry(observer, event_type, payload, context, *, secrets=(), completeness="complete", reason=None, event_id=None, acknowledge=False):
-    """Optional capture is independent of protocol and required evidence callbacks.
-
-    Protection is shared with the pure telemetry contract. A failed protector has
-    no unchecked fallback; a failed optional observer cannot replace the effect.
-    """
-    if observer is None:
-        return False
-    try:
-        from ..telemetry import protect
-        event = {"event_type": event_type, "payload": payload, "context": context,
-                 "basis": "observed", "completeness": completeness}
-        if reason is not None:
-            event["reason"] = reason
-        if event_id is not None:
-            event["event_id"] = event_id
-        protected = protect(deepcopy(event), secrets=secrets)
-        result = observer.capture(protected) if acknowledge and isinstance(observer, TelemetryDispatch) else observer(protected)
-        return result is None or isinstance(result, dict) and result.get("status") in {"recorded", "duplicate"}
-    except BaseException:
-        return False
-
-
-def observe_wire(observer, event_type, data, context, *, secrets=(), complete=True,
-                 total_bytes=None, reason=None, range_start=0, event_id=None, acknowledge=False, **fields):
-    """Retain protected bytes and explicitly distinguish source/retained ranges.
-
-    The reversible decode keeps safe binary diagnostics intact. Credential text
-    is filtered before base64 encoding, including when the surrounding frame is
-    malformed. A protector failure yields a safe suppression envelope.
-    """
-    if observer is None:
-        return
-    try:
-        from ..telemetry import protect
-        text = data.decode("utf-8", "surrogateescape")
-        if not complete:
-            # A retained prefix can stop inside a configured credential. Full
-            # value replacement alone cannot protect that incomplete suffix.
-            for secret in secrets:
-                if not isinstance(secret, str) or not secret:
-                    continue
-                variants = (secret, json.dumps(secret, ensure_ascii=True)[1:-1])
-                for variant in variants:
-                    for size in range(min(len(text), len(variant) - 1), 0, -1):
-                        if text.endswith(variant[:size]):
-                            text = text[:-size] + "[REDACTED]"
-                            break
-        try:
-            json.loads(text)
-        except (ValueError, RecursionError):
-            text = _INCOMPLETE_CREDENTIAL.sub(lambda match: match[1] + match[2] + "[REDACTED]", text)
-        protected = protect(text, secrets=secrets).encode("utf-8", "surrogateescape")
-        payload = {**fields, "content": base64.b64encode(protected).decode("ascii"), "encoding": "base64",
-                   "captured_bytes": len(protected), "range_start": range_start, "range_end": range_start + len(data),
-                   "total_bytes": total_bytes, "protection": "unchanged" if data == protected else "redacted",
-                   "representation": "protected_bytes", "source_bytes": len(data)}
-        return observe_telemetry(observer, event_type, payload, context, secrets=secrets,
-                                 completeness="complete" if complete else "partial", reason=reason, event_id=event_id, acknowledge=acknowledge)
-    except BaseException:
-        observe_telemetry(observer, event_type, {"representation": "suppressed", "captured_bytes": 0}, context,
-                          secrets=secrets, completeness="suppressed", reason="credential_filter_unavailable")
-
-
-class _StderrCapture:
-    """Drain independently even after the bounded retained prefix is full."""
-
-    def __init__(self, process, maximum):
-        self.process, self.maximum = process, maximum
-        self.data = bytearray()
-        self.total = 0
-        self.eof = False
-        self.thread = threading.Thread(target=self._read, daemon=True)
-        self.thread.start()
-
-    def _read(self):
-        try:
-            while True:
-                block = self.process.stderr.read(65536)
-                if not block:
-                    self.eof = True
-                    return
-                self.total += len(block)
-                self.data.extend(block[:max(0, self.maximum - len(self.data))])
-        except (OSError, ValueError):
-            pass
-
-    def emit(self, observer, context, secrets):
-        self.thread.join(timeout=1)
-        complete = self.eof and self.total == len(self.data)
-        observe_wire(observer, "process.stderr", bytes(self.data), context, secrets=secrets,
-                     complete=complete, total_bytes=self.total if self.eof else None,
-                     reason=None if complete else "retention_limit" if self.total > len(self.data) else "interrupted",
-                     channel="stderr")
-
-
-def positive_number(options: dict, name: str, default: float) -> float:
-    value = options.get(name, default)
-    try:
-        valid = not isinstance(value, bool) and isinstance(value, (int, float)) and math.isfinite(value) and value > 0
-    except OverflowError:
-        valid = False
-    if not valid:
-        raise OrchestrationError(f"{name} must be a finite positive number.", "invalid_configuration")
-    return float(value)
-
-
-def positive_integer(options: dict, name: str, default: int) -> int:
-    value = options.get(name, default)
-    if type(value) is not int or value <= 0:
-        raise OrchestrationError(f"{name} must be a positive integer.", "invalid_configuration")
-    return value
-
-
-def command_options(options: dict, key: str = "command") -> dict:
-    command = options.get(key)
-    if not isinstance(command, list) or not command or any(not isinstance(arg, str) or "\0" in arg for arg in command) or not command[0]:
-        raise OrchestrationError(f"{key} must be a nonempty argv list.", "invalid_configuration")
-    cwd = options.get("cwd")
-    if cwd is not None and (not isinstance(cwd, str) or not cwd or "\0" in cwd):
-        raise OrchestrationError("cwd must be a directory path.", "invalid_configuration")
-    environment = options.get("env", {})
-    if not isinstance(environment, dict) or any(
-        not isinstance(k, str) or not k or "=" in k or "\0" in k or not isinstance(v, str) or "\0" in v
-        for k, v in environment.items()
-    ):
-        raise OrchestrationError("env must map environment variable names to strings.", "invalid_configuration")
-    inherit = options.get("inherit_env", False)
-    if not isinstance(inherit, bool):
-        raise OrchestrationError("inherit_env must be boolean.", "invalid_configuration")
-    pass_env = options.get("pass_env", [])
-    if not isinstance(pass_env, list) or any(not isinstance(name, str) or not name or "=" in name or "\0" in name for name in pass_env):
-        raise OrchestrationError("pass_env must list environment variable names.", "invalid_configuration")
-    # The explicit default prevents unrelated host credentials reaching a tool.
-    env = dict(os.environ) if inherit else {}
-    env.update({name: os.environ[name] for name in pass_env if name in os.environ})
-    env.update(environment)
-    return {"args": list(command), "cwd": cwd, "env": env, "shell": False, "start_new_session": os.name == "posix"}
-
-
-def encode_json(value: Any, *, sort_keys: bool = False) -> bytes:
-    try:
-        return json.dumps(value, ensure_ascii=True, allow_nan=False, separators=(",", ":"), sort_keys=sort_keys).encode("utf-8")
-    except (TypeError, ValueError, RecursionError) as exc:
-        raise OrchestrationError("Value is not valid JSON.", "invalid_request", {"outcome": "not_started"}) from exc
-
-
-def decode_json(data: bytes) -> Any:
-    def invalid_constant(_):
-        raise ValueError("Non-finite JSON number")
-
-    try:
-        value = json.loads(data.decode("utf-8"), object_pairs_hook=unique_keys("Duplicate JSON property"), parse_constant=invalid_constant)
-        # The parser can also produce infinity from a syntactically valid
-        # exponent such as 1e999; parse_constant alone cannot reject that case.
-        json.dumps(value, allow_nan=False)
-        return value
-    except (ValueError, UnicodeError, RecursionError) as exc:
-        raise OrchestrationError("Subprocess returned invalid JSON.", "provider_protocol") from exc
-
-
-def _signal_group(process: subprocess.Popen, sig: int) -> None:
-    try:
-        if os.name == "posix":
-            os.killpg(process.pid, sig)
-        elif process.poll() is None:
-            process.kill() if sig == signal.SIGKILL else process.terminate()
-    except ProcessLookupError:
-        pass
-
-
-def close_process(process: subprocess.Popen, grace: float = 0.2) -> None:
-    """Close stdin, then terminate and kill the owned process group if needed."""
-    if process.stdin is not None:
-        try:
-            process.stdin.close()
-        except (OSError, ValueError):
-            pass
-    try:
-        process.wait(timeout=grace)
-    except subprocess.TimeoutExpired:
-        _signal_group(process, signal.SIGTERM)
-        try:
-            process.wait(timeout=grace)
-        except subprocess.TimeoutExpired:
-            _signal_group(process, signal.SIGKILL)
-            process.wait(timeout=max(grace, 1))
-    # A child can survive its parent and retain our pipe descriptors.
-    _signal_group(process, signal.SIGKILL)
-    if process.stdout is not None:
-        try:
-            process.stdout.close()
-        except (OSError, ValueError):
-            pass
+from ..model import OrchestrationError
+from .process import close_process, command_options, decode_json, encode_json, positive_integer, positive_number
+from .telemetry_capture import (
+    StderrCapture,
+    TelemetryDispatch,
+    TelemetrySource,
+    capture_origin,
+    observe_telemetry,
+    observe_wire,
+    telemetry_dispatch,
+    telemetry_secrets,
+)
 
 
 def run_json_process(options: dict, payload: dict, command_key: str = "command", *,
@@ -424,7 +57,7 @@ def run_json_process(options: dict, payload: dict, command_key: str = "command",
         if owns_dispatch:
             telemetry_observer.close()
         raise OrchestrationError("Could not start configured subprocess.", "provider_unavailable", {"outcome": "not_started"}) from exc
-    stderr = _StderrCapture(process, stderr_maximum) if telemetry_observer is not None else None
+    stderr = StderrCapture(process, stderr_maximum) if telemetry_observer is not None else None
     output = bytearray()
     failure: list[Exception] = []
     finished = threading.Event()
@@ -520,7 +153,7 @@ def run_json_process(options: dict, payload: dict, command_key: str = "command",
             telemetry_observer.close() if owns_dispatch else telemetry_observer.drain()
 
 
-class JsonLineProcess:
+class JsonLineProcess(TelemetrySource):
     """Bounded, full-duplex JSON-RPC client.
 
     A reader continuously correlates responses and dispatches callbacks, even
@@ -569,22 +202,25 @@ class JsonLineProcess:
         self._close_complete = threading.Event()
         self._close_owner = None
         self._owns_dispatch = telemetry_observer is not None and not isinstance(telemetry_observer, TelemetryDispatch)
-        self.telemetry_observer = telemetry_dispatch(telemetry_observer, options)
+        self._telemetry_observer = telemetry_dispatch(telemetry_observer, options)
         try:
             self.process = subprocess.Popen(**command_options(options), stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                             stderr=subprocess.PIPE if telemetry_observer is not None else subprocess.DEVNULL, bufsize=0)
         except (OSError, ValueError) as exc:
-            observe_telemetry(self.telemetry_observer, "process.error", {"code": "provider_unavailable", "outcome": "not_started"},
+            observe_telemetry(self._telemetry_observer, "process.error", {"code": "provider_unavailable", "outcome": "not_started"},
                               self.telemetry_context, secrets=self.telemetry_secrets)
             if self._owns_dispatch:
-                self.telemetry_observer.close()
+                self._telemetry_observer.close()
             raise OrchestrationError("Could not start configured subprocess.", "provider_unavailable", {"outcome": "not_started"}) from exc
-        self._stderr = _StderrCapture(self.process, stderr_maximum) if telemetry_observer is not None else None
+        self._stderr = StderrCapture(self.process, stderr_maximum) if telemetry_observer is not None else None
         self._workers = [threading.Thread(target=self._callback_worker, daemon=True) for _ in range(worker_count)]
         self._reader = threading.Thread(target=self._read, daemon=True)
         for worker in self._workers:
             worker.start()
         self._reader.start()
+
+    def _telemetry_binding(self):
+        raise OrchestrationError("Process telemetry is fixed when the process starts.", "conflict")
 
     @staticmethod
     def _unavailable(outcome="unknown"):
@@ -604,7 +240,7 @@ class JsonLineProcess:
             else:
                 origins = []
         for identifier, origin in origins:
-            observe_telemetry(self.telemetry_observer, "process.error", {"code": getattr(error, "code", "provider_unavailable"),
+            observe_telemetry(self._telemetry_observer, "process.error", {"code": getattr(error, "code", "provider_unavailable"),
                               "outcome": "unknown", "request_id": identifier}, origin, secrets=self.telemetry_secrets)
         self.close()
 
@@ -626,7 +262,7 @@ class JsonLineProcess:
                                 origin = pending["context"]
                 finally:
                     complete = len(line) <= self.max_frame and line.endswith(b"\n")
-                    observe_wire(self.telemetry_observer, "process.response", line, origin, secrets=self.telemetry_secrets,
+                    observe_wire(self._telemetry_observer, "process.response", line, origin, secrets=self.telemetry_secrets,
                                  complete=complete, total_bytes=len(line) if complete else None,
                                  reason=None if complete else "frame_limit_or_interrupted", channel="stdout")
                 if len(line) > self.max_frame or not line.endswith(b"\n"):
@@ -759,7 +395,7 @@ class JsonLineProcess:
             # The application's semantic/native observations retain typed
             # results. A second opaque encoding cannot inherit the source
             # session's grant to every resource embedded in that result.
-            observe_telemetry(self.telemetry_observer, "process.request", {
+            observe_telemetry(self._telemetry_observer, "process.request", {
                 "representation": "suppressed", "captured_bytes": 0, "source_bytes": len(data),
                 "total_bytes": len(data), "range_start": 0, "range_end": 0, "phase": "serialized",
                 "direction": "callback_response", "request_id": message.get("id"),
@@ -767,7 +403,7 @@ class JsonLineProcess:
             }, origin, secrets=self.telemetry_secrets, completeness="suppressed",
                 reason="callback_response_requires_typed_observation")
         else:
-            observe_wire(self.telemetry_observer, "process.request", data[:self.max_frame + 1],
+            observe_wire(self._telemetry_observer, "process.request", data[:self.max_frame + 1],
                          origin, secrets=self.telemetry_secrets, complete=len(data) <= self.max_frame + 1,
                          total_bytes=len(data), phase="serialized")
         if len(data) > self.max_frame:
@@ -824,10 +460,10 @@ class JsonLineProcess:
             # Validate before publishing a pending request or writing any bytes.
             serialized = encode_json(packet) + b"\n"
             if len(serialized) > self.max_frame:
-                observe_wire(self.telemetry_observer, "process.request", serialized[:self.max_frame + 1], origin,
+                observe_wire(self._telemetry_observer, "process.request", serialized[:self.max_frame + 1], origin,
                              secrets=self.telemetry_secrets, complete=False, total_bytes=len(serialized),
                              reason="input_limit", phase="serialized", outcome="not_started")
-                observe_telemetry(self.telemetry_observer, "process.error", {"code": "invalid_request", "outcome": "not_started",
+                observe_telemetry(self._telemetry_observer, "process.error", {"code": "invalid_request", "outcome": "not_started",
                                   "request_id": identifier}, origin, secrets=self.telemetry_secrets)
                 raise OrchestrationError("Request exceeds the configured frame bound.", "invalid_request", {"outcome": "not_started"})
             future = Future()
@@ -881,14 +517,6 @@ class JsonLineProcess:
             raise failure
         return result
 
-    def telemetry_health(self):
-        observer = self.telemetry_observer
-        return observer.health() if isinstance(observer, TelemetryDispatch) else {"status": "disabled"}
-
-    def drain_telemetry(self, timeout=None):
-        observer = self.telemetry_observer
-        return observer.drain(timeout) if isinstance(observer, TelemetryDispatch) else {"status": "disabled"}
-
     def close(self) -> None:
         with self._state:
             if not self._closed:
@@ -907,15 +535,15 @@ class JsonLineProcess:
                 if threading.current_thread() is not self._reader:
                     self._reader.join(timeout=1)
                 if self._stderr is not None:
-                    self._stderr.emit(self.telemetry_observer, self.telemetry_context, self.telemetry_secrets)
+                    self._stderr.emit(self._telemetry_observer, self.telemetry_context, self.telemetry_secrets)
                     try:
                         self.process.stderr.close()
                     except (OSError, ValueError):
                         pass
-                observe_telemetry(self.telemetry_observer, "process.exit", {"exit_code": self.process.poll()},
+                observe_telemetry(self._telemetry_observer, "process.exit", {"exit_code": self.process.poll()},
                                   self.telemetry_context, secrets=self.telemetry_secrets)
-                if isinstance(self.telemetry_observer, TelemetryDispatch):
-                    self.telemetry_observer.close() if self._owns_dispatch else self.telemetry_observer.drain()
+                if isinstance(self._telemetry_observer, TelemetryDispatch):
+                    self._telemetry_observer.close() if self._owns_dispatch else self._telemetry_observer.drain()
             finally:
                 self._close_complete.set()
                 for item in pending:

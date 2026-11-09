@@ -11,7 +11,7 @@ from scripts.testkit.adapters.configuration import isolated_config
 from scripts.testkit.adapters.evidence import allocate_run, write_json
 from scripts.verification.multi_harness import prepare_config
 from tests.hexagonal.support.native import peer_options
-from xorchestrate.adapters.jsonrpc import command_options
+from xorchestrate.adapters.process import command_options
 
 
 def test_both_native_runners_share_relocation_without_mutating_operator_configuration(tmp_path):
