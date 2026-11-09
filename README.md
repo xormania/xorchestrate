@@ -167,14 +167,10 @@ acceptance is an explicit local run; protocol fixtures cannot supply that result
 | `tests/hexagonal/` | Declared behavioral families, independent contracts, support adapters and collected scenarios |
 | `scripts/testkit/` | Shared test framework, collection, execution, lifecycle and evidence services |
 | `scripts/acceptance/` | Reusable tmux acceptance runner, scenarios, and deterministic protocol peers |
-| `devtools/` | Imported source retained for selective reuse; historical tests and CI removed |
-| `reference/imported-agent-skills/` | Historical agent instructions, removed from active skill discovery |
-| `legacy/agentscient/` | Earlier conductor, tooling, fixtures, and testkit source collection |
-| `reference/agentscient-dev/` | Original repository guidance and CI machinery |
 
-The imported runtime and historical documents describe their original behavior;
-its roles, path ceilings, evaluator prerequisites, and delivery policies are not
-requirements for the current application. There is no automatic migration of its
-state or a claim of feature parity. Reuse is deliberate, with original license
-notices and [extraction provenance](docs/extraction.md) retained.
+Earlier Agentscient material is not kept in this repository. Reuse is deliberate:
+adapted mechanisms cite their pinned upstream sources, recorded with the removed
+in-repo copies in [extraction provenance](docs/extraction.md). The historical
+runtime's roles, path ceilings, evaluator prerequisites, and delivery policies are
+not requirements for the current application, and there is no migration of its state.
 

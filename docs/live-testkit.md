@@ -100,7 +100,7 @@ diagnostics do not override deterministic failures. See
 
 ## Reused work and adaptations
 
-The imported source is pinned in [`extraction-manifest.json`](../extraction-manifest.json).
+The upstream revisions are recorded in [Agentscient extraction](extraction.md).
 This integration adapts the existing Agentscient mechanisms into active ports and
 adapters:
 

@@ -29,7 +29,8 @@ Generated evidence is not represented as a new measured code input.
 3. Run `python -m pytest tests/hexagonal -q`. The final command record identifies
    executed tests, skips and environmental limitations. Tests that require tmux
    need tmux and an operating system permitting its Unix socket; a skip is not a pass.
-4. Run `python -m ruff check xorchestrate tests devtools .github scripts`,
+4. Run `python -m ruff check xorchestrate tests .github scripts`
+   (historically also `devtools`, since removed),
    `python .github/lint_checks.py`, and the dependency checks in
    `tests/hexagonal/test_boundaries.py`.
 5. Use [the full verification procedure](../behavioral-verification.md) to preserve

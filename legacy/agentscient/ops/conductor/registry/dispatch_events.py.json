@@ -1,1 +1,0 @@
-{"tool": "dispatch_events.py", "rows": [{"argv": ["frobnicate"], "class": "arguments", "identity": false}, {"argv": ["route", "--consumer", "dispatch", "--once"], "class": "identity", "identity": false}]}

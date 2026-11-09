@@ -303,21 +303,19 @@ process environment and capabilities for the intended work.
 
 ## Reuse and extension
 
-`devtools/` and `legacy/agentscient/` are implementation source collections.
-Useful protocol handling, integrity mechanisms, and fixtures can be adapted behind
-the new ports. The active package does not import the legacy runtime and thereby
+Earlier Agentscient implementations live upstream at the pinned revisions in
+[extraction provenance](extraction.md); no in-repo copies are kept. Useful protocol
+handling, integrity mechanisms, and fixtures can be adapted behind the new ports.
+The active package does not depend on the historical runtime and thereby
 inherit its hierarchy, mandatory evaluator setup, source-hash coupling, or
 historical delivery policy. The active application now owns durable delivery
 attempts and composes explicit session selection, scheduling, retry and receipt
 policies; message routing retains the exact actor/relationship snapshot used at
 enqueue. Ordinary caller acknowledgements remain separate from native receipts.
 
-Historical instructions were moved from `.agents/skills` to
-`reference/imported-agent-skills`; their active `.claude/skills` aliases were removed.
-Imported operator documents are marked as
-historical. Source regression tests remain separate from the new application
-suite. Their passing behavior is evidence about that source, not a preservation
-requirement for the new architecture.
+Historical source regression tests are not part of the application suite. Their
+passing behavior is evidence about that source, not a preservation requirement for
+the new architecture.
 
 There is no automatic migration of imported state and no assertion that every
 historical capability has been ported. The current adapter tests use real local

@@ -2,7 +2,7 @@
 
 Telemetry extends the active `xorchestrate/` application. The collector is the
 shared `agent_telemetry` package from CCE, pinned by the `telemetry` installation
-extra. The imported `devtools/` runtime remains reference source.
+extra.
 
 ## Install and enable
 
@@ -79,8 +79,7 @@ An invalid `operational` object marks operational export unavailable in
 The application exposes these telemetry operations: `telemetry_status`,
 `telemetry_events`, `telemetry_usage`, `telemetry_compare`, `telemetry_payload`,
 `telemetry_snapshot`, `telemetry_verify` and `telemetry_restore`. The operator
-tools with similar names in the historical [`devtools/` runtime](runtime-telemetry.md)
-are distinct.
+tools with similar names in the historical Agentscient runtime are distinct.
 
 ## Capture and reads
 

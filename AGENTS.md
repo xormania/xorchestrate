@@ -56,10 +56,11 @@ work; do not assume an unfamiliar capability must be invented.
 
 Start with the relevant sources, not an exhaustive survey for every task:
 
-- This repository's active code, `devtools/`, `legacy/agentscient/`, extraction
-  provenance, and referenced multi-harness PoC material.
-- [uscient/agentscient](https://github.com/uscient/agentscient), including relevant
-  `dev` and `shit` branch implementations and acceptance machinery.
+- This repository's active code and referenced multi-harness PoC material.
+- [uscient/agentscient](https://github.com/uscient/agentscient) at the revisions
+  pinned in [extraction provenance](docs/extraction.md) (`dev` @ `9150612`, `shit`
+  @ `456457b`), including implementations and acceptance machinery. No in-repo
+  copies are kept; removed copies remain in history.
 - [xormania/xordination](https://github.com/xormania/xordination) for harness and
   MCP coordination.
 - [uscient/agentscient-test-repo](https://github.com/uscient/agentscient-test-repo)
@@ -71,7 +72,7 @@ Start with the relevant sources, not an exhaustive survey for every task:
 Adapt useful code and tests into the active architecture. Preserve intended
 capabilities while replacing incidental infrastructure coupling where necessary.
 Explain concrete incompatibilities before replacing an existing solution; age,
-different terminology, or placement under `legacy/` is not sufficient reason.
+or different terminology is not sufficient reason.
 
 Copying code into an archive and passing its historical tests does not demonstrate
 active integration. Show where the current application uses the reused mechanism
