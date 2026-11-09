@@ -41,7 +41,7 @@
             "EVENT_NAME": "${{ github.event_name }}",
             "PULL_REQUEST_BASE": "${{ github.event.pull_request.base.sha }}"
           },
-          "run": "force=true\nchanged=\"$RUNNER_TEMP/xor-changed-paths\"\nif [ \"$EVENT_NAME\" = pull_request ] && [ -n \"$PULL_REQUEST_BASE\" ] \\\n  && git diff --name-only -z \"$PULL_REQUEST_BASE\" HEAD -- > \"$changed\" \\\n  && [ -s \"$changed\" ] && tr '\\0' '\\n' < \"$changed\" > \"$changed.lines\"; then\n  status=0\n  grep -Eq '^(scripts/ci/|\\.github/|contracts/|tests/)' \"$changed.lines\" || status=$?\n  case \"$status\" in\n    0) echo \"Classifier or validation definitions changed; forcing full validation\" ;;\n    1) force=false ;;\n    *) echo \"Guard could not inspect changed paths; forcing full validation\" ;;\n  esac\nfi\necho \"force=$force\" >> \"$GITHUB_OUTPUT\"\necho \"force=$force\"\n"
+          "run": "force=true\nchanged=\"$RUNNER_TEMP/xor-changed-paths\"\nif [ \"$EVENT_NAME\" = pull_request ] && [ -n \"$PULL_REQUEST_BASE\" ] \\\n  && git diff --name-only --no-renames -z \"$PULL_REQUEST_BASE\" HEAD -- > \"$changed\" \\\n  && [ -s \"$changed\" ] && tr '\\0' '\\n' < \"$changed\" > \"$changed.lines\"; then\n  status=0\n  grep -Eq '^(scripts/ci/|\\.github/|contracts/|tests/)' \"$changed.lines\" || status=$?\n  case \"$status\" in\n    0) echo \"Classifier or validation definitions changed; forcing full validation\" ;;\n    1) force=false ;;\n    *) echo \"Guard could not inspect changed paths; forcing full validation\" ;;\n  esac\nfi\necho \"force=$force\" >> \"$GITHUB_OUTPUT\"\necho \"force=$force\"\n"
         },
         {
           "name": "Classify documentation-only changes",
@@ -50,7 +50,7 @@
             "EVENT_NAME": "${{ github.event_name }}",
             "PULL_REQUEST_BASE": "${{ github.event.pull_request.base.sha }}"
           },
-          "run": "python3 -B -m scripts.ci.classify_changes --event \"$EVENT_NAME\" --pull-request-base \"$PULL_REQUEST_BASE\" --head HEAD --github-output \"$GITHUB_OUTPUT\""
+          "run": "python3 -I -B scripts/ci/classify_changes.py --event \"$EVENT_NAME\" --pull-request-base \"$PULL_REQUEST_BASE\" --head HEAD --github-output \"$GITHUB_OUTPUT\""
         }
       ]
     },

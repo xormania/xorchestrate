@@ -53,7 +53,7 @@ def independent_guard(step):
     assert step.get("shell") == "bash"
     assert "scripts.ci" not in step["run"] and "python" not in step["run"]
     assert step["run"].startswith("force=true\n"), "The guard must default to a full run"
-    assert "$PULL_REQUEST_BASE" in step["run"] and "git diff --name-only -z" in step["run"]
+    assert "$PULL_REQUEST_BASE" in step["run"] and "git diff --name-only --no-renames -z" in step["run"]
     for prefix in GUARD_PREFIXES:
         assert prefix.replace(".", "\\.") in step["run"], prefix
 

@@ -185,7 +185,7 @@ def test_workflow_gates_only_heavy_jobs_on_the_classifier():
     checkout = classifier["steps"][0]
     assert checkout["with"]["fetch-depth"] == 0 and checkout["with"]["persist-credentials"] is False
     step = next(step for step in classifier["steps"] if step.get("id") == "classify")
-    assert "-m scripts.ci.classify_changes" in step["run"] and "$GITHUB_OUTPUT" in step["run"]
+    assert "python3 -I -B scripts/ci/classify_changes.py" in step["run"] and "$GITHUB_OUTPUT" in step["run"]
     assert step["env"]["PULL_REQUEST_BASE"] == "${{ github.event.pull_request.base.sha }}"
     for name in contract.HEAVY_JOBS:
         contract.heavy_job_gate(jobs[name])
@@ -222,3 +222,12 @@ def test_guard_allows_classification_only_for_an_inspected_pull_request(reposito
     assert _guard(root, output, PULL_REQUEST_BASE=base, EVENT_NAME="push") == "force=true"
     assert _guard(root, output, PULL_REQUEST_BASE="") == "force=true"
     assert _guard(root, output, PULL_REQUEST_BASE="1" * 40) == "force=true"
+
+
+def test_guard_sees_the_source_side_of_a_rename(repository, tmp_path_factory):
+    root, _ = repository
+    base = _commit(root, {"tests/test_example.py": "def test_example():\n    assert True\n"})
+    _git(root, "mv", "tests/test_example.py", "docs/test_example.py")
+    _commit(root)
+    output = tmp_path_factory.mktemp("guard") / "github_output"
+    assert _guard(root, output, PULL_REQUEST_BASE=base) == "force=true"
