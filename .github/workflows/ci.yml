@@ -68,8 +68,83 @@
         }
       ]
     },
-    "application": {
-      "name": "Application and adapter tests (Python 3.12)",
+    "application-tests": {
+      "name": "Application tests shard ${{ matrix.shard }}/4 (Python 3.12)",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 15,
+      "strategy": {
+        "fail-fast": false,
+        "matrix": {
+          "shard": [
+            1,
+            2,
+            3,
+            4
+          ]
+        }
+      },
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          },
+          "id": "checkout"
+        },
+        {
+          "name": "Configure external Python cache",
+          "id": "cache",
+          "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/xorchestrate-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\""
+        },
+        {
+          "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
+          "with": {
+            "python-version": "3.12"
+          },
+          "id": "python"
+        },
+        {
+          "name": "Install pinned Python runtime manager",
+          "uses": "astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9",
+          "with": {
+            "version": "0.13.7",
+            "enable-cache": false
+          }
+        },
+        {
+          "name": "Prepare Python with fixed SQLite WAL support",
+          "id": "telemetry-python",
+          "run": "uv python install 3.12.16\nuv venv --seed --python 3.12.16 \"$RUNNER_TEMP/xor-telemetry-python\"\necho \"$RUNNER_TEMP/xor-telemetry-python/bin\" >> \"$GITHUB_PATH\""
+        },
+        {
+          "name": "Install application dependencies",
+          "run": "python3 -m pip install --disable-pip-version-check -e '.[test,telemetry]' -r .github/requirements-ci.txt",
+          "id": "dependencies"
+        },
+        {
+          "name": "Run tests shard ${{ matrix.shard }}/4",
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
+          "run": "mkdir -p \"$RUNNER_TEMP/xor-checks\"\ngit show -s --format='%H%n%T%n%P' HEAD > \"$RUNNER_TEMP/xor-checks/identity.txt\"\npython3 -m scripts.testkit run --suite tests --shard \"${{ matrix.shard }}/4\" --output \"$RUNNER_TEMP/xor-checks/tests\" --check-timeout 600"
+        },
+        {
+          "name": "Record unavailable tests shard",
+          "if": "!cancelled() && (steps.checkout.outcome != 'success' || steps.cache.outcome != 'success' || steps.python.outcome != 'success' || steps.dependencies.outcome != 'success')",
+          "run": "mkdir -p \"$RUNNER_TEMP/xor-checks\"\ncat > \"$RUNNER_TEMP/xor-checks/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"selected_suites\":[\"tests\"],\"launched\":false,\"reason\":\"CI checkout, cache, interpreter or dependency setup did not succeed\"}\nJSON"
+        },
+        {
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+          "if": "always()",
+          "with": {
+            "name": "framework-tests-python-3.12-shard-${{ matrix.shard }}-of-4",
+            "path": "${{ runner.temp }}/xor-checks/**/*.json\n${{ runner.temp }}/xor-checks/**/*.xml\n${{ runner.temp }}/xor-checks/**/*.log\n${{ runner.temp }}/xor-checks/**/*.txt\n!${{ runner.temp }}/xor-checks/**/snapshot/**\n!${{ runner.temp }}/xor-checks/**/control/**\n!${{ runner.temp }}/xor-checks/**/mutant/**\n!${{ runner.temp }}/xor-checks/**/candidate/**",
+            "if-no-files-found": "error",
+            "retention-days": 30
+          }
+        }
+      ]
+    },
+    "calibration": {
+      "name": "Calibration and composed protocol (Python 3.12)",
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 15,
       "steps": [
@@ -111,9 +186,9 @@
           "id": "dependencies"
         },
         {
-          "name": "Run application, boundary, and subprocess integration tests",
-          "run": "mkdir -p \"$RUNNER_TEMP/xor-checks\"\ngit show -s --format='%H%n%T%n%P' HEAD > \"$RUNNER_TEMP/xor-checks/identity.txt\"\npython3 -m scripts.testkit run --suite tests --output \"$RUNNER_TEMP/xor-checks/tests\" --check-timeout 600",
-          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'"
+          "name": "Record tested revision",
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
+          "run": "mkdir -p \"$RUNNER_TEMP/xor-checks\"\ngit show -s --format='%H%n%T%n%P' HEAD > \"$RUNNER_TEMP/xor-checks/identity.txt\""
         },
         {
           "name": "Calibrate independent verification through the shared framework",
@@ -126,9 +201,9 @@
           "run": "python3 -m scripts.testkit run --suite multi-harness --mode protocol-fixture --output \"$RUNNER_TEMP/xor-verification\" --timeout 60"
         },
         {
-          "name": "Record unavailable application validation",
+          "name": "Record unavailable calibration and protocol validation",
           "if": "!cancelled() && (steps.checkout.outcome != 'success' || steps.cache.outcome != 'success' || steps.python.outcome != 'success' || steps.dependencies.outcome != 'success')",
-          "run": "mkdir -p \"$RUNNER_TEMP/xor-checks\"\ncat > \"$RUNNER_TEMP/xor-checks/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"selected_suites\":[\"tests\",\"calibration\",\"multi-harness\"],\"launched\":false,\"reason\":\"CI checkout, cache, interpreter or dependency setup did not succeed\"}\nJSON"
+          "run": "mkdir -p \"$RUNNER_TEMP/xor-checks\"\ncat > \"$RUNNER_TEMP/xor-checks/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"selected_suites\":[\"calibration\",\"multi-harness\"],\"launched\":false,\"reason\":\"CI checkout, cache, interpreter or dependency setup did not succeed\"}\nJSON"
         },
         {
           "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
@@ -149,6 +224,26 @@
             "if-no-files-found": "error",
             "retention-days": 30
           }
+        }
+      ]
+    },
+    "application": {
+      "name": "Application and adapter tests (Python 3.12)",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 2,
+      "needs": [
+        "application-tests",
+        "calibration"
+      ],
+      "if": "always()",
+      "steps": [
+        {
+          "name": "Require every tests shard, calibration and protocol suite",
+          "env": {
+            "TESTS_RESULT": "${{ needs.application-tests.result }}",
+            "CALIBRATION_RESULT": "${{ needs.calibration.result }}"
+          },
+          "run": "status=0\nif [ \"$TESTS_RESULT\" != success ]; then\n  echo \"Tests shards did not all pass: $TESTS_RESULT\"\n  status=1\nfi\nif [ \"$CALIBRATION_RESULT\" != success ]; then\n  echo \"Calibration and composed protocol suites did not pass: $CALIBRATION_RESULT\"\n  status=1\nfi\nif [ \"$status\" = 0 ]; then\n  echo \"All tests shards, calibration and composed protocol suites passed\"\nfi\nexit \"$status\""
         }
       ]
     },

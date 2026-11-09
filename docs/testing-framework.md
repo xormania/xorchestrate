@@ -33,6 +33,9 @@ python3 -m scripts.testkit run --suite checks
 # Static checks plus one declared behavioral family.
 python3 -m scripts.testkit run --suite checks --family state
 
+# One balanced shard (K of N, one-based) of the cataloged tests; combines with --family.
+python3 -m scripts.testkit run --suite tests --shard 2/4
+
 # Prove that deliberate native, work and state faults trigger the intended assertions.
 python3 -m scripts.testkit run --suite calibration
 
@@ -57,6 +60,38 @@ tmux, native configuration or model credentials. `--family` filters behavioral
 tests only; it never reduces static coverage. The default composition runs each
 selected check once.
 
+## Sharding the tests suite
+
+`--shard K/N` (1 <= K <= N) splits the `tests` suite by test module. The plugin
+first applies the catalog and any `--family`/`--test-layer` selection, then
+partitions exactly those modules into N shards and runs shard K. Each module
+belongs to exactly one shard and the union of shards 1..N is the unsharded
+selection, so running every shard is equivalent to one unsharded run. Every shard
+still collects and validates the complete catalog; its inventory records the shard
+index, count, assigned modules and estimated seconds, and its JUnit/inventory
+are written to its own run directory. A shard that would select no modules (more
+shards than selected modules) is an error rather than an empty pass. `--shard`
+with a suite that has no tests is rejected; direct pytest takes `--test-shard K/N`.
+
+Assignment is deterministic: longest-processing-time first, heaviest module on the
+currently lightest shard, ties broken by module path and shard index. Weights come
+from the committed [`contracts/test-timings.json`](../contracts/test-timings.json)
+(module path to seconds, including setup and teardown). A module without a recorded
+duration, such as a newly added one, gets the file's `default_seconds` (the median
+recorded duration) and is assigned like any other; entries for removed modules are
+ignored. Timings only affect balance, never coverage.
+
+Regenerate the timings when the balance drifts, from one unsharded run or from
+every shard's JUnit (for example the CI shard artifacts):
+
+```bash
+python3 -m scripts.testkit run --suite tests --output ../runs
+python3 -m scripts.testkit.timings ../runs/<run-id>/tests.xml
+# or: python3 -m scripts.testkit.timings shard-1/tests.xml shard-2/tests.xml ...
+```
+
+Review and commit the rewritten `contracts/test-timings.json`.
+
 Ruff and syntax validation select applicable Python files beneath `xorchestrate`,
 `scripts`, `tests` and `.github`. Historical source trees remain outside this
 scope. Ruff uses its configured/default exclusions while Git ignore rules do not
@@ -78,6 +113,7 @@ after the same startup environment is established. Disable its local cache:
 ```bash
 python3 -m pytest -p no:cacheprovider
 python3 -m pytest -p no:cacheprovider --test-family state --test-inventory ../state-inventory.json
+python3 -m pytest -p no:cacheprovider --test-shard 1/4 --test-inventory ../shard-1-inventory.json
 python3 -m pytest -p no:cacheprovider tests/hexagonal/test_storage.py -q
 ```
 
@@ -98,6 +134,8 @@ controller requests, native callback selection and managed tmux automation.
 | Static check definitions and suite membership | Shared test-kit composition and static adapter |
 | Ruff policy and pin | `ruff.toml`, `.github/requirements-ci.txt` |
 | Catalog validation and selection | `scripts/testkit/catalog.py` |
+| Shard specification, balanced module partition and timings format | `scripts/testkit/sharding.py`, `contracts/test-timings.json` |
+| Timings regeneration from JUnit | `scripts/testkit/adapters/timings.py`, `python3 -m scripts.testkit.timings` |
 | Pytest discovery, markers and inventory | `scripts/testkit/adapters/pytest_plugin.py` |
 | Command execution, named results, check receipts and resource ownership | `scripts/testkit/{model,ports,core}.py` and execution adapters |
 | Independent expected behavior and reusable scenario inventories | `tests/hexagonal/contracts/` |

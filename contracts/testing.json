@@ -133,6 +133,7 @@
       "modules": {
         "tests/hexagonal/test_testkit_core.py": "contract",
         "tests/hexagonal/test_testkit_command.py": "adapter",
+        "tests/hexagonal/test_testkit_sharding.py": "framework",
         "tests/hexagonal/test_testkit_configuration.py": "adapter",
         "tests/hexagonal/test_testkit_entrypoint.py": "composition",
         "tests/hexagonal/test_stories.py": "composition",

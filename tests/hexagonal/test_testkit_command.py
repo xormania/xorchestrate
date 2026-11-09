@@ -257,23 +257,33 @@ def test_recorded_cancellation_preserves_partial_bytes_and_final_receipt(tmp_pat
 
 def test_command_interruption_keeps_receipt_and_reaches_child_finalizer(tmp_path):
     finalized = tmp_path / "finalized"
+    ready = tmp_path / "ready"
     directory = tmp_path / "receipt"
+    # The child announces readiness only after its SIGTERM finalizer is
+    # installed, so the interrupt cannot race interpreter startup on a loaded
+    # runner. Bounds are generous; the assertions are unchanged.
     program = (
         "import signal,time,sys; from pathlib import Path\n"
         f"def finish(*_): Path({str(finalized)!r}).touch(); sys.exit(0)\n"
         "signal.signal(signal.SIGTERM,finish)\n"
+        f"Path({str(ready)!r}).touch()\n"
         "while True: time.sleep(.02)\n"
     )
     helper = (
-        "import _thread,threading,sys\n"
+        "import _thread,threading,sys,time\n"
+        "from pathlib import Path\n"
         "from scripts.testkit.adapters.evidence import run_command\n"
-        "timer=threading.Timer(.4,_thread.interrupt_main); timer.start()\n"
+        "def interrupt():\n"
+        " deadline=time.monotonic()+60\n"
+        f" while not Path({str(ready)!r}).exists() and time.monotonic()<deadline: time.sleep(.02)\n"
+        " _thread.interrupt_main()\n"
+        "threading.Thread(target=interrupt,daemon=True).start()\n"
         "try:\n"
-        f" run_command((sys.executable,'-c',{program!r}),{str(tmp_path)!r},{str(directory)!r},timeout=10)\n"
+        f" run_command((sys.executable,'-c',{program!r}),{str(tmp_path)!r},{str(directory)!r},timeout=90)\n"
         "except KeyboardInterrupt: pass\n"
-        "finally: timer.cancel()\n"
     )
-    subprocess.run((sys.executable, "-c", helper), cwd=Path(__file__).resolve().parents[2], check=True, timeout=5)
+    subprocess.run((sys.executable, "-c", helper), cwd=Path(__file__).resolve().parents[2], check=True, timeout=120)
+    assert ready.exists()
     assert finalized.exists()
     receipt = json.loads((directory / "command.json").read_text())
     assert receipt["status"] == "interrupted" and receipt["error"] == "KeyboardInterrupt"

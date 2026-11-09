@@ -271,6 +271,7 @@
         "scripts.testkit.core",
         "scripts.testkit.catalog",
         "scripts.testkit.operator",
+        "scripts.testkit.sharding",
         "scripts.testkit.stories"
       ],
       "allowed_roles": [
@@ -312,7 +313,8 @@
         "scripts.testkit.adapters.syntax",
         "scripts.testkit.adapters.managed_store",
         "scripts.testkit.adapters.managed_process",
-        "scripts.testkit.adapters.terminals"
+        "scripts.testkit.adapters.terminals",
+        "scripts.testkit.adapters.timings"
       ],
       "allowed_roles": [
         "testkit_foundation",
@@ -730,7 +732,8 @@
     "testkit_entrypoints": {
       "modules": [
         "scripts.testkit.__main__",
-        "scripts.testkit.operator_cli"
+        "scripts.testkit.operator_cli",
+        "scripts.testkit.timings"
       ],
       "allowed_roles": [
         "foundation",
