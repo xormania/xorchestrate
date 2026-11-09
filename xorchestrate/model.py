@@ -1,9 +1,17 @@
 """Values exchanged at the application boundary; independent of infrastructure."""
 
+import hashlib
+import json
+from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any
 
 JSON = dict[str, Any]
+
+
+def canonical_digest(value: Any) -> str:
+    """SHA-256 of canonical JSON: sorted keys, compact separators, finite numbers only."""
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
 
 
 class OrchestrationError(ValueError):
@@ -43,12 +51,31 @@ class Record:
     version: int
 
 
+def record_view(record: Record) -> JSON:
+    """A detached public copy of a record with its identity and version."""
+    return {**deepcopy(record.data), "id": record.key, "version": record.version}
+
+
+def public_error_message(error: Exception) -> str:
+    # Expected adapter errors have deliberately public messages. Arbitrary errors
+    # may embed credentials, process input or SDK internals.
+    return str(error) if isinstance(error, OrchestrationError) else f"External operation did not return a verified result ({type(error).__name__})."
+
+
 @dataclass(frozen=True)
 class Capability:
     name: str
     description: str
     input_schema: JSON = field(default_factory=lambda: {"type": "object"})
     annotations: JSON = field(default_factory=dict)
+
+
+def action_spec(description: str, properties: JSON, required: tuple[str, ...] = (), *, read: bool = False) -> Capability:
+    """Describe an application action with a closed JSON object input schema."""
+    return Capability("", description, {
+        "type": "object", "properties": properties, "required": list(required),
+        "additionalProperties": False,
+    }, {"readOnlyHint": read})
 
 
 @dataclass(frozen=True)

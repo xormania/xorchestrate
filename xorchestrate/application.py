@@ -4,27 +4,26 @@ Capability names are ``provider/name``. Observations and assessments are retaine
 as evidence; only the injected guardrail decides whether an action is authorized.
 External effects have a durable operation record before execution. A key is never
 silently retried after an uncertain outcome, including across application restarts.
+Session lifecycle, the effect journal, delivery, assessment and acceptance are
+composed from their own modules; this facade owns dispatch, authorization context
+and record mutation.
 """
 
 from __future__ import annotations
 
-import hashlib
-import json
 from copy import deepcopy
 from dataclasses import asdict
-from typing import Any, Callable
+from typing import Any
 
-from .acceptance import (
-    ACCEPTANCE_ACTIONS,
-    WorkAcceptance,
-    assessment_input_binding,
-    assessment_work_input,
-)
-from .delivery import DELIVERY_ACTIONS, DeliveryMixin
+from .acceptance import WorkAcceptance
+from .actions import ACTIONS, SESSION_CREATIONS, STRING
+from .assessment import WorkAssessment
+from .delivery import DeliveryMixin
+from .effects import EffectJournalMixin
 from .inspection import InspectionProjector
 from .lifecycles import DURABLE_LIFECYCLES, default_definitions
-from .model import JSON, Assessment, Capability, Conflict, OrchestrationError, Record
-from .outcomes import before_effect, effect_outcome
+from .model import JSON, Capability, Conflict, OrchestrationError, Record, canonical_digest, record_view
+from .outcomes import before_effect
 from .ports import (
     AcceptancePolicy,
     CapabilityProvider,
@@ -43,148 +42,12 @@ from .ports import (
     Transaction,
 )
 from .schema import validate
+from .session_lifecycle import SessionLifecycleMixin
 from .state import StateEngine
 from .telemetry import TelemetryViews, dispatch_pressure, record_observation
 
-_STRING = {"type": "string", "minLength": 1}
-_OBJECT = {"type": "object"}
-_VERSION = {"type": "integer", "minimum": 1}
 
-
-def _spec(description: str, properties: JSON, required: tuple[str, ...] = (), *, read: bool = False) -> Capability:
-    return Capability("", description, {
-        "type": "object", "properties": properties, "required": list(required),
-        "additionalProperties": False,
-    }, {"readOnlyHint": read})
-
-
-_ACTIONS = {
-    "create_work": _spec("Create work from a goal and caller-supplied context.", {
-        "goal": _STRING, "title": _STRING, "inputs": _OBJECT, "context": _OBJECT, "metadata": _OBJECT,
-    }, ("goal",)),
-    "get_work": _spec("Read work and its assignments, evidence, and sessions.", {"work_id": _STRING}, ("work_id",), read=True),
-    "list_work": _spec("List work, optionally filtered by status.", {"status": _STRING}, read=True),
-    "update_work": _spec("Update work with an explicit record version.", {
-        "work_id": _STRING, "expected_version": _VERSION,
-        "changes": {"type": "object", "minProperties": 1, "additionalProperties": False, "properties": {
-            "goal": _STRING, "title": _STRING, "status": _STRING, "inputs": _OBJECT, "context": _OBJECT, "metadata": _OBJECT,
-        }},
-    }, ("work_id", "expected_version", "changes")),
-    "add_actor": _spec("Register an actor with caller-defined roles.", {
-        "actor_id": _STRING, "name": _STRING, "roles": {"type": "array", "items": _STRING, "uniqueItems": True}, "metadata": _OBJECT,
-    }, ("actor_id",)),
-    "update_actor": _spec("Update an actor without prescribing a role hierarchy.", {
-        "actor_id": _STRING, "expected_version": _VERSION,
-        "changes": {"type": "object", "minProperties": 1, "additionalProperties": False, "properties": {
-            "name": _STRING, "roles": {"type": "array", "items": _STRING, "uniqueItems": True}, "metadata": _OBJECT,
-        }},
-    }, ("actor_id", "expected_version", "changes")),
-    "list_actors": _spec("List registered actors.", {}, read=True),
-    "assign": _spec("Assign an actor to work in an optional caller-defined role.", {
-        "work_id": _STRING, "actor_id": _STRING, "role": {"type": "string"}, "metadata": _OBJECT,
-    }, ("work_id", "actor_id")),
-    "remove_assignment": _spec("Remove an assignment at its observed version.", {
-        "assignment_id": _STRING, "expected_version": _VERSION,
-    }, ("assignment_id", "expected_version")),
-    "relate": _spec("Record a named, directed relationship between actors.", {
-        "source": _STRING, "target": _STRING, "relationship": _STRING, "metadata": _OBJECT,
-    }, ("source", "target", "relationship")),
-    "remove_relation": _spec("Remove a relationship at its observed version.", {
-        "relation_id": _STRING, "expected_version": _VERSION,
-    }, ("relation_id", "expected_version")),
-    "send_message": _spec("Route and retain a message using the configured routing policy.", {
-        "destination": _OBJECT, "body": {}, "work_id": _STRING, "thread_id": _STRING,
-    }, ("destination", "body")),
-    "inbox": _spec("Read a recipient's retained messages.", {
-        "recipient": _STRING, "include_acknowledged": {"type": "boolean"}, "work_id": _STRING,
-    }, read=True),
-    "acknowledge": _spec("Acknowledge a message delivered to the caller.", {"message_id": _STRING}, ("message_id",)),
-    "start_session": _spec("Start a configured session driver, once per explicit idempotency key.", {
-        "driver": _STRING, "specification": _OBJECT, "idempotency_key": _STRING, "work_id": _STRING, "actor_id": _STRING,
-        "resume_session_id": _STRING,
-    }, ("driver", "specification", "idempotency_key")),
-    "send_session": _spec("Send a message through a session driver, once per key.", {
-        "session_id": _STRING, "message": _OBJECT, "idempotency_key": _STRING,
-    }, ("session_id", "message", "idempotency_key")),
-    "poll_session": _spec("Collect session output, retaining the result for replay of this key.", {
-        "session_id": _STRING, "idempotency_key": _STRING,
-    }, ("session_id", "idempotency_key")),
-    "stop_session": _spec("Stop a session, once per key.", {
-        "session_id": _STRING, "idempotency_key": _STRING,
-    }, ("session_id", "idempotency_key")),
-    "list_sessions": _spec("List sessions, optionally for one work item.", {"work_id": _STRING}, read=True),
-    "capabilities": _spec("Discover provider capabilities using provider/name addresses.", {"provider": _STRING}, read=True),
-    "invoke": _spec("Invoke a discovered capability, once per explicit idempotency key.", {
-        "capability": _STRING, "arguments": _OBJECT, "idempotency_key": _STRING, "work_id": _STRING,
-    }, ("capability", "arguments", "idempotency_key")),
-    "assess": _spec("Obtain an assessment, escalating uncertainty using configured evaluators.", {
-        "question": _STRING, "work_id": _STRING, "context": _OBJECT,
-    }, ("question",)),
-    "record_result": _spec("Retain caller-supplied work evidence without changing policy.", {
-        "work_id": _STRING, "result": {}, "label": _STRING, "metadata": _OBJECT,
-    }, ("work_id", "result")),
-    "events": _spec("Read the event stream after a sequence number.", {
-        "after": {"type": "integer", "minimum": 0}, "limit": {"type": "integer", "minimum": 1, "maximum": 1000},
-    }, read=True),
-    "get_operation": _spec("Inspect an external operation and any preserved outcome.", {"operation_id": _STRING}, ("operation_id",), read=True),
-    "resolve_operation": _spec("Record a verified outcome of an interrupted effect without executing it again.", {
-        "operation_id": _STRING, "expected_version": _VERSION,
-        "outcome": {"enum": ["completed", "failed"]}, "result": {}, "reason": _STRING,
-    }, ("operation_id", "expected_version", "outcome", "reason")),
-}
-
-
-_ACTIONS.update(ACCEPTANCE_ACTIONS)
-_ACTIONS.update(DELIVERY_ACTIONS)
-_TELEMETRY_QUERY = {
-    "after": {"type": "integer", "minimum": 0},
-    "cutoff": {"type": "integer", "minimum": 0},
-    "max_bytes": {"type": "integer", "minimum": 256, "maximum": 1048576},
-    "limit": {"type": "integer", "minimum": 1, "maximum": 1000},
-    "event_type": _STRING, "work_id": _STRING, "session_id": _STRING, "operation_id": _STRING,
-    "run_id": _STRING, "attempt_id": _STRING,
-}
-_ACTIONS.update({
-    "telemetry_status": _spec("Inspect optional capture health and authorized source coverage.", {}, read=True),
-    "telemetry_events": _spec("Read bounded authorized observations with source provenance.", _TELEMETRY_QUERY, read=True),
-    "telemetry_usage": _spec("Normalize identified usage while retaining raw quantities and unknown prices.", _TELEMETRY_QUERY, read=True),
-    "telemetry_compare": _spec("Compare explicitly selected reported result populations with denominators and evidence limits.", {
-        **{key: value for key, value in _TELEMETRY_QUERY.items() if key in {"after", "cutoff", "limit", "max_bytes"}},
-        "baseline_run_id": _STRING, "candidate_run_id": _STRING, "baseline_work_id": _STRING, "candidate_work_id": _STRING,
-        "event_types": {"type": "array", "minItems": 1, "items": _STRING}, "unit": _STRING,
-        "passed_outcomes": {"type": "array", "items": _STRING}, "failed_outcomes": {"type": "array", "items": _STRING},
-    }, read=True),
-    "telemetry_payload": _spec("Read a bounded payload belonging to an authorized observation.", {
-        "event_id": _STRING, "digest": _STRING, "offset": {"type": "integer", "minimum": 0},
-        "limit": {"type": "integer", "minimum": 1, "maximum": 1048576},
-    }, ("event_id",), read=True),
-    "telemetry_snapshot": _spec("Export a verified snapshot after authorizing the complete evidence closure.",
-        {"destination": _STRING}, ("destination",)),
-    "telemetry_verify": _spec("Verify a local bundle under current authority for its complete evidence closure.",
-        {"destination": _STRING}, ("destination",), read=True),
-    "telemetry_restore": _spec("Restore an authorized verified bundle into a fresh configured destination.",
-        {"bundle": _STRING, "destination": _STRING}, ("bundle", "destination")),
-})
-for _lifecycle_action in ("attach_session", "reconnect_session"):
-    _ACTIONS[_lifecycle_action] = deepcopy(_ACTIONS["start_session"])
-_ACTIONS["detach_session"] = deepcopy(_ACTIONS["stop_session"])
-
-
-def _view(record: Record) -> JSON:
-    return {**deepcopy(record.data), "id": record.key, "version": record.version}
-
-
-def _digest(value: Any) -> str:
-    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
-
-
-def _error_message(error: Exception) -> str:
-    # Expected adapter errors have deliberately public messages. Arbitrary errors
-    # may embed credentials, process input or SDK internals.
-    return str(error) if isinstance(error, OrchestrationError) else f"External operation did not return a verified result ({type(error).__name__})."
-
-
-class Application(DeliveryMixin):
+class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
     """Transport-independent orchestration; construction performs no I/O."""
 
     def __init__(
@@ -222,10 +85,10 @@ class Application(DeliveryMixin):
         try:
             validate(assessment if assessment is not None else {}, {
                 "type": "object", "additionalProperties": False, "properties": {
-                    "triage": _STRING, "escalate": _STRING,
+                    "triage": STRING, "escalate": STRING,
                     "confidence_threshold": {"type": "number", "minimum": 0, "maximum": 1},
-                    "uncertain_outcomes": {"type": "array", "items": _STRING},
-                    "work_input_fields": {"type": "array", "uniqueItems": True, "items": _STRING},
+                    "uncertain_outcomes": {"type": "array", "items": STRING},
+                    "work_input_fields": {"type": "array", "uniqueItems": True, "items": STRING},
                 },
             })
         except OrchestrationError as error:
@@ -240,9 +103,13 @@ class Application(DeliveryMixin):
             provider_configurations=lambda: self.provider_configurations,
             evaluator_configurations=lambda: self.evaluator_configurations,
         )
+        self.work_assessment = WorkAssessment(
+            store, evaluators=lambda: self.evaluators, configuration=lambda: self.assessment,
+            create=self._create, evidence=self._evidence,
+        )
 
     def describe(self) -> list[Capability]:
-        return [Capability(name, spec.description, deepcopy(spec.input_schema), deepcopy(spec.annotations)) for name, spec in _ACTIONS.items()]
+        return [Capability(name, spec.description, deepcopy(spec.input_schema), deepcopy(spec.annotations)) for name, spec in ACTIONS.items()]
 
     def call(self, action: str, arguments: JSON, actor: str = "owner", *, native_context=None, replay_only=False,
              telemetry_run_id=None) -> JSON:
@@ -294,7 +161,7 @@ class Application(DeliveryMixin):
                     scope.update({key: session.get("backend", {})[key] for key in ("native_id", "incarnation")
                                   if session.get("backend", {}).get(key)})
             if isinstance(arguments, dict) and "idempotency_key" in arguments:
-                operation_id = _digest([actor, arguments["idempotency_key"]])
+                operation_id = canonical_digest([actor, arguments["idempotency_key"]])
                 with self.store.transaction() as tx:
                     operation = tx.get("operation", operation_id)
                 if operation is not None:
@@ -370,15 +237,15 @@ class Application(DeliveryMixin):
     def _call(self, action: str, arguments: JSON, actor: str = "owner", *, native_context=None, replay_only=False,
               capture_context=None) -> JSON:
         with before_effect():
-            if action not in _ACTIONS:
+            if action not in ACTIONS:
                 raise OrchestrationError(f"Unknown action: {action}", "unknown_action")
             if not isinstance(actor, str) or not actor:
                 raise OrchestrationError("A caller identity is required.")
-            validate(arguments, _ACTIONS[action].input_schema)
+            validate(arguments, ACTIONS[action].input_schema)
             # Detach caller-owned structures so neither adapters nor a caller can mutate
             # the request whose identity is bound to an operation key.
             arguments = deepcopy(arguments)
-            if action in {"start_session", "attach_session", "reconnect_session"} and "resume" in arguments["specification"]:
+            if action in SESSION_CREATIONS and "resume" in arguments["specification"]:
                 raise OrchestrationError("Session identity is reserved; use resume_session_id to reference an application session.", "invalid_arguments")
             context = self._context(actor, arguments)
             if capture_context is not None:
@@ -387,34 +254,21 @@ class Application(DeliveryMixin):
                 context["native_source"] = deepcopy(native_context)
                 with self.store.transaction() as tx:
                     self._verify_native_source(tx, context["native_source"], actor)
-            resume_id = arguments.get("resume_session_id") if action in {"start_session", "reconnect_session"} else None
-            if action == "resolve_operation" and context["operation"]["action"] in {"start_session", "attach_session", "reconnect_session"}:
-                resume_id = context["operation"]["arguments"].get("resume_session_id")
-            if resume_id:
-                source = self._resume_context(actor, resume_id)
-                driver = arguments["driver"] if action in {"start_session", "reconnect_session"} else context["operation"]["arguments"]["driver"]
-                if source["session"]["driver"] != driver:
-                    raise OrchestrationError("Resume source and destination must use the same configured driver.", "driver_mismatch")
-                source["resume_destination"] = {"driver": driver, "actor_id": context["session_actor"], "work_id": context["work_id"]}
-                context["resume_source"] = source
+            self._bind_resume_source(action, arguments, actor, context)
             if action == "invoke":
                 context.update({"provider": arguments["capability"].partition("/")[0], "capability": {"name": arguments["capability"]}})
             if "idempotency_key" in arguments:
                 with self.store.transaction() as tx:
-                    existing = tx.get("operation", _digest([actor, arguments["idempotency_key"]]))
+                    existing = tx.get("operation", canonical_digest([actor, arguments["idempotency_key"]]))
                 if existing:
                     request = {k: v for k, v in arguments.items() if k != "idempotency_key"}
-                    if existing.data["fingerprint"] != _digest({"action": action, "arguments": request}):
+                    if existing.data["fingerprint"] != canonical_digest({"action": action, "arguments": request}):
                         raise Conflict("The idempotency key is already bound to a different request.")
                     if existing.data.get("capability"):
                         context["capability"] = deepcopy(existing.data["capability"])
-                    context["operation"] = _view(existing)
-                    if action in {"start_session", "attach_session", "reconnect_session"}:
-                        with self.store.transaction() as tx:
-                            selected = self._require(tx, "session", existing.data["session_id"])
-                        context["requested_arguments"] = deepcopy(context["arguments"])
-                        context["resolved_driver"] = selected.data["driver"]
-                        context["arguments"] = {**context["arguments"], "driver": selected.data["driver"]}
+                    context["operation"] = record_view(existing)
+                    if action in SESSION_CREATIONS:
+                        self._bind_replayed_session(context, existing)
                     self._authorize(action, context)
                     with self.store.transaction() as tx:
                         self._verify_context(tx, context)
@@ -447,37 +301,23 @@ class Application(DeliveryMixin):
             if arguments.get("message_id"):
                 work_id = self._require(tx, "message", arguments["message_id"]).data.get("work_id")
             work = self._require(tx, "work", work_id) if work_id else None
-            evidence = [_view(r) for r in tx.list("evidence") if r.data.get("work_id") == work.key] if work else []
+            evidence = [record_view(r) for r in tx.list("evidence") if r.data.get("work_id") == work.key] if work else []
         context = {
-            "actor": actor, "actor_record": _view(caller) if caller else None,
-            "arguments": deepcopy(arguments), "work": _view(work) if work else None,
+            "actor": actor, "actor_record": record_view(caller) if caller else None,
+            "arguments": deepcopy(arguments), "work": record_view(work) if work else None,
             "inputs": deepcopy(work.data.get("inputs", {})) if work else {},
             "context": deepcopy(work.data.get("context", {})) if work else {},
-            "evidence": evidence, "session": _view(session) if session else None,
+            "evidence": evidence, "session": record_view(session) if session else None,
             "work_id": work.key if work else None,
             "session_actor": arguments.get("actor_id", actor) if "driver" in arguments else (session.data.get("actor_id") if session else None),
-            "operation": _view(operation) if operation else None,
-            "native_call": _view(native_call) if native_call else None,
+            "operation": record_view(operation) if operation else None,
+            "native_call": record_view(native_call) if native_call else None,
         }
         if operation and operation.data.get("capability"):
             context.update({"capability": deepcopy(operation.data["capability"]),
                 "provider": operation.data["arguments"]["capability"].partition("/")[0]})
         context["acceptance_basis"] = self.work_acceptance.context(work.key) if work else None
         return context
-
-    def _resume_context(self, actor: str, session_id: str) -> JSON:
-        source = self._context(actor, {"session_id": session_id})
-        session = source["session"]
-        if not isinstance(session.get("backend"), dict) or not session.get("start_operation_id"):
-            raise OrchestrationError("The resume source has no verified adapter start receipt; start a fresh session.", "unverified_session_result")
-        with self.store.transaction() as tx:
-            receipt = self._require(tx, "operation", session["start_operation_id"])
-        if (receipt.data.get("action") not in {"start_session", "attach_session", "reconnect_session"} or receipt.data.get("session_id") != session_id
-                or receipt.data.get("status") != "completed" or receipt.data.get("external_result_origin") != "adapter"
-                or receipt.data.get("external_result") != session["backend"]):
-            raise OrchestrationError("The resume source is not bound to a verified adapter start receipt.", "unverified_session_result")
-        source["resume_receipt"] = _view(receipt)
-        return source
 
     def _authorize(self, action: str, context: JSON) -> None:
         if action in {"start_session", "reconnect_session"} and context.get("resume_source"):
@@ -493,21 +333,6 @@ class Application(DeliveryMixin):
                 verdict.reason or "The configured guardrail did not authorize this action.",
                 "review_required" if verdict.review else "denied", deepcopy(verdict.details),
             )
-
-    def _verify_native_source(self, tx, source, actor):
-        session = self._require(tx, "session", source["session_id"])
-        backend = session.data.get("backend", {})
-        if session.data.get("actor_id") != actor or session.data["status"] not in {"starting", "active", "unknown"}:
-            raise OrchestrationError("The native callback source is no longer live.", "stale_native_callback")
-        if backend and (backend.get("native_id") != source.get("native_id") or backend.get("incarnation") != source.get("incarnation")):
-            raise OrchestrationError("Native callback incarnation no longer matches its source.", "stale_native_callback")
-        if not backend:
-            observations = [r for r in tx.list("native_observation") if r.data["session_id"] == session.key
-                and r.data.get("origin") == "adapter" and not r.data.get("stale")
-                and r.data["observation"].get("native_id") == source.get("native_id")
-                and r.data["observation"].get("incarnation") == source.get("incarnation")]
-            if not observations:
-                raise OrchestrationError("The starting callback has no observed native binding.", "session_identity")
 
     def _verify_context(self, tx: Transaction, context: JSON) -> None:
         if context.get("native_source"):
@@ -562,23 +387,23 @@ class Application(DeliveryMixin):
                 "goal": args["goal"], "title": args.get("title", args["goal"]), "status": "open",
                 "inputs": args.get("inputs", {}), "context": args.get("context", {}), "metadata": args.get("metadata", {}),
             })
-            return {"work": _view(record)}
+            return {"work": record_view(record)}
 
     def _get_work(self, args: JSON, actor: str, context: JSON) -> JSON:
         return self.inspection.inspect_snapshot("get_work", actor, context, lambda tx: self._work_snapshot(tx, args["work_id"]))
 
     def _work_snapshot(self, tx: Transaction, work_id: str) -> JSON:
         work = self._require(tx, "work", work_id)
-        result = {"work": _view(work)}
+        result = {"work": record_view(work)}
         result.update(self.work_acceptance.view(tx, work.key))
         for kind, plural in (("assignment", "assignments"), ("evidence", "evidence"), ("session", "sessions")):
-            result[plural] = [_view(r) for r in tx.list(kind) if r.data.get("work_id") == work.key]
+            result[plural] = [record_view(r) for r in tx.list(kind) if r.data.get("work_id") == work.key]
         return result
 
     def _list_work(self, args: JSON, actor: str, context: JSON) -> JSON:
         with self.store.transaction() as tx:
             self._verify_context(tx, context)
-            return {"work": [_view(r) for r in tx.list("work") if "status" not in args or r.data.get("status") == args["status"]]}
+            return {"work": [record_view(r) for r in tx.list("work") if "status" not in args or r.data.get("status") == args["status"]]}
 
     def _update(self, kind: str, args: JSON, actor: str, context: JSON) -> JSON:
         with self.store.transaction() as tx:
@@ -586,7 +411,7 @@ class Application(DeliveryMixin):
             current = self._require(tx, kind, args[f"{kind}_id"])
             record = tx.put(kind, current.key, {**current.data, **deepcopy(args["changes"]), "updated_at": self.clock()}, args["expected_version"])
             self._event(tx, f"{kind}.updated", actor, record_id=record.key, version=record.version)
-            return {kind: _view(record)}
+            return {kind: record_view(record)}
 
     def _update_work(self, args: JSON, actor: str, context: JSON) -> JSON:
         return self._update("work", args, actor, context)
@@ -597,7 +422,7 @@ class Application(DeliveryMixin):
             record = self._create(tx, "actor", actor, {
                 "name": args.get("name", args["actor_id"]), "roles": args.get("roles", []), "metadata": args.get("metadata", {}),
             }, args["actor_id"])
-            return {"actor": _view(record)}
+            return {"actor": record_view(record)}
 
     def _update_actor(self, args: JSON, actor: str, context: JSON) -> JSON:
         return self._update("actor", args, actor, context)
@@ -605,7 +430,7 @@ class Application(DeliveryMixin):
     def _list_actors(self, args: JSON, actor: str, context: JSON) -> JSON:
         with self.store.transaction() as tx:
             self._verify_context(tx, context)
-            return {"actors": [_view(r) for r in tx.list("actor")]}
+            return {"actors": [record_view(r) for r in tx.list("actor")]}
 
     def _assign(self, args: JSON, actor: str, context: JSON) -> JSON:
         with self.store.transaction() as tx:
@@ -618,7 +443,7 @@ class Application(DeliveryMixin):
                 and record.data.get("actor_id") == args["actor_id"]
                 and record.data.get("role", "") == role), None)
             record = existing or self._create(tx, "assignment", actor, {**args, "role": role})
-            return {"assignment": _view(record)}
+            return {"assignment": record_view(record)}
 
     def _relate(self, args: JSON, actor: str, context: JSON) -> JSON:
         with self.store.transaction() as tx:
@@ -628,7 +453,7 @@ class Application(DeliveryMixin):
             existing = next((record for record in tx.list("relation")
                 if all(record.data.get(field) == args[field] for field in ("source", "target", "relationship"))), None)
             record = existing or self._create(tx, "relation", actor, args)
-            return {"relation": _view(record)}
+            return {"relation": record_view(record)}
 
     def _remove(self, kind: str, args: JSON, actor: str, context: JSON) -> JSON:
         with self.store.transaction() as tx:
@@ -646,8 +471,8 @@ class Application(DeliveryMixin):
 
     def _send_message(self, args: JSON, actor: str, context: JSON) -> JSON:
         with self.store.transaction() as tx:
-            actors = [_view(r) for r in tx.list("actor")]
-            relations = [_view(r) for r in tx.list("relation")]
+            actors = [record_view(r) for r in tx.list("actor")]
+            relations = [record_view(r) for r in tx.list("relation")]
         recipients = list(dict.fromkeys(self.routing.recipients(actor, deepcopy(args["destination"]), actors, relations)))
         if not recipients:
             raise OrchestrationError("The destination did not resolve to any recipients.", "no_recipients")
@@ -660,7 +485,7 @@ class Application(DeliveryMixin):
                 "routing_snapshot": {"actors": actors, "relations": relations, "semantics": "resolved_at_enqueue"},
             })
             self._queue_deliveries(tx, record, actor)
-            result = {"message": _view(record)}
+            result = {"message": record_view(record)}
         if self.delivery_scheduler.dispatch_on_enqueue:
             try:
                 result["dispatch"] = self.call("dispatch_deliveries", {"message_id": record.key}, actor=actor)
@@ -676,7 +501,7 @@ class Application(DeliveryMixin):
         recipient = args.get("recipient", actor)
         with self.store.transaction() as tx:
             self._verify_context(tx, context)
-            return {"messages": [_view(r) for r in tx.list("message")
+            return {"messages": [record_view(r) for r in tx.list("message")
                 if recipient in r.data["recipients"]
                 and (args.get("include_acknowledged", False) or recipient not in r.data["acknowledgements"])
                 and ("work_id" not in args or r.data.get("work_id") == args["work_id"])]}
@@ -692,7 +517,7 @@ class Application(DeliveryMixin):
                 data["acknowledgements"][actor] = self.clock()
                 message = tx.put("message", message.key, data, message.version)
                 self._event(tx, "message.acknowledged", actor, message_id=message.key)
-            return {"message": _view(message)}
+            return {"message": record_view(message)}
 
     def _capabilities(self, args: JSON, actor: str, context: JSON) -> JSON:
         names = [args["provider"]] if "provider" in args else list(self.providers)
@@ -737,348 +562,37 @@ class Application(DeliveryMixin):
             "capability": asdict(capability),
         }))
 
-    def _start_session(self, args: JSON, actor: str, context: JSON) -> JSON:
-        return self._create_session("start_session", args, actor, context)
-
-    def _attach_session(self, args, actor, context):
-        if args.get("resume_session_id"):
-            raise OrchestrationError("Use reconnect_session for an existing source binding.")
-        return self._create_session("attach_session", args, actor, context)
-
-    def _reconnect_session(self, args, actor, context):
-        if not args.get("resume_session_id"):
-            raise OrchestrationError("Reconnect requires a verified source session.")
-        return self._create_session("reconnect_session", args, actor, context)
-
-    def _create_session(self, action, args, actor, context):
-        with before_effect():
-            requested_driver = args["driver"]
-            resolved = requested_driver
-            if resolved not in self.sessions:
-                resolved = self.session_fallbacks.get(requested_driver)
-                if resolved not in self.sessions or context.get("resume_source"):
-                    raise OrchestrationError(f"Unknown session driver: {requested_driver}", "not_found")
-            context = {**context, "resolved_driver": resolved, "requested_driver": requested_driver}
-            driver = self.sessions[resolved]
-            # Effective configured selection is visible to authorization before any effect.
-            context["requested_arguments"] = deepcopy(context["arguments"])
-            context["arguments"] = {**context["arguments"], "driver": resolved}
-            self._authorize(action, context)
-            source = context.get("resume_source")
-            method = "reconnect" if action == "reconnect_session" else ("resume" if source else ("attach" if action == "attach_session" else "start"))
-            if not callable(getattr(driver, method, None)):
-                raise OrchestrationError("The configured driver does not support this lifecycle operation.", "unsupported_operation", {"outcome": "not_started"})
-            trusted_context = {"actor": args.get("actor_id", actor), "delegated_by": actor, "work_id": context["work_id"]}
-        def perform(operation):
-            specification = {**deepcopy(args["specification"]), "context": {
-                **trusted_context, "session_id": operation.data["session_id"]}}
-            source = context.get("resume_source")
-            method = "reconnect" if action == "reconnect_session" else ("resume" if source else ("attach" if action == "attach_session" else "start"))
-            invoke = getattr(driver, method, None)
-            if not callable(invoke):
-                raise OrchestrationError("The configured driver does not support this lifecycle operation.", "unsupported_operation", {"outcome": "not_started"})
-            return invoke(deepcopy(source["session"]["backend"]), specification) if source else invoke(specification)
-        result = self._effect(action, args, actor, context, perform)
-        self._owned_session_ids.add(result["session"]["id"])
-        return result
-
-    def _session_effect(self, action: str, args: JSON, actor: str, context: JSON) -> JSON:
-        with before_effect():
-            session = context["session"]
-            name = session["driver"]
-            if name not in self.sessions:
-                raise OrchestrationError(f"Session driver {name} is not currently configured.", "not_found")
-            driver = self.sessions[name]
-        def perform(operation: Record) -> Any:
-            backend = deepcopy(operation.data["backend"])
-            if action == "send_session":
-                return driver.send(backend, deepcopy(args["message"]))
-            if action == "poll_session":
-                return driver.poll(backend)
-            if action == "detach_session":
-                detach = getattr(driver, "detach", None)
-                if not callable(detach):
-                    raise OrchestrationError("Driver cannot detach.", "unsupported_operation", {"outcome": "not_started"})
-                return detach(backend)
-            return driver.stop(backend)
-        return self._effect(action, args, actor, context, perform)
-
-    def _send_session(self, args: JSON, actor: str, context: JSON) -> JSON:
-        return self._session_effect("send_session", args, actor, context)
-
-    def _poll_session(self, args: JSON, actor: str, context: JSON) -> JSON:
-        return self._session_effect("poll_session", args, actor, context)
-
-    def _stop_session(self, args: JSON, actor: str, context: JSON) -> JSON:
-        return self._session_effect("stop_session", args, actor, context)
-
-    def _detach_session(self, args, actor, context):
-        return self._session_effect("detach_session", args, actor, context)
-
-    def runtime_closed(self):
-        with self.store.transaction() as tx:
-            for session_id in self._owned_session_ids:
-                session = tx.get("session", session_id)
-                if session and session.data["status"] in {"active", "unknown"}:
-                    self._transition(tx, session, "disconnect", {**session.data, "status": "disconnected", "connection_state": "closed"}, "runtime")
-                    self._event(tx, "session.disconnected", "runtime", session_id=session_id)
-
-    def _list_sessions(self, args: JSON, actor: str, context: JSON) -> JSON:
-        with self.store.transaction() as tx:
-            self._verify_context(tx, context)
-            return {"sessions": [_view(r) for r in tx.list("session") if "work_id" not in args or r.data.get("work_id") == args["work_id"]]}
-
-    def _effect(self, action: str, args: JSON, actor: str, context: JSON, perform: Callable[[Record], Any]) -> JSON:
-        with before_effect():
-            key = _digest([actor, args["idempotency_key"]])
-            request = {k: deepcopy(v) for k, v in args.items() if k != "idempotency_key"}
-            fingerprint = _digest({"action": action, "arguments": request})
-            with self.store.transaction() as tx:
-                self._verify_context(tx, context)
-                existing = tx.get("operation", key)
-                if existing:
-                    if existing.data["fingerprint"] != fingerprint:
-                        raise Conflict("The idempotency key is already bound to a different request.")
-                    return self._replay(existing)
-                data = {"action": action, "arguments": request, "fingerprint": fingerprint, "actor": actor,
-                        "idempotency_key": args["idempotency_key"], "status": "pending", "work_id": context["work"]["id"] if context.get("work") else None}
-                if action in {"start_session", "attach_session", "reconnect_session"}:
-                    if args.get("actor_id"):
-                        self._require(tx, "actor", args["actor_id"])
-                    provenance = {}
-                    if context.get("resume_source"):
-                        source = context["resume_source"]
-                        if source["session"].get("pending_operation") and action != "reconnect_session":
-                            raise Conflict("The resume source has a pending or unresolved operation; reconcile it before another effect.")
-                        provenance["resume_source"] = {"session_id": source["session"]["id"], "version": source["session"]["version"],
-                            "start_operation_id": source["resume_receipt"]["id"]}
-                        data.update(deepcopy(provenance))
-                        data["unresolved_effects"] = list(dict.fromkeys([
-                            *source["session"].get("unresolved_effects", []),
-                            *([source["session"]["pending_operation"]] if source["session"].get("pending_operation") else []),
-                        ]))
-                    session = self._create(tx, "session", actor, {
-                        "driver": context.get("resolved_driver", args["driver"]),
-                        "selection": {"requested": args["driver"], "resolved": context.get("resolved_driver", args["driver"]),
-                            "fallback_reason": "requested_driver_unavailable" if context.get("resolved_driver", args["driver"]) != args["driver"] else None}, "specification": args["specification"], "work_id": data["work_id"],
-                        "actor_id": args.get("actor_id", actor), "status": "starting", "backend": {}, "pending_operation": key,
-                        "start_operation_id": key, "unresolved_effects": data.get("unresolved_effects", []), **provenance,
-                    })
-                    data["session_id"] = session.key
-                elif action.endswith("_session"):
-                    session = self._require(tx, "session", args["session_id"])
-                    independent = action in {"poll_session", "stop_session", "detach_session"}
-                    if not independent:
-                        self._check_recovered_effects(tx, session)
-                    if session.data.get("pending_operation") and not independent:
-                        raise Conflict("A session operation is pending or unresolved; inspect it before another effect.")
-                    if session.data["status"] not in ({"active", "unknown"} if independent else {"active"}):
-                        raise OrchestrationError("The session is not active.", "invalid_state")
-                    if session.version != context["session"]["version"]:
-                        raise Conflict("The session changed after authorization.")
-                    data.update({"session_id": session.key, "backend": deepcopy(session.data["backend"]), "independent": independent})
-                    if not independent:
-                        self._transition(tx, session, "reserve", {**session.data, "pending_operation": key}, actor)
-                elif action == "invoke":
-                    data["capability"] = deepcopy(context["capability"])
-                    self._create(tx, "invocation", actor, {
-                        "capability": args["capability"], "arguments": args["arguments"], "work_id": data["work_id"],
-                        "operation_id": key, "status": "pending",
-                    }, key)
-                operation = self._create(tx, "operation", actor, data, key)
-        try:
-            raw = perform(operation)
-        except Exception as error:
-            known_outcome = effect_outcome(error)
-            if known_outcome == "completed":
-                details = getattr(error, "details", {})
-                retained = ({"external_result": deepcopy(details["external_result"])} if "external_result" in details
-                    else {"external_result": deepcopy(details["result"])} if "result" in details else {})
-                recording_error = self._retain_completed_effect(key, actor, error, retained)
-                raise OrchestrationError("The adapter completed, but its result needs reconciliation.", "result_unapplied", {
-                    "operation_id": key, "outcome": "completed", **retained,
-                    "recording_error": recording_error}) from error
-            unknown = known_outcome not in {"failed", "not_started"}
-            status = "unknown" if unknown else "failed"
-            recording_error = None
-            try:
-                self._fail_effect(key, error, status)
-            except Exception as storage_error:
-                recording_error = _error_message(storage_error)
-            raise OrchestrationError(_error_message(error), "operation_unknown" if unknown else "operation_failed", {
-                "operation_id": key, "outcome": status, "cause": getattr(error, "code", type(error).__name__),
-                "recording_error": recording_error,
-            }) from error
-        try:
-            with self.store.transaction() as tx:
-                current = self._require(tx, "operation", key)
-                if current.data["status"] != "pending":
-                    raise Conflict("The operation was reconciled while its external call was in progress.")
-                result = self._apply_effect(tx, current, raw)
-                self._transition(tx, current, "complete", {**current.data, "status": "completed", "result": result,
-                    "external_result": deepcopy(raw), "external_result_origin": "adapter", "finished_at": self.clock()}, actor)
-                self._event(tx, "operation.completed", actor, operation_id=key, work_id=current.data.get("work_id"))
-                return result
-        except Exception as error:
-            # The external effect succeeded even if a local write did not. Preserve
-            # that result for reconciliation instead of labelling it a failed call.
-            recording_error = self._retain_completed_effect(key, actor, error, {"external_result": deepcopy(raw)})
-            raise OrchestrationError("The external effect completed, but its result needs reconciliation.", "result_unapplied", {
-                "operation_id": key, "outcome": "completed", "external_result": deepcopy(raw),
-                "recording_error": recording_error,
-            }) from error
-
-    def _retain_completed_effect(self, key, actor, error, retained):
-        """Keep adapter completion distinct from uncertainty without forcing settlement."""
-        try:
-            with self.store.transaction() as tx:
-                current = self._require(tx, "operation", key)
-                changes = {"effect_outcome": "completed", "application_error": _error_message(error)}
-                if current.data["status"] in {"pending", "unknown"}:
-                    changes.update({"status": "completed_unapplied", **retained})
-                    if "external_result" in retained:
-                        changes["external_result_origin"] = "adapter"
-                elif "external_result" in retained:
-                    changes["late_external_result"] = deepcopy(retained["external_result"])
-                self._transition(tx, current, "retain_success" if "status" in changes else "retain_late",
-                    {**current.data, **changes}, actor)
-                self._event(tx, "operation.result_retained", actor, operation_id=key)
-        except Exception as storage_error:
-            # The caller still receives the actual outcome and response if
-            # persistence or an independently configured retention rule refuses.
-            return _error_message(storage_error)
-        return None
-
-    @staticmethod
-    def _replay(operation: Record) -> JSON:
-        status = operation.data["status"]
-        if status == "completed":
-            return deepcopy(operation.data["result"])
-        raise OrchestrationError(
-            f"This key has an existing {status} operation; it will not execute again.",
-            "operation_failed" if status == "failed" else "operation_unresolved",
-            {"operation_id": operation.key, "outcome": "completed" if status == "completed_unapplied" else status,
-             "status": status, "error": operation.data.get("error"),
-             **({"external_result": deepcopy(operation.data["external_result"])}
-                if status == "completed_unapplied" and "external_result" in operation.data else {})},
-        )
-
-    def _check_recovered_effects(self, tx, session):
-        unresolved = [key for key in session.data.get("unresolved_effects", [])
-            if self._require(tx, "operation", key).data["status"] in {"pending", "unknown", "completed_unapplied"}]
-        if unresolved:
-            raise Conflict("The reconnected conversation has unresolved source effects; observation/control remain available.")
+    def _reserve_effect(self, tx: Transaction, action: str, key: str, args: JSON, actor: str, context: JSON, data: JSON) -> None:
+        if action != "invoke":
+            return self._reserve_session_effect(tx, action, key, args, actor, context, data)
+        data["capability"] = deepcopy(context["capability"])
+        self._create(tx, "invocation", actor, {
+            "capability": args["capability"], "arguments": args["arguments"], "work_id": data["work_id"],
+            "operation_id": key, "status": "pending",
+        }, key)
 
     def _apply_effect(self, tx: Transaction, operation: Record, raw: Any, *, reconciling=False) -> JSON:
-        action, actor = operation.data["action"], operation.data["actor"]
-        if action == "invoke":
-            if not isinstance(raw, dict):
-                raise OrchestrationError("Capability output must be a JSON object.", "invalid_result")
-            invocation = self._require(tx, "invocation", operation.key)
-            record = self._transition(tx, invocation, "complete", {**invocation.data, "status": "completed", "result": deepcopy(raw)}, actor)
-            if operation.data.get("work_id"):
-                self._evidence(tx, actor, operation.data["work_id"], raw, {"type": "capability", "operation_id": operation.key})
-            return {"invocation": _view(record), "operation_id": operation.key}
-        session = self._require(tx, "session", operation.data["session_id"])
-        independent = operation.data.get("independent", False)
-        if not independent and session.data.get("pending_operation") != operation.key:
-            raise Conflict("The session is no longer reserved by this operation.")
-        if action not in {"start_session", "attach_session", "reconnect_session"} and session.data.get("backend") != operation.data.get("backend"):
-            raise Conflict("Session incarnation changed while the operation was outstanding.")
-        if action == "send_session" and session.data["status"] in {"stopped", "detached", "disconnected", "superseded"}:
-            if reconciling:
-                self._transition(tx, session, "release_closed", {**session.data, "pending_operation": None}, actor)
-                return {"session": _view(self._require(tx, "session", session.key)), "output": deepcopy(raw), "operation_id": operation.key}
-            raise Conflict("The session closed before a late submission result.")
-        data = {**session.data, "updated_at": self.clock()}
-        if not independent:
-            data["pending_operation"] = None
-        if action in {"start_session", "attach_session", "reconnect_session"}:
-            if not isinstance(raw, dict):
-                raise OrchestrationError("Session start must return a JSON object.", "invalid_result")
-            data.update({"backend": deepcopy(raw), "status": "active"})
-            if operation.data.get("resume_source"):
-                source = self._require(tx, "session", operation.data["resume_source"]["session_id"])
-                self._transition(tx, source, "replace", {**source.data, "status": "superseded", "replacement_session_id": session.key}, actor)
-                self._event(tx, "session.replaced", actor, session_id=source.key, replacement_session_id=session.key)
-        elif action == "poll_session":
-            if not isinstance(raw, list) or any(not isinstance(item, dict) for item in raw):
-                raise OrchestrationError("Session poll must return a list of JSON objects.", "invalid_result")
-            # Polling does not reconcile uncertainty or reopen a stopped connection.
-        else:
-            if not isinstance(raw, dict):
-                raise OrchestrationError("Session operations must return a JSON object.", "invalid_result")
-            if action in {"stop_session", "detach_session"}:
-                data["status"] = "stopped" if action == "stop_session" else "detached"
-                data["connection_state"] = "closed"
-            elif not independent:
-                data["status"] = "active"
-        event = "activate" if action in {"start_session", "attach_session", "reconnect_session"} else action.removesuffix("_session")
-        record = self._transition(tx, session, event, data, actor)
-        self._event(tx, f"session.{action.removesuffix('_session')}", actor, session_id=session.key, operation_id=operation.key)
-        if operation.data.get("work_id") and action in {"send_session", "poll_session"}:
-            self._evidence(tx, actor, operation.data["work_id"], raw, {"type": "session", "session_id": session.key, "operation_id": operation.key})
-        return {"session": _view(record), "output": deepcopy(raw), "operation_id": operation.key}
+        if operation.data["action"] != "invoke":
+            return self._apply_session_effect(tx, operation, raw, reconciling)
+        if not isinstance(raw, dict):
+            raise OrchestrationError("Capability output must be a JSON object.", "invalid_result")
+        actor = operation.data["actor"]
+        invocation = self._require(tx, "invocation", operation.key)
+        record = self._transition(tx, invocation, "complete", {**invocation.data, "status": "completed", "result": deepcopy(raw)}, actor)
+        if operation.data.get("work_id"):
+            self._evidence(tx, actor, operation.data["work_id"], raw, {"type": "capability", "operation_id": operation.key})
+        return {"invocation": record_view(record), "operation_id": operation.key}
 
-    def _fail_effect(self, key: str, error: Exception, status: str) -> None:
-        with self.store.transaction() as tx:
-            operation = self._require(tx, "operation", key)
-            if operation.data["status"] != "pending":
-                return
-            details = {"message": _error_message(error), "code": getattr(error, "code", type(error).__name__), "details": deepcopy(getattr(error, "details", {}))}
-            self._transition(tx, operation, "uncertain" if status == "unknown" else "fail",
-                {**operation.data, "status": status, "error": details, "finished_at": self.clock()}, operation.data["actor"])
-            self._mark_effect_failure(tx, operation, status)
-            self._event(tx, f"operation.{status}", operation.data["actor"], operation_id=key)
+    def _release_effect(self, tx: Transaction, operation: Record, status: str) -> None:
+        if operation.data["action"] != "invoke":
+            return self._release_session_effect(tx, operation, status)
+        invocation = self._require(tx, "invocation", operation.key)
+        self._transition(tx, invocation, "uncertain" if status == "unknown" else "fail",
+            {**invocation.data, "status": status}, operation.data["actor"])
 
-    def _mark_effect_failure(self, tx: Transaction, operation: Record, status: str) -> None:
-        if operation.data["action"] == "invoke":
-            invocation = self._require(tx, "invocation", operation.key)
-            self._transition(tx, invocation, "uncertain" if status == "unknown" else "fail",
-                {**invocation.data, "status": status}, operation.data["actor"])
-        else:
-            session = self._require(tx, "session", operation.data["session_id"])
-            if operation.data.get("independent"):
-                return
-            if session.data.get("pending_operation") != operation.key:
-                raise Conflict("The session reservation changed.")
-            next_status = "unknown" if status == "unknown" else ("failed" if operation.data["action"] in {"start_session", "attach_session", "reconnect_session"} else "active")
-            if session.data["status"] in {"stopped", "detached", "disconnected", "superseded"}:
-                next_status = session.data["status"]
-            event = "uncertain" if status == "unknown" else ("start_failed" if operation.data["action"] in {"start_session", "attach_session", "reconnect_session"} else "effect_failed")
-            self._transition(tx, session, event, {**session.data, "status": next_status,
-                "pending_operation": operation.key if status == "unknown" else None}, operation.data["actor"])
-
-    def _get_operation(self, args: JSON, actor: str, context: JSON) -> JSON:
-        return self.inspection.inspect_snapshot("get_operation", actor, context,
-            lambda tx: {"operation": _view(self._require(tx, "operation", args["operation_id"]))})
-
-    def _resolve_operation(self, args: JSON, actor: str, context: JSON) -> JSON:
-        with self.store.transaction() as tx:
-            self._verify_context(tx, context)
-            operation = self._require(tx, "operation", args["operation_id"])
-            if operation.version != args["expected_version"]:
-                raise Conflict()
-            if operation.data["status"] not in {"pending", "unknown", "completed_unapplied"}:
-                raise OrchestrationError("Only unresolved operations can be reconciled.", "invalid_state")
-            data = {**operation.data, "status": args["outcome"], "resolved_by": actor, "resolution": args["reason"], "finished_at": self.clock()}
-            if args["outcome"] == "completed":
-                if operation.data["action"] in {"start_session", "attach_session", "reconnect_session"}:
-                    if "result" in args or "external_result" not in operation.data or operation.data.get("external_result_origin") != "adapter":
-                        raise OrchestrationError("Session start completion requires its retained adapter receipt; caller-supplied results cannot bind a session.", "unverified_session_result")
-                    raw = operation.data["external_result"]
-                else:
-                    if "result" not in args and "external_result" not in operation.data:
-                        raise OrchestrationError("A verified external result is required to resolve completion.")
-                    raw = args["result"] if "result" in args else operation.data["external_result"]
-                origin = "caller" if "result" in args else operation.data.get("external_result_origin")
-                data.update({"result": self._apply_effect(tx, operation, raw, reconciling=True), "external_result": deepcopy(raw), "external_result_origin": origin})
-            else:
-                self._mark_effect_failure(tx, operation, "failed")
-                data["error"] = {"message": args["reason"], "code": "reconciled_failure"}
-            record = self._transition(tx, operation, "resolve_" + args["outcome"], data, actor)
-            self._event(tx, "operation.resolved", actor, operation_id=operation.key, outcome=args["outcome"])
-            return {"operation": _view(record)}
+    def _check_reconciliation(self, operation: Record, args: JSON) -> None:
+        if operation.data["action"] != "invoke":
+            self._check_session_reconciliation(operation, args)
 
     def _set_requirements(self, args, actor, context):
         return self.work_acceptance.set_requirements(args, actor, context)
@@ -1103,58 +617,7 @@ class Application(DeliveryMixin):
             lambda tx: self.work_acceptance.view(tx, args["work_id"]))
 
     def _assess(self, args: JSON, actor: str, context: JSON) -> JSON:
-        triage = self.assessment.get("triage")
-        if not triage:
-            raise OrchestrationError("No triage evaluator is configured.", "evaluation_unavailable")
-        if triage not in self.evaluators:
-            raise OrchestrationError(f"Evaluator {triage} is unavailable.", "evaluation_unavailable")
-        evaluation_context = {**deepcopy(context), "request_context": deepcopy(args.get("context", {}))}
-        # Display titles and write bookkeeping must not silently become material
-        # evaluator inputs. Everything supplied from mutable work/evidence is
-        # bound to its observed content and rechecked when consumed.
-        evaluation_context["work"] = assessment_work_input(context.get("work"), self.assessment)
-        input_binding = assessment_input_binding(evaluation_context, self.assessment)
-        evaluations = []
-        first = self.evaluators[triage].assess(args["question"], deepcopy(evaluation_context))
-        self._validate_assessment(first)
-        evaluations.append({"evaluator": triage, **asdict(first), "evidence": list(deepcopy(first.evidence))})
-        threshold = self.assessment.get("confidence_threshold", 0.8)
-        uncertain = first.confidence is None or first.confidence < threshold or first.outcome in self.assessment.get("uncertain_outcomes", ["uncertain", "borderline", "review"])
-        heavier = self.assessment.get("escalate")
-        unresolved = uncertain
-        escalation_error = None
-        if uncertain and heavier:
-            try:
-                if heavier not in self.evaluators:
-                    raise OrchestrationError(f"Evaluator {heavier} is unavailable.", "evaluation_unavailable")
-                assessment = self.evaluators[heavier].assess(args["question"], {**deepcopy(evaluation_context), "triage": deepcopy(evaluations[0])})
-                self._validate_assessment(assessment)
-                evaluations.append({"evaluator": heavier, **asdict(assessment), "evidence": list(deepcopy(assessment.evidence))})
-                unresolved = assessment.confidence is None or assessment.confidence < threshold or assessment.outcome in self.assessment.get("uncertain_outcomes", ["uncertain", "borderline", "review"])
-            except Exception as error:
-                escalation_error = {"code": getattr(error, "code", "evaluation_unavailable"), "message": _error_message(error)}
-        data = {"question": args["question"], "work_id": args.get("work_id"), "evaluations": evaluations,
-                "conclusion": deepcopy(evaluations[-1]), "unresolved": unresolved, "escalation_error": escalation_error}
-        with self.store.transaction() as tx:
-            # The evidence describes exactly the snapshot evaluated, even when the
-            # work changes during inference. It confers no permission on later work.
-            data["work_version"] = context["work"]["version"] if context.get("work") else None
-            data["input_binding"] = input_binding
-            data["request_context"] = deepcopy(args.get("context", {}))
-            data["acceptance_binding"] = deepcopy((context.get("acceptance_basis") or {}).get("binding"))
-            data["assessment_configuration_identity"] = (context.get("acceptance_basis") or {}).get("assessment_configuration_identity")
-            record = self._create(tx, "assessment", actor, data)
-            if args.get("work_id"):
-                self._evidence(tx, actor, args["work_id"], data, {"type": "assessment", "assessment_id": record.key})
-            return {"assessment": _view(record)}
-
-    @staticmethod
-    def _validate_assessment(assessment: Assessment) -> None:
-        if not isinstance(assessment, Assessment) or not isinstance(assessment.outcome, str) or not assessment.outcome:
-            raise OrchestrationError("The evaluator did not return an assessment.", "evaluation_invalid")
-        confidence = assessment.confidence
-        if confidence is not None and (isinstance(confidence, bool) or not isinstance(confidence, (int, float)) or not 0 <= confidence <= 1):
-            raise OrchestrationError("Assessment confidence must be between zero and one, or unknown.", "evaluation_invalid")
+        return self.work_assessment.assess(args, actor, context)
 
     def _evidence(self, tx: Transaction, actor: str, work_id: str, result: Any, source: JSON, **extra: Any) -> Record:
         self._require(tx, "work", work_id)
@@ -1165,7 +628,7 @@ class Application(DeliveryMixin):
             self._verify_context(tx, context)
             evidence = self._evidence(tx, actor, args["work_id"], args["result"], {"type": "caller", "actor": actor},
                 label=args.get("label"), metadata=args.get("metadata", {}))
-            return {"evidence": _view(evidence)}
+            return {"evidence": record_view(evidence)}
 
     def _events(self, args: JSON, actor: str, context: JSON) -> JSON:
         with self.store.transaction() as tx:

@@ -4,18 +4,11 @@ The store and explicit authority callbacks keep this concern independent of
 message delivery, acceptance workflows and the application facade. Trusted raw
 records remain unchanged; projected reads revalidate authority and snapshots.
 """
-import hashlib
-import json
 from copy import deepcopy
 from typing import Callable
 
-from .model import JSON, Conflict, OrchestrationError
+from .model import JSON, Conflict, OrchestrationError, canonical_digest
 from .ports import StateStore, Transaction
-
-
-def digest(value):
-    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
-
 
 DELIVERY_RECORDS = {"message": "message", "deliveries": "delivery", "attempts": "delivery_attempt",
     "evidence": "evidence", "sessions": "session", "messages": "message", "all_attempts": "delivery_attempt",
@@ -92,7 +85,7 @@ class InspectionProjector:
         return current
 
     def _basis(self, actor, arguments, cache):
-        key = digest(arguments)
+        key = canonical_digest(arguments)
         if cache is None:
             return self._context(actor, arguments)
         if key not in cache:
@@ -146,7 +139,7 @@ class InspectionProjector:
                          (("actors", "actor"), ("relations", "relation")) if isinstance(snapshot.get(key), list)}, cache)
                     snapshot.update(children)
                     contexts.extend(child_contexts)
-                if digest(visible) != digest(record):
+                if canonical_digest(visible) != canonical_digest(record):
                     visible["inspection_redacted"] = True
                 result[section].append(visible)
                 contexts.append(current)
@@ -202,14 +195,14 @@ class InspectionProjector:
                 operation = None
                 with self.store.transaction() as tx:
                     if payload["action"] == "invoke" and isinstance(arguments.get("idempotency_key"), str):
-                        operation = tx.get("operation", digest([executing_actor, arguments["idempotency_key"]]))
-                        fingerprint = digest({"action": "invoke", "arguments": {
+                        operation = tx.get("operation", canonical_digest([executing_actor, arguments["idempotency_key"]]))
+                        fingerprint = canonical_digest({"action": "invoke", "arguments": {
                             key: value for key, value in arguments.items() if key != "idempotency_key"}})
                         if operation and operation.data["fingerprint"] != fingerprint:
                             operation = None
                     elif payload["action"] == "run_measurement" and isinstance(arguments.get("measurement_key"), str):
-                        measurement = tx.get("measurement", digest([executing_actor, "measurement", arguments["measurement_key"]]))
-                        if measurement and measurement.data["fingerprint"] == digest(arguments):
+                        measurement = tx.get("measurement", canonical_digest([executing_actor, "measurement", arguments["measurement_key"]]))
+                        if measurement and measurement.data["fingerprint"] == canonical_digest(arguments):
                             operation = tx.get("operation", measurement.data["operation_id"])
                 if operation:
                     scope_arguments["operation_id"] = operation.key
@@ -287,16 +280,16 @@ class InspectionProjector:
         with self.store.transaction() as tx:
             self._verify_context(tx, context)
             self.verify_contexts(tx, contexts)
-            if digest(original) != digest(snapshot(tx)):
+            if canonical_digest(original) != canonical_digest(snapshot(tx)):
                 raise Conflict("Inspection records changed during authorization.", retry_safe=True)
-        if digest(original) != digest(projected):
+        if canonical_digest(original) != canonical_digest(projected):
             projected["inspection_redacted"] = True
         return projected
 
     def verify_contexts(self, tx, contexts):
         checked = set()
         for current in contexts:
-            key = digest(current["arguments"])
+            key = canonical_digest(current["arguments"])
             if key not in checked:
                 self._verify_context(tx, current)
                 checked.add(key)

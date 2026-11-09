@@ -12,7 +12,8 @@ from copy import deepcopy
 from dataclasses import asdict
 from pathlib import Path
 
-from .bridge_transport import Peer, bridge_error, copy_json, fifo_connect, json_digest
+from ..model import canonical_digest
+from .bridge_transport import Peer, bridge_error, copy_json, fifo_connect
 
 
 class BridgeSessionDriver:
@@ -105,7 +106,7 @@ class BridgeSessionDriver:
         peer = Peer(connection, lambda method, params: self._incoming(local, method, params), self.options)
         try:
             receipt = peer.request("attach", {"context": local["context"], "source": source,
-                "catalog_identity": json_digest([asdict(c) for c in self._capabilities])})
+                "catalog_identity": canonical_digest([asdict(c) for c in self._capabilities])})
             if not isinstance(receipt, dict) or not receipt.get("native_id") or not receipt.get("incarnation") or receipt.get("ownership") != "external":
                 raise bridge_error("Host returned an invalid attachment receipt.", "bridge_protocol")
             handle = uuid.uuid4().hex

@@ -8,6 +8,9 @@
   "source_paths": [
     "xorchestrate/ports.py",
     "xorchestrate/application.py",
+    "xorchestrate/effects.py",
+    "xorchestrate/session_lifecycle.py",
+    "xorchestrate/assessment.py",
     "xorchestrate/composition.py",
     "xorchestrate/state.py"
   ]
