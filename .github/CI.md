@@ -34,12 +34,19 @@ permissions. Pull requests, pushes to master and manual runs invoke:
 |---|---|
 | Static checks | Shared `static` suite: Ruff lint/security, current-source syntax and deterministic architecture enforcement |
 | Application and adapter tests (Python 3.12) | Shared `tests` suite with declared behavioral families and pytest inventory/JUnit, then shared calibration and composed three-harness protocol suites |
-| Tmux live acceptance (protocol fixture) | Shared acceptance suite with tmux explicitly installed; private owned process cleanup is part of the receipt |
+| Tmux live acceptance (protocol fixture) | Shared acceptance suite with tmux required (installed through apt only when the runner image lacks it; the step prints `tmux -V`); private owned process cleanup is part of the receipt |
 | Jev architecture diagnostics | Independent diagnostics-only invocation with retained advisory output |
 | Hexagonal architecture | Retains the existing required status name and reports the shared static job's outcome; it does not rerun validation |
 
 Each Python job configures `PYTHONPYCACHEPREFIX` in the runner's temporary directory before
-invoking Python. Static checks run once in their own job. The Jev diagnostic
+invoking Python. Each pinned `actions/setup-python` step enables its `cache: pip`
+download/wheel cache (`~/.cache/pip`), keyed on the files that declare that job's
+installs: static on `.github/requirements-ci.txt`, application on `pyproject.toml`
+and `.github/requirements-ci.txt`, tmux and Jev on `pyproject.toml`. The application
+job's uv-created 3.12.16 venv pip uses the same cache directory. The cache only
+avoids downloads/wheel builds; pip still resolves the declared pins and ranges on
+every run. uv's own cache stays disabled because uv only provisions the interpreter.
+Static checks run once in their own job. The Jev diagnostic
 calculation remains independent and does not add a second deterministic gate.
 Application, calibration and protocol steps have explicit eligibility conditions:
 successful checkout/interpreter/dependency setup and a run that has not been
