@@ -1,8 +1,10 @@
-"""Classify a CI event's changed paths as documentation-only or code.
+"""Classify a pull request's changed paths as documentation-only or code.
 
-The decision is conservative: only an explicit allow-list of documentation paths
-can skip heavy validation, and every uncertainty (unsupported event, missing or
-null base, failed diff, empty change set) selects the full pipeline.
+The decision is conservative: only regular files on an explicit allow-list of
+documentation paths can skip heavy validation. Every event other than a pull
+request, and every uncertainty (missing or null base, failed diff, unparsable
+diff, empty change set), selects the full pipeline. Pushes always run in full so
+the integrated tree is validated even when a later push cancels an earlier run.
 """
 
 from __future__ import annotations
@@ -15,7 +17,10 @@ from pathlib import Path
 
 NULL_SHA = "0" * 40
 HEX = frozenset("0123456789abcdef")
-DIFF_EVENTS = frozenset({"pull_request", "push"})
+DIFF_EVENT = "pull_request"
+# Absent (added/deleted side) or a regular file. Symlinks (120000), gitlinks (160000)
+# and anything else are code: copying or traversing them can break validation.
+REGULAR_MODES = frozenset({"000000", "100644", "100755"})
 # Allow-list, in order: top-level *.md, anything under docs/, *.md anywhere under examples/.
 DOCUMENTATION_RULES = (
     ("top-level markdown", lambda path: "/" not in path and path.endswith(".md")),
@@ -35,10 +40,14 @@ def is_documentation(path: str) -> bool:
     return any(rule(path) for _, rule in DOCUMENTATION_RULES)
 
 
-def classify(paths) -> dict:
-    """Decide for an observed change set; an empty set is treated as code."""
-    paths = sorted(set(paths))
-    code_paths = [path for path in paths if not is_documentation(path)]
+def classify(paths, *, special=()) -> dict:
+    """Decide for an observed change set; an empty set is treated as code.
+
+    ``special`` names changed paths whose old or new entry is not a regular file.
+    """
+    paths = sorted(set(paths) | set(special))
+    special = set(special)
+    code_paths = [path for path in paths if path in special or not is_documentation(path)]
     if not paths:
         return {"code": True, "reason": "no changed paths observed", "paths": paths, "code_paths": []}
     if code_paths:
@@ -47,59 +56,71 @@ def classify(paths) -> dict:
     return {"code": False, "reason": "documentation-only change", "paths": paths, "code_paths": []}
 
 
-def comparison_base(event: str, *, pull_request_base: str = "", push_before: str = "") -> str | None:
+def comparison_base(event: str, *, pull_request_base: str = "") -> str | None:
     """Select the commit to diff against, or None when the event requires a full run."""
-    if event == "pull_request":
-        base = pull_request_base
-    elif event == "push":
-        base = push_before
-    else:
+    if event != DIFF_EVENT:
         return None
-    base = (base or "").strip().lower()
+    base = (pull_request_base or "").strip().lower()
     if len(base) != 40 or base == NULL_SHA or not set(base) <= HEX:
         return None
     return base
 
 
-def changed_paths(root: Path, base: str, head: str, *, runner=subprocess.run) -> list[str] | None:
-    """List changed paths, both sides of renames; None when Git cannot answer."""
+def parse_raw(output: bytes) -> list[tuple[str, str, str]] | None:
+    """Parse ``git diff --raw -z --no-renames`` into (path, old_mode, new_mode); None if malformed."""
+    fields = output.decode("utf-8", "surrogateescape").split("\0")
+    if fields and fields[-1] == "":
+        fields.pop()
+    if len(fields) % 2:
+        return None
+    entries = []
+    for meta, path in zip(fields[::2], fields[1::2]):
+        parts = meta.split(" ")
+        if len(parts) != 5 or not parts[0].startswith(":") or not path:
+            return None
+        entries.append((path, parts[0][1:], parts[1]))
+    return entries
+
+
+def changed_entries(root: Path, base: str, head: str, *,
+                    runner=subprocess.run) -> list[tuple[str, str, str]] | None:
+    """List changed entries with their modes; None when Git cannot answer."""
     try:
-        result = runner(["git", "diff", "--name-only", "--no-renames", "-z", base, head, "--"],
+        result = runner(["git", "diff", "--raw", "-z", "--no-renames", "--no-abbrev", base, head, "--"],
                         cwd=root, capture_output=True, check=False, timeout=60)
     except (OSError, subprocess.TimeoutExpired):
         return None
     if result.returncode != 0:
         return None
-    return [item for item in result.stdout.decode("utf-8", "surrogateescape").split("\0") if item]
+    return parse_raw(result.stdout)
 
 
 def decide(event: str, *, root: Path, head: str = "HEAD", pull_request_base: str = "",
-           push_before: str = "", runner=subprocess.run) -> dict:
+           runner=subprocess.run) -> dict:
     """Full decision record for one CI event."""
     context = {"event": event, "head": head or "HEAD"}
-    base = comparison_base(event, pull_request_base=pull_request_base, push_before=push_before)
+    base = comparison_base(event, pull_request_base=pull_request_base)
     if base is None:
-        reason = ("comparison base unavailable" if event in DIFF_EVENTS
-                  else "event always runs full validation")
+        reason = "comparison base unavailable" if event == DIFF_EVENT else "event always runs full validation"
         return {"code": True, "reason": reason, "base": None, "paths": [], "code_paths": [], **context}
-    paths = changed_paths(root, base, context["head"], runner=runner)
-    if paths is None:
+    entries = changed_entries(root, base, context["head"], runner=runner)
+    if entries is None:
         return {"code": True, "reason": "changed paths could not be computed", "base": base, "paths": [],
                 "code_paths": [], **context}
-    return {**classify(paths), "base": base, **context}
+    special = [path for path, old, new in entries if old not in REGULAR_MODES or new not in REGULAR_MODES]
+    return {**classify([path for path, _, _ in entries], special=special), "base": base, **context}
 
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Classify CI changes as documentation-only or code.")
     parser.add_argument("--event", required=True)
     parser.add_argument("--pull-request-base", default="")
-    parser.add_argument("--push-before", default="")
     parser.add_argument("--head", default="HEAD")
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--github-output", type=Path, help="Append code=true|false to this GitHub output file")
     args = parser.parse_args(argv)
     decision = decide(args.event, root=args.root.resolve(), head=args.head,
-                      pull_request_base=args.pull_request_base, push_before=args.push_before)
+                      pull_request_base=args.pull_request_base)
     print(json.dumps(decision, indent=2, sort_keys=True))
     if args.github_output is not None:
         with args.github_output.open("a", encoding="utf-8") as stream:

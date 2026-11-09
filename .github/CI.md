@@ -50,24 +50,49 @@ launching dependent validation. Available evidence uploads even on failure.
 
 ### Documentation-only changes
 
-The `paths` job (Classify changed paths) checks out full history and runs
-`python3 -m scripts.ci.classify_changes`, which writes `code=true|false` to the
-job output. It diffs `HEAD` against `github.event.pull_request.base.sha` for
-pull requests and against `github.event.before` for pushes, counting both sides
-of renames. A change is documentation-only when every changed path is a
-top-level `*.md`, anything under `docs/`, or a `*.md` under `examples/`.
-`docs/implementation/owner-brief.md` is excluded because the protocol suites read
-it as input. Everything else is code, including `.github/**` (also `CI.md`),
-`contracts/**`, `scripts/**`, `tests/**`, `xorchestrate/**`, `examples/*.json`,
-`pyproject.toml` and `ruff.toml`. Manual runs and other events, a missing or null
-base (new branch, `before=000…`), a diff that fails (for example a force-push
-whose old head is gone) and an empty change set all count as code.
+Only pull requests can skip validation. Pushes (including every push to
+`master`), manual runs and every other event always run the full pipeline. The
+concurrency group cancels an in-progress run when a newer push arrives on the
+same ref. If a docs-only push could skip, a docs-only merge could cancel the
+full run of a code merge just before it. The integrated `master` tree would then
+never be fully validated, because the ruleset does not require branches to be up
+to date.
 
-The application, tmux acceptance and Jev diagnostics jobs declare `needs: paths`
-and the job-level condition
-`!cancelled() && needs.paths.outputs.code != 'false'`. They are skipped only
-when the classifier explicitly reports `false`. If the classifier fails or emits
-nothing, they still run. Static checks and the `Hexagonal architecture` status
+For a pull request, the `paths` job (Classify changed paths) checks out full
+history and diffs `HEAD` (the merge commit) against
+`github.event.pull_request.base.sha`. Two independent steps must both agree
+before the heavy jobs are skipped:
+
+1. **Guard** (inline Bash, does not use the classifier). It reports
+   `force=true` unless the event is `pull_request` and
+   `git diff --name-only -z` against the base succeeds with a non-empty
+   result. It also reports `force=true` if any path is under `scripts/ci/`,
+   `.github/`, `contracts/` or `tests/`. A pull request that changes the
+   classifier, the workflow or the validation definitions therefore cannot
+   decide for itself that its own tests may be skipped. A pull request can still
+   edit the guard itself in `ci.yml`. Review covers that case, because
+   `.github/**` always forces a full run unless the guard is removed.
+2. **Classifier** (`python3 -m scripts.ci.classify_changes`). It writes
+   `code=true|false` from `git diff --raw -z --no-renames`, counting both sides
+   of renames. A change is documentation-only when every changed entry is a
+   regular file (mode `100644`/`100755`, or absent on the added/deleted side)
+   and its path is a top-level `*.md`, anything under `docs/`, or a `*.md` under
+   `examples/`. Symlinks (`120000`), gitlinks (`160000`) and other modes are
+   code even under `docs/`, because validation copies `docs/` and follows
+   symlinks. `docs/implementation/owner-brief.md` is excluded because the
+   protocol suites read it as input. Everything else is code, including
+   `.github/**` (also `CI.md`), `contracts/**`, `scripts/**`, `tests/**`,
+   `xorchestrate/**`, `examples/*.json`, `pyproject.toml` and `ruff.toml`. A
+   missing or null base, a failed or malformed diff and an empty change set all
+   count as code.
+
+The job output is
+`steps.guard.outputs.force == 'false' && steps.classify.outputs.code || 'true'`.
+It is `false` only when the guard ran and allowed classification and the
+classifier reported `false`. The application, tmux acceptance and Jev
+diagnostics jobs declare `needs: paths` and the job-level condition
+`!cancelled() && needs.paths.outputs.code != 'false'`. If either step fails or
+emits nothing, they still run. Static checks and the `Hexagonal architecture` status
 job do not depend on `paths` and always run. The static suite is cheap and backs
 the required status. It does not lint Markdown, so no documentation check is
 lost by skipping the other jobs.

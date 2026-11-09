@@ -36,6 +36,28 @@ def heavy_job_gate(job):
     assert "== 'true'" not in gate, "Classifier failure must not skip heavy validation"
 
 
+GUARD_PREFIXES = ("scripts/ci/", ".github/", "contracts/", "tests/")
+GUARDED_PATHS = ("scripts/ci/classify_changes.py", ".github/CI.md", ".github/workflows/ci.yml",
+                 "contracts/testing.json", "tests/hexagonal/contracts/ci_changes.py")
+
+
+def classifier_output(expression):
+    """The job output is documentation-only only when the guard and the classifier both say so."""
+    assert "steps.guard.outputs.force == 'false'" in expression, expression
+    assert "steps.classify.outputs.code" in expression
+    assert expression.rstrip(" }").endswith("|| 'true'"), "A missing result must select the full pipeline"
+
+
+def independent_guard(step):
+    """The guard is inline shell over the same base and never invokes the classifier."""
+    assert step.get("shell") == "bash"
+    assert "scripts.ci" not in step["run"] and "python" not in step["run"]
+    assert step["run"].startswith("force=true\n"), "The guard must default to a full run"
+    assert "$PULL_REQUEST_BASE" in step["run"] and "git diff --name-only -z" in step["run"]
+    for prefix in GUARD_PREFIXES:
+        assert prefix.replace(".", "\\.") in step["run"], prefix
+
+
 def always_running(job, *, needs):
     assert job.get("needs", []) == needs
     assert CLASSIFIER_JOB not in job.get("needs", [])
