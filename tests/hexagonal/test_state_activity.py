@@ -11,7 +11,7 @@ from xorchestrate.adapters.claude import ClaudeSessionDriver, _ClaudeLive
 from xorchestrate.adapters.grok import GrokSessionDriver
 from xorchestrate.adapters.sessions import ACPSessionDriver, CodexSessionDriver, _LiveSession
 from xorchestrate.model import Capability, OrchestrationError
-from xorchestrate.outcomes import before_effect
+from xorchestrate.outcomes import before_effect, effect_outcome
 from xorchestrate.state import StateEngine
 
 
@@ -85,32 +85,28 @@ def _callback_fixture(protocol, callback, engine=None):
         def invoke():
             return adapter._tool(live, {"name": "inspect", "arguments": {}, "mcp_request_id": 1})
     else:
-        kind = {"codex": CodexSessionDriver, "acp": ACPSessionDriver, "grok": GrokSessionDriver}[protocol]
+        kind = {"codex": CodexSessionDriver, "grok": GrokSessionDriver}[protocol]
         adapter = kind(options)
         if engine is not None:
             adapter.bind_state_engine(engine)
         live = _LiveSession({}, native_id="native", activity_model=ActivityState(engine))
-        if protocol == "acp":
-            adapter.set_request_handler(callback)
+        adapter.bind_application_tools([capability], callback)
+        if protocol == "codex":
             def invoke():
-                return adapter._request(live, "fixture/request", {"sessionId": "native"})
+                return adapter._request(live, "item/tool/call", {
+                    "threadId": "native", "callId": "call", "tool": "inspect", "arguments": {}})
         else:
-            adapter.bind_application_tools([capability], callback)
-            if protocol == "codex":
-                def invoke():
-                    return adapter._request(live, "item/tool/call", {
-                        "threadId": "native", "callId": "call", "tool": "inspect", "arguments": {}})
-            else:
-                live.grok = {"active_prompts": set(), "interjections": {}, "mcp_requests": {},
-                    "calls": {"call": {"action": "inspect", "arguments": {}, "used": False}},
-                    "condition": threading.Condition(live.lock)}
-                def invoke():
-                    return adapter._gateway(live, "tools/call", {"name": "inspect", "arguments": {},
-                        "mcp_connection_id": "connection", "mcp_request_id": 1})
+            live.grok = {"active_prompts": live.activity_model.set("native_prompt"),
+                "interjections": live.activity_model.mapping("interjection"), "mcp_requests": {},
+                "calls": {"call": {"action": "inspect", "arguments": {}, "used": False}},
+                "condition": threading.Condition(live.lock)}
+            def invoke():
+                return adapter._gateway(live, "tools/call", {"name": "inspect", "arguments": {},
+                    "mcp_connection_id": "connection", "mcp_request_id": 1})
     return adapter, live, invoke
 
 
-@pytest.mark.parametrize("protocol", ["codex", "acp", "grok", "claude"])
+@pytest.mark.parametrize("protocol", ["codex", "grok", "claude"])
 @pytest.mark.parametrize("knowledge,expected", [("preflight", "idle"), ("unknown", "unknown")])
 def test_callback_activity_uses_effect_evidence_not_exception_category(protocol, knowledge, expected):
     def refusal(*args):
@@ -129,6 +125,19 @@ def test_callback_activity_uses_effect_evidence_not_exception_category(protocol,
         assert live.activity == expected
         assert live.activity_model.activity == expected
         assert not live.activity_model.active("callback")
+    finally:
+        adapter.close()
+
+
+def test_untranslated_native_request_is_refused_before_any_effect():
+    adapter = ACPSessionDriver({"command": [sys.executable, "unused"]})
+    live = _LiveSession({}, native_id="native")
+    try:
+        with pytest.raises(OrchestrationError) as refused:
+            adapter._request(live, "fixture/request", {"sessionId": "native"})
+        assert refused.value.code == "unsupported_method"
+        assert effect_outcome(refused.value) == "not_started"
+        assert live.activity == "idle" and not live.activity_model.active("callback")
     finally:
         adapter.close()
 

@@ -84,15 +84,15 @@ not a claim that an installed vendor version accepts every option or has been
 authenticated. Local native acceptance must record installed versions and actual
 observed settings.
 
-Codex native approval requests may be handled by a separately bound trusted
-handler, or by explicit `native_permissions` responses, for example
-`{"item/commandExecution/requestApproval":{"decision":"decline"}}`. The adapter
-does not implicitly approve native requests. Codex's own sandbox and approval
-configuration still apply.
+Codex native approval requests are answered by explicit `native_permissions`
+responses, for example
+`{"item/commandExecution/requestApproval":{"decision":"decline"}}`. Other native
+requests, and calls to configured dynamic tools that are not application tools,
+are rejected as `unsupported_method`. The adapter does not implicitly approve
+native requests. Codex's own sandbox and approval configuration still apply.
 
 Grok `native_permissions` has `allow` and `deny` lists of native tool names, with
-`default` set to `allow`, `deny`, or `delegate`. `delegate` uses a separately bound
-trusted handler for unlisted tools. These choices govern native permission
+`default` set to `allow` or `deny` for unlisted tools. These choices govern native permission
 requests; application callbacks separately pass the application guardrail. Native
 MCP machinery may itself request permission, so deployments must configure its
 names as appropriate for the installed version. Application gateway tool

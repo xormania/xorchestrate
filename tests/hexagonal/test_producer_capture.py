@@ -216,7 +216,7 @@ class EvaluatorProducerCaptureTests(unittest.TestCase):
             def __exit__(self, *unused):
                 pass
 
-            def read(self, count):
+            def read1(self, count):
                 raise http.client.IncompleteRead(partial, 100)
 
         class Opener:

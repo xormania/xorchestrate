@@ -333,7 +333,7 @@ def test_unrelated_evaluator_change_does_not_invalidate_selected_assessment(app)
 
 def test_persisted_assessment_rejects_same_name_evaluator_reconfiguration_after_rebuild(tmp_path):
     path = str(tmp_path / "assessment.sqlite")
-    first_store = SQLiteStore(path)
+    first_store = SQLiteStore({"path": path})
     app = make_app(first_store, evaluator=Evaluator(), policy=RequiredChecksAcceptance({"require_assessment": True}))
     app.evaluator_configurations = {"review": "first-model-config"}
     work, _ = setup_work(app, {"A": "Behavior"})
@@ -341,7 +341,7 @@ def test_persisted_assessment_rejects_same_name_evaluator_reconfiguration_after_
     assessment = app.call("assess", {"work_id": work["id"], "question": "Review"})["assessment"]
     assert accept(app, work, assessment)["accepted"]
     first_store.close()
-    second_store = SQLiteStore(path)
+    second_store = SQLiteStore({"path": path})
     try:
         rebuilt = make_app(second_store, evaluator=Evaluator(), policy=RequiredChecksAcceptance({"require_assessment": True}))
         rebuilt.evaluator_configurations = {"review": "replacement-model-config"}

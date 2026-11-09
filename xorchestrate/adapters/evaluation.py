@@ -238,7 +238,7 @@ class TypeSafeEvaluator(_TelemetryEvaluator):
         def read_response(response, deadline=None):
             nonlocal response_observed
             maximum = self.limits["max_response_bytes"]
-            status = getattr(response, "status", getattr(response, "code", None))
+            status = response.status
             total = None
             try:
                 length = response.headers.get("Content-Length")
@@ -249,10 +249,7 @@ class TypeSafeEvaluator(_TelemetryEvaluator):
             reason = None
             complete = False
             try:
-                # read1 exposes each available body block before a later timeout;
-                # a fallback supports the same small response interface as before.
-                read_one = getattr(response, "read1", None)
-                read = read_one if callable(read_one) else response.read
+                # read1 exposes each available body block before a later timeout.
                 while len(captured) <= maximum:
                     if deadline is not None:
                         remaining = deadline - time.monotonic()
@@ -273,11 +270,7 @@ class TypeSafeEvaluator(_TelemetryEvaluator):
                         else:
                             reason = "capture_deadline_unavailable"
                             raise TimeoutError("Assessment diagnostic read cannot be bounded")
-                    count = min(65536, maximum + 1 - len(captured))
-                    # A read(n) fallback may internally wait for n bytes across
-                    # many successful socket reads. One byte keeps that fallback
-                    # within the next remaining-time timeout as well.
-                    block = read(1 if deadline is not None and not callable(read_one) else count)
+                    block = response.read1(min(65536, maximum + 1 - len(captured)))
                     if not block:
                         complete = True
                         if total is None:

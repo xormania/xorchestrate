@@ -93,15 +93,14 @@ class SessionTests(unittest.TestCase):
         driver = self.driver(CodexSessionDriver, "codex", thread={"sandbox": "workspace-write", "approvalPolicy": "on-request"}, request_parameters={
             "type": "object", "properties": {"model": {"enum": ["configured-by-caller"]}}, "additionalProperties": False,
         })
-        driver.set_tools([{"name": "echo", "description": "Test callback", "inputSchema": {"type": "object"}}])
         contexts = []
 
-        def callback(method, params, context):
-            contexts.append((method, copy.deepcopy(context)))
+        def callback(action, arguments, context, key):
+            contexts.append((action, copy.deepcopy(context)))
             context["actor"] = "mutated"
-            return {"echo": params["arguments"]["value"]}
+            return {"echo": arguments["value"]}
 
-        driver.set_request_handler(callback)
+        driver.bind_application_tools([Capability("echo", "Test callback", {"type": "object"})], callback)
         session = driver.start({"parameters": {"model": "configured-by-caller"}, "context": {"actor": "coder"}})
         result = driver.send(session, {"text": "tool"})
         self.assertEqual("workspace-write", result["start"]["sandbox"])
@@ -112,7 +111,9 @@ class SessionTests(unittest.TestCase):
         self.assertTrue(tool["success"])
         self.assertEqual({"echo": "from-native"}, json.loads(tool["contentItems"][0]["text"]))
         driver.send(session, {"text": "tool"})
-        self.assertEqual([("item/tool/call", {"actor": "coder"})], contexts)  # duplicate native call is replayed
+        # The duplicate native call is replayed from the adapter ledger, not invoked again.
+        self.assertEqual(["echo"], [action for action, _ in contexts])
+        self.assertEqual("coder", contexts[0][1]["actor"])
         self.assert_code("conflict", driver.set_tools, [])
         self.assertEqual(2, len(driver.poll(session)))
 
@@ -170,28 +171,23 @@ class SessionTests(unittest.TestCase):
         self.assertEqual("session_identity", json.loads(rejected["contentItems"][0]["text"])["error"]["code"])
         self.assertEqual(4, len(keys))
 
-    def test_codex_application_tools_coexist_with_configured_tools_and_raw_handlers(self):
+    def test_codex_application_tools_coexist_with_configured_tools_and_untranslated_requests(self):
         driver = self.driver(CodexSessionDriver, "codex", dynamic_tools=[{
             "name": "echo", "description": "Configured native callback", "inputSchema": {"type": "object"},
         }])
-        raw_calls, application_calls = [], []
-
-        def raw_handler(method, params, context):
-            raw_calls.append((method, params, context))
-            return {"handled": "raw"}
-
-        driver.set_request_handler(raw_handler)
+        application_calls = []
         driver.bind_application_tools([Capability("record_result", "Application callback", {"type": "object"})],
                                       lambda *args: application_calls.append(args) or {"handled": "application"})
         session = driver.start({"context": {"actor": "coder"}})
         result = driver.send(session, {"text": "tool"})
         self.assertEqual({"echo", "record_result"}, {tool["name"] for tool in result["start"]["dynamicTools"]})
-        self.assertEqual({"handled": "raw"}, json.loads(result["tool_response"]["result"]["contentItems"][0]["text"]))
+        configured = result["tool_response"]["result"]
+        self.assertFalse(configured["success"])
+        self.assertEqual("unsupported_method", json.loads(configured["contentItems"][0]["text"])["error"]["code"])
         live = driver._get(session)
         response = driver._request(live, "item/tool/call", {"tool": "record_result", "arguments": {"result": "observed"}, "threadId": session["native_id"], "callId": "record-1"})
         self.assertEqual({"handled": "application"}, json.loads(response["contentItems"][0]["text"]))
-        self.assertEqual({"handled": "raw"}, driver._request(live, "item/commandExecution/requestApproval", {"threadId": session["native_id"]}))
-        self.assertEqual(["item/tool/call", "item/commandExecution/requestApproval"], [call[0] for call in raw_calls])
+        self.assert_code("unsupported_method", driver._request, live, "item/commandExecution/requestApproval", {"threadId": session["native_id"]})
         self.assertEqual(1, len(application_calls))
         self.assertEqual({"actor": "coder", "native_id": session["native_id"], "incarnation": session["incarnation"],
                           "call_id": "record-1", "action": "record_result"}, application_calls[0][2])
@@ -261,7 +257,7 @@ class SessionTests(unittest.TestCase):
                     self.assertEqual("not_started", error.details["outcome"])
                     process.assert_not_called()
 
-    def test_codex_missing_handler_and_identity_mismatch_never_invoke_a_tool(self):
+    def test_codex_unbound_tool_and_identity_mismatch_never_invoke_a_tool(self):
         driver = self.driver(CodexSessionDriver, "codex")
         session = driver.start({})
         result = driver.send(session, {"text": "tool"})
@@ -270,9 +266,12 @@ class SessionTests(unittest.TestCase):
         self.assertEqual("unsupported_method", error["code"])
         second = self.driver(CodexSessionDriver, "codex")
         calls = []
-        second.set_request_handler(lambda *args: calls.append(args) or {})
+        second.bind_application_tools([Capability("echo", "Callback", {"type": "object"})],
+                                      lambda *args: calls.append(args) or {})
         result = second.send(second.start({}), {"text": "wrong_tool"})
         self.assertFalse(result["tool_response"]["result"]["success"])
+        error = json.loads(result["tool_response"]["result"]["contentItems"][0]["text"])["error"]
+        self.assertEqual("session_identity", error["code"])
         self.assertEqual([], calls)
 
     def test_codex_identity_mismatch_notifications_close_connection(self):

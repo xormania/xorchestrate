@@ -50,6 +50,8 @@ def _contained(root, value, name):
 class UnavailableTelemetry:
     """A safe, visible failed optional construction without keeping source errors."""
 
+    project_id = None
+
     def __init__(self, reason="configuration_unavailable"):
         self.reason = reason
 
@@ -63,10 +65,13 @@ class UnavailableTelemetry:
         return {"status": "unavailable", "reason": self.reason, "coverage": "unknown", "sources": {},
                 "publication": "unknown"}
 
-    def query(self, **kwargs):
-        return []
+    def scan(self, *, after=0, limit=100, **filters):
+        return {"events": [], "next_after": after, "scanned": 0, "exhausted": True}
 
     def get_event(self, event_id, *, hydrate=True):
+        return None
+
+    def resolve_scope(self, row, *, database_path=None):
         return None
 
     def read_payload(self, *args, **kwargs):
@@ -75,7 +80,7 @@ class UnavailableTelemetry:
     def snapshot(self, *args, **kwargs):
         raise OrchestrationError("Telemetry capture is unavailable.", "telemetry_unavailable")
 
-    verify = restore = snapshot
+    verify = restore = view_observation = snapshot
     snapshot_source = bundle_source = snapshot
 
     def close(self):
@@ -318,12 +323,6 @@ class LocalTelemetry:
 
     def view_observation(self, row, *, hydrate=True, artifact_store=None):
         return self._view(row, hydrate=hydrate, artifact_store=artifact_store)
-
-    def query(self, *, after=0, limit=100, event_type=None, work_id=None, session_id=None, operation_id=None,
-              run_id=None, attempt_id=None):
-        return self.scan(after=after, limit=limit, event_type=event_type, work_id=work_id,
-                         session_id=session_id, operation_id=operation_id,
-                         run_id=run_id, attempt_id=attempt_id)["events"]
 
     def scan(self, *, after=0, limit=100, event_type=None, work_id=None, session_id=None, operation_id=None,
              run_id=None, attempt_id=None):

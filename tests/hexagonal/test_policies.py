@@ -2,6 +2,7 @@ import json
 import unittest
 from unittest.mock import Mock
 
+from xorchestrate.adapters.delivery import DefiniteFailureRetry, DeliverySchedule, LatestSessionSelection
 from xorchestrate.adapters.policies import ConfigurableRouting, RuleGuardrail
 from xorchestrate.adapters.storage import MemoryStore
 from xorchestrate.application import Application
@@ -81,6 +82,8 @@ class GuardrailTests(unittest.TestCase):
             guardrail=RuleGuardrail({"rules": [{"actions": ["invoke"], "effect": "deny",
                                                "where": {"arguments.arguments.count": 1}}]}),
             routing=ConfigurableRouting(), clock=lambda: "now", identifiers=lambda: str(next(identifiers)),
+            session_selection=LatestSessionSelection(), delivery_scheduler=DeliverySchedule(),
+            retry_policy=DefiniteFailureRetry(),
         )
         for spelling in ("1", "1.0", "1e0"):
             with self.subTest(spelling=spelling), self.assertRaises(OrchestrationError) as caught:

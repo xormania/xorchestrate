@@ -309,7 +309,7 @@ class ProductReceiptEvidenceAdapter(IdentityEvidenceAdapter):
     def evaluate(self):
         expectation = {"run_id": "identity-run", "case_id": "exchange", "nonce": "fresh-nonce",
                        "memory": "retained-memory", "sender": self.source.peer, "recipient": self.target.peer}
-        snapshot = {**self.raw, "message": self.raw["messages"][0]}
+        snapshot = {**self.raw, "message": self.raw["messages"][0], "all_attempts": self.raw["attempts"]}
         decision = evaluate_exchange(snapshot, self.target.peer, expectation)
         return IdentityOutcome(decision["verified"], frozenset(decision["diagnostics"]), decision)
 

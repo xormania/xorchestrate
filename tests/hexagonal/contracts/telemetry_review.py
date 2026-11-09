@@ -36,10 +36,11 @@ def operation_disclosure_contract(subject, boundary):
 def artifact_usage_contract(subject):
     subject.capture_artifact_usage()
     result = subject.usage(event_type="fixture.retained_usage")
-    sample = next((item for item in result["samples"] if item["event_id"] == "retained-usage"), None)
-    assert sample is not None, "TELEMETRY_USAGE_MUST_INCLUDE_AUTHORIZED_ARTIFACT_BACKED_OBSERVATIONS"
-    values = {tuple(item["path"]): item["value"] for item in sample["measurements"]}
-    assert values[("usage",)] == {"input_tokens": 0, "output_tokens": None}
+    raw = next((row for row in result["raw_observations"] if row["event_id"] == "retained-usage"), None)
+    assert raw is not None and "retained-usage" in result["source_event_ids"], \
+        "TELEMETRY_USAGE_MUST_INCLUDE_AUTHORIZED_ARTIFACT_BACKED_OBSERVATIONS"
+    assert raw["payload"]["usage"] == {"input_tokens": 0, "output_tokens": None}
+    assert raw["payload"]["retained_content"] == "u" * 2048
     assert result["cost"] is None and result["cost_status"] == "unknown"
 
 
@@ -87,9 +88,9 @@ def bounded_usage_contract(subject, explicit_budget):
     else:
         assert len(json.dumps(result).encode("utf-8")) <= budget, \
             "TELEMETRY_USAGE_MUST_ENFORCE_BYTE_BUDGET_AFTER_PAYLOAD_HYDRATION"
-        sample = next((row for row in result["samples"] if row["event_id"] == "large-valid-usage"), None)
-        assert sample is not None, "TELEMETRY_USAGE_MUST_NOT_SILENTLY_DROP_A_MEASUREMENT_THAT_EXCEEDS_ITS_VIEW_BUDGET"
-        assert sample["measurements_omitted"] is True
-        assert sample["read_action"] == "telemetry_payload"
+        assert "large-valid-usage" in result["source_event_ids"]
+        assert result["raw_observations_omitted"] is True and "raw_observations" not in result
+        assert {"event_id": "large-valid-usage", "read_action": "telemetry_payload"} in result["source_references"], \
+            "TELEMETRY_USAGE_MUST_NOT_SILENTLY_DROP_A_MEASUREMENT_THAT_EXCEEDS_ITS_VIEW_BUDGET"
     assert subject.complete_payload("large-valid-usage") == source, \
         "TELEMETRY_USAGE_BYTE_BOUND_MUST_PRESERVE_COMPLETE_AUTHORIZED_RAW_MEASUREMENTS"

@@ -242,19 +242,18 @@ class Fixture:
         original_status = sink.status
         horizon = 20001
 
-        def query(*, after=0, limit=100, **filters):
+        def rows(after, limit):
             return [{"event_id": "allowed-after-denied-prefix" if index == horizon else f"denied-{index}",
                 "sequence": index, "event_type": "fixture.scan", "payload": {"index": index},
                 "context": {"work_id": public if index == horizon else private}}
                 for index in range(after + 1, min(after + limit, horizon) + 1)]
 
         def scan(*, after=0, limit=100, **filters):
-            rows = query(after=after, limit=limit, **filters)
-            cursor = rows[-1]["sequence"] if rows else after
-            return {"events": rows, "next_after": cursor, "scanned": len(rows),
+            batch = rows(after, limit)
+            cursor = batch[-1]["sequence"] if batch else after
+            return {"events": batch, "next_after": cursor, "scanned": len(batch),
                 "exhausted": cursor >= horizon}
 
-        sink.query = query
         sink.scan = scan
         sink.status = lambda: {**original_status(), "max_sequence": horizon}
 

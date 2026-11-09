@@ -36,7 +36,7 @@ flowchart TD
 | Guardrail | Whether a requested action is allowed under explicit policy | Model reasoning or arbitrary host isolation |
 | Evaluator | An assessment with rationale, confidence, and evidence | Permission to override policy |
 | Acceptance policy | Decisions over current owner requirements and bound measurements | Replacing missing or failed required evidence with confidence |
-| Session selection / delivery scheduling / retry / receipt | Replaceable routing-to-native-delivery responsibilities | Conflating submission, receipt, response, completion and acceptance |
+| Session selection / delivery scheduling / retry / receipt | Replaceable routing-to-native-delivery responsibilities (`SessionSelection`, `DeliveryScheduling`, `DeliveryRetry` and `ReceiptPolicy` ports) | Conflating submission, receipt, response, completion and acceptance |
 | Composition and input adapters | Trusted configuration, adapter lifetime, CLI/MCP encoding and identity | Domain-specific project practices |
 
 Public inspection is shared by work, acceptance, delivery and native-history
@@ -111,7 +111,8 @@ false`) are not activated. Configuration is read for the assembled application;
 unrelated historical source edits do not invalidate ongoing work or retained
 results. Restart with the intended configuration to activate a change.
 
-Telemetry is an optional output port. When the `telemetry` section is absent or
+Telemetry is an optional output port (`TelemetrySink`: capture, bounded scans,
+scope resolution, payload reads and bundle snapshot/verify/restore). When the `telemetry` section is absent or
 `enabled: false`, no collector is constructed. The `local` adapter bridges
 application, native, capability, evaluator and process observations to the shared
 `agent_telemetry` collector (the `telemetry` installation extra). A failed
@@ -277,11 +278,13 @@ application-provided dynamic tools cross the application's guardrails.
 Drivers that expose application tools opt into
 `ApplicationToolSessionDriver.bind_application_tools(capabilities, handler)`.
 The handler receives an action, JSON arguments, trusted session context, and an
-optional adapter invocation key. Composition binds the caller and work context,
+optional adapter invocation key. Drivers that answer repeated native calls from
+their own call ledger may also define `bind_application_replay(handler)`, through
+which composition revalidates a completed cache hit without a new effect. Composition binds the caller and work context,
 and scopes effect keys to the configured driver. Each adapter translates its
 own protocol, tool descriptors, and request identities; the shared wiring does
-not require Codex request fields. Configured native tools and raw native request
-handlers remain adapter features. Conflicting application/native tool names
+not require Codex request fields. Native requests that an adapter does not
+translate are rejected as `unsupported_method`. Conflicting application/native tool names
 must be resolved in configuration before sessions start.
 
 Native execution policy belongs in trusted adapter options: Codex `thread` and

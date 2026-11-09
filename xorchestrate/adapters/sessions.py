@@ -76,24 +76,6 @@ class _LiveSession:
         self.active_callbacks = self.activity_model.set("callback")
         self.submissions = self.activity_model.set("submission")
 
-    @property
-    def closed(self):
-        return self.connection.state == "closed"
-
-    @closed.setter
-    def closed(self, value):
-        if value:
-            self.connection.transition("close")
-
-    @property
-    def activity_uncertain(self):
-        return self.activity_model.has_uncertainty
-
-    @activity_uncertain.setter
-    def activity_uncertain(self, value):
-        if value:
-            self.activity_model.uncertain()
-
 
 class _ProcessSessions:
     protocol = "jsonrpc"
@@ -102,7 +84,7 @@ class _ProcessSessions:
     contract_version = "native-session-v1"
     application_callback_methods = ()
 
-    def __init__(self, options: JSON, request_handler: Callable | None = None):
+    def __init__(self, options: JSON):
         self.options = _object(options, "Session options", "invalid_configuration")
         command_options(self.options)  # Validate configuration before the first effect.
         self.max_sessions = positive_integer(self.options, "max_sessions", 64)
@@ -110,7 +92,6 @@ class _ProcessSessions:
         self.max_pending_messages = positive_integer(self.options, "max_pending_messages", 1024)
         if not isinstance(self.options.get("allow_configuration_change_on_resume", False), bool):
             raise OrchestrationError("allow_configuration_change_on_resume must be boolean.", "invalid_configuration")
-        self._handler = request_handler
         self._instance = uuid.uuid4().hex
         self._sessions: dict[str, _LiveSession] = {}
         self._starting = 0
@@ -191,15 +172,6 @@ class _ProcessSessions:
         return {**_object(live.context, "Context"), "native_id": live.native_id,
                 "incarnation": live.incarnation, "call_id": call_id, "action": action}
 
-    def set_request_handler(self, handler: Callable | None) -> None:
-        """Bind trusted composition behavior, never a tool-supplied callback."""
-        if handler is not None and not callable(handler):
-            raise OrchestrationError("Session request handler must be callable.", "invalid_configuration")
-        with self._lock:
-            if self._sessions or self._starting:
-                raise OrchestrationError("Bind session handlers before starting sessions.", "conflict")
-            self._handler = handler
-
     def _verify_identity(self, live: _LiveSession, params: JSON) -> None:
         for name in ("threadId", "sessionId", "session_id"):
             observed = params.get(name)
@@ -208,7 +180,7 @@ class _ProcessSessions:
 
     def _verified_request(self, live: _LiveSession, params: Any) -> JSON:
         params = _object(params, "Native request", "provider_protocol")
-        if live.closed:
+        if live.connection.state == "closed":
             raise OrchestrationError("Native callback belongs to a closed connection.", "session_unavailable")
         self._verify_identity(live, params)
         if live.native_id is None:
@@ -221,28 +193,10 @@ class _ProcessSessions:
         return live.activity
 
     def _request(self, live: _LiveSession, method: str, params: Any) -> JSON:
+        """Reject native requests that the protocol adapter does not translate."""
         with before_effect():
-            params = self._verified_request(live, params)
-            if self._handler is None:
-                raise OrchestrationError("No handler is configured for this native request.", "unsupported_method")
-        token = uuid.uuid4().hex
-        completed = False
-        with live.lock:
-            live.active_callbacks.add(token)
-            self._observation(live, "activity", state=self._activity(live))
-        try:
-            result = self._handler(method, params, _object(live.context, "Context"))
-            completed = True
-            return result
-        except Exception as error:
-            completed = effect_outcome(error) in {"not_started", "failed"}
-            raise
-        finally:
-            with live.lock:
-                live.active_callbacks.discard(token)
-                if not completed:
-                    live.activity_model.uncertain("callback", token)
-                self._observation(live, "activity", state=self._activity(live))
+            self._verified_request(live, params)
+            raise OrchestrationError("This native request is not supported.", "unsupported_method")
 
     def _new(self, specification: JSON) -> _LiveSession:
         with self._lock:
@@ -290,7 +244,7 @@ class _ProcessSessions:
             handshake(live, specification)
             return self._publish(live)
         except BaseException:
-            live.closed = True
+            live.connection.transition("close")
             live.process.close()
             if hasattr(live, "gateway"):
                 live.gateway.close()
@@ -310,8 +264,8 @@ class _ProcessSessions:
             if not isinstance(handle, str) or session.get("instance") != self._instance:
                 raise OrchestrationError("Session connection is unavailable in this driver instance. Explicitly resume its native ID if supported.", "session_unavailable", {"outcome": "not_started"})
             live = self._sessions.get(handle)
-            if (live is None or live.closed or session.get("native_id") != live.native_id
-                    or session.get("protocol") != self.protocol or session.get("incarnation", live.incarnation) != live.incarnation):
+            if (live is None or live.connection.state == "closed" or session.get("native_id") != live.native_id
+                    or session.get("protocol") != self.protocol or session.get("incarnation") != live.incarnation):
                 raise OrchestrationError("Session handle does not identify an owned connection.", "session_unavailable", {"outcome": "not_started"})
             return live
 
@@ -359,7 +313,7 @@ class _ProcessSessions:
 
     def stop(self, session: JSON) -> JSON:
         live = self._get(session)
-        live.closed = True
+        live.connection.transition("close")
         live.process.close()
         with self._lock:
             self._sessions.pop(session["handle"], None)
@@ -372,7 +326,7 @@ class _ProcessSessions:
             sessions = list(self._sessions.values())
             self._sessions.clear()
         for live in sessions:
-            live.closed = True
+            live.connection.transition("close")
             live.process.close()
             self._observation(live, "session_disconnected", ownership="owned")
         if isinstance(self._telemetry_observer, TelemetryDispatch):
@@ -388,8 +342,8 @@ class JSONRPCSessionDriver(_ProcessSessions):
     session specification. The entire specification is passed as ordinary data.
     """
 
-    def __init__(self, options: JSON, request_handler: Callable | None = None):
-        super().__init__(options, request_handler)
+    def __init__(self, options: JSON):
+        super().__init__(options)
         methods = _object(self.options.get("methods", {}), "Session methods", "invalid_configuration")
         self.methods = {operation: methods.get(operation, f"session/{operation}") for operation in ("start", "send", "poll", "stop")}
         if any(not isinstance(value, str) or not value for value in self.methods.values()):
@@ -437,8 +391,8 @@ class JSONRPCSessionDriver(_ProcessSessions):
 class _NativeSessions(_ProcessSessions):
     """Native start parameters require a delegation from trusted composition."""
 
-    def __init__(self, options: JSON, request_handler: Callable | None = None):
-        super().__init__(options, request_handler)
+    def __init__(self, options: JSON):
+        super().__init__(options)
         self.request_parameters = self.options.get("request_parameters", {"type": "object", "additionalProperties": False})
         check_schema(self.request_parameters)
 
@@ -509,18 +463,18 @@ class CodexSessionDriver(_NativeSessions):
 
     def _turn_started(self, live, turn_id):
         if not isinstance(turn_id, str) or not turn_id:
-            live.activity_uncertain = True
+            live.activity_model.uncertain()
         elif turn_id not in live.completed:
             if len(live.pending) >= self.max_pending_messages and turn_id not in live.pending:
-                live.activity_uncertain = True
+                live.activity_model.uncertain()
                 raise OrchestrationError("Native turn observation bound reached.", "observation_overflow")
             live.pending[turn_id] = None
             if turn_id not in live.seen_turns:
                 live.seen_turns.append(turn_id)
         self._activity(live)
 
-    def __init__(self, options: JSON, request_handler: Callable | None = None):
-        super().__init__(options, request_handler)
+    def __init__(self, options: JSON):
+        super().__init__(options)
         self.thread = _object(self.options.get("thread", {}), "Codex thread parameters", "invalid_configuration")
         self.turn = _object(self.options.get("turn", {}), "Codex turn parameters", "invalid_configuration")
         self._application_tools: dict[str, Capability] = {}
@@ -706,11 +660,11 @@ class CodexSessionDriver(_NativeSessions):
                     # A duplicate can be ignored; an unbound completion cannot
                     # establish that all observed work ended. A response may
                     # legitimately race its in-flight submission registration.
-                    live.activity_uncertain = True
+                    live.activity_model.uncertain()
                 if identified and not stale:
                     live.completed.append(turn_id)
                 if turn.get("status") in {"failed", "interrupted"} or turn.get("error"):
-                    live.activity_uncertain = True
+                    live.activity_model.uncertain()
                 self._activity(live)
                 self._observation(live, "native_completion", turn_id=turn_id, stale=stale, result=turn, activity=live.activity)
                 self._observation(live, "activity", state=live.activity, turn_id=turn_id)
@@ -739,7 +693,7 @@ class CodexSessionDriver(_NativeSessions):
             with live.lock:
                 live.submissions.discard(token)
                 if not live.submissions and live.unbound_completions:
-                    live.activity_uncertain = True
+                    live.activity_model.uncertain()
                     live.unbound_completions.clear()
                 self._observation(live, "activity", state=self._activity(live))
 
@@ -784,8 +738,8 @@ class ACPSessionDriver(_NativeSessions):
 
     protocol = "acp"
 
-    def __init__(self, options: JSON, request_handler: Callable | None = None):
-        super().__init__(options, request_handler)
+    def __init__(self, options: JSON):
+        super().__init__(options)
         self.session = _object(self.options.get("session", {}), "ACP session parameters", "invalid_configuration")
         self.initialize = _object(self.options.get("initialize", {"protocolVersion": 1, "clientCapabilities": {}}), "ACP initialization", "invalid_configuration")
         self.authentication = self.options.get("authentication")

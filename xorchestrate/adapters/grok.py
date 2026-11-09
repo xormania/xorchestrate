@@ -13,7 +13,6 @@ import uuid
 from collections import deque
 from copy import deepcopy
 
-from ..activity import ActivityMap, ActivitySet
 from ..model import Capability, OrchestrationError
 from ..outcomes import before_effect, effect_outcome
 from .jsonrpc import encode_json
@@ -23,30 +22,13 @@ from .sessions import ACPSessionDriver, _identifier, _object
 class GrokSessionDriver(ACPSessionDriver):
     protocol = "grok"
 
-    @staticmethod
-    def _work_state(live):
-        state = live.grok
-        # These views also admit older in-memory fixture/native state without
-        # retaining two mutable sources of activity truth.
-        if not isinstance(state["active_prompts"], ActivitySet):
-            state["active_prompts"] = live.activity_model.set("native_prompt", state["active_prompts"])
-        if not isinstance(state["interjections"], ActivityMap):
-            state["interjections"] = live.activity_model.mapping("interjection", state["interjections"])
-        return state
-
-    def _activity(self, live):
-        if hasattr(live, "grok"):
-            self._work_state(live)
-        live.activity = live.activity_model.activity
-        return live.activity
-
     def _native_prompt_started(self, live, prompt):
-        state = self._work_state(live)
+        state = live.grok
         if not isinstance(prompt, str) or not prompt:
-            live.activity_uncertain = True
+            live.activity_model.uncertain()
         elif prompt not in state["completed"]:
             if len(state["active_prompts"]) >= self.max_pending_messages and prompt not in state["active_prompts"]:
-                live.activity_uncertain = True
+                live.activity_model.uncertain()
                 raise OrchestrationError("Native prompt observation bound reached.", "observation_overflow")
             state["active_prompts"].add(prompt)
             if prompt not in state["seen"]:
@@ -55,11 +37,11 @@ class GrokSessionDriver(ACPSessionDriver):
         state["native_busy"] = bool(state["active_prompts"])
 
     def _native_prompt_finished(self, live, prompt, completed):
-        state = self._work_state(live)
+        state = live.grok
         identified = isinstance(prompt, str) and bool(prompt)
         duplicate = identified and prompt in state["completed"]
         if not identified or (prompt not in state["active_prompts"] and not duplicate):
-            live.activity_uncertain = True
+            live.activity_model.uncertain()
         if identified:
             state["active_prompts"].discard(prompt)
             if not duplicate:
@@ -69,16 +51,16 @@ class GrokSessionDriver(ACPSessionDriver):
         state["native_busy"] = bool(state["active_prompts"])
         return duplicate
 
-    def __init__(self, options, request_handler=None):
-        super().__init__(options, request_handler)
+    def __init__(self, options):
+        super().__init__(options)
         self._application_tools = {}
         self._application_callback = None
         self.server_name = self.options.get("application_server", "xorchestrate")
         if not isinstance(self.server_name, str) or not self.server_name or "__" in self.server_name:
             raise OrchestrationError("Grok application_server must be an unambiguous name.", "invalid_configuration")
         self.permissions = _object(self.options.get("native_permissions", {}), "Native permissions", "invalid_configuration")
-        if self.permissions.get("default", "deny") not in {"allow", "deny", "delegate"}:
-            raise OrchestrationError("Grok native permission default must be allow, deny or delegate.", "invalid_configuration")
+        if self.permissions.get("default", "deny") not in {"allow", "deny"}:
+            raise OrchestrationError("Grok native permission default must be allow or deny.", "invalid_configuration")
         for key in ("allow", "deny"):
             if not isinstance(self.permissions.get(key, []), list) or any(not isinstance(x, str) for x in self.permissions.get(key, [])):
                 raise OrchestrationError("Native permission lists must contain tool names.", "invalid_configuration")
@@ -142,7 +124,7 @@ class GrokSessionDriver(ACPSessionDriver):
             completion = None
             if method == "_x.ai/session/prompt_complete" or kind == "turn_completed":
                 if not isinstance(prompt, str) or not prompt:
-                    live.activity_uncertain = True
+                    live.activity_model.uncertain()
                     self._activity(live)
                     self._observation(live, "native_completion_unknown", reason="missing_native_prompt_id", activity=live.activity)
                     self._observation(live, "activity", state=live.activity)
@@ -193,8 +175,6 @@ class GrokSessionDriver(ACPSessionDriver):
         allowed = name in self.permissions.get("allow", []) or self.permissions.get("default") == "allow"
         if name in self.permissions.get("deny", []):
             allowed = False
-        if self.permissions.get("default") == "delegate" and name not in self.permissions.get("allow", []) + self.permissions.get("deny", []):
-            return super()._request(live, method, params)
         option = next((o for o in params.get("options", []) if o.get("kind") == ("allow_once" if allowed else "reject_once")), None)
         result = {"outcome": {"outcome": "selected", "optionId": option["optionId"]} if option else {"outcome": "cancelled"}}
         self._observation(live, "native_permission", action=name, allowed=allowed, call_id=call.get("toolCallId"), result=result)
@@ -290,7 +270,7 @@ class GrokSessionDriver(ACPSessionDriver):
                         row["used"] = True
                         break
                     remaining = deadline - time.monotonic()
-                    if remaining <= 0 or live.closed:
+                    if remaining <= 0 or live.connection.state == "closed":
                         raise OrchestrationError("MCP execution has no matching native tool observation.", "missing_native_observation")
                     live.grok["condition"].wait(min(remaining, .1))
             trusted = self._callback_context(live, name, call_id)
@@ -368,7 +348,6 @@ class GrokSessionDriver(ACPSessionDriver):
         message = _object(message, "Delivery envelope")
         live = self._get(session)
         with live.lock:
-            self._work_state(live)
             busy = live.activity_model.activity == "active"
             if busy:
                 if len(live.grok["interjections"]) >= self.options.get("max_pending_messages", 1024):

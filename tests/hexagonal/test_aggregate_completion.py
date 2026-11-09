@@ -23,7 +23,7 @@ from tests.hexagonal.support.native import (
     wait_for,
 )
 from xorchestrate.adapters.grok import GrokSessionDriver
-from xorchestrate.adapters.sessions import ACPSessionDriver, CodexSessionDriver, _LiveSession
+from xorchestrate.adapters.sessions import CodexSessionDriver, _LiveSession
 from xorchestrate.delivery import view
 from xorchestrate.model import Capability
 
@@ -127,7 +127,8 @@ def test_unmatched_completion_never_retires_known_turns_and_preserves_uncertaint
     adapter = {"codex": CodexSessionDriver, "grok": GrokSessionDriver}[protocol]({"command": [sys.executable, "unused"]})
     live = _LiveSession({}, native_id="native")
     if protocol == "grok":
-        live.grok = {"current": None, "native_busy": False, "active_prompts": set(), "seen": [], "completed": [], "interjections": {}}
+        live.grok = {"current": None, "native_busy": False, "active_prompts": live.activity_model.set("native_prompt"),
+                     "seen": [], "completed": [], "interjections": live.activity_model.mapping("interjection")}
     def notify(method, ident):
         if protocol == "codex":
             adapter._notification(live, method, {"threadId": "native", "turn": {"id": ident}})
@@ -181,7 +182,7 @@ def test_completion_before_submission_response_must_bind_to_returned_turn(comple
     adapter.close()
 
 
-@pytest.mark.parametrize("protocol", ["codex", "acp", "grok"])
+@pytest.mark.parametrize("protocol", ["codex", "grok"])
 @pytest.mark.parametrize("failure", [False, True])
 def test_native_completion_before_callback_return_keeps_running_callback_visible(protocol, failure):
     entered, release = threading.Event(), threading.Event()
@@ -191,14 +192,13 @@ def test_native_completion_before_callback_return_keeps_running_callback_visible
         if failure:
             raise RuntimeError("unrelated callback failure")
         return {"finished": True}
-    adapter = {"codex": CodexSessionDriver, "acp": ACPSessionDriver, "grok": GrokSessionDriver}[protocol](
-        {"command": [sys.executable, "unused"]}, handler)
+    adapter = {"codex": CodexSessionDriver, "grok": GrokSessionDriver}[protocol]({"command": [sys.executable, "unused"]})
     live = _LiveSession({}, native_id="native")
-    if protocol in {"codex", "grok"}:
-        adapter.bind_application_tools([Capability("hold", "Hold")], handler)
+    adapter.bind_application_tools([Capability("hold", "Hold")], handler)
     if protocol == "grok":
-        live.grok = {"current": "A", "native_busy": True, "active_prompts": {"A"}, "seen": ["A"], "completed": [],
-                     "interjections": {}, "mcp_requests": {}, "condition": threading.Condition(live.lock),
+        live.grok = {"current": "A", "native_busy": True, "active_prompts": live.activity_model.set("native_prompt", {"A"}),
+                     "seen": ["A"], "completed": [], "interjections": live.activity_model.mapping("interjection"),
+                     "mcp_requests": {}, "condition": threading.Condition(live.lock),
                      "calls": {"call": {"action": "hold", "arguments": {}, "used": False}}}
     errors = []
     def invoke():
@@ -206,26 +206,18 @@ def test_native_completion_before_callback_return_keeps_running_callback_visible
             if protocol == "grok":
                 adapter._gateway(live, "tools/call", {"name": "hold", "arguments": {},
                     "mcp_connection_id": "connection", "mcp_request_id": "request"})
-            elif protocol == "codex":
-                adapter._request(live, "item/tool/call", {"threadId": "native", "callId": "call", "tool": "hold", "arguments": {}})
             else:
-                adapter._request(live, "custom/callback", {"sessionId": "native"})
+                adapter._request(live, "item/tool/call", {"threadId": "native", "callId": "call", "tool": "hold", "arguments": {}})
         except RuntimeError as error:
             errors.append(str(error))
     thread = threading.Thread(target=invoke)
     try:
         if protocol == "codex":
             adapter._notification(live, "turn/started", {"threadId": "native", "turn": {"id": "A"}})
-        elif protocol == "acp":
-            live.pending["A"] = None
         thread.start()
         assert entered.wait(3)
         if protocol == "codex":
             adapter._notification(live, "turn/completed", {"threadId": "native", "turn": {"id": "A"}})
-        elif protocol == "acp":
-            with live.lock:
-                live.pending.pop("A")
-                adapter._prompt_finished(live, "A", True)
         else:
             adapter._notification(live, "_x.ai/session/prompt_complete", {"sessionId": "native", "promptId": "A"})
         assert live.activity == "active" and live.active_callbacks

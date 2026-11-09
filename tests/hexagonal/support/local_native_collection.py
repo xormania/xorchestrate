@@ -42,8 +42,8 @@ class NativeCollection:
             sink = fixture.app.telemetry
             self.database = sink.path
             self.artifacts = sink.artifact_root
-            self.event_count = len(sink.query(limit=1000))
-            references = [ref for row in sink.query(limit=1000) for ref in row.get("artifacts", [])
+            self.event_count = len(sink.scan(limit=1000)["events"])
+            references = [ref for row in sink.scan(limit=1000)["events"] for ref in row.get("artifacts", [])
                 if ref["availability"] == "captured"]
             assert references, "collection control must have actual artifact-backed events"
             ref = references[0]

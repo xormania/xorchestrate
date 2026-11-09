@@ -265,7 +265,6 @@ class CompositionTests(unittest.TestCase):
         })
         session = runtime.application.sessions["agent"]
         self.assertIn("create_work", {tool.name for tool in session.tools})
-        self.assertFalse(hasattr(session, "set_request_handler"))
         work = session.callback("create_work", {"goal": "Native work"},
                                 {"actor": "bound-agent", "work_id": "unused-for-create"})["work"]
         self.assertEqual(work["created_by"], "bound-agent")

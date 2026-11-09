@@ -97,23 +97,6 @@ class _ClaudeLive:
         self.active_turns = self.activity_model.set("turn")
         self.active_tools = self.activity_model.set("callback")
 
-    @property
-    def anonymous_turns(self):
-        return len(self.activity_model.active("anonymous_turn"))
-
-    @anonymous_turns.setter
-    def anonymous_turns(self, count):
-        self.activity_model.set_anonymous_count(count)
-
-    @property
-    def activity_uncertain(self):
-        return self.activity_model.has_uncertainty
-
-    @activity_uncertain.setter
-    def activity_uncertain(self, value):
-        if value:
-            self.activity_model.uncertain()
-
 
 class ClaudeSessionDriver:
     protocol = "claude"
@@ -538,8 +521,9 @@ class ClaudeSessionDriver:
                     prompt = packet.get("prompt_id")
                     if isinstance(prompt, str) and prompt:
                         live.active_turns.add(prompt)
-                    elif action not in self._capabilities and not live.active_turns and not live.anonymous_turns:
-                        live.anonymous_turns += 1
+                    elif (action not in self._capabilities and not live.active_turns
+                          and not live.activity_model.active("anonymous_turn")):
+                        live.activity_model.begin_anonymous("anonymous_turn")
                 self._activity(live)
             self._emit(live, "native_tool", source, call_id=call_id, action=action, tool=tool,
                        arguments=arguments, turn_id=packet.get("prompt_id"))
@@ -555,32 +539,33 @@ class ClaudeSessionDriver:
                         live.active_turns.remove(prompt)
                         live.completed_turns.add(prompt)
                     elif prompt not in live.completed_turns:
-                        live.activity_uncertain = True
-                elif live.anonymous_turns:
+                        live.activity_model.uncertain()
+                elif anonymous := live.activity_model.active("anonymous_turn"):
                     # Concurrent anonymous completions cannot be deduplicated.
                     # Retire at most one, retaining uncertainty if identity was
                     # insufficient to prove that all observed work completed.
-                    if live.anonymous_turns > 1:
-                        live.activity_uncertain = True
-                    live.anonymous_turns -= 1
+                    if len(anonymous) > 1:
+                        live.activity_model.uncertain()
+                    live.activity_model.finish("anonymous_turn", anonymous[-1])
                 else:
-                    live.activity_uncertain = True
+                    live.activity_model.uncertain()
                 if name == "StopFailure":
-                    live.activity_uncertain = True
+                    live.activity_model.uncertain()
                 self._activity(live)
             self._emit(live, "turn_completed" if name == "Stop" else "turn_failed", source,
                        turn_id=packet.get("prompt_id"), status="completed" if name == "Stop" else "failed",
                        activity=live.activity)
         elif name == "UserPromptSubmit":
             with live.lock:
-                if len(live.active_turns) + len(live.completed_turns) + live.anonymous_turns >= self.max_calls:
+                anonymous = live.activity_model.active("anonymous_turn")
+                if len(live.active_turns) + len(live.completed_turns) + len(anonymous) >= self.max_calls:
                     raise OrchestrationError("Claude turn observation bound reached.", "observation_overflow")
                 prompt = packet.get("prompt_id")
                 if isinstance(prompt, str) and prompt:
                     if prompt not in live.completed_turns:
                         live.active_turns.add(prompt)
                 else:
-                    live.anonymous_turns += 1
+                    live.activity_model.begin_anonymous("anonymous_turn")
                 self._activity(live)
             self._emit(live, "turn_started", source, turn_id=packet.get("prompt_id"))
         self._emit(live, "activity", source, state=live.activity)

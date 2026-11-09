@@ -25,7 +25,8 @@ class NativeEffects:
 
     def start(self, specification):
         assert self.engine is not None, "host must bind state policy before starting the native port"
-        return {"native_id": "retained-conversation", "incarnation": "native-1", "protocol": "fixture"}
+        return {"native_id": "retained-conversation", "incarnation": "native-1", "protocol": "fixture",
+                "configuration_id": "effects-v1"}
 
     def resume(self, source, specification):
         return {**self.start(specification), "incarnation": "native-2"}

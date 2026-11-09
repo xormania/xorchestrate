@@ -10,10 +10,12 @@ from copy import deepcopy
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import cast
 from uuid import uuid4
 
 from .application import Application
 from .model import OrchestrationError, unique_keys
+from .ports import ApplicationToolSessionDriver, SessionDriver
 
 BUILTINS = {
     "telemetry": {"local": "xorchestrate.adapters.telemetry:LocalTelemetry"},
@@ -232,10 +234,10 @@ def build(config=None, base_dir=None):
         raise
 
 
-def _wire_application_tools(name, driver, application):
-    bind = getattr(driver, "bind_application_tools", None)
-    if not callable(bind):
+def _wire_application_tools(name: str, driver: SessionDriver, application: Application) -> None:
+    if not callable(getattr(driver, "bind_application_tools", None)):
         raise OrchestrationError("This session adapter cannot expose application tools.", "configuration_error")
+    tools = cast(ApplicationToolSessionDriver, driver)
     capabilities = {capability.name: capability for capability in application.describe()}
 
     def handle(action, arguments, context, idempotency_key=None, *, replay_only=False):
@@ -269,8 +271,8 @@ def _wire_application_tools(name, driver, application):
             raise OrchestrationError("Replay requires its original native binding.", "native_evidence_missing")
         return application.call(action, arguments, actor=context.get("actor"))
 
-    bind(deepcopy(list(capabilities.values())), handle)
-    replay = getattr(driver, "bind_application_replay", None)
+    tools.bind_application_tools(deepcopy(list(capabilities.values())), handle)
+    replay = getattr(tools, "bind_application_replay", None)
     if callable(replay):
         replay(lambda action, arguments, context, key=None:
                handle(action, arguments, context, key, replay_only=True))
