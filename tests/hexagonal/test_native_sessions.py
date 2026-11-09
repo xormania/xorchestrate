@@ -69,8 +69,9 @@ def test_grok_requires_execution_observation_and_rejects_conflicting_call_ids():
             'rawInput': {'v': 1}, '_meta': {'x.ai/tool': {'version': 1, 'namespace': 'mcp', 'name': 'xorchestrate__echo'}}}}
         adapter._notification(live, 'session/update', params)
         params['update']['rawInput'] = {'v': 2}
-        with pytest.raises(OrchestrationError, match='conflicting'):
+        with pytest.raises(OrchestrationError) as conflict:
             adapter._notification(live, 'session/update', params)
+        assert conflict.value.code == 'native_call_conflict'
     finally:
         adapter.close()
 
@@ -300,7 +301,7 @@ def test_grok_mcp_request_replay_and_identical_input_observations_remain_one_to_
         assert called == ['one']
         with pytest.raises(OrchestrationError) as conflict:
             adapter._gateway(live, 'tools/call', {**request, 'arguments': {'n': 2}})
-        assert conflict.value.code == 'call_id_conflict'
+        assert conflict.value.code == 'native_call_conflict'
         assert adapter._gateway(live, 'tools/call', {**request, 'mcp_connection_id': 'restarted'}) == {'ok': True}
         assert called == ['one', 'two']
         native('three', {'n': 3})

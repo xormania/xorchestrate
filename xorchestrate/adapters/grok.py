@@ -15,6 +15,7 @@ from copy import deepcopy
 
 from ..model import OrchestrationError
 from ..outcomes import before_effect, effect_outcome
+from .native_calls import NativeCallLedger, call_fingerprint
 from .process import encode_json
 from .session_base import ApplicationToolDriver, json_object, native_identifier
 from .sessions import ACPSessionDriver
@@ -135,7 +136,7 @@ class GrokSessionDriver(ACPSessionDriver, ApplicationToolDriver):
                 signature = hashlib.sha256(encode_json([event_kind, action, args], sort_keys=True)).hexdigest()
                 previous = state["calls"].get(call_id)
                 if previous and previous["signature"] != signature:
-                    raise OrchestrationError("Grok call ID was reused for a conflicting execution.", "call_id_conflict")
+                    raise OrchestrationError("Native call ID was reused with different arguments.", "native_call_conflict")
                 if not previous:
                     if len(state["calls"]) >= self.max_native_calls:
                         raise OrchestrationError("Native replay ledger is full.", "session_capacity")
@@ -188,14 +189,7 @@ class GrokSessionDriver(ACPSessionDriver, ApplicationToolDriver):
             with live.lock:
                 prior = live.grok["mcp_requests"].get(key)
                 if prior and prior.get("owner") == token and prior["state"] == "pending":
-                    event = "fail" if completed else "uncertain"
-                    try:
-                        prior["state"] = self._state_engine.decide("native_effect", prior["state"], event,
-                            {"kind": "callback", "identity": key}).target
-                    except Exception as recording_error:
-                        prior["recording_error"] = getattr(recording_error, "code", type(recording_error).__name__)
-                    prior.update({"effect_outcome": effect_outcome(error), "error": {"code": getattr(error, "code", "callback_failed"),
-                        "message": str(error), "details": deepcopy(getattr(error, "details", {}))}})
+                    live.grok["mcp_requests"].fail(key, error)
             raise
         finally:
             with live.lock:
@@ -220,27 +214,8 @@ class GrokSessionDriver(ACPSessionDriver, ApplicationToolDriver):
             request_key = encode_json([payload.get("mcp_connection_id"), payload.get("mcp_request_id")]).decode()
             if not payload.get("mcp_connection_id") or payload.get("mcp_request_id") is None:
                 raise OrchestrationError("MCP request lacks a connection-scoped identity.", "missing_call_identity")
-            fingerprint = hashlib.sha256(encode_json([name, arguments], sort_keys=True)).hexdigest()
-            replay = None
             with live.lock:
-                prior = live.grok["mcp_requests"].get(request_key)
-                if prior:
-                    if prior["fingerprint"] != fingerprint:
-                        raise OrchestrationError("MCP request ID was reused with different arguments.", "call_id_conflict")
-                    if prior["state"] == "completed":
-                        replay = deepcopy(prior)
-                    elif prior["state"] == "failed":
-                        error = prior["error"]
-                        raise OrchestrationError(error["message"], error["code"], error["details"])
-                    else:
-                        raise OrchestrationError("MCP request already has an unresolved invocation.", "call_in_progress",
-                        {"outcome": prior.get("effect_outcome", "unknown")})
-                else:
-                    if len(live.grok["mcp_requests"]) >= self.max_native_calls:
-                        raise OrchestrationError("MCP replay ledger is full.", "session_capacity")
-                    target = self._state_engine.decide("native_effect", None, "reserve",
-                        {"kind": "callback", "identity": request_key}).target
-                    live.grok["mcp_requests"][request_key] = {"fingerprint": fingerprint, "state": target, "owner": owner}
+                replay = live.grok["mcp_requests"].reserve(request_key, call_fingerprint(name, arguments), owner=owner)
             if replay is not None:
                 if self._application_replay:
                     return self._application_replay(name, deepcopy(arguments), deepcopy(replay["context"]), replay["key"])
@@ -268,16 +243,14 @@ class GrokSessionDriver(ACPSessionDriver, ApplicationToolDriver):
             self._observation(live, "native_mcp_association", call_id=call_id, action=name, arguments=arguments,
                               eligible_native_call_ids=eligible, mcp_connection_id=payload["mcp_connection_id"],
                               mcp_request_id=payload["mcp_request_id"], correlation_basis=trusted["correlation_basis"])
-        result = self._application_callback(name, arguments, trusted, "grok:" + encode_json([live.native_id, call_id]).decode())
+        key = "grok:" + encode_json([live.native_id, call_id]).decode()
+        result = self._application_callback(name, arguments, trusted, key)
         with live.lock:
-            live.grok["mcp_requests"][request_key].update({"result": deepcopy(result), "effect_outcome": "completed",
-                "context": deepcopy(trusted), "key": "grok:" + encode_json([live.native_id, call_id]).decode()})
+            live.grok["mcp_requests"].complete(request_key, result, context=trusted, key=key)
         try:
             self._observation(live, "native_tool_result", action=name, arguments=arguments, call_id=call_id, result=result)
             with live.lock:
-                row = live.grok["mcp_requests"][request_key]
-                row["state"] = self._state_engine.decide("native_effect", row["state"], "succeed",
-                    {"kind": "callback", "identity": request_key}).target
+                live.grok["mcp_requests"].succeed(request_key)
         except Exception as error:
             raise OrchestrationError("Callback completed but local settlement was refused.", "operation_unresolved",
                 {"outcome": "completed", "result": deepcopy(result), "cause": getattr(error, "code", type(error).__name__)}) from error
@@ -288,7 +261,7 @@ class GrokSessionDriver(ACPSessionDriver, ApplicationToolDriver):
         def handshake(live, spec):
             live.grok = {"current": None, "native_busy": False, "active_prompts": live.activity_model.set("native_prompt"),
                          "seen": deque(maxlen=1024), "completed": deque(maxlen=1024),
-                         "calls": {}, "mcp_requests": {}, "interjections": live.activity_model.mapping("interjection"), "condition": threading.Condition(live.lock)}
+                         "calls": {}, "mcp_requests": NativeCallLedger(self._state_engine, self.max_native_calls), "interjections": live.activity_model.mapping("interjection"), "condition": threading.Condition(live.lock)}
             params = {**requested, **deepcopy(self.session)}
             if self._application_callback:
                 from .native_gateway import LocalGateway

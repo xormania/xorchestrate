@@ -29,6 +29,7 @@ from ..activity import ActivityState, NativeConnection
 from ..model import OrchestrationError
 from ..outcomes import before_effect, effect_outcome
 from ..schema import check_schema, validate
+from .native_calls import DEFAULT_LIMIT, NativeCallLedger, call_fingerprint
 from .native_gateway import LocalGateway
 from .process import close_process, command_options, decode_json, encode_json, positive_integer, positive_number
 from .session_base import ApplicationToolDriver, json_object
@@ -52,7 +53,7 @@ class _ClaudeLive:
     events: deque = field(default_factory=deque)
     calls: dict = field(default_factory=dict)
     pending_calls: deque = field(default_factory=deque)
-    mcp_calls: dict = field(default_factory=dict)
+    mcp_calls: NativeCallLedger = None
     deliveries: dict = field(default_factory=dict)
     channel: queue.Queue = field(default_factory=queue.Queue)
     process: object = None
@@ -79,6 +80,8 @@ class _ClaudeLive:
         self.connection = NativeConnection(self.activity_model.engine, self.incarnation)
         self.active_turns = self.activity_model.set("turn")
         self.active_tools = self.activity_model.set("callback")
+        if self.mcp_calls is None:
+            self.mcp_calls = NativeCallLedger(self.activity_model.engine)
 
 
 class ClaudeSessionDriver(ApplicationToolDriver):
@@ -92,7 +95,7 @@ class ClaudeSessionDriver(ApplicationToolDriver):
         self.startup_timeout = positive_number(self.options, "startup_timeout", 120)
         self.max_sessions = positive_integer(self.options, "max_sessions", 64)
         self.max_events = positive_integer(self.options, "max_events", 10000)
-        self.max_calls = positive_integer(self.options, "max_calls", 10000)
+        self.max_native_calls = positive_integer(self.options, "max_native_calls", DEFAULT_LIMIT)
         self.max_deliveries = positive_integer(self.options, "max_deliveries", 1024)
         self.max_transcript_bytes = positive_integer(self.options, "max_transcript_bytes", 4 * 1024 * 1024)
         self.max_transcript_frame = positive_integer(self.options, "max_transcript_frame_bytes", 1024 * 1024)
@@ -121,7 +124,7 @@ class ClaudeSessionDriver(ApplicationToolDriver):
             raise OrchestrationError("Claude terminal must be inherit, discard or a PTY adapter.", "invalid_configuration")
         # Operational time/queue bounds do not change the selected native configuration.
         material = {key: value for key, value in self.options.items() if key not in {
-            "timeout", "startup_timeout", "max_sessions", "max_events", "max_calls", "max_deliveries", "gateway_timeout", "gateway_workers", "terminal", "evidence_directory",
+            "timeout", "startup_timeout", "max_sessions", "max_events", "max_native_calls", "max_deliveries", "gateway_timeout", "gateway_workers", "terminal", "evidence_directory",
             "telemetry_drain_timeout", "max_telemetry_pending", "max_telemetry_bytes", "max_transcript_bytes", "max_transcript_frame_bytes"}}
         self.configuration_id = _digest({"adapter": "claude-channel-v1", "options": material})
         super().__init__()
@@ -363,7 +366,7 @@ class ClaudeSessionDriver(ApplicationToolDriver):
         prefix = "mcp__" + self.server_name + "__"
         for block in blocks:
             if (block.get("type") == "tool_use" and isinstance(block.get("id"), str)
-                    and isinstance(block.get("name"), str) and len(live.transcript_tools) < self.max_calls):
+                    and isinstance(block.get("name"), str) and len(live.transcript_tools) < self.max_native_calls):
                 live.transcript_tools.setdefault(block["id"], block["name"])
         withheld = []
         results = [block for block in blocks if block.get("type") == "tool_result"]
@@ -422,21 +425,21 @@ class ClaudeSessionDriver(ApplicationToolDriver):
                 raise OrchestrationError("Native tool hook lacks tool, call ID or arguments.", "native_evidence_missing")
             prefix = "mcp__" + self.server_name + "__"
             action = tool[len(prefix):] if tool.startswith(prefix) else None
-            fingerprint = _digest([tool, arguments])
+            fingerprint = call_fingerprint(tool, arguments)
             decision = self.permissions.get(tool, self.permissions.get("*", "defer"))
             if action in self._application_tools:
                 decision = self.permissions.get("application_tools", decision)
             with live.lock:
                 previous = live.calls.get(call_id)
                 if previous and previous["fingerprint"] != fingerprint:
-                    live.failure = OrchestrationError("Native call ID reused with different arguments.", "native_call_conflict")
+                    live.failure = OrchestrationError("Native call ID was reused with different arguments.", "native_call_conflict")
                     raise live.failure
                 if previous:
                     decision = previous.get("decision", "defer")
                     return {} if decision == "defer" else {"hookSpecificOutput": {"hookEventName": "PreToolUse",
                         "permissionDecision": decision, "permissionDecisionReason": "Configured Xorchestrate native tool policy"}}
                 if not previous:
-                    if len(live.calls) >= self.max_calls:
+                    if len(live.calls) >= self.max_native_calls:
                         raise OrchestrationError("Claude native call bound reached.", "observation_overflow")
                     live.calls[call_id] = {"fingerprint": fingerprint, "action": action, "arguments": deepcopy(arguments), "used": False, "decision": decision}
                     if action in self._application_tools:
@@ -483,7 +486,7 @@ class ClaudeSessionDriver(ApplicationToolDriver):
         elif name == "UserPromptSubmit":
             with live.lock:
                 anonymous = live.activity_model.active("anonymous_turn")
-                if len(live.active_turns) + len(live.completed_turns) + len(anonymous) >= self.max_calls:
+                if len(live.active_turns) + len(live.completed_turns) + len(anonymous) >= self.max_native_calls:
                     raise OrchestrationError("Claude turn observation bound reached.", "observation_overflow")
                 prompt = packet.get("prompt_id")
                 if isinstance(prompt, str) and prompt:
@@ -507,32 +510,20 @@ class ClaudeSessionDriver(ApplicationToolDriver):
             if isinstance(mcp_id, bool) or not isinstance(mcp_id, (str, int)):
                 raise OrchestrationError("MCP invocation requires a request ID.", "native_evidence_missing")
             mcp_key = json.dumps([payload.get("mcp_connection_id", "direct-gateway"), mcp_id])
-            fingerprint = _digest([name, arguments])
-            replay = None
+            fingerprint = call_fingerprint(name, arguments)
             with live.lock:
                 previous = live.mcp_calls.get(mcp_key)
-                if previous:
-                    if previous["fingerprint"] != fingerprint:
-                        raise OrchestrationError("MCP request ID reused with different arguments.", "native_call_conflict")
-                    if previous.get("state") == "failed":
-                        error = previous["error"]
-                        raise OrchestrationError(error["message"], error["code"], error["details"])
-                    if previous.get("state") != "completed":
-                        raise OrchestrationError("Native callback outcome is unresolved.", "operation_unresolved",
-                            {"outcome": previous.get("effect_outcome", "unknown")})
-                    replay = deepcopy(previous)
                 matched = previous["call_id"] if previous else next((key for key in live.pending_calls if not live.calls[key]["used"]
                                 and live.calls[key]["action"] == name and live.calls[key]["arguments"] == arguments), None)
-                if matched is None:
-                    raise OrchestrationError("Application call has no matching native hook.", "native_evidence_missing")
-                if live.calls[matched].get("decision") == "deny":
-                    raise OrchestrationError("Configured native tool policy denied this call.", "denied")
-                if not previous:
-                    target = self._state_engine.decide("native_effect", None, "reserve",
-                        {"kind": "callback", "identity": mcp_key}).target
+                if previous is None:
+                    if matched is None:
+                        raise OrchestrationError("Application call has no matching native hook.", "native_evidence_missing")
+                    if live.calls[matched].get("decision") == "deny":
+                        raise OrchestrationError("Configured native tool policy denied this call.", "denied")
+                replay = live.mcp_calls.reserve(mcp_key, fingerprint, call_id=matched)
+                if replay is None:
                     live.calls[matched]["used"] = True
                     live.pending_calls.remove(matched)
-                    live.mcp_calls[mcp_key] = {"fingerprint": fingerprint, "call_id": matched, "state": target}
             trusted = {**deepcopy(live.context), "native_id": live.native_id, "incarnation": live.incarnation,
                        "call_id": matched, "action": name, "native_observation": "claude/PreToolUse"}
             if replay is not None:
@@ -545,11 +536,10 @@ class ClaudeSessionDriver(ApplicationToolDriver):
             result = self._application_callback(name, deepcopy(arguments), trusted, json.dumps([live.native_id, live.incarnation, matched]))
             returned = True
             with live.lock:
-                live.mcp_calls[mcp_key].update({"result": deepcopy(result), "effect_outcome": "completed"})
+                live.mcp_calls.complete(mcp_key, result)
             self._emit(live, "tool_result", "claude/mcp", call_id=matched, action=name, arguments=arguments)
             with live.lock:
-                live.mcp_calls[mcp_key]["state"] = self._state_engine.decide("native_effect", "pending", "succeed",
-                    {"kind": "callback", "identity": mcp_key}).target
+                live.mcp_calls.succeed(mcp_key)
                 live.active_tools.discard(matched)
                 self._activity(live)
         except Exception as error:
@@ -560,15 +550,7 @@ class ClaudeSessionDriver(ApplicationToolDriver):
                 live.active_tools.discard(matched)
                 if effect_outcome(error) not in {"not_started", "failed"}:
                     live.activity_model.uncertain("callback", matched)
-                try:
-                    live.mcp_calls[mcp_key]["state"] = self._state_engine.decide("native_effect", "pending",
-                        "fail" if effect_outcome(error) in {"not_started", "failed"} else "uncertain",
-                        {"kind": "callback", "identity": mcp_key}).target
-                except Exception as recording_error:
-                    live.mcp_calls[mcp_key]["recording_error"] = getattr(recording_error, "code", type(recording_error).__name__)
-                live.mcp_calls[mcp_key]["effect_outcome"] = effect_outcome(error)
-                live.mcp_calls[mcp_key]["error"] = {"code": getattr(error, "code", "callback_failed"),
-                    "message": str(error), "details": {**deepcopy(getattr(error, "details", {})), "outcome": effect_outcome(error)}}
+                live.mcp_calls.fail(mcp_key, error)
                 self._activity(live)
             raise error
         return result
@@ -633,6 +615,7 @@ class ClaudeSessionDriver(ApplicationToolDriver):
                 raise OrchestrationError("Claude session capacity unavailable.", "session_capacity", {"outcome": "not_started"})
             self._starting += 1
         live = _ClaudeLive(json_object(specification.get("context", {}), "Trusted session context"), source["native_id"] if source else str(uuid.uuid4()),
+                           mcp_calls=NativeCallLedger(self._state_engine, self.max_native_calls),
                            activity_model=ActivityState(self._state_engine))
         live.telemetry_context = capture_origin({**live.context, "native_id": live.native_id, "incarnation": live.incarnation})
         live.settings = {"requested": requested, "resolved": resolved,

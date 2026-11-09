@@ -23,6 +23,7 @@ from ..outcomes import before_effect, effect_outcome
 from ..ports import ApplicationToolCallback
 from ..schema import check_schema, validate
 from .jsonrpc import JsonLineProcess
+from .native_calls import DEFAULT_LIMIT, NativeCallLedger, call_fingerprint
 from .process import command_options, decode_json, encode_json, positive_integer
 from .session_base import OwnedSessionDriver, application_tools, json_object, native_identifier
 from .telemetry_capture import capture_origin, observe_telemetry
@@ -38,7 +39,7 @@ class _LiveSession:
     activity: str = "idle"
     settings: JSON = field(default_factory=lambda: {"requested": {}, "resolved": {}, "observed": {}})
     events: list[JSON] = field(default_factory=list)
-    calls: dict[str, tuple[str, JSON]] = field(default_factory=dict)
+    calls: NativeCallLedger | None = None
     activity_model: ActivityState = field(default_factory=ActivityState)
     pending: Any = field(init=False)
     connection: NativeConnection = field(init=False)
@@ -54,6 +55,8 @@ class _LiveSession:
         self.pending = self.activity_model.mapping("prompt")
         self.active_callbacks = self.activity_model.set("callback")
         self.submissions = self.activity_model.set("submission")
+        if self.calls is None:
+            self.calls = NativeCallLedger(self.activity_model.engine)
 
 
 class _ProcessSessions(OwnedSessionDriver):
@@ -67,7 +70,7 @@ class _ProcessSessions(OwnedSessionDriver):
         self.options = json_object(options, "Session options", "invalid_configuration")
         command_options(self.options)  # Validate configuration before the first effect.
         self.max_sessions = positive_integer(self.options, "max_sessions", 64)
-        self.max_native_calls = positive_integer(self.options, "max_native_calls", 10000)
+        self.max_native_calls = positive_integer(self.options, "max_native_calls", DEFAULT_LIMIT)
         self.max_pending_messages = positive_integer(self.options, "max_pending_messages", 1024)
         if not isinstance(self.options.get("allow_configuration_change_on_resume", False), bool):
             raise OrchestrationError("allow_configuration_change_on_resume must be boolean.", "invalid_configuration")
@@ -133,7 +136,8 @@ class _ProcessSessions(OwnedSessionDriver):
             self._starting += 1
         try:
             context = json_object(specification.get("context", {}), "Session context")
-            live = _LiveSession(context=context, activity_model=ActivityState(self._state_engine))
+            live = _LiveSession(context=context, activity_model=ActivityState(self._state_engine),
+                                calls=NativeCallLedger(self._state_engine, self.max_native_calls))
             live.process = JsonLineProcess(self.options, lambda method, params: self._request(live, method, params), jsonrpc=self.jsonrpc,
                                            notification_handler=lambda method, params: self._notification(live, method, params),
                                            telemetry_observer=self._telemetry_observer, telemetry_context=capture_origin({**context, "incarnation": live.incarnation}),
@@ -355,6 +359,10 @@ class _NativeSessions(_ProcessSessions):
         return result
 
 
+def _tool_response(result: JSON, success: bool) -> JSON:
+    return {"contentItems": [{"type": "inputText", "text": encode_json(result).decode("utf-8")}], "success": success}
+
+
 class CodexSessionDriver(_NativeSessions):
     """Codex app-server adapter, with explicit process and native policy config.
 
@@ -455,7 +463,6 @@ class CodexSessionDriver(_NativeSessions):
             return super()._request(live, method, params)
         claimed = False
         call_id = None
-        fingerprint = None
         callback_token = None
         completed = False
         try:
@@ -466,55 +473,51 @@ class CodexSessionDriver(_NativeSessions):
                 self._observation(live, "activity", state=self._activity(live))
             action = params.get("tool")
             call_id = params.get("callId")
-            fingerprint = hashlib.sha256(encode_json([action, params.get("arguments", {})], sort_keys=True)).hexdigest()
             replay = None
             if call_id is not None:
                 native_identifier(call_id, "tool call ID")
                 with live.lock:
-                    prior = live.calls.get(call_id)
-                    if prior:
-                        if prior[0] != fingerprint:
-                            raise OrchestrationError("Native call ID was reused with different arguments.", "call_id_conflict")
-                        if prior[1] is None:
-                            raise OrchestrationError("The native call is already in progress.", "call_in_progress")
-                        replay = deepcopy(prior[1])
-                    else:
-                        if len(live.calls) >= self.max_native_calls:
-                            raise OrchestrationError("Native call replay ledger is full.", "session_capacity")
-                        live.calls[call_id] = (fingerprint, None)
-                        claimed = True
+                    replay = live.calls.reserve(call_id, call_fingerprint(action, params.get("arguments", {})))
+                    claimed = replay is None
             if replay is not None:
-                if replay.get("success") and action in self._application_tools and self._application_replay:
+                completed = True
+                if action in self._application_tools and self._application_replay:
                     arguments = params.get("arguments", {})
                     if isinstance(arguments, str):
                         arguments = decode_json(arguments.encode("utf-8"))
                     result = self._application_replay(action, json_object(arguments, "Tool arguments"),
                         self._callback_context(live, action, call_id),
                         "codex:" + encode_json([live.native_id, call_id]).decode("utf-8"))
-                    completed = True
-                    return {"contentItems": [{"type": "inputText", "text": encode_json(result).decode("utf-8")}], "success": True}
-                completed = True
-                return replay
+                    return _tool_response(result, True)
+                return replay["result"]
             if self._application_callback is not None and isinstance(action, str) and action in self._application_tools:
                 result = self._application_request(live, params)
             else:
                 result = super()._request(live, method, params)
-            response = {"contentItems": [{"type": "inputText", "text": encode_json(result).decode("utf-8")}], "success": True}
-            if call_id is not None:
+            response = _tool_response(result, True)
+            if claimed:
                 with live.lock:
-                    live.calls[call_id] = (fingerprint, deepcopy(response))
+                    live.calls.complete(call_id, response)
+                    try:
+                        live.calls.succeed(call_id)
+                    except Exception as error:
+                        raise OrchestrationError("Callback completed but local settlement was refused.", "operation_unresolved",
+                            {"outcome": "completed", "result": deepcopy(result), "cause": getattr(error, "code", type(error).__name__)}) from error
             completed = True
             return response
         except OrchestrationError as exc:
-            result = {"error": {"code": exc.code, "message": str(exc), "details": exc.details}}
-            response = {"contentItems": [{"type": "inputText", "text": encode_json(result).decode("utf-8")}], "success": False}
-            if claimed:
-                with live.lock:
-                    live.calls[call_id] = (fingerprint, deepcopy(response))
             # A rejected duplicate/replay never resolves the original call. A
             # definitely pre-effect denial is terminal, unlike unknown effects.
             completed = not claimed or effect_outcome(exc) in {"failed", "not_started"}
-            return response
+            if not claimed:
+                return _tool_response({"error": {"code": exc.code, "message": str(exc), "details": exc.details}}, False)
+            with live.lock:
+                return _tool_response({"error": live.calls.fail(call_id, exc)}, False)
+        except Exception as exc:
+            if claimed:
+                with live.lock:
+                    live.calls.fail(call_id, exc)
+            raise
         finally:
             if callback_token is not None:
                 with live.lock:

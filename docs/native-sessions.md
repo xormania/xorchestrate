@@ -28,10 +28,19 @@ Adapter observations enter the application through a trusted callback. They
 retain the native conversation ID, connection incarnation, native call ID, action,
 arguments, and source. A model's `record_result` arguments cannot manufacture
 that provenance. Grok MCP execution additionally requires a matching independently
-observed ACP tool execution. Catalog discovery is never execution. Conflicting
-native call-ID reuse is rejected; repeated Codex native calls replay their prior
-response without invoking the application again. MCP request replay is fenced
-within each gateway connection. Grok associates MCP executions with exact native
+observed ACP tool execution. Catalog discovery is never execution. MCP request
+replay is fenced within each gateway connection.
+
+Codex, Claude and Grok share one native call ledger
+([`native_calls.py`](../xorchestrate/adapters/native_calls.py)) keyed by the
+native call ID (Codex) or connection-scoped MCP request ID (Claude, Grok) and an
+argument fingerprint, following the `native_effect` lifecycle. A repeated call
+replays its completed result without invoking the application again, and a
+recorded failure is returned again with its effect outcome. Reusing an ID with
+different arguments fails with `native_call_conflict`, as does conflicting reuse
+of an observed native call ID; repeating a call that has not settled fails with
+`call_in_progress`. `max_native_calls` (default 10000) bounds each session's
+ledger and native call observations; a full ledger fails with `session_capacity`. Grok associates MCP executions with exact native
 action/argument observations one-to-one in observed order. When concurrent inputs
 are identical, the association records all eligible native call IDs and its
 ordered-match basis; it does not claim the MCP request itself supplied a native

@@ -23,6 +23,7 @@ from tests.hexagonal.support.native import (
     wait_for,
 )
 from xorchestrate.adapters.grok import GrokSessionDriver
+from xorchestrate.adapters.native_calls import NativeCallLedger
 from xorchestrate.adapters.sessions import CodexSessionDriver, _LiveSession
 from xorchestrate.delivery import view
 from xorchestrate.model import Capability
@@ -198,7 +199,7 @@ def test_native_completion_before_callback_return_keeps_running_callback_visible
     if protocol == "grok":
         live.grok = {"current": "A", "native_busy": True, "active_prompts": live.activity_model.set("native_prompt", {"A"}),
                      "seen": ["A"], "completed": [], "interjections": live.activity_model.mapping("interjection"),
-                     "mcp_requests": {}, "condition": threading.Condition(live.lock),
+                     "mcp_requests": NativeCallLedger(live.activity_model.engine), "condition": threading.Condition(live.lock),
                      "calls": {"call": {"action": "hold", "arguments": {}, "used": False}}}
     errors = []
     def invoke():

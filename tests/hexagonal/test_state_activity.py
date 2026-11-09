@@ -1,4 +1,5 @@
 """Native identity transitions and their active adapter consumers."""
+import json
 import sys
 import threading
 from dataclasses import replace
@@ -9,6 +10,7 @@ import pytest
 from xorchestrate.activity import ActivityState, NativeConnection, activity_definitions
 from xorchestrate.adapters.claude import ClaudeSessionDriver, _ClaudeLive
 from xorchestrate.adapters.grok import GrokSessionDriver
+from xorchestrate.adapters.native_calls import NativeCallLedger
 from xorchestrate.adapters.sessions import ACPSessionDriver, CodexSessionDriver, _LiveSession
 from xorchestrate.model import Capability, OrchestrationError
 from xorchestrate.outcomes import before_effect, effect_outcome
@@ -82,8 +84,8 @@ def _callback_fixture(protocol, callback, engine=None):
         live = _ClaudeLive({}, "native", activity_model=ActivityState(engine))
         adapter._hook(live, {"session_id": "native", "hook_event_name": "PreToolUse",
             "tool_name": "mcp__xorchestrate__inspect", "tool_use_id": "call", "tool_input": {}})
-        def invoke():
-            return adapter._tool(live, {"name": "inspect", "arguments": {}, "mcp_request_id": 1})
+        def invoke(arguments=None):
+            return adapter._tool(live, {"name": "inspect", "arguments": arguments or {}, "mcp_request_id": 1})
     else:
         kind = {"codex": CodexSessionDriver, "grok": GrokSessionDriver}[protocol]
         adapter = kind(options)
@@ -92,16 +94,17 @@ def _callback_fixture(protocol, callback, engine=None):
         live = _LiveSession({}, native_id="native", activity_model=ActivityState(engine))
         adapter.bind_application_tools([capability], callback)
         if protocol == "codex":
-            def invoke():
+            def invoke(arguments=None):
                 return adapter._request(live, "item/tool/call", {
-                    "threadId": "native", "callId": "call", "tool": "inspect", "arguments": {}})
+                    "threadId": "native", "callId": "call", "tool": "inspect", "arguments": arguments or {}})
         else:
             live.grok = {"active_prompts": live.activity_model.set("native_prompt"),
-                "interjections": live.activity_model.mapping("interjection"), "mcp_requests": {},
+                "interjections": live.activity_model.mapping("interjection"),
+                "mcp_requests": NativeCallLedger(live.activity_model.engine),
                 "calls": {"call": {"action": "inspect", "arguments": {}, "used": False}},
                 "condition": threading.Condition(live.lock)}
-            def invoke():
-                return adapter._gateway(live, "tools/call", {"name": "inspect", "arguments": {},
+            def invoke(arguments=None):
+                return adapter._gateway(live, "tools/call", {"name": "inspect", "arguments": arguments or {},
                     "mcp_connection_id": "connection", "mcp_request_id": 1})
     return adapter, live, invoke
 
@@ -125,6 +128,36 @@ def test_callback_activity_uses_effect_evidence_not_exception_category(protocol,
         assert live.activity == expected
         assert live.activity_model.activity == expected
         assert not live.activity_model.active("callback")
+    finally:
+        adapter.close()
+
+
+def _refusal_code(protocol, invoke, arguments=None):
+    if protocol == "codex":
+        response = invoke(arguments)
+        assert response["success"] is False
+        return json.loads(response["contentItems"][0]["text"])["error"]["code"]
+    with pytest.raises(OrchestrationError) as refused:
+        invoke(arguments)
+    return refused.value.code
+
+
+@pytest.mark.parametrize("protocol", ["codex", "grok", "claude"])
+def test_native_call_ledger_refusals_share_codes_across_drivers(protocol):
+    calls, nested = [], []
+
+    def reentrant(*args):
+        calls.append(args)
+        nested.append(_refusal_code(protocol, invoke))
+        return {"observed": "once"}
+
+    adapter, live, invoke = _callback_fixture(protocol, reentrant)
+    try:
+        invoke()
+        assert nested == ["call_in_progress"]
+        assert _refusal_code(protocol, invoke, {"changed": True}) == "native_call_conflict"
+        invoke()
+        assert len(calls) == 1
     finally:
         adapter.close()
 
