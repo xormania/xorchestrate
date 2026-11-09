@@ -768,6 +768,7 @@
     "testkit_pytest": {
       "modules": [
         "scripts.testkit.adapters.pytest_plugin",
+        "scripts.testkit.adapters.pytest_evidence",
         "scripts.testkit.adapters.timings"
       ],
       "allowed_roles": [
