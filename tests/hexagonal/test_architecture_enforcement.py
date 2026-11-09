@@ -10,7 +10,7 @@ import copy
 
 import pytest
 
-from scripts.architecture.python import check
+from scripts.architecture.python import OBSERVATIONS, check
 
 
 def write(root, package, path, content):
@@ -269,5 +269,73 @@ def test_contract_identity_changes_when_policy_changes(tmp_path):
     assert before["status"] == after["status"] == "pass"
     assert before["subject"]["source_sha256"] == after["subject"]["source_sha256"]
     assert before["subject"]["contract_sha256"] != after["subject"]["contract_sha256"]
+
+
+def cold_check(root, profile):
+    OBSERVATIONS.clear()
+    return check(root, profile)
+
+
+def test_cached_observations_reproduce_a_cold_extraction(tmp_path):
+    profile = subject(tmp_path)
+    profile["roles"]["core"]["forbidden_literals"] = ["transport_field"]
+    write(tmp_path, "parcels", "core/service.py",
+          "import importlib\nfrom . import helper\nfrom ..adapters.memory import MemoryStore\n"
+          "def run():\n    return importlib.import_module('transport_field')\n")
+    write(tmp_path, "parcels", "core/helper.py", "import socket\n")
+    cold = cold_check(tmp_path, profile)
+    assert cold["status"] == "violation" and len(OBSERVATIONS) == len(cold["files"])
+    cold_copy = copy.deepcopy(cold)
+    cold["files"][0]["sha256"] = "tampered"
+    for record in cold["relationships"]:
+        record["target"] = "tampered"
+    warm = check(tmp_path, profile)
+    assert warm == cold_copy
+    assert warm == cold_check(tmp_path, profile)
+
+
+def test_changed_content_at_the_same_path_is_examined_again(tmp_path):
+    profile = subject(tmp_path)
+    assert check(tmp_path, profile)["status"] == "pass"
+    service = write(tmp_path, "parcels", "core/service.py", "from ..adapters.memory import MemoryStore\n")
+    warm = check(tmp_path, profile)
+    require_finding(warm, "dependency", "dependencies.allowed", "core/service.py")
+    assert warm == cold_check(tmp_path, profile)
+    service.write_text("def broken(:\n")
+    for _ in range(2):  # Unparsable bytes are never memoized as a clean observation.
+        require_finding(check(tmp_path, profile), "extraction", "source.readable", "core/service.py")
+    service.write_text("from ..ports import Store\n")
+    assert check(tmp_path, profile) == cold_check(tmp_path, profile)
+    assert check(tmp_path, profile)["status"] == "pass"
+
+
+def test_identical_relative_paths_in_different_roots_keep_their_own_results(tmp_path):
+    clean, faulty = tmp_path / "clean", tmp_path / "faulty"
+    profile = subject(clean)
+    subject(faulty)
+    write(faulty, "parcels", "core/service.py", "from ..adapters.memory import MemoryStore\n")
+    # Same bytes, different neighbours: the submodule edge exists only where its target does.
+    for root in (clean, faulty):
+        write(root, "parcels", "core/helper.py", "from . import extra\n")
+    write(clean, "parcels", "core/extra.py", "VALUE = 1\n")
+    expected = {root: cold_check(root, profile) for root in (clean, faulty)}
+    assert expected[clean]["status"] == "pass", expected[clean]
+    require_finding(expected[faulty], "dependency", "dependencies.allowed", "core/service.py")
+    assert {"source": "parcels.core.helper", "target": "parcels.core.extra", "line": 1,
+            "kind": "import"} in expected[clean]["relationships"]
+    assert all(item["target"] != "parcels.core.extra" for item in expected[faulty]["relationships"])
+    OBSERVATIONS.clear()
+    for root in (clean, faulty, clean, faulty):
+        assert check(root, profile) == expected[root]
+
+
+def test_observation_cache_is_bounded_and_eviction_preserves_results(tmp_path, monkeypatch):
+    profile = subject(tmp_path)
+    expected = cold_check(tmp_path, profile)
+    monkeypatch.setattr(OBSERVATIONS, "limit", 2)
+    OBSERVATIONS.clear()
+    for _ in range(2):
+        assert check(tmp_path, profile) == expected
+        assert len(OBSERVATIONS) == 2
 
 
