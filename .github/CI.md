@@ -54,8 +54,9 @@ at their pinned source revisions and in Git history. CI does not preserve an old
 implementation as a product acceptance obligation.
 
 Security-lint calibration belongs to the catalog's architecture family and uses
-the shared Ruff definition with independent expected findings. The verification job
-installs `.[test]` with the pinned Ruff requirements; it does not need the telemetry extra. Architecture and tmux
+the shared Ruff definition with independent expected findings; it runs in the
+application job, where the pinned Ruff dependency is installed. The verification job
+installs `.[test]` and does not need the telemetry extra. Architecture and tmux
 regression tests run through the application suite; dedicated jobs do not rerun
 the same selected pytest modules.
 
