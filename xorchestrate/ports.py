@@ -35,27 +35,39 @@ class TelemetrySink(Protocol):
     """Optional observations; capture receipts do not establish action success.
 
     Rows have stable event identities, collection sequences, protected payloads
-    and their explicit source context. Queries do not initialize absent storage.
+    and their explicit source context. Reads do not initialize absent storage.
+    Bundle operations authorize every row of their complete closure through the
+    supplied callback before returning a receipt.
     """
+
+    project_id: str | None
 
     def new_id(self) -> str: ...
     def record(self, event_type: str, payload: JSON, context: JSON, **metadata: object) -> JSON: ...
-    def query(self, *, after: int = 0, limit: int = 100, **filters: object) -> list[JSON]: ...
+    def scan(self, *, after: int = 0, limit: int = 100, **filters: object) -> JSON:
+        """Filter one bounded raw batch.
+
+        Returns matching ``events``, raw ``next_after`` and ``scanned`` progress,
+        and ``exhausted``. At most ``limit`` repository rows may be read,
+        including rows rejected by resource filters. Empty matches may advance.
+        """
+        ...
     def get_event(self, event_id: str, *, hydrate: bool = True) -> JSON | None: ...
+    def resolve_scope(self, row: JSON, *, database_path: object | None = None) -> JSON | None:
+        """Recover typed work/session/operation scope for an unscoped row, if known."""
+        ...
+    def view_observation(self, row: JSON, *, hydrate: bool = True, artifact_store: object | None = None) -> JSON: ...
     def status(self) -> JSON: ...
     def read_payload(self, event_id: str, digest: str | None = None, offset: int = 0, limit: int = 65536) -> JSON: ...
+    def snapshot_source(self) -> JSON: ...
+    def bundle_source(self, destination: str) -> JSON: ...
+    def snapshot(self, destination: str, *, authorize: Callable[[JSON], bool] | None = None,
+                 receipt: bool = False) -> JSON: ...
+    def verify(self, destination: str, *, authorize: Callable[[JSON], bool] | None = None,
+               receipt: bool = False) -> JSON: ...
+    def restore(self, bundle: str, destination: str, *, authorize: Callable[[JSON], bool] | None = None,
+                receipt: bool = False) -> JSON: ...
     def close(self) -> None: ...
-
-
-class TelemetryScanner(TelemetrySink, Protocol):
-    """Optional raw-batch accounting for filtered observation reads.
-
-    A scan returns matching ``events``, raw ``next_after`` and ``scanned``
-    progress, and ``exhausted``. At most ``limit`` repository rows may be read,
-    including rows rejected by resource filters. Empty matches may advance.
-    """
-
-    def scan(self, *, after: int = 0, limit: int = 100, **filters: object) -> JSON: ...
 
 
 class CapabilityProvider(Protocol):
@@ -103,25 +115,22 @@ class ApplicationToolCallback(Protocol):
 
 
 class ApplicationToolSessionDriver(SessionDriver, Protocol):
+    """Optional port for drivers that expose application actions as native tools.
+
+    Native tool descriptions, requests and response envelopes belong to the
+    adapter. Ordinary session drivers need not implement this port.
+
+    A driver that answers repeated native calls from its own call ledger may
+    also define ``bind_application_replay(callback)``, with the same callback
+    signature. Composition then validates each completed cache hit through it
+    without invoking a new effect: the callback retains the original native
+    call identity, rechecks current authorization and result applicability,
+    and rejects a missing/unresolved durable call. Drivers without a replay
+    ledger omit it and keep their own cache-only replay contract.
+    """
+
     def bind_application_tools(self, capabilities: list[Capability], callback: ApplicationToolCallback) -> None:
-        """Optionally expose application actions before starting sessions.
-
-        Native tool descriptions, requests and response envelopes belong to the
-        adapter. Ordinary session drivers need not implement this optional port.
-        """
-        ...
-
-
-class ApplicationReplaySessionDriver(SessionDriver, Protocol):
-    def bind_application_replay(self, callback: ApplicationToolCallback) -> None:
-        """Validate a completed cache hit without invoking a new effect.
-
-        This optional boundary retains the original native call identity and
-        lets composition recheck current authorization and result applicability.
-        The callback must reject a missing/unresolved durable call; it cannot
-        turn an adapter cache hit into a fresh application invocation. Drivers
-        with custom callbacks may keep their own cache-only replay contract.
-        """
+        """Bind application actions before starting sessions."""
         ...
 
 
@@ -143,21 +152,6 @@ class Clock(Protocol):
 
 
 Identifier = Callable[[], str]
-
-
-class NativeDeliveryDriver(SessionDriver, Protocol):
-    def deliver(self, session: JSON, message: JSON) -> JSON:
-        """Submit a correlated delivery without claiming receipt or completion."""
-        ...
-    def bind_observer(self, observer: Callable[[JSON, JSON], None]) -> None:
-        """Bind trusted native evidence before creating sessions."""
-        ...
-
-
-class AttachSessionDriver(SessionDriver, Protocol):
-    def attach(self, specification: JSON) -> JSON: ...
-    def detach(self, session: JSON) -> JSON: ...
-    def reconnect(self, source_backend: JSON, specification: JSON) -> JSON: ...
 
 
 class SessionSelection(Protocol):

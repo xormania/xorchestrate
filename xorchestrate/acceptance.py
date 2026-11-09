@@ -247,10 +247,10 @@ class WorkAcceptance:
             return {"contribution": _view(record)}
 
     def _policy_identity(self):
-        policy = getattr(self, "acceptance", None)
-        identity = getattr(policy, "identity", None)
+        policy = self.acceptance
         if policy is None:
             return None
+        identity = getattr(policy, "identity", None)
         if not isinstance(identity, str) or not identity:
             raise OrchestrationError("Acceptance policy must expose its material configuration identity.", "configuration_error")
         return identity
@@ -302,7 +302,7 @@ class WorkAcceptance:
 
     def _measurement_providers(self, requirements):
         names = {check["capability"].partition("/")[0] for check in requirements["checks"].values()} if requirements else set()
-        configured = getattr(self, "provider_configurations", {})
+        configured = self.provider_configurations
         return {name: configured.get(name) for name in sorted(names)}
 
     def context(self, work_id):
@@ -423,7 +423,7 @@ class WorkAcceptance:
                 "work_id": args["work_id"], "check_id": args["check_id"], "fingerprint": fingerprint,
                 "requirements_identity": requirement.data["identity"], "requirement_revision": requirement.version,
                 "candidate_identity": candidate.data["identity"], "candidate_revision": candidate.version,
-                "provider_identity": getattr(self, "provider_configurations", {}).get(check["capability"].partition("/")[0]),
+                "provider_identity": self.provider_configurations.get(check["capability"].partition("/")[0]),
                 "request_binding": binding, "operation_id": operation_id, "status": "pending", "sequence": sequence,
             }, key)
         try:
@@ -456,7 +456,7 @@ class WorkAcceptance:
                 "outcome": "completed", "external_result": deepcopy(raw)}) from error
 
     def accept_work(self, args, actor, context):
-        if getattr(self, "acceptance", None) is None:
+        if self.acceptance is None:
             raise OrchestrationError("No acceptance policy is configured.", "acceptance_unavailable")
         with self.store.transaction() as tx:
             self._verify_context(tx, context)

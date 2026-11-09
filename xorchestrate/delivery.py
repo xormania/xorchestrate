@@ -108,13 +108,13 @@ class DeliveryMixin:
             message = self._require(tx, "message", delivery.data["message_id"])
             candidates = [view(r) for r in tx.list("session") if r.data.get("actor_id") == delivery.data["recipient"]
                 and r.data.get("status") == "active" and (not message.data.get("work_id") or r.data.get("work_id") == message.data.get("work_id"))]
-        selected = self.session_selection.select(view(message), delivery.data["recipient"], deepcopy(candidates)) if self.session_selection else (max(candidates, key=lambda s: (s.get("created_at", ""), s["id"]))["id"] if candidates else None)
+        selected = self.session_selection.select(view(message), delivery.data["recipient"], deepcopy(candidates))
         if selected is None:
             return {"delivery": view(delivery), "deferred": "no_active_session"}
         selected_session = next((s for s in candidates if s["id"] == selected), None)
         if selected_session is None:
             raise OrchestrationError("Session selection returned an ineligible session.", "invalid_selection")
-        if self.delivery_scheduler and not self.delivery_scheduler.ready(view(delivery), deepcopy(selected_session), self.clock()):
+        if not self.delivery_scheduler.ready(view(delivery), deepcopy(selected_session), self.clock()):
             return {"delivery": view(delivery), "deferred": "schedule"}
         # Each effect is authorized against its real recipient session and work.
         session_context = self._context(actor, {"session_id": selected})
@@ -218,7 +218,7 @@ class DeliveryMixin:
             if delivery.data["status"] != "failed":
                 raise OrchestrationError("Only a definite failed attempt can be retried; unknown outcomes require explicit reconciliation.", "delivery_unresolved")
             history = [view(self._require(tx, "delivery_attempt", key)) for key in delivery.data["attempts"]]
-            if self.retry_policy and not self.retry_policy.permit(view(delivery), history):
+            if not self.retry_policy.permit(view(delivery), history):
                 raise OrchestrationError("The retry policy denied another attempt.", "retry_denied")
             record = self._transition(tx, delivery, "retry", {**delivery.data, "status": "queued"}, actor)
             self._event(tx, "delivery.retry_scheduled", actor, delivery_id=delivery.key)

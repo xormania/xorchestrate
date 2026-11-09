@@ -56,6 +56,8 @@ def test_native_resume_cannot_bypass_denied_source_control(tmp_path, protocol, s
 @pytest.mark.parametrize("protocol", ["codex", "acp"])
 def test_authorized_resume_after_restart_binds_callbacks_to_destination(tmp_path, protocol):
     config = configuration(tmp_path, protocol, "sqlite")
+    if protocol == "codex":
+        config["sessions"]["agent"]["options"]["application_tools"] = True
     with build(config) as runtime:
         app = runtime.application
         app.call("add_actor", {"actor_id": "delegate"})
@@ -67,8 +69,6 @@ def test_authorized_resume_after_restart_binds_callbacks_to_destination(tmp_path
     with build(config) as runtime:
         app = runtime.application
         assert app.call("list_sessions", {})["sessions"][0]["status"] == "disconnected"
-        contexts = []
-        app.sessions["agent"].set_request_handler(lambda method, params, context: contexts.append(context) or {})
         resumed = app.call("start_session", {"driver": "agent", "resume_session_id": source["id"],
             "specification": {"context": {"actor": "forged"}}, "actor_id": "delegate",
             "work_id": target_work["id"], "idempotency_key": "authorized-resume"}, actor="controller")["session"]
@@ -76,7 +76,21 @@ def test_authorized_resume_after_restart_binds_callbacks_to_destination(tmp_path
         assert resumed["backend"]["instance"] != source["backend"]["instance"]
         assert resumed["actor_id"] == "delegate"
         assert resumed["work_id"] == target_work["id"]
-        app.call("send_session", {"session_id": resumed["id"], "message": {"text": "tool"},
-                                  "idempotency_key": "callback"}, actor="delegate")
-        wait_for(lambda: contexts, timeout=2)
-        assert contexts == [{"actor": "delegate", "delegated_by": "controller", "work_id": target_work["id"], "session_id": resumed["id"]}]
+        output = app.call("send_session", {"session_id": resumed["id"], "message": {"text": "record"},
+                                           "idempotency_key": "callback"}, actor="delegate")["output"]
+        if protocol == "acp":
+            # ACP exposes no application tools; the untranslated native request is refused.
+            def completion():
+                rows = app.call("native_observations", {"session_id": resumed["id"]})["observations"]
+                return [row for row in rows if row["observation"]["kind"] == "native_completion"]
+            completed = wait_for(completion, timeout=2)
+            assert completed[0]["created_by"] == "delegate" and completed[0]["work_id"] == target_work["id"]
+            assert completed[0]["observation"]["result"]["tool_response"]["error"]["code"] == -32601
+            evidence = app.call("get_work", {"work_id": target_work["id"]})["evidence"]
+            assert all(item["result"] != "from-native" for item in evidence)
+            return
+        assert output["tool_response"]["result"]["success"] is True
+        evidence = app.call("get_work", {"work_id": target_work["id"]})["evidence"]
+        assert ("from-native", "delegate") in [(item["result"], item["created_by"]) for item in evidence]
+        assert all(item["created_by"] == "delegate" for item in evidence)
+        assert not app.call("get_work", {"work_id": original_work["id"]})["evidence"]

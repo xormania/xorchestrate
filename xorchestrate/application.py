@@ -26,13 +26,18 @@ from .lifecycles import DURABLE_LIFECYCLES, default_definitions
 from .model import JSON, Assessment, Capability, Conflict, OrchestrationError, Record
 from .outcomes import before_effect, effect_outcome
 from .ports import (
+    AcceptancePolicy,
     CapabilityProvider,
     Clock,
+    DeliveryRetry,
+    DeliveryScheduling,
     Evaluator,
     Guardrail,
     Identifier,
+    ReceiptPolicy,
     RoutingPolicy,
     SessionDriver,
+    SessionSelection,
     StateStore,
     TelemetrySink,
     Transaction,
@@ -185,10 +190,12 @@ class Application(DeliveryMixin):
     def __init__(
         self, store: StateStore, providers: dict[str, CapabilityProvider],
         sessions: dict[str, SessionDriver], guardrail: Guardrail, routing: RoutingPolicy,
-        evaluators: dict[str, Evaluator], clock: Clock, identifiers: Identifier,
-        assessment: JSON | None = None, acceptance=None, session_selection=None,
-        delivery_scheduler=None, retry_policy=None, receipt_policy=None, session_fallbacks=None, provider_configurations=None, evaluator_configurations=None, state_engine=None,
-        telemetry: TelemetrySink | None = None,
+        evaluators: dict[str, Evaluator], clock: Clock, identifiers: Identifier, *,
+        session_selection: SessionSelection, delivery_scheduler: DeliveryScheduling, retry_policy: DeliveryRetry,
+        receipt_policy: ReceiptPolicy | None = None, assessment: JSON | None = None,
+        acceptance: AcceptancePolicy | None = None, session_fallbacks: dict[str, str] | None = None,
+        provider_configurations: JSON | None = None, evaluator_configurations: JSON | None = None,
+        state_engine: StateEngine | None = None, telemetry: TelemetrySink | None = None,
     ):
         self.store = store
         self.state_engine = StateEngine(default_definitions()) if state_engine is None else state_engine
@@ -654,7 +661,7 @@ class Application(DeliveryMixin):
             })
             self._queue_deliveries(tx, record, actor)
             result = {"message": _view(record)}
-        if getattr(self.delivery_scheduler, "dispatch_on_enqueue", False):
+        if self.delivery_scheduler.dispatch_on_enqueue:
             try:
                 result["dispatch"] = self.call("dispatch_deliveries", {"message_id": record.key}, actor=actor)
             except OrchestrationError as error:

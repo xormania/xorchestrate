@@ -8,6 +8,7 @@ import itertools
 from contextlib import contextmanager
 from copy import deepcopy
 
+from xorchestrate.adapters.delivery import DefiniteFailureRetry, DeliverySchedule, LatestSessionSelection
 from xorchestrate.adapters.policies import ConfigurableRouting, RuleGuardrail
 from xorchestrate.adapters.storage import MemoryStore, SQLiteStore
 from xorchestrate.application import Application
@@ -84,7 +85,7 @@ def make_store(implementation="memory", path=None):
     if implementation == "memory":
         return MemoryStore()
     if implementation == "sqlite" and path is not None:
-        return SQLiteStore(str(path))
+        return SQLiteStore({"path": str(path)})
     raise ValueError("Select a declared storage adapter and supply a path for SQLite")
 
 
@@ -110,8 +111,10 @@ def application(store=None, *, provider=None, driver=None, providers=None, sessi
         clock=clock if clock is not None else lambda: "2026-10-23T12:00:00Z",
         identifiers=identifiers if identifiers is not None else lambda: f"r{next(sequence)}",
         assessment=assessment, acceptance=acceptance, session_fallbacks=session_fallbacks,
-        receipt_policy=receipt_policy, session_selection=session_selection,
-        delivery_scheduler=delivery_scheduler, retry_policy=retry_policy,
+        receipt_policy=receipt_policy,
+        session_selection=session_selection if session_selection is not None else LatestSessionSelection(),
+        delivery_scheduler=delivery_scheduler if delivery_scheduler is not None else DeliverySchedule(),
+        retry_policy=retry_policy if retry_policy is not None else DefiniteFailureRetry(),
         provider_configurations=provider_configurations,
         evaluator_configurations=evaluator_configurations, state_engine=state_engine,
     )

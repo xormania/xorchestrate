@@ -265,13 +265,12 @@ def _storage_error(exc: sqlite3.Error) -> OrchestrationError:
 class SQLiteStore:
     """Durable serializable transactions across threads, instances and processes.
 
-    Options: ``path`` (required), ``busy_timeout_ms`` (default 5000). A string is
-    shorthand for a path. Each instance owns its connection; newly created state
-    files and directories are private to the current user.
+    Options: ``path`` (required), ``busy_timeout_ms`` (default 5000). Each
+    instance owns its connection; newly created state files and directories are
+    private to the current user.
     """
 
-    def __init__(self, options: dict | str):
-        options = {"path": options} if isinstance(options, str) else options
+    def __init__(self, options: dict):
         if not isinstance(options, dict) or not isinstance(options.get("path"), str) or not options["path"]:
             raise OrchestrationError("SQLite storage requires a nonempty path.")
         timeout = options.get("busy_timeout_ms", 5000)

@@ -6,7 +6,7 @@ import pytest
 
 from tests.hexagonal.support.application import application
 from tests.hexagonal.support.delivery import Native, dispatch
-from xorchestrate.adapters.delivery import DefiniteFailureRetry, DeliverySchedule
+from xorchestrate.adapters.delivery import DefiniteFailureRetry, DeliverySchedule, LatestSessionSelection
 from xorchestrate.adapters.policies import RuleGuardrail
 from xorchestrate.model import Conflict, OrchestrationError
 
@@ -105,7 +105,7 @@ def test_policy_substitution_scheduling_selection_and_authorization(setup):
             return None
     app.session_selection = NoSession()
     assert dispatch(app, message)['deferred'] == 'no_active_session'
-    app.session_selection = None
+    app.session_selection = LatestSessionSelection()
     app.guardrail = RuleGuardrail({'rules': [{'actions': ['deliver_message'], 'effect': 'deny'}]})
     assert dispatch(app, message)['error']['code'] == 'denied'
     assert driver.calls == []

@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from xorchestrate.adapters.capabilities import CLIProvider, StdioMCPProvider
+from xorchestrate.adapters.delivery import DefiniteFailureRetry, DeliverySchedule, LatestSessionSelection
 from xorchestrate.adapters.jsonrpc import JsonLineProcess
 from xorchestrate.adapters.policies import ConfigurableRouting, RuleGuardrail
 from xorchestrate.adapters.storage import MemoryStore
@@ -378,6 +379,8 @@ class CapabilityTests(unittest.TestCase):
             store=store, providers={"tools": CallbackProvider()}, sessions={},
             guardrail=RuleGuardrail(), routing=ConfigurableRouting(), evaluators={},
             clock=lambda: "2026-10-23T12:00:00Z", identifiers=lambda: f"record{next(identifiers)}",
+            session_selection=LatestSessionSelection(), delivery_scheduler=DeliverySchedule(),
+            retry_policy=DefiniteFailureRetry(),
         )
         arguments = {"capability": "tools/callback", "arguments": {}, "idempotency_key": "once"}
         error = self.assert_code("operation_unknown", lambda: app.call("invoke", arguments))

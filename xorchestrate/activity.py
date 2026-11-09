@@ -1,7 +1,7 @@
 """Native work identities and effect lifecycles, independent of wire protocols.
 
 Adapters hold their own lock while applying these transitions. Collection views
-retain the old adapter vocabulary without maintaining another activity ledger;
+expose one work family of the ledger without maintaining another one;
 future/process objects are payloads, never state-machine input or persisted state.
 """
 from collections.abc import MutableMapping, MutableSet
@@ -112,17 +112,12 @@ class ActivityState:
         return tuple({"kind": kind, "identity": identity, **deepcopy(row)}
                      for (kind, identity), row in self._items.items())
 
-    def set_anonymous_count(self, count):
-        if type(count) is not int or count < 0:
-            raise OrchestrationError("Anonymous work count must be a nonnegative integer.", "invalid_request")
-        active = list(self.active("anonymous_turn"))
-        while len(active) < count:
-            self._anonymous_sequence += 1
-            identity = str(self._anonymous_sequence)
-            self.begin("anonymous_turn", identity)
-            active.append(identity)
-        while len(active) > count:
-            self.finish("anonymous_turn", active.pop())
+    def begin_anonymous(self, kind):
+        """Start work whose native identity was not observed."""
+        self._anonymous_sequence += 1
+        identity = str(self._anonymous_sequence)
+        self.begin(kind, identity)
+        return identity
 
     def set(self, kind, values=()):
         result = ActivitySet(self, kind)

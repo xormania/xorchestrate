@@ -17,7 +17,8 @@ class AsynchronousNative:
         self.observer = observer
 
     def start(self, specification):
-        self.backend = {"native_id": "controlled-native", "incarnation": "native-incarnation", "protocol": "custom"}
+        self.backend = {"native_id": "controlled-native", "incarnation": "native-incarnation", "protocol": "custom",
+                        "configuration_id": "turns-v1"}
         return deepcopy(self.backend)
 
     def emit(self, kind, **fields):

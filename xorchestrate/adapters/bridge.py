@@ -26,10 +26,12 @@ from copy import deepcopy
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import cast
 
 from ..activity import activity_engine
 from ..model import OrchestrationError
 from ..outcomes import before_effect, effect_outcome
+from ..ports import ApplicationToolSessionDriver, SessionDriver
 from .jsonrpc import decode_json, positive_number
 
 
@@ -356,7 +358,7 @@ class _Peer:
 class SessionBridgeHost:
     """Keep one configured native conversation alive across client attachments."""
 
-    def __init__(self, driver, endpoint, specification=None, capabilities=(), options=None, *, state_engine=None):
+    def __init__(self, driver: SessionDriver, endpoint, specification=None, capabilities=(), options=None, *, state_engine=None):
         self.driver = driver
         self.state_engine = state_engine if state_engine is not None else activity_engine()
         bind_state = getattr(driver, "bind_state_engine", None)
@@ -389,11 +391,11 @@ class SessionBridgeHost:
         self.capabilities = tuple(capabilities)
         self.catalog_identity = _digest([asdict(c) for c in self.capabilities])
         if self.capabilities:
-            bind = getattr(driver, "bind_application_tools", None)
-            if not callable(bind):
+            if not callable(getattr(driver, "bind_application_tools", None)):
                 raise _error("Native driver cannot expose configured application tools.", "invalid_configuration")
-            bind(list(self.capabilities), self._callback)
-            bind_replay = getattr(driver, "bind_application_replay", None)
+            tools = cast(ApplicationToolSessionDriver, driver)
+            tools.bind_application_tools(list(self.capabilities), self._callback)
+            bind_replay = getattr(tools, "bind_application_replay", None)
             if callable(bind_replay):
                 bind_replay(self._replay_callback)
         observer = getattr(driver, "bind_observer", None)
@@ -406,28 +408,21 @@ class SessionBridgeHost:
                 raise _error("Configured native driver cannot recover the saved host conversation.", "unsupported_operation")
             self.host_id = saved["host_id"]
             self._secret = bytes.fromhex(saved["secret"])
-            self._effects = saved.get("effects", {})
+            self._effects = saved["effects"]
             for key, effect in tuple(self._effects.items()):
                 if effect["status"] == "pending":
                     self._transition_effect(key, "recover", {
                         "recovery_reason": "host_restarted_before_effect_outcome"})
-            self._events = saved.get("events", [])
-            self._sequence = saved.get("sequence", 0)
-            self._bindings = {(field, value): lease for field, value, lease in saved.get("bindings", [])}
-            # Older host snapshots indexed call IDs without native incarnation.
-            # Recover the qualified bindings from their retained observations;
-            # never reinterpret those calls as calls from the resumed driver.
-            for event in self._events:
-                if event.get("call_id"):
-                    binding = _call_binding({**event, "incarnation": event.get("native_incarnation")})
-                    self._bindings.setdefault(binding, event.get("incarnation"))
+            self._events = saved["events"]
+            self._sequence = saved["sequence"]
+            self._bindings = {(field, value): lease for field, value, lease in saved["bindings"]}
             self.backend = resume(deepcopy(saved["backend"]), _copy(specification or {}))
             if self.backend.get("native_id") != saved["backend"].get("native_id"):
                 driver.close()
                 raise _error("Recovered native conversation identity changed.", "session_identity", "unknown")
         else:
             self.backend = driver.start(_copy(specification or {}))
-        self.configuration_id = self.backend.get("configuration_id", _digest({"driver": type(driver).__module__ + ":" + type(driver).__name__, "options": getattr(driver, "options", {})}))
+        self.configuration_id = self.backend["configuration_id"]
         self._socket = None
         try:
             self.endpoint.parent.mkdir(parents=True, exist_ok=True)
@@ -758,7 +753,7 @@ class SessionBridgeHost:
             # including an unbound observation made before any attachment.
             # Completion without a known turn stays
             # unbound rather than becoming evidence for a replacement lease.
-            if lease is None and observation.get("kind") in {"native_tool", "native_tool_call", "tool_call", "native_call"}:
+            if lease is None and observation.get("kind") in {"native_tool", "native_tool_call"}:
                 call_key = _call_binding(observation)
                 lease = self._bindings.get(call_key, self._lease)
                 if observation.get("call_id"):
@@ -771,7 +766,7 @@ class SessionBridgeHost:
             # later completion can be forwarded. A fresh call never transfers
             # an already-owned turn, and a stale call cannot bind a new turn.
             if (not conflict and lease and lease == self._lease
-                    and observation.get("kind") in {"native_tool", "native_tool_call", "tool_call", "native_call"}
+                    and observation.get("kind") in {"native_tool", "native_tool_call"}
                     and observation.get("call_id")
                     and self._bindings.get(_call_binding(observation)) == lease):
                 for field in ("turn_id", "prompt_id"):
@@ -925,7 +920,7 @@ class BridgeSessionDriver:
             raise _error("Bridge attachment accepts trusted application context only; configure the host to select native settings.", "invalid_arguments")
         if self._closed:
             raise _error("Bridge driver is closed.")
-        if source is not None and (source.get("bridge_endpoint") != self.endpoint or source.get("bridge_transport", "unix") != self.transport):
+        if source is not None and (source.get("bridge_endpoint") != self.endpoint or source.get("bridge_transport") != self.transport):
             raise _error("Resume source belongs to another configured endpoint.", "session_identity")
         connection = None
         try:

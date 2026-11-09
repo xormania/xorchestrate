@@ -84,7 +84,7 @@ class ReassignedCallbackHost(SessionBridgeHost):
 
     def _callback(self, action, arguments, native_context, idempotency_key=None):
         with self._lock:
-            key = next(key for key in self._bindings if key[0] in {"call_id", "native_call"})
+            key = next(key for key in self._bindings if key[0] == "native_call")
             if self._bindings[key] != self._lease:
                 self.fault_activated = True
                 self._bindings[key] = self._lease
@@ -144,7 +144,7 @@ def callback_scenario(tmp_path, store, replace, host_type=SessionBridgeHost):
             result = future.result(3)
         return {"outcome": result, "old": app.call("get_work", {"work_id": works["old"]}),
             "new": app.call("get_work", {"work_id": works["new"]}), "events": deepcopy(host._events),
-            "old_incarnation": old["backend"]["incarnation"], "call_binding": next(key for key in host._bindings if key[0] in {"call_id", "native_call"}), "bindings": deepcopy(host._bindings),
+            "old_incarnation": old["backend"]["incarnation"], "call_binding": next(key for key in host._bindings if key[0] == "native_call"), "bindings": deepcopy(host._bindings),
             "fault_activated": getattr(host, "fault_activated", False)}
     finally:
         native.release.set()

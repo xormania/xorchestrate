@@ -104,7 +104,7 @@ def export_api():
 
 def observation(identity, sequence, payload, *, event_type="usage.sample", **extra):
     return {"event_id": identity, "sequence": sequence, "event_type": event_type,
-            "payload_json": json.dumps(payload), "context": {"project_id": "fixture-project",
+            "payload": json.loads(json.dumps(payload)), "context": {"project_id": "fixture-project",
             "session_id": "sensitive-session", "task_id": "work-public"}, **extra}
 
 

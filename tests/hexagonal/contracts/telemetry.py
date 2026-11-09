@@ -113,10 +113,14 @@ def raw_usage_contract(fixture):
     _record(fixture, "fixture.usage", {"usage": {"input_tokens": 0, "output_tokens": None},
         "tokens": {"cache_read": 12}}, event_id="raw-usage")
     result = fixture.usage(event_type="fixture.usage")
-    sample = next(item for item in result["samples"] if item["event_id"] == "raw-usage")
-    quantities = {tuple(item["path"]): item["value"] for item in sample["measurements"]}
-    assert quantities[("usage",)] == {"input_tokens": 0, "output_tokens": None}
-    assert quantities[("tokens",)] == {"cache_read": 12}
+    assert "raw-usage" in result["source_event_ids"]
+    raw = next(row for row in result["raw_observations"] if row["event_id"] == "raw-usage")
+    assert raw["payload"]["usage"] == {"input_tokens": 0, "output_tokens": None}, \
+        "TELEMETRY_USAGE_MUST_PRESERVE_RAW_SOURCE_FIELDS"
+    assert raw["payload"]["tokens"] == {"cache_read": 12}
+    assert result["quantities"]["input_tokens"] is None and result["known_quantities"]["input_tokens"] is None, \
+        "TELEMETRY_UNDECLARED_COUNTER_SEMANTICS_MUST_NOT_BECOME_KNOWN_QUANTITIES"
+    assert {"input_tokens", "output_tokens"} <= set(result["missing_categories"])
     assert result["cost"] is None
     assert result["cost_status"] == "unknown", "TELEMETRY_UNKNOWN_COST_MUST_NOT_BECOME_ZERO"
 

@@ -96,14 +96,14 @@ def dispatch_pressure(value):
 class TelemetryViews:
     """Read through explicit current-authorization and projection callbacks."""
 
-    def __init__(self, sink, store, context, authorize, verify, projector, authority=None):
+    def __init__(self, sink, store, context, authorize, verify, projector, authority):
         self.sink = sink
         self.store = store
         self.context = context
         self.authorize = authorize
         self.verify = verify
         self.projector = projector
-        self.authority = authority if authority is not None else (lambda: None)
+        self.authority = authority
 
     def _configured(self):
         if self.sink is None:
@@ -114,8 +114,7 @@ class TelemetryViews:
         row = deepcopy(row)
         scope = row.get("context", {})
         if not any(scope.get(key) for key in ("work_id", "session_id", "operation_id")):
-            resolve = resolve_scope if resolve_scope is not None else getattr(self.sink, "resolve_scope", None)
-            resolved = resolve(row) if callable(resolve) else None
+            resolved = (resolve_scope or self.sink.resolve_scope)(row)
             if resolved:
                 scope = {**scope, **resolved}
                 row["context"] = scope
@@ -203,15 +202,9 @@ class TelemetryViews:
         page_full = False
         while len(visible) < limit and scanned < scan_limit and not page_full and not complete:
             batch_limit = min(1000, scan_limit - scanned)
-            scanner = getattr(sink, "scan", None)
-            if callable(scanner):
-                batch = scanner(after=cursor, limit=batch_limit, **filters)
-                rows = batch["events"]
-                batch_cursor, examined, exhausted = batch["next_after"], batch["scanned"], batch["exhausted"]
-            else:
-                rows = sink.query(after=cursor, limit=batch_limit, **filters)
-                batch_cursor = rows[-1]["sequence"] if rows else cursor
-                examined, exhausted = len(rows), len(rows) < batch_limit
+            batch = sink.scan(after=cursor, limit=batch_limit, **filters)
+            rows = batch["events"]
+            batch_cursor, examined, exhausted = batch["next_after"], batch["scanned"], batch["exhausted"]
             if not 0 <= examined <= batch_limit or (not exhausted and batch_cursor <= cursor):
                 raise OrchestrationError("Telemetry source did not provide bounded scan progress.", "invalid_query")
             scanned += examined
@@ -328,34 +321,13 @@ class TelemetryViews:
         from .telemetry_views import usage_summary
 
         events = self._analysis_page(arguments, actor, "telemetry_usage")
-        measurements = []
-
-        def visit(value, path):
-            if isinstance(value, dict):
-                for key, child in value.items():
-                    if "token" in key.lower() or key in {"usage", "cost", "costUsdTicks"}:
-                        measurements.append({"path": path + [key], "value": deepcopy(child)})
-                    elif isinstance(child, (dict, list)):
-                        visit(child, path + [key])
-            elif isinstance(value, list):
-                for index, child in enumerate(value):
-                    visit(child, path + [index])
-
-        samples = []
-        for row in events["events"]:
-            measurements = []
-            visit(row.get("payload"), [])
-            if measurements:
-                samples.append({"event_id": row["event_id"], "sequence": row["sequence"],
-                                "context": row["context"], "measurements": measurements})
         self._verify(events["_contexts"])
         normalized = usage_summary(events["events"])
         # Retained observations are exact payload reads; an analysis response is
         # a bounded projection with explicit source references when content is
-        # too large to inline. The legacy raw sample view remains available.
-        normalized.update(samples=samples, next_after=events["next_after"], cutoff=events["cutoff"],
+        # too large to inline.
+        normalized.update(next_after=events["next_after"], cutoff=events["cutoff"],
                           scan_limited=events["scan_limited"], complete=events["complete"],
-                          normalization=normalized["normalization_version"],
                           cost=None, cost_status="unknown", totals_status="normalized" if normalized["source_event_ids"] else "unknown",
                           population={"basis": "authorized returned page", "after": arguments.get("after", 0),
                                       "complete": events["complete"]})
@@ -411,10 +383,6 @@ class TelemetryViews:
         raw = result.pop("raw_observations", [])
         result["raw_observations_omitted"] = True
         result["source_references"] = [{"event_id": row["event_id"], "read_action": "telemetry_payload"} for row in raw]
-        if len(canonical(result).encode()) > budget:
-            result["samples"] = [{"event_id": item["event_id"], "sequence": item["sequence"],
-                                   "measurements_omitted": True, "read_action": "telemetry_payload"}
-                                  for item in result.get("samples", [])]
         if len(canonical(result).encode()) > budget:
             raise OrchestrationError("Telemetry analysis exceeds the selected budget; select a smaller page.", "invalid_query")
         return result

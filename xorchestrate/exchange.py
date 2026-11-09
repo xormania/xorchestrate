@@ -119,7 +119,7 @@ def _callback(snapshot, actor, action, arguments_match, result_match):
 
 
 def _submission(snapshot, message, recipient):
-    attempts = [attempt for attempt in snapshot.get("all_attempts", snapshot["attempts"])
+    attempts = [attempt for attempt in snapshot["all_attempts"]
                 if attempt.get("message_id") == message["id"] and attempt.get("recipient") == recipient]
     require(attempts, "delivery_attempt_missing")
     # A later failed/uncertain attempt must not be hidden by an old successful

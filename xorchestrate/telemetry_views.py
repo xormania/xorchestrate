@@ -16,13 +16,7 @@ QUANTITIES = ("input_tokens", "output_tokens", "cache_read_tokens",
 
 def _payload(event):
     value = event.get("payload")
-    if isinstance(value, dict):
-        return value
-    try:
-        value = json.loads(event.get("payload_json", "{}"))
-        return value if isinstance(value, dict) else {}
-    except (ValueError, TypeError):
-        return {}
+    return value if isinstance(value, dict) else {}
 
 
 def _ordered(events):

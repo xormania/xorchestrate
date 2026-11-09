@@ -100,7 +100,7 @@ class CallbackFixture:
 
     def rows(self):
         result = []
-        for envelope in self.app.telemetry.query(limit=1000):
+        for envelope in self.app.telemetry.scan(limit=1000)["events"]:
             row = self.app.telemetry.get_event(envelope["event_id"])
             if envelope.get("payload_storage"):
                 row["payload_storage"] = envelope["payload_storage"]

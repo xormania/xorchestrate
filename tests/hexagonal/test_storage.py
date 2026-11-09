@@ -236,7 +236,7 @@ class MemoryStoreTests(StorageContract, unittest.TestCase):
 
 class SQLiteStoreTests(StorageContract, unittest.TestCase):
     def make_store(self):
-        return SQLiteStore(str(Path(self.directory.name) / "state.db"))
+        return SQLiteStore({"path": str(Path(self.directory.name) / "state.db")})
 
     def test_restart_keeps_records_versions_and_event_sequence(self):
         path = str(Path(self.directory.name) / "state.db")
@@ -300,7 +300,7 @@ class SQLiteStoreTests(StorageContract, unittest.TestCase):
             self.assertEqual(tx.events(), [{"count": count, "seq": count} for count in range(1, 37)])
 
     def test_memory_database_lives_until_its_store_closes(self):
-        memory = SQLiteStore(":memory:")
+        memory = SQLiteStore({"path": ":memory:"})
         self.addCleanup(memory.close)
         with memory.transaction() as tx:
             tx.put("job", "one", {})
@@ -311,7 +311,7 @@ class SQLiteStoreTests(StorageContract, unittest.TestCase):
         path = Path(self.directory.name) / "not-a-database.db"
         path.write_bytes(b"This is not a SQLite database.")
         with self.assertRaises(OrchestrationError) as failure:
-            SQLiteStore(str(path))
+            SQLiteStore({"path": str(path)})
         self.assertEqual(failure.exception.code, "storage_error")
         self.assertEqual(failure.exception.details, {"retryable": False})
 
@@ -319,14 +319,14 @@ class SQLiteStoreTests(StorageContract, unittest.TestCase):
     def test_new_state_files_and_directories_are_private(self):
         parent = Path(self.directory.name) / "private" / "nested"
         path = parent / "state.db"
-        store = SQLiteStore(str(path))
+        store = SQLiteStore({"path": str(path)})
         self.addCleanup(store.close)
         self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
         self.assertEqual(stat.S_IMODE(parent.stat().st_mode), 0o700)
         self.assertEqual(stat.S_IMODE(parent.parent.stat().st_mode), 0o700)
 
     def test_invalid_configuration(self):
-        for options in ({}, {"path": ""}, {"path": "x", "busy_timeout_ms": -1}, {"path": "x", "busy_timeout_ms": True}):
+        for options in ("state.db", {}, {"path": ""}, {"path": "x", "busy_timeout_ms": -1}, {"path": "x", "busy_timeout_ms": True}):
             with self.assertRaises(OrchestrationError):
                 SQLiteStore(options)
 

@@ -24,6 +24,8 @@ def tool(text):
     method = "item/tool/call" if protocol == "codex" else "session/request_permission"
     params = {"threadId" if protocol == "codex" else "sessionId": "alien" if text == "wrong_tool" else native_id,
               "tool": "echo", "arguments": {"value": "from-native"}, "callId": "call-1"}
+    if text == "record":
+        params.update(tool="record_result", arguments={"result": "from-native"}, callId="call-record")
     write(id="native-1", method=method, params=params)
     answer = json.loads(sys.stdin.readline())
     return answer
@@ -62,7 +64,7 @@ for line in sys.stdin:
             sys.exit(0)
         result = {"accepted": True, "native_id": native_id, "start": start_params, "message": message,
                   "environment": os.environ.get("SESSION_TEST"), "authentication": authentication}
-        if text in ("tool", "wrong_tool"):
+        if text in ("tool", "wrong_tool", "record"):
             result["tool_response"] = tool(text)
         if protocol == "codex":
             write(method="item/agentMessage/delta", params={"threadId": "alien" if text == "wrong_identity" else native_id, "delta": "echo:" + text})
