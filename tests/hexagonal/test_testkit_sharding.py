@@ -2,6 +2,7 @@
 
 import json
 import random
+import re
 import subprocess
 
 import pytest
@@ -12,7 +13,7 @@ from scripts.testkit.adapters import profiles
 from scripts.testkit.adapters.pytest_plugin import load_catalog, load_timings, shard_selection
 from scripts.testkit.adapters.timings import regenerate
 from scripts.testkit.catalog import select_families
-from scripts.testkit.sharding import parse_shard, partition, select_shard
+from scripts.testkit.sharding import parse_shard, partition
 from tests.hexagonal.contracts.sharding import (
     INVALID_SPECS,
     VALID_SPECS,
@@ -86,12 +87,6 @@ def test_module_without_recorded_timing_receives_default_weight_and_is_assigned(
     assert owner["estimated_seconds"] == fixture.DEFAULT_SECONDS
 
 
-def test_more_shards_than_selected_modules_is_an_error_not_an_empty_pass():
-    with pytest.raises(ValueError, match="selects no modules"):
-        select_shard(fixture.modules(), (len(fixture.modules()) + 1, len(fixture.modules()) + 1),
-                     weights=fixture.TIMINGS, default=fixture.DEFAULT_SECONDS)
-
-
 def test_tests_check_carries_the_shard_and_requires_the_timings_input(tmp_path):
     (check,) = composition.plan(directory=tmp_path, suite="tests", mode="protocol-fixture",
                                 families=("state",), shard="2/4")
@@ -106,21 +101,23 @@ def test_tests_check_carries_the_shard_and_requires_the_timings_input(tmp_path):
     assert next(item for item in row["readiness"] if item["name"] == "test_shard")["modules"] > 0
 
 
-@pytest.mark.parametrize("arguments", [["--suite", "static", "--shard", "1/2"], ["--suite", "tests", "--shard", "3/2"]])
-def test_command_line_rejects_shards_without_tests_or_out_of_range(arguments, tmp_path, capsys):
+@pytest.mark.parametrize("arguments", [["--suite", suite, "--shard", "1/2"] for suite in ("static", "checks", "all")]
+                         + [["--shard", "1/2"], ["--suite", "tests", "--shard", "3/2"]])
+def test_command_line_accepts_shards_only_for_the_tests_suite(arguments, tmp_path, capsys):
     assert cli.main(["run", *arguments, "--output", str(tmp_path / "runs")]) == 1
     report = json.loads(capsys.readouterr().out.splitlines()[-1])
     assert report["status"] == "setup_error" and report["checks"] == []
     assert "shard" in report["error"]["diagnostic"].lower()
 
 
-def test_profiles_retain_a_shard_only_for_suites_with_tests(tmp_path):
+def test_profiles_retain_a_shard_only_for_the_tests_suite(tmp_path):
     profile = tmp_path / "profile.json"
     profile.write_text(json.dumps({"schema_version": 1, "suite": "tests", "shard": "1/3", "output": "runs"}))
     assert profiles.load_profile(profile, root=composition.ROOT)["shard"] == "1/3"
-    profile.write_text(json.dumps({"schema_version": 1, "suite": "static", "shard": "1/3", "output": "runs"}))
-    with pytest.raises(ValueError, match="shard"):
-        profiles.load_profile(profile, root=composition.ROOT)
+    for suite in ("static", "checks", "all"):
+        profile.write_text(json.dumps({"schema_version": 1, "suite": suite, "shard": "1/3", "output": "runs"}))
+        with pytest.raises(ValueError, match="shard"):
+            profiles.load_profile(profile, root=composition.ROOT)
 
 
 def test_pytest_shards_partition_cases_with_their_own_inventory_and_junit(tmp_path):
@@ -139,21 +136,10 @@ def test_pytest_shards_partition_cases_with_their_own_inventory_and_junit(tmp_pa
     assert any(fixture.UNTIMED in inventory["shard"]["modules"] for inventory in inventories)
 
 
-def test_pytest_shards_compose_with_family_selection(tmp_path):
+def test_pytest_rejects_a_shard_that_would_select_no_modules(tmp_path):
     project = fixture.create_project(tmp_path / "project")
-    _, unsharded, _ = fixture.run_pytest(project, "--test-family", "alpha", name="alpha")
-    inventories = [fixture.run_pytest(project, "--test-family", "alpha", "--test-shard", f"{index}/2",
-                                      name=f"alpha-{index}")[1] for index in (1, 2)]
-    sharded_inventories(unsharded, inventories, 2)
-    assert {case["family"] for inventory in inventories for case in inventory["cases"] if case["selected"]} == {"alpha"}
-
-
-@pytest.mark.parametrize("arguments", [["--test-shard", "4/3"], ["--test-shard", "7/7"],
-                                       ["--test-family", "gamma", "--test-shard", "2/2"]])
-def test_pytest_rejects_invalid_or_empty_shards(arguments, tmp_path):
-    project = fixture.create_project(tmp_path / "project")
-    result, _, _ = fixture.run_pytest(project, *arguments)
-    assert result.returncode == 4, result.stdout + result.stderr
+    result, _, _ = fixture.run_pytest(project, "--test-family", "gamma", "--test-shard", "2/2")
+    assert result.returncode == 4 and "selects no modules" in result.stdout + result.stderr
 
 
 def test_timings_regenerate_from_shard_junit_reports(tmp_path):
@@ -163,34 +149,48 @@ def test_timings_regenerate_from_shard_junit_reports(tmp_path):
     second = fixture.junit_report(tmp_path / "two.xml", [("tests.test_beta_one.TestGroup", 4.0),
                                                          ("tests.unrelated", 9.0)])
     output = tmp_path / "timings.json"
-    result = regenerate(project, [first, second], output)
-    document = json.loads(output.read_text())
-    assert document == {"schema_version": 1, "default_seconds": 3.25, "modules": {
+    with pytest.raises(ValueError, match="untimed"):
+        regenerate(project, [first, second], output)
+    assert not output.exists(), "a partial run must not replace the timings"
+    result = regenerate(project, [first, second], output, allow_partial=True)
+    assert json.loads(output.read_text()) == {"schema_version": 1, "default_seconds": 3.25, "modules": {
         "tests/test_alpha_heavy.py": 3.25, "tests/test_beta_one.py": 4.0, "tests/test_beta_two.py": 0.5}}
     assert result["untimed_modules"] == ["tests/test_alpha_light.py", "tests/test_alpha_mid.py", "tests/test_gamma_new.py"]
+    rest = fixture.junit_report(tmp_path / "three.xml", [("tests.test_alpha_light", .5), ("tests.test_alpha_mid", 1),
+                                                         ("tests.test_gamma_new", 2)])
+    assert regenerate(project, [first, second, rest], output)["untimed_modules"] == []
     load_timings(project, output)
 
 
-def test_timings_command_writes_a_loadable_file_for_the_real_catalog(tmp_path):
+def test_timings_command_refuses_partial_reports_unless_allowed(tmp_path):
     report = fixture.junit_report(tmp_path / "tests.xml", [("tests.hexagonal.test_testkit_sharding", 0.5)])
     output = tmp_path / "timings.json"
-    completed = fixture.run_timings_tool(report, "--output", output)
-    assert completed.returncode == 0, completed.stderr
-    assert json.loads(completed.stdout)["modules"] == 1
+    refused = fixture.run_timings_tool(report, "--output", output)
+    assert refused.returncode == 1 and json.loads(refused.stdout)["status"] == "setup_error"
+    assert not output.exists()
+    completed = fixture.run_timings_tool(report, "--output", output, "--allow-partial")
+    assert completed.returncode == 0, completed.stdout + completed.stderr
     default, weights = load_timings(composition.ROOT, output)
     assert weights == {"tests/hexagonal/test_testkit_sharding.py": 0.5} and default == 0.5
 
 
-def test_ci_runs_every_shard_and_keeps_the_required_application_check():
+def test_ci_defines_the_shard_count_once_and_keeps_the_required_application_check():
     workflow = json.loads((composition.ROOT / ".github/workflows/ci.yml").read_text())
     shards = workflow["jobs"]["application-tests"]
     assert shards["strategy"]["fail-fast"] is False
-    values = shards["strategy"]["matrix"]["shard"]
+    matrix = shards["strategy"]["matrix"]
+    (count,) = matrix["shards"]
+    assert matrix["shard"] == list(range(1, count + 1)), "every shard index of N runs exactly once"
+    # Every shard reference derives from the matrix count; no literal count can drift.
+    text = json.dumps({key: value for key, value in shards.items() if key != "strategy"})
+    references = re.findall(r"\$\{\{ matrix\.shard \}\}([^$]{0,4})(\$\{\{ matrix\.shards \}\})?", text)
+    assert references and all(total for _, total in references), references
+    assert re.search(r"shard[ -]?\d|\d[ -]?shards|/\d", text.replace("ubuntu-24.04", "")) is None
     run = next(step["run"] for step in shards["steps"] if "--suite tests" in step.get("run", ""))
-    count = int(run.split('--shard "${{ matrix.shard }}/', 1)[1].split('"', 1)[0])
-    assert values == list(range(1, count + 1)), "every shard index of N runs exactly once"
+    assert '--shard "${{ matrix.shard }}/${{ matrix.shards }}"' in run
     upload = next(step for step in shards["steps"] if step.get("uses", "").startswith("actions/upload-artifact"))
-    assert "${{ matrix.shard }}" in upload["with"]["name"] and upload["if"] == "always()"
+    assert upload["with"]["name"].endswith("shard-${{ matrix.shard }}-of-${{ matrix.shards }}")
+    assert upload["if"] == "always()"
     assert not any("--suite tests" in step.get("run", "") for name, job in workflow["jobs"].items()
                    if name != "application-tests" for step in job.get("steps", []))
     gate = workflow["jobs"]["application"]

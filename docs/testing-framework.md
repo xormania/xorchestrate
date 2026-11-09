@@ -67,11 +67,15 @@ first applies the catalog and any `--family`/`--test-layer` selection, then
 partitions exactly those modules into N shards and runs shard K. Each module
 belongs to exactly one shard and the union of shards 1..N is the unsharded
 selection, so running every shard is equivalent to one unsharded run. Every shard
-still collects and validates the complete catalog; its inventory records the shard
-index, count, assigned modules and estimated seconds, and its JUnit/inventory
-are written to its own run directory. A shard that would select no modules (more
-shards than selected modules) is an error rather than an empty pass. `--shard`
-with a suite that has no tests is rejected; direct pytest takes `--test-shard K/N`.
+still discovers all test modules and validates them against the complete catalog
+(undeclared, missing or multiply-owned modules fail every shard); the check that
+each requested module was collected and has cases covers only that shard's own
+modules. Its inventory records the shard index, count, assigned modules and
+estimated seconds, and its JUnit/inventory are written to its own run directory.
+A shard that would select no modules (more shards than selected modules) is an
+error rather than an empty pass. `--shard` is accepted only with `--suite tests`
+(not `checks` or `all`, which would rerun their other suites in every shard);
+direct pytest takes `--test-shard K/N`.
 
 Assignment is deterministic: longest-processing-time first, heaviest module on the
 currently lightest shard, ties broken by module path and shard index. Weights come
@@ -87,10 +91,13 @@ every shard's JUnit (for example the CI shard artifacts):
 ```bash
 python3 -m scripts.testkit run --suite tests --output ../runs
 python3 -m scripts.testkit.timings ../runs/<run-id>/tests.xml
-# or: python3 -m scripts.testkit.timings shard-1/tests.xml shard-2/tests.xml ...
+# or, with every shard's report: python3 -m scripts.testkit.timings shard-1/tests.xml shard-2/tests.xml ...
 ```
 
-Review and commit the rewritten `contracts/test-timings.json`.
+Reports that leave any cataloged module untimed (for example a single shard or a
+family run) are refused and the file is left unchanged; `--allow-partial` writes
+them anyway, and the missing modules then take the default weight. Review and
+commit the rewritten `contracts/test-timings.json`.
 
 Ruff and syntax validation select applicable Python files beneath `xorchestrate`,
 `scripts`, `tests` and `.github`. Historical source trees remain outside this

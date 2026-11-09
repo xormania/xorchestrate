@@ -12,6 +12,7 @@ import math
 import re
 
 SHARD_PATTERN = re.compile(r"([1-9][0-9]*)/([1-9][0-9]*)")
+TIMINGS = "contracts/test-timings.json"
 
 
 def parse_shard(value):
@@ -25,6 +26,14 @@ def parse_shard(value):
     if index > count:
         raise ValueError("Shard index must satisfy 1 <= K <= N")
     return index, count
+
+
+def suite_shard(suite, value):
+    """The one rule for where a shard applies: only the standalone tests suite."""
+    shard = parse_shard(value)
+    if shard is not None and suite != "tests":
+        raise ValueError("--shard applies only to --suite tests")
+    return shard
 
 
 def _seconds(value, name):
@@ -48,16 +57,16 @@ def validate_timings(document):
     return default, {path: _seconds(seconds, "Timing for " + path) for path, seconds in modules.items()}
 
 
-def timings_document(durations, *, precision=2):
+def timings_document(durations):
     """Build a timings document; the default weight is the median recorded duration."""
-    modules = {path: round(_seconds(seconds, "Timing for " + path), precision)
+    modules = {path: round(_seconds(seconds, "Timing for " + path), 2)
                for path, seconds in sorted(durations.items())}
     values = sorted(modules.values())
     if not values:
         raise ValueError("Test timings need at least one recorded module")
     middle = len(values) // 2
     median = values[middle] if len(values) % 2 else (values[middle - 1] + values[middle]) / 2
-    return {"schema_version": 1, "default_seconds": max(round(median, precision), 10 ** -precision),
+    return {"schema_version": 1, "default_seconds": max(round(median, 2), 0.01),
             "modules": modules}
 
 
@@ -87,15 +96,13 @@ def partition(modules, count, *, weights=None, default=1.0):
     return shards
 
 
-def select_shard(selected, shard, *, weights=None, default=1.0):
-    """Restrict a catalog selection to one shard without manufacturing an empty plan."""
+def shard_plan(selected, shard, *, weights=None, default=1.0):
+    """One shard of a catalog selection, refusing to manufacture an empty plan."""
     index, count = shard
-    chosen = set(partition(selected, count, weights=weights, default=default)[index - 1]["modules"])
-    if not chosen:
+    plan = partition(selected, count, weights=weights, default=default)[index - 1]
+    if not plan["modules"]:
         raise ValueError(f"Shard {index}/{count} selects no modules; use fewer shards for this selection")
-    if isinstance(selected, dict):
-        return {path: entry for path, entry in selected.items() if path in chosen}
-    return sorted(chosen)
+    return plan
 
 
 def module_durations(cases, modules):

@@ -9,10 +9,8 @@ from pathlib import Path
 import pytest
 
 from ..catalog import LAYERS, select_families, validate_catalog
-from ..sharding import parse_shard, partition, select_shard, validate_timings
+from ..sharding import TIMINGS, parse_shard, shard_plan, validate_timings
 from .evidence import canonical, digest, write_json
-
-TIMINGS = "contracts/test-timings.json"
 
 
 def pytest_addoption(parser):
@@ -70,8 +68,8 @@ def shard_selection(root, selected, shard, timings=None):
     if parsed is None:
         return selected, None
     default, weights = load_timings(root, timings)
-    chosen = select_shard(selected, parsed, weights=weights, default=default)
-    plan = partition(selected, parsed[1], weights=weights, default=default)[parsed[0] - 1]
+    plan = shard_plan(selected, parsed, weights=weights, default=default)
+    chosen = {path: entry for path, entry in selected.items() if path in set(plan["modules"])}
     return chosen, {"index": parsed[0], "count": parsed[1], "default_seconds": default,
                     "candidate_modules": len(selected), **plan}
 

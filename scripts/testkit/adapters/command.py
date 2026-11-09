@@ -159,6 +159,37 @@ class SubprocessRunner:
         self.last_output = (out or b"", err or b"")
         return out or b"", err or b"", receipt
 
+    def _session_shutdown(self, child, *, reason, scope):
+        """Bounded cleanup when the owned group could not be observed.
+
+        The child is still unreaped, so its PID is also the session/group ID
+        acquired by this Popen. TERM precedes a bounded KILL escalation.
+        """
+        receipt = {"reason": str(reason), "scope": scope, "forced": False,
+                   "grace_seconds": self.shutdown_grace,
+                   "errors": [{"type": "OwnershipUnavailable", "phase": "group_acquisition"}]}
+        with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
+            if self.shutdown_target == "owner":
+                child.terminate()
+            else:
+                os.killpg(child.pid, signal.SIGTERM)
+        try:
+            out, err = child.communicate(timeout=self.shutdown_grace)
+        except (subprocess.TimeoutExpired, OSError):
+            receipt["forced"] = True
+            _kill_session(child)
+            out, err = _finish(child)
+        # Surviving members keep the group ID allocated after the owner exits.
+        with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
+            os.killpg(child.pid, 0)
+            receipt["forced"] = True
+            os.killpg(child.pid, signal.SIGKILL)
+        receipt["exit_status"] = child.returncode
+        receipt["verified"] = False
+        self.last_shutdown = receipt
+        self.last_output = (out or b"", err or b"")
+        return out or b"", err or b"", receipt
+
     def run(self, argv, *, cwd, env, timeout, stdin=None):
         """Capture evidence or retain the operator's terminal descriptors.
 
@@ -179,9 +210,12 @@ class SubprocessRunner:
         child = subprocess.Popen(argv, cwd=str(cwd), env=dict(env),
                                  stdin=stream, stdout=stream, stderr=stream,
                                  start_new_session=True)
-        group = _OwnedGroup(child)
+        group = None
         pending_input = stdin.encode("utf-8") if isinstance(stdin, str) else stdin
         try:
+            # Group observation scans /proc; an interrupt arriving meanwhile
+            # must still reach the cleanup below rather than orphan the session.
+            group = _OwnedGroup(child)
             while True:
                 reason = self.cancellation() if self.cancellation is not None else None
                 remaining = started + timeout - time.monotonic()
@@ -206,7 +240,13 @@ class SubprocessRunner:
             # KeyboardInterrupt/SystemExit still traverse graceful cleanup. The
             # evidence adapter retains the initiating exception and shutdown.
             try:
-                self.last_shutdown = self._shutdown(child, reason="interrupted", scope="run", group=group)[2]
+                if group is None:
+                    with contextlib.suppress(Exception):
+                        group = _OwnedGroup(child)
+                if group is None:
+                    self._session_shutdown(child, reason="interrupted", scope="run")
+                else:
+                    self.last_shutdown = self._shutdown(child, reason="interrupted", scope="run", group=group)[2]
             except BaseException:
                 _kill_session(child, group)
                 with contextlib.suppress(OSError, subprocess.TimeoutExpired):

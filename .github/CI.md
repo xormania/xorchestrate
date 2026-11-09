@@ -11,7 +11,7 @@ export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XX
 python3 -m pip install -e '.[test,telemetry]' -r .github/requirements-ci.txt
 python3 -m scripts.testkit run --suite static
 python3 -m scripts.testkit run --suite tests
-python3 -m scripts.testkit run --suite tests --shard 1/4   # one CI shard
+python3 -m scripts.testkit run --suite tests --shard 1/4   # one of four shards
 python3 -m scripts.testkit run --suite checks
 python3 -m scripts.testkit run --suite calibration
 python3 -m scripts.testkit run --suite multi-harness
@@ -22,7 +22,7 @@ python3 -m scripts.testkit run --suite acceptance
 composes every component suite once: static checks, tests, calibration, both live
 suites and `stories`.
 `--family NAME` selects behavioral families without reducing static coverage.
-`--shard K/N` runs one balanced, deterministic shard of the selected test modules;
+`--shard K/N` (only with `--suite tests`) runs one balanced, deterministic shard of the selected test modules;
 shards 1..N together cover the selection exactly once (see
 [sharding](../docs/testing-framework.md#sharding-the-tests-suite)).
 Each run gets fresh private evidence outside
@@ -37,7 +37,7 @@ permissions. Pull requests, pushes to master and manual runs invoke:
 | Job | Purpose |
 |---|---|
 | Static checks | Shared `static` suite: Ruff lint/security, current-source syntax and deterministic architecture enforcement |
-| Application tests shard K/4 (Python 3.12) | Matrix of four jobs, each running `--suite tests --shard K/4` with its own pytest inventory/JUnit |
+| Application tests shard K/N (Python 3.12) | Matrix of N jobs, each running `--suite tests --shard K/N` with its own pytest inventory/JUnit |
 | Calibration and composed protocol (Python 3.12) | Shared calibration and composed three-harness protocol suites, in parallel with the shards |
 | Application and adapter tests (Python 3.12) | Retains the existing required status name; needs every tests shard and the calibration job and fails unless all of them succeeded. It does not rerun validation |
 | Tmux live acceptance (protocol fixture) | Shared acceptance suite with tmux explicitly installed; private owned process cleanup is part of the receipt |
@@ -47,10 +47,12 @@ permissions. Pull requests, pushes to master and manual runs invoke:
 Each Python job configures `PYTHONPYCACHEPREFIX` in the runner's temporary directory before
 invoking Python. Static checks run once in their own job. The Jev diagnostic
 calculation remains independent and does not add a second deterministic gate.
-The `tests` suite is the longest validation, so it runs as four parallel shards
-balanced by the committed `contracts/test-timings.json`. Shards use `fail-fast: false`
-so one failing shard does not hide the others' results. The shard count appears in
-both the matrix and the `--shard K/4` argument; a framework test keeps them equal.
+The `tests` suite is the longest validation, so it runs as parallel shards
+balanced by the committed `contracts/test-timings.json`. The shard count N is
+defined once, as the matrix value `shards` of the `application-tests` job (currently 4);
+job and step names, the `--shard` argument and artifact names all reference it,
+and the `shard` list must be 1..N. A framework test enforces both. Shards use
+`fail-fast: false` so one failing shard does not hide the others' results.
 Application, calibration and protocol steps have explicit eligibility conditions:
 successful checkout/interpreter/dependency setup and a run that has not been
 cancelled. A suite failure does not skip the later independent suites or erase
@@ -63,8 +65,9 @@ at their pinned source revisions and in Git history. CI does not preserve an old
 implementation as a product acceptance obligation.
 
 Security-lint calibration belongs to the catalog's architecture family and uses
-the shared Ruff definition with independent expected findings. Its pinned Ruff
-dependency remains installed in the application test shard jobs. Architecture and tmux
+the shared Ruff definition with independent expected findings; it runs in the tests
+shard that owns its module. The tests shard jobs and the calibration job both install
+the pinned Ruff with the application dependencies. Architecture and tmux
 regression tests run through the application suite; dedicated jobs do not rerun
 the same selected pytest modules.
 
@@ -72,7 +75,7 @@ the same selected pytest modules.
 
 `static-checks-python-3.12` retains static reports, effective-input identities,
 structured findings and raw command receipts for 30 days.
-`framework-tests-python-3.12-shard-K-of-4` retains each shard's family/case
+`framework-tests-python-3.12-shard-K-of-N` retains each shard's family/case
 inventory, JUnit and command records, and `framework-checks-python-3.12` retains
 calibration reports and command records, for 30 days. Shard JUnit reports can
 regenerate the timings file with `python3 -m scripts.testkit.timings`.

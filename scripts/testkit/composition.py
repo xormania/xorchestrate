@@ -22,7 +22,7 @@ from .adapters.evidence import (
 from .adapters.static import STATIC_IDS
 from .core import execute_checks, required_inputs, validate_checks
 from .model import COMPONENT_SUITES, MODES, SUITES, Check
-from .sharding import parse_shard
+from .sharding import TIMINGS, suite_shard
 from .stories import select_stories, validate_limits
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -49,8 +49,7 @@ def _options(*, suite, mode, timeout, check_timeout, config, driver, families, d
             raise ValueError("Timeout must be a positive finite number")
     if families and "tests" not in selected:
         raise ValueError("--family selects pytest families in the tests suite")
-    if parse_shard(shard) is not None and "tests" not in selected:
-        raise ValueError("--shard partitions pytest modules in the tests suite")
+    suite_shard(suite, shard)
     if (not isinstance(drivers, (tuple, list)) or any(not isinstance(d, str) or not d for d in drivers)
             or len(drivers) != len(set(drivers))):
         raise ValueError("Acceptance drivers must be unique nonempty names")
@@ -101,7 +100,7 @@ def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=
         required = ("contracts/testing.json", "tests/conftest.py")
         if shard is not None:
             argv += ["--test-shard", shard]
-            required += ("contracts/test-timings.json",)
+            required += (TIMINGS,)
         checks.append(Check("tests", tuple(argv), check_timeout, required))
     if "calibration" in selected:
         for name, module in (("native-calibration", "scripts.verification.calibrate_suite"),

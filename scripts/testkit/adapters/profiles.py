@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 from ..model import MODES, SUITES
-from ..sharding import parse_shard
+from ..sharding import suite_shard
 from ..stories import select_stories, validate_limits
 from .configuration import local_capture
 from .evidence import write_json
@@ -114,8 +114,7 @@ def load_profile(path, *, root, overrides=None):
         values["config"], values["drivers"] = None, []
     if values["families"] and values["suite"] not in {"tests", "checks", "all"}:
         raise ValueError("families require a suite containing tests")
-    if parse_shard(values["shard"]) is not None and values["suite"] not in {"tests", "checks", "all"}:
-        raise ValueError("shard requires a suite containing tests")
+    suite_shard(values["suite"], values["shard"])
     values["profile_path"] = str(path)
     values["root"] = str(root)
     return values

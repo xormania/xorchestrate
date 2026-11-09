@@ -313,8 +313,7 @@
         "scripts.testkit.adapters.syntax",
         "scripts.testkit.adapters.managed_store",
         "scripts.testkit.adapters.managed_process",
-        "scripts.testkit.adapters.terminals",
-        "scripts.testkit.adapters.timings"
+        "scripts.testkit.adapters.terminals"
       ],
       "allowed_roles": [
         "testkit_foundation",
@@ -767,7 +766,8 @@
     },
     "testkit_pytest": {
       "modules": [
-        "scripts.testkit.adapters.pytest_plugin"
+        "scripts.testkit.adapters.pytest_plugin",
+        "scripts.testkit.adapters.timings"
       ],
       "allowed_roles": [
         "testkit_foundation",
