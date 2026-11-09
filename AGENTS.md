@@ -108,3 +108,6 @@ unrelated work.
 
 Prepare repository changes on a branch for review. xor controls merging and
 releases. Use xormania attribution for commits; do not add AI co-author trailers.
+Follow [the PR quality standard](docs/pr-quality.md) for coverage, behavioral
+proof, pre-draft adversarial review and candidate evidence. The bounded review and
+practical delivery guidance above still applies.
