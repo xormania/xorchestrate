@@ -362,6 +362,16 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
                    "command_record": str(Path(main["directory"]) / "command.json") if main else None,
                    "reason": result.stderr if result.exit != 0 else "",
                    "shutdown": result.shutdown, "validation": "complete"}
+            if name == "tests" and result.launched:
+                from .adapters.pytest_evidence import bind_pytest_report
+
+                try:
+                    row["tool_report"] = bind_pytest_report(root=root, directory=directory,
+                                                           families=families, shard=shard, exit_status=result.exit)
+                except Exception as error:
+                    row["evidence_error"] = str(error)
+                    if row["status"] == "passed":
+                        row.update(status="evidence_error", reason=str(error))
             if name in manifests:
                 from .adapters.static import bind_static_report, static_manifest
 
