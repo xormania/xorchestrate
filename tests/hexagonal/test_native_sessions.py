@@ -7,7 +7,7 @@ from functools import partial
 import pytest
 
 from tests.hexagonal.support.native import native_driver, peer_options, wait_for
-from xorchestrate.adapters.sessions import CodexSessionDriver
+from xorchestrate.adapters.codex import CodexSessionDriver
 from xorchestrate.model import Capability, OrchestrationError
 
 # These scenarios declare operational bounds; peer launch and observation
@@ -334,7 +334,7 @@ def test_unknown_prompt_completion_is_not_idle_and_interjections_are_bounded():
 
 
 def test_material_configuration_identity_includes_protocol_contract():
-    from xorchestrate.adapters.sessions import ACPSessionDriver
+    from xorchestrate.adapters.acp import ACPSessionDriver
     options = peer_options('codex')
     codex = CodexSessionDriver(options)
     acp = ACPSessionDriver(options)

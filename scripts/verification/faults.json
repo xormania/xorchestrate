@@ -21,7 +21,7 @@
     "mutation": {
       "new": "        if False:  # planted loss of retained requested selection\n            specification[\"parameters\"] = deepcopy(session[\"settings\"][\"requested\"])",
       "old": "        if \"parameters\" not in specification and session.get(\"settings\", {}).get(\"requested\"):\n            specification[\"parameters\"] = deepcopy(session[\"settings\"][\"requested\"])",
-      "path": "xorchestrate/adapters/sessions.py"
+      "path": "xorchestrate/adapters/process_sessions.py"
     },
     "selectors": [
       "tests/hexagonal/test_native_sessions.py::test_settings_preserve_requested_resolved_observed_and_require_changed_config_policy[codex]",
@@ -55,7 +55,7 @@
     "mutation": {
       "new": "if method == \"detach\":\n                self.driver.stop(deepcopy(self.backend))\n                self._active = None",
       "old": "if method == \"detach\":\n                self._active = None",
-      "path": "xorchestrate/adapters/bridge.py"
+      "path": "xorchestrate/adapters/bridge_host.py"
     },
     "selectors": [
       "tests/hexagonal/test_external_bridge.py::test_external_detach_does_not_terminate_host_and_reconnect_retains_context[codex]",

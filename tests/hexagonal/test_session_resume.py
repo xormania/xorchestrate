@@ -42,7 +42,7 @@ def test_native_resume_cannot_bypass_denied_source_control(tmp_path, protocol, s
                     "resume_session_id": source["id"], "idempotency_key": "denied-resume"}, actor="worker")
             assert denied.value.code == "denied"
             resume.assert_not_called()
-        with patch("xorchestrate.adapters.sessions.JsonLineProcess") as process:
+        with patch("xorchestrate.adapters.process_sessions.JsonLineProcess") as process:
             with pytest.raises(OrchestrationError):
                 app.call("start_session", {"driver": "agent",
                     "specification": {"resume": source["backend"]["native_id"]},

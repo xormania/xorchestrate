@@ -8,10 +8,12 @@ from itertools import permutations
 import pytest
 
 from xorchestrate.activity import ActivityState, NativeConnection, activity_definitions
+from xorchestrate.adapters.acp import ACPSessionDriver
 from xorchestrate.adapters.claude import ClaudeSessionDriver, _ClaudeLive
+from xorchestrate.adapters.codex import CodexSessionDriver
 from xorchestrate.adapters.grok import GrokSessionDriver
 from xorchestrate.adapters.native_calls import NativeCallLedger
-from xorchestrate.adapters.sessions import ACPSessionDriver, CodexSessionDriver, _LiveSession
+from xorchestrate.adapters.process_sessions import LiveSession
 from xorchestrate.model import Capability, OrchestrationError
 from xorchestrate.outcomes import before_effect, effect_outcome
 from xorchestrate.state import StateEngine
@@ -91,7 +93,7 @@ def _callback_fixture(protocol, callback, engine=None):
         adapter = kind(options)
         if engine is not None:
             adapter.bind_state_engine(engine)
-        live = _LiveSession({}, native_id="native", activity_model=ActivityState(engine))
+        live = LiveSession({}, native_id="native", activity_model=ActivityState(engine))
         adapter.bind_application_tools([capability], callback)
         if protocol == "codex":
             def invoke(arguments=None):
@@ -164,7 +166,7 @@ def test_native_call_ledger_refusals_share_codes_across_drivers(protocol):
 
 def test_untranslated_native_request_is_refused_before_any_effect():
     adapter = ACPSessionDriver({"command": [sys.executable, "unused"]})
-    live = _LiveSession({}, native_id="native")
+    live = LiveSession({}, native_id="native")
     try:
         with pytest.raises(OrchestrationError) as refused:
             adapter._request(live, "fixture/request", {"sessionId": "native"})
@@ -193,7 +195,7 @@ def test_codex_claimed_call_rejected_before_application_does_not_poison_activity
     adapter = CodexSessionDriver({"command": [sys.executable, "unused"]})
     adapter.bind_application_tools([Capability("inspect", "fixture", {"type": "object"})],
         lambda *args: invoked.append(args))
-    live = _LiveSession({}, native_id="native")
+    live = LiveSession({}, native_id="native")
     try:
         response = adapter._request(live, "item/tool/call", {
             "threadId": "native", "callId": "claimed", "tool": "inspect", "arguments": ["not-an-object"]})
@@ -245,7 +247,7 @@ def test_callback_result_is_retained_when_configured_settlement_refuses(protocol
 
 def test_codex_unconfigured_fallback_refuses_before_native_handler():
     adapter = CodexSessionDriver({"command": [sys.executable, "unused"]})
-    live = _LiveSession({}, native_id="native")
+    live = LiveSession({}, native_id="native")
     try:
         response = adapter._request(live, "item/tool/call", {
             "threadId": "native", "callId": "claimed", "tool": "unconfigured", "arguments": {}})

@@ -15,10 +15,10 @@ from copy import deepcopy
 
 from ..model import OrchestrationError
 from ..outcomes import before_effect, effect_outcome
+from .acp import ACPSessionDriver
 from .native_calls import NativeCallLedger, call_fingerprint
 from .process import encode_json
 from .session_base import ApplicationToolDriver, json_object, native_identifier
-from .sessions import ACPSessionDriver
 
 
 class GrokSessionDriver(ACPSessionDriver, ApplicationToolDriver):

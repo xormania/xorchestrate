@@ -6,7 +6,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from xorchestrate.adapters.sessions import ACPSessionDriver, CodexSessionDriver, JSONRPCSessionDriver, _LiveSession
+from xorchestrate.adapters.acp import ACPSessionDriver
+from xorchestrate.adapters.codex import CodexSessionDriver
+from xorchestrate.adapters.process_sessions import JSONRPCSessionDriver, LiveSession
 from xorchestrate.model import Capability, OrchestrationError
 
 FIXTURE = Path(__file__).parent / "fixtures" / "session_server.py"
@@ -158,13 +160,13 @@ class SessionTests(unittest.TestCase):
         driver.bind_application_tools([Capability("echo", "Callback", {"type": "object"})],
                                       lambda action, arguments, context, key: keys.append(key) or {})
         for native_id, call_id in (("a:b", "c"), ("a", "b:c"), ("other", "c"), ("a:b", "c")):
-            live = _LiveSession(context={"actor": "coder"}, native_id=native_id)
+            live = LiveSession(context={"actor": "coder"}, native_id=native_id)
             result = driver._request(live, "item/tool/call", {"tool": "echo", "arguments": {}, "callId": call_id, "threadId": native_id})
             self.assertTrue(result["success"])
         self.assertEqual(keys[0], keys[3])
         self.assertEqual(3, len(set(keys[:3])))
         self.assertTrue(all(keys))
-        rejected = driver._request(_LiveSession(context={"actor": "coder"}, native_id="owned"), "item/tool/call", {
+        rejected = driver._request(LiveSession(context={"actor": "coder"}, native_id="owned"), "item/tool/call", {
             "tool": "echo", "arguments": {}, "callId": "c", "threadId": "another-thread",
         })
         self.assertFalse(rejected["success"])
@@ -196,7 +198,7 @@ class SessionTests(unittest.TestCase):
         driver = self.driver(CodexSessionDriver, "codex", dynamic_tools=[{
             "name": "echo", "description": "Configured native callback", "inputSchema": {"type": "object"},
         }])
-        with patch("xorchestrate.adapters.sessions.JsonLineProcess") as process:
+        with patch("xorchestrate.adapters.process_sessions.JsonLineProcess") as process:
             self.assert_code("invalid_configuration", driver.bind_application_tools,
                              [Capability("echo", "Conflicting application callback", {"type": "object"})], lambda *args: {})
             process.assert_not_called()
@@ -213,7 +215,7 @@ class SessionTests(unittest.TestCase):
             (acp, {"cwd": "/not-delegated"}),
         ]
         for driver, parameters in cases:
-            with self.subTest(parameters=parameters), patch("xorchestrate.adapters.sessions.JsonLineProcess") as process:
+            with self.subTest(parameters=parameters), patch("xorchestrate.adapters.process_sessions.JsonLineProcess") as process:
                 error = self.assert_code("invalid_arguments", driver.start, {"parameters": parameters})
                 self.assertEqual("not_started", error.details["outcome"])
                 process.assert_not_called()
@@ -222,7 +224,7 @@ class SessionTests(unittest.TestCase):
         driver = self.driver(CodexSessionDriver, "codex", thread={"model": "operator-selected"}, request_parameters={
             "type": "object", "properties": {"model": {"enum": ["delegated-model"]}}, "additionalProperties": False,
         })
-        with patch("xorchestrate.adapters.sessions.JsonLineProcess") as process:
+        with patch("xorchestrate.adapters.process_sessions.JsonLineProcess") as process:
             self.assert_code("invalid_arguments", driver.start, {"parameters": {"model": "outside-delegation"}})
             self.assert_code("invalid_arguments", driver.start, {"parameters": {"model": "delegated-model", "sandbox": "danger-full-access"}})
             process.assert_not_called()
@@ -233,7 +235,7 @@ class SessionTests(unittest.TestCase):
         codex = self.driver(CodexSessionDriver, "codex", request_parameters={"type": "object"})
         acp = self.driver(ACPSessionDriver, "acp", request_parameters={"type": "object"})
         for driver, parameters in ((codex, {"threadId": "other"}), (codex, {"dynamicTools": []}), (acp, {"sessionId": "other"})):
-            with self.subTest(parameters=parameters), patch("xorchestrate.adapters.sessions.JsonLineProcess") as process:
+            with self.subTest(parameters=parameters), patch("xorchestrate.adapters.process_sessions.JsonLineProcess") as process:
                 error = self.assert_code("invalid_request", driver.start, {"parameters": parameters})
                 self.assertEqual("not_started", error.details["outcome"])
                 process.assert_not_called()
@@ -242,7 +244,7 @@ class SessionTests(unittest.TestCase):
         for cls, mode in ((CodexSessionDriver, "codex"), (ACPSessionDriver, "acp")):
             driver = self.driver(cls, mode, request_parameters={"type": "object"})
             for value in ("another-native-id", None):
-                with self.subTest(protocol=mode, resume=value), patch("xorchestrate.adapters.sessions.JsonLineProcess") as process:
+                with self.subTest(protocol=mode, resume=value), patch("xorchestrate.adapters.process_sessions.JsonLineProcess") as process:
                     error = self.assert_code("invalid_request", driver.start, {"resume": value})
                     self.assertEqual("not_started", error.details["outcome"])
                     process.assert_not_called()
@@ -252,7 +254,7 @@ class SessionTests(unittest.TestCase):
             driver = self.driver(cls, mode, **({"resume_supported": True} if mode == "acp" else {}))
             for source in ({"protocol": "other", "native_id": "thread"}, {"protocol": mode},
                            {"protocol": mode, "native_id": ""}, {"protocol": mode, "native_id": 1}):
-                with self.subTest(protocol=mode, source=source), patch("xorchestrate.adapters.sessions.JsonLineProcess") as process:
+                with self.subTest(protocol=mode, source=source), patch("xorchestrate.adapters.process_sessions.JsonLineProcess") as process:
                     error = self.assert_code("session_identity", driver.resume, source, {})
                     self.assertEqual("not_started", error.details["outcome"])
                     process.assert_not_called()
@@ -317,7 +319,7 @@ class SessionTests(unittest.TestCase):
         resumed = driver.resume(session, {})
         self.assertEqual(session["native_id"], resumed["native_id"])
         unsupported = self.driver(ACPSessionDriver, "acp")
-        with patch("xorchestrate.adapters.sessions.JsonLineProcess") as process:
+        with patch("xorchestrate.adapters.process_sessions.JsonLineProcess") as process:
             self.assert_code("unsupported_operation", unsupported.resume, session, {})
             process.assert_not_called()
 

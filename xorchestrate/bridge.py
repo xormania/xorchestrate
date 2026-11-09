@@ -4,7 +4,7 @@ import json
 import signal
 import threading
 
-from .adapters.bridge import SessionBridgeHost
+from .adapters.bridge_host import SessionBridgeHost
 from .composition import build, load_config
 
 

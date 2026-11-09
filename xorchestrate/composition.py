@@ -23,9 +23,9 @@ BUILTINS = {
     "store": {"memory": "xorchestrate.adapters.storage:MemoryStore", "sqlite": "xorchestrate.adapters.storage:SQLiteStore"},
     "providers": {"mcp": "xorchestrate.adapters.capabilities:StdioMCPProvider", "cli": "xorchestrate.adapters.capabilities:CLIProvider"},
     "sessions": {
-        "jsonrpc": "xorchestrate.adapters.sessions:JSONRPCSessionDriver",
-        "codex": "xorchestrate.adapters.sessions:CodexSessionDriver",
-        "acp": "xorchestrate.adapters.sessions:ACPSessionDriver",
+        "jsonrpc": "xorchestrate.adapters.process_sessions:JSONRPCSessionDriver",
+        "codex": "xorchestrate.adapters.codex:CodexSessionDriver",
+        "acp": "xorchestrate.adapters.acp:ACPSessionDriver",
         "grok": "xorchestrate.adapters.grok:GrokSessionDriver",
         "claude": "xorchestrate.adapters.claude:ClaudeSessionDriver",
         "bridge": "xorchestrate.adapters.bridge:BridgeSessionDriver",

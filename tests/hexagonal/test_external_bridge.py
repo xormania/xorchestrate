@@ -13,8 +13,9 @@ from pathlib import Path
 
 import pytest
 
-from xorchestrate.adapters.bridge import BridgeSessionDriver, SessionBridgeHost
-from xorchestrate.adapters.sessions import CodexSessionDriver
+from xorchestrate.adapters.bridge import BridgeSessionDriver
+from xorchestrate.adapters.bridge_host import SessionBridgeHost
+from xorchestrate.adapters.codex import CodexSessionDriver
 from xorchestrate.model import Capability, OrchestrationError
 
 

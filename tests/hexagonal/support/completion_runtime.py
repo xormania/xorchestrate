@@ -16,10 +16,10 @@ from scripts.verification.checker import verify
 from tests.hexagonal.contracts.completion import CompletionObservation
 from tests.hexagonal.support.native import application_message, peer_options, wait_for
 from tests.hexagonal.support.native import retry as call
-from xorchestrate.adapters.bridge import SessionBridgeHost
+from xorchestrate.adapters.bridge_host import SessionBridgeHost
 from xorchestrate.adapters.claude import ClaudeSessionDriver
+from xorchestrate.adapters.codex import CodexSessionDriver
 from xorchestrate.adapters.grok import GrokSessionDriver
-from xorchestrate.adapters.sessions import CodexSessionDriver
 from xorchestrate.composition import build
 from xorchestrate.model import Capability
 
