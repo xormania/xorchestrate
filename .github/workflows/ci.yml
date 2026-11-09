@@ -17,6 +17,43 @@
     "cancel-in-progress": true
   },
   "jobs": {
+    "paths": {
+      "name": "Classify changed paths",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 3,
+      "outputs": {
+        "code": "${{ steps.guard.outputs.force == 'false' && steps.classify.outputs.code || 'true' }}"
+      },
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false,
+            "fetch-depth": 0
+          },
+          "id": "checkout"
+        },
+        {
+          "name": "Force full validation for classifier and validation changes",
+          "id": "guard",
+          "shell": "bash",
+          "env": {
+            "EVENT_NAME": "${{ github.event_name }}",
+            "PULL_REQUEST_BASE": "${{ github.event.pull_request.base.sha }}"
+          },
+          "run": "force=true\nchanged=\"$RUNNER_TEMP/xor-changed-paths\"\nif [ \"$EVENT_NAME\" = pull_request ] && [ -n \"$PULL_REQUEST_BASE\" ] \\\n  && git diff --name-only --no-renames -z \"$PULL_REQUEST_BASE\" HEAD -- > \"$changed\" \\\n  && [ -s \"$changed\" ] && tr '\\0' '\\n' < \"$changed\" > \"$changed.lines\"; then\n  status=0\n  grep -Eq '^(scripts/ci/|\\.github/|contracts/|tests/)' \"$changed.lines\" || status=$?\n  case \"$status\" in\n    0) echo \"Classifier or validation definitions changed; forcing full validation\" ;;\n    1) force=false ;;\n    *) echo \"Guard could not inspect changed paths; forcing full validation\" ;;\n  esac\nfi\necho \"force=$force\" >> \"$GITHUB_OUTPUT\"\necho \"force=$force\"\n"
+        },
+        {
+          "name": "Classify documentation-only changes",
+          "id": "classify",
+          "env": {
+            "EVENT_NAME": "${{ github.event_name }}",
+            "PULL_REQUEST_BASE": "${{ github.event.pull_request.base.sha }}"
+          },
+          "run": "python3 -I -B scripts/ci/classify_changes.py --event \"$EVENT_NAME\" --pull-request-base \"$PULL_REQUEST_BASE\" --head HEAD --github-output \"$GITHUB_OUTPUT\""
+        }
+      ]
+    },
     "changes": {
       "name": "Static checks",
       "runs-on": "ubuntu-24.04",
@@ -74,6 +111,10 @@
       "name": "Application and adapter tests (Python 3.12)",
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 15,
+      "needs": [
+        "paths"
+      ],
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' }}",
       "steps": [
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
@@ -208,6 +249,10 @@
       "name": "Tmux live acceptance (protocol fixture)",
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 5,
+      "needs": [
+        "paths"
+      ],
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' }}",
       "steps": [
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
@@ -284,6 +329,10 @@
       "name": "Jev architecture diagnostics",
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 6,
+      "needs": [
+        "paths"
+      ],
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' }}",
       "steps": [
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
