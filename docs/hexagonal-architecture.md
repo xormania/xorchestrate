@@ -39,6 +39,25 @@ flowchart TD
 | Session selection / delivery scheduling / retry / receipt | Replaceable routing-to-native-delivery responsibilities (`SessionSelection`, `DeliveryScheduling`, `DeliveryRetry` and `ReceiptPolicy` ports) | Conflating submission, receipt, response, completion and acceptance |
 | Composition and input adapters | Trusted configuration, adapter lifetime, CLI/MCP encoding and identity | Domain-specific project practices |
 
+The application module keeps action dispatch, authorization context and its
+verification, guardrail authorization, record creation and update, work, actor
+and message records, capability discovery and invocation (with the invocation
+effect hooks) and telemetry reads. The remaining use cases live in focused
+modules that it assembles:
+
+| Module | Responsibility |
+| --- | --- |
+| `actions.py` | The public action catalogue and its closed input schemas |
+| `effects.py` | The effect journal: intent before I/O, outcome retention, replay and reconciliation through reservation, application and release hooks supplied by the host |
+| `session_lifecycle.py` | Session start, attach, reconnect, resume, send, poll, stop and detach, including the session effect hooks |
+| `delivery.py` | Routing-to-native delivery, native observations and exchange verification |
+| `assessment.py` | `WorkAssessment`: triage and escalation through configured evaluators; like acceptance, it depends only on contracts and host callbacks |
+| `acceptance.py` | `WorkAcceptance` (below) |
+| `inspection.py` | `InspectionProjector` (below) |
+
+Shared canonical JSON digests, public record views and action descriptors are
+foundation helpers in `model.py`.
+
 Public inspection is shared by work, acceptance, delivery and native-history
 reads. `InspectionProjector` owns typed record projection, nested historical
 results and freshness revalidation through the store and explicit context,

@@ -26,10 +26,10 @@ from pathlib import Path
 from typing import cast
 
 from ..activity import activity_engine
-from ..model import OrchestrationError
+from ..model import OrchestrationError, canonical_digest
 from ..outcomes import before_effect, effect_outcome
 from ..ports import ApplicationToolSessionDriver, SessionDriver
-from .bridge_transport import FifoListener, Peer, bridge_error, copy_json, json_digest, positive_option
+from .bridge_transport import FifoListener, Peer, bridge_error, copy_json, positive_option
 from .process import decode_json
 
 
@@ -72,7 +72,7 @@ class SessionBridgeHost:
         self._closed = False
         self._outgoing = queue.Queue(maxsize=self.max_events)
         self.capabilities = tuple(capabilities)
-        self.catalog_identity = json_digest([asdict(c) for c in self.capabilities])
+        self.catalog_identity = canonical_digest([asdict(c) for c in self.capabilities])
         if self.capabilities:
             if not callable(getattr(driver, "bind_application_tools", None)):
                 raise bridge_error("Native driver cannot expose configured application tools.", "invalid_configuration")
@@ -217,7 +217,7 @@ class SessionBridgeHost:
         value = {"host_id": self.host_id, "native_id": self.backend["native_id"], "configuration_id": self.configuration_id}
         if source is not None:
             value = {key: source.get(key) for key in value}
-        return hmac.new(self._secret, json_digest(value).encode(), hashlib.sha256).hexdigest()
+        return hmac.new(self._secret, canonical_digest(value).encode(), hashlib.sha256).hexdigest()
 
     def _receipt(self):
         return {"host_id": self.host_id, "native_id": self.backend["native_id"], "protocol": "bridge",
@@ -282,7 +282,7 @@ class SessionBridgeHost:
             key = params.get("operation_id")
             if not isinstance(key, str) or not key:
                 raise bridge_error("A bridge operation identity is required.", "bridge_protocol")
-            identity = json_digest({"method": method, "message": params.get("message"), "incarnation": lease})
+            identity = canonical_digest({"method": method, "message": params.get("message"), "incarnation": lease})
             existing = self._effects.get(key)
             if existing:
                 if existing["identity"] != identity:

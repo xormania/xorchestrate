@@ -26,8 +26,7 @@ from xorchestrate.adapters.codex import CodexSessionDriver
 from xorchestrate.adapters.grok import GrokSessionDriver
 from xorchestrate.adapters.native_calls import NativeCallLedger
 from xorchestrate.adapters.process_sessions import LiveSession
-from xorchestrate.delivery import view
-from xorchestrate.model import Capability
+from xorchestrate.model import Capability, record_view
 
 wait = partial(wait_for, timeout=8, message='controlled native schedule timed out')
 
@@ -42,7 +41,7 @@ def composed_overlap(protocol, order, tmp_path, force_idle=False):
     with native_runtime(protocol, tmp_path) as (app, adapter, work, basis, actor, send, rejected):
         app.providers["holds"] = holds
         with app.store.transaction() as tx:
-            session = view(tx.list("session")[0])
+            session = record_view(tx.list("session")[0])
         peers = {protocol: {"session_id": session["id"], "native_id": session["backend"]["native_id"],
                             "incarnation": session["backend"]["incarnation"]}}
         case = {"id": "completion-" + protocol, "kind": "completion", "peer": protocol}

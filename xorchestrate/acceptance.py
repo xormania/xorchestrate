@@ -6,26 +6,17 @@ boundary; caller prose and evaluator confidence are not mechanical proof.
 """
 from __future__ import annotations
 
-import hashlib
 import json
 from copy import deepcopy
 from typing import Callable
 
-from .model import JSON, Capability, Conflict, OrchestrationError, Record, unique_keys
+from .model import JSON, Conflict, OrchestrationError, Record, action_spec, canonical_digest, record_view, unique_keys
 from .ports import AcceptancePolicy, Clock, StateStore, Transaction
-
-
-def _hash(value):
-    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
-
-
-def _view(record):
-    return {**deepcopy(record.data), "id": record.key, "version": record.version}
 
 
 def _same(left, right):
     # Python equality conflates JSON booleans with numbers.
-    return _hash(left) == _hash(right)
+    return canonical_digest(left) == canonical_digest(right)
 
 
 def _invalid_constant(value):
@@ -41,37 +32,32 @@ _CHECK = {"type": "object", "additionalProperties": False, "required": ["capabil
 }}
 
 
-def _action(description, properties, required, read=False):
-    return Capability("", description, {"type": "object", "additionalProperties": False,
-        "properties": properties, "required": list(required)}, {"readOnlyHint": read})
-
-
 ACCEPTANCE_ACTIONS = {
-    "set_requirements": _action("Explicitly revise the owner objective and required outcomes, independently of plans.", {
+    "set_requirements": action_spec("Explicitly revise the owner objective and required outcomes, independently of plans.", {
         "work_id": _STRING, "expected_revision": _REVISION, "objective": _STRING,
         "outcomes": {"type": "object", "minProperties": 1, "additionalProperties": _STRING},
         "checks": {"type": "object", "additionalProperties": _CHECK},
     }, ("work_id", "expected_revision", "objective", "outcomes", "checks")),
-    "set_candidate": _action("Select the exact candidate identity to be measured for this work.", {
+    "set_candidate": action_spec("Select the exact candidate identity to be measured for this work.", {
         "work_id": _STRING, "expected_revision": _REVISION,
         "candidate": {"type": "object", "minProperties": 1, "required": ["identity"], "properties": {"identity": _STRING}},
     }, ("work_id", "expected_revision", "candidate")),
-    "create_contribution": _action("Record a subordinate contribution without replacing owner requirements.", {
+    "create_contribution": action_spec("Record a subordinate contribution without replacing owner requirements.", {
         "work_id": _STRING, "goal": _STRING, "outcomes": _OUTCOMES, "metadata": _OBJECT,
     }, ("work_id", "goal", "outcomes")),
-    "update_contribution": _action("Revise a contribution or cancel it without cancelling required outcomes.", {
+    "update_contribution": action_spec("Revise a contribution or cancel it without cancelling required outcomes.", {
         "work_id": _STRING, "contribution_id": _STRING, "expected_version": {"type": "integer", "minimum": 1},
         "changes": {"type": "object", "minProperties": 1, "additionalProperties": False, "properties": {
             "goal": _STRING, "outcomes": _OUTCOMES, "status": _STRING, "metadata": _OBJECT,
         }},
     }, ("work_id", "contribution_id", "expected_version", "changes")),
-    "run_measurement": _action("Execute a required check through its configured provider and retain actual returned bindings.", {
+    "run_measurement": action_spec("Execute a required check through its configured provider and retain actual returned bindings.", {
         "work_id": _STRING, "check_id": _STRING, "measurement_key": _STRING, "arguments": _OBJECT,
     }, ("work_id", "check_id", "measurement_key")),
-    "accept_work": _action("Decide acceptance from current bound measurements and configured policy.", {
+    "accept_work": action_spec("Decide acceptance from current bound measurements and configured policy.", {
         "work_id": _STRING, "assessment_id": _STRING,
     }, ("work_id",)),
-    "get_acceptance": _action("Read current coverage and applicable acceptance; retain superseded decisions as history.", {
+    "get_acceptance": action_spec("Read current coverage and applicable acceptance; retain superseded decisions as history.", {
         "work_id": _STRING,
     }, ("work_id",), read=True),
 }
@@ -106,7 +92,7 @@ def assessment_configuration_identity(assessment, evaluator_configurations):
         "work_input_fields": assessment.get("work_input_fields")}
     selected = {name for name in (configuration["triage"], configuration["escalate"]) if name}
     identities = evaluator_configurations
-    return _hash({"assessment": configuration, "evaluators": {name: identities.get(name) for name in sorted(selected)}})
+    return canonical_digest({"assessment": configuration, "evaluators": {name: identities.get(name) for name in sorted(selected)}})
 
 def assessment_work_input(work, assessment):
     """Select supplied work fields; display metadata is excluded by default.
@@ -133,9 +119,9 @@ def assessment_input_binding(context, assessment):
     return {"work": assessment_work_input(context.get("work"), assessment),
         "inputs": deepcopy(context.get("inputs", {})), "context": deepcopy(context.get("context", {})),
         "actor_record": deepcopy(context.get("actor_record")),
-        "evidence": sorted([[item["id"], item["version"], _hash(item)]
+        "evidence": sorted([[item["id"], item["version"], canonical_digest(item)]
             for item in context.get("evidence", [])]),
-        "contributions": sorted([[item["id"], item["version"], _hash(item)]
+        "contributions": sorted([[item["id"], item["version"], canonical_digest(item)]
             for item in (context.get("acceptance_basis") or {}).get("contributions", [])])}
 
 
@@ -204,12 +190,12 @@ class WorkAcceptance:
                 raise Conflict("Requirements changed; explicitly revise their current basis.")
             data = {"work_id": args["work_id"], "objective": args["objective"],
                 "outcomes": deepcopy(outcomes), "checks": deepcopy(checks)}
-            data["identity"] = _hash(data)
+            data["identity"] = canonical_digest(data)
             data.update({"revised_by": actor, "revised_at": self.clock()})
             record = tx.put("requirements", args["work_id"], data, current.version if current else None)
             self._create(tx, "requirement_revision", actor, {**data, "revision": record.version})
             self._event(tx, "requirements.revised", actor, work_id=args["work_id"], revision=record.version, identity=data["identity"])
-            return {"requirements": _view(record)}
+            return {"requirements": record_view(record)}
 
     def set_candidate(self, args, actor, context):
         with self.store.transaction() as tx:
@@ -218,11 +204,11 @@ class WorkAcceptance:
             if (current.version if current else 0) != args["expected_revision"]:
                 raise Conflict("Candidate selection changed.")
             data = {"work_id": args["work_id"], "candidate": deepcopy(args["candidate"]),
-                "identity": _hash(args["candidate"]), "selected_by": actor, "selected_at": self.clock()}
+                "identity": canonical_digest(args["candidate"]), "selected_by": actor, "selected_at": self.clock()}
             record = tx.put("candidate", args["work_id"], data, current.version if current else None)
             self._create(tx, "candidate_revision", actor, {**data, "revision": record.version})
             self._event(tx, "candidate.selected", actor, work_id=args["work_id"], revision=record.version)
-            return {"candidate": _view(record)}
+            return {"candidate": record_view(record)}
 
     def create_contribution(self, args, actor, context):
         with self.store.transaction() as tx:
@@ -231,7 +217,7 @@ class WorkAcceptance:
             if set(args["outcomes"]) - set(basis.data["outcomes"]):
                 raise OrchestrationError("Contribution refers to an undeclared outcome.", "unknown_outcome")
             record = self._create(tx, "contribution", actor, {**args, "status": "open", "requirement_revision": basis.version})
-            return {"contribution": _view(record)}
+            return {"contribution": record_view(record)}
 
     def update_contribution(self, args, actor, context):
         with self.store.transaction() as tx:
@@ -244,7 +230,7 @@ class WorkAcceptance:
                 raise OrchestrationError("Contribution refers to an undeclared outcome.", "unknown_outcome")
             record = tx.put("contribution", current.key, {**current.data, **deepcopy(args["changes"])}, args["expected_version"])
             self._event(tx, "contribution.updated", actor, work_id=args["work_id"], contribution_id=current.key)
-            return {"contribution": _view(record)}
+            return {"contribution": record_view(record)}
 
     def _policy_identity(self):
         policy = self.acceptance
@@ -261,15 +247,15 @@ class WorkAcceptance:
         actor = tx.get("actor", assessment.data["created_by"])
         # Recording this assessment is an output of inference, never one of its
         # own inputs. Other newly supplied evidence still invalidates the result.
-        evidence = [_view(item) for item in tx.list("evidence")
+        evidence = [record_view(item) for item in tx.list("evidence")
             if item.data.get("work_id") == work_id and work_id is not None
             and not (item.data.get("source", {}).get("type") == "assessment"
                 and item.data["source"].get("assessment_id") == assessment.key)]
-        contributions = [_view(item) for item in tx.list("contribution") if item.data.get("work_id") == work_id]
-        return assessment_input_binding({"work": _view(work) if work else None,
+        contributions = [record_view(item) for item in tx.list("contribution") if item.data.get("work_id") == work_id]
+        return assessment_input_binding({"work": record_view(work) if work else None,
             "inputs": deepcopy(work.data.get("inputs", {})) if work else {},
             "context": deepcopy(work.data.get("context", {})) if work else {},
-            "actor_record": _view(actor) if actor else None, "evidence": evidence,
+            "actor_record": record_view(actor) if actor else None, "evidence": evidence,
             "acceptance_basis": {"contributions": contributions}}, self.assessment)
 
     def _assessment_inputs_current(self, tx, assessment):
@@ -277,13 +263,13 @@ class WorkAcceptance:
 
     def _acceptance_snapshot(self, tx, work_id):
         requirements, candidate = tx.get("requirements", work_id), tx.get("candidate", work_id)
-        measurements = sorted((_view(item) for item in tx.list("measurement") if item.data["work_id"] == work_id), key=lambda item: item["sequence"])
+        measurements = sorted((record_view(item) for item in tx.list("measurement") if item.data["work_id"] == work_id), key=lambda item: item["sequence"])
         operations = {}
         for item in measurements:
             operation = tx.get("operation", item["operation_id"])
-            operations[item["operation_id"]] = _view(operation) if operation else None
-        snapshot = {"requirements": _view(requirements) if requirements else None,
-            "candidate": _view(candidate) if candidate else None, "measurements": measurements,
+            operations[item["operation_id"]] = record_view(operation) if operation else None
+        snapshot = {"requirements": record_view(requirements) if requirements else None,
+            "candidate": record_view(candidate) if candidate else None, "measurements": measurements,
             "operations": operations, "policy_identity": self._policy_identity(),
             "assessment_configuration_identity": assessment_configuration_identity(self.assessment, self.evaluator_configurations),
             "provider_configurations": self._measurement_providers(requirements.data if requirements else None)}
@@ -308,7 +294,7 @@ class WorkAcceptance:
     def context(self, work_id):
         with self.store.transaction() as tx:
             snapshot = self._acceptance_snapshot(tx, work_id)
-            snapshot["contributions"] = [_view(item) for item in tx.list("contribution") if item.data["work_id"] == work_id]
+            snapshot["contributions"] = [record_view(item) for item in tx.list("contribution") if item.data["work_id"] == work_id]
             return snapshot
 
     def verify_context(self, tx, context):
@@ -362,7 +348,7 @@ class WorkAcceptance:
                     or operation.get("arguments", {}).get("capability") != check["capability"]
                     or not _same(operation.get("arguments", {}).get("arguments", {}).get("measurement"), item["request_binding"])
                     or not _same(operation.get("external_result"), item.get("raw_response"))
-                    or item.get("raw_digest") != _hash(item.get("raw_response"))):
+                    or item.get("raw_digest") != canonical_digest(item.get("raw_response"))):
                 issues.append({"code": "measurement_unverified", "check_id": check_id})
                 continue
             observed = _observation(item.get("raw_response"))
@@ -391,8 +377,8 @@ class WorkAcceptance:
         return issues, coverage
 
     def run_measurement(self, args, actor, context):
-        key = _hash([actor, "measurement", args["measurement_key"]])
-        fingerprint = _hash(args)
+        key = canonical_digest([actor, "measurement", args["measurement_key"]])
+        fingerprint = canonical_digest(args)
         with self.store.transaction() as tx:
             self._verify_context(tx, context)
             existing = tx.get("measurement", key)
@@ -404,9 +390,9 @@ class WorkAcceptance:
                         and operation.data["status"] == "completed" and operation.data.get("external_result_origin") == "adapter"):
                     raw = operation.data["external_result"]
                     existing = self._transition(tx, existing, "recover", {**existing.data, "status": "completed",
-                        "raw_response": deepcopy(raw), "raw_digest": _hash(raw), "finished_at": self.clock()}, actor)
+                        "raw_response": deepcopy(raw), "raw_digest": canonical_digest(raw), "finished_at": self.clock()}, actor)
                     self._event(tx, "measurement.recovered", actor, work_id=args["work_id"], measurement_id=key)
-                return {"measurement": _view(existing), "replayed": True}
+                return {"measurement": record_view(existing), "replayed": True}
             requirement = _require(tx, "requirements", args["work_id"])
             candidate = _require(tx, "candidate", args["work_id"])
             check = requirement.data["checks"].get(args["check_id"])
@@ -417,7 +403,7 @@ class WorkAcceptance:
                 "candidate": deepcopy(candidate.data["candidate"]), "bindings": deepcopy(check.get("bindings", {})),
                 "outcomes": list(check["outcomes"])}
             invoke_key = "measurement:" + key
-            operation_id = _hash([actor, invoke_key])
+            operation_id = canonical_digest([actor, invoke_key])
             sequence = 1 + max((item.data["sequence"] for item in tx.list("measurement") if item.data["work_id"] == args["work_id"]), default=0)
             record = self._create(tx, "measurement", actor, {
                 "work_id": args["work_id"], "check_id": args["check_id"], "fingerprint": fingerprint,
@@ -445,9 +431,9 @@ class WorkAcceptance:
             with self.store.transaction() as tx:
                 current = _require(tx, "measurement", key)
                 record = self._transition(tx, current, "complete", {**current.data, "status": "completed", "raw_response": deepcopy(raw),
-                    "raw_digest": _hash(raw), "finished_at": self.clock()}, actor)
+                    "raw_digest": canonical_digest(raw), "finished_at": self.clock()}, actor)
                 self._event(tx, "measurement.completed", actor, work_id=args["work_id"], measurement_id=key, operation_id=operation_id)
-                return {"measurement": _view(record), "replayed": False}
+                return {"measurement": record_view(record), "replayed": False}
         except Exception as error:
             # The invocation's completed operation already retains the adapter
             # response. Replay recovers this measurement without invoking again.
@@ -463,7 +449,7 @@ class WorkAcceptance:
             snapshot = self._acceptance_snapshot(tx, args["work_id"])
             assessment = _require(tx, "assessment", args["assessment_id"]) if args.get("assessment_id") else None
         if assessment:
-            snapshot["assessment"] = _view(assessment)
+            snapshot["assessment"] = record_view(assessment)
             if assessment.data.get("work_id") != args["work_id"] or assessment.data.get("acceptance_binding") != snapshot["binding"]:
                 snapshot["issues"].append({"code": "assessment_stale"})
             if assessment.data.get("assessment_configuration_identity") != snapshot["assessment_configuration_identity"]:
@@ -497,11 +483,11 @@ class WorkAcceptance:
                 "sequence": 1 + max((item.data["sequence"] for item in tx.list("acceptance_decision") if item.data["work_id"] == args["work_id"]), default=0)}
             record = self._create(tx, "acceptance_decision", actor, data)
             self._event(tx, "work.accepted" if accepted else "work.acceptance_rejected", actor, work_id=args["work_id"], decision_id=record.key)
-            return {"acceptance": _view(record), "current": True}
+            return {"acceptance": record_view(record), "current": True}
 
     def view(self, tx, work_id):
         snapshot = self._acceptance_snapshot(tx, work_id)
-        decisions = sorted((_view(item) for item in tx.list("acceptance_decision") if item.data["work_id"] == work_id), key=lambda item: item["sequence"])
+        decisions = sorted((record_view(item) for item in tx.list("acceptance_decision") if item.data["work_id"] == work_id), key=lambda item: item["sequence"])
         for item in decisions:
             item["current"] = item["binding"] == snapshot["binding"]
             if item.get("assessment_id"):
@@ -515,5 +501,5 @@ class WorkAcceptance:
             "coverage": snapshot["coverage"], "acceptance_issues": snapshot["issues"],
             "measurements": snapshot["measurements"], "acceptance_history": decisions,
             "accepted": bool(latest and latest["current"] and latest["accepted"]),
-            "contributions": [_view(item) for item in tx.list("contribution") if item.data["work_id"] == work_id]}
+            "contributions": [record_view(item) for item in tx.list("contribution") if item.data["work_id"] == work_id]}
 

@@ -3,7 +3,6 @@
 Only this module selects infrastructure. Installed ``module:factory`` extensions
 receive their options as a dict; incoming tool arguments never choose factories.
 """
-import hashlib
 import importlib
 import json
 from copy import deepcopy
@@ -14,7 +13,7 @@ from typing import cast
 from uuid import uuid4
 
 from .application import Application
-from .model import OrchestrationError, unique_keys
+from .model import OrchestrationError, canonical_digest, unique_keys
 from .ports import ApplicationToolSessionDriver, SessionDriver
 
 BUILTINS = {
@@ -167,7 +166,7 @@ def build(config=None, base_dir=None):
                     provider = material["options"].get("provider")
                     material["measurement_provider_configuration"] = provider_configurations.get(provider)
                 identities = provider_configurations if kind == "providers" else evaluator_configurations
-                identities[name] = hashlib.sha256(json.dumps(material, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+                identities[name] = canonical_digest(material)
         return result
 
     try:

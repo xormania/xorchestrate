@@ -25,7 +25,10 @@
         "__future__",
         "collections",
         "contextlib",
+        "copy",
         "dataclasses",
+        "hashlib",
+        "json",
         "typing"
       ],
       "allow_dynamic": false,
@@ -37,13 +40,16 @@
     },
     "core": {
       "modules": [
+        "xorchestrate.actions",
         "xorchestrate.activity",
         "xorchestrate.application",
         "xorchestrate.delivery",
+        "xorchestrate.effects",
         "xorchestrate.exchange",
         "xorchestrate.lifecycles",
         "xorchestrate.outcomes",
         "xorchestrate.schema",
+        "xorchestrate.session_lifecycle",
         "xorchestrate.state"
       ],
       "allowed_roles": [
@@ -79,7 +85,8 @@
     },
     "work_acceptance": {
       "modules": [
-        "xorchestrate.acceptance"
+        "xorchestrate.acceptance",
+        "xorchestrate.assessment"
       ],
       "allowed_roles": [
         "foundation",
@@ -101,7 +108,7 @@
         "input",
         "print"
       ],
-      "description": "Acceptance workflows and material binding calculations depend on contracts and explicit mutation/invocation callbacks, without application, inspection, delivery or infrastructure imports."
+      "description": "Assessment and acceptance workflows and their material binding calculations depend on contracts and explicit mutation/invocation callbacks, without application, inspection, delivery or infrastructure imports."
     },
     "inspection": {
       "modules": [

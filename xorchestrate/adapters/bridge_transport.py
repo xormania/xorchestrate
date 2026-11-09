@@ -4,7 +4,6 @@ The stream is a local trust boundary; peer credentials are checked by the host.
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import select
@@ -22,10 +21,6 @@ from .process import decode_json, positive_number
 
 def copy_json(value):
     return json.loads(json.dumps(value, allow_nan=False))
-
-
-def json_digest(value):
-    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
 
 
 def bridge_error(message, code="bridge_unavailable", outcome="not_started"):

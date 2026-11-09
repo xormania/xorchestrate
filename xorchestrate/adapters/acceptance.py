@@ -1,8 +1,5 @@
 """Replaceable acceptance policies, independent of evaluation and authorization."""
-import hashlib
-import json
-
-from ..model import OrchestrationError
+from ..model import OrchestrationError, canonical_digest
 
 
 class RequiredChecksAcceptance:
@@ -24,9 +21,8 @@ There is no required model, score threshold, role or organizational hierarchy.
             raise OrchestrationError("assessment_outcomes must be nonempty names.", "configuration_error")
         self.require_assessment = options.get("require_assessment", False)
         self.assessment_outcomes = tuple(outcomes)
-        self.identity = "required-checks-v1:" + hashlib.sha256(json.dumps({
-            "require_assessment": self.require_assessment, "assessment_outcomes": outcomes},
-            sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+        self.identity = "required-checks-v1:" + canonical_digest({
+            "require_assessment": self.require_assessment, "assessment_outcomes": outcomes})
 
     def evaluate(self, snapshot):
         reasons = list(snapshot["issues"])

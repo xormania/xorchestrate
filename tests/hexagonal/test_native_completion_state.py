@@ -16,7 +16,7 @@ from tests.hexagonal.support.native import (
     retry,
     wait_for,
 )
-from xorchestrate.delivery import view
+from xorchestrate.model import record_view
 
 wait = partial(wait_for, timeout=8, message='native completion schedule did not complete')
 
@@ -37,7 +37,7 @@ def test_actual_completion_snapshot_keeps_held_callback_visible_to_checker(proto
         holds = Holds(timeout=10)
         app.providers["holds"] = holds
         with app.store.transaction() as tx:
-            session = view(tx.list("session")[0])
+            session = record_view(tx.list("session")[0])
         peers = {protocol: {"session_id": session["id"], "native_id": session["backend"]["native_id"],
                             "incarnation": session["backend"]["incarnation"]}}
         case = {"id": "completion-" + protocol, "kind": "completion", "peer": protocol}

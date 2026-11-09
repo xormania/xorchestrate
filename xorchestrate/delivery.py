@@ -3,45 +3,29 @@
 An attempt records submission only. Adapter observations and exchange receipts
 are separate records; a successful queue write or RPC never creates a receipt.
 """
-import hashlib
-import json
 from copy import deepcopy
 
 from .inspection import DELIVERY_RECORDS
-from .model import Capability, Conflict, OrchestrationError
+from .model import Conflict, OrchestrationError, action_spec, canonical_digest, record_view
 from .outcomes import before_effect, effect_outcome
-
-
-def digest(value):
-    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()).hexdigest()
-
-
-def view(record):
-    return {**deepcopy(record.data), "id": record.key, "version": record.version}
-
-
-def action(description, properties, required=(), read=False):
-    return Capability("", description, {"type": "object", "properties": properties,
-        "required": list(required), "additionalProperties": False}, {"readOnlyHint": read})
-
 
 S = {"type": "string", "minLength": 1}
 DELIVERY_ACTIONS = {
-    "dispatch_deliveries": action("Submit eligible durable deliveries; uncertain attempts are never automatically repeated.",
+    "dispatch_deliveries": action_spec("Submit eligible durable deliveries; uncertain attempts are never automatically repeated.",
         {"message_id": S, "limit": {"type": "integer", "minimum": 1, "maximum": 1000}}),
-    "get_delivery": action("Read durable delivery attempts, observations and receipts.", {"message_id": S}, ("message_id",), True),
-    "retry_delivery": action("Schedule a definitely failed delivery under the configured retry policy.",
+    "get_delivery": action_spec("Read durable delivery attempts, observations and receipts.", {"message_id": S}, ("message_id",), read=True),
+    "retry_delivery": action_spec("Schedule a definitely failed delivery under the configured retry policy.",
         {"delivery_id": S, "expected_version": {"type": "integer", "minimum": 1}}, ("delivery_id", "expected_version")),
-    "resolve_delivery": action("Record an explicit unknown-outcome disposition, retaining the original uncertain attempt.",
+    "resolve_delivery": action_spec("Record an explicit unknown-outcome disposition, retaining the original uncertain attempt.",
         {"delivery_id": S, "expected_version": {"type": "integer", "minimum": 1},
          "outcome": {"enum": ["failed", "submitted"]}, "reason": S}, ("delivery_id", "expected_version", "outcome", "reason")),
-    "verify_exchange": action("Evaluate an exchange with the configured receipt policy against durable native observations.",
+    "verify_exchange": action_spec("Evaluate an exchange with the configured receipt policy against durable native observations.",
         {"message_id": S, "recipient": S, "expectation": {"type": "object"}}, ("message_id", "recipient", "expectation")),
-    "resolve_native_call": action("Reconcile a native call using its retained application result; caller results cannot manufacture proof.",
+    "resolve_native_call": action_spec("Reconcile a native call using its retained application result; caller results cannot manufacture proof.",
         {"native_call_id": S, "expected_version": {"type": "integer", "minimum": 1}, "reason": S},
         ("native_call_id", "expected_version", "reason")),
-    "native_observations": action("Read independently observed native calls and activity.",
-        {"session_id": S, "after": {"type": "integer", "minimum": 0}}, (), True),
+    "native_observations": action_spec("Read independently observed native calls and activity.",
+        {"session_id": S, "after": {"type": "integer", "minimum": 0}}, read=True),
 }
 
 
@@ -50,20 +34,20 @@ class DeliveryMixin:
         for recipient in message.data["recipients"]:
             self._create(tx, "delivery", actor, {"message_id": message.key,
                 "recipient": recipient, "work_id": message.data.get("work_id"),
-                "status": "queued", "attempts": [], "current_attempt": None}, digest([message.key, recipient]))
+                "status": "queued", "attempts": [], "current_attempt": None}, canonical_digest([message.key, recipient]))
 
     def _delivery_snapshot(self, tx, message_id):
         message = self._require(tx, "message", message_id)
-        deliveries = [view(r) for r in tx.list("delivery") if r.data["message_id"] == message_id]
-        attempts = [view(r) for r in tx.list("delivery_attempt") if r.data["message_id"] == message_id]
-        sessions = [view(r) for r in tx.list("session")]
+        deliveries = [record_view(r) for r in tx.list("delivery") if r.data["message_id"] == message_id]
+        attempts = [record_view(r) for r in tx.list("delivery_attempt") if r.data["message_id"] == message_id]
+        sessions = [record_view(r) for r in tx.list("session")]
         # The receipt policy may join reply and receipt messages across an exchange.
-        return {"message": view(message), "deliveries": deliveries, "attempts": attempts,
-            "evidence": [view(r) for r in tx.list("evidence")],
-            "sessions": sessions, "messages": [view(r) for r in tx.list("message")],
-            "all_attempts": [view(r) for r in tx.list("delivery_attempt")],
-            "observations": [view(r) for r in tx.list("native_observation")],
-            "receipts": [view(r) for r in tx.list("delivery_receipt") if r.data["message_id"] == message_id]}
+        return {"message": record_view(message), "deliveries": deliveries, "attempts": attempts,
+            "evidence": [record_view(r) for r in tx.list("evidence")],
+            "sessions": sessions, "messages": [record_view(r) for r in tx.list("message")],
+            "all_attempts": [record_view(r) for r in tx.list("delivery_attempt")],
+            "observations": [record_view(r) for r in tx.list("native_observation")],
+            "receipts": [record_view(r) for r in tx.list("delivery_receipt") if r.data["message_id"] == message_id]}
 
     def _get_delivery(self, args, actor, context):
         with self.store.transaction() as tx:
@@ -83,14 +67,14 @@ class DeliveryMixin:
             self._verify_context(tx, context)
             self._verify_context(tx, selected)
             self.inspection.verify_contexts(tx, contexts)
-            if digest(snapshot) != digest(self._delivery_snapshot(tx, args["message_id"])):
+            if canonical_digest(snapshot) != canonical_digest(self._delivery_snapshot(tx, args["message_id"])):
                 raise Conflict("Delivery inspection records changed during authorization.", retry_safe=True)
         return {**projected, "message": projected["message"][0]}
 
     def _dispatch_deliveries(self, args, actor, context):
         with self.store.transaction() as tx:
             self._verify_context(tx, context)
-            queue = [view(r) for r in tx.list("delivery") if r.data["status"] == "queued"
+            queue = [record_view(r) for r in tx.list("delivery") if r.data["status"] == "queued"
                 and (not args.get("message_id") or r.data["message_id"] == args["message_id"])][:args.get("limit", 100)]
         results = []
         for item in queue:
@@ -104,22 +88,22 @@ class DeliveryMixin:
         with self.store.transaction() as tx:
             delivery = self._require(tx, "delivery", delivery_id)
             if delivery.data["status"] != "queued":
-                return {"delivery": view(delivery)}
+                return {"delivery": record_view(delivery)}
             message = self._require(tx, "message", delivery.data["message_id"])
-            candidates = [view(r) for r in tx.list("session") if r.data.get("actor_id") == delivery.data["recipient"]
+            candidates = [record_view(r) for r in tx.list("session") if r.data.get("actor_id") == delivery.data["recipient"]
                 and r.data.get("status") == "active" and (not message.data.get("work_id") or r.data.get("work_id") == message.data.get("work_id"))]
-        selected = self.session_selection.select(view(message), delivery.data["recipient"], deepcopy(candidates))
+        selected = self.session_selection.select(record_view(message), delivery.data["recipient"], deepcopy(candidates))
         if selected is None:
-            return {"delivery": view(delivery), "deferred": "no_active_session"}
+            return {"delivery": record_view(delivery), "deferred": "no_active_session"}
         selected_session = next((s for s in candidates if s["id"] == selected), None)
         if selected_session is None:
             raise OrchestrationError("Session selection returned an ineligible session.", "invalid_selection")
-        if not self.delivery_scheduler.ready(view(delivery), deepcopy(selected_session), self.clock()):
-            return {"delivery": view(delivery), "deferred": "schedule"}
+        if not self.delivery_scheduler.ready(record_view(delivery), deepcopy(selected_session), self.clock()):
+            return {"delivery": record_view(delivery), "deferred": "schedule"}
         # Each effect is authorized against its real recipient session and work.
         session_context = self._context(actor, {"session_id": selected})
-        session_context["delivery"] = view(delivery)
-        session_context["message"] = view(message)
+        session_context["delivery"] = record_view(delivery)
+        session_context["message"] = record_view(message)
         self._authorize("deliver_message", session_context)
         driver = self.sessions.get(selected_session["driver"])
         deliver = getattr(driver, "deliver", None)
@@ -189,7 +173,7 @@ class DeliveryMixin:
                     current = self._transition(tx, current, event, {**current.data, "status": status}, actor)
                 self._event(tx, "delivery.stale_result" if stale else "delivery." + status, actor,
                     delivery_id=delivery_id, attempt_id=attempt.key)
-                return {"delivery": view(current), "attempt": view(self._require(tx, "delivery_attempt", attempt.key)), "stale": stale}
+                return {"delivery": record_view(current), "attempt": record_view(self._require(tx, "delivery_attempt", attempt.key)), "stale": stale}
         except Exception as error:
             # A lifecycle guard may refuse settlement after the adapter already
             # returned. Retain that fact independently of mutable state guards;
@@ -217,12 +201,12 @@ class DeliveryMixin:
                 raise Conflict()
             if delivery.data["status"] != "failed":
                 raise OrchestrationError("Only a definite failed attempt can be retried; unknown outcomes require explicit reconciliation.", "delivery_unresolved")
-            history = [view(self._require(tx, "delivery_attempt", key)) for key in delivery.data["attempts"]]
-            if not self.retry_policy.permit(view(delivery), history):
+            history = [record_view(self._require(tx, "delivery_attempt", key)) for key in delivery.data["attempts"]]
+            if not self.retry_policy.permit(record_view(delivery), history):
                 raise OrchestrationError("The retry policy denied another attempt.", "retry_denied")
             record = self._transition(tx, delivery, "retry", {**delivery.data, "status": "queued"}, actor)
             self._event(tx, "delivery.retry_scheduled", actor, delivery_id=delivery.key)
-            return {"delivery": view(record)}
+            return {"delivery": record_view(record)}
 
     def _resolve_delivery(self, args, actor, context):
         with self.store.transaction() as tx:
@@ -239,7 +223,7 @@ class DeliveryMixin:
             updated = self._transition(tx, delivery, "resolve_" + args["outcome"], {**delivery.data, "status": args["outcome"],
                 "resolution": args["reason"]}, actor)
             self._event(tx, "delivery.resolved", actor, delivery_id=delivery.key, attempt_id=attempt.key)
-            return {"delivery": view(updated)}
+            return {"delivery": record_view(updated)}
 
     def observe_native(self, driver_name, context, observation):
         retained = self._observe_native(driver_name, context, observation)
@@ -267,7 +251,7 @@ class DeliveryMixin:
                 (backend.get("native_id") != native_id or backend.get("incarnation") != incarnation))
             phase = observation.get("phase", observation.get("kind", "observation"))
             call_id = observation.get("call_id")
-            key = digest([driver_name, session_id, incarnation, call_id, phase]) if call_id else self.identifiers()
+            key = canonical_digest([driver_name, session_id, incarnation, call_id, phase]) if call_id else self.identifiers()
             data = {"session_id": session_id, "driver": driver_name, "work_id": session.data.get("work_id"),
                 "origin": "adapter", "stale": stale, "observation": observation}
             existing = tx.get("native_observation", key)
@@ -280,15 +264,15 @@ class DeliveryMixin:
                 incoming["observation"].pop("at", None)
                 if comparable != incoming:
                     raise Conflict("A native call identity was reused with conflicting evidence.")
-                return view(existing)
+                return record_view(existing)
             record = self._create(tx, "native_observation", context.get("actor", "native"), data, key)
-            return view(record)
+            return record_view(record)
 
     def invoke_native(self, driver_name, action_name, arguments, context, *, replay_only=False):
         """Durably fence semantic native call IDs even for non-idempotent actions."""
         with before_effect():
-            identity = digest([driver_name, context["native_id"], context["call_id"]])
-            fingerprint = digest([action_name, arguments, context["session_id"], context["incarnation"], context["actor"]])
+            identity = canonical_digest([driver_name, context["native_id"], context["call_id"]])
+            fingerprint = canonical_digest([action_name, arguments, context["session_id"], context["incarnation"], context["actor"]])
             native = {key: context[key] for key in ("native_id", "incarnation", "call_id")}
             native.update({"kind": "application_tool", "action": action_name, "arguments": deepcopy(arguments)})
             replay = None
@@ -331,7 +315,7 @@ class DeliveryMixin:
             descriptor = next((entry for entry in self.describe() if entry.name == action_name), None)
             if descriptor and descriptor.annotations.get("readOnlyHint"):
                 observed = self.call(action_name, arguments, actor=context["actor"], native_context=context)
-                if digest(observed) != digest(replay):
+                if canonical_digest(observed) != canonical_digest(replay):
                     raise OrchestrationError("The retained read result is stale; issue a new native call to observe current state.", "stale_native_result")
             return replay
         completed = False
@@ -393,8 +377,8 @@ class DeliveryMixin:
     def _native_observations(self, args, actor, context):
         with self.store.transaction() as tx:
             self._verify_context(tx, context)
-            records = [view(r) for r in tx.list("native_observation") if not args.get("session_id") or r.data["session_id"] == args["session_id"]]
-            calls = [view(r) for r in tx.list("native_call") if not args.get("session_id") or r.data["session_id"] == args["session_id"]]
+            records = [record_view(r) for r in tx.list("native_observation") if not args.get("session_id") or r.data["session_id"] == args["session_id"]]
+            calls = [record_view(r) for r in tx.list("native_call") if not args.get("session_id") or r.data["session_id"] == args["session_id"]]
         projected, contexts = self.inspection.project_records("native_observations", actor,
             {"observations": ("native_observation", records[args.get("after", 0):]), "calls": ("native_call", calls)})
         with self.store.transaction() as tx:
@@ -402,7 +386,7 @@ class DeliveryMixin:
             self.inspection.verify_contexts(tx, contexts)
             for kind, originals in (("native_observation", records), ("native_call", calls)):
                 for original in originals:
-                    if view(self._require(tx, kind, original["id"])) != original:
+                    if record_view(self._require(tx, kind, original["id"])) != original:
                         raise Conflict("Native inspection record changed during authorization.", retry_safe=True)
         return projected
 
@@ -424,7 +408,7 @@ class DeliveryMixin:
             updated = self._transition(tx, row, "resolve", {**row.data, "status": "completed",
                 "effect_outcome": "completed", "result": deepcopy(result),
                 "resolved_by": actor, "resolution": args["reason"], "observation_id": observations[0].key}, actor)
-            return {"native_call": view(updated)}
+            return {"native_call": record_view(updated)}
 
     def _verify_exchange(self, args, actor, context):
         if self.receipt_policy is None:
@@ -437,10 +421,10 @@ class DeliveryMixin:
             raise OrchestrationError("Receipt policy returned an invalid decision.", "invalid_receipt")
         with self.store.transaction() as tx:
             self._verify_context(tx, context)
-            if digest(snapshot) != digest(self._delivery_snapshot(tx, args["message_id"])):
+            if canonical_digest(snapshot) != canonical_digest(self._delivery_snapshot(tx, args["message_id"])):
                 raise Conflict("Exchange evidence changed during verification.")
             receipt = self._create(tx, "delivery_receipt", actor, {"message_id": args["message_id"],
                 "recipient": args["recipient"], "expectation": args["expectation"], "decision": result,
-                "evidence_digest": digest(snapshot)})
-            return {"receipt": view(receipt)}
+                "evidence_digest": canonical_digest(snapshot)})
+            return {"receipt": record_view(receipt)}
 
