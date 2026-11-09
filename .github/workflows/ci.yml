@@ -179,6 +179,10 @@
     },
     "verification": {
       "name": "Calibration and multi-harness verification",
+      "needs": [
+        "paths"
+      ],
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' }}",
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 15,
       "steps": [
