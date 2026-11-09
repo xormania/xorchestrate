@@ -140,7 +140,7 @@ def test_blocked_live_check_preserves_independent_captured_result_and_own_receip
 
     def selected_plan(**options):
         checks = {check.name: check for check in original_plan(**options)}
-        independent = replace(checks["tests"], argv=(sys.executable, "-c", "print('" + marker + "')"))
+        independent = replace(checks["tests"], name="probe", argv=(sys.executable, "-c", "print('" + marker + "')"))
         return (checks["multi-harness"], independent)
 
     monkeypatch.setattr(composition, "plan", selected_plan)
@@ -159,7 +159,7 @@ def test_blocked_live_check_preserves_independent_captured_result_and_own_receip
                              mode="native" if fault == "missing-native" else "protocol-fixture",
                              brief=None if fault == "missing-native" else brief)
     assert report["status"] == "failed"
-    assert [row["name"] for row in report["checks"]] == ["multi-harness", "tests"]
+    assert [row["name"] for row in report["checks"]] == ["multi-harness", "probe"]
     blocked, independent = report["checks"]
     assert blocked["status"] == "setup_error" and blocked["launched"] is False
     assert blocked["exit_status"] is None and blocked["command_record"] is None

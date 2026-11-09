@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pytest
 
+from scripts.testkit import composition
+from scripts.testkit.adapters.evidence import RecordingRunner
 from scripts.testkit.catalog import select_families, validate_catalog
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -124,3 +126,155 @@ def test_failed_and_skipped_cases_stay_visible_in_inventory(project):
     assert inventory["status"] == "failed"
     assert inventory["families"]["identity"]["outcomes"] == {"skipped": 1}
     assert inventory["families"]["transport"]["outcomes"] == {"failed": 1}
+
+
+@pytest.fixture
+def testkit_project(project):
+    directory = project / "tests/hexagonal"
+    directory.mkdir()
+    for path in (project / "tests").glob("test_*.py"):
+        path.rename(directory / path.name)
+    declaration = catalog()
+    declaration["roots"] = ["tests/hexagonal"]
+    for family in declaration["families"].values():
+        family["modules"] = {path.replace("tests/", "tests/hexagonal/"): layer
+                             for path, layer in family["modules"].items()}
+    (project / "contracts/testing.json").write_text(json.dumps(declaration))
+    (project / "contracts/test-timings.json").write_text(json.dumps({
+        "schema_version": 1, "default_seconds": 1, "modules": {}}))
+    return project
+
+
+@pytest.mark.parametrize("fault", [
+    "missing", "malformed", "catalog", "duplicate_case", "foreign_case", "missing_outcome",
+    "counts", "family_counts", "ownership", "selection", "collect_only", "exit_status", "missing_module",
+])
+def test_successful_pytest_command_requires_consistent_execution_evidence(testkit_project, monkeypatch, fault):
+    project = testkit_project
+    monkeypatch.setenv("PYTHONPATH", str(ROOT))
+    original = RecordingRunner.run
+
+    def run_then_damage_inventory(runner, argv, **options):
+        result = original(runner, argv, **options)
+        assert result.exit == 0, result.stdout + result.stderr
+        inventory_path = Path(argv[argv.index("--test-inventory") + 1])
+        if fault == "missing":
+            inventory_path.unlink()
+        elif fault == "malformed":
+            inventory_path.write_text("{")
+        else:
+            inventory = json.loads(inventory_path.read_text())
+            if fault == "catalog":
+                inventory["catalog_sha256"] = "0" * 64
+            elif fault == "duplicate_case":
+                inventory["cases"][1] = deepcopy(inventory["cases"][0])
+            elif fault == "foreign_case":
+                inventory["cases"][0]["id"] = "tests/test_foreign.py::test_identity"
+            elif fault == "missing_outcome":
+                inventory["cases"][0]["outcome"] = "not_run"
+            elif fault == "counts":
+                inventory["selected"] += 1
+            elif fault == "family_counts":
+                inventory["families"]["identity"]["outcomes"] = {"passed": 500}
+            elif fault == "ownership":
+                inventory["cases"][0]["family"] = "transport"
+            elif fault == "selection":
+                inventory["cases"][0]["selected"] = False
+            elif fault == "missing_module":
+                inventory["cases"] = [case for case in inventory["cases"] if case["family"] != "transport"]
+                inventory["collected"] = inventory["selected"] = len(inventory["cases"])
+                inventory["collected_modules"].remove("tests/hexagonal/test_transport.py")
+                inventory["families"]["transport"].update(collected=0, selected=0, outcomes={})
+            elif fault == "collect_only":
+                inventory["status"] = "collected"
+            else:
+                inventory["exit_status"] = 1
+            inventory_path.write_text(json.dumps(inventory))
+        return result
+
+    monkeypatch.setattr(RecordingRunner, "run", run_then_damage_inventory)
+    report = composition.run(root=project, output=project.parent / (project.name + "-runs"), suite="tests")
+    check, = report["checks"]
+    assert check["launched"] and check["exit_status"] == 0
+    assert check["status"] == "evidence_error", report
+    assert report["status"] == "failed"
+    assert Path(check["command_record"]).is_file()
+
+
+@pytest.mark.parametrize("behavior,expected_exit,expected_status", [
+    ("mixed", 0, "passed"), ("all_skipped", 0, "evidence_error"), ("failure", 1, "failed"),
+])
+def test_pytest_verdict_distinguishes_executed_behavior_from_skips(testkit_project, monkeypatch, behavior,
+                                                                 expected_exit, expected_status):
+    project = testkit_project
+    monkeypatch.setenv("PYTHONPATH", str(ROOT))
+    (project / "tests/hexagonal/test_identity.py").write_text(
+        'import pytest\ndef test_identity():\n    pytest.skip("fixture unavailable")\n')
+    if behavior == "all_skipped":
+        (project / "tests/hexagonal/test_transport.py").write_text(
+            'import pytest\ndef test_transport():\n    pytest.skip("transport unavailable")\n')
+    elif behavior == "failure":
+        (project / "tests/hexagonal/test_transport.py").write_text('def test_transport():\n    assert False, "transport fault"\n')
+    report = composition.run(root=project, output=project.parent / (project.name + "-runs"), suite="tests")
+    check, = report["checks"]
+    assert check["launched"] and check["exit_status"] == expected_exit, report
+    assert check["status"] == expected_status, report
+    assert report["status"] == ("passed" if behavior == "mixed" else "failed")
+    inventory = json.loads((Path(report["directory"]) / "inventory.json").read_text())
+    assert inventory["families"]["identity"]["outcomes"] == {"skipped": 1}
+    assert inventory["families"]["transport"]["outcomes"] == {
+        {"mixed": "passed", "all_skipped": "skipped", "failure": "failed"}[behavior]: 1}
+    command = json.loads(Path(check["command_record"]).read_text())
+    assert command["exit_status"] == expected_exit
+
+
+@pytest.mark.parametrize("families,shards", [((), ("1/2", "2/2")), (("identity",), ("1/1",))])
+def test_pytest_evidence_qualifies_real_shard_and_family_selections(testkit_project, monkeypatch, families, shards):
+    monkeypatch.setenv("PYTHONPATH", str(ROOT))
+    observed = set()
+    for shard in shards:
+        report = composition.run(root=testkit_project, output=testkit_project.parent / (testkit_project.name + "-runs"),
+                                 suite="tests", families=families, shard=shard)
+        assert report["status"] == "passed", report
+        check, = report["checks"]
+        assert check["status"] == "passed" and check["exit_status"] == 0
+        inventory = json.loads((Path(report["directory"]) / "inventory.json").read_text())
+        selected = {case["id"] for case in inventory["cases"] if case["selected"]}
+        assert selected and not observed.intersection(selected)
+        observed.update(selected)
+        assert all(case["outcome"] == ("passed" if case["selected"] else "deselected") for case in inventory["cases"])
+    expected = {"tests/hexagonal/test_identity.py::test_identity[1]", "tests/hexagonal/test_identity.py::test_identity[2]"}
+    if not families:
+        expected.add("tests/hexagonal/test_transport.py::test_transport")
+    assert observed == expected
+
+
+@pytest.mark.parametrize("fault", ["missing_descriptor", "wrong_descriptor", "missing_selected_module"])
+def test_pytest_evidence_rejects_inconsistent_shard_execution(testkit_project, monkeypatch, fault):
+    monkeypatch.setenv("PYTHONPATH", str(ROOT))
+    original = RecordingRunner.run
+
+    def run_then_damage_shard(runner, argv, **options):
+        result = original(runner, argv, **options)
+        assert result.exit == 0, result.stdout + result.stderr
+        path = Path(argv[argv.index("--test-inventory") + 1])
+        inventory = json.loads(path.read_text())
+        if fault == "missing_descriptor":
+            del inventory["shard"]
+        elif fault == "wrong_descriptor":
+            inventory["shard"]["count"] = 2
+        else:
+            inventory["cases"] = [case for case in inventory["cases"] if case["family"] != "transport"]
+            inventory["collected"] = inventory["selected"] = len(inventory["cases"])
+            inventory["collected_modules"].remove("tests/hexagonal/test_transport.py")
+            inventory["families"]["transport"].update(collected=0, selected=0, outcomes={})
+        path.write_text(json.dumps(inventory))
+        return result
+
+    monkeypatch.setattr(RecordingRunner, "run", run_then_damage_shard)
+    report = composition.run(root=testkit_project, output=testkit_project.parent / (testkit_project.name + "-runs"),
+                             suite="tests", shard="1/1")
+    check, = report["checks"]
+    assert check["launched"] and check["exit_status"] == 0
+    assert check["status"] == "evidence_error", report
+    assert report["status"] == "failed"
