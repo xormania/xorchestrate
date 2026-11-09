@@ -4,6 +4,7 @@ import json
 import os
 import shutil
 import signal
+import socket
 import subprocess
 import sys
 import threading
@@ -15,8 +16,20 @@ import pytest
 
 from xorchestrate.adapters.bridge import BridgeSessionDriver
 from xorchestrate.adapters.bridge_host import SessionBridgeHost
+from xorchestrate.adapters.bridge_transport import Peer
 from xorchestrate.adapters.codex import CodexSessionDriver
 from xorchestrate.model import Capability, OrchestrationError
+
+
+class PrivateNativeFailure(RuntimeError):
+    """An arbitrary third-party error whose text and attributes are not public."""
+
+    code = "sdk_internal_code"
+    details = {"authorization": "Bearer s3cret-bridge-token"}
+
+
+def public_failure(error):
+    return json.dumps({"code": error.code, "message": str(error), "details": error.details})
 
 
 class MemoryNative:
@@ -58,6 +71,8 @@ class MemoryNative:
     def send(self, backend, message):
         self.calls += 1
         assert not self.closed
+        if message.get("private_failure"):
+            raise PrivateNativeFailure("native SDK rejected token=s3cret-bridge-token")
         assert backend["native_id"] == self.backend["native_id"]
         if message.get("hold"):
             self.entered.set()
@@ -168,6 +183,35 @@ def test_lost_response_preserves_host_effect_and_control_progress(bridges):
     assert any(item["status"] == "pending" for item in inspection["effects"].values())
     native.release.set()
     assert native.calls == 1
+
+
+def test_bridge_peer_relays_only_public_failure_text():
+    near, far = socket.socketpair()
+    def private(method, params):
+        raise PrivateNativeFailure("handler failed with token=s3cret-bridge-token")
+    server, client = Peer(near, private, {"timeout": 2}), Peer(far, lambda method, params: {}, {"timeout": 2})
+    try:
+        with pytest.raises(OrchestrationError) as refused:
+            client.request("anything", {})
+        assert "s3cret" not in public_failure(refused.value), "BRIDGE_PRIVATE_ERROR_TEXT"
+        assert refused.value.code == "bridge_error" and refused.value.details == {"outcome": "unknown"}
+    finally:
+        client.close()
+        server.close()
+
+
+def test_bridge_host_retains_only_public_native_failure_text(bridges):
+    native, host, client = bridges()
+    backend = client.attach({})
+    with pytest.raises(OrchestrationError) as refused:
+        client.send(backend, {"private_failure": True})
+    assert "s3cret" not in public_failure(refused.value), "BRIDGE_PRIVATE_ERROR_TEXT"
+    assert refused.value.details["outcome"] == "unknown"
+    effects = client.inspect(backend)["effects"]
+    assert "s3cret" not in json.dumps(effects), "BRIDGE_PRIVATE_ERROR_EVIDENCE"
+    failed = [effect for effect in effects.values() if effect.get("effect_outcome") == "unknown"]
+    assert [(effect["error"], effect["error_message"], effect["error_details"]) for effect in failed] == [(
+        "PrivateNativeFailure", "External operation did not return a verified result (PrivateNativeFailure).", {})]
 
 
 def test_native_callbacks_and_observations_use_attached_context_and_progress_without_poll(bridges):
