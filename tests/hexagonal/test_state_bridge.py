@@ -9,7 +9,8 @@ from dataclasses import replace
 import pytest
 
 from xorchestrate.activity import activity_definitions
-from xorchestrate.adapters.bridge import BridgeSessionDriver, SessionBridgeHost
+from xorchestrate.adapters.bridge import BridgeSessionDriver
+from xorchestrate.adapters.bridge_host import SessionBridgeHost
 from xorchestrate.model import OrchestrationError
 from xorchestrate.state import StateEngine
 

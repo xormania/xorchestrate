@@ -11,7 +11,7 @@ from copy import deepcopy
 
 import pytest
 
-from xorchestrate.adapters.bridge import SessionBridgeHost
+from xorchestrate.adapters.bridge_host import SessionBridgeHost
 from xorchestrate.composition import build
 from xorchestrate.model import OrchestrationError
 

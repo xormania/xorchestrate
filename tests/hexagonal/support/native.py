@@ -16,10 +16,11 @@ from pathlib import Path
 
 from scripts.testkit.core import ResourceScope
 from tests.hexagonal.support.work_acceptance import MeasuringProvider, accept, make_app, measure, setup_work
-from xorchestrate.adapters.bridge import SessionBridgeHost
+from xorchestrate.adapters.acp import ACPSessionDriver
+from xorchestrate.adapters.bridge_host import SessionBridgeHost
 from xorchestrate.adapters.claude import ClaudeSessionDriver
+from xorchestrate.adapters.codex import CodexSessionDriver
 from xorchestrate.adapters.grok import GrokSessionDriver
-from xorchestrate.adapters.sessions import ACPSessionDriver, CodexSessionDriver
 from xorchestrate.composition import build
 from xorchestrate.model import Capability, Conflict, OrchestrationError
 

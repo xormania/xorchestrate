@@ -15,7 +15,7 @@ Public inspection must independently authorize returned records while internal r
 | Track | Findings | Ownership | Evidence directory |
 |---|---|---|---|
 | delivery_scope | F01 | delivery.py, dedicated tests | delivery_scope |
-| bridge_lifecycle | F02–F03 | bridge.py, dedicated tests | bridge_lifecycle |
+| bridge_lifecycle | F02–F03 | bridge.py, bridge_host.py, bridge_transport.py, dedicated tests | bridge_lifecycle |
 | native_adapters | F04/F06 | sessions/Claude/Grok, composition replay binding, tests | native_adapters |
 | assessment_binding | F05 | acceptance.py and assessment application methods, tests | assessment_binding |
 | checker_repairs | F07–F10 | normalize/checker/calibrators, tests | checker_repairs |

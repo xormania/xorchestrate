@@ -31,9 +31,9 @@ settings are recorded separately; unknown observations remain unknown.
 |---|---|---|---|---|
 | Lead | H3 H6 H7 A1 A2, integration of all IDs | application, ports, composition, delivery, delivery tests, execution/handoff | baseline above; contract 1 | Implemented; final integrated checks indexed in evidence |
 | Transport | H2 H7 | adapters/jsonrpc.py, mcp.py, transport progress tests | contract 1 | Implemented; final integrated checks indexed in evidence |
-| Sessions | H1 H2 H4 H5 B3 | adapters/sessions.py, Grok integration and tests | contract 1 | Implemented; final integrated checks indexed in evidence |
+| Sessions | H1 H2 H4 H5 B3 | adapters/process_sessions.py, codex.py, acp.py, Grok integration and tests | contract 1 | Implemented; final integrated checks indexed in evidence |
 | Claude | H1 H2 H4 H5 B3 | adapters/claude*.py, Claude tests | contract 1 | Implemented; final integrated checks indexed in evidence |
-| External lifecycle | H4 H7 B3 | adapters/bridge.py, bridge host, bridge tests | contract 1 | Implemented; final integrated checks indexed in evidence |
+| External lifecycle | H4 H7 B3 | adapters/bridge.py, bridge_host.py, bridge_transport.py, bridge tests | contract 1 | Implemented; final integrated checks indexed in evidence |
 | Acceptance | B1 B2 A1 A2 | acceptance.py, adapters/acceptance.py, work acceptance tests | contract 1 | Implemented; final integrated checks indexed in evidence |
 | Verification | H8 B4 B5 | scripts/verification, verification tests/docs | contract 1 | Implemented; final integrated checks indexed in evidence |
 

@@ -22,9 +22,10 @@ from tests.hexagonal.support.native import (
     retry,
     wait_for,
 )
+from xorchestrate.adapters.codex import CodexSessionDriver
 from xorchestrate.adapters.grok import GrokSessionDriver
 from xorchestrate.adapters.native_calls import NativeCallLedger
-from xorchestrate.adapters.sessions import CodexSessionDriver, _LiveSession
+from xorchestrate.adapters.process_sessions import LiveSession
 from xorchestrate.delivery import view
 from xorchestrate.model import Capability
 
@@ -126,7 +127,7 @@ def test_unrelated_callback_failure_is_not_pending_activity_detection():
 @pytest.mark.parametrize("protocol", ["codex", "grok"])
 def test_unmatched_completion_never_retires_known_turns_and_preserves_uncertainty(bad_id, protocol):
     adapter = {"codex": CodexSessionDriver, "grok": GrokSessionDriver}[protocol]({"command": [sys.executable, "unused"]})
-    live = _LiveSession({}, native_id="native")
+    live = LiveSession({}, native_id="native")
     if protocol == "grok":
         live.grok = {"current": None, "native_busy": False, "active_prompts": live.activity_model.set("native_prompt"),
                      "seen": [], "completed": [], "interjections": live.activity_model.mapping("interjection")}
@@ -157,7 +158,7 @@ def test_unmatched_completion_never_retires_known_turns_and_preserves_uncertaint
 @pytest.mark.parametrize("completed_id,expected", [("B", "idle"), ("unrelated", "unknown")])
 def test_completion_before_submission_response_must_bind_to_returned_turn(completed_id, expected):
     adapter = CodexSessionDriver({"command": [sys.executable, "unused"]})
-    live = _LiveSession({}, native_id="native")
+    live = LiveSession({}, native_id="native")
     observations = []
     adapter.bind_observer(lambda context, event: observations.append(event))
     class Process:
@@ -194,7 +195,7 @@ def test_native_completion_before_callback_return_keeps_running_callback_visible
             raise RuntimeError("unrelated callback failure")
         return {"finished": True}
     adapter = {"codex": CodexSessionDriver, "grok": GrokSessionDriver}[protocol]({"command": [sys.executable, "unused"]})
-    live = _LiveSession({}, native_id="native")
+    live = LiveSession({}, native_id="native")
     adapter.bind_application_tools([Capability("hold", "Hold")], handler)
     if protocol == "grok":
         live.grok = {"current": "A", "native_busy": True, "active_prompts": live.activity_model.set("native_prompt", {"A"}),

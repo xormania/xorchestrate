@@ -4,7 +4,8 @@ from copy import deepcopy
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from xorchestrate.adapters.bridge import BridgeSessionDriver, SessionBridgeHost
+from xorchestrate.adapters.bridge import BridgeSessionDriver
+from xorchestrate.adapters.bridge_host import SessionBridgeHost
 from xorchestrate.model import Capability, OrchestrationError
 
 
