@@ -65,19 +65,23 @@ def native_claims_match(event, sessions, *, source_actor=False):
         # session belongs to its configured caller. Reconcile that caller's two
         # explicit records instead of deriving an actor from the protocol label.
         actor = recorded.get("actor_id", peer)
-    if not identity_matches(event, sessions) or ("native_actor" in event and event["native_actor"] != actor):
+    # The application stamps every native observation with its actor and every
+    # session with its actor_id; both claims are required.
+    if not identity_matches(event, sessions) or event.get("native_actor") != actor:
         return False
     recorded = event.get("recorded_session_identity")
     if recorded is not None and (not identity_matches({**recorded, "peer": peer}, sessions)
-                                or ("actor_id" in recorded and recorded["actor_id"] != actor)):
+                                or recorded.get("actor_id") != actor):
         return False
     return not ("session_work_id" in event and "observation_work_id" in event
                 and event["session_work_id"] != event["observation_work_id"])
 
 
 def native_conflict(first, other, sessions):
-    # Omitted optional claims are compatible. Explicit null/wrong claims remain
-    # evidence and cannot borrow the valid identity of the selected observation.
+    # Harness-supplied nested session ids and optional work selection may be
+    # omitted; explicit null/wrong claims remain evidence and cannot borrow the
+    # valid identity of the selected observation. Application-written actor
+    # claims are required by native_claims_match.
     return (signature(first) != signature(other) or not native_claims_match(other, sessions)
             or any(key in first and key in other and first[key] != other[key]
                    for key in ("observation_work_id", "session_work_id", "observation_session_id")))
@@ -127,11 +131,22 @@ def native_call(events, peer, tool, arguments, sessions, call_id, context):
     return None
 
 
-def effect_claims_match(embedded, persisted, peer, sessions):
-    """Check only typed identity/work claims; arbitrary payloads stay opaque."""
-    if not isinstance(embedded, dict):
+EFFECT_CLAIMS = ("id", "work_id", "created_by", "sender", "source", "session_id", "native_id", "incarnation")
+
+
+def effect_claims_match(embedded, persisted, peer, sessions, *, complete=False):
+    """Check only typed identity/work claims; arbitrary payloads stay opaque.
+
+    The persisted effect is application-written and always carries its
+    creator. A completed application callback returns the full effect view, so
+    with complete=True every typed claim of the persisted effect must also be
+    present in the returned one. Harness-reported native returns may omit claims.
+    """
+    if not isinstance(embedded, dict) or not isinstance(persisted, dict) or "created_by" not in persisted:
         return False
-    for key in ("id", "work_id", "created_by", "sender", "source", "session_id", "native_id", "incarnation"):
+    if complete and any(key in persisted and key not in embedded for key in EFFECT_CLAIMS):
+        return False
+    for key in EFFECT_CLAIMS:
         if key in embedded and key in persisted and canonical(embedded[key]) != canonical(persisted[key]):
             return False
     for value in (embedded, persisted):
@@ -207,9 +222,8 @@ def match_callback(events, event, sessions, context):
         recorded = event["recorded_session_identity"]
         require(isinstance(recorded, dict)
                 and identity_matches({**recorded, "peer": event["peer"]}, sessions)
-                and ("actor_id" not in recorded or recorded["actor_id"] == event["peer"]), "callback_session_binding")
-    if "callback_actor" in event:
-        require(event["callback_actor"] == event["peer"], "callback_actor_binding")
+                and recorded.get("actor_id") == event["peer"], "callback_session_binding")
+    require(event.get("callback_actor") == event["peer"], "callback_actor_binding")
     if "session_work_id" in event and "observation_work_id" in event:
         require(event["observation_work_id"] == event["session_work_id"], "callback_work_binding")
     native = native_call(events, event["peer"], event.get("tool"), event.get("arguments"),
@@ -237,11 +251,11 @@ def match_callback(events, event, sessions, context):
         require(canonical(arguments.get("result")) == canonical(persisted.get("result"))
                 and arguments.get("work_id") == persisted.get("work_id"),
                 "application_effect_arguments_mismatch")
-        if "source" in persisted or "created_by" in persisted:
-            require(("source" not in persisted or persisted["source"] == {"type": "caller", "actor": event["peer"]})
-                    and ("created_by" not in persisted or persisted["created_by"] == event["peer"]), "persisted_evidence_actor_mismatch")
+        require(persisted.get("source") == {"type": "caller", "actor": event["peer"]}
+                and persisted.get("created_by") == event["peer"], "persisted_evidence_actor_mismatch")
         embedded = event.get("callback_result", {}).get("evidence", {})
-        require(effect_claims_match(embedded, persisted, event["peer"], sessions), "application_effect_arguments_mismatch")
+        require(effect_claims_match(embedded, persisted, event["peer"], sessions, complete=True),
+                "application_effect_arguments_mismatch")
         if "work_id" in embedded:
             require(embedded["work_id"] == arguments.get("work_id"), "application_effect_arguments_mismatch")
     if "persisted_message" in event:
@@ -252,7 +266,8 @@ def match_callback(events, event, sessions, context):
                 and event.get("peer") == persisted.get("sender"),
                 "application_effect_arguments_mismatch")
         embedded = event.get("callback_result", {}).get("message", {})
-        require(effect_claims_match(embedded, persisted, event["peer"], sessions), "application_effect_arguments_mismatch")
+        require(effect_claims_match(embedded, persisted, event["peer"], sessions, complete=True),
+                "application_effect_arguments_mismatch")
         if "work_id" in embedded:
             require(embedded["work_id"] == arguments.get("work_id"), "application_effect_arguments_mismatch")
     kind = "message" if native.get("tool") == "send_message" else "evidence"
@@ -390,23 +405,25 @@ def lifecycle_evidence(case, run, lifecycle, context):
     for view, actual in ((before, actual_before), (after, actual_after)):
         require(all(view.get(k) == actual.get("backend", {}).get(k) for k in ("native_id", "incarnation", "ownership")),
                 "lifecycle_session_binding")
-        require("actor_id" not in actual or actual["actor_id"] == peer, "lifecycle_actor_binding")
+        require(actual.get("actor_id") == peer, "lifecycle_actor_binding")
     require(before.get("native_id") and before["native_id"] == after.get("native_id"), "lifecycle_native_identity")
     returned = measured.get("result", {}).get("session", {})
     require(returned.get("id") == after["session_id"], "lifecycle_result_binding")
     # The typed returned session is an independent observation, not an identity
     # source that can be repaired from the durable session with the same id.
-    expected_actor = actual_after.get("actor_id", run.get("sessions", {}).get(peer, {}).get("actor_id", peer))
-    require(("actor_id" not in returned or returned["actor_id"] == expected_actor)
+    # The application returns its full session view, so every claim the durable
+    # session carries must be present and equal in the returned one.
+    missing = object()
+    actual_backend = actual_after.get("backend", {})
+    require(returned.get("actor_id") == peer
             and ("session_id" not in returned or returned["session_id"] == after["session_id"])
-            and all(key not in returned or key not in actual_after or returned[key] == actual_after[key]
-                    for key in ("work_id", "created_by"))
-            and all(key not in returned or returned[key] == actual_after.get("backend", {}).get(key)
+            and all(returned.get(key, missing) == actual_after[key] for key in ("work_id", "created_by")
+                    if key in actual_after)
+            and all(key not in returned or returned[key] == actual_backend.get(key)
                     for key in ("native_id", "incarnation", "ownership")), "lifecycle_result_binding")
-    if "backend" in returned:
-        backend = returned["backend"]
-        require(isinstance(backend, dict) and all(key not in backend or backend[key] == actual_after.get("backend", {}).get(key)
-                for key in ("native_id", "incarnation", "ownership")), "lifecycle_result_binding")
+    backend = returned.get("backend")
+    require(isinstance(backend, dict) and all(backend.get(key, missing) == actual_backend[key]
+            for key in ("native_id", "incarnation", "ownership") if key in actual_backend), "lifecycle_result_binding")
     if operation == "detach":
         output = measured.get("result", {}).get("output", {})
         require(before.get("ownership") == "external" and output.get("terminated") is False,
@@ -428,12 +445,11 @@ def lifecycle_evidence(case, run, lifecycle, context):
     callback = by_id("native_observation", retained.get("callback_observation_id"))
     saved = by_id("evidence", retained.get("evidence_id"))
     require(native and callback and saved, "lifecycle_retained_observation_binding")
-    require("created_by" not in saved or saved["created_by"] == peer, "lifecycle_actor_binding")
-    require("source" not in saved or saved["source"] == {"type": "caller", "actor": peer},
-            "lifecycle_actor_binding")
+    require(saved.get("created_by") == peer, "lifecycle_actor_binding")
+    require(saved.get("source") == {"type": "caller", "actor": peer}, "lifecycle_actor_binding")
     raw_callback = callback.get("observation", {})
     for row in (native, callback):
-        require("created_by" not in row or row["created_by"] == peer, "lifecycle_actor_binding")
+        require(row.get("created_by") == peer, "lifecycle_actor_binding")
         observation = row["observation"]
         identity = {"peer": peer, "session_id": row.get("session_id"),
                     **{key: observation.get(key) for key in ("native_id", "incarnation")}}
@@ -489,17 +505,18 @@ def lifecycle_evidence(case, run, lifecycle, context):
         other_effect = observation.get("result", {}).get("evidence", {})
         work_claims = [*selected_work, *[value["work_id"] for value in (other_args, other_effect) if "work_id" in value]]
         require(row.get("origin") == "adapter" and context.identity_matcher(identity, {peer: after})
-                and ("created_by" not in row or row["created_by"] == peer)
+                and row.get("created_by") == peer
                 and observation.get("action") == "record_result" and arguments_match(native_args, other_args)
                 and ("work_id" not in row or not source_work or row["work_id"] == source_work[0])
                 and (not work_claims or all(value == work_claims[0] for value in work_claims))
-                and effect_claims_match(other_effect, saved, peer, {peer: after}),
+                and effect_claims_match(other_effect, saved, peer, {peer: after},
+                                        complete=observation.get("phase") == "completed"),
                 "lifecycle_retained_observation_binding")
     expected = {"verification": {"run_id": run["run_id"], "phase": "lifecycle", "case_id": case["id"], "memory": run["memories"][peer]}}
     require(saved.get("result") == expected and selected.get("arguments", {}).get("result") == expected
             and raw_callback.get("arguments", {}).get("result") == expected, "lifecycle_context_lost")
     require(raw_callback.get("result", {}).get("evidence", {}).get("id") == saved["id"], "lifecycle_evidence_binding")
-    require(effect_claims_match(embedded, saved, peer, {peer: after}), "lifecycle_evidence_binding")
+    require(effect_claims_match(embedded, saved, peer, {peer: after}, complete=True), "lifecycle_evidence_binding")
     return {"operation_id": measured["id"], "native_observation_id": native["id"],
             "callback_observation_id": callback["id"], "evidence_id": saved["id"]}
 

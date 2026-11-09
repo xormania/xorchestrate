@@ -92,7 +92,7 @@ def normalize(raw, peer_sessions, provider_events, mode, *, decoders: dict[str, 
         item = record["observation"]
         session = session_records.get(record["session_id"])
         recorded_identity = None if session is None else {
-            "session_id": session["id"], "actor_id": session.get("actor_id"),
+            "session_id": session["id"], **({"actor_id": session["actor_id"]} if "actor_id" in session else {}),
             **{key: session.get("backend", {}).get(key) for key in ("native_id", "incarnation")}}
         # Keep executed application arguments independent from native input.
         # The checker compares the two; normalization must never reconcile them.
@@ -102,8 +102,7 @@ def normalize(raw, peer_sessions, provider_events, mode, *, decoders: dict[str, 
                 **({"observation_work_id": record["work_id"]} if "work_id" in record else {}),
                 **({"session_work_id": session["work_id"]} if session and "work_id" in session else {}),
                 "recorded_session_identity": recorded_identity,
-                "callback_actor": record.get("created_by", (session or {}).get("actor_id")),
-                "callback_actor_basis": "observation" if "created_by" in record else "session",
+                **({"callback_actor": record["created_by"]} if "created_by" in record else {}),
                 **({"observation_session_id": item["session_id"]} if "session_id" in item else {}),
                 "callback_observation_id": record["id"], "callback_result": deepcopy(item.get("result", {})),
                 "raw_ref": {"kind": "native_observation", "id": record["id"]},

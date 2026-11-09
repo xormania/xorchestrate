@@ -205,11 +205,11 @@ def durable_exchange():
     expectation = {"run_id": "run", "case_id": "case", "nonce": "nonce", "memory": "secret",
                    "sender": "codex", "recipient": "grok"}
     common = {k: expectation[k] for k in ("run_id", "case_id", "nonce")}
-    challenge = {"id": "m1", "sender": "codex", "recipients": ["grok"], "work_id": "w",
+    challenge = {"id": "m1", "sender": "codex", "created_by": "codex", "recipients": ["grok"], "work_id": "w",
                  "body": {"verification": {**common, "kind": "challenge", "memory": ""}}, "created_at": "1"}
-    reply = {"id": "m2", "sender": "grok", "recipients": ["codex"], "work_id": "w",
+    reply = {"id": "m2", "sender": "grok", "created_by": "grok", "recipients": ["codex"], "work_id": "w",
              "body": {"verification": {**common, "kind": "reply", "memory": "secret"}}, "created_at": "2"}
-    evidence = {"id": "e1", "work_id": "w", "source": {"type": "caller", "actor": "codex"}, "created_at": "3",
+    evidence = {"id": "e1", "work_id": "w", "created_by": "codex", "source": {"type": "caller", "actor": "codex"}, "created_at": "3",
                 "result": {"verification": {**common, "phase": "received", "memory": "secret", "peer": "grok"}}}
     sessions = [{"id": peer + "-app", "actor_id": peer, "backend": {"native_id": peer + "-native", "incarnation": peer + "-epoch"}}
                 for peer in ("codex", "grok")]
@@ -219,11 +219,11 @@ def durable_exchange():
         ("grok", "send_message", {"work_id": "w", "body": reply["body"]}, {"message": reply}),
         ("codex", "record_result", {"work_id": "w", "result": evidence["result"]}, {"evidence": evidence}),
     ]):
-        observations.append({"id": f"obs-{index}-native", "session_id": peer + "-app", "origin": "adapter", "stale": False,
+        observations.append({"id": f"obs-{index}-native", "session_id": peer + "-app", "origin": "adapter", "stale": False, "created_by": peer,
             "observation": {"native_id": peer + "-native", "incarnation": peer + "-epoch", "call_id": str(index),
                             "action": action, "arguments": args, "kind": "native_tool_call", "source": peer}})
         for phase in ("requested", "completed"):
-            observations.append({"id": f"obs-{index}-{phase}", "session_id": peer + "-app", "origin": "adapter", "stale": False,
+            observations.append({"id": f"obs-{index}-{phase}", "session_id": peer + "-app", "origin": "adapter", "stale": False, "created_by": peer,
                 "observation": {"native_id": peer + "-native", "incarnation": peer + "-epoch", "call_id": str(index),
                                 "action": action, "arguments": args, "phase": phase, **({"result": result} if phase == "completed" else {})}})
     attempts = [{"id": "a" + str(i), "message_id": message["id"], "recipient": peer, "session_id": peer + "-app",
@@ -330,9 +330,9 @@ def test_successful_transport_does_not_hide_wrong_work_missing_completion_or_uns
     args = {"batch": 0, "failed_jobs": [], "failed_tests": 0}
     common = {"peer": peer, **sessions[peer], "tool": "invoke", "arguments": args, "call_id": "work-call"}
     events.extend([
-        {"seq": 20, "event": "native_tool", **common, "origin": "grok/session/update"},
-        {"seq": 21, "event": "tool_called", **common},
-        {"seq": 22, "event": "work_submitted", **common, "batch": 0, "answer": {"failed_jobs": [], "failed_tests": 0}},
+        {"seq": 20, "event": "native_tool", **common, "origin": "grok/session/update", "native_actor": peer},
+        {"seq": 21, "event": "tool_called", **common, "callback_actor": peer},
+        {"seq": 22, "event": "work_submitted", **common, "callback_actor": peer, "batch": 0, "answer": {"failed_jobs": [], "failed_tests": 0}},
     ])
     fixture = {"batches": [[{"job": "required", "attempt": 1, "status": "FAIL", "failed_tests": 2}]]}
     run = {"events": events, "sessions": sessions}
@@ -342,8 +342,8 @@ def test_successful_transport_does_not_hide_wrong_work_missing_completion_or_uns
         check_case({"id": "work", "kind": "work", "peer": peer, "batch": 0}, run, fixture)
     with pytest.raises(VerificationFailure, match="native_completion_missing"):
         check_case({"id": "completion", "kind": "completion", "peer": peer}, run, fixture)
-    events.append({"seq": 23, "event": "tool_completed", **common})
-    events.append({"seq": 24, "event": "activity", "peer": peer, **sessions[peer], "state": "idle", "basis": "native"})
+    events.append({"seq": 23, "event": "tool_completed", **common, "callback_actor": peer})
+    events.append({"seq": 24, "event": "activity", "peer": peer, **sessions[peer], "state": "idle", "basis": "native", "native_actor": peer})
     # A late submission acknowledgement cannot invalidate actual completion.
     events.append({"seq": 25, "event": "submitted", "peer": peer, **sessions[peer]})
     assert check_case({"id": "completion", "kind": "completion", "peer": peer}, run, fixture)

@@ -12,7 +12,7 @@ def completion_input(peer="claude"):
         if kind == "native_completion" and peer != "claude":
             fields.setdefault("turn_id" if peer == "codex" else "prompt_id", "A")
         record = {"id": "observation-" + str(index), "session_id": identity["session_id"],
-                  "origin": "adapter", "stale": False, "created_at": at or f"2026-10-24T00:00:{index:02}+00:00",
+                  "origin": "adapter", "stale": False, "created_by": peer, "created_at": at or f"2026-10-24T00:00:{index:02}+00:00",
                   "observation": {**identity, "kind": kind, "source": source, **fields}}
         records.append(record)
         return record

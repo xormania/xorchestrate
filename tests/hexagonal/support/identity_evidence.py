@@ -71,7 +71,7 @@ class IdentityEvidenceAdapter:
         self.sessions = {encoding.peer: {"session_id": encoding.peer + "-application", "native_id": encoding.peer + "-native",
                                        "incarnation": encoding.peer + "-incarnation"} for encoding in (source, target)}
         self.observations = ObservationBuilder(self.raw, self.sessions, work_id="session-work",
-                                              include_actor=True, completed_side="callback", separator="-")
+                                              completed_side="callback", separator="-")
         if scope == "exchange":
             self._exchange()
         elif scope == "lifecycle":

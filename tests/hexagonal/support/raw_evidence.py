@@ -11,15 +11,15 @@ from scripts.verification.model import canonical, digest
 class ObservationBuilder:
     """One construction path for independent native/request/effect observations.
 
-    The encoding and optional actor claims are fixture inputs. Native arguments
+    The encoding is a fixture input; every row carries the application-written
+    actor stamp, as the product's durable observations do. Native arguments
     are snapshotted before the application adds its default work scope. This
     distinction is material to the identity and raw-evidence contracts.
     """
 
-    def __init__(self, raw, sessions, *, work_id="work", include_actor=False,
-                 completed_side="completed", separator=""):
+    def __init__(self, raw, sessions, *, work_id="work", completed_side="completed", separator=""):
         self.raw, self.sessions = raw, sessions
-        self.work_id, self.include_actor = work_id, include_actor
+        self.work_id = work_id
         self.completed_side, self.separator = completed_side, separator
         self.sequence = 0
 
@@ -43,9 +43,7 @@ class ObservationBuilder:
                     observation["result"] = deepcopy(result or {})
             row = {"id": side + self.separator + call_id, "session_id": identity["session_id"],
                    "origin": "adapter", "stale": False, "created_at": stamp,
-                   "work_id": self.work_id, "observation": observation}
-            if self.include_actor:
-                row["created_by"] = peer
+                   "work_id": self.work_id, "created_by": peer, "observation": observation}
             self.raw["observations"].append(row)
             records[side] = row
             if side == "requested" and saved is not None:
@@ -69,10 +67,10 @@ def raw_exchange(kind="exchange"):
 
     def message(peer, target, identifier, memory):
         body = {"verification": {"case_id": "case", "kind": identifier, "nonce": "nonce", "memory": memory}}
-        saved = {"id": identifier, "work_id": "work", "sender": peer,
+        saved = {"id": identifier, "work_id": "work", "sender": peer, "created_by": peer,
                  "destination": {"actor": target}, "recipients": [target], "body": body}
         raw["messages"].append(saved)
-        call(peer, "send_message", {"destination": saved["destination"], "body": body}, {"message": {"id": identifier}}, saved)
+        call(peer, "send_message", {"destination": saved["destination"], "body": body}, {"message": deepcopy(saved)}, saved)
         raw["attempts"].append({"id": "attempt-" + identifier, "message_id": identifier, "recipient": target,
             **sessions[target], "status": "submitted", "sequence": 1, "origin": "adapter",
             "submission": {"submitted": True}, "created_at": at(), "finished_at": at()})
@@ -83,7 +81,7 @@ def raw_exchange(kind="exchange"):
              "source": {"type": "caller", "actor": "codex"}, "result": {"verification": {"phase": "received", "case_id": "case",
         "nonce": "nonce", "memory": "private", "peer": "grok"}}}
     raw["evidence"].append(saved)
-    call("codex", "record_result", {"result": saved["result"]}, {"evidence": {"id": "receipt"}}, saved)
+    call("codex", "record_result", {"result": saved["result"]}, {"evidence": deepcopy(saved)}, saved)
     providers = []
     if kind == "work_exchange":
         providers = [{"event": "work_started", "peer": "grok", "at": "2026-10-24T00:00:00+00:00"},
@@ -104,21 +102,37 @@ def raw_exchange(kind="exchange"):
 
 
 
+def select_explicit_work(inputs, work_id):
+    """Coherently select explicit work in arguments, effects and returned views."""
+    raw = inputs[0]["raw_records"]
+    for record in raw["observations"]:
+        observation = record["observation"]
+        observation["arguments"]["work_id"] = work_id
+        for kind in ("message", "evidence"):
+            if isinstance(observation.get("result", {}).get(kind), dict):
+                observation["result"][kind]["work_id"] = work_id
+    for record in raw["messages"] + raw["evidence"]:
+        record["work_id"] = work_id
+    return raw
+
+
 def lifecycle_input(operation="resume"):
     case = {"peer": "codex", "operation": operation, "id": "lifecycle-codex-" + operation}
     before = {"session_id": "old-app", "native_id": "retained-native", "incarnation": "old", "ownership": "owned"}
     after = {**before, "session_id": "new-app", "incarnation": "new"}
     result = {"verification": {"run_id": "run", "phase": "lifecycle", "case_id": case["id"], "memory": "private"}}
-    raw = {"session": [{"id": view["session_id"], "backend": view} for view in (before, after)],
+    sessions = [{"id": view["session_id"], "actor_id": "codex", "backend": view} for view in (before, after)]
+    saved = {"id": "saved", "created_by": "codex", "source": {"type": "caller", "actor": "codex"}, "result": result}
+    raw = {"session": sessions,
            "operation": [{"id": "op", "status": "completed", "action": "start_session" if operation == "resume" else "reconnect_session",
-                          "result": {"session": {"id": after["session_id"]}}}],
-           "evidence": [{"id": "saved", "result": result}], "native_observation": []}
+                          "result": {"session": deepcopy(sessions[1])}}],
+           "evidence": [saved], "native_observation": []}
     for side in ("native", "callback"):
         observation = {"native_id": after["native_id"], "incarnation": after["incarnation"],
                        "action": "record_result", "call_id": "retained-call", "arguments": {"result": result}}
         observation.update({"kind": "native_tool_call", "source": "codex"} if side == "native" else
-                           {"phase": "completed", "result": {"evidence": {"id": "saved"}}})
-        raw["native_observation"].append({"id": side, "origin": "adapter", "stale": False,
+                           {"phase": "completed", "result": {"evidence": deepcopy(saved)}})
+        raw["native_observation"].append({"id": side, "origin": "adapter", "stale": False, "created_by": "codex",
                                           "session_id": after["session_id"], "observation": observation})
     lifecycle = {"before": before, "after": after, "operation_id": "op",
                  "stale_errors": {side: {"code": "stale_connection"} for side in ("application", "adapter")},

@@ -39,6 +39,15 @@ application records. Candidate-authored verdicts, copied totals, missing cases,
 another candidate's bindings and lifecycle summary booleans cannot substitute
 for those records. Requested, discovered and executed inventories remain separate.
 
+The receipt policy (`xorchestrate/exchange.py`) and the independent checker apply
+one identity rule. Claims the application always writes are required: the
+`created_by` actor on every native observation and durable effect, the session
+`actor_id`, evidence `source`, and the full effect or session view returned by
+`send_message`, `record_result` and lifecycle operations. A missing claim is
+rejected with the same diagnostic as a wrong or null one. Claims copied from
+harness packets (a nested native `session_id`, native arguments, native return
+payloads) and work selection may be omitted; when present they must agree.
+
 ## Reproducible deterministic checks
 
 Run from a candidate checkout with Python 3.12 for baseline validation. Establish

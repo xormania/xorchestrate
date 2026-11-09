@@ -29,11 +29,12 @@ def proof_chain():
         return value
     def callback(peer, tool, args, event, **data):
         call_id = "call-" + str(len(events))
-        add("native_tool", peer, tool=tool, arguments=args, call_id=call_id,
+        # Application-written actor stamps are part of every normalized record.
+        add("native_tool", peer, tool=tool, arguments=args, call_id=call_id, native_actor=peer,
             origin={"codex": "codex/item/tool/call", "grok": "grok/session/update"}[peer])
-        add("tool_called", peer, tool=tool, arguments=args, call_id=call_id)
-        add(event, peer, tool=tool, arguments=args, call_id=call_id, **data)
-        add("tool_completed", peer, tool=tool, arguments=args, call_id=call_id)
+        add("tool_called", peer, tool=tool, arguments=args, call_id=call_id, callback_actor=peer)
+        add(event, peer, tool=tool, arguments=args, call_id=call_id, callback_actor=peer, **data)
+        add("tool_completed", peer, tool=tool, arguments=args, call_id=call_id, callback_actor=peer)
     challenge = {"id": "challenge", "to": "grok", "kind": "challenge", "case_id": "case", "nonce": "nonce", "memory": ""}
     callback("codex", "send_message", challenge, "queued", message=challenge)
     add("attempt", "grok", message_id="challenge", attempt_id="attempt-1", recipient="grok",
