@@ -9,7 +9,8 @@
     "scripts/acceptance",
     "scripts/verification",
     "scripts/architecture",
-    "tests"
+    "tests",
+    "scripts/ci"
   ],
   "roles": {
     "foundation": {
@@ -863,6 +864,19 @@
       ],
       "allow_dynamic": true
     },
+    "ci_tooling": {
+      "modules": [
+        "scripts.ci",
+        "scripts.ci.classify_changes"
+      ],
+      "allowed_roles": [
+        "ci_tooling"
+      ],
+      "allowed_external": [
+        "stdlib:*"
+      ],
+      "allow_dynamic": false
+    },
     "test_contracts": {
       "modules": [
         "tests.hexagonal.contracts.*"
@@ -1062,6 +1076,7 @@
         "architecture_core",
         "architecture_adapters",
         "architecture_entrypoints",
+        "ci_tooling",
         "test_contracts",
         "test_fixtures",
         "test_support",

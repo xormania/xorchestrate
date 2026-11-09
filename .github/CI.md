@@ -32,6 +32,7 @@ permissions. Pull requests, pushes to master and manual runs invoke:
 
 | Job | Purpose |
 |---|---|
+| Classify changed paths | `scripts/ci/classify_changes.py` decides whether the change touches anything other than documentation; see below |
 | Static checks | Shared `static` suite: Ruff lint/security, current-source syntax and deterministic architecture enforcement |
 | Application and adapter tests (Python 3.12) | Shared `tests` suite with declared behavioral families and pytest inventory/JUnit, then shared calibration and composed three-harness protocol suites |
 | Tmux live acceptance (protocol fixture) | Shared acceptance suite with tmux explicitly installed; private owned process cleanup is part of the receipt |
@@ -46,6 +47,42 @@ successful checkout/interpreter/dependency setup and a run that has not been
 cancelled. A suite failure does not skip the later independent suites or erase
 the original job failure. Failed setup produces an unavailable receipt instead of
 launching dependent validation. Available evidence uploads even on failure.
+
+### Documentation-only changes
+
+The `paths` job (Classify changed paths) checks out full history and runs
+`python3 -m scripts.ci.classify_changes`, which writes `code=true|false` to the
+job output. It diffs `HEAD` against `github.event.pull_request.base.sha` for
+pull requests and against `github.event.before` for pushes, counting both sides
+of renames. A change is documentation-only when every changed path is a
+top-level `*.md`, anything under `docs/`, or a `*.md` under `examples/`.
+`docs/implementation/owner-brief.md` is excluded because the protocol suites read
+it as input. Everything else is code, including `.github/**` (also `CI.md`),
+`contracts/**`, `scripts/**`, `tests/**`, `xorchestrate/**`, `examples/*.json`,
+`pyproject.toml` and `ruff.toml`. Manual runs and other events, a missing or null
+base (new branch, `before=000…`), a diff that fails (for example a force-push
+whose old head is gone) and an empty change set all count as code.
+
+The application, tmux acceptance and Jev diagnostics jobs declare `needs: paths`
+and the job-level condition
+`!cancelled() && needs.paths.outputs.code != 'false'`. They are skipped only
+when the classifier explicitly reports `false`. If the classifier fails or emits
+nothing, they still run. Static checks and the `Hexagonal architecture` status
+job do not depend on `paths` and always run. The static suite is cheap and backs
+the required status. It does not lint Markdown, so no documentation check is
+lost by skipping the other jobs.
+
+Required status checks: the repository ruleset currently requires only
+`Hexagonal architecture`. It needs only `changes` (Static checks), so it reports
+a real pass or fail for every change. GitHub reports a job skipped by its
+job-level `if` as `skipped`, and a skipped job satisfies a required status
+check. So any heavy job made required later will still pass on documentation-only
+changes instead of staying pending. Do not move this decision to workflow-level
+`paths`/`paths-ignore` filters: a workflow that never starts leaves required
+checks pending. Do not gate `changes` on `paths` either: a skipped static job
+would make `Hexagonal architecture` fail, because it requires
+`needs.changes.result == 'success'`. On code changes the heavy jobs start after
+the short classifier job finishes, roughly 10–20 seconds later.
 
 The former historical-runtime and recovered-toolkit jobs, PHP provisioning/tests
 and historical runner have been removed. Historical test sources remain available

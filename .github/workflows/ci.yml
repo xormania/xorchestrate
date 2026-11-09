@@ -17,6 +17,34 @@
     "cancel-in-progress": true
   },
   "jobs": {
+    "paths": {
+      "name": "Classify changed paths",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 3,
+      "outputs": {
+        "code": "${{ steps.classify.outputs.code }}"
+      },
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false,
+            "fetch-depth": 0
+          },
+          "id": "checkout"
+        },
+        {
+          "name": "Classify documentation-only changes",
+          "id": "classify",
+          "env": {
+            "EVENT_NAME": "${{ github.event_name }}",
+            "PULL_REQUEST_BASE": "${{ github.event.pull_request.base.sha }}",
+            "PUSH_BEFORE": "${{ github.event.before }}"
+          },
+          "run": "python3 -B -m scripts.ci.classify_changes --event \"$EVENT_NAME\" --pull-request-base \"$PULL_REQUEST_BASE\" --push-before \"$PUSH_BEFORE\" --head HEAD --github-output \"$GITHUB_OUTPUT\""
+        }
+      ]
+    },
     "changes": {
       "name": "Static checks",
       "runs-on": "ubuntu-24.04",
@@ -72,6 +100,10 @@
       "name": "Application and adapter tests (Python 3.12)",
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 15,
+      "needs": [
+        "paths"
+      ],
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' }}",
       "steps": [
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
@@ -156,6 +188,10 @@
       "name": "Tmux live acceptance (protocol fixture)",
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 5,
+      "needs": [
+        "paths"
+      ],
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' }}",
       "steps": [
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
@@ -230,6 +266,10 @@
       "name": "Jev architecture diagnostics",
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 6,
+      "needs": [
+        "paths"
+      ],
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' }}",
       "steps": [
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",

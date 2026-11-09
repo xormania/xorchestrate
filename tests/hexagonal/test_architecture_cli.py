@@ -61,7 +61,7 @@ def test_ci_retains_blocking_gate_and_independent_diagnostics(tmp_path):
                    and "--diagnostics-only" not in step["run"]
                    for job in workflow["jobs"].values() for step in job["steps"])
     job = workflow["jobs"]["architecture"]
-    assert not job.get("needs")
+    assert job.get("needs", []) in ([], ["paths"]), "Diagnostics must not depend on the static gate"
     diagnostic = next(step for step in job["steps"] if step.get("name") == "Jev architecture diagnostics")
     assert "!cancelled()" in diagnostic["if"]
     assert "steps.dependencies.outcome == 'success'" in diagnostic["if"]
