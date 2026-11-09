@@ -13,8 +13,9 @@ CODE_PATHS = (
 HEAVY_JOBS = ("application-tests", "application", "verification", "tmux-acceptance", "architecture")
 ALWAYS_JOBS = ("changes", "architecture-status")
 CLASSIFIER_JOB = "paths"
-# Heavy jobs that also aggregate other heavy jobs; each still depends on the classifier.
-HEAVY_JOB_NEEDS = {"application": [CLASSIFIER_JOB, "application-tests"]}
+# Heavy jobs that aggregate other heavy jobs. They still depend on the classifier,
+# but use always() so a cancelled or failed dependency is reported, not skipped.
+AGGREGATE_JOBS = {"application": [CLASSIFIER_JOB, "application-tests"]}
 
 
 def full_run(decision, reason=None):
@@ -29,11 +30,11 @@ def documentation_only(decision, paths):
     assert decision["code_paths"] == []
 
 
-def heavy_job_gate(job, needs=(CLASSIFIER_JOB,)):
+def heavy_job_gate(job, needs=(CLASSIFIER_JOB,), status="!cancelled()"):
     """A heavy job runs unless the classifier explicitly reported documentation-only."""
     assert job.get("needs") == list(needs), job.get("needs")
     gate = job["if"]
-    assert "!cancelled()" in gate
+    assert gate.startswith("${{ " + status + " && "), gate
     assert "needs.paths.outputs.code != 'false'" in gate, gate
     assert "== 'true'" not in gate, "Classifier failure must not skip heavy validation"
 

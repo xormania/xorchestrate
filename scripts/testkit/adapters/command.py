@@ -13,6 +13,7 @@ import os
 import signal
 import subprocess
 import time
+from pathlib import Path
 
 from ..model import Cancelled, Result, Timeout
 
@@ -64,11 +65,29 @@ class _OwnedGroup:
 def _kill_session(child, group=None):
     if group is not None:
         group.signal(signal.SIGKILL)
-    else:
+    elif child.returncode is None:
+        # Only an unreaped owner pins its PID, and therefore its group ID.
         with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
             os.killpg(child.pid, signal.SIGKILL)
     with contextlib.suppress(ProcessLookupError, OSError):
         child.kill()
+
+
+def _group_members(pgid):
+    """Live (non-zombie) members of a process group; ``None`` when /proc is unreadable."""
+    try:
+        paths = list(Path("/proc").glob("[0-9]*/stat"))
+    except OSError:
+        return None
+    count = 0
+    for path in paths:
+        try:
+            state, _, group = path.read_text().rsplit(") ", 1)[1].split()[:3]
+        except (OSError, IndexError, ValueError):
+            continue
+        if state != "Z" and group == str(pgid):
+            count += 1
+    return count
 
 
 def _finish(child):
@@ -162,28 +181,41 @@ class SubprocessRunner:
     def _session_shutdown(self, child, *, reason, scope):
         """Bounded cleanup when the owned group could not be observed.
 
-        The child is still unreaped, so its PID is also the session/group ID
-        acquired by this Popen. TERM precedes a bounded KILL escalation.
+        The owner stays unreaped until signalling ends, so its PID, which is
+        also the session/group ID acquired by this Popen, cannot be reused by
+        another group. TERM precedes a bounded KILL escalation; the owner is
+        reaped and its pipes drained only afterwards, and nothing is signalled
+        once it has been reaped.
         """
         receipt = {"reason": str(reason), "scope": scope, "forced": False,
                    "grace_seconds": self.shutdown_grace,
                    "errors": [{"type": "OwnershipUnavailable", "phase": "group_acquisition"}]}
         with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
             if self.shutdown_target == "owner":
-                child.terminate()
+                child.send_signal(signal.SIGTERM)
             else:
                 os.killpg(child.pid, signal.SIGTERM)
+        # A zombie owner still answers killpg(pid, 0); count live members instead.
+        deadline = time.monotonic() + self.shutdown_grace
+        members = _group_members(child.pid)
+        while members != 0 and time.monotonic() < deadline:
+            time.sleep(min(.02, max(0, deadline - time.monotonic())))
+            members = _group_members(child.pid)
+        verification_deadline = time.monotonic() + CLEANUP_TIMEOUT
+        while members != 0 and time.monotonic() < verification_deadline:
+            receipt["forced"] = True
+            with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
+                os.killpg(child.pid, signal.SIGKILL)
+            time.sleep(.01)
+            members = _group_members(child.pid)
+        if members is None:
+            receipt["errors"].append({"type": "MembershipUnavailable", "phase": "group_verification"})
         try:
-            out, err = child.communicate(timeout=self.shutdown_grace)
-        except (subprocess.TimeoutExpired, OSError):
-            receipt["forced"] = True
-            _kill_session(child)
             out, err = _finish(child)
-        # Surviving members keep the group ID allocated after the owner exits.
-        with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
-            os.killpg(child.pid, 0)
-            receipt["forced"] = True
-            os.killpg(child.pid, signal.SIGKILL)
+        except (OSError, subprocess.TimeoutExpired) as error:
+            receipt["errors"].append({"type": type(error).__name__, "phase": "forced_drain"})
+            out, err = getattr(error, "stdout", b""), getattr(error, "stderr", b"")
+        receipt["remaining_members"] = members
         receipt["exit_status"] = child.returncode
         receipt["verified"] = False
         self.last_shutdown = receipt
@@ -207,12 +239,12 @@ class SubprocessRunner:
             raise Cancelled(argv, cwd=cwd, reason=reason, launched=False,
                             shutdown={"reason": str(reason), "scope": "run", "forced": False})
         stream = subprocess.PIPE if self.terminal == "capture" else None
-        child = subprocess.Popen(argv, cwd=str(cwd), env=dict(env),
-                                 stdin=stream, stdout=stream, stderr=stream,
-                                 start_new_session=True)
-        group = None
+        child = group = None
         pending_input = stdin.encode("utf-8") if isinstance(stdin, str) else stdin
         try:
+            child = subprocess.Popen(argv, cwd=str(cwd), env=dict(env),
+                                     stdin=stream, stdout=stream, stderr=stream,
+                                     start_new_session=True)
             # Group observation scans /proc; an interrupt arriving meanwhile
             # must still reach the cleanup below rather than orphan the session.
             group = _OwnedGroup(child)
@@ -237,6 +269,8 @@ class SubprocessRunner:
         except (Timeout, Cancelled):
             raise
         except BaseException:
+            if child is None:
+                raise
             # KeyboardInterrupt/SystemExit still traverse graceful cleanup. The
             # evidence adapter retains the initiating exception and shutdown.
             try:

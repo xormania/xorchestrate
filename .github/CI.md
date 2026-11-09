@@ -117,7 +117,9 @@ the job-level condition `!cancelled() && needs.paths.outputs.code != 'false'`
 (the application aggregate also needs the shard matrix). If either step fails or
 emits nothing, they still run. On a documentation-only pull request the shards
 and the aggregate are skipped together; otherwise the aggregate runs even after a
-shard failure and fails unless the whole matrix succeeded. Static checks and the `Hexagonal architecture` status
+shard failure and fails unless the whole matrix succeeded. The aggregate's
+condition uses `always()` instead of `!cancelled()`, so a cancelled run reports
+it as failed or cancelled rather than skipped. Static checks and the `Hexagonal architecture` status
 job do not depend on `paths` and always run. The static suite is cheap and backs
 the required status. It does not lint Markdown, so no documentation check is
 lost by skipping the other jobs.

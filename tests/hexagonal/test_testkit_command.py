@@ -322,7 +322,21 @@ def test_interrupt_during_group_acquisition_still_terminates_the_whole_session(t
             raise OSError("process table unavailable")
         return real(child)
 
+    # Record whether each group signal precedes the owner's reaping: a reaped
+    # owner no longer pins its PID, so a later group signal could hit a reused ID.
+    real_killpg, real_finish, events = os.killpg, command._finish, []
+
+    def killpg(pgid, number):
+        events.append(("signal", pgid, number))
+        return real_killpg(pgid, number)
+
+    def finish(child):
+        events.append(("reap", child.pid, None))
+        return real_finish(child)
+
     monkeypatch.setattr(command, "_OwnedGroup", interrupted)
+    monkeypatch.setattr(os, "killpg", killpg)
+    monkeypatch.setattr(command, "_finish", finish)
     runner = SubprocessRunner(shutdown_grace=1)
     with subreaper():
         try:
@@ -347,6 +361,10 @@ def test_interrupt_during_group_acquisition_still_terminates_the_whole_session(t
         assert len(calls) == 2 and shutdown["verified"] is True and shutdown["remaining_processes"] == []
     else:
         assert shutdown["errors"] == [{"type": "OwnershipUnavailable", "phase": "group_acquisition"}]
+        assert shutdown["remaining_members"] == 0
+        kinds = [kind for kind, _, _ in events]
+        assert ("signal", calls[0], signal.SIGTERM) in events and ("signal", calls[0], signal.SIGKILL) in events
+        assert "reap" in kinds and "signal" not in kinds[kinds.index("reap"):], events
 
 
 def test_atomic_writer_has_no_shared_temporary_file_under_concurrent_publications(tmp_path):

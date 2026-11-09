@@ -199,7 +199,7 @@
         "paths",
         "application-tests"
       ],
-      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' }}",
+      "if": "${{ always() && needs.paths.outputs.code != 'false' }}",
       "steps": [
         {
           "name": "Require every tests shard",

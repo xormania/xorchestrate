@@ -174,7 +174,7 @@ def test_timings_command_refuses_partial_reports_unless_allowed(tmp_path):
     assert weights == {"tests/hexagonal/test_testkit_sharding.py": 0.5} and default == 0.5
 
 
-def test_ci_defines_the_shard_count_once_and_keeps_the_required_application_check():
+def test_ci_defines_the_shard_count_once_and_keeps_the_application_aggregate_name():
     workflow = json.loads((composition.ROOT / ".github/workflows/ci.yml").read_text())
     shards = workflow["jobs"]["application-tests"]
     assert shards["strategy"]["fail-fast"] is False
@@ -196,13 +196,14 @@ def test_ci_defines_the_shard_count_once_and_keeps_the_required_application_chec
     gate = workflow["jobs"]["application"]
     assert gate["name"] == "Application and adapter tests (Python 3.12)"
     assert "application-tests" in gate["needs"] and not gate.get("continue-on-error")
-    # The aggregate and the shards share one documentation-only gate, so the
-    # aggregate is skipped exactly when the shards are and otherwise reports them.
-    assert gate["if"] == shards["if"] and "!cancelled()" in gate["if"]
+    # Same documentation-only condition as the shards, but always(): a cancelled
+    # or failed shard matrix is reported by the aggregate instead of skipping it.
+    assert gate["if"] == shards["if"].replace("!cancelled()", "always()")
+    assert gate["if"].startswith("${{ always() && ")
 
 
 @pytest.mark.parametrize("tests_result", ["success", "failure", "cancelled", "skipped"])
-def test_required_application_check_passes_only_when_every_shard_passed(tmp_path, tests_result):
+def test_application_aggregate_passes_only_when_every_shard_passed(tmp_path, tests_result):
     gate = json.loads((composition.ROOT / ".github/workflows/ci.yml").read_text())["jobs"]["application"]
     (step,) = gate["steps"]
     assert step["env"] == {"TESTS_RESULT": "${{ needs.application-tests.result }}"}
