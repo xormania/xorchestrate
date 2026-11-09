@@ -10,7 +10,8 @@ import copy
 
 import pytest
 
-from scripts.architecture.python import OBSERVATIONS, check
+from scripts.architecture import python as extractor
+from scripts.architecture.python import OBSERVATIONS, ObservationCache, check
 
 
 def write(root, package, path, content):
@@ -276,7 +277,7 @@ def cold_check(root, profile):
     return check(root, profile)
 
 
-def test_cached_observations_reproduce_a_cold_extraction(tmp_path):
+def test_cached_observations_reproduce_a_cold_extraction(tmp_path, monkeypatch):
     profile = subject(tmp_path)
     profile["roles"]["core"]["forbidden_literals"] = ["transport_field"]
     write(tmp_path, "parcels", "core/service.py",
@@ -289,7 +290,12 @@ def test_cached_observations_reproduce_a_cold_extraction(tmp_path):
     cold["files"][0]["sha256"] = "tampered"
     for record in cold["relationships"]:
         record["target"] = "tampered"
+    observed, parsed = [], []
+    observe, parse = extractor._observe, extractor.ast.parse
+    monkeypatch.setattr(extractor, "_observe", lambda *args: observed.append(args[0]) or observe(*args))
+    monkeypatch.setattr(extractor.ast, "parse", lambda *args, **kw: parsed.append(args) or parse(*args, **kw))
     warm = check(tmp_path, profile)
+    assert observed == [] and parsed == [], "unchanged sources must be served from the cache"
     assert warm == cold_copy
     assert warm == cold_check(tmp_path, profile)
 
@@ -339,3 +345,12 @@ def test_observation_cache_is_bounded_and_eviction_preserves_results(tmp_path, m
         assert len(OBSERVATIONS) == 2
 
 
+def test_observation_cache_evicts_the_least_recently_used_entry():
+    cache = ObservationCache(limit=2)
+    cache.put("a", ("a",))
+    cache.put("b", ("b",))
+    assert cache.get("a") == ("a",)
+    cache.put("c", ("c",))
+    assert len(cache) == 2
+    assert cache.get("a") == ("a",) and cache.get("c") == ("c",)
+    assert cache.get("b") is None

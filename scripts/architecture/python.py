@@ -131,7 +131,8 @@ class ObservationCache:
             self._entries.clear()
 
     def __len__(self):
-        return len(self._entries)
+        with self._lock:
+            return len(self._entries)
 
 
 OBSERVATIONS = ObservationCache()
