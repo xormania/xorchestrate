@@ -17,16 +17,16 @@ def test_calibrator_requires_exact_assertion_and_passing_controls(tmp_path, body
     source = tmp_path / "test_probe.py"
     source.write_text(f"import pytest\ndef test_behavior():\n    {body}\ndef {CONTROL}():\n    {control}\n")
     run = execute(tmp_path, tmp_path / "result", ["test_probe.py"])
-    assert classify(run["exit_code"], Path(run["xml"]), "test_behavior", "EXPECTED_VIOLATION")["classification"] == expected
+    assert classify(run["exit_status"], Path(run["xml"]), "test_behavior", "EXPECTED_VIOLATION")["classification"] == expected
 
 
 def test_missing_dependency_is_setup_error_and_never_fault_detection(tmp_path):
     (tmp_path / "test_probe.py").write_text("import deliberately_missing_calibration_dependency\n")
     run = execute(tmp_path, tmp_path / "result", ["test_probe.py"])
-    assert classify(run["exit_code"], Path(run["xml"]), "test_behavior", "EXPECTED_VIOLATION")["classification"] == "setup_error"
+    assert classify(run["exit_status"], Path(run["xml"]), "test_behavior", "EXPECTED_VIOLATION")["classification"] == "setup_error"
 
 
 def test_absent_requested_assertion_is_missing_coverage(tmp_path):
     (tmp_path / "test_probe.py").write_text(f"def {CONTROL}():\n    pass\n")
     run = execute(tmp_path, tmp_path / "result", ["test_probe.py"])
-    assert classify(run["exit_code"], Path(run["xml"]), "test_behavior", "EXPECTED_VIOLATION")["classification"] == "missing_coverage"
+    assert classify(run["exit_status"], Path(run["xml"]), "test_behavior", "EXPECTED_VIOLATION")["classification"] == "missing_coverage"

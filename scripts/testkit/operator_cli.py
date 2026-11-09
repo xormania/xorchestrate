@@ -43,7 +43,6 @@ def parser():
     value.add_argument("--shutdown-grace", type=float)
     value.add_argument("--output", type=Path)
     value.add_argument("--detach", action="store_true")
-    value.add_argument("--json", action="store_true", help="Machine-readable status (also the default)")
     value.add_argument("--target", type=int, help="One-based owned terminal number")
     return value
 

@@ -14,12 +14,12 @@ import time
 import uuid
 from copy import deepcopy
 
+from scripts.testkit.adapters.evidence import now, write_json
 from scripts.testkit.core import ResourceScope
 from xorchestrate.composition import build
 from xorchestrate.model import OrchestrationError
 
 from .adapters.native import default_decoders
-from .capture import now, write_json
 from .checker import PEERS, VerificationFailure
 
 

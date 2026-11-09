@@ -8,9 +8,8 @@ import sys
 from pathlib import Path
 
 from scripts.testkit.adapters.evidence import allocate_run
+from scripts.testkit.adapters.tmux import supervise
 from scripts.testkit.stories import select_stories, validate_limits
-
-from .lifecycle import supervise
 
 
 def main(argv=None):

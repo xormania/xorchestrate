@@ -123,5 +123,5 @@ class GrokDecoder(_Decoder):
 
 
 def default_decoders():
-    """Historical three-peer composition, replaceable with any decoder mapping."""
+    """Default Codex, Claude and Grok decoders; replaceable with any decoder mapping."""
     return {"codex": CodexDecoder(), "claude": ClaudeDecoder(), "grok": GrokDecoder()}

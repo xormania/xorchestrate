@@ -11,12 +11,12 @@ from pathlib import Path
 
 import pytest
 
-from scripts.acceptance import lifecycle
+from scripts.testkit.adapters import tmux
 
 
 def test_missing_tmux_fails_with_a_retained_receipt(tmp_path, monkeypatch):
-    monkeypatch.setattr(lifecycle.shutil, "which", lambda name: None)
-    report = lifecycle.supervise([sys.executable, "-c", "raise SystemExit(0)"], tmp_path)
+    monkeypatch.setattr(tmux.shutil, "which", lambda name: None)
+    report = tmux.supervise([sys.executable, "-c", "raise SystemExit(0)"], tmp_path)
     assert report["status"] == "failed"
     assert report["failure"] == "tmux_missing"
     assert json.loads((tmp_path / "report.json").read_text()) == report
@@ -27,13 +27,13 @@ def test_fixture_environment_does_not_inherit_authentication(tmp_path, monkeypat
     monkeypatch.setenv("TMUX", "unrelated-server")
     monkeypatch.setenv("PYTHONPATH", "unrelated-imports")
     monkeypatch.setenv("PYTHONPYCACHEPREFIX", str(tmp_path / "external-bytecode"))
-    fixture = lifecycle.environment("fixture", tmp_path)
+    fixture = tmux.environment("fixture", tmp_path)
     assert "ACCEPTANCE_EXAMPLE_SECRET" not in fixture
     assert "TMUX" not in fixture
     assert "PYTHONPATH" not in fixture
     assert fixture["PYTHONPYCACHEPREFIX"] == str(tmp_path / "external-bytecode")
     assert Path(fixture["HOME"]).is_relative_to(tmp_path)
-    native = lifecycle.environment("native", tmp_path)
+    native = tmux.environment("native", tmp_path)
     assert native["ACCEPTANCE_EXAMPLE_SECRET"] == "do-not-forward"
     assert "TMUX" not in native
 
@@ -49,7 +49,7 @@ def test_fixture_child_import_keeps_bytecode_outside_source(tmp_path, monkeypatc
     monkeypatch.setenv("PYTHONPYCACHEPREFIX" if policy == "external" else "PYTHONDONTWRITEBYTECODE",
                        str(cache) if policy == "external" else "1")
     completed = subprocess.run([sys.executable, "-c", "import cache_probe; assert cache_probe.value == 1"],
-                               cwd=candidate, env=lifecycle.environment("fixture", tmp_path),
+                               cwd=candidate, env=tmux.environment("fixture", tmp_path),
                                capture_output=True, text=True, timeout=10)
     assert completed.returncode == 0, completed.stderr
     assert not list(candidate.rglob("*.pyc"))
@@ -59,10 +59,10 @@ def test_fixture_child_import_keeps_bytecode_outside_source(tmp_path, monkeypatc
 
 def test_reused_pid_is_never_signaled(monkeypatch):
     called = []
-    monkeypatch.setattr(lifecycle, "processes", lambda: {100: (lifecycle.Identity(100, 20), 1, "S")})
-    monkeypatch.setattr(lifecycle.os, "kill", lambda *args: called.append(args))
-    monkeypatch.setattr(lifecycle.os, "pidfd_open", lambda *args: called.append(args))
-    lifecycle.send_signal(lifecycle.Identity(100, 10), signal.SIGTERM)
+    monkeypatch.setattr(tmux, "processes", lambda: {100: (tmux.Identity(100, 20), 1, "S")})
+    monkeypatch.setattr(tmux.os, "kill", lambda *args: called.append(args))
+    monkeypatch.setattr(tmux.os, "pidfd_open", lambda *args: called.append(args))
+    tmux.send_signal(tmux.Identity(100, 10), signal.SIGTERM)
     assert called == []
 
 
@@ -98,7 +98,7 @@ while not Path({str(release)!r}).exists():
             time.sleep(0.01)
         assert predicate()
 
-    with lifecycle.subreaper():
+    with tmux.subreaper():
         parent = subprocess.Popen([sys.executable, "-c", code])
         owned = None
         child = None
@@ -107,27 +107,27 @@ while not Path({str(release)!r}).exists():
             if already_spawned:
                 spawn.touch()
                 wait_for(child_pid.exists)
-            tracker = lifecycle.OwnedProcesses()
+            tracker = tmux.OwnedProcesses()
             if not already_spawned:
                 spawn.touch()
                 wait_for(child_pid.exists)
                 tracker.observe()
-            child = lifecycle.processes()[int(child_pid.read_text())][0]
-            assert lifecycle.processes()[child.pid][1] == parent.pid
+            child = tmux.processes()[int(child_pid.read_text())][0]
+            assert tmux.processes()[child.pid][1] == parent.pid
             owned = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"], start_new_session=True)
             release.touch()
             parent.wait(timeout=5)
-            assert lifecycle.processes()[child.pid][1] == os.getpid()
+            assert tmux.processes()[child.pid][1] == os.getpid()
 
             survivors = tracker.observe()
             assert child not in tracker.known
             assert {identity.pid for identity in survivors} == {owned.pid}
             for identity in survivors:
-                lifecycle.send_signal(identity, signal.SIGTERM)
+                tmux.send_signal(identity, signal.SIGTERM)
             owned.wait(timeout=5)
             tracker.reap()
             assert tracker.observe() == []
-            assert lifecycle.alive(child), "cleanup must leave the adopted unrelated descendant alive"
+            assert tmux.alive(child), "cleanup must leave the adopted unrelated descendant alive"
         finally:
             if parent.poll() is None:
                 parent.terminate()
@@ -137,26 +137,26 @@ while not Path({str(release)!r}).exists():
                     owned.kill()
                 owned.wait(timeout=5)
             if child is None and child_pid.exists():
-                child = lifecycle.processes().get(int(child_pid.read_text()), (None,))[0]
+                child = tmux.processes().get(int(child_pid.read_text()), (None,))[0]
             if child is not None:
-                lifecycle.send_signal(child, signal.SIGKILL)
-                wait_for(lambda: not lifecycle.alive(child))
+                tmux.send_signal(child, signal.SIGKILL)
+                wait_for(lambda: not tmux.alive(child))
                 os.waitpid(child.pid, os.WNOHANG)
 
 
 @pytest.mark.parametrize("already_spawned", [True, False], ids=["initial-tree", "later-observed-tree"])
 def test_exclusion_follows_the_complete_tree_across_reparenting(monkeypatch, already_spawned):
-    monkeypatch.setattr(lifecycle.os, "getpid", lambda: 1)
+    monkeypatch.setattr(tmux.os, "getpid", lambda: 1)
     parent = os.getpid()
-    unrelated = lifecycle.Identity(100, 10)
-    child = lifecycle.Identity(101, 11)
-    grandchild = lifecycle.Identity(102, 12)
-    owned = lifecycle.Identity(200, 20)
+    unrelated = tmux.Identity(100, 10)
+    child = tmux.Identity(101, 11)
+    grandchild = tmux.Identity(102, 12)
+    owned = tmux.Identity(200, 20)
     # Reverse ancestry order requires a transitive closure rather than one pass.
     descendants = {102: (grandchild, 101, "S"), 101: (child, 100, "S")}
     snapshot = {**(descendants if already_spawned else {}), 100: (unrelated, parent, "S")}
-    monkeypatch.setattr(lifecycle, "processes", lambda: snapshot)
-    tracker = lifecycle.OwnedProcesses()
+    monkeypatch.setattr(tmux, "processes", lambda: snapshot)
+    tracker = tmux.OwnedProcesses()
     if not already_spawned:
         snapshot = {**descendants, **snapshot}
         assert tracker.observe() == []
@@ -167,13 +167,13 @@ def test_exclusion_follows_the_complete_tree_across_reparenting(monkeypatch, alr
 
 
 def test_excluded_pid_reuse_does_not_exclude_a_new_owned_process(monkeypatch):
-    monkeypatch.setattr(lifecycle.os, "getpid", lambda: 1)
+    monkeypatch.setattr(tmux.os, "getpid", lambda: 1)
     parent = os.getpid()
-    old = lifecycle.Identity(100, 10)
-    current = lifecycle.Identity(100, 20)
+    old = tmux.Identity(100, 10)
+    current = tmux.Identity(100, 20)
     snapshot = {100: (old, parent, "S")}
-    monkeypatch.setattr(lifecycle, "processes", lambda: snapshot)
-    tracker = lifecycle.OwnedProcesses()
+    monkeypatch.setattr(tmux, "processes", lambda: snapshot)
+    tracker = tmux.OwnedProcesses()
     snapshot = {100: (current, parent, "S")}
     assert tracker.observe() == [current]
 
@@ -187,7 +187,7 @@ def test_pass_requires_worker_exit_and_scenario_receipt(tmp_path, receipt, exit_
     code = ("import json,sys; from pathlib import Path; "
             + (f"Path({str(tmp_path / 'scenario.json')!r}).write_text(json.dumps({{'status':'passed'}})); " if receipt else "")
             + f"sys.exit({exit_code})")
-    report = lifecycle.supervise([sys.executable, "-c", code], tmp_path, timeout=10, grace=0.5)
+    report = tmux.supervise([sys.executable, "-c", code], tmp_path, timeout=10, grace=0.5)
     assert report["status"] == expected, report
     assert report["worker_exit"] == exit_code
     assert report["cleanup"]["verified"], report
@@ -203,7 +203,7 @@ def test_terminal_eof_waits_for_the_actual_worker_exit(tmp_path, exit_code):
             f"Path({str(tmp_path / 'scenario.json')!r}).write_text(json.dumps({{'status':'passed'}})); "
             "signal.signal(signal.SIGHUP,signal.SIG_IGN); os.close(0); os.close(1); os.close(2); time.sleep(0.3); "
             f"Path({str(completed)!r}).write_text('worker reached its own exit'); os._exit({exit_code})")
-    report = lifecycle.supervise([sys.executable, "-c", code], tmp_path, timeout=10, grace=0.5)
+    report = tmux.supervise([sys.executable, "-c", code], tmp_path, timeout=10, grace=0.5)
     assert completed.exists(), report
     assert report["worker_exit"] == exit_code, report
     assert report["status"] == ("passed" if exit_code == 0 else "failed"), report
@@ -216,7 +216,7 @@ def test_worker_signal_is_a_final_failed_exit(tmp_path):
     code = ("import json,os,signal; from pathlib import Path; "
             f"Path({str(tmp_path / 'scenario.json')!r}).write_text(json.dumps({{'status':'passed'}})); "
             "os.kill(os.getpid(),signal.SIGTERM)")
-    report = lifecycle.supervise([sys.executable, "-c", code], tmp_path, timeout=10, grace=0.5)
+    report = tmux.supervise([sys.executable, "-c", code], tmp_path, timeout=10, grace=0.5)
     assert report["status"] == "failed", report
     assert report["failure"] == "worker_signaled", report
     assert report["worker_exit"] == -signal.SIGTERM, report
@@ -232,13 +232,13 @@ def test_timeout_reaps_detached_descendant_without_touching_unrelated_process(tm
             "p=subprocess.Popen([sys.executable,'-c','import time,signal; signal.signal(signal.SIGTERM,signal.SIG_IGN); time.sleep(60)'],start_new_session=True); "
             f"Path({str(child_pid)!r}).write_text(str(p.pid)); time.sleep(60)")
     try:
-        report = lifecycle.supervise([sys.executable, "-c", code], tmp_path, timeout=2, grace=0.2)
+        report = tmux.supervise([sys.executable, "-c", code], tmp_path, timeout=2, grace=0.2)
         assert report["status"] == "failed"
         assert report["failure"] == "timeout", report
         assert report["cleanup"]["verified"], report
         assert report["cleanup"]["forced"]
         assert child_pid.exists(), report
-        assert int(child_pid.read_text()) not in lifecycle.processes()
+        assert int(child_pid.read_text()) not in tmux.processes()
         assert unrelated.poll() is None
     finally:
         unrelated.terminate()
@@ -260,10 +260,10 @@ def test_fast_orphan_cannot_escape_cleanup(tmp_path):
         while not unrelated_socket.exists() and unrelated.poll() is None and time.monotonic() < deadline:
             time.sleep(0.02)
         assert unrelated_socket.exists()
-        report = lifecycle.supervise([sys.executable, "-c", code], tmp_path, timeout=10, grace=0.2)
+        report = tmux.supervise([sys.executable, "-c", code], tmp_path, timeout=10, grace=0.2)
         assert report["cleanup"]["verified"], report
         assert report["cleanup"]["forced"]
-        assert int(child_pid.read_text()) not in lifecycle.processes()
+        assert int(child_pid.read_text()) not in tmux.processes()
         assert report["status"] == "failed"
         assert report["failure"] == "owned_process_leak"
         assert unrelated.poll() is None

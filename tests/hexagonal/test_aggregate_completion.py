@@ -9,9 +9,8 @@ from itertools import permutations
 
 import pytest
 
-from scripts.verification.checker import VerificationFailure, check_case, completed_native_turns, verify
+from scripts.verification.checker import VerificationFailure, check_case, completed_native_turns, normalize, verify
 from scripts.verification.multi_harness import snapshot
-from scripts.verification.normalize import normalize
 from tests.hexagonal.support.completion_evidence import completion_input
 from tests.hexagonal.support.native import (
     ControlledCallbacks as Holds,

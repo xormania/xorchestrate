@@ -115,12 +115,12 @@ adapters:
 - [World resource registration and reverse cleanup](https://github.com/uscient/agentscient/blob/456457b9a0a9eb1ff285ee2d3e40535b6f722cdb/ops/testkit/world.py)
   supply the shared ownership model. Cleanup drains every registered resource and
   retains failures, including explicit releases that failed earlier.
-- [Existing Xorchestrate ownership supervisor](../scripts/acceptance/lifecycle.py)
+- [Existing Xorchestrate ownership supervisor](../scripts/testkit/adapters/tmux.py)
   retains PID/start identity checks, pidfd signaling and orphan adoption. It moved
   intact behind the kit adapter instead of reverting to older process scans.
-- [Existing candidate/evidence capture](../scripts/verification/capture.py)
-  retains dirty/untracked input identity and exact command output. The old module
-  reexports the shared implementation. Checker identity now includes kit sources.
+- [Existing candidate/evidence capture](../scripts/testkit/adapters/evidence.py)
+  retains dirty/untracked input identity and exact command output. Checker
+  identity now includes kit sources.
 
 Historical fixture-only HOME isolation cannot be imposed on authenticated vendor
 clients. Fixture and native environment policies remain explicit. No conductor,

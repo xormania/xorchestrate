@@ -18,9 +18,7 @@ from pathlib import Path
 
 from scripts.testkit.adapters.clock import SystemClock
 from scripts.testkit.adapters.configuration import isolated_config
-from scripts.testkit.core import CheckRecorder, ResourceScope
-
-from .capture import (
+from scripts.testkit.adapters.evidence import (
     candidate_identity,
     canonical,
     digest,
@@ -30,8 +28,9 @@ from .capture import (
     verify_candidate,
     write_json,
 )
-from .checker import PEERS, VerificationFailure, check_case, native_inventory, verify
-from .normalize import normalize
+from scripts.testkit.core import CheckRecorder, ResourceScope
+
+from .checker import PEERS, VerificationFailure, check_case, native_inventory, normalize, verify
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = Path(__file__).with_name("build-log.json")

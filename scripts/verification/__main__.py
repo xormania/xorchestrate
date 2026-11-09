@@ -9,8 +9,9 @@ import shutil
 import sys
 from pathlib import Path
 
+from scripts.testkit.adapters.evidence import canonical, capture_candidate, digest, now, run_command, write_json
+
 from .calibration import classify, junit_cases
-from .capture import canonical, capture_candidate, digest, now, run_command, write_json
 from .checker import VerificationFailure, default_criteria, verify
 
 
@@ -105,11 +106,6 @@ def main(argv=None):
     check.add_argument("--bindings", type=Path, required=True)
     check.add_argument("--fixture", type=Path, required=True)
     check.add_argument("--out", type=Path, required=True)
-    measure = commands.add_parser("run")
-    measure.add_argument("--cwd", type=Path, required=True)
-    measure.add_argument("--out", type=Path, required=True)
-    measure.add_argument("--timeout", type=float, default=300)
-    measure.add_argument("argv", nargs=argparse.REMAINDER)
     fault = commands.add_parser("calibrate")
     fault.add_argument("--candidate", type=Path, required=True)
     fault.add_argument("--out", type=Path, required=True)
@@ -125,12 +121,6 @@ def main(argv=None):
     if args.command == "criteria":
         write_json(args.out, default_criteria(digest(args.brief.read_bytes())))
         return 0
-    if args.command == "run":
-        argv = args.argv[1:] if args.argv[:1] == ["--"] else args.argv
-        if not argv:
-            parser.error("run requires a command after --")
-        result = run_command(argv, args.cwd, args.out, timeout=args.timeout)
-        return 0 if result["status"] == "passed" else 1
     if args.command == "calibrate":
         result = calibrate(args.candidate, args.out, read_json(args.mutation), args.selector,
                            args.target, args.diagnostic, args.unaffected)

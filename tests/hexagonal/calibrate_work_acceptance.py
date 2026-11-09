@@ -59,7 +59,7 @@ CASES = [
 ]
 
 
-def classify(exit_code, xml_path, target, assertion):
+def classify(exit_status, xml_path, target, assertion):
     """A nonzero exit alone never receives detection credit."""
     from scripts.verification.calibration import assertion_attribution, assertion_detected, exception_type
 
@@ -85,9 +85,9 @@ def classify(exit_code, xml_path, target, assertion):
         state = "skipped"
     elif not targets or not controls:
         state = "missing_coverage"
-    elif not failures and exit_code == 0:
+    elif not failures and exit_status == 0:
         state = "escaped_fault"
-    elif (exit_code == 1 and len(failures) == len(targets)
+    elif (exit_status == 1 and len(failures) == len(targets)
           and all(case in targets and assertion_detected(case.find("failure").get("message", ""), assertion, assertion_attribution(case)) for case in failures)
           and all(case.find("failure") is None for case in controls)):
         state = "detected"
@@ -98,19 +98,15 @@ def classify(exit_code, xml_path, target, assertion):
 
 
 def execute(root, output, selectors):
-    """Compatibility receipt for the shared observed-pytest execution service."""
+    """Run selectors through the shared observed-pytest execution service."""
     from scripts.verification.__main__ import observed_pytest
 
-    record = observed_pytest(root, output, selectors, timeout=45)
-    code = record["exit_status"]
-    return {**record, "exit_code": code if code is not None else (124 if record["status"] == "timeout" else 3),
-            "timed_out": record["status"] == "timeout", "log": record["stdout"],
-            "started": record["started_at"], "finished": record["finished_at"]}
+    return observed_pytest(root, output, selectors, timeout=45)
 
 
 def main(argv=None):
+    from scripts.testkit.adapters.evidence import candidate_identity, verify_candidate, write_json
     from scripts.verification.__main__ import calibration_workspace
-    from scripts.verification.capture import candidate_identity, verify_candidate, write_json
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--candidate", type=Path, default=ROOT)
@@ -132,12 +128,12 @@ def main(argv=None):
                 selectors = [TEST + "::" + case["test"] + "[" + store + "-" + node + "]"
                     for store in ("memory", "sqlite") for node in case["nodes"]] + [TEST + "::" + CONTROL]
             passing = execute(baseline, case_dir / "control-run", selectors)
-            baseline_class = classify(passing["exit_code"], Path(passing["xml"]), case["test"], case["assertion"])
+            baseline_class = classify(passing["exit_status"], Path(passing["xml"]), case["test"], case["assertion"])
             if baseline_class["classification"] != "escaped_fault":
                 outcome = {**baseline_class, "reason": "baseline_not_clean_pass", "control": passing}
             else:
                 mutated = execute(mutant, case_dir / "mutant-run", selectors)
-                outcome = {**classify(mutated["exit_code"], Path(mutated["xml"]), case["test"], case["assertion"]),
+                outcome = {**classify(mutated["exit_status"], Path(mutated["xml"]), case["test"], case["assertion"]),
                            "control": passing, "fault": mutated}
             results.append({"id": case["id"], "assertion": case["assertion"],
                             "candidate_sha256": identity["content_sha256"], **outcome})

@@ -10,8 +10,7 @@ from copy import deepcopy
 
 import pytest
 
-from scripts.verification.checker import verify
-from scripts.verification.normalize import normalize
+from scripts.verification.checker import normalize, verify
 from tests.hexagonal.support.raw_evidence import raw_exchange
 
 

@@ -477,8 +477,7 @@
     },
     "verification_composition": {
       "modules": [
-        "scripts.verification.checker",
-        "scripts.verification.normalize"
+        "scripts.verification.checker"
       ],
       "allowed_roles": [
         "verification_foundation",
@@ -508,22 +507,6 @@
         "input",
         "print"
       ]
-    },
-    "verification_capture": {
-      "modules": [
-        "scripts.verification.capture"
-      ],
-      "allowed_roles": [
-        "verification_foundation",
-        "verification_capture",
-        "testkit_foundation",
-        "testkit_core",
-        "testkit_adapters"
-      ],
-      "allowed_external": [
-        "stdlib:*"
-      ],
-      "allow_dynamic": true
     },
     "verification_fixture": {
       "modules": [
@@ -578,7 +561,6 @@
         "verification_core",
         "verification_decoders",
         "verification_composition",
-        "verification_capture",
         "verification_runner",
         "telemetry",
         "telemetry_views"
@@ -606,7 +588,6 @@
         "testkit_core",
         "testkit_adapters",
         "testkit_configuration",
-        "verification_capture",
         "verification_calibration",
         "verification_entrypoints"
       ],
@@ -659,22 +640,6 @@
       ],
       "allow_dynamic": false
     },
-    "acceptance_lifecycle": {
-      "modules": [
-        "scripts.acceptance.lifecycle"
-      ],
-      "allowed_roles": [
-        "acceptance_foundation",
-        "acceptance_lifecycle",
-        "testkit_foundation",
-        "testkit_core",
-        "testkit_adapters"
-      ],
-      "allowed_external": [
-        "stdlib:*"
-      ],
-      "allow_dynamic": true
-    },
     "acceptance_runner": {
       "modules": [
         "scripts.acceptance.scenario"
@@ -711,7 +676,6 @@
       ],
       "allowed_roles": [
         "acceptance_foundation",
-        "acceptance_lifecycle",
         "acceptance_entrypoints",
         "testkit_foundation",
         "testkit_core",
@@ -975,14 +939,12 @@
         "verification_core",
         "verification_decoders",
         "verification_composition",
-        "verification_capture",
         "verification_fixture",
         "verification_calibration",
         "verification_runner",
         "verification_entrypoints",
         "acceptance_foundation",
         "acceptance_fixture",
-        "acceptance_lifecycle",
         "acceptance_runner",
         "acceptance_entrypoints",
         "testkit_composition",
@@ -1027,14 +989,12 @@
         "verification_core",
         "verification_decoders",
         "verification_composition",
-        "verification_capture",
         "verification_fixture",
         "verification_calibration",
         "verification_runner",
         "verification_entrypoints",
         "acceptance_foundation",
         "acceptance_fixture",
-        "acceptance_lifecycle",
         "acceptance_runner",
         "acceptance_entrypoints",
         "testkit_composition",
@@ -1080,14 +1040,12 @@
         "verification_core",
         "verification_decoders",
         "verification_composition",
-        "verification_capture",
         "verification_fixture",
         "verification_calibration",
         "verification_runner",
         "verification_entrypoints",
         "acceptance_foundation",
         "acceptance_fixture",
-        "acceptance_lifecycle",
         "acceptance_runner",
         "acceptance_entrypoints",
         "testkit_composition",
@@ -1136,14 +1094,12 @@
         "verification_core",
         "verification_decoders",
         "verification_composition",
-        "verification_capture",
         "verification_fixture",
         "verification_calibration",
         "verification_runner",
         "verification_entrypoints",
         "acceptance_foundation",
         "acceptance_fixture",
-        "acceptance_lifecycle",
         "acceptance_runner",
         "acceptance_entrypoints",
         "testkit_composition",

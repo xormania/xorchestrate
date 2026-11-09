@@ -14,8 +14,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any
 
-from scripts.verification.checker import verify
-from scripts.verification.normalize import normalize
+from scripts.verification.checker import normalize, verify
 from tests.hexagonal.contracts.identity import IdentityOutcome
 from tests.hexagonal.support.raw_evidence import ObservationBuilder
 from xorchestrate.exchange import evaluate_exchange

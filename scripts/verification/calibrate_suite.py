@@ -3,8 +3,9 @@ import argparse
 import json
 from pathlib import Path
 
+from scripts.testkit.adapters.evidence import candidate_identity, now, verify_candidate, write_json
+
 from .__main__ import calibrate
-from .capture import candidate_identity, now, verify_candidate, write_json
 
 
 def main(argv=None):
