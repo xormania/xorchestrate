@@ -33,7 +33,8 @@ permissions. Pull requests, pushes to master and manual runs invoke:
 | Job | Purpose |
 |---|---|
 | Static checks | Shared `static` suite: Ruff lint/security, current-source syntax and deterministic architecture enforcement |
-| Application and adapter tests (Python 3.12) | Shared `tests` suite with declared behavioral families and pytest inventory/JUnit, then shared calibration and composed three-harness protocol suites |
+| Application and adapter tests (Python 3.12) | Shared `tests` suite with declared behavioral families and pytest inventory/JUnit |
+| Calibration and multi-harness verification | Shared `calibration` suite and composed three-harness `multi-harness` protocol suite, in parallel with the application tests |
 | Tmux live acceptance (protocol fixture) | Shared acceptance suite with tmux explicitly installed; private owned process cleanup is part of the receipt |
 | Jev architecture diagnostics | Independent diagnostics-only invocation with retained advisory output |
 | Hexagonal architecture | Retains the existing required status name and reports the shared static job's outcome; it does not rerun validation |
@@ -41,9 +42,9 @@ permissions. Pull requests, pushes to master and manual runs invoke:
 Each Python job configures `PYTHONPYCACHEPREFIX` in the runner's temporary directory before
 invoking Python. Static checks run once in their own job. The Jev diagnostic
 calculation remains independent and does not add a second deterministic gate.
-Application, calibration and protocol steps have explicit eligibility conditions:
+The application, calibration and protocol suite steps have explicit eligibility conditions:
 successful checkout/interpreter/dependency setup and a run that has not been
-cancelled. A suite failure does not skip the later independent suites or erase
+cancelled. In the verification job a calibration failure does not skip the protocol suite or erase
 the original job failure. Failed setup produces an unavailable receipt instead of
 launching dependent validation. Available evidence uploads even on failure.
 
@@ -53,8 +54,8 @@ at their pinned source revisions and in Git history. CI does not preserve an old
 implementation as a product acceptance obligation.
 
 Security-lint calibration belongs to the catalog's architecture family and uses
-the shared Ruff definition with independent expected findings. Its pinned Ruff
-dependency remains installed in the application job. Architecture and tmux
+the shared Ruff definition with independent expected findings. The verification job
+installs `.[test]` with the pinned Ruff requirements; it does not need the telemetry extra. Architecture and tmux
 regression tests run through the application suite; dedicated jobs do not rerun
 the same selected pytest modules.
 
@@ -62,8 +63,9 @@ the same selected pytest modules.
 
 `static-checks-python-3.12` retains static reports, effective-input identities,
 structured findings and raw command receipts for 30 days.
-`framework-checks-python-3.12` retains family/case inventories, JUnit,
-command records and calibration reports for 30 days.
+`framework-checks-python-3.12` retains family/case inventories, JUnit and
+command records for 30 days. `calibration-python-3.12` retains calibration
+reports and command records for 30 days.
 Full calibration candidate copies are excluded from artifact uploads.
 Composed protocol receipts remain available for seven days; tmux uploads selected
 report/scenario and captured outer-command receipts for seven days. Raw native configurations and terminal
