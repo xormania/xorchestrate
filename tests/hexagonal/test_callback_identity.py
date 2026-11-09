@@ -12,7 +12,7 @@ from scripts.verification.checker import normalize
 from tests.hexagonal.contracts.callback_identity import CALLBACK_JOIN_SCENARIOS, CALLBACK_LIFECYCLE_SCENARIOS
 from tests.hexagonal.contracts.identity import assert_identity_scenario
 from tests.hexagonal.support.callback_identity import RawCallbackEvidence, callback
-from tests.hexagonal.support.raw_evidence import lifecycle_input, raw_exchange
+from tests.hexagonal.support.raw_evidence import lifecycle_input, raw_exchange, select_explicit_work
 
 
 def assert_callback_rejected(inputs, diagnostic="callback_identity_mismatch"):
@@ -23,16 +23,12 @@ def assert_callback_rejected(inputs, diagnostic="callback_identity_mismatch"):
 
 def test_permitted_explicit_work_scope_and_unrelated_history_stay_valid():
     inputs = raw_exchange()
-    raw = inputs[0]["raw_records"]
-    for record in raw["observations"]:
-        record["observation"]["arguments"]["work_id"] = "explicit-work"
-    for record in raw["messages"] + raw["evidence"]:
-        record["work_id"] = "explicit-work"
+    raw = select_explicit_work(inputs, "explicit-work")
     # Irrelevant historical sessions need not be qualified for this exchange.
     raw["sessions"].append({"id": "unrelated-history", "work_id": "other-work"})
     assert checker.verify(*inputs)["status"] == "passed"
     events = normalize(raw, inputs[0]["sessions"], [], inputs[0]["mode"])
-    assert all(event["callback_actor_basis"] == "session" for event in events if event["event"] == "tool_called")
+    assert all(event["callback_actor"] == event["peer"] for event in events if event["event"] == "tool_called")
 
 
 def test_valid_duplicate_native_observation_does_not_change_callback_authority():

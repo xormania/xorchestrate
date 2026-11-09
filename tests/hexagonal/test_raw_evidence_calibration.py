@@ -11,7 +11,7 @@ from copy import deepcopy
 import pytest
 
 from scripts.verification.checker import normalize, verify
-from tests.hexagonal.support.raw_evidence import raw_exchange
+from tests.hexagonal.support.raw_evidence import raw_exchange, select_explicit_work
 
 
 def check(inputs):
@@ -198,11 +198,7 @@ def test_observed_timestamp_order_uses_timezone_offsets():
 
 def test_explicit_native_work_scope_is_preserved_without_forcing_session_default():
     inputs = raw_exchange()
-    raw = inputs[0]["raw_records"]
-    for record in raw["observations"]:
-        record["observation"]["arguments"]["work_id"] = "explicit-work"
-    for record in raw["messages"] + raw["evidence"]:
-        record["work_id"] = "explicit-work"
+    select_explicit_work(inputs, "explicit-work")
     assert check(inputs)["status"] == "passed"
 
 

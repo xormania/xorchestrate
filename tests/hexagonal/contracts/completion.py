@@ -87,10 +87,13 @@ def final_idle_claims_reconcile(fixture: CompletionFixture, subject: CompletionS
     fixture.release_tail("completed")
     require_eventual_completion(fixture, subject)
     observed = fixture.capture()
-    # Omission remains optional. Each contradictory variant differs from this
-    # passing evidence in exactly one explicit claim or retained identity field.
-    for claim in ("native_actor", "source_work"):
-        assert subject.is_complete(fixture.with_completion_claim(observed, claim, None, absent=True))
+    # Work selection may be omitted. The application stamps every retained
+    # observation with its actor, so omitting that claim is a contradiction.
+    # Each contradictory variant differs from this passing evidence in exactly
+    # one explicit claim or retained identity field.
+    assert subject.is_complete(fixture.with_completion_claim(observed, "source_work", None, absent=True))
+    assert not subject.is_complete(fixture.with_completion_claim(observed, "native_actor", None, absent=True)), \
+        "IV03_FINAL_IDLE_ACTOR_REQUIRED"
     for claim in ("native_actor", "source_work", "recorded_actor", "recorded_native", "recorded_incarnation"):
         for value in ("contradictory-claim", None):
             evidence = fixture.with_completion_claim(observed, claim, value)

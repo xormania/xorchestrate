@@ -33,10 +33,11 @@ def _valid_observation(record, snapshot, actor):
     session = _session(snapshot, record.get("session_id"))
     if not session or session.get("actor_id") != actor:
         return False
-    # Optional historical claims may be absent. An explicit claim, including
-    # null, must agree with its own observed session rather than borrowing the
-    # identity of a matching callback elsewhere in the snapshot.
-    if ("created_by" in record and record["created_by"] != actor
+    # The application stamps every durable observation with its authenticated
+    # actor, so that claim is required. The nested session_id is copied from
+    # the harness packet and stays optional; when present it must agree. Work
+    # selection is optional: a session need not select work.
+    if (record.get("created_by") != actor
             or "session_id" in observation and observation["session_id"] != record.get("session_id")
             or "work_id" in record and "work_id" in session and record["work_id"] != session["work_id"]):
         return False
@@ -47,17 +48,27 @@ def _valid_observation(record, snapshot, actor):
             and observation["incarnation"] == backend.get("incarnation"))
 
 
-def _effect_matches(result, kind, effect, actor):
+_MISSING = object()
+
+
+def _effect_matches(result, kind, effect, actor, *, complete=True):
     """Join typed returned identities without interpreting opaque payloads.
 
-    Historical callbacks may return only an id. Additional explicit identity
-    claims must agree with the durable effect and its authenticated caller.
+    The durable effect is application-written and must carry its creator. A
+    completed application callback returns the full effect view, so every typed
+    claim on the effect must be present and equal there (complete). A native
+    harness return is vendor-reported and may omit claims; explicit claims must
+    still agree (complete=False).
     """
     returned = result.get(kind, {}) if isinstance(result, dict) else {}
     fields = ("work_id",) + (("sender",) if kind == "message" else ("source",))
-    return (isinstance(returned, dict) and returned.get("id") == effect["id"]
-            and ("created_by" not in effect or effect["created_by"] == actor)
-            and ("created_by" not in returned or returned["created_by"] == actor)
+    if not (isinstance(returned, dict) and returned.get("id") == effect["id"]
+            and effect.get("created_by") == actor):
+        return False
+    if complete:
+        return (returned.get("created_by") == actor
+                and all(returned.get(key, _MISSING) == effect.get(key, _MISSING) for key in fields))
+    return (("created_by" not in returned or returned["created_by"] == actor)
             and all(key not in returned or returned[key] == effect.get(key) for key in fields))
 
 
@@ -102,14 +113,14 @@ def _callback(snapshot, actor, action, arguments_match, result_match):
                          and set(data["arguments"]) - set(raw) <= {"idempotency_key", "work_id"}),
                     "independent_native_arguments_mismatch")
         # A native return is another observation of the application result.
-        # Some adapters retain only the call metadata; when the typed result is
+        # Some harnesses retain only the call metadata; when the typed result is
         # present its explicit identities must agree with the durable effect.
         for record in returned:
             observed = record["observation"]
             result = observed.get("result")
             kind = "message" if action == "send_message" else "evidence"
             require("result" not in observed or isinstance(result, dict)
-                    and (kind not in result or result_match(result)),
+                    and (kind not in result or result_match(result, complete=False)),
                     "native_result_identity_mismatch")
         require(all(_valid_observation(record, snapshot, actor) for record in requests), "native_request_identity_mismatch")
         return {"native": native[0]["id"], "requested": requests[0]["id"], "completed": completed["id"],
@@ -157,7 +168,7 @@ def evaluate_exchange(snapshot, recipient, expectation):
                 "challenge_missing_or_misbound")
         challenge_call = _callback(snapshot, sender, "send_message",
             lambda args: args.get("body") == challenge["body"] and args.get("work_id") == challenge.get("work_id"),
-            lambda result: _effect_matches(result, "message", challenge, sender))
+            lambda result, complete=True: _effect_matches(result, "message", challenge, sender, complete=complete))
         submitted = _submission(snapshot, challenge, recipient)
         replies = [message for message in snapshot["messages"] if message.get("sender") == recipient
                    and sender in message.get("recipients", []) and message.get("work_id") == challenge.get("work_id")
@@ -166,7 +177,7 @@ def evaluate_exchange(snapshot, recipient, expectation):
         reply = replies[0]
         reply_call = _callback(snapshot, recipient, "send_message",
             lambda args: args.get("body") == reply["body"] and args.get("work_id") == reply.get("work_id"),
-            lambda result: _effect_matches(result, "message", reply, recipient))
+            lambda result, complete=True: _effect_matches(result, "message", reply, recipient, complete=complete))
         require(reply_call["session_id"] == submitted["session_id"]
                 and reply_call["incarnation"] == submitted["incarnation"], "reply_delivery_incarnation_mismatch")
         reply_submitted = _submission(snapshot, reply, sender)
@@ -178,7 +189,7 @@ def evaluate_exchange(snapshot, recipient, expectation):
         receipt = receipts[0]
         receipt_call = _callback(snapshot, sender, "record_result",
             lambda args: args.get("result") == expected_receipt and args.get("work_id") == challenge.get("work_id"),
-            lambda result: _effect_matches(result, "evidence", receipt, sender))
+            lambda result, complete=True: _effect_matches(result, "evidence", receipt, sender, complete=complete))
         require(receipt_call["session_id"] == reply_submitted["session_id"]
                 and receipt_call["incarnation"] == reply_submitted["incarnation"], "receipt_delivery_incarnation_mismatch")
         require(challenge.get("created_at") and reply.get("created_at") and receipt.get("created_at")

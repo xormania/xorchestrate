@@ -62,6 +62,12 @@ class IdentityEvidencePort(Protocol):
 
 IdentityFactory = Callable[[str, str], IdentityEvidencePort]
 
+# The application writes actor/creator, durable session actor and returned
+# effect/session views itself, so an omitted claim is a rejection like a wrong
+# or null one. Harness-reported claims (nested session ids, native arguments
+# and native return payloads) and work selection may legitimately be omitted.
+REQUIRED_INVALID = (("wrong", "another-identity", False), ("null", None, False), ("absent", None, True))
+
 
 def _native_result_scenarios(scope: str) -> tuple[IdentityScenario, ...]:
     """The same independently recorded return claims apply to each proof kind."""
@@ -83,6 +89,8 @@ def _native_result_scenarios(scope: str) -> tuple[IdentityScenario, ...]:
                for claim in ("actor", "record_work", "application_session", "native_session", "incarnation",
                              "nested_session", "argument_work", "arguments")
                for name, value in (("wrong", "contradictory-identity"), ("null", None))),
+        IdentityScenario("native-return-actor-absent", scope,
+                         (ClaimChange("return", "actor", absent=True),), False, diagnostic, native_results=True),
         *tuple(IdentityScenario("native-return-action-" + name, scope,
                                 (ClaimChange("return", "action", value),), False, diagnostic, native_results=True)
                for name, value in (("contradiction", "invoke"), ("null", None))),
@@ -92,7 +100,7 @@ def _native_result_scenarios(scope: str) -> tuple[IdentityScenario, ...]:
                for name, value in (("wrong", "other-work"), ("null", None))),
         *tuple(IdentityScenario("native-return-" + claim + "-absent", scope,
                                 (ClaimChange("return", claim, absent=True),), native_results=True)
-               for claim in ("actor", "record_work", "nested_session", "arguments", "result_payload")),
+               for claim in ("record_work", "nested_session", "arguments", "result_payload")),
         IdentityScenario("native-return-argument-work-absent", scope,
                          (ClaimChange("return", "argument_work", absent=True),), native_results=True),
         IdentityScenario("native-return-argument-work-enriched", scope,
@@ -118,43 +126,35 @@ def _native_result_scenarios(scope: str) -> tuple[IdentityScenario, ...]:
 EXCHANGE_SCENARIOS = (
     *_native_result_scenarios("exchange"),
     IdentityScenario("authorized-native", "exchange"),
-    IdentityScenario("native-actor-absent", "exchange", (ClaimChange("native", "actor", absent=True),)),
     IdentityScenario("identical-native-duplicate", "exchange", duplicate=True),
-    IdentityScenario("optional-actor-absent-on-duplicate", "exchange",
-                     (ClaimChange("duplicate", "actor", absent=True),), duplicate=True),
     IdentityScenario("coherent-explicit-alternate-work", "exchange", alternate_work=True),
     *tuple(IdentityScenario("coherent-" + scope + "-history-" + str(stale), "exchange",
                             historical_scope=scope, historical_stale=stale)
            for scope in ("retired", "unrelated") for stale in (False, True)),
-    IdentityScenario("optional-embedded-work-absent", "exchange", (ClaimChange("callback", "embedded_work", absent=True),)),
-    *tuple(IdentityScenario("embedded-work-" + name, "exchange", (ClaimChange("callback", "embedded_work", value),),
+    *tuple(IdentityScenario(side + "-" + claim + "-" + name, "exchange",
+                            (ClaimChange(side, claim, value, absent=absent),),
                             False, "application_effect_arguments_mismatch")
-           for name, value in (("wrong", "other-work"), ("null", None))),
-    *tuple(IdentityScenario(side + "-" + claim + "-" + name, "exchange", (ClaimChange(side, claim, value),),
-                            False, "application_effect_arguments_mismatch")
-           for side, claim in (("callback", "embedded_actor"), ("callback", "embedded_sender"),
-                               ("effect", "actor"), ("receipt-callback", "embedded_actor"),
-                               ("receipt-callback", "embedded_source"), ("receipt-callback", "embedded_work"))
-           for name, value in (("wrong", "another-identity"), ("null", None))),
-    *tuple(IdentityScenario(side + "-" + claim + "-absent", "exchange", (ClaimChange(side, claim, absent=True),))
-           for side, claim in (("callback", "embedded_actor"), ("callback", "embedded_sender"),
-                               ("effect", "actor"), ("receipt-callback", "embedded_actor"),
-                               ("receipt-callback", "embedded_source"), ("receipt-callback", "embedded_work"))),
-    *tuple(IdentityScenario("saved-receipt-actor-" + name, "exchange", (ClaimChange("receipt-effect", "actor", value),),
+           for side, claim in (("callback", "embedded_work"), ("callback", "embedded_actor"),
+                               ("callback", "embedded_sender"), ("effect", "actor"),
+                               ("receipt-callback", "embedded_actor"), ("receipt-callback", "embedded_source"),
+                               ("receipt-callback", "embedded_work"))
+           for name, value, absent in REQUIRED_INVALID),
+    *tuple(IdentityScenario("saved-receipt-actor-" + name, "exchange",
+                            (ClaimChange("receipt-effect", "actor", value, absent=absent),),
                             False, "persisted_evidence_actor_mismatch")
-           for name, value in (("wrong", "another-actor"), ("null", None))),
-    IdentityScenario("saved-receipt-actor-absent", "exchange", (ClaimChange("receipt-effect", "actor", absent=True),)),
+           for name, value, absent in REQUIRED_INVALID),
     IdentityScenario("exact-completed-callback-duplicate", "exchange", duplicate_callback=True),
     *tuple(IdentityScenario("duplicate-callback-work-" + name, "exchange",
                             (ClaimChange("duplicate-callback", "embedded_work", value),), False,
                             "application_effect_arguments_mismatch", duplicate_callback=True)
            for name, value in (("wrong", "other-work"), ("null", None))),
-    *tuple(IdentityScenario("native-actor-" + name, "exchange", (ClaimChange("native", "actor", value),),
+    *tuple(IdentityScenario("native-actor-" + name, "exchange", (ClaimChange("native", "actor", value, absent=absent),),
                             False, "native_call_missing_or_misbound")
-           for name, value in (("wrong", "another-actor"), ("null", None), ("false", False))),
-    *tuple(IdentityScenario("duplicate-actor-" + name, "exchange", (ClaimChange("duplicate", "actor", value),),
+           for name, value, absent in (*REQUIRED_INVALID, ("false", False, False))),
+    *tuple(IdentityScenario("duplicate-actor-" + name, "exchange",
+                            (ClaimChange("duplicate", "actor", value, absent=absent),),
                             False, "native_call_missing_or_misbound", duplicate=True)
-           for name, value in (("wrong", "another-actor"), ("null", None))),
+           for name, value, absent in REQUIRED_INVALID),
     *tuple(IdentityScenario("duplicate-native-" + claim + "-" + name, "exchange", (ClaimChange("duplicate", claim, value),),
                             False, "native_call_missing_or_misbound", duplicate=True)
            for claim in ("native_session", "incarnation", "nested_session", "application_session")
@@ -167,9 +167,9 @@ EXCHANGE_SCENARIOS = (
     IdentityScenario("duplicate-work-contradiction", "exchange",
                      (ClaimChange("duplicate", "record_work", "other-work"),),
                      False, "native_call_missing_or_misbound", duplicate=True),
-    *tuple(IdentityScenario(side + "-actor-" + name, "exchange", (ClaimChange(side, "actor", value),),
+    *tuple(IdentityScenario(side + "-actor-" + name, "exchange", (ClaimChange(side, "actor", value, absent=absent),),
                             False, "callback_actor_binding")
-           for side in ("requested", "callback") for name, value in (("wrong", "another-actor"), ("null", None))),
+           for side in ("requested", "callback") for name, value, absent in REQUIRED_INVALID),
     *tuple(IdentityScenario("native-" + claim + "-" + name, "exchange", (ClaimChange("native", claim, value),),
                             False, "native_call_missing_or_misbound")
            for claim in ("native_session", "incarnation", "nested_session")
@@ -177,6 +177,8 @@ EXCHANGE_SCENARIOS = (
     IdentityScenario("native-nested-session-absent", "exchange", (ClaimChange("native", "nested_session", absent=True),)),
     IdentityScenario("durable-session-actor-contradiction", "exchange",
                      (ClaimChange("session", "actor", "another-actor"),), False, "callback_session_binding"),
+    IdentityScenario("durable-session-actor-absent", "exchange",
+                     (ClaimChange("session", "actor", absent=True),), False, "callback_session_binding"),
 )
 
 
@@ -187,15 +189,15 @@ LIFECYCLE_SCENARIOS = (
                             False, "lifecycle_result_binding")
            for claim in ("result_actor", "result_work", "result_native_session", "result_incarnation")
            for name, value in (("wrong", "contradictory-identity"), ("null", None))),
+    # The operation result is the application's own session view.
     *tuple(IdentityScenario("operation-session-" + claim + "-absent", "lifecycle",
-                            (ClaimChange("operation", claim, absent=True),))
+                            (ClaimChange("operation", claim, absent=True),), False, "lifecycle_result_binding")
            for claim in ("result_actor", "result_work", "result_native_session", "result_incarnation")),
     IdentityScenario("identical-native-duplicate", "lifecycle", duplicate=True),
-    IdentityScenario("optional-actor-absent-on-duplicate", "lifecycle",
-                     (ClaimChange("duplicate", "actor", absent=True),), duplicate=True),
-    *tuple(IdentityScenario("duplicate-actor-" + name, "lifecycle", (ClaimChange("duplicate", "actor", value),),
+    *tuple(IdentityScenario("duplicate-actor-" + name, "lifecycle",
+                            (ClaimChange("duplicate", "actor", value, absent=absent),),
                             False, "lifecycle_retained_observation_binding", duplicate=True)
-           for name, value in (("wrong", "another-actor"), ("null", None))),
+           for name, value, absent in REQUIRED_INVALID),
     *tuple(IdentityScenario("duplicate-native-" + claim + "-" + name, "lifecycle", (ClaimChange("duplicate", claim, value),),
                             False, "lifecycle_retained_observation_binding", duplicate=True)
            for claim in ("native_session", "incarnation", "nested_session", "application_session")
@@ -209,12 +211,11 @@ LIFECYCLE_SCENARIOS = (
     IdentityScenario("all-optional-work-absent", "lifecycle", omit_work=True),
     IdentityScenario("native-work-argument-enriched", "lifecycle",
                      (ClaimChange("native", "argument_work", absent=True),)),
-    IdentityScenario("optional-native-actor-absent", "lifecycle", (ClaimChange("native", "actor", absent=True),)),
     IdentityScenario("optional-nested-session-absent", "lifecycle", (ClaimChange("native", "nested_session", absent=True),)),
-    *tuple(IdentityScenario(side + "-actor-" + name, "lifecycle", (ClaimChange(side, "actor", value),),
+    *tuple(IdentityScenario(side + "-actor-" + name, "lifecycle", (ClaimChange(side, "actor", value, absent=absent),),
                             False, "lifecycle_actor_binding")
            for side in ("native", "callback", "session", "effect")
-           for name, value in (("wrong", "another-actor"), ("null", None))),
+           for name, value, absent in REQUIRED_INVALID),
     *tuple(IdentityScenario(side + "-" + claim + "-" + name, "lifecycle", (ClaimChange(side, claim, value),),
                             False, "lifecycle_work_binding")
            for side, claim in (("native", "argument_work"), ("callback", "argument_work"),

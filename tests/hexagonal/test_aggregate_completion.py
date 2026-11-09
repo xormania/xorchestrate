@@ -171,7 +171,7 @@ def test_completion_before_submission_response_must_bind_to_returned_turn(comple
         adapter._notification(live, "turn/completed", {"threadId": "native", "turn": {"id": "B"}})
     assert not live.pending and not live.submissions and live.activity == expected
     peers = {"codex": {"session_id": "app", "native_id": live.native_id, "incarnation": live.incarnation}}
-    raw = {"observations": [{"id": str(i), "session_id": "app", "origin": "adapter", "stale": False,
+    raw = {"observations": [{"id": str(i), "session_id": "app", "origin": "adapter", "stale": False, "created_by": "codex",
         "created_at": event["at"], "observation": event} for i, event in enumerate(observations)]}
     latest = {"at": observations[-1]["at"]}
     if expected == "idle":
@@ -283,7 +283,7 @@ def test_finished_callbacks_do_not_hide_unfinished_native_turns(protocol, order,
             with driver._get(session).lock:
                 captured = deepcopy(observations)
                 status = driver.status(session)
-            raw = {"observations": [{"id": str(i), "session_id": "app", "origin": "adapter", "stale": False,
+            raw = {"observations": [{"id": str(i), "session_id": "app", "origin": "adapter", "stale": False, "created_by": protocol,
                     "created_at": event["at"], "observation": event} for i, event in enumerate(captured)],
                    "messages": [], "attempts": [], "evidence": []}
             events = normalize(raw, peers, [], "protocol-fixture")
@@ -296,7 +296,7 @@ def test_finished_callbacks_do_not_hide_unfinished_native_turns(protocol, order,
                 # and successful callbacks, append a plausible native idle.
                 bad = deepcopy(raw)
                 at = datetime.now(timezone.utc).isoformat()
-                bad["observations"].append({"id": "false-idle", "session_id": "app", "origin": "adapter", "stale": False,
+                bad["observations"].append({"id": "false-idle", "session_id": "app", "origin": "adapter", "stale": False, "created_by": protocol,
                     "created_at": at, "observation": {**peers[protocol], "kind": "activity", "source": protocol, "at": at, "state": "idle"}})
                 with pytest.raises(VerificationFailure, match="^completion_native_turn_unresolved$"):
                     check_case(case, {"raw_records": bad, "events": normalize(bad, peers, [], "protocol-fixture"), "sessions": peers}, {})

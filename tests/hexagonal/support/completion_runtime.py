@@ -209,7 +209,7 @@ class ComposedCompletionFixture:
         at = datetime.now(timezone.utc).isoformat()
         evidence["run"]["raw_records"]["observations"].append({
             "id": "controlled-false-idle-" + uuid4().hex, "session_id": identity["session_id"],
-            "origin": "adapter", "stale": False, "created_at": at, "observation": {
+            "origin": "adapter", "stale": False, "created_at": at, "created_by": self.peer.name, "observation": {
                 **identity, "kind": "activity", "source": self.peer.activity_source, "at": at, "state": "idle"}})
         unchanged = deepcopy(evidence["run"]["raw_records"])
         unchanged["observations"].pop()
