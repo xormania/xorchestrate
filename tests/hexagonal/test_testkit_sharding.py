@@ -195,21 +195,17 @@ def test_ci_defines_the_shard_count_once_and_keeps_the_required_application_chec
                    if name != "application-tests" for step in job.get("steps", []))
     gate = workflow["jobs"]["application"]
     assert gate["name"] == "Application and adapter tests (Python 3.12)"
-    assert gate["if"] == "always()" and "application-tests" in gate["needs"] and not gate.get("continue-on-error")
-    needed = [workflow["jobs"][name] for name in gate["needs"] if name != "application-tests"]
-    assert any("--suite calibration" in step.get("run", "") for job in needed for step in job["steps"])
-    assert any("--suite multi-harness" in step.get("run", "") for job in needed for step in job["steps"])
+    assert "application-tests" in gate["needs"] and not gate.get("continue-on-error")
+    # The aggregate and the shards share one documentation-only gate, so the
+    # aggregate is skipped exactly when the shards are and otherwise reports them.
+    assert gate["if"] == shards["if"] and "!cancelled()" in gate["if"]
 
 
-@pytest.mark.parametrize("tests_result,calibration_result", [
-    ("success", "success"), ("failure", "success"), ("cancelled", "success"), ("skipped", "success"),
-    ("success", "failure"), ("success", "skipped")])
-def test_required_application_check_passes_only_when_every_needed_job_passed(tmp_path, tests_result,
-                                                                             calibration_result):
+@pytest.mark.parametrize("tests_result", ["success", "failure", "cancelled", "skipped"])
+def test_required_application_check_passes_only_when_every_shard_passed(tmp_path, tests_result):
     gate = json.loads((composition.ROOT / ".github/workflows/ci.yml").read_text())["jobs"]["application"]
     (step,) = gate["steps"]
-    assert step["env"] == {"TESTS_RESULT": "${{ needs.application-tests.result }}",
-                           "CALIBRATION_RESULT": "${{ needs.calibration.result }}"}
+    assert step["env"] == {"TESTS_RESULT": "${{ needs.application-tests.result }}"}
     result = subprocess.run(["/bin/bash", "-e", "-c", step["run"]], cwd=tmp_path, capture_output=True, text=True,
-                            env={"TESTS_RESULT": tests_result, "CALIBRATION_RESULT": calibration_result}, timeout=10)
-    assert (result.returncode == 0) == (tests_result == calibration_result == "success"), result.stdout
+                            env={"TESTS_RESULT": tests_result}, timeout=10)
+    assert (result.returncode == 0) == (tests_result == "success"), result.stdout

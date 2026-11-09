@@ -17,6 +17,43 @@
     "cancel-in-progress": true
   },
   "jobs": {
+    "paths": {
+      "name": "Classify changed paths",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 3,
+      "outputs": {
+        "code": "${{ steps.guard.outputs.force == 'false' && steps.classify.outputs.code || 'true' }}"
+      },
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false,
+            "fetch-depth": 0
+          },
+          "id": "checkout"
+        },
+        {
+          "name": "Force full validation for classifier and validation changes",
+          "id": "guard",
+          "shell": "bash",
+          "env": {
+            "EVENT_NAME": "${{ github.event_name }}",
+            "PULL_REQUEST_BASE": "${{ github.event.pull_request.base.sha }}"
+          },
+          "run": "force=true\nchanged=\"$RUNNER_TEMP/xor-changed-paths\"\nif [ \"$EVENT_NAME\" = pull_request ] && [ -n \"$PULL_REQUEST_BASE\" ] \\\n  && git diff --name-only --no-renames -z \"$PULL_REQUEST_BASE\" HEAD -- > \"$changed\" \\\n  && [ -s \"$changed\" ] && tr '\\0' '\\n' < \"$changed\" > \"$changed.lines\"; then\n  status=0\n  grep -Eq '^(scripts/ci/|\\.github/|contracts/|tests/)' \"$changed.lines\" || status=$?\n  case \"$status\" in\n    0) echo \"Classifier or validation definitions changed; forcing full validation\" ;;\n    1) force=false ;;\n    *) echo \"Guard could not inspect changed paths; forcing full validation\" ;;\n  esac\nfi\necho \"force=$force\" >> \"$GITHUB_OUTPUT\"\necho \"force=$force\"\n"
+        },
+        {
+          "name": "Classify documentation-only changes",
+          "id": "classify",
+          "env": {
+            "EVENT_NAME": "${{ github.event_name }}",
+            "PULL_REQUEST_BASE": "${{ github.event.pull_request.base.sha }}"
+          },
+          "run": "python3 -I -B scripts/ci/classify_changes.py --event \"$EVENT_NAME\" --pull-request-base \"$PULL_REQUEST_BASE\" --head HEAD --github-output \"$GITHUB_OUTPUT\""
+        }
+      ]
+    },
     "changes": {
       "name": "Static checks",
       "runs-on": "ubuntu-24.04",
@@ -37,7 +74,9 @@
         {
           "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
           "with": {
-            "python-version": "3.12"
+            "python-version": "3.12",
+            "cache": "pip",
+            "cache-dependency-path": ".github/requirements-ci.txt"
           },
           "id": "python"
         },
@@ -72,6 +111,10 @@
       "name": "Application tests shard ${{ matrix.shard }}/${{ matrix.shards }} (Python 3.12)",
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 15,
+      "needs": [
+        "paths"
+      ],
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' }}",
       "strategy": {
         "fail-fast": false,
         "matrix": {
@@ -102,7 +145,9 @@
         {
           "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
           "with": {
-            "python-version": "3.12"
+            "python-version": "3.12",
+            "cache": "pip",
+            "cache-dependency-path": "pyproject.toml\n.github/requirements-ci.txt"
           },
           "id": "python"
         },
@@ -146,8 +191,31 @@
         }
       ]
     },
-    "calibration": {
-      "name": "Calibration and composed protocol (Python 3.12)",
+    "application": {
+      "name": "Application and adapter tests (Python 3.12)",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 2,
+      "needs": [
+        "paths",
+        "application-tests"
+      ],
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' }}",
+      "steps": [
+        {
+          "name": "Require every tests shard",
+          "env": {
+            "TESTS_RESULT": "${{ needs.application-tests.result }}"
+          },
+          "run": "if [ \"$TESTS_RESULT\" != success ]; then\n  echo \"Tests shards did not all pass: $TESTS_RESULT\"\n  exit 1\nfi\necho \"All tests shards passed\""
+        }
+      ]
+    },
+    "verification": {
+      "name": "Calibration and multi-harness verification",
+      "needs": [
+        "paths"
+      ],
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' }}",
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 15,
       "steps": [
@@ -166,37 +234,21 @@
         {
           "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
           "with": {
-            "python-version": "3.12"
+            "python-version": "3.12",
+            "cache": "pip",
+            "cache-dependency-path": "pyproject.toml"
           },
           "id": "python"
         },
         {
-          "name": "Install pinned Python runtime manager",
-          "uses": "astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9",
-          "with": {
-            "version": "0.13.7",
-            "enable-cache": false
-          }
-        },
-        {
-          "name": "Prepare Python with fixed SQLite WAL support",
-          "id": "telemetry-python",
-          "run": "uv python install 3.12.16\nuv venv --seed --python 3.12.16 \"$RUNNER_TEMP/xor-telemetry-python\"\necho \"$RUNNER_TEMP/xor-telemetry-python/bin\" >> \"$GITHUB_PATH\""
-        },
-        {
-          "name": "Install application dependencies",
-          "run": "python3 -m pip install --disable-pip-version-check -e '.[test,telemetry]' -r .github/requirements-ci.txt",
+          "name": "Install verification dependencies",
+          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]' -r .github/requirements-ci.txt",
           "id": "dependencies"
-        },
-        {
-          "name": "Record tested revision",
-          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
-          "run": "mkdir -p \"$RUNNER_TEMP/xor-checks\"\ngit show -s --format='%H%n%T%n%P' HEAD > \"$RUNNER_TEMP/xor-checks/identity.txt\""
         },
         {
           "name": "Calibrate independent verification through the shared framework",
           "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
-          "run": "python3 -m scripts.testkit run --suite calibration --output \"$RUNNER_TEMP/xor-checks/calibration\" --check-timeout 600"
+          "run": "python3 -m scripts.testkit run --suite calibration --output \"$RUNNER_TEMP/xor-calibration\" --check-timeout 600"
         },
         {
           "name": "Run composed three-harness protocol acceptance",
@@ -204,9 +256,9 @@
           "run": "python3 -m scripts.testkit run --suite multi-harness --mode protocol-fixture --output \"$RUNNER_TEMP/xor-verification\" --timeout 60"
         },
         {
-          "name": "Record unavailable calibration and protocol validation",
+          "name": "Record unavailable calibration and multi-harness validation",
           "if": "!cancelled() && (steps.checkout.outcome != 'success' || steps.cache.outcome != 'success' || steps.python.outcome != 'success' || steps.dependencies.outcome != 'success')",
-          "run": "mkdir -p \"$RUNNER_TEMP/xor-checks\"\ncat > \"$RUNNER_TEMP/xor-checks/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"selected_suites\":[\"calibration\",\"multi-harness\"],\"launched\":false,\"reason\":\"CI checkout, cache, interpreter or dependency setup did not succeed\"}\nJSON"
+          "run": "mkdir -p \"$RUNNER_TEMP/xor-calibration\" \"$RUNNER_TEMP/xor-verification\"\ncat > \"$RUNNER_TEMP/xor-calibration/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"selected_suites\":[\"calibration\"],\"launched\":false,\"reason\":\"CI checkout, cache, interpreter or dependency setup did not succeed\"}\nJSON\ncat > \"$RUNNER_TEMP/xor-verification/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"selected_suites\":[\"multi-harness\"],\"launched\":false,\"reason\":\"CI checkout, cache, interpreter or dependency setup did not succeed\"}\nJSON"
         },
         {
           "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
@@ -222,31 +274,11 @@
           "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
-            "name": "framework-checks-python-3.12",
-            "path": "${{ runner.temp }}/xor-checks/**/*.json\n${{ runner.temp }}/xor-checks/**/*.xml\n${{ runner.temp }}/xor-checks/**/*.log\n${{ runner.temp }}/xor-checks/**/*.txt\n!${{ runner.temp }}/xor-checks/**/snapshot/**\n!${{ runner.temp }}/xor-checks/**/control/**\n!${{ runner.temp }}/xor-checks/**/mutant/**\n!${{ runner.temp }}/xor-checks/**/candidate/**",
+            "name": "calibration-python-3.12",
+            "path": "${{ runner.temp }}/xor-calibration/**/*.json\n${{ runner.temp }}/xor-calibration/**/*.xml\n${{ runner.temp }}/xor-calibration/**/*.log\n${{ runner.temp }}/xor-calibration/**/*.txt\n!${{ runner.temp }}/xor-calibration/**/snapshot/**\n!${{ runner.temp }}/xor-calibration/**/control/**\n!${{ runner.temp }}/xor-calibration/**/mutant/**\n!${{ runner.temp }}/xor-calibration/**/candidate/**",
             "if-no-files-found": "error",
             "retention-days": 30
           }
-        }
-      ]
-    },
-    "application": {
-      "name": "Application and adapter tests (Python 3.12)",
-      "runs-on": "ubuntu-24.04",
-      "timeout-minutes": 2,
-      "needs": [
-        "application-tests",
-        "calibration"
-      ],
-      "if": "always()",
-      "steps": [
-        {
-          "name": "Require every tests shard, calibration and protocol suite",
-          "env": {
-            "TESTS_RESULT": "${{ needs.application-tests.result }}",
-            "CALIBRATION_RESULT": "${{ needs.calibration.result }}"
-          },
-          "run": "status=0\nif [ \"$TESTS_RESULT\" != success ]; then\n  echo \"Tests shards did not all pass: $TESTS_RESULT\"\n  status=1\nfi\nif [ \"$CALIBRATION_RESULT\" != success ]; then\n  echo \"Calibration and composed protocol suites did not pass: $CALIBRATION_RESULT\"\n  status=1\nfi\nif [ \"$status\" = 0 ]; then\n  echo \"All tests shards, calibration and composed protocol suites passed\"\nfi\nexit \"$status\""
         }
       ]
     },
@@ -254,6 +286,10 @@
       "name": "Tmux live acceptance (protocol fixture)",
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 5,
+      "needs": [
+        "paths"
+      ],
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' }}",
       "steps": [
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
@@ -270,13 +306,15 @@
         {
           "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
           "with": {
-            "python-version": "3.12"
+            "python-version": "3.12",
+            "cache": "pip",
+            "cache-dependency-path": "pyproject.toml"
           },
           "id": "python"
         },
         {
           "name": "Install application and tmux",
-          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]'\nsudo apt-get update\nsudo apt-get install -y tmux",
+          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]'\nif ! command -v tmux >/dev/null 2>&1; then\n  sudo apt-get update\n  sudo apt-get install -y tmux\nfi\ntmux -V",
           "id": "dependencies"
         },
         {
@@ -328,6 +366,10 @@
       "name": "Jev architecture diagnostics",
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 6,
+      "needs": [
+        "paths"
+      ],
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' }}",
       "steps": [
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
@@ -344,7 +386,9 @@
         {
           "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
           "with": {
-            "python-version": "3.12"
+            "python-version": "3.12",
+            "cache": "pip",
+            "cache-dependency-path": "pyproject.toml"
           },
           "id": "python"
         },
