@@ -11,6 +11,7 @@ export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XX
 python3 -m pip install -e '.[test,telemetry]' -r .github/requirements-ci.txt
 python3 -m scripts.testkit run --suite static
 python3 -m scripts.testkit run --suite tests
+python3 -m scripts.testkit run --suite tests --shard 1/4   # one of four shards
 python3 -m scripts.testkit run --suite checks
 python3 -m scripts.testkit run --suite calibration
 python3 -m scripts.testkit run --suite multi-harness
@@ -21,6 +22,9 @@ python3 -m scripts.testkit run --suite acceptance
 composes every component suite once: static checks, tests, calibration, both live
 suites and `stories`.
 `--family NAME` selects behavioral families without reducing static coverage.
+`--shard K/N` (only with `--suite tests`) runs one balanced, deterministic shard of the selected test modules;
+shards 1..N together cover the selection exactly once (see
+[sharding](../docs/testing-framework.md#sharding-the-tests-suite)).
 Each run gets fresh private evidence outside
 the candidate. Direct pytest is available for a focused scenario; default
 collection targets only active tests and validates `contracts/testing.json`.
@@ -34,8 +38,9 @@ permissions. Pull requests, pushes to master and manual runs invoke:
 |---|---|
 | Classify changed paths | `scripts/ci/classify_changes.py` decides whether the change touches anything other than documentation; see below |
 | Static checks | Shared `static` suite: Ruff lint/security, current-source syntax and deterministic architecture enforcement |
-| Application and adapter tests (Python 3.12) | Shared `tests` suite with declared behavioral families and pytest inventory/JUnit |
-| Calibration and multi-harness verification | Shared `calibration` suite and composed three-harness `multi-harness` protocol suite, in parallel with the application tests |
+| Application tests shard K/N (Python 3.12) | Matrix of N jobs, each running `--suite tests --shard K/N` with its own pytest inventory/JUnit |
+| Application and adapter tests (Python 3.12) | Retains the existing status name; needs every tests shard and fails unless the shard matrix succeeded. It does not rerun validation |
+| Calibration and multi-harness verification | Shared `calibration` suite and composed three-harness `multi-harness` protocol suite, in parallel with the tests shards |
 | Tmux live acceptance (protocol fixture) | Shared acceptance suite with tmux required (installed through apt only when the runner image lacks it; the step prints `tmux -V`); private owned process cleanup is part of the receipt |
 | Jev architecture diagnostics | Independent diagnostics-only invocation with retained advisory output |
 | Hexagonal architecture | Retains the existing required status name and reports the shared static job's outcome; it does not rerun validation |
@@ -43,8 +48,8 @@ permissions. Pull requests, pushes to master and manual runs invoke:
 Each Python job configures `PYTHONPYCACHEPREFIX` in the runner's temporary directory before
 invoking Python. Each pinned `actions/setup-python` step enables its `cache: pip`
 download/wheel cache (`~/.cache/pip`), keyed on the files that declare that job's
-installs: static on `.github/requirements-ci.txt`, application on `pyproject.toml`
-and `.github/requirements-ci.txt`, verification, tmux and Jev on `pyproject.toml`. The application
+installs: static on `.github/requirements-ci.txt`, tests shards on `pyproject.toml`
+and `.github/requirements-ci.txt`, verification, tmux and Jev on `pyproject.toml`. Each tests shard
 job's uv-created 3.12.16 venv pip uses the same cache directory. The cache only
 avoids downloads/wheel builds; pip still resolves the declared pins and ranges on
 every run. A cache entry is written once per key and refreshed only when those
@@ -53,7 +58,13 @@ on each run until then. uv's own cache stays disabled because uv only provisions
 the interpreter.
 Static checks run once in their own job. The Jev diagnostic
 calculation remains independent and does not add a second deterministic gate.
-The application, calibration and protocol suite steps have explicit eligibility conditions:
+The `tests` suite is the longest validation, so it runs as parallel shards
+balanced by the committed `contracts/test-timings.json`. The shard count N is
+defined once, as the matrix value `shards` of the `application-tests` job (currently 4);
+job and step names, the `--shard` argument and artifact names all reference it,
+and the `shard` list must be 1..N. A framework test enforces both. Shards use
+`fail-fast: false` so one failing shard does not hide the others' results.
+The tests shard, calibration and protocol suite steps have explicit eligibility conditions:
 successful checkout/interpreter/dependency setup and a run that has not been
 cancelled. In the verification job a calibration failure does not skip the protocol suite or erase
 the original job failure. Failed setup produces an unavailable receipt instead of
@@ -100,10 +111,15 @@ before the heavy jobs are skipped:
 The job output is
 `steps.guard.outputs.force == 'false' && steps.classify.outputs.code || 'true'`.
 It is `false` only when the guard ran and allowed classification and the
-classifier reported `false`. The application, verification, tmux acceptance and Jev
-diagnostics jobs declare `needs: paths` and the job-level condition
-`!cancelled() && needs.paths.outputs.code != 'false'`. If either step fails or
-emits nothing, they still run. Static checks and the `Hexagonal architecture` status
+classifier reported `false`. The tests shards, the application aggregate, the
+verification, tmux acceptance and Jev diagnostics jobs declare `needs: paths` and
+the job-level condition `!cancelled() && needs.paths.outputs.code != 'false'`
+(the application aggregate also needs the shard matrix). If either step fails or
+emits nothing, they still run. On a documentation-only pull request the shards
+and the aggregate are skipped together; otherwise the aggregate runs even after a
+shard failure and fails unless the whole matrix succeeded. The aggregate's
+condition uses `always()` instead of `!cancelled()`, so a cancelled run reports
+it as failed or cancelled rather than skipped. Static checks and the `Hexagonal architecture` status
 job do not depend on `paths` and always run. The static suite is cheap and backs
 the required status. It does not lint Markdown, so no documentation check is
 lost by skipping the other jobs.
@@ -127,18 +143,19 @@ implementation as a product acceptance obligation.
 
 Security-lint calibration belongs to the catalog's architecture family and uses
 the shared Ruff definition with independent expected findings; it runs in the
-application job, where the pinned Ruff dependency is installed. The verification job
-installs `.[test]` and does not need the telemetry extra. Architecture and tmux
-regression tests run through the application suite; dedicated jobs do not rerun
+tests shard that owns its module, where the pinned Ruff dependency is installed.
+The verification job installs `.[test]` and does not need the telemetry extra. Architecture and tmux
+regression tests run through the tests shards; dedicated jobs do not rerun
 the same selected pytest modules.
 
 ## Evidence and limits
 
 `static-checks-python-3.12` retains static reports, effective-input identities,
 structured findings and raw command receipts for 30 days.
-`framework-checks-python-3.12` retains family/case inventories, JUnit and
-command records for 30 days. `calibration-python-3.12` retains calibration
-reports and command records for 30 days.
+`framework-tests-python-3.12-shard-K-of-N` retains each shard's family/case
+inventory, JUnit and command records for 30 days. `calibration-python-3.12` retains
+calibration reports and command records for 30 days. Shard JUnit reports can
+regenerate the timings file with `python3 -m scripts.testkit.timings`.
 Full calibration candidate copies are excluded from artifact uploads.
 Composed protocol receipts remain available for seven days; tmux uploads selected
 report/scenario and captured outer-command receipts for seven days. Raw native configurations and terminal

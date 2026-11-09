@@ -10,9 +10,12 @@ CODE_PATHS = (
     "xorchestrate/README.md", "pyproject.toml", "ruff.toml", ".gitignore", "docs/implementation/owner-brief.md",
     "README.txt", "docs", "/README.md", "docs/../xorchestrate/model.py", "",
 )
-HEAVY_JOBS = ("application", "verification", "tmux-acceptance", "architecture")
+HEAVY_JOBS = ("application-tests", "application", "verification", "tmux-acceptance", "architecture")
 ALWAYS_JOBS = ("changes", "architecture-status")
 CLASSIFIER_JOB = "paths"
+# Heavy jobs that aggregate other heavy jobs. They still depend on the classifier,
+# but use always() so a cancelled or failed dependency is reported, not skipped.
+AGGREGATE_JOBS = {"application": [CLASSIFIER_JOB, "application-tests"]}
 
 
 def full_run(decision, reason=None):
@@ -27,11 +30,11 @@ def documentation_only(decision, paths):
     assert decision["code_paths"] == []
 
 
-def heavy_job_gate(job):
+def heavy_job_gate(job, needs=(CLASSIFIER_JOB,), status="!cancelled()"):
     """A heavy job runs unless the classifier explicitly reported documentation-only."""
-    assert job.get("needs") == [CLASSIFIER_JOB], job.get("needs")
+    assert job.get("needs") == list(needs), job.get("needs")
     gate = job["if"]
-    assert "!cancelled()" in gate
+    assert gate.startswith("${{ " + status + " && "), gate
     assert "needs.paths.outputs.code != 'false'" in gate, gate
     assert "== 'true'" not in gate, "Classifier failure must not skip heavy validation"
 

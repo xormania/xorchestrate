@@ -24,7 +24,7 @@ from .composition import ROOT, preflight, run
 from .composition import plan as check_plan
 from .operator import FINISHED, decide, project
 
-RUN_FIELDS = ("suite", "mode", "config", "brief", "drivers", "families", "timeout", "check_timeout",
+RUN_FIELDS = ("suite", "mode", "config", "brief", "drivers", "families", "shard", "timeout", "check_timeout",
               "stories", "max_sessions", "max_turns", "max_tool_calls")
 
 

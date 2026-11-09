@@ -272,6 +272,7 @@
         "scripts.testkit.core",
         "scripts.testkit.catalog",
         "scripts.testkit.operator",
+        "scripts.testkit.sharding",
         "scripts.testkit.stories"
       ],
       "allowed_roles": [
@@ -731,7 +732,8 @@
     "testkit_entrypoints": {
       "modules": [
         "scripts.testkit.__main__",
-        "scripts.testkit.operator_cli"
+        "scripts.testkit.operator_cli",
+        "scripts.testkit.timings"
       ],
       "allowed_roles": [
         "foundation",
@@ -765,7 +767,8 @@
     },
     "testkit_pytest": {
       "modules": [
-        "scripts.testkit.adapters.pytest_plugin"
+        "scripts.testkit.adapters.pytest_plugin",
+        "scripts.testkit.adapters.timings"
       ],
       "allowed_roles": [
         "testkit_foundation",

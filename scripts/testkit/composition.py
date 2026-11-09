@@ -22,6 +22,7 @@ from .adapters.evidence import (
 from .adapters.static import STATIC_IDS
 from .core import execute_checks, required_inputs, validate_checks
 from .model import COMPONENT_SUITES, MODES, SUITES, Check
+from .sharding import TIMINGS, suite_shard
 from .stories import select_stories, validate_limits
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -38,7 +39,8 @@ def _selection(suite):
     return COMPONENT_SUITES if suite == "all" else ("static", "tests") if suite == "checks" else (suite,)
 
 
-def _options(*, suite, mode, timeout, check_timeout, config, driver, families, drivers=(), shutdown_grace=10.0):
+def _options(*, suite, mode, timeout, check_timeout, config, driver, families, drivers=(), shutdown_grace=10.0,
+             shard=None):
     selected = _selection(suite)
     if mode not in MODES:
         raise ValueError("Unknown mode")
@@ -47,6 +49,7 @@ def _options(*, suite, mode, timeout, check_timeout, config, driver, families, d
             raise ValueError("Timeout must be a positive finite number")
     if families and "tests" not in selected:
         raise ValueError("--family selects pytest families in the tests suite")
+    suite_shard(suite, shard)
     if (not isinstance(drivers, (tuple, list)) or any(not isinstance(d, str) or not d for d in drivers)
             or len(drivers) != len(set(drivers))):
         raise ValueError("Acceptance drivers must be unique nonempty names")
@@ -74,11 +77,11 @@ def cache_environment(root):
 
 def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=ROOT, brief=None,
          families=(), check_timeout=600, drivers=(), shutdown_grace=10.0,
-         stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000):
+         stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000, shard=None):
     """Pure check definitions; filesystem preparation belongs to the owning check."""
     selected = _options(suite=suite, mode=mode, timeout=timeout, check_timeout=check_timeout,
                         config=config, driver=driver, families=families, drivers=drivers,
-                        shutdown_grace=shutdown_grace)
+                        shutdown_grace=shutdown_grace, shard=shard)
     limits = validate_limits(max_sessions=max_sessions, max_turns=max_turns, max_tool_calls=max_tool_calls)
     if stories and "stories" not in selected:
         raise ValueError("--story requires a suite containing stories")
@@ -94,7 +97,11 @@ def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=
                 "--test-inventory", str(directory / "inventory.json"), "--junitxml=" + str(directory / "tests.xml")]
         for family in families:
             argv += ["--test-family", family]
-        checks.append(Check("tests", tuple(argv), check_timeout, ("contracts/testing.json", "tests/conftest.py")))
+        required = ("contracts/testing.json", "tests/conftest.py")
+        if shard is not None:
+            argv += ["--test-shard", shard]
+            required += (TIMINGS,)
+        checks.append(Check("tests", tuple(argv), check_timeout, required))
     if "calibration" in selected:
         for name, module in (("native-calibration", "scripts.verification.calibrate_suite"),
                              ("work-calibration", "tests.hexagonal.calibrate_work_acceptance"),
@@ -178,7 +185,7 @@ def _native_readiness(check, *, config, driver):
     return items
 
 
-def readiness(check, *, root, mode, config=None, driver=None, brief=None, families=()):
+def readiness(check, *, root, mode, config=None, driver=None, brief=None, families=(), shard=None):
     """One side-effect-free prerequisite definition for doctor and execution."""
     items = []
     try:
@@ -187,12 +194,15 @@ def readiness(check, *, root, mode, config=None, driver=None, brief=None, famili
         if check.name == "ruff":
             items.append({"name": "ruff", "passed": importlib.util.find_spec("ruff") is not None})
         if check.name == "tests":
-            from .adapters.pytest_plugin import load_catalog
+            from .adapters.pytest_plugin import load_catalog, shard_selection
             from .catalog import select_families
 
             _, assignments = load_catalog(root)
-            select_families(assignments, families)
+            chosen, shard_plan = shard_selection(root, select_families(assignments, families), shard)
             items.append({"name": "test_catalog", "passed": True, "modules": len(assignments)})
+            if shard_plan is not None:
+                items.append({"name": "test_shard", "passed": True, "shard": shard, "modules": len(chosen),
+                              "estimated_seconds": shard_plan["estimated_seconds"]})
         if check.name == "acceptance" or check.name.startswith(("acceptance:", "story:")):
             binary = shutil.which("tmux")
             items.append({"name": "tmux", "passed": binary is not None, "path": binary})
@@ -210,13 +220,14 @@ def readiness(check, *, root, mode, config=None, driver=None, brief=None, famili
 
 def preflight(*, suite, mode, config=None, driver=None, timeout=180, root=ROOT,
               families=(), check_timeout=600, brief=None, drivers=(), shutdown_grace=10.0,
-              stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000):
+              stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000, shard=None):
     root = Path(root).resolve()
     cache_environment(root)
     checks = plan(directory=root.parent / "testkit-preflight", suite=suite, mode=mode, config=config,
                   driver=driver, timeout=timeout, root=root, brief=brief, families=families,
                   check_timeout=check_timeout, drivers=drivers, shutdown_grace=shutdown_grace,
-                  stories=stories, max_sessions=max_sessions, max_turns=max_turns, max_tool_calls=max_tool_calls)
+                  stories=stories, max_sessions=max_sessions, max_turns=max_turns, max_tool_calls=max_tool_calls,
+                  shard=shard)
     if families:
         try:
             from .adapters.pytest_plugin import load_catalog
@@ -229,17 +240,17 @@ def preflight(*, suite, mode, config=None, driver=None, timeout=180, root=ROOT,
             pass
         else:
             select_families(assignments, families)
-    rows = [readiness(check, root=root, mode=mode, config=config, driver=driver, brief=brief, families=families)
-            for check in checks]
+    rows = [readiness(check, root=root, mode=mode, config=config, driver=driver, brief=brief, families=families,
+                      shard=shard) for check in checks]
     return {"status": "passed" if all(row["status"] == "passed" for row in rows) else "setup_error",
-            "suite": suite, "mode": mode, "checks": rows,
+            "suite": suite, "mode": mode, "shard": shard, "checks": rows,
             "authentication": "verified by live callbacks only" if mode == "native" else "not used"}
 
 
 def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=None,
         timeout=180, root=ROOT, brief=None, families=(), check_timeout=600,
         directory=None, cancellation=None, result_sink=None, shutdown_grace=10.0, drivers=(),
-        stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000):
+        stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000, shard=None):
     root, output = Path(root).resolve(), Path(output).expanduser().resolve()
     if output == root or root in output.parents:
         raise ValueError("Run output must be outside the measured candidate")
@@ -252,7 +263,7 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
         if directory.exists() and any(directory.iterdir()):
             raise ValueError("Run directory must be new or empty")
         directory.mkdir(parents=True, exist_ok=True, mode=0o700)
-    report = {"schema_version": 2, "suite": suite, "mode": mode, "status": "setup_error",
+    report = {"schema_version": 2, "suite": suite, "mode": mode, "shard": shard, "status": "setup_error",
               "directory": str(directory), "checks": [], "runtime": {"python": sys.version}}
     progress = {"schema_version": 1, "revision": 0, "checks": {}}
 
@@ -285,12 +296,13 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
         checks = plan(directory=directory, suite=suite, mode=mode, config=config, driver=driver,
                       timeout=timeout, root=root, brief=brief, families=families,
                       check_timeout=check_timeout, drivers=drivers, shutdown_grace=shutdown_grace,
-                      stories=stories, max_sessions=max_sessions, max_turns=max_turns, max_tool_calls=max_tool_calls)
+                      stories=stories, max_sessions=max_sessions, max_turns=max_turns, max_tool_calls=max_tool_calls,
+                      shard=shard)
         report["selected_check_ids"] = [check.name for check in checks]
         ready = preflight(suite=suite, mode=mode, config=config, driver=driver, timeout=timeout, root=root,
                           brief=brief, families=families, check_timeout=check_timeout, drivers=drivers,
                           shutdown_grace=shutdown_grace, stories=stories, max_sessions=max_sessions,
-                          max_turns=max_turns, max_tool_calls=max_tool_calls)
+                          max_turns=max_turns, max_tool_calls=max_tool_calls, shard=shard)
         write_json(directory / "preflight.json", ready)
         report["preflight"] = ready
         before = candidate_identity(root) if (root / ".git").exists() else None
@@ -313,7 +325,8 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
         resolved, manifests = {}, {}
 
         def prepare(check):
-            row = readiness(check, root=root, mode=mode, config=config, driver=driver, brief=brief, families=families)
+            row = readiness(check, root=root, mode=mode, config=config, driver=driver, brief=brief, families=families,
+                            shard=shard)
             if row["status"] != "passed":
                 raise ValueError(row["reason"])
             prepared = check

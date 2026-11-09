@@ -5,6 +5,7 @@ Adapted from Agentscient ops/testkit/tests/test_command.py at
 and bounded cleanup when a descendant holds the command's pipes.
 """
 
+import contextlib
 import json
 import os
 import pty
@@ -257,27 +258,113 @@ def test_recorded_cancellation_preserves_partial_bytes_and_final_receipt(tmp_pat
 
 def test_command_interruption_keeps_receipt_and_reaches_child_finalizer(tmp_path):
     finalized = tmp_path / "finalized"
+    ready = tmp_path / "ready"
     directory = tmp_path / "receipt"
+    # The child announces readiness only after its SIGTERM finalizer is
+    # installed, so the interrupt cannot race interpreter startup on a loaded
+    # runner. Bounds are generous; the assertions are unchanged.
     program = (
         "import signal,time,sys; from pathlib import Path\n"
         f"def finish(*_): Path({str(finalized)!r}).touch(); sys.exit(0)\n"
         "signal.signal(signal.SIGTERM,finish)\n"
+        f"Path({str(ready)!r}).touch()\n"
         "while True: time.sleep(.02)\n"
     )
     helper = (
-        "import _thread,threading,sys\n"
+        "import _thread,threading,sys,time\n"
+        "from pathlib import Path\n"
         "from scripts.testkit.adapters.evidence import run_command\n"
-        "timer=threading.Timer(.4,_thread.interrupt_main); timer.start()\n"
+        "def interrupt():\n"
+        " deadline=time.monotonic()+60\n"
+        f" while not Path({str(ready)!r}).exists() and time.monotonic()<deadline: time.sleep(.02)\n"
+        " _thread.interrupt_main()\n"
+        "threading.Thread(target=interrupt,daemon=True).start()\n"
         "try:\n"
-        f" run_command((sys.executable,'-c',{program!r}),{str(tmp_path)!r},{str(directory)!r},timeout=10)\n"
+        f" run_command((sys.executable,'-c',{program!r}),{str(tmp_path)!r},{str(directory)!r},timeout=90)\n"
         "except KeyboardInterrupt: pass\n"
-        "finally: timer.cancel()\n"
     )
-    subprocess.run((sys.executable, "-c", helper), cwd=Path(__file__).resolve().parents[2], check=True, timeout=5)
+    subprocess.run((sys.executable, "-c", helper), cwd=Path(__file__).resolve().parents[2], check=True, timeout=120)
+    assert ready.exists()
     assert finalized.exists()
     receipt = json.loads((directory / "command.json").read_text())
     assert receipt["status"] == "interrupted" and receipt["error"] == "KeyboardInterrupt"
     assert receipt["finished_at"] and receipt["shutdown"]["forced"] is False
+
+
+@pytest.mark.parametrize("acquisition", ["retried", "unavailable"])
+def test_interrupt_during_group_acquisition_still_terminates_the_whole_session(tmp_path, monkeypatch, acquisition):
+    from scripts.testkit.adapters import command
+
+    finalized, ready = tmp_path / "finalized", tmp_path / "ready"
+    descendant_pid = tmp_path / "descendant.pid"
+    # The descendant ignores TERM, so only a bounded KILL escalation removes it.
+    descendant = ("import os,signal,time,sys; from pathlib import Path\n"
+                  "signal.signal(signal.SIGTERM,signal.SIG_IGN)\n"
+                  f"Path({str(descendant_pid)!r}).write_text(str(os.getpid()))\n"
+                  "time.sleep(60)\n")
+    owner = ("import signal,subprocess,sys,time; from pathlib import Path\n"
+             f"def finish(*_): Path({str(finalized)!r}).touch(); sys.exit(0)\n"
+             "signal.signal(signal.SIGTERM,finish)\n"
+             f"subprocess.Popen([sys.executable,'-c',{descendant!r}])\n"
+             f"while not Path({str(descendant_pid)!r}).exists(): time.sleep(.01)\n"
+             f"Path({str(ready)!r}).touch()\n"
+             "while True: time.sleep(.02)\n")
+    real, calls = command._OwnedGroup, []
+
+    def interrupted(child):
+        calls.append(child.pid)
+        if len(calls) == 1:
+            deadline = time.monotonic() + 60
+            while not ready.exists() and time.monotonic() < deadline:
+                time.sleep(.01)
+            raise KeyboardInterrupt
+        if acquisition == "unavailable":
+            raise OSError("process table unavailable")
+        return real(child)
+
+    # Record whether each group signal precedes the owner's reaping: a reaped
+    # owner no longer pins its PID, so a later group signal could hit a reused ID.
+    real_killpg, real_finish, events = os.killpg, command._finish, []
+
+    def killpg(pgid, number):
+        events.append(("signal", pgid, number))
+        return real_killpg(pgid, number)
+
+    def finish(child):
+        events.append(("reap", child.pid, None))
+        return real_finish(child)
+
+    monkeypatch.setattr(command, "_OwnedGroup", interrupted)
+    monkeypatch.setattr(os, "killpg", killpg)
+    monkeypatch.setattr(command, "_finish", finish)
+    runner = SubprocessRunner(shutdown_grace=1)
+    with subreaper():
+        try:
+            with pytest.raises(KeyboardInterrupt):
+                runner.run((sys.executable, "-c", owner), cwd=tmp_path, env=dict(os.environ), timeout=90)
+            pid = int(descendant_pid.read_text())
+            deadline = time.monotonic() + 10
+            while (observed := processes().get(pid)) is not None and alive(observed[0]) and time.monotonic() < deadline:
+                time.sleep(.02)
+            assert observed is None or not alive(observed[0]), "session descendant was orphaned"
+        finally:
+            if descendant_pid.exists():
+                observed = processes().get(int(descendant_pid.read_text()))
+                if observed is not None:
+                    send_signal(observed[0], signal.SIGKILL)
+                with contextlib.suppress(ChildProcessError):
+                    os.waitpid(int(descendant_pid.read_text()), 0)
+    assert finalized.exists(), "the owner's TERM finalizer was skipped"
+    shutdown = runner.last_shutdown
+    assert shutdown["reason"] == "interrupted" and shutdown["exit_status"] == 0 and shutdown["forced"] is True
+    if acquisition == "retried":
+        assert len(calls) == 2 and shutdown["verified"] is True and shutdown["remaining_processes"] == []
+    else:
+        assert shutdown["errors"] == [{"type": "OwnershipUnavailable", "phase": "group_acquisition"}]
+        assert shutdown["remaining_members"] == 0
+        kinds = [kind for kind, _, _ in events]
+        assert ("signal", calls[0], signal.SIGTERM) in events and ("signal", calls[0], signal.SIGKILL) in events
+        assert "reap" in kinds and "signal" not in kinds[kinds.index("reap"):], events
 
 
 def test_atomic_writer_has_no_shared_temporary_file_under_concurrent_publications(tmp_path):

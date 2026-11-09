@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from ..catalog import LAYERS, select_families, validate_catalog
+from ..sharding import TIMINGS, parse_shard, shard_plan, validate_timings
 from .evidence import canonical, digest, write_json
 
 
@@ -20,6 +21,10 @@ def pytest_addoption(parser):
                     help="Select a contract, adapter, composition, calibration or framework layer")
     group.addoption("--test-inventory", type=Path, metavar="PATH",
                     help="Retain catalog ownership, selected case inventory and outcomes as JSON")
+    group.addoption("--test-shard", metavar="K/N",
+                    help="Run one-based shard K of N over the selected catalog modules")
+    group.addoption("--test-timings", type=Path, metavar="PATH",
+                    help="Per-module durations balancing --test-shard (default: " + TIMINGS + ")")
 
 
 def pytest_configure(config):
@@ -51,12 +56,32 @@ def load_catalog(root):
     return catalog, validate_catalog(catalog, sorted(discovered))
 
 
+def load_timings(root, path=None):
+    """Return the default weight and recorded per-module seconds used for sharding."""
+    source = Path(path) if path is not None else Path(root) / TIMINGS
+    return validate_timings(json.loads(source.read_text()))
+
+
+def shard_selection(root, selected, shard, timings=None):
+    """Restrict an existing family/layer selection to one balanced shard."""
+    parsed = parse_shard(shard)
+    if parsed is None:
+        return selected, None
+    default, weights = load_timings(root, timings)
+    plan = shard_plan(selected, parsed, weights=weights, default=default)
+    chosen = {path: entry for path, entry in selected.items() if path in set(plan["modules"])}
+    return chosen, {"index": parsed[0], "count": parsed[1], "default_seconds": default,
+                    "candidate_modules": len(selected), **plan}
+
+
 class CatalogCollection:
     def __init__(self, config):
         self.config = config
         self.root = Path(config.rootpath).resolve()
         self.catalog, self.assignments = load_catalog(self.root)
-        self.selected_modules = select_families(self.assignments, config.getoption("test_family"), config.getoption("test_layer"))
+        self.selected_modules, self.shard = shard_selection(
+            self.root, select_families(self.assignments, config.getoption("test_family"), config.getoption("test_layer")),
+            config.getoption("test_shard"), config.getoption("test_timings"))
         self.inventory = {}
         self.selected = set()
         self.collected_modules = set()
@@ -142,4 +167,5 @@ class CatalogCollection:
                             "catalog_sha256": digest(canonical(self.catalog)), "status": status,
                             "exit_status": int(exitstatus), "declared_modules": len(self.assignments),
                             "collected_modules": sorted(self.collected_modules), "collected": len(cases),
-                            "selected": len(self.selected), "families": families, "cases": cases})
+                            "selected": len(self.selected), "shard": self.shard,
+                            "families": families, "cases": cases})

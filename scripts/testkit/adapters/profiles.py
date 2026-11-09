@@ -17,11 +17,12 @@ import sys
 from pathlib import Path
 
 from ..model import MODES, SUITES
+from ..sharding import suite_shard
 from ..stories import select_stories, validate_limits
 from .configuration import local_capture
 from .evidence import write_json
 
-FIELDS = frozenset({"schema_version", "suite", "mode", "drivers", "families", "config", "brief",
+FIELDS = frozenset({"schema_version", "suite", "mode", "drivers", "families", "shard", "config", "brief",
                     "timeout", "check_timeout", "run_timeout", "shutdown_grace", "output",
                     "environment", "interpreter", "stories", "max_sessions", "max_turns", "max_tool_calls", "project"})
 PATH_FIELDS = ("config", "brief", "output", "environment", "interpreter")
@@ -57,7 +58,7 @@ def load_profile(path, *, root, overrides=None):
     if unknown:
         raise ValueError("Unknown profile fields: " + ", ".join(sorted(unknown)))
     values = {"schema_version": 1, "suite": "all", "mode": "protocol-fixture", "drivers": [],
-              "families": [], "stories": [], "max_sessions": 2, "max_turns": 4, "max_tool_calls": 5000,
+              "families": [], "shard": None, "stories": [], "max_sessions": 2, "max_turns": 4, "max_tool_calls": 5000,
               "config": None, "project": None, "brief": str(root / "docs/implementation/owner-brief.md"),
               "timeout": 180, "check_timeout": 600, "run_timeout": None, "shutdown_grace": 10,
               "output": "runs", "environment": "environment", "interpreter": None,
@@ -113,6 +114,7 @@ def load_profile(path, *, root, overrides=None):
         values["config"], values["drivers"] = None, []
     if values["families"] and values["suite"] not in {"tests", "checks", "all"}:
         raise ValueError("families require a suite containing tests")
+    suite_shard(values["suite"], values["shard"])
     values["profile_path"] = str(path)
     values["root"] = str(root)
     return values
