@@ -4,8 +4,7 @@ The behavioral predicates live in core; protocol decoding is selected here via
 replaceable ports. A separate checkout isolates execution, not the correctness
 oracle: expectations must still come from requirements and observed evidence.
 """
-from . import core
-from . import normalize as normalizer
+from . import core, evidence
 from .adapters.native import default_decoders
 from .evidence import decode_observations
 from .model import VerificationFailure as VerificationFailure
@@ -22,6 +21,10 @@ signature = core.signature
 
 def _decoders(decoders):
     return default_decoders() if decoders is None else decoders
+
+
+def normalize(raw, peer_sessions, provider_events, mode, *, decoders=None):
+    return evidence.normalize(raw, peer_sessions, provider_events, mode, decoders=_decoders(decoders))
 
 
 def _context(decoders=None, *, callbacks=True):
@@ -109,7 +112,7 @@ def verify(run, criteria, expected_bindings, fixture, *, decoders=None):
     try:
         if "raw_records" in run:
             arguments = (run["raw_records"], run["sessions"], run.get("provider_events", []), run.get("mode"))
-            events = normalizer.normalize(*arguments) if decoders is None else normalizer.normalize(*arguments, decoders=selected)
+            events = normalize(*arguments) if decoders is None else normalize(*arguments, decoders=selected)
             for event in run.get("lifecycle_events", []):
                 events.append({**event, "seq": len(events) + 1})
             run = {**run, "events": events}

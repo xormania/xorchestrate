@@ -1,6 +1,6 @@
 """Raw completion evidence builders independent of verdict implementation."""
 
-from scripts.verification.capture import canonical, digest
+from scripts.testkit.adapters.evidence import canonical, digest
 
 
 def completion_input(peer="claude"):

@@ -7,9 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.verification.__main__ import calibrate
-from scripts.verification.calibration import classify
-from scripts.verification.capture import (
+from scripts.testkit.adapters.evidence import (
     candidate_identity,
     canonical,
     capture_candidate,
@@ -17,6 +15,8 @@ from scripts.verification.capture import (
     run_command,
     verify_candidate,
 )
+from scripts.verification.__main__ import calibrate
+from scripts.verification.calibration import classify
 from scripts.verification.checker import VerificationFailure, exchange_evidence, native_inventory, tool_audit, verify
 from tests.hexagonal.support.verification_evidence import proof_chain, repository
 from xorchestrate.exchange import evaluate_exchange

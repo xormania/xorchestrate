@@ -159,8 +159,7 @@
         "tests/hexagonal/test_telemetry_views.py": "contract",
         "tests/hexagonal/test_telemetry_workflow.py": "composition",
         "tests/hexagonal/test_telemetry_callback_review.py": "composition",
-        "tests/hexagonal/test_telemetry_review.py": "composition",
-        "tests/hexagonal/test_telemetry_measurements.py": "composition"
+        "tests/hexagonal/test_telemetry_review.py": "composition"
       }
     }
   }

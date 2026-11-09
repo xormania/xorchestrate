@@ -8,7 +8,7 @@ from copy import deepcopy
 import pytest
 
 import scripts.verification.checker as checker
-from scripts.verification.normalize import normalize
+from scripts.verification.checker import normalize
 from tests.hexagonal.contracts.callback_identity import CALLBACK_JOIN_SCENARIOS, CALLBACK_LIFECYCLE_SCENARIOS
 from tests.hexagonal.contracts.identity import assert_identity_scenario
 from tests.hexagonal.support.callback_identity import RawCallbackEvidence, callback

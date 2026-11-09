@@ -84,21 +84,15 @@ entries. A later documentation commit or reconstructed upstream Git history
 does not change the production and procedure file hashes measured here. The
 [exact measured procedure](https://github.com/xormania/xorchestrate/blob/382c943fd424720af72aa38620db666704b121e3/docs/telemetry-evidence/measure_overhead.py)
 is retained at that historical remote commit. The
-[current procedure with its updated output guard](telemetry-evidence/measure_overhead.py)
+[last revision of the procedure, with its updated output guard](https://github.com/xormania/xorchestrate/blob/957c404/docs/telemetry-evidence/measure_overhead.py)
 additionally rejects any output path resolving inside the candidate checkout
-before sealing sources or running workloads. That admission-only repair has
+before sealing sources or running workloads. That admission-only repair had
 SHA256 `29458bcbe079bda2f7a00d5caddf84f0c4c85152e9f48199d1c966d3cc098f12`;
 the timed workflow implementation and retained dataset are unchanged. The
 [verification receipt](telemetry-evidence/read-calibration-verification-2026-11-08.json)
 records the separate test, calibration, static-check and review checkpoints.
-
-The independent [measurement contract](../tests/hexagonal/contracts/telemetry_measurements.py)
-and [support adapter](../tests/hexagonal/support/telemetry_measurements.py) use tiny
-two-work, 2 KiB fixtures in CI. They compare actual public-call ledgers, original
-arguments/returned evidence, database rows, artifact bytes and restored files.
-Empty queries, corrupt source artifacts, failed snapshots and altered success
-reports must be rejected. These checks validate measurement correctness without
-running the manual workload or imposing timing thresholds in CI.
+The procedure and its CI measurement-correctness checks are no longer in the
+active tree; they remain available at that commit.
 
 ## Capture overhead — 7 November 2026
 
@@ -174,7 +168,7 @@ The collector source pin is
 [`84229bb7497547d2db91d02a4633ccb3867f740b`](https://github.com/xormania/cce/tree/84229bb7497547d2db91d02a4633ccb3867f740b/tools/telemetry).
 The original capture-only procedure had SHA256
 `67517eb36430f3ac87d7c3998aef6a6090725a522c33427f536effd9d0b4fb86`.
-The [current extended procedure](telemetry-evidence/measure_overhead.py) and its
+The [extended procedure](https://github.com/xormania/xorchestrate/blob/957c404/docs/telemetry-evidence/measure_overhead.py) and its
 new source seals are identified in the 8 November section. If relevant production
 or collector hashes change, each measurement remains evidence for its own sealed
 source and should be refreshed for the changed path.
@@ -183,7 +177,8 @@ source and should be refreshed for the changed path.
 
 Install the telemetry extra and test dependencies as described in
 [the active guide](telemetry.md), using a runtime accepted by the collector's
-SQLite check. From the intended candidate checkout, run this finite procedure:
+SQLite check. From a checkout of commit `957c404`, the last revision containing
+the procedure, run this finite procedure:
 
 ```sh
 TELEMETRY_CALIBRATION_ROOT="$PWD" \
@@ -201,7 +196,7 @@ bounded measurement; the shared test-kit remains the validation runner. An
 imported application from a different checkout is rejected before measurement.
 
 The 7 November compact dataset retains primitive per-trial values and source
-seals. The current procedure and 8 November raw dataset additionally retain each
+seals. The extended procedure and 8 November raw dataset additionally retain each
 capture operation's elapsed sample, safe status metadata and the public-read
 workflow records. The capture summary still uses the same per-trial
 wall-time/completed-work basis.

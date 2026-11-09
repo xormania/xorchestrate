@@ -4,9 +4,8 @@ from functools import partial
 
 import pytest
 
-from scripts.verification.checker import VerificationFailure, check_case
+from scripts.verification.checker import VerificationFailure, check_case, normalize
 from scripts.verification.multi_harness import snapshot
-from scripts.verification.normalize import normalize
 from tests.hexagonal.support.native import (
     ControlledCallbacks as Holds,
 )

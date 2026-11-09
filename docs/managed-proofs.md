@@ -103,7 +103,6 @@ success means the run was accepted and launched, not that its proof passed.
 ```bash
 ./scripts/proof.sh list --profile "$HOME/.config/xorchestrate/proof.json"
 ./scripts/proof.sh status RUN_DIRECTORY
-./scripts/proof.sh status RUN_DIRECTORY --json
 ./scripts/proof.sh watch RUN_DIRECTORY
 ./scripts/proof.sh attach RUN_DIRECTORY
 ./scripts/proof.sh wait RUN_DIRECTORY

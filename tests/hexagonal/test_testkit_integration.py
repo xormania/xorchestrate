@@ -12,9 +12,9 @@ import pytest
 
 from scripts.testkit import composition as testkit
 from scripts.testkit.adapters.command import SubprocessRunner
+from scripts.testkit.adapters.evidence import digest
 from scripts.testkit.model import Check, Timeout
 from scripts.verification import lifecycle, multi_harness
-from scripts.verification.capture import digest
 from xorchestrate import composition
 
 

@@ -7,8 +7,7 @@ from copy import deepcopy
 
 import pytest
 
-from scripts.verification.checker import verify
-from scripts.verification.normalize import normalize
+from scripts.verification.checker import normalize, verify
 from tests.hexagonal.support.completion_evidence import completion_input
 
 
@@ -73,7 +72,7 @@ def test_retired_state_does_not_override_current_native_idle(stale):
 
 def test_sustained_fault_calibrates_the_completion_assertion(monkeypatch):
     """Fault recreates old normalization; oracle must expose its false pass."""
-    import scripts.verification.normalize as normalizer
+    import scripts.verification.checker as checker
 
     inputs, add = completion_input()
     add("turn_completed", turn_id="A")
@@ -92,7 +91,7 @@ def test_sustained_fault_calibrates_the_completion_assertion(monkeypatch):
             if event.get("activity_kind") == "turn_completed":
                 event["state"] = "idle"
         return events
-    monkeypatch.setattr(normalizer, "normalize", faulty)
+    monkeypatch.setattr(checker, "normalize", faulty)
     assert verify(*inputs)["status"] == "passed", "F06_FAULT_MUST_ACTIVATE"
     with pytest.raises(AssertionError, match="^F06_OUTSTANDING_WORK_CANNOT_PASS_COMPLETION"):
         assert_pending_rejected(inputs)
@@ -101,11 +100,11 @@ def test_sustained_fault_calibrates_the_completion_assertion(monkeypatch):
 
 
 def test_unrelated_normalization_failure_is_not_completion_detection(monkeypatch):
-    import scripts.verification.normalize as normalizer
+    import scripts.verification.checker as checker
 
     inputs, _ = completion_input()
     def unrelated(*args):
         raise RuntimeError("unrelated checker setup failure")
-    monkeypatch.setattr(normalizer, "normalize", unrelated)
+    monkeypatch.setattr(checker, "normalize", unrelated)
     with pytest.raises(RuntimeError, match="unrelated checker setup failure"):
         assert_pending_rejected(inputs)
