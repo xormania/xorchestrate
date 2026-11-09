@@ -45,7 +45,10 @@ installs: static on `.github/requirements-ci.txt`, application on `pyproject.tom
 and `.github/requirements-ci.txt`, tmux and Jev on `pyproject.toml`. The application
 job's uv-created 3.12.16 venv pip uses the same cache directory. The cache only
 avoids downloads/wheel builds; pip still resolves the declared pins and ranges on
-every run. uv's own cache stays disabled because uv only provisions the interpreter.
+every run. A cache entry is written once per key and refreshed only when those
+files change, so packages newly released within a declared range are downloaded
+on each run until then. uv's own cache stays disabled because uv only provisions
+the interpreter.
 Static checks run once in their own job. The Jev diagnostic
 calculation remains independent and does not add a second deterministic gate.
 Application, calibration and protocol steps have explicit eligibility conditions:
