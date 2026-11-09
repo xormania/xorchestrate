@@ -19,7 +19,6 @@ from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
 MAPPING_VERSION = "xorchestrate-operational-v1"
-OTLP_VERSION = "1.11.1"
 _LABELS = ("boundary", "outcome", "component", "source")
 _CORRELATION = ("event_id", "run_id", "session_id", "operation_id", "attempt_id", "parent_attempt_id")
 _OUTCOMES = frozenset(("success", "succeeded", "complete", "completed", "recorded", "duplicate",

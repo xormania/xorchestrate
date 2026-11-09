@@ -254,4 +254,6 @@ all native context, or an unobserved service's internal latency.
 
 Remote publication to a data branch, lakeFS, MLflow or OCFL remains a selected
 deployment adapter rather than a default destination. Telemetry currently
-provides a verified portable local bundle and a replaceable publication boundary.
+provides a verified portable local bundle and a replaceable publication boundary
+([`publish_bundle`](../xorchestrate/adapters/telemetry_snapshot.py);
+[lost-acknowledgment, unverified-receipt and refusal checks](../tests/hexagonal/test_telemetry_publication.py)).
