@@ -46,7 +46,10 @@ collector, and preserves existing native configuration bytes. Explicit disabled
 capture stays disabled. When local capture is selected, doctor checks the
 selected interpreter's actual SQLite compatibility (`telemetry_sqlite`);
 it does not log into vendors, launch a model or establish authenticated
-acceptance. A fixed SQLite runtime such as uv Python 3.12.16 can be selected
+acceptance. It does report whether the evidence root is a location the product
+accepts for a private home (`run_location`). Add `--probe` to take each selected
+driver through session start and stop, without a turn, before spending a model
+call on a run; see [managed setup](managed-proofs.md#set-up-once). A fixed SQLite runtime such as uv Python 3.12.16 can be selected
 before setup. [Source: setup/doctor](../scripts/testkit/adapters/profiles.py).
 
 Inspect the profile's `config` path and configure the existing

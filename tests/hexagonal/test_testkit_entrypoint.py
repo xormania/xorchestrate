@@ -215,7 +215,9 @@ def test_native_doctor_checks_inputs_without_authentication_or_process_launch(tm
 
     monkeypatch.setattr(subprocess, "Popen", unexpected_launch)
     monkeypatch.setattr(cli, "run", unexpected_launch)
-    assert cli.main(["doctor", "--mode", "native", "--config", str(config), "--driver", "codex"]) == 0
+    # An explicit evidence root keeps the verdict independent of where the checkout lives.
+    assert cli.main(["doctor", "--mode", "native", "--config", str(config), "--driver", "codex",
+                     "--output", str(tmp_path / "runs")]) == 0
     report = json.loads(capsys.readouterr().out)
     assert report["status"] == "passed"
     assert report["authentication"] == "verified by live callbacks only"
