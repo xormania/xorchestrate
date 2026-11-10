@@ -16,6 +16,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Added
 
+- A configurable PR capability provider observes candidate-bound checks and
+  discussions, checkpoints and refreshes owned branches, publishes reviewed
+  source trees as drafts, and retains target custody and progress for uncertain
+  writes. See [PR preparation](docs/pr-delivery.md) for configuration and recovery.
 - CI candidate contexts bind the tested merge/base/tree to GitHub checks and
   immutable per-lane producer artifacts, including successful partial reruns.
 
@@ -237,7 +241,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   first; the install script stops when it finds one. Install only one of
   `xorchestrate` and `xork`: they own the same commands (see
   [install](docs/install.md#package-index)).
-- **Lifecycle definitions:** None.
+- **Lifecycle definitions:** operation definition version `2` adds a
+  `progress` transition from `pending` to `pending` for PR target custody and
+  confirmed substeps. Existing stored states need no migration. Custom operation
+  definitions used with the PR provider must admit and govern this transition.
 - **Adapter options:** the local telemetry adapter's `profile` option is
   removed; a configuration that still sets it leaves telemetry unavailable with
   `cause` `{"code": "unknown_option", "detail": "profile"}`. Move the profile's
@@ -249,6 +256,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   `database`, `capture_lock_timeout_ms` and `artifact_root` shorthands remain
   and cannot be combined with them. `telemetry_corpus` and
   `telemetry_artifacts` are refused as top-level configuration sections.
+  A new optional `pr` capability provider accepts `github` and `git` adapter
+  options; its owned workspace paths are explicit absolute paths. No existing
+  provider configuration changes. Uncertain PR writes retain custody until
+  explicit journal reconciliation; see [PR preparation](docs/pr-delivery.md).
 - **Operator source schema:** None.
 - **Telemetry collector:** the collector is now part of xorchestrate and the
   `telemetry` installation extra is removed; install `.[test]` (or the package

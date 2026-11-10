@@ -40,7 +40,10 @@
       "guarantee": "Configured capability providers and evaluators preserve discovery, invocation, permissions and assessment evidence across process adapters.",
       "modules": {
         "tests/hexagonal/test_capabilities.py": "adapter",
-        "tests/hexagonal/test_evaluation.py": "adapter"
+        "tests/hexagonal/test_evaluation.py": "adapter",
+        "tests/hexagonal/test_pr_operations.py": "contract",
+        "tests/hexagonal/test_pr_workspace.py": "adapter",
+        "tests/hexagonal/test_pr_github.py": "adapter"
       }
     },
     "delivery": {
