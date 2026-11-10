@@ -6,7 +6,7 @@ receive their options as a dict; incoming tool arguments never choose factories.
 import importlib
 import json
 from copy import deepcopy
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import cast
@@ -186,6 +186,69 @@ class Runtime:
 SUPPORTED_CONFIG_VERSIONS = frozenset({1})
 """Configuration format versions this release reads. Absent ``version`` means 1."""
 
+
+@dataclass(frozen=True)
+class ConfigMigrations:
+    """Ordered configuration rewrites ``N -> N + 1`` ending at ``current``.
+
+    A step is a pure function of a configuration document (or merge patch) that
+    returns the rewritten document; it never reads files, constructs adapters or
+    sets ``version``, which the chain sets after each step. Rewrites run only
+    when explicitly requested (``xorchestrate migrate-config``), never on load.
+    """
+
+    current: int
+    steps: dict = field(default_factory=dict)
+
+    def __post_init__(self):
+        if type(self.current) is not int or self.current < 1:
+            raise ValueError("The current configuration version must be a positive integer.")
+        for source, step in self.steps.items():
+            if type(source) is not int or not 1 <= source < self.current or not callable(step):
+                raise ValueError("Configuration rewrites are keyed by a source version below the current version.")
+        if self.steps and set(self.steps) != set(range(min(self.steps), self.current)):
+            raise ValueError("Configuration rewrites must form a contiguous chain to the current version.")
+
+    def oldest(self):
+        return min(self.steps, default=self.current)
+
+    def migrate(self, config):
+        """Return ``(document, from_version, applied)``: ``config`` rewritten to ``current``.
+
+        A configuration without ``version`` is read as version 1 and gains an
+        explicit ``version``. A newer version is refused
+        (``configuration_version_unsupported``), and so is one older than the
+        chain reaches (``configuration_migration_unavailable``).
+        """
+        if not isinstance(config, dict):
+            raise OrchestrationError("Configuration must be an object.", "configuration_error")
+        version = config.get("version", 1)
+        if type(version) is not int or version < 1:
+            raise OrchestrationError("Configuration version must be a positive integer.", "configuration_error")
+        details = {"version": version, "current": self.current, "release": RELEASE}
+        if version > self.current:
+            raise OrchestrationError(
+                f"Configuration format version {version} is newer than release {RELEASE} reads; it is never "
+                "rewritten to an older version.", "configuration_version_unsupported", details)
+        if version < self.oldest():
+            raise OrchestrationError(
+                f"No configuration rewrite in release {RELEASE} reaches version {self.current} from {version}.",
+                "configuration_migration_unavailable", {**details, "oldest_migratable": self.oldest()})
+        document, applied = {**deepcopy(config), "version": version}, []
+        for source in range(version, self.current):
+            document = self.steps[source](deepcopy(document))
+            if not isinstance(document, dict):
+                raise OrchestrationError("A configuration rewrite did not return an object.", "configuration_error",
+                                         {"from": source})
+            document["version"] = source + 1
+            applied.append([source, source + 1])
+        document["version"] = self.current
+        return document, version, applied
+
+
+CONFIG_MIGRATIONS = ConfigMigrations(max(SUPPORTED_CONFIG_VERSIONS), {})
+"""The configuration rewrites of this release. Version 1 is the first format, so there are none yet."""
+
 RELEASE = f"v{__version__}"
 # Nested storage kinds are selected inside telemetry options, never as sections.
 _SECTIONS = (frozenset(BUILTINS) - NESTED - OPERATOR) | {"assessment", "session_fallbacks", "version"}
@@ -280,6 +343,16 @@ def _resolve_path(base_dir, value, kind, adapter, strict=True):
         raise OrchestrationError(f"Invalid {kind} adapter {adapter} path.", "configuration_error") from exc
 
 
+def sqlite_store_path(options, base_dir):
+    """The file the ``sqlite`` store opens for ``options``: its ``path`` resolved against ``base_dir``.
+
+    Construction and operator tooling (backups, upgrades) use this one rule, so
+    they always address the same file. ``:memory:`` is returned unchanged.
+    """
+    path = options.get("path", ".xorchestrate/state.sqlite3") if isinstance(options, dict) else None
+    return path if path == ":memory:" else _resolve_path(Path(base_dir).resolve(), path, "store", "sqlite")
+
+
 def _select(kind, specification, base_dir):
     if not isinstance(specification, dict) or not isinstance(specification.get("adapter"), str):
         raise OrchestrationError(f"{kind} requires an adapter and options object.", "configuration_error")
@@ -298,8 +371,7 @@ def _select(kind, specification, base_dir):
     if kind in {"providers", "sessions"} and adapter in BUILTINS[kind] and adapter != "pr":
         options["cwd"] = _resolve_path(base_dir, options.get("cwd", "."), kind, adapter)
     if kind == "store" and adapter == "sqlite":
-        path = options.get("path", ".xorchestrate/state.sqlite3")
-        options["path"] = path if path == ":memory:" else _resolve_path(base_dir, path, kind, adapter)
+        options["path"] = sqlite_store_path(options, base_dir)
     if kind == "telemetry" and adapter == "local" and isinstance(options.get("runtime_root"), str):
         options["runtime_root"] = _resolve_path(base_dir, options["runtime_root"], kind, adapter, strict=False)
     return AdapterSelection(kind, adapter, target, options)
@@ -396,6 +468,41 @@ def validate_config(config=None, base_dir=None, *, telemetry_defaults=None):
     )
 
 
+def _construct_telemetry(selection):
+    module, name = selection.target.split(":", 1)
+    factory = getattr(importlib.import_module(module), name)
+    options = deepcopy(selection.options)
+    if selection.adapter == "local":
+        return factory(options, resolve=lambda component, adapter: factory_for("telemetry_" + component, adapter))
+    return factory(options)
+
+
+def build_telemetry(config=None, base_dir=None, *, project=None):
+    """Construct only a configuration's telemetry adapter, for operator snapshots; ``None`` when disabled.
+
+    Unlike ``build``, which keeps an unavailable telemetry state so other work
+    continues, a configuration whose telemetry cannot be constructed is refused
+    here (``telemetry_unavailable``) with the bounded cause. The caller closes
+    the adapter.
+    """
+    if project is not None and not isinstance(project, ProjectContext):
+        raise OrchestrationError("Project must be a ProjectContext value.", "configuration_error")
+    defaults = project.telemetry_defaults() if project is not None else None
+    base_dir = base_dir or (project.data_dir if project is not None else None)
+    resolved = validate_config(config, base_dir, telemetry_defaults=defaults)
+    if resolved.telemetry is None:
+        if resolved.telemetry_unavailable:
+            raise OrchestrationError("Telemetry is unavailable.", "telemetry_unavailable",
+                                     {"cause": resolved.telemetry_cause})
+        return None
+    try:
+        return _construct_telemetry(resolved.telemetry)
+    except Exception as error:
+        from .adapters.telemetry import construction_cause
+        raise OrchestrationError("Telemetry is unavailable.", "telemetry_unavailable",
+                                 {"cause": construction_cause(error)}) from error
+
+
 def build(config=None, base_dir=None, *, project=None, telemetry_defaults=None):
     """Assemble a runtime.
 
@@ -420,9 +527,8 @@ def build(config=None, base_dir=None, *, project=None, telemetry_defaults=None):
             module, name = selection.target.split(":", 1)
             factory = getattr(importlib.import_module(module), name)
             options = deepcopy(selection.options)
-            if selection.kind == "telemetry" and selection.adapter == "local":
-                resource = factory(options, resolve=lambda component, adapter: factory_for(
-                    "telemetry_" + component, adapter))
+            if selection.kind == "telemetry":
+                resource = _construct_telemetry(selection)
             elif selection.kind == "evaluators" and selection.adapter == "tool":
                 resource = factory(options, providers)
             elif selection.kind == "providers" and selection.adapter == "pr":

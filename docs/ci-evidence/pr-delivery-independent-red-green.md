@@ -119,3 +119,24 @@ commit mechanism does not silently eliminate the attempted interleaving.
 
 These narrow checks supplement the preceding evidence; they do not relabel its
 older source hashes. The local/controlled-HTTPS limits above still apply.
+
+## Current branch refs versus unchanged PR metadata
+
+An unchanged PR payload can itself be stale while its source or target branch
+has advanced. Repeating that payload is insufficient to establish a current
+candidate. Independent test commit `35a3617` gives the loopback API a separate
+canonical branch-ref map and advances the source and base independently while
+leaving the PR payload and retained tested context unchanged.
+
+Against the actual pre-guard adapter at `232c4cb`, both cases fail on the intended
+assertion: the snapshot still claims `complete=true`. The unchanged-ref healthy
+control passes. With repaired adapter `82ca388`, all **23 HTTP cases pass**.
+The [current-ref regression record](pr-delivery-current-ref-regression.json)
+retains exact source/test hashes, commands and failing assertions.
+
+The corrected observation resolves explicit `refs/heads/...` source and target
+refs separately. A mismatch prevents a technical clear and records the newer
+canonical identities. The tests also require the reported source, tested base
+and tested merge to retain their original identities; current branch refs do
+not rewrite evidence about an older execution. This is a time-bound observation,
+not an atomic promise that a branch cannot move afterward.

@@ -227,6 +227,13 @@ class GitHubPRHost:
     def snapshot(self, repository, number):
         root = f"/repos/{repository}"
         pr = self._short(self._request("GET", root + f"/pulls/{number}"))
+        canonical = {
+            "source": self.branch(pr["source_repository"], "refs/heads/" + pr["head_ref"])
+                if pr["source_repository"] else None,
+            "base": self.branch(repository, "refs/heads/" + pr["base_ref"]),
+        }
+        current_refs_match = (canonical["source"] is not None and canonical["base"] is not None
+            and canonical["source"].get("sha") == pr["head"] and canonical["base"].get("sha") == pr["base"])
         runs = self._all(root + "/actions/runs?" + urllib.parse.urlencode({"head_sha": pr["head"]}), "workflow_runs")
         relevant = [row for row in runs if row.get("event") == "pull_request"
             and row.get("path") == ".github/workflows/ci.yml" and row.get("head_sha") == pr["head"]
@@ -255,4 +262,11 @@ class GitHubPRHost:
             "provenance": self._provenance(repository, pr, run) if run and validation == "passed" else {"status": "incomplete"},
             "run": {key: run.get(key) for key in ("id", "run_attempt", "event", "status", "conclusion", "attempt_started_at")} if run else None,
             "observed_at": datetime.now(timezone.utc).isoformat()})
+        pr["canonical_refs"] = canonical
+        if not current_refs_match:
+            # Keep the PR's reported/tested candidate intact as historical facts.
+            # Canonical branch resolution is a separate current observation.
+            pr["tested_evidence"] = pr["provenance"]
+            pr.update({"complete": False, "validation": "unknown", "provenance": {
+                "status": "incomplete", "reason": "current_refs_changed"}})
         return pr

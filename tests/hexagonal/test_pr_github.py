@@ -39,6 +39,26 @@ def test_http_observation_joins_source_checks_to_proven_tested_merge_and_reviews
     assert all(request["authorization"] == "Bearer inert-pr-test-token" for request in remote.requests)
 
 
+@pytest.mark.parametrize("advanced", ["source", "base"])
+def test_unchanged_stale_pr_payload_cannot_clear_advanced_canonical_branch_refs(remote, advanced):
+    pr_before = deepcopy(remote.pr)
+    context_before = deepcopy(remote.context)
+    branch = "refs/heads/feature" if advanced == "source" else "refs/heads/master"
+    advanced_sha = "f" * 40
+    remote.references[branch]["sha"] = advanced_sha
+    with pull_request_api(remote) as api:
+        result = host(api).snapshot(remote.repository, 17)
+    assert result["complete"] is False, "unchanged PR metadata concealed a newer canonical branch revision"
+    assert result["validation"] != "passed"
+    assert result["provenance"]["status"] != "qualified"
+    assert result["canonical_refs"][advanced]["sha"] == advanced_sha
+    # Current branch observations must not rewrite what the retained run actually tested.
+    assert result["head"] == pr_before["head"]["sha"]
+    assert result["base"] == pr_before["base"]["sha"]
+    assert result["merge"] == pr_before["merge_commit_sha"]
+    assert remote.pr == pr_before and remote.context == context_before
+
+
 def test_configured_pr_provider_is_active_through_project_application_composition(remote, project):
     with pull_request_api(remote) as api:
         config = {"version": 1, "providers": {"delivery": {"adapter": "pr", "options": {

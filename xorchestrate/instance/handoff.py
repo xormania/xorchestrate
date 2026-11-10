@@ -117,10 +117,17 @@ def handoff(home, release, argv, *, execute=os.execve, runner=subprocess.run):
     """
     if release == RELEASE:
         return None
-    if os.environ.get(HANDOFF_VARIABLE) == release:
+    incoming = os.environ.get(HANDOFF_VARIABLE)
+    if incoming == release:
         raise OrchestrationError(f"The {release} toolchain runs release {RELEASE}; rebuild it by removing "
                                  f"{home.toolchains / release}.", "toolchain_mismatch",
                                  {"release": release, "running": RELEASE})
+    if incoming:
+        # Another launcher handed this command to us; handing it on to a third release (or back)
+        # could loop between releases that disagree about which one runs it.
+        raise OrchestrationError(f"Release {RELEASE} was handed this command for {incoming} and would hand it on to "
+                                 f"{release}; refusing to loop between releases.", "handoff_loop",
+                                 {"handed_off_for": incoming, "running": RELEASE, "release": release})
     python = build_toolchain(home, release, runner=runner)
     environment = {**os.environ, HANDOFF_VARIABLE: release}
     return execute(str(python), [str(python), "-P", "-m", "xorchestrate", *argv], environment)

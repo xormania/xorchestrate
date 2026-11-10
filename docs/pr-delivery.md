@@ -63,6 +63,10 @@ not change. Collection/authentication failures produce `incomplete`; they never
 mean there are no blockers. An observation is not an atomic promise about future
 GitHub state. The current loose ruleset can still permit the base to advance
 between inspection and merge.
+Each snapshot also resolves canonical source and target branch refs separately
+from the PR payload. A missing ref or disagreement makes the current observation
+incomplete, even when repeated PR payloads are unchanged. Reported/tested merge
+provenance remains historical evidence; it is never relabeled with the new refs.
 
 Technical qualification consumes the CI aggregate's version 2 result and version
 1 candidate context. It checks the source head separately from the generated

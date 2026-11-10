@@ -5,6 +5,8 @@ contract from its documented behaviour, not from any implementation.
 """
 
 INVALID_NAMES = ("", ".hidden", "../escape", "a/b", "spaced name")
+# Keys may be paths of names; these are still refused.
+INVALID_KEYS = ("", ".hidden", "../escape", "a/../b", "a//b", "/a", "a/", "a/.b", "spaced name")
 
 
 def companion_records(companion):
@@ -29,15 +31,37 @@ def companion_records(companion):
     # A capability added later is just another kind: no port or adapter change.
     assert alpha.write("snapshot-archive", "bundle-1", b"\x00\x01") is True
     assert alpha.keys("snapshot-archive") == ["bundle-1"] and alpha.read("snapshot-archive", "bundle-1") == b"\x00\x01"
+    # Keys may be paths of names, so a capability can keep a tree of records.
+    tree = {"inst/bundle/manifest.json": b"{}", "inst/bundle/artifacts/sha256/ab/abcd": b"\x02",
+            "inst/other/manifest.json": b"[]"}
+    for key, data in tree.items():
+        assert alpha.write("telemetry", key, data) is True
+    assert alpha.keys("telemetry", recursive=True) == sorted(tree)
+    assert alpha.keys("telemetry") == [], "without recursive only single-name keys are listed"
+    shared.write("launchers", "lib/helper.sh", b"#!/bin/sh\n")
+    assert shared.keys("launchers") == [] and shared.keys("launchers", recursive=True) == ["lib/helper.sh"]
+    shared.write("policies", "disabled/old.json", b"{}")
+    assert shared.keys("policies") == ["a.json", "b.json"], "a nested record is not a flat kind's record"
+    assert {key: alpha.read("telemetry", key) for key in tree} == tree
+    assert beta.keys("telemetry") == [] and beta.read("telemetry", "inst/bundle/manifest.json") is None
+    assert alpha.read("telemetry", "inst/bundle") is None, "a key prefix is not a record"
+    for conflicting in ("inst/bundle/manifest.json/child", "inst/bundle"):
+        _refused(lambda key=conflicting: alpha.write("telemetry", key, b"x"), conflicting)
     for name in INVALID_NAMES:
-        for call in (lambda: alpha.read(name, "key"), lambda: alpha.write("kind", name, b"x"),
-                     lambda: companion.records(name or "/")):
-            try:
-                call()
-            except Exception as error:  # noqa: BLE001 - any refusal satisfies the contract
-                assert getattr(error, "code", None) == "invalid_arguments", (name, error)
-            else:
-                raise AssertionError(f"invalid name {name!r} was accepted")
+        for call in (lambda: alpha.read(name, "key"), lambda: companion.records(name or "/")):
+            _refused(call, name)
+    for key in INVALID_KEYS:
+        for call in (lambda: alpha.read("kind", key), lambda: alpha.write("kind", key, b"x")):
+            _refused(call, key)
+
+
+def _refused(call, name):
+    try:
+        call()
+    except Exception as error:  # noqa: BLE001 - any refusal satisfies the contract
+        assert getattr(error, "code", None) == "invalid_arguments", (name, error)
+    else:
+        raise AssertionError(f"invalid name {name!r} was accepted")
 
 
 def version_control(vcs, repository, linked, unrelated_directory):
@@ -51,6 +75,9 @@ def version_control(vcs, repository, linked, unrelated_directory):
     roots = vcs.root_commits(str(repository))
     assert roots and roots == vcs.root_commits(str(linked))
     assert vcs.root_commits(str(unrelated_directory)) == frozenset()
+    revision = vcs.revision(str(repository))
+    assert isinstance(revision, str) and revision, "a repository with history has a checked-out revision"
+    assert vcs.revision(str(unrelated_directory)) is None
 
 
 def repository_hosting(hosting, private_url, public_url, unanswerable_urls):

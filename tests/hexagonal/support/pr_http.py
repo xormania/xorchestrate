@@ -6,10 +6,11 @@ import threading
 from contextlib import contextmanager
 from copy import deepcopy
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 from scripts.ci.candidate import capture_context
 from tests.hexagonal.support.ci_candidate import artifact_zip, candidate_repository, github_observation
+from tests.hexagonal.support.ci_candidate import git as git_command
 
 
 class PullRequestAPI:
@@ -34,6 +35,12 @@ class PullRequestAPI:
                        for index, name in enumerate(("CI result", "Hexagonal architecture"), 100)]
         self.commit = {"sha": git["tested_commit"], "tree": {"sha": git["tree"]},
                        "parents": [{"sha": value} for value in git["parents"]]}
+        self.references = {
+            "refs/heads/feature": {"sha": git["source"], "commit": {"tree": {
+                "sha": git_command(git["root"], "rev-parse", git["source"] + "^{tree}")}}},
+            "refs/heads/master": {"sha": git["tested_base"], "commit": {"tree": {
+                "sha": git_command(git["root"], "rev-parse", git["tested_base"] + "^{tree}")}}},
+        }
         self.threads = [{"id": "owner-thread", "isResolved": False}]
         self.result = {"schema_version": 2, "status": "passed", "candidate_context": self.context}
         self.requests = []
@@ -63,6 +70,10 @@ class PullRequestAPI:
                 return 200, {**row, "run_started_at": row.get("run_started_at", f"2026-11-10T12:00:{attempt:02}Z")}
         if parsed.path == root + f"/commits/{self.pr['head']['sha']}/check-runs":
             return 200, {"check_runs": self.checks}
+        if parsed.path.startswith(root + "/commits/"):
+            reference = unquote(parsed.path.removeprefix(root + "/commits/"))
+            if reference in self.references:
+                return 200, self.references[reference]
         if parsed.path == root + "/pulls/17/reviews":
             return 200, []
         if parsed.path == "/graphql":

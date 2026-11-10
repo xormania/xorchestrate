@@ -67,6 +67,40 @@ def protect(value, secrets=()):
     return walk(deepcopy(value))
 
 
+SNAPSHOT_TRIGGERS = ("before_upgrade", "before_sync", "before_approve")
+"""Moments at which the operator layer snapshots the corpus, when selected (D17)."""
+MANUAL_SNAPSHOT = "manual"
+"""Always available through ``xorchestrate telemetry snapshot``; not a configurable trigger."""
+DEFAULT_SNAPSHOT_TRIGGERS = ("before_upgrade",)
+
+
+def snapshot_policy(value):
+    """Validate the ``snapshots`` telemetry option; return ``(triggers, archive)``.
+
+    ``{"triggers": [...], "archive": bool}``; both fields are optional and
+    default to ``["before_upgrade"]`` and ``false``. An absent option is the
+    default. Unknown trigger names, and ``manual``, are refused.
+    """
+    if value is None:
+        return DEFAULT_SNAPSHOT_TRIGGERS, False
+    if not isinstance(value, dict) or value.keys() - {"triggers", "archive"}:
+        raise OrchestrationError("Telemetry snapshots must be {\"triggers\": [...], \"archive\": bool}.",
+                                 "configuration_error", {"option": "snapshots"})
+    triggers = value.get("triggers", list(DEFAULT_SNAPSHOT_TRIGGERS))
+    archive = value.get("archive", False)
+    if (not isinstance(triggers, list) or any(not isinstance(item, str) for item in triggers)
+            or type(archive) is not bool):
+        raise OrchestrationError("Telemetry snapshot triggers must be names and archive a boolean.",
+                                 "configuration_error", {"option": "snapshots"})
+    unknown = sorted({item for item in triggers if item not in SNAPSHOT_TRIGGERS})
+    if unknown:
+        raise OrchestrationError(
+            "Unknown telemetry snapshot trigger; use " + ", ".join(SNAPSHOT_TRIGGERS)
+            + f" (`{MANUAL_SNAPSHOT}` is always available through `xorchestrate telemetry snapshot`).",
+            "configuration_error", {"option": "snapshots", "unknown": unknown, "known": list(SNAPSHOT_TRIGGERS)})
+    return tuple(dict.fromkeys(triggers)), archive
+
+
 def record_observation(sink, event_type, payload, context, **metadata):
     """Never convert an optional capture failure into a different action outcome."""
     if sink is None:
