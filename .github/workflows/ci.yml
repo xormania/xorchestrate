@@ -435,6 +435,17 @@
           "run": "jev_base_ref=\"$JEV_BASE_REF\"\nif [ -z \"$jev_base_ref\" ] || [ \"$jev_base_ref\" = \"0000000000000000000000000000000000000000\" ]; then\n  jev_base_ref=\"$(git rev-parse HEAD^)\"\nfi\npython3 -m scripts.architecture --jev-config contracts/hexagonal-jev.json --base-ref \"$jev_base_ref\" --diagnostics-only --output \"$RUNNER_TEMP/architecture/diagnostics.json\""
         },
         {
+          "name": "Measure Jev effectiveness on paired architecture controls",
+          "continue-on-error": true,
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
+          "env": {
+            "TYPESAFE_API_KEY": "${{ secrets.TYPESAFE_API_KEY || secrets.JEV_API_KEY }}",
+            "JEV_ENDPOINT": "${{ vars.JEV_ENDPOINT }}",
+            "JEV_MODEL": "${{ vars.JEV_MODEL }}"
+          },
+          "run": "python3 -m scripts.architecture.effectiveness --mode live --jev-config contracts/hexagonal-jev.json --max-seconds 120 --output \"$RUNNER_TEMP/architecture/effectiveness.json\""
+        },
+        {
           "name": "Record unavailable diagnostics",
           "if": "!cancelled() && (steps.checkout.outcome != 'success' || steps.cache.outcome != 'success' || steps.python.outcome != 'success' || steps.dependencies.outcome != 'success')",
           "run": "mkdir -p \"$RUNNER_TEMP/architecture\"\ncat > \"$RUNNER_TEMP/architecture/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"launched\":false,\"reason\":\"CI checkout, cache, interpreter or dependency setup did not succeed\"}\nJSON"

@@ -150,7 +150,8 @@
         "tests/hexagonal/test_architecture_cli.py": "composition",
         "tests/hexagonal/test_testkit_boundaries.py": "framework",
         "tests/hexagonal/test_security_lint.py": "calibration",
-        "tests/hexagonal/test_architecture_context.py": "composition"
+        "tests/hexagonal/test_architecture_context.py": "composition",
+        "tests/hexagonal/test_architecture_effectiveness.py": "calibration"
       }
     },
     "live-acceptance": {

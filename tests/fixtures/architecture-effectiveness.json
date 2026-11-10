@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "id": "architecture-effectiveness-pilot-v1",
+  "description": "Three paired source groups. Oracle and scripted predictions are withheld from live provider inputs. Semantic payload faults extend the import/call/literal rules; those rules are preserved without lexical substitutes.",
+  "profile": {
+    "schema_version": 1,
+    "id": "effectiveness.hexagonal",
+    "version": 1,
+    "description": "The core may call an injected port for neutral domain operations. Storage table/column choices, SQL statements and JSON-RPC wire envelopes belong inside adapters; the core cannot construct them. Method names alone do not establish infrastructure coupling.",
+    "source_roots": ["app"],
+    "roles": {
+      "core": {
+        "modules": ["app.core"],
+        "allowed_roles": ["core"],
+        "allowed_external": [],
+        "allow_dynamic": false,
+        "description": "Infrastructure-neutral application behavior. Calling an injected port, including methods named open or execute, is legitimate. Concrete imports, storage encodings and wire envelopes are outside this role."
+      }
+    }
+  },
+  "common_sources": {},
+  "cases": [
+    {
+      "id": "imports-healthy",
+      "group": "concrete-import",
+      "sources": {"app/core.py": "def persist(store, value):\n    return store.save(value)\n"},
+      "selection": [{"path": "app/core.py", "start_line": 1, "end_line": 2}],
+      "oracle": {"fault": false, "findings": []},
+      "fixture_outcome": "no_concern"
+    },
+    {
+      "id": "imports-fault",
+      "group": "concrete-import",
+      "sources": {"app/core.py": "def persist(store, value):\n    import sqlite3\n    return sqlite3.connect(value)\n"},
+      "selection": [{"path": "app/core.py", "start_line": 1, "end_line": 3}],
+      "oracle": {"fault": true, "findings": [{"path": "app/core.py", "start_line": 2, "end_line": 3, "checks": ["semantic_boundaries"], "deterministic_rule_ids": ["dependencies.external"], "reason": "Core directly imports and instantiates concrete storage despite its explicit external-dependency contract."}]},
+      "fixture_outcome": "concern"
+    },
+    {
+      "id": "storage-healthy",
+      "group": "storage-payload",
+      "sources": {"app/core.py": "def persist(store, value):\n    return store.save({'body': value})\n"},
+      "selection": [{"path": "app/core.py", "start_line": 1, "end_line": 2}],
+      "oracle": {"fault": false, "findings": []},
+      "fixture_outcome": "no_concern"
+    },
+    {
+      "id": "storage-fault",
+      "group": "storage-payload",
+      "sources": {"app/core.py": "def persist(store, value):\n    query = 'INSERT INTO work_items (body) VALUES (?)'\n    return store.execute(query, [value])\n"},
+      "selection": [{"path": "app/core.py", "start_line": 1, "end_line": 3}],
+      "oracle": {"fault": true, "findings": [{"path": "app/core.py", "start_line": 2, "end_line": 3, "checks": ["semantic_boundaries", "port_abstraction"], "deterministic_rule_ids": [], "reason": "Core constructs the adapter's SQL statement and table/column encoding. Legal imports alone cannot detect this explicit semantic responsibility breach."}]},
+      "fixture_outcome": "concern"
+    },
+    {
+      "id": "transport-healthy-suspicious-name",
+      "group": "transport-envelope",
+      "sources": {"app/core.py": "def open(port, value):\n    return port.execute(value)\n"},
+      "selection": [{"path": "app/core.py", "start_line": 1, "end_line": 2}],
+      "oracle": {"fault": false, "findings": []},
+      "fixture_outcome": "concern"
+    },
+    {
+      "id": "transport-fault",
+      "group": "transport-envelope",
+      "sources": {"app/core.py": "def open(port, value):\n    packet = {'jsonrpc': '2.0', 'id': 1, 'method': 'save', 'params': {'body': value}}\n    return port.execute(packet)\n"},
+      "selection": [{"path": "app/core.py", "start_line": 1, "end_line": 3}],
+      "oracle": {"fault": true, "findings": [{"path": "app/core.py", "start_line": 2, "end_line": 3, "checks": ["semantic_boundaries", "port_abstraction"], "deterministic_rule_ids": [], "reason": "Core constructs a concrete JSON-RPC envelope and transport identifier; these choices belong in the injected adapter."}]},
+      "fixture_outcome": "insufficient_evidence"
+    }
+  ]
+}

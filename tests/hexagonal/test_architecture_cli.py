@@ -1,6 +1,7 @@
 """Exercise the actual local/CI gate, including its process exit status."""
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -57,7 +58,7 @@ def test_ci_retains_blocking_gate_and_independent_diagnostics(tmp_path):
     checks = plan(directory=tmp_path, suite="static", mode="protocol-fixture")
     architecture = [check for check in checks if check.name == "architecture"]
     assert len(architecture) == 1 and architecture[0].argv[1:3] == ("-m", "scripts.architecture")
-    assert not any("-m scripts.architecture" in step.get("run", "")
+    assert not any(re.search(r"-m\s+scripts\.architecture(?:\s|$)", step.get("run", ""))
                    and "--diagnostics-only" not in step["run"]
                    for job in workflow["jobs"].values() for step in job["steps"])
     job = workflow["jobs"]["architecture"]

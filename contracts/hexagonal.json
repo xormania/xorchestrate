@@ -873,7 +873,8 @@
     },
     "architecture_entrypoints": {
       "modules": [
-        "scripts.architecture.__main__"
+        "scripts.architecture.__main__",
+        "scripts.architecture.effectiveness"
       ],
       "allowed_roles": [
         "architecture_foundation",
@@ -886,7 +887,10 @@
         "core",
         "work_acceptance",
         "inspection",
-        "adapters"
+        "adapters",
+        "testkit_adapters",
+        "testkit_foundation",
+        "testkit_core"
       ],
       "allowed_external": [
         "stdlib:*",
