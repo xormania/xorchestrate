@@ -228,17 +228,49 @@ class Prepared:
 
 
 SNAPSHOT_HISTORY = 20
+UPGRADE_JOURNAL = "upgrade.json"
 
 
-def _triggered_snapshots(instance, tracked, companion, context, rendered):
+def archive_journal(instance, reason):
+    """Move an upgrade journal aside as ``upgrade.<UTC time>.abandoned.json``; return its new path."""
+    path = instance.data_dir / UPGRADE_JOURNAL
+    if not path.exists():
+        return None
+    journal = read_document(path, private=True) or {}
+    target = path.with_name(f"upgrade.{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')}.abandoned.json")
+    write_document(target, {**journal, "abandoned": reason})
+    path.unlink()
+    return str(target)
+
+
+def abandon_upgrade(instance, reason):
+    """Archive an unfinished upgrade journal once the instance runs normally without it.
+
+    Called when the instance runs the pinned release: an attempt that never
+    recorded its release was abandoned (for example by restoring the pin), so a
+    later upgrade must not resume its old snapshot and backup. A journal whose
+    release was recorded is kept for ``upgrade`` to finish verifying.
+    """
+    path = instance.data_dir / UPGRADE_JOURNAL
+    if not path.exists():
+        return None
+    journal = read_document(path, private=True) or {}
+    if journal.get("flipped") and journal.get("to") == installed_release(instance):
+        return None
+    return archive_journal(instance, reason)
+
+
+def _triggered_snapshots(instance, tracked, companion, context, rendered, skip=False):
     """Take the snapshots the running configuration selects before this render replaces it.
 
     ``before_approve`` fires when the tracked configuration's hash differs from
     the one last rendered (a newly approved configuration takes effect);
     ``before_sync`` when the rendered configuration itself changes. The
     running (previous) configuration's corpus and ``snapshots`` option are
-    used. A selected snapshot that fails refuses the render, so the previous
-    rendered file stays in place.
+    used, and a trigger fires only while the new configuration still selects
+    it, so deselecting a failing trigger takes effect. A selected snapshot that
+    fails refuses the render (``snapshot_failed``), so the previous rendered
+    file stays in place; ``skip`` records the snapshot as skipped instead.
     """
     try:
         previous = read_document(rendered.path)
@@ -251,22 +283,25 @@ def _triggered_snapshots(instance, tracked, companion, context, rendered):
         moments.append("before_approve")
     if previous != rendered.config:
         moments.append("before_sync")
-    configured = snapshots.policy(previous)[0] if moments else ()
+    configured = set(snapshots.policy(previous)[0]) & set(snapshots.policy(rendered.config)[0]) if moments else ()
     selected = [moment for moment in moments if moment in configured]
     if not selected:
         return ()
+    if skip:
+        return ({"status": "skipped", "triggers": selected, "reason": "skip_requested"},)
     return (snapshots.snapshot(previous, context, selected, companion=companion, instance=instance,
                                tracked=tracked),)
 
 
-def prepare(path=None, *, environ=None):
+def prepare(path=None, *, environ=None, skip_snapshots=False):
     """Find the project at ``path``, check its approval and release, and render it.
 
     The approval is checked before every render, so a running server's
     configuration can only be replaced by an approved one, and the instance
     must run the pinned release (``upgrade_required`` otherwise). Snapshots
     the running configuration selects for this moment are taken before the
-    rendered file is replaced.
+    rendered file is replaced, unless ``skip_snapshots``. An upgrade
+    abandoned by restoring the pin is archived (see ``upgrade.py``).
     """
     home = Home.locate(environ)
     services = Services(home)
@@ -278,11 +313,13 @@ def prepare(path=None, *, environ=None):
             raise refusal
     context = context_for(instance, tracked)
     rendered = render(tracked, companion, context, write=False)
-    taken = _triggered_snapshots(instance, tracked, companion, context, rendered)
+    abandon_upgrade(instance, "the instance runs the pinned release again")
+    taken = _triggered_snapshots(instance, tracked, companion, context, rendered, skip_snapshots)
     launchers = copy_launchers(companion, instance.data_dir)
     write_document(rendered.path, rendered.config)
     history = [*instance.record.get("snapshots", []), *taken][-SNAPSHOT_HISTORY:]
     instance = instance.update(approval_hash=tracked.config_hash, rendered_at=datetime.now(timezone.utc).isoformat(),
                                launchers=launchers, versions={"xorchestrate": __version__},
+                               overlay_sha256=snapshots.overlay_sha256(companion, tracked.name),
                                **({"snapshots": history} if taken else {}))
     return Prepared(home, tracked, instance, companion, context, rendered, taken)

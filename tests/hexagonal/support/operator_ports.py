@@ -34,10 +34,10 @@ class _MemoryRecords:
         self.store = store
         self.project = None if project is None else _name(project, "project")
 
-    def keys(self, kind):
+    def keys(self, kind, *, recursive=False):
         _name(kind, "kind")
         return sorted(key for (project, stored_kind, key) in self.store
-                      if project == self.project and stored_kind == kind)
+                      if project == self.project and stored_kind == kind and (recursive or "/" not in key))
 
     def read(self, kind, key):
         return self.store.get((self.project, _name(kind, "kind"), _key(key)))

@@ -164,8 +164,15 @@ a change that selects a trigger applies from the render after it. A render that
 is both a sync and a newly approved configuration takes one bundle naming both
 triggers. Bundles are written to the export root as `<trigger>-<UTC time>`;
 the last 20 triggered snapshots are listed in `instance.json` `snapshots`.
-A selected snapshot that fails refuses the render (or the upgrade), leaving the
-previous rendered configuration in place; `"triggers": []` selects none. A
+A `before_sync` or `before_approve` snapshot is taken only while the new
+configuration also selects that trigger, so a change that deselects a failing
+trigger takes effect. A selected snapshot that fails refuses the render (or the
+upgrade) with `snapshot_failed`, naming the triggers, the bundle path and the
+cause, and leaves the previous rendered configuration in place. The global
+option `--skip-snapshots` (for example `xorchestrate --skip-snapshots describe`
+or `xorchestrate --skip-snapshots upgrade`) proceeds without the snapshot and
+records it as skipped in `instance.json` `snapshots` (or the upgrade report).
+`"triggers": []` selects none. A
 configuration with telemetry disabled takes none. An unknown trigger name,
 including `manual`, is refused when rendering (`configuration_error`) and by the
 collector (`cause` `{"code": "invalid_option", "detail": "snapshots"}`).
@@ -183,7 +190,7 @@ gains an `archive` object:
 | --- | --- |
 | `companion_commit` | the companion's git `HEAD` when archived (`null` without one); uncommitted overlay changes are not in it |
 | `config_sha256` | the approval hash of the tracked configuration last rendered |
-| `overlay_sha256` | SHA-256 of the project's overlay record, `null` when absent |
+| `overlay_sha256` | SHA-256 of the project's overlay record as of the last render (recorded in `instance.json`), `null` when absent |
 | `release` | the release the instance runs |
 | `project`, `instance_id`, `archived_at` | where and when it was archived |
 

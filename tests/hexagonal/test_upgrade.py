@@ -7,17 +7,23 @@ Expectations are stated from the documented procedure and read back through
 SQLite, the instance record and the files on disk, not from the upgrade report.
 """
 import json
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
+import xorchestrate.instance.upgrade as upgrade_module
 from tests.hexagonal.contracts.project_server import initialize, rpc
 from tests.hexagonal.support.project_server import CliEnvironment
 from tests.hexagonal.support.store_fixtures import raw_state
 from tests.hexagonal.support.upgrades import UpgradeMachine, fake_uv, pin_release, raw_store
+from xorchestrate.adapters.local_socket import InstanceLock, lock_is_held
 from xorchestrate.adapters.telemetry_snapshot import verify_bundle
+from xorchestrate.cli import ServerControl
 from xorchestrate.composition import RELEASE
+from xorchestrate.server import ServerFiles, server_identity
 
 SESSION_FIXTURE = Path(__file__).resolve().parent / "fixtures" / "session_server.py"
 
@@ -156,3 +162,143 @@ def test_upgrade_is_refused_while_sessions_are_live_unless_detached(tmp_path):
     finally:
         cli.cleanup()
 
+
+
+# -- review fixes: handoffs, stale journals, guards and locks -------------------------------------
+
+def test_status_and_down_never_hand_off_so_an_older_installed_release_cannot_loop(machine):
+    """An installed release from before upgrades hands every project command to the pin; status must not reach it."""
+    log = machine.base / "legacy.log"
+    legacy = machine.home / "toolchains" / "v8.0.0" / ".venv" / "bin" / "python"
+    legacy.write_text(legacy.read_text().replace(" 1 \"$@\"", " 1 --legacy \"$@\""))
+    machine.pin("v9.9.9")
+    machine.json("upgrade", "--plan-only")  # builds the v9.9.9 toolchain the legacy release would hand to
+    try:
+        result = machine.run("status", timeout=20, FAKE_TOOLCHAIN_LOG=str(log))
+    except subprocess.TimeoutExpired:
+        result = None
+    handoffs = log.read_text().splitlines() if log.exists() else []
+    assert result is not None and result.returncode == 3, (handoffs[:4], result)
+    assert json.loads(result.stdout)["running"] is False and handoffs == []
+    assert machine.json("down")["running"] is False
+
+
+def test_a_handed_off_command_is_never_handed_on_to_another_release(machine):
+    error = machine.json("describe", expect=2, XORCHESTRATE_HANDOFF="v7.0.0")["error"]
+    assert error["code"] == "handoff_loop"
+    assert error["details"] == {"handed_off_for": "v7.0.0", "running": RELEASE, "release": "v8.0.0"}
+
+
+def test_an_abandoned_attempt_is_not_resumed_after_the_pin_was_restored(machine):
+    machine.pin("v9.9.9")
+    machine.json("upgrade", expect=2, FAKE_UV_DATA_VERSION="2", FAKE_TOOLCHAIN_MIGRATION="fail")
+    first, = machine.backups()
+    machine.pin("v8.0.0")  # roll back before upgrading; the earlier configuration is still approved
+    machine.json("call", "create_work", "--json", '{"goal": "Written after the rollback"}')
+    assert machine.journal() is None and len(list(machine.data_dir.glob("upgrade.*.abandoned.json"))) == 1
+    machine.pin("v9.9.9")
+    report = machine.json("upgrade", FAKE_UV_DATA_VERSION="2")
+    assert report["status"] == "upgraded" and report["resumed"] is False
+    backup = Path(report["steps"]["backup"]["path"])
+    assert backup != first and len(machine.backups()) == 2
+    goals = {item["goal"] for item in raw_store(backup / "state.sqlite3")["work"]}
+    assert "Written after the rollback" in goals, "the new attempt backed up the current store"
+    assert len(machine.bundles("before_upgrade-")) == 2
+
+
+def test_the_documented_rollback_after_a_failed_verification_can_be_upgraded_again(machine):
+    machine.pin("v9.9.9")
+    error = machine.json("upgrade", expect=2, FAKE_UV_DATA_VERSION="2", FAKE_TOOLCHAIN_FAIL="describe")["error"]
+    assert error["code"] == "upgrade_verification_failed"
+    assert machine.instance()["release"] == "v9.9.9" and machine.journal()["flipped"] is True
+    backup, = machine.backups()
+    # docs/upgrade.md rollback, without deleting upgrade.json
+    machine.pin("v8.0.0")
+    for name in ("state.sqlite3-wal", "state.sqlite3-shm"):
+        (machine.data_dir / name).unlink(missing_ok=True)
+    shutil.copyfile(backup / "state.sqlite3", machine.store)
+    shutil.copyfile(backup / "instance.json", machine.data_dir / "instance.json")
+    assert raw_store(machine.store)["user_version"] == 1
+    machine.pin("v9.9.9")
+    report = machine.json("upgrade")
+    assert report["status"] == "upgraded" and report["resumed"] is False and "abandoned_journal" in report
+    assert raw_store(machine.store)["user_version"] == 2
+    assert [entry["to"] for entry in machine.instance()["upgrades"]] == ["v9.9.9"]
+
+
+def test_the_migrate_step_runs_only_inside_an_upgrade(machine):
+    machine.pin("v9.9.9")
+    machine.json("upgrade", "--plan-only", FAKE_UV_DATA_VERSION="2")
+    target = machine.home / "toolchains" / "v9.9.9" / ".venv" / "bin" / "python"
+    result = subprocess.run([str(target), "-P", "-m", "xorchestrate", "--project", str(machine.repo), "upgrade-step",
+                             "migrate"], capture_output=True, text=True, env=machine.environment, timeout=60)
+    assert result.returncode == 2 and json.loads(result.stderr)["error"]["code"] == "upgrade_required", result
+    assert raw_store(machine.store)["user_version"] == 1, "the store was not migrated"
+    assert "upgrade-step" not in machine.run("--help").stdout
+
+
+def test_an_approved_change_that_moves_the_store_blocks_the_upgrade(machine):
+    config = {"version": 1, "store": {"adapter": "sqlite", "options": {"path": "${data}/moved.sqlite3"}}}
+    (machine.repo / ".xorchestrate" / "config.json").write_text(json.dumps(config))
+    machine.pin("v9.9.9")
+    error = machine.json("upgrade", expect=2, FAKE_UV_DATA_VERSION="2")["error"]
+    assert error["code"] == "upgrade_blocked"
+    assert {"area": "store", "status": "moved", "from": str(machine.store),
+            "to": str(machine.data_dir / "moved.sqlite3")} in error["details"]["blockers"]
+    assert raw_store(machine.store)["user_version"] == 1 and machine.instance()["release"] == "v8.0.0"
+
+
+def test_a_concurrent_upgrade_is_refused(machine):
+    machine.pin("v9.9.9")
+    lock = InstanceLock(machine.data_dir / "upgrade.lock")
+    assert lock.acquire()
+    try:
+        error = machine.json("upgrade", expect=2)["error"]
+    finally:
+        lock.release()
+    assert error["code"] == "upgrade_in_progress" and machine.journal() is None
+
+
+@pytest.fixture
+def in_process(machine, monkeypatch):
+    """Run ``upgrade()`` in this process with the machine's environment and the CLI's server control."""
+    for key, value in machine.environment.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setenv("FAKE_UV_DATA_VERSION", "2")
+    instance_id = machine.instance()["instance_id"]
+    return lambda **options: upgrade_module.upgrade(machine.repo, server=ServerControl(instance_id, machine.repo, 30),
+                                                    **options)
+
+
+def test_the_server_and_upgrade_locks_are_held_while_the_target_checks_and_migrates(machine, in_process):
+    files = ServerFiles.locate(server_identity(machine.instance()["instance_id"]))
+    held = []
+
+    def runner(command, **options):
+        if "upgrade-step" in command:
+            held.append((command[-1], lock_is_held(files.lock), lock_is_held(machine.data_dir / "upgrade.lock")))
+        return subprocess.run(command, **options)
+
+    machine.pin("v9.9.9")
+    assert in_process(runner=runner)["status"] == "upgraded"
+    assert held == [("check", True, True), ("migrate", True, True), ("check", True, True)]
+    assert not lock_is_held(files.lock) and not lock_is_held(machine.data_dir / "upgrade.lock")
+
+
+def test_a_crash_after_recording_the_release_does_not_record_it_twice(machine, in_process, monkeypatch):
+    saved = upgrade_module._save
+
+    def crash_once(instance, journal):
+        if journal.get("flipped") and not crash_once.done:
+            crash_once.done = True
+            raise OSError("simulated crash before the journal is saved")
+        saved(instance, journal)
+
+    crash_once.done = False
+    monkeypatch.setattr(upgrade_module, "_save", crash_once)
+    machine.pin("v9.9.9")
+    with pytest.raises(OSError):
+        in_process()
+    assert machine.instance()["release"] == "v9.9.9"
+    in_process()
+    assert [(entry["from"], entry["to"]) for entry in machine.instance()["upgrades"]] == [("v8.0.0", "v9.9.9")]

@@ -8,12 +8,47 @@ the storage adapter read that version with a migration step that marks every
 ``work`` record ``{"fixture_migrated": DATA_VERSION}``.
 ``$FAKE_TOOLCHAIN_MIGRATION=fail`` makes the step fail. Both are patched before
 the storage adapter, which binds them at import, is imported.
+``$FAKE_TOOLCHAIN_FAIL=COMMAND`` makes that command fail.
+
+With ``--legacy`` before the arguments, the toolchain behaves like a release
+from before upgrades existed (master ``7903ab0``): every project command whose
+``project.json`` pins another release is handed to that release's toolchain,
+with ``XORCHESTRATE_HANDOFF`` naming it. Each such handoff is appended to
+``$FAKE_TOOLCHAIN_LOG`` when set.
 """
 import os
 import sys
 
+PROJECT_COMMANDS = {"describe", "call", "run", "serve", "connect", "up", "down", "status"}
+
+
+def legacy_handoff(release, arguments):
+    """The pre-upgrade launcher's rule: a project command runs with the release project.json pins."""
+    import json
+    from pathlib import Path
+
+    argv = arguments[3:]
+    project = argv[argv.index("--project") + 1] if "--project" in argv else os.getcwd()
+    command = next((item for item in argv if item in PROJECT_COMMANDS), None)
+    pinned = json.loads((Path(project) / ".xorchestrate" / "project.json").read_text())["release"]
+    if command is None or pinned == release:
+        return
+    if os.environ.get("XORCHESTRATE_HANDOFF") == pinned:
+        sys.stderr.write("toolchain_mismatch\n")
+        sys.exit(2)
+    log = os.environ.get("FAKE_TOOLCHAIN_LOG")
+    if log:
+        with open(log, "a", encoding="utf-8") as target:
+            target.write(f"{release} -> {pinned} {command}\n")
+    python = Path(os.environ["XORCHESTRATE_HOME"]) / "toolchains" / pinned / ".venv" / "bin" / "python"
+    os.execve(str(python), [str(python), "-P", "-m", "xorchestrate", *argv],
+              {**os.environ, "XORCHESTRATE_HANDOFF": pinned})
+
 
 def run(release, data_version, arguments):
+    if arguments[:1] == ["--legacy"]:
+        arguments = arguments[1:]
+        legacy_handoff(release, arguments)
     import xorchestrate
 
     xorchestrate.__version__ = release.removeprefix("v")
@@ -33,6 +68,11 @@ def run(release, data_version, arguments):
         storage_migrations.RELEASE = release
         storage_migrations.REGISTRY = storage_migrations.MigrationRegistry(
             data_version, {source: mark for source in range(1, data_version)})
+    failing = os.environ.get("FAKE_TOOLCHAIN_FAIL")
+    if failing and failing in arguments:
+        # A release whose command fails, for example `describe` during an upgrade's verification.
+        sys.stderr.write('{"error": {"code": "simulated_failure", "message": "simulated failure"}}\n')
+        return 2
     if arguments[:3] != ["-P", "-m", "xorchestrate"]:
         sys.stderr.write(f"unexpected toolchain arguments: {arguments}\n")
         return 2

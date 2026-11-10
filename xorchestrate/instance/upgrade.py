@@ -56,16 +56,20 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from uuid import uuid4
 
+from ..adapters.local_socket import InstanceLock, lock_is_held
 from ..adapters.storage import SQLiteStore
 from ..adapters.storage_migrations import DATA_VERSION
 from ..composition import RELEASE, SUPPORTED_CONFIG_VERSIONS, build_telemetry
-from ..model import OrchestrationError
+from ..model import OrchestrationError, canonical_digest
 from . import snapshots
 from .handoff import build_toolchain
 from .home import Home, private_directory, read_document, write_document
 from .instance import (
+    UPGRADE_JOURNAL,
     approval_refusal,
+    archive_journal,
     context_for,
     installed_release,
     load_instance,
@@ -75,7 +79,9 @@ from .instance import (
 from .render import RENDERED_FILE, render
 from .services import Services
 
-JOURNAL = "upgrade.json"
+JOURNAL = UPGRADE_JOURNAL
+LOCK = "upgrade.lock"
+TOKEN_VARIABLE = "XORCHESTRATE_UPGRADE_TOKEN"
 STEP_TIMEOUT = 600
 STEP_COMMAND = "upgrade-step"
 
@@ -134,6 +140,17 @@ def _telemetry_report(config, context):
 BLOCKING_DATA = {"unsupported", "unrecognized", "migration_unavailable"}
 
 
+def _guard_migration(instance, environ):
+    """Migrate only for the upgrade in progress: its lock is held, it targets this release and passed its token."""
+    environ = os.environ if environ is None else environ
+    journal = read_document(instance.data_dir / JOURNAL, private=True) or {}
+    token = journal.get("token")
+    if (not lock_is_held(instance.data_dir / LOCK) or journal.get("to") != RELEASE or not token
+            or environ.get(TOKEN_VARIABLE) != token):
+        raise OrchestrationError("`upgrade-step migrate` runs only inside `xorchestrate upgrade` to this release.",
+                                 "upgrade_required", {"release": RELEASE, "upgrade_target": journal.get("to")})
+
+
 def upgrade_step(step, path=None, environ=None):
     """Run one step of an upgrade with this release; called by the upgrading launcher.
 
@@ -151,6 +168,8 @@ def upgrade_step(step, path=None, environ=None):
     refusal = approval_refusal(companion, tracked)
     if refusal is not None:
         raise refusal
+    if step == "migrate":
+        _guard_migration(instance, environ)
     context = context_for(instance, tracked)
     report = {"release": RELEASE, "config_versions": sorted(SUPPORTED_CONFIG_VERSIONS), "data_version": DATA_VERSION}
     try:
@@ -196,9 +215,9 @@ class Toolchain:
         self.release, self.python, self.built = release, Path(python), built
         self.root, self.home, self.runner = root, home, runner
 
-    def run(self, *arguments, check=True):
+    def run(self, *arguments, check=True, environment=None):
         """Run ``xorchestrate --project ROOT ARGUMENTS`` with this release; return ``(exit code, JSON, error)``."""
-        environment = {**os.environ, "XORCHESTRATE_HOME": str(self.home.root)}
+        environment = {**os.environ, "XORCHESTRATE_HOME": str(self.home.root), **(environment or {})}
         environment.pop("XORCHESTRATE_HANDOFF", None)
         result = self.runner([str(self.python), "-P", "-m", "xorchestrate", "--project", str(self.root), *arguments],
                              capture_output=True, text=True, timeout=STEP_TIMEOUT, check=False, env=environment,
@@ -214,8 +233,8 @@ class Toolchain:
             error = None
         return result.returncode, value, error
 
-    def step(self, name):
-        code, value, error = self.run(STEP_COMMAND, name)
+    def step(self, name, token=None):
+        code, value, error = self.run(STEP_COMMAND, name, environment={TOKEN_VARIABLE: token} if token else None)
         if code != 0 or not isinstance(value, dict):
             if isinstance(error, dict) and isinstance(error.get("code"), str):
                 raise OrchestrationError(f"The {self.release} upgrade {name} failed: {error.get('message')}",
@@ -245,6 +264,30 @@ def _digest(path):
     return hasher.hexdigest()
 
 
+def store_fingerprint(path):
+    """A logical fingerprint of a SQLite store's content (record count and versions, last event), or ``None``.
+
+    Any write changes it, so a backup taken before it changed no longer describes the store.
+    """
+    if path is None or not Path(path).is_file():
+        return None
+    connection = sqlite3.connect(Path(path).resolve().as_uri() + "?mode=ro", uri=True)
+    try:
+        records = connection.execute("SELECT COUNT(*), COALESCE(SUM(version), 0) FROM records").fetchone()
+        events = connection.execute("SELECT COALESCE(MAX(seq), 0) FROM events").fetchone()
+        version = connection.execute("PRAGMA user_version").fetchone()
+        return canonical_digest({"records": list(records), "events": events[0], "user_version": version[0]})
+    except sqlite3.Error:
+        return None
+    finally:
+        connection.close()
+
+
+def instance_fingerprint(record):
+    """What an upgrade changes in ``instance.json``: a journal is valid only while it is unchanged."""
+    return canonical_digest({key: record.get(key) for key in ("release", "data_version", "upgrades")})
+
+
 def backup(instance, running, *, source, target, snapshot):
     """Back up the instance's state store, records and rendered configuration; return the backup report."""
     moment = _now()
@@ -269,7 +312,8 @@ def backup(instance, running, *, source, target, snapshot):
                 "store": None if store is None else str(store), "files": files,
                 "telemetry_snapshot": (snapshot or {}).get("bundle")}
     write_document(directory / "manifest.json", manifest)
-    return {"path": str(directory), "files": files, "store": manifest["store"]}
+    return {"path": str(directory), "files": files, "store": manifest["store"],
+            "store_fingerprint": store_fingerprint(store)}
 
 
 def _journal_path(instance):
@@ -297,7 +341,7 @@ def _before_upgrade(instance, tracked, companion, running):
 
 
 def upgrade(path=None, *, to=None, plan_only=False, detach=False, server=None, environ=None,
-            runner=subprocess.run):
+            runner=subprocess.run, skip_snapshots=False):
     """Upgrade the instance of the project at ``path`` to its pinned release (see the module docstring).
 
     ``server`` stops, holds and starts the project's server (``stop(detach)``,
@@ -307,6 +351,48 @@ def upgrade(path=None, *, to=None, plan_only=False, detach=False, server=None, e
     services = Services(home)
     tracked = locate_project(path, services.version_control)
     instance = resolve_instance(home, tracked, services.version_control)
+    lock = InstanceLock(instance.data_dir / LOCK)
+    if not lock.acquire():
+        raise OrchestrationError("Another `xorchestrate upgrade` of this project is running.", "upgrade_in_progress",
+                                 {"project": tracked.name})
+    try:
+        return _upgrade(home, services, tracked, instance, to=to, plan_only=plan_only, detach=detach, server=server,
+                        runner=runner, skip_snapshots=skip_snapshots)
+    finally:
+        lock.release()
+
+
+def _valid_journal(instance, source, target):
+    """The journal of an upgrade that can resume, or ``None``; a stale journal is archived.
+
+    A journal is stale when it targets another release, or when ``instance.json``
+    no longer is what the attempt left (another upgrade, or a rollback, came
+    in between). Unchanged ``instance.json`` with a changed store (written
+    while the pin was restored) only invalidates the snapshot and backup.
+    """
+    journal = read_document(instance.data_dir / JOURNAL, private=True)
+    if journal is None:
+        return None, None
+    fingerprint = instance_fingerprint(instance.record)
+    if journal.get("flipped"):
+        valid = source == journal.get("to") == target and journal.get("flipped_fingerprint") == fingerprint
+    else:
+        valid = journal.get("to") == target and journal.get("from") == source and \
+            journal.get("fingerprint") == fingerprint
+    if not valid:
+        return None, archive_journal(instance, "superseded: the instance changed since this attempt")
+    steps = journal.get("steps", {})
+    backed_up = steps.get("backup")
+    if not journal.get("migrating") and backed_up is not None:
+        current = store_fingerprint(Path(backed_up["store"])) if backed_up.get("store") else None
+        if current != backed_up.get("store_fingerprint"):
+            # The store changed after the backup: take the snapshot and backup again.
+            steps.pop("snapshot", None)
+            steps.pop("backup", None)
+    return journal, None
+
+
+def _upgrade(home, services, tracked, instance, *, to, plan_only, detach, server, runner, skip_snapshots):
     companion = services.companion(instance)
     refusal = approval_refusal(companion, tracked)
     if refusal is not None:
@@ -324,17 +410,16 @@ def upgrade(path=None, *, to=None, plan_only=False, detach=False, server=None, e
     if plan_only:
         chain = toolchain(home, target, root, runner=runner)
         return {**report, "plan_only": True, "toolchain": str(chain.python), "plan": chain.step("check")}
-    journal = read_document(_journal_path(instance), private=True)
-    if journal is not None and journal.get("to") != target:
-        # An earlier attempt for another target: it either never took effect or recorded its own
-        # release, which is now the source. Its backup stays.
-        journal = None
+    journal, abandoned = _valid_journal(instance, source, target)
+    if abandoned:
+        report["abandoned_journal"] = abandoned
     if source == target and journal is None:
         return {**report, "status": "current"}
     if journal is None:
         stopped = server.stop(detach) if server is not None else {"was_running": False}
         journal = {"schema": 1, "from": source, "to": target, "started_at": _now().isoformat(), "steps": {},
-                   "server": stopped, "flipped": False}
+                   "server": stopped, "flipped": False, "fingerprint": instance_fingerprint(instance.record),
+                   "token": uuid4().hex}
         _save(instance, journal)
     elif not journal.get("flipped") and server is not None:
         stopped = server.stop(detach)
@@ -344,7 +429,8 @@ def upgrade(path=None, *, to=None, plan_only=False, detach=False, server=None, e
     try:
         if not journal.get("flipped"):
             with (server.hold() if server is not None else _nothing()):
-                _procedure(home, instance, tracked, companion, journal, source, target, root, runner)
+                _procedure(home, instance, tracked, companion, journal, source, target, root, runner,
+                           skip_snapshots)
                 instance = load_instance(home, tracked.name)
         chain = toolchain(home, target, root, runner=runner)
         code, described, error = chain.run("describe")
@@ -378,12 +464,13 @@ class _nothing:
         return False
 
 
-def _procedure(home, instance, tracked, companion, journal, source, target, root, runner):
+def _procedure(home, instance, tracked, companion, journal, source, target, root, runner, skip_snapshots=False):
     """Snapshot, backup, toolchain, dry run, migrate and flip; each finished step is kept in the journal."""
     steps = journal["steps"]
     running = _running_config(instance)
     if "snapshot" not in steps:
-        steps["snapshot"] = _before_upgrade(instance, tracked, companion, running)
+        steps["snapshot"] = ({"status": "skipped", "reason": "skip_requested"} if skip_snapshots
+                             else _before_upgrade(instance, tracked, companion, running))
         _save(instance, journal)
     if "backup" not in steps:
         steps["backup"] = backup(instance, running, source=source, target=target, snapshot=steps["snapshot"])
@@ -393,10 +480,18 @@ def _procedure(home, instance, tracked, companion, journal, source, target, root
     plan = chain.step("check")
     steps["plan"] = plan
     _save(instance, journal)
-    if not plan.get("ready"):
+    blockers = list(plan.get("blockers") or [])
+    planned_store = (plan.get("data") or {}).get("path")
+    if planned_store != steps["backup"].get("store") and (planned_store or steps["backup"].get("store")):
+        # The approved change moves the store: the backup and the migration would not be the same store.
+        blockers.append({"area": "store", "status": "moved", "from": steps["backup"].get("store"),
+                         "to": planned_store})
+    if not plan.get("ready") or blockers:
         raise OrchestrationError(f"Release {target} cannot run this project as it is; nothing was migrated. See "
-                                 "the blockers.", "upgrade_blocked", {"blockers": plan.get("blockers")})
-    migrated = chain.step("migrate")
+                                 "the blockers.", "upgrade_blocked", {"blockers": blockers})
+    journal["migrating"] = True
+    _save(instance, journal)
+    migrated = chain.step("migrate", journal["token"])
     confirmed = chain.step("check")
     data = confirmed.get("data", {})
     if data.get("status") not in {"current", "absent", "not_applicable"}:
@@ -407,11 +502,15 @@ def _procedure(home, instance, tracked, companion, journal, source, target, root
     entry = {"from": source, "to": target, "at": _now().isoformat(), "backup": steps["backup"]["path"],
              "snapshot": steps["snapshot"].get("bundle"), "migrations": (plan.get("data") or {}).get("pending_steps", []),
              "companion_commit": companion.revision()}
-    instance.update(release=target, data_version=data.get("data_version"),
-                    config_version=(confirmed.get("config") or {}).get("version"),
-                    toolchain=str(chain.python) if chain.built else None,
-                    upgrades=[*instance.record.get("upgrades", []), entry])
+    upgrades = list(instance.record.get("upgrades", []))
+    last = upgrades[-1] if upgrades else {}
+    if (last.get("from"), last.get("to"), last.get("backup")) != (source, target, entry["backup"]):
+        upgrades.append(entry)  # recording again after a crash at this point adds nothing
+    instance = instance.update(release=target, data_version=data.get("data_version"),
+                               config_version=(confirmed.get("config") or {}).get("version"),
+                               toolchain=str(chain.python) if chain.built else None, upgrades=upgrades)
     journal["flipped"] = True
+    journal["flipped_fingerprint"] = instance_fingerprint(instance.record)
     journal.pop("status", None)
     journal.pop("error", None)
     _save(instance, journal)

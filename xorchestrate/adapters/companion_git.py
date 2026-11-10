@@ -79,7 +79,12 @@ class DirectoryRecords:
 
     def _path(self, kind, key):
         """The record's path, refusing a symbolic link or a record where a directory is needed."""
+        kind_directory = self.root / _name(kind, "kind")
         path = self._directory(kind)
+        for parent in (kind_directory, path) if path != kind_directory else (path,):
+            if parent.is_symlink():
+                raise OrchestrationError("A companion record path crosses a symbolic link.", "invalid_arguments",
+                                         {"key": key})
         for part in _key(key):
             if path.is_symlink() or (path.exists() and not path.is_dir()):
                 raise OrchestrationError("A companion record path crosses a symbolic link or another record.",
@@ -87,10 +92,13 @@ class DirectoryRecords:
             path = path / part
         return path
 
-    def keys(self, kind):
+    def keys(self, kind, *, recursive=False):
         directory = self._directory(kind)
-        if not directory.is_dir() or directory.is_symlink():
+        if not directory.is_dir() or directory.is_symlink() or (self.root / kind).is_symlink():
             return []
+        if not recursive:
+            return sorted(path.name for path in directory.iterdir()
+                          if path.is_file() and not path.is_symlink() and NAME.match(path.name))
         found = []
         for current, directories, files in os.walk(directory, followlinks=False):
             relative = Path(current).relative_to(directory)

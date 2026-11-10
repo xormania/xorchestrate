@@ -174,3 +174,52 @@ def test_archive_true_archives_each_triggered_snapshot(versioned):
         "a manual snapshot follows the archive setting too"
     archived = sorted((project.companion / "telemetry" / project.name).glob("*/*/manifest.json"))
     assert {path.parent.name for path in archived} == {report["bundle_id"], manual["bundle_id"]}
+
+
+def broken_exports(project):
+    """Make every snapshot fail: the export root is a file."""
+    exports = project.data_dir / "telemetry" / "exports"
+    shutil.rmtree(exports, ignore_errors=True)
+    exports.write_text("not a directory")
+
+
+def test_a_failing_trigger_reports_its_cause_and_can_be_skipped_explicitly(tmp_path):
+    project = with_events(ProjectFixture(tmp_path, overlay=triggers("before_sync")))
+    broken_exports(project)
+    project.write_overlay({**triggers("before_sync"), "guardrail": {"adapter": "rules", "options": {}}})
+    refused = project.json("describe", expect=2)["error"]
+    assert refused["code"] == "snapshot_failed" and refused["details"]["triggers"] == ["before_sync"]
+    assert refused["details"]["cause"]["code"] and refused["details"]["skip"] == "--skip-snapshots"
+    assert refused["details"]["bundle"].startswith(str(project.data_dir / "telemetry" / "exports"))
+    # The explicit escape renders and records the snapshot as skipped.
+    project.json("--skip-snapshots", "describe")
+    record = json.loads((project.data_dir / "instance.json").read_text())
+    assert record["snapshots"][-1] == {"status": "skipped", "triggers": ["before_sync"], "reason": "skip_requested"}
+
+
+def test_a_change_that_deselects_a_failing_trigger_takes_effect(tmp_path):
+    project = with_events(ProjectFixture(tmp_path, overlay=triggers("before_sync")))
+    broken_exports(project)
+    project.write_overlay({**triggers(), "routing": {"adapter": "configurable", "options": {}}})
+    prepared = project.prepared()
+    assert prepared.snapshots == () and "routing" in prepared.config
+
+
+def test_upgrade_can_skip_its_snapshot_explicitly(tmp_path):
+    machine = UpgradeMachine(tmp_path, release="v8.0.0")
+    machine.json("call", "create_work", "--json", '{"goal": "Observed before the upgrade"}')
+    machine.pin("v9.9.9")
+    report = machine.json("--skip-snapshots", "upgrade")
+    assert report["steps"]["snapshot"] == {"status": "skipped", "reason": "skip_requested"}
+    assert machine.bundles() == []
+
+
+def test_archived_provenance_names_the_overlay_of_the_configuration_that_produced_the_bundle(versioned):
+    project = versioned
+    selected = triggers("before_sync", archive=True, dataset_id="archived")
+    project.write_overlay(selected)
+    project.prepared()
+    before = (project.companion / "overlay" / project.name / "overlay.json").read_bytes()
+    project.write_overlay({**selected, "guardrail": {"adapter": "rules", "options": {}}})
+    report, = project.prepared().snapshots
+    assert report["archive"]["archive"]["overlay_sha256"] == hashlib.sha256(before).hexdigest()

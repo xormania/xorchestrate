@@ -26,9 +26,11 @@ tracked setting, and approval works the same way:
 Between steps 2 and 3, project commands (`describe`, `call`, `run`, `serve`,
 `connect`, `up`, `telemetry`) are refused with `upgrade_required`, naming the
 pinned and installed releases, so no release runs against data or a
-configuration it was not upgraded for. `down` and `status` keep running with the
-installed release, so its server can still be inspected and stopped. To go back
-before upgrading, restore the pin: the earlier configuration is still approved.
+configuration it was not upgraded for. `down` and `status` only talk to the
+running server's socket, so they always run in the installed launcher without a
+handoff, and the server can still be inspected and stopped. To go back before
+upgrading, restore the pin: the earlier configuration is still approved, and the
+next project command archives the abandoned attempt's progress file.
 
 ## `xorchestrate upgrade`
 
@@ -39,7 +41,8 @@ xorchestrate upgrade [--to TAG] [--plan-only] [--detach] [--timeout S]
 | Option | Effect |
 | --- | --- |
 | `--to TAG` | The release you expect to upgrade to; refused with `upgrade_target_mismatch` unless it is the approved pin. With `--plan-only` any release can be planned. |
-| `--plan-only` | Build the target toolchain and print its dry-run plan; change nothing (the server keeps running). |
+| `--plan-only` | Build the target toolchain and print its dry-run plan; change nothing in the instance (the server keeps running). With `--to`, this builds and runs a release that is not approved for the project; plan only releases you trust. |
+| `--skip-snapshots` (global option, before `upgrade`) | Skip the `before_upgrade` snapshot; the report records it as skipped. |
 | `--detach` | Stop the server even while sessions are live (they become `disconnected`). |
 | `--timeout S` | Seconds to wait for the server to drain and stop (default 60). |
 
@@ -67,7 +70,9 @@ The steps, each reported in the JSON output:
    `migration_required`, `unsupported` or `invalid`), the store's data version
    and pending migration steps (`data`), and the telemetry corpus (`telemetry`).
    Anything it cannot read is a blocker: the upgrade stops with
-   `upgrade_blocked` before migrating. A configuration in an older format needs
+   `upgrade_blocked` before migrating. So is an approved change that moves the
+   state store (`{"area": "store", "status": "moved"}`): the backup and the
+   migration must be the same store; move the store in a separate change. A configuration in an older format needs
    [`migrate-config`](#configuration-format-rewrites) and a new approval first.
 6. **Migrate.** The target release (`upgrade-step migrate`) runs the explicit
    [data migration chain](state-management.md); then the dry run is repeated to
@@ -85,11 +90,29 @@ Running `upgrade` when the instance already runs the pin reports
 
 ## Interrupted or failed upgrades
 
+One upgrade of a project runs at a time: `upgrade` holds
+`~/.xorchestrate/projects/<project>/upgrade.lock` for the whole command, and a
+second one is refused with `upgrade_in_progress`.
+
 Progress is kept in `~/.xorchestrate/projects/<project>/upgrade.json` with the
 finished steps, `status` (`failed`, `blocked`, `verify_failed`) and the error.
 Run `xorchestrate upgrade` again after fixing the cause: finished steps (the
 snapshot and the backup) are not repeated, and migration resumes at the last
 committed data version. The file is removed when the upgrade finishes.
+
+The file resumes only the attempt it describes. It records the source and target
+releases and a fingerprint of what an upgrade changes in `instance.json`
+(`release`, `data_version`, `upgrades`); when those no longer match (another
+upgrade or a rollback came in between, or the target changed), it is archived
+as `upgrade.<UTC time>.abandoned.json` and a fresh upgrade starts, reported as
+`abandoned_journal`. If the store changed after the backup and before any
+migration began, the snapshot and backup are taken again. A project command
+that runs while the pin equals the installed release archives an attempt that
+never recorded its release.
+
+The internal `upgrade-step migrate` command migrates only for the upgrade in
+progress: its lock must be held, the attempt must target the running release,
+and the upgrading launcher passes it a one-time token.
 
 What each failure leaves:
 
@@ -104,9 +127,10 @@ configuration is still approved) and, if data was migrated, copy the backup's
 `state.sqlite3` over the instance's store, deleting any `state.sqlite3-wal` and
 `-shm` beside it. Then set `release` in `instance.json` back to the old release
 (or copy the backup's `instance.json`). To restore telemetry as well, use
-`telemetry_restore` with the `before_upgrade` bundle. Downgrading migrated data
-without the backup is unsupported. A dedicated rollback command is not provided
-yet.
+`telemetry_restore` with the `before_upgrade` bundle. Delete
+`upgrade.json` (or leave it: a later `upgrade` archives it because
+`instance.json` no longer matches). Downgrading migrated data without the backup
+is unsupported. A dedicated rollback command is not provided yet.
 
 ## Configuration format rewrites
 

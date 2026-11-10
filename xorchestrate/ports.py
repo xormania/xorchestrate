@@ -300,8 +300,12 @@ class CompanionRecords(Protocol):
 
     project: str | None
 
-    def keys(self, kind: str) -> list[str]:
-        """The keys present in ``kind``, including ``/``-separated ones, sorted."""
+    def keys(self, kind: str, *, recursive: bool = False) -> list[str]:
+        """The keys present in ``kind``, sorted: single names only, or with ``recursive`` every key, ``/`` ones included.
+
+        Flat kinds (overlays, approvals, policies, launchers) list only their
+        own records, so a subdirectory someone keeps there is never read as one.
+        """
         ...
 
     def read(self, kind: str, key: str) -> bytes | None:

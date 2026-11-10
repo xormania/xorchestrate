@@ -76,15 +76,23 @@ def snapshot(config, context, triggers, *, destination=None, companion=None, ins
     if not triggers or any(item not in (*SNAPSHOT_TRIGGERS, MANUAL_SNAPSHOT) for item in triggers):
         raise OrchestrationError("Unknown snapshot trigger.", "invalid_arguments", {"triggers": triggers})
     configured_archive = policy(config)[1]
-    telemetry = build_telemetry(config, project=context)
-    if telemetry is None:
-        return {"status": "skipped", "triggers": triggers, "reason": "telemetry_disabled"}
+    name, bundle, telemetry = destination or f"{triggers[0]}-{_stamp()}", None, None
     try:
-        name = destination or f"{triggers[0]}-{_stamp()}"
+        telemetry = build_telemetry(config, project=context)
+        if telemetry is None:
+            return {"status": "skipped", "triggers": triggers, "reason": "telemetry_disabled"}
+        bundle = _bundle_directory(telemetry, name)
         manifest = telemetry.snapshot(name)
-        path = _bundle_directory(telemetry, name)
+    except OrchestrationError as error:
+        raise OrchestrationError(
+            f"The {', '.join(triggers)} telemetry snapshot failed ({error.code}: {error}). Fix the cause, or run the "
+            f"command again with --skip-snapshots to proceed without it.", "snapshot_failed",
+            {"triggers": triggers, "bundle": None if bundle is None else str(bundle),
+             "cause": {"code": error.code, "message": str(error)}, "skip": "--skip-snapshots"}) from error
     finally:
-        telemetry.close()
+        if telemetry is not None:
+            telemetry.close()
+    path = bundle
     report = {"status": "complete", "triggers": triggers, "bundle": str(path), "bundle_id": manifest["bundle_id"],
               "event_count": manifest["source"]["event_count"]}
     if (configured_archive if archive is None else archive):
@@ -109,12 +117,21 @@ def _files(directory):
     return files
 
 
+def overlay_sha256(companion, project):
+    overlay = companion.records(project).read(records.OVERLAY, records.OVERLAY_KEY)
+    return None if overlay is None else hashlib.sha256(overlay).hexdigest()
+
+
 def provenance(companion, instance, tracked):
     """What produced a bundle: the companion commit, configuration digests and the release."""
-    overlay = companion.records(tracked.name).read(records.OVERLAY, records.OVERLAY_KEY)
+    if "overlay_sha256" in instance.record:
+        # Recorded when the configuration was last rendered, beside approval_hash.
+        overlay_digest = instance.record["overlay_sha256"]
+    else:
+        overlay_digest = overlay_sha256(companion, tracked.name)
     return {"companion_commit": companion.revision(),
             "config_sha256": instance.record.get("approval_hash") or tracked.config_hash,
-            "overlay_sha256": None if overlay is None else hashlib.sha256(overlay).hexdigest(),
+            "overlay_sha256": overlay_digest,
             "release": instance.record.get("release", tracked.release),
             "project": tracked.name, "instance_id": instance.instance_id}
 

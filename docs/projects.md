@@ -296,7 +296,10 @@ a kind and its format (`overlay`, `approvals` and `telemetry` per project,
 `policies` and `launchers` independent of projects); a later capability adds a
 kind without changing the port or its adapters. A key is one or more names
 separated by `/`, so a capability can keep a tree of records: archived bundles
-are `telemetry` records keyed `<instance>/<bundle_id>/<file>`. `revision()`
+are `telemetry` records keyed `<instance>/<bundle_id>/<file>`. `keys(kind)`
+lists only single-name keys, so the flat kinds ignore subdirectories (a launcher
+library in `launchers/lib/`, a parked policy in `policies/disabled/`);
+`keys(kind, recursive=True)` lists every key. `revision()`
 reports the companion's committed revision (its git `HEAD`), which archived
 bundles record; xorchestrate writes companion records but never commits them.
 
@@ -319,13 +322,15 @@ permissions.
 
 The installed `xorchestrate` reads `release` from `project.json`. When it is a
 different release, the project commands (`describe`, `call`, `run`, `serve`,
-`connect`, `up`, `down`, `status`, `telemetry`) execute the same command line
-through `~/.xorchestrate/toolchains/<release>/`. The pin must also be the
-release this machine's instance was set up or upgraded for (`instance.json`
-`release`): a newly pinned release takes effect only through
-[`xorchestrate upgrade`](upgrade.md), and until then project commands are
-refused with `upgrade_required`, except `down` and `status`, which run with the
-installed release. A missing toolchain is built with uv
+`connect`, `up`, `telemetry`) execute the same command line through
+`~/.xorchestrate/toolchains/<release>/`. `down` and `status` only talk to the
+server's socket and always run in the installed launcher. The pin must also be
+the release this machine's instance was set up or upgraded for
+(`instance.json` `release`): a newly pinned release takes effect only through
+[`xorchestrate upgrade`](upgrade.md), and until then the other project commands
+are refused with `upgrade_required`. A process that was handed a command for one
+release never hands it on to another (`handoff_loop`), so releases that
+disagree about which one runs a command cannot loop. A missing toolchain is built with uv
 first:
 
 1. `uv python install <python>`;

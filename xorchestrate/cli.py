@@ -61,8 +61,9 @@ from .server import (
 
 SERVER_COMMANDS = {"connect", "up", "down", "status"}
 PROJECT_COMMANDS = SERVER_COMMANDS | {"describe", "call", "run", "serve", "telemetry"}
-# Run with the instance's installed release while an upgrade to a newly pinned one is pending.
-INSTALLED_RELEASE_COMMANDS = {"down", "status"}
+# Only talk to the running server's socket, so they run in this launcher, never through a handoff:
+# whichever release the server runs, and while an upgrade to a newly pinned release is pending.
+LAUNCHER_COMMANDS = {"down", "status"}
 
 
 def _write(value, stream):
@@ -102,11 +103,15 @@ def _parser():
     parser.add_argument("--version", action=_Version, help="Print release identity and supported versions as JSON")
     parser.add_argument("--project", help="A set-up project's repository or worktree (default: the working directory)")
     parser.add_argument("--actor", default="owner", help="Principal for this local process")
+    parser.add_argument("--skip-snapshots", action="store_true",
+                        help="Do not take the telemetry snapshots the configuration selects for this render or "
+                             "upgrade (recorded as skipped)")
     parser.add_argument("--max-frame-bytes", type=int, default=1_048_576)
     parser.add_argument("--request-workers", type=int, default=8, help="Concurrent MCP effect workers")
     parser.add_argument("--control-workers", type=int, default=2, help="Reserved MCP observation/control workers")
     parser.add_argument("--max-pending-requests", type=int, default=64, help="MCP admission bound per worker pool")
-    commands = parser.add_subparsers(dest="command", required=True)
+    # upgrade-step is internal: it is left out of the listed commands.
+    commands = parser.add_subparsers(dest="command", required=True, metavar="COMMAND")
     commands.add_parser("describe", help="List application operations and input schemas")
     call = commands.add_parser("call", help="Run one operation; read JSON from stdin by default")
     call.add_argument("action")
@@ -168,7 +173,7 @@ def _parser():
     migrate = commands.add_parser("migrate-config", help="Rewrite a configuration to the current format version")
     migrate.add_argument("file", nargs="?", help="Configuration file (default: the project's tracked config.json)")
     migrate.add_argument("--write", action="store_true", help="Rewrite the file (default: show the diff only)")
-    step = commands.add_parser("upgrade-step", help="Internal: one upgrade step, run by `upgrade` with the target release")
+    step = commands.add_parser("upgrade-step")
     step.add_argument("step", choices=("check", "migrate"))
     return parser
 
@@ -372,7 +377,8 @@ def _upgrade_command(args):
     tracked = locate_project(args.project)
     instance = resolve_instance(Home.locate(), tracked)
     control = ServerControl(instance.instance_id, tracked.worktree.root, args.timeout)
-    return upgrade(args.project, to=args.to, plan_only=args.plan_only, detach=args.detach, server=control)
+    return upgrade(args.project, to=args.to, plan_only=args.plan_only, detach=args.detach, server=control,
+                   skip_snapshots=args.skip_snapshots)
 
 
 def _operator_command(args):
@@ -466,22 +472,21 @@ def main(argv=None):
         # The pinned release is read from project.json, so it is trusted only
         # once the project is set up here and that file is approved.
         instance = resolve_instance(home, tracked)
+        if args.command in LAUNCHER_COMMANDS:
+            os.environ.pop(HANDOFF_VARIABLE, None)
+            return _server_command(args, tracked)
         release = tracked.release
-        if installed_release(instance, tracked) != release and args.command in INSTALLED_RELEASE_COMMANDS:
-            # A newly pinned release takes effect through `upgrade`; until then the
-            # installed release (recorded in the home) stops and inspects its server.
-            release = installed_release(instance, tracked)
-        elif release != RELEASE or installed_release(instance, tracked) != release:
+        if release != RELEASE or installed_release(instance, tracked) != release:
             for refusal in (approval_refusal(require_companion(home, instance), tracked),
                             upgrade_refusal(instance, tracked)):
                 if refusal is not None:
                     raise refusal
-        # The selected release runs the command; this returns only when it is this release.
+        # The pinned release runs the command; this returns only when it is this release.
         handoff(home, release, argv)
         os.environ.pop(HANDOFF_VARIABLE, None)
         if args.command in SERVER_COMMANDS:
             return _server_command(args, tracked)
-        prepared = prepare(tracked.worktree.root)
+        prepared = prepare(tracked.worktree.root, skip_snapshots=args.skip_snapshots)
         if args.command == "serve" and args.transport == "unix":
             _serve_unix(args, prepared)
             return 0

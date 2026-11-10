@@ -8,7 +8,8 @@ naming the release it was built for, its arguments and the handoff marker.
 stand-in interpreter is this Python itself, so the "toolchain" runs the
 current xorchestrate: a release that reports a version other than the pinned
 one. With ``$FAKE_UV_REAL=release`` it runs the current xorchestrate as the
-toolchain's release through ``support/release_toolchain.py``, and with
+toolchain's release through ``support/release_toolchain.py`` (``legacy``: as a
+release from before upgrades existed, see that module), and with
 ``$FAKE_UV_DATA_VERSION=N`` (fixed when the toolchain is built) that release
 reads data version ``N`` and migrates older stores (see that module). The
 release is read from the toolchain's ``pyproject.toml`` dependency
@@ -50,10 +51,11 @@ def main(arguments):
         interpreter.parent.mkdir(parents=True)
         if os.environ.get("FAKE_UV_REAL") == "1":
             interpreter.write_text(f'#!/bin/sh\nexec "{sys.executable}" "$@"\n')
-        elif os.environ.get("FAKE_UV_REAL") == "release":
+        elif os.environ.get("FAKE_UV_REAL") in {"release", "legacy"}:
+            legacy = " --legacy" if os.environ["FAKE_UV_REAL"] == "legacy" else ""
             interpreter.write_text(
                 f'#!/bin/sh\nexec "{sys.executable}" "{RELEASE_TOOLCHAIN}" {release} '
-                f'{int(os.environ.get("FAKE_UV_DATA_VERSION", "1"))} "$@"\n')
+                f'{int(os.environ.get("FAKE_UV_DATA_VERSION", "1"))}{legacy} "$@"\n')
         else:
             interpreter.write_text(
                 f'#!/bin/sh\nexec "{sys.executable}" "{Path(__file__).resolve()}" toolchain {release} "$@"\n')

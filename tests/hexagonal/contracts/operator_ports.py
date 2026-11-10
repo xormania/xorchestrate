@@ -36,7 +36,12 @@ def companion_records(companion):
             "inst/other/manifest.json": b"[]"}
     for key, data in tree.items():
         assert alpha.write("telemetry", key, data) is True
-    assert alpha.keys("telemetry") == sorted(tree)
+    assert alpha.keys("telemetry", recursive=True) == sorted(tree)
+    assert alpha.keys("telemetry") == [], "without recursive only single-name keys are listed"
+    shared.write("launchers", "lib/helper.sh", b"#!/bin/sh\n")
+    assert shared.keys("launchers") == [] and shared.keys("launchers", recursive=True) == ["lib/helper.sh"]
+    shared.write("policies", "disabled/old.json", b"{}")
+    assert shared.keys("policies") == ["a.json", "b.json"], "a nested record is not a flat kind's record"
     assert {key: alpha.read("telemetry", key) for key in tree} == tree
     assert beta.keys("telemetry") == [] and beta.read("telemetry", "inst/bundle/manifest.json") is None
     assert alpha.read("telemetry", "inst/bundle") is None, "a key prefix is not a record"
