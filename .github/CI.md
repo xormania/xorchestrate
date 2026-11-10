@@ -196,3 +196,43 @@ Static checks remain independent of this extra. The existing application test-ki
 collects the declared telemetry families alongside the current behavior suites.
 Optional collector/exporter failure does not replace the application's required
 effect, receipt or acceptance recording. See [the active guide](../docs/telemetry.md).
+
+## Aggregate result and reviewer summary
+
+`CI result` is an always-running final job. It requires successful path
+classification, static checks, every application shard and its aggregate,
+calibration/multi-harness verification, tmux acceptance, and installed-package
+acceptance when that job is present. Jev remains advisory. Only a successful
+`pull_request` classifier explicitly reporting `code=false` permits heavy jobs
+to be skipped; an absent decision, failed classifier, missing job or cancellation
+cannot establish a pass. Static checks remain required on documentation PRs.
+
+The aggregate downloads this run's retained artifacts. It checks that the expected
+suite reports passed and identify a clean checkout of the actual tested commit.
+A missing or nonempty candidate Git status cannot stand in for that clean identity. Application inventories
+must contain exactly the workflow's shard set, use the current catalog identity,
+have disjoint selected modules/cases, and cover every catalog module. It checks
+the inventory hashes already qualified by the test-kit. Missing or foreign
+required evidence fails the aggregate, even when GitHub job outcomes say success.
+It does not independently enumerate dynamic tests or assess assertion quality.
+
+The job summary lists source head and tested merge commit separately, job outcomes,
+recorded family/shard pass and skip counts, command durations and the run's artifact
+links. Command durations are not workflow wall time. Full reports remain separate
+artifacts, including `ci-result-evidence/result.json`. The summary states evidence
+qualification; GitHub's final `CI result` job status also includes failures of the
+checkout, artifact download and final upload steps. The same stdlib aggregation
+entrypoint is available locally as `python3 -m scripts.ci.result --help`.
+
+### Required-check rollout
+
+The active ruleset's existing `Hexagonal architecture` check remains the enforced
+status until this workflow is merged. After merge and a successful `master` run,
+replace its required status entry with **`CI result`**, using GitHub Actions as its
+source integration (15368). Preserve the ruleset's other settings: PRs, resolved
+review threads, merge commits, deletion/force-push protection, and current owner
+review policy. Then read back the actual ruleset and verify a failing required-job
+control cannot produce a successful `CI result`. Do not activate the new required
+name before the workflow exists on `master`: other active PRs would otherwise
+wait for a status their branches cannot yet emit. Repository settings are an
+explicit rollout operation; this document does not claim they were changed.
