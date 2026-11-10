@@ -19,6 +19,8 @@ ARTIFACTS = {
 }
 JEV_OUTCOMES = {"concern", "no_concern", "insufficient_evidence"}
 JEV_STATUSES = {"complete", "unavailable", "error", "inconclusive", "not_configured"}
+# The public diagnostic selector permits 100 candidates and three named checks.
+JEV_MAX_ASSESSMENTS = 100 * 3
 
 
 def _sha(value, length=64):
@@ -45,7 +47,7 @@ def _diagnostic_scope(value):
 
 
 def _diagnostic_assessments(values):
-    if not isinstance(values, list) or len(values) > 32:
+    if not isinstance(values, list) or len(values) > JEV_MAX_ASSESSMENTS:
         raise ValueError("Invalid diagnostic assessment list")
     result, identities, task_ids = [], set(), set()
     for value in values:
