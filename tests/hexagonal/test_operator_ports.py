@@ -2,6 +2,7 @@
 
 import json
 import socket
+import stat
 
 import pytest
 
@@ -124,11 +125,11 @@ def test_a_project_companion_takes_precedence_over_the_machine_default(project, 
 def test_the_companion_adapter_refuses_its_own_unsafe_location(project, tmp_path):
     inside = project.repo / "notes" / "companion"
     companion = GitDirectoryCompanion({"path": str(inside)}, version_control=GitCLI())
-    assert companion.validate_location() == f"it is inside the project worktree {project.repo}"
+    assert companion.validate_location() == f"it is inside the project at {project.repo}"
     assert GitDirectoryCompanion({"path": str(tmp_path / "outside")}, version_control=GitCLI()).validate_location() is None
     with pytest.raises(OrchestrationError) as refused:
         operations.companion_init(inside, {"XORCHESTRATE_HOME": str(tmp_path / "h")})
-    assert refused.value.code == "companion_exposed" and refused.value.details == {"location": str(inside)}
+    assert refused.value.code == "companion_exposed" and refused.value.details["location"] == str(inside)
 
 
 # -- doctor reports the companion's remote ------------------------------------------------
@@ -161,3 +162,48 @@ def test_the_cli_selects_a_companion_for_one_project(project, tmp_path):
     assert created["scope"] == "project" and created["companion"]["options"]["path"] == str(other)
     used = project.json("companion", "use", str(project.companion), project=False)
     assert used["scope"] == "machine"
+
+
+def test_new_companions_are_private_directories(tmp_path):
+    root = tmp_path / "private"
+    GitDirectoryCompanion({"path": str(root)}, version_control=GitCLI()).initialize()
+    assert stat.S_IMODE(root.stat().st_mode) == 0o700
+
+
+def test_a_companion_others_can_write_is_refused_when_registered_and_when_opened(project, tmp_path):
+    environ = project.provisioned.environment
+    shared = tmp_path / "shared-companion"
+    GitDirectoryCompanion({"path": str(shared)}, version_control=GitCLI()).initialize()
+    shared.chmod(0o777)
+    with pytest.raises(OrchestrationError) as registered:
+        operations.companion_use(shared, environ)
+    assert registered.value.code == "companion_exposed"
+    assert "writable by group or others" in registered.value.details["reason"]
+    # A companion that became writable by others after registration is refused on every open.
+    project.companion.chmod(0o770)
+    error = json.loads(project.run("describe").stderr)["error"]
+    assert error["code"] == "companion_exposed" and error["details"]["location"] == str(project.companion)
+    project.companion.chmod(0o700)
+    assert project.run("describe").returncode == 0
+    loose = tmp_path / "loose"
+    loose.mkdir()
+    loose.chmod(0o777)
+    with pytest.raises(OrchestrationError) as enclosing:
+        operations.companion_init(loose / "inner", {"XORCHESTRATE_HOME": str(tmp_path / "h")})
+    assert "enclosing directory" in enclosing.value.details["reason"]
+
+
+def test_a_companion_nested_in_its_own_repository_inside_a_project_is_refused(project, tmp_path):
+    nested = project.repo / "vendor" / "companion"
+    nested.mkdir(parents=True)
+    git("init", "-q", str(nested), cwd=project.repo)
+    companion = GitDirectoryCompanion({"path": str(nested)}, version_control=GitCLI())
+    assert companion.validate_location() == f"it is inside the project at {project.repo}"
+    with pytest.raises(OrchestrationError) as refused:
+        operations.companion_init(nested, {"XORCHESTRATE_HOME": str(tmp_path / "h")})
+    assert refused.value.code == "companion_exposed"
+    # Registered behind the check's back, it is refused when the project opens it.
+    companion.initialize()
+    Home(project.home).update_settings(companion={"adapter": "git-directory", "options": {"path": str(nested)}})
+    error = json.loads(project.run("describe").stderr)["error"]
+    assert error["code"] == "companion_exposed"

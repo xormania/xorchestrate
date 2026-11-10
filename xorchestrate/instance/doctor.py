@@ -90,7 +90,7 @@ def project_checks(path=None, environ=None):
         services = Services(Home.locate(environ))
         tracked = locate_project(path, services.version_control)
         instance = resolve_instance(services.home, tracked, services.version_control)
-        companion = services.companion(instance)
+        companion = services.companion(instance, validate=False)
     except OrchestrationError as error:
         return [_check("project", "error", str(error), code=error.code)], None
     checks.append(_check("project", "ok", f"{tracked.name} instance {instance.instance_id}",

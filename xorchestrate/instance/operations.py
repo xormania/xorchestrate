@@ -15,20 +15,11 @@ from .instance import load_instance, locate_project, prepare, register, relocate
 from .project import default_name, locate_worktree, read_tracked, write_starter
 from .render import launched_commands, merged, repository_references
 from .services import Services, companion_path_selection
+from .services import refuse_unsafe as _checked
 
 MCP_FILE = ".mcp.json"
 MCP_SERVER = "xorchestrate"
 MCP_ENTRY = {"command": "xorchestrate", "args": ["connect"]}
-
-
-def _checked(companion):
-    """Refuse a companion whose adapter reports its location unsafe."""
-    reason = companion.validate_location()
-    if reason is not None:
-        raise OrchestrationError(f"The companion must not be inside a project repository: {reason}. Approvals "
-                                 "there could be written by the agents the approvals guard against.",
-                                 "companion_exposed", {"location": companion.location})
-    return companion
 
 
 def _select(services, selection, project):

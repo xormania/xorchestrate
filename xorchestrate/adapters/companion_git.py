@@ -14,9 +14,11 @@ from __future__ import annotations
 
 import os
 import re
+import stat
 from pathlib import Path
 
 from ..model import OrchestrationError
+from .local_socket import check_socket_directory
 
 LAYOUT = ("overlay", "approvals", "policies", "launchers")
 REQUIRED = ("overlay", "approvals")
@@ -100,9 +102,39 @@ class GitDirectoryCompanion:
         self.version_control = version_control
 
     def validate_location(self):
+        """Refuse a location others could write to, or that lies inside any project.
+
+        - Ownership: the companion directory must be this user's and not
+          writable by group or others; every enclosing directory, as given and
+          resolved, must be owned by this user or root and not writable by
+          group or others unless sticky (the private-directory rule of the
+          project server's sockets). Before the companion exists, its nearest
+          existing directory and the ones above it are checked the same way.
+        - Projects: no enclosing directory may hold a project
+          (``.xorchestrate/project.json``), however many repositories are
+          nested in between, and the innermost git worktree must not have a
+          ``.xorchestrate/``.
+        """
         existing = self.root
         while not existing.exists() and existing != existing.parent:
             existing = existing.parent
+        if existing == self.root:
+            try:
+                check_socket_directory(self.root / "companion")
+            except OrchestrationError as error:
+                return f"{error.details.get('directory')} is unsafe: {error.details.get('reason')}"
+        else:
+            # Not created yet: the directories it will be created in are enclosing directories.
+            uid = os.getuid()
+            for ancestor in dict.fromkeys([existing, *existing.parents, *existing.resolve().parents]):
+                metadata = os.stat(ancestor)
+                if metadata.st_uid not in (uid, 0):
+                    return f"{ancestor} is unsafe: an enclosing directory is owned by another user"
+                if metadata.st_mode & 0o022 and not metadata.st_mode & stat.S_ISVTX:
+                    return f"{ancestor} is unsafe: an enclosing directory is writable by others without the sticky bit"
+        for directory in dict.fromkeys([self.root, *self.root.parents, *existing.resolve().parents]):
+            if (directory / TRACKED_DIRECTORY / "project.json").is_file():
+                return f"it is inside the project at {directory}"
         worktree = self.version_control.worktree(str(existing))
         if worktree is not None and (Path(worktree.root) / TRACKED_DIRECTORY).exists():
             return f"it is inside the project worktree {worktree.root}"
@@ -116,6 +148,9 @@ class GitDirectoryCompanion:
             raise OrchestrationError("The companion path is not a directory.", "invalid_arguments",
                                      {"path": self.location})
         created = []
+        if not self.root.exists():
+            self.root.mkdir(mode=0o700, parents=True)
+            created.append(str(self.root))
         for name in LAYOUT:
             directory = self.root / name
             if not directory.exists():

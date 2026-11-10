@@ -102,8 +102,12 @@ class Services:
         value = self.machine_companion()
         return (value, "machine") if value is not None else (None, None)
 
-    def companion(self, instance=None):
-        """The companion for ``instance`` (or the machine default), which must exist."""
+    def companion(self, instance=None, *, validate=True):
+        """The companion for ``instance`` (or the machine default), which must exist.
+
+        Its adapter's location check runs every time it is opened, unless
+        ``validate`` is false (``doctor`` reports the check instead).
+        """
         value, scope = self.companion_selection(instance)
         if value is None:
             raise OrchestrationError("No companion is registered; run `xorchestrate setup`.", "companion_required")
@@ -111,7 +115,19 @@ class Services:
         if not companion.exists():
             raise OrchestrationError("The selected companion is missing or incomplete; run xorchestrate setup.",
                                      "companion_required", {"location": companion.location, "scope": scope})
+        if validate:
+            refuse_unsafe(companion)
         return companion
+
+
+def refuse_unsafe(companion):
+    """Refuse a companion whose adapter reports its location unsafe."""
+    reason = companion.validate_location()
+    if reason is not None:
+        raise OrchestrationError(f"The companion at {companion.location} is unsafe: {reason}. Approvals there could "
+                                 "be written by the agents or accounts they guard against.", "companion_exposed",
+                                 {"location": companion.location, "reason": reason})
+    return companion
 
 
 def services(environ=None):

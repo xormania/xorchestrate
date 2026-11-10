@@ -232,10 +232,16 @@ whose commits you pull. So:
 - A project command checks the approval before it hands off to the release
   `project.json` pins (see below), so an unapproved pin never builds or runs
   a toolchain.
-- The companion must be outside every project. Each companion adapter
-  validates its own location; the git-directory adapter refuses a path inside
-  a git worktree that has `.xorchestrate/`, where agents could write
-  approvals. `setup` and `companion init`/`use` refuse such a companion
+- The companion must be private and outside every project. Each companion
+  adapter validates its own location. The git-directory adapter refuses a
+  companion directory not owned by you or writable by group or others, any
+  enclosing directory owned by another non-root user or writable by others
+  without the sticky bit (the rule the server applies to its socket
+  directories), any location below a directory that holds a project
+  (`.xorchestrate/project.json`, however many repositories are nested in
+  between), and a git worktree with `.xorchestrate/`. New companions are
+  created with mode `0700`. `setup` and `companion init`/`use` refuse an
+  unsafe companion, every command that opens the companion refuses it again
   (`companion_exposed`), and `doctor` reports it as an error.
 - `doctor` reports the companion's remote (its git `origin`) and whether the
   hosted repository is private (`companion_remote`): a public repository, or
