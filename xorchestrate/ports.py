@@ -5,7 +5,8 @@ The public ports, the ones adapters implement, are defined in the Apache-2.0
 adapters keep importing them from ``xorchestrate.ports``. The driving-side
 client transport ports (``PeerIdentity``, ``ClientConnection``,
 ``ClientTransport``) stay here: the entrypoints choose them, not configuration,
-and they evolve with the project server.
+and they evolve with the project server. So do the pull request delivery ports
+(``PullRequestHost``, ``PullRequestWorkspace``), which are new and still changing.
 
 Implementations are supplied by composition. No port exposes SQL, subprocesses,
 MCP packets, vendor model names, or a prescribed organizational hierarchy.
@@ -48,7 +49,7 @@ __all__ = [
     "AcceptancePolicy", "ApplicationToolCallback", "ApplicationToolSessionDriver", "CapabilityProvider",
     "ClientConnection", "ClientTransport", "Clock", "Companion", "CompanionRecords", "DeliveryRetry",
     "DeliveryScheduling", "Evaluator", "Guardrail", "HostingVisibility", "Identifier", "PeerIdentity",
-    "ReceiptPolicy", "RepositoryHosting", "ResumableSessionDriver", "RoutingPolicy", "SessionDriver",
+    "PullRequestHost", "PullRequestWorkspace", "ReceiptPolicy", "RepositoryHosting", "ResumableSessionDriver", "RoutingPolicy", "SessionDriver",
     "SessionSelection", "StateStore", "TelemetrySink", "Transaction", "VersionControl", "WorktreeLocation",
 ]
 
@@ -111,3 +112,30 @@ class ClientTransport(Protocol):
     def close(self) -> None:
         """Stop accepting; already accepted connections remain open."""
         ...
+
+
+# -- pull request delivery ports ------------------------------------------------
+# Used by the application's PR preparation (``xorchestrate/pr.py``) through the
+# built-in ``pr`` provider. They are new and still changing, so they stay here
+# rather than in xcontracts, like the client transport ports.
+
+class PullRequestHost(Protocol):
+    """Fresh hosted PR observations and the one draft-creation write.
+
+    Snapshots enumerate their bounded collections or explicitly fail incomplete.
+    Write errors retain effect-outcome knowledge; they never return an ordinary
+    success-shaped object for an uncertain mutation.
+    """
+
+    def snapshot(self, repository: str, number: int) -> JSON: ...
+    def branch(self, repository: str, ref: str) -> JSON | None: ...
+    def find(self, repository: str, branch: str) -> list[JSON]: ...
+    def create(self, repository: str, branch: str, base: str, title: str, body: str) -> JSON: ...
+
+
+class PullRequestWorkspace(Protocol):
+    """Explicitly owned source preparation without candidate execution."""
+
+    def identity(self, name: str) -> JSON: ...
+    def refresh(self, name: str, expected_head: str, target: str, paths: list[str]) -> JSON: ...
+    def publish(self, name: str, expected_head: str, branch: str) -> JSON: ...

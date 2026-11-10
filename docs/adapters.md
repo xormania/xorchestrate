@@ -20,8 +20,9 @@ Xorchestrate imports `my_package.policies`, reads its top-level `DenyActions`
 and calls it with a private deep copy of `options` as its only argument. The
 one public exception is `companion`: `factory(options, *, version_control=...)`.
 Some built-in aliases get host internals (the built-in `tool` evaluator gets
-the constructed providers, the built-in `local` telemetry collector gets
-`resolve=`); a `module:Name` reference never does. Project adapters with
+the constructed providers, the built-in `pr` provider gets the store and the
+state engine, the built-in `local` telemetry collector gets `resolve=`); a
+`module:Name` reference never does. Project adapters with
 `close()` are closed in reverse construction order when the runtime ends.
 
 A factory refuses invalid options by raising `OrchestrationError` with a
@@ -44,8 +45,8 @@ Options are rendered and checked before your factory sees them:
   `options["cwd"]` (default `"."`), only to identify the configuration, so a
   non-string `cwd` is refused with `configuration_error`; your factory still
   receives `cwd` as written.
-- Only built-in aliases receive resolved paths: built-in providers and
-  sessions an absolute `cwd`, the SQLite store its `path`, the local telemetry
+- Only built-in aliases receive resolved paths: built-in providers (except
+  `pr`) and sessions an absolute `cwd`, the SQLite store its `path`, the local telemetry
   its `runtime_root`. Built-in evaluators receive `cwd` as written.
 - Operator settings in the user's home are not rendered.
 
@@ -71,7 +72,9 @@ collector is not supported yet and `telemetry` is not in `xcontracts.KINDS`.
 Xorchestrate's lifecycle engine, not a published port, and may change with
 any release. The local collector's `corpus`/`artifacts` storage and the
 client transports (`ClientTransport`, `ClientConnection`, `PeerIdentity`) are
-internal as well. The optional `bind_telemetry`, `bind_observer` and
+internal as well, and so are the pull request delivery ports
+(`PullRequestHost`, `PullRequestWorkspace`), which are new and still
+changing. The optional `bind_telemetry`, `bind_observer` and
 `bind_state_engine` hooks pass host internals and are not covered by
 xcontracts' compatibility policy.
 

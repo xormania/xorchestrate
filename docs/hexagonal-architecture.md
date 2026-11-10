@@ -65,7 +65,9 @@ checked without depending on Xorchestrate. `ports.py` and `model.py` re-export
 them unchanged; the application and adapters keep importing from there. The
 driving-side client transport ports (`ClientTransport`, `ClientConnection`,
 `PeerIdentity`) stay in `ports.py`: entrypoints choose them, not
-configuration, and they evolve with the project server. In the architecture
+configuration, and they evolve with the project server. The pull request
+delivery ports (`PullRequestHost`, `PullRequestWorkspace`) also stay there
+while they are new and still changing. In the architecture
 profile (`contracts/hexagonal.json`), the foundation and every role that
 reaches it may import only `xcontracts.ports` and `xcontracts.model`; the
 conformance kit (`xcontracts.testing`) and the factory types are allowed only

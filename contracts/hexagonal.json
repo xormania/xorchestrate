@@ -52,6 +52,7 @@
         "xorchestrate.exchange",
         "xorchestrate.lifecycles",
         "xorchestrate.outcomes",
+        "xorchestrate.pr",
         "xorchestrate.schema",
         "xorchestrate.session_lifecycle",
         "xorchestrate.state",
@@ -945,7 +946,8 @@
         "scripts.ci.classify_changes",
         "scripts.ci.dependencies",
         "scripts.ci.release_identity",
-        "scripts.ci.result"
+        "scripts.ci.result",
+        "scripts.ci.candidate"
       ],
       "allowed_roles": [
         "ci_tooling"
@@ -1059,7 +1061,8 @@
         "test_fixtures",
         "test_support",
         "telemetry",
-        "telemetry_views"
+        "telemetry_views",
+        "ci_tooling"
       ],
       "allowed_external": [
         "stdlib:*",

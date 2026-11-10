@@ -21,8 +21,8 @@ def _same(event, states):
     return tuple(_edge(event, {state}, state) for state in sorted(states))
 
 
-def _definition(name, states, transitions):
-    return MachineDefinition(name, 1, frozenset(states), tuple(transitions))
+def _definition(name, states, transitions, version=1):
+    return MachineDefinition(name, version, frozenset(states), tuple(transitions))
 
 
 def default_definitions():
@@ -36,6 +36,7 @@ def default_definitions():
     definitions = {
         "operation": _definition("operation", operation, (
             _edge("create", {None}, "pending"),
+            _edge("progress", {"pending"}, "pending"),
             _edge("complete", {"pending"}, "completed"),
             _edge("fail", {"pending"}, "failed"),
             _edge("uncertain", {"pending"}, "unknown"),
@@ -43,7 +44,7 @@ def default_definitions():
             *_same("retain_late", operation),
             _edge("resolve_completed", {"pending", "unknown", "completed_unapplied"}, "completed"),
             _edge("resolve_failed", {"pending", "unknown", "completed_unapplied"}, "failed"),
-        )),
+        ), version=2),
         "session": _definition("session", session, (
             _edge("create", {None}, "starting"),
             _edge("reserve", {"active"}, "active"),

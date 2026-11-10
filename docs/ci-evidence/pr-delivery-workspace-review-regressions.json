@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "test_commit": "c5cf8a6",
+  "defective_commit": "7c234d4",
+  "path": "xorchestrate/adapters/pr_workspace.py",
+  "defective_sha256": "107ae6eca7056146dd84318fc7556030eb2004eaac0556dd6e6e35f684135243",
+  "red": {
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-q",
+      "tests/hexagonal/test_pr_workspace.py",
+      "-k",
+      "option_like_remote or staging_just_before or refresh_checkpoints_selected_work or normal_publication or https_publication_credentials"
+    ],
+    "exit_code": 1,
+    "summary": "2 failed, 3 passed, 10 deselected in 2.94s",
+    "failure_excerpt": [
+      "E       AssertionError: checkpoint absorbed another writer's path after the selected snapshot was checked",
+      "E       assert 'another writ... staged bytes' == 'original'",
+      "E         ",
+      "E         - original",
+      "E         + another writer's late staged bytes",
+      "E       AssertionError: candidate upload-pack command executed in the trusted publication process",
+      "E       assert not True",
+      "E        +  where True = exists()",
+      "E        +    where exists = PosixPath('/tmp/pytest-of-agent/pytest-118/test_option_like_remote_cannot0/candidate-command-ran').exists",
+      "FAILED tests/hexagonal/test_pr_workspace.py::test_staging_just_before_checkpoint_commit_cannot_absorb_another_writers_path",
+      "FAILED tests/hexagonal/test_pr_workspace.py::test_option_like_remote_cannot_execute_a_candidate_upload_pack_program"
+    ]
+  },
+  "repaired_sha256": "374d3d9f37c13a46689e4f642694149889cd2e9681097d14e0d05a8d0869f43d",
+  "green": {
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-q",
+      "tests/hexagonal/test_pr_workspace.py"
+    ],
+    "exit_code": 0,
+    "summary": "15 passed in 23.94s"
+  },
+  "witnesses": {
+    "remote_argument": "An option-like candidate remote must be rejected before any Git publication command; its real upload-pack canary must not execute.",
+    "late_staging": "A real unrelated git add immediately before checkpoint commit must not enter the checkpoint tree; external bytes/index and selected work must remain preserved, or the operation returns a recoverable conflict."
+  },
+  "limits": [
+    "No production credentials or external network were used for the two defect reproductions.",
+    "The HTTPS healthy control uses inert credentials and a controlled transport; local Git repositories and command execution are real."
+  ]
+}

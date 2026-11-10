@@ -30,7 +30,8 @@ ROOT = Path(__file__).resolve().parents[2]
 # Host-internal kinds: the lifecycle engine's interface and the local collector's storage are not public ports;
 # telemetry's port is published but provisional (it passes host internals), so it is not a selectable public kind.
 INTERNAL_KINDS = {"state_engine", "telemetry"} | NESTED
-LOCAL_PORTS = {"PeerIdentity", "ClientConnection", "ClientTransport"}
+# Driving-side client transport and the new pull request delivery ports stay in xorchestrate.
+LOCAL_PORTS = {"PeerIdentity", "ClientConnection", "ClientTransport", "PullRequestHost", "PullRequestWorkspace"}
 
 
 def test_the_foundation_re_exports_the_xcontracts_ports_and_values_unchanged():

@@ -92,6 +92,9 @@ changed property and affected behavior; reuse applicable evidence for unchanged
 work with its original revision and scope visible. Complete the repository's
 required checks and agreed acceptance work on the candidate being handed over.
 See [CI](../.github/CI.md) for the actual jobs, execution policy and limitations.
+The [PR preparation provider](pr-delivery.md) exposes revision-aware inspection,
+checkpointed refresh, draft publication and observed handoffs through the normal
+application/MCP capability path.
 
 Current CI status belongs in GitHub Checks. The PR description retains durable
 verification evidence and links to runs where they support a specific claim;

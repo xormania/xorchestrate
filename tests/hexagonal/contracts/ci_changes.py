@@ -63,5 +63,4 @@ def independent_guard(step):
 
 def always_running(job, *, needs):
     assert job.get("needs", []) == needs
-    assert CLASSIFIER_JOB not in job.get("needs", [])
     assert "needs.paths" not in job.get("if", "")

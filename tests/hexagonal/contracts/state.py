@@ -171,6 +171,15 @@ def live_application_records_all_finite_lifecycles(fixture) -> None:
         "native_call": [(None, "pending"), ("pending", "completed")],
         "measurement": [(None, "pending"), ("pending", "completed")],
     }
+    expected_versions = {
+        "operation": 2,
+        "session": 1,
+        "invocation": 1,
+        "delivery": 1,
+        "delivery_attempt": 1,
+        "native_call": 1,
+        "measurement": 1,
+    }
     assert set(observed["records"]) == set(expected)
     for kind, transitions in expected.items():
         record = observed["records"][kind]
@@ -179,7 +188,8 @@ def live_application_records_all_finite_lifecycles(fixture) -> None:
             "STATE_ACTIVE_LIFECYCLE_HAS_REQUIRED_HISTORY", kind)
         assert [event["record_version"] for event in history] == list(range(1, len(transitions) + 1))
         assert [event["previous_version"] for event in history] == [None, *range(1, len(transitions))]
-        assert all(event["machine"] == kind and event["definition_version"] == 1 for event in history)
+        assert all(event["machine"] == kind and event["definition_version"] == expected_versions[kind]
+                   for event in history), ("STATE_ACTIVE_LIFECYCLE_HAS_EXPECTED_DEFINITION_VERSION", kind)
         assert record["status"] == transitions[-1][1] and record["version"] == len(transitions)
     assert observed["start_calls"] == 1 and observed["delivery_calls"] == 1 and observed["provider_calls"] == 2
     assert observed["acceptance"]["acceptance_issues"] == []

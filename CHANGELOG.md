@@ -9,6 +9,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Fixed
 
+- The built-in PR provider limits authenticated inspection and handoff reads to
+  configured workspace repositories plus explicit `read_repositories` entries.
+  Out-of-scope reads are rejected before hosting or credential lookup.
 - Effect-journal responses and new retained failures omit arbitrary exception
   attributes and class names. Legacy diagnostics are projected conservatively
   without deleting stored history; malformed completion metadata preserves the
@@ -46,6 +49,13 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 - Checkout installs use `uv pip install --python python3 -e .` until
   xcontracts is on PyPI, because plain pip cannot read the pinned git source;
   a test runs that bootstrap in a clean environment.
+- A configurable PR capability provider observes candidate-bound checks and
+  discussions, checkpoints and refreshes owned branches, publishes reviewed
+  source trees as drafts, and retains target custody and progress for uncertain
+  writes. See [PR preparation](docs/pr-delivery.md) for configuration and recovery.
+- CI candidate contexts bind the tested merge/base/tree to GitHub checks and
+  immutable per-lane producer artifacts, including successful partial reruns.
+
 - Live test-kit failures keep their reason. A failed scenario check still
   records only its assertion code in the shareable `scenario.json`; the request
   involved, the application's error and the preserved outcome of a failed effect
@@ -338,7 +348,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   `snapshot_failed`, leaving the previous rendered configuration in place;
   `--skip-snapshots` proceeds without it. `instance.json` records the overlay
   digest of each render (`overlay_sha256`).
-- **Lifecycle definitions:** None.
+- **Lifecycle definitions:** operation definition version `2` adds a
+  `progress` transition from `pending` to `pending` for PR target custody and
+  confirmed substeps. Existing stored states need no migration. Custom operation
+  definitions used with the PR provider must admit and govern this transition.
 - **Adapter options:** the local telemetry adapter's `profile` option is
   removed; a configuration that still sets it leaves telemetry unavailable with
   `cause` `{"code": "unknown_option", "detail": "profile"}`. Move the profile's
@@ -350,6 +363,13 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   `database`, `capture_lock_timeout_ms` and `artifact_root` shorthands remain
   and cannot be combined with them. `telemetry_corpus` and
   `telemetry_artifacts` are refused as top-level configuration sections.
+  A new optional `pr` capability provider accepts `github` and `git` adapter
+  options; its owned workspace paths are explicit absolute paths. Its optional
+  `read_repositories` list grants inspection outside those workspace repositories;
+  configure this list for a provider used only for reads. An empty read scope
+  denies all hosted inspection. Other provider configuration is unchanged.
+  Uncertain PR writes retain custody until explicit journal reconciliation;
+  see [PR preparation](docs/pr-delivery.md).
 - **Operator source schema:** None.
 - **Operator ports:** `Companion` gains `revision()` and `VersionControl` gains
   `revision(path)` (the checked-out commit); companion record keys may now be
