@@ -27,7 +27,8 @@ from pathlib import Path
 
 from ..composition import ProjectContext, validate_config
 from ..model import OrchestrationError
-from .home import account_home, read_document, write_document
+from . import companion as records
+from .home import account_home, write_document
 from .project import CONFIG_FILE, POLICIES_DIRECTORY
 
 PLACEHOLDERS = frozenset({"repo", "data", "launchers", "home", "instance"})
@@ -49,16 +50,6 @@ def merge_patch(target, patch):
     return result
 
 
-def _fragments(directory, source):
-    directory = Path(directory)
-    if not directory.is_dir():
-        return []
-    layers = []
-    for path in sorted(directory.glob("*.json")):
-        layers.append((f"{source}:{path.name}", read_document(path)))
-    return layers
-
-
 def layers(tracked, companion):
     """The ordered ``(source, document)`` layers of a project's configuration.
 
@@ -72,8 +63,8 @@ def layers(tracked, companion):
     return [
         *((f"project_policy:{name}", document) for name, document in tracked.fragments(POLICIES_DIRECTORY)),
         ("project_config", config),
-        *_fragments(companion.policies, "companion_policy"),
-        ("overlay", companion.overlay(tracked.name)),
+        *((f"companion_policy:{name}", document) for name, document in records.policies(companion)),
+        ("overlay", records.overlay(companion, tracked.name)),
     ]
 
 
@@ -300,21 +291,17 @@ def render(tracked, companion, context, *, write=True):
 
 def copy_launchers(companion, data_dir):
     """Copy the companion's launchers under the instance (mode 0755); return their digests."""
-    source, target = companion.launchers, Path(data_dir) / "launchers"
+    target = Path(data_dir) / "launchers"
     target.mkdir(mode=0o700, parents=True, exist_ok=True)
     digests = {}
     wanted = set()
-    if source.is_dir():
-        for path in sorted(source.iterdir()):
-            if path.is_symlink() or not path.is_file():
-                continue
-            data = path.read_bytes()
-            temporary = target / f".{path.name}.{os.getpid()}.tmp"
-            temporary.write_bytes(data)
-            os.chmod(temporary, 0o755)  # noqa: S103 - launchers are executables
-            os.replace(temporary, target / path.name)
-            digests[path.name] = hashlib.sha256(data).hexdigest()
-            wanted.add(path.name)
+    for name, data in records.launchers(companion).items():
+        temporary = target / f".{name}.{os.getpid()}.tmp"
+        temporary.write_bytes(data)
+        os.chmod(temporary, 0o755)  # noqa: S103 - launchers are executables
+        os.replace(temporary, target / name)
+        digests[name] = hashlib.sha256(data).hexdigest()
+        wanted.add(name)
     for stale in target.iterdir():
         if stale.name not in wanted and stale.is_file() and not stale.name.startswith("."):
             stale.unlink()

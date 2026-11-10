@@ -22,11 +22,12 @@ Two directories share a name and hold different things:
 <repo>/.mcp.json                     tracked; {"mcpServers": {"xorchestrate": {"command": "xorchestrate", "args": ["connect"]}}}
 
 ~/.xorchestrate/                     or $XORCHESTRATE_HOME, which must be absolute
-  settings.json                      {"schema": 1, "companion": "/abs/path/to/companion"}
+  settings.json                      {"schema": 1, "companion": {"adapter": "git-directory", "options": {"path": "/abs"}}}
   registry.json                      instance id -> project name, repository, git common directory
   toolchains/<release>/              release-keyed environments (see release handoff)
   projects/<project>/                one instance per project per machine, shared by all worktrees
-    instance.json                    instance id, git common directory, release, approval hash, versions
+    instance.json                    instance id, git common directory, release, approval hash, versions,
+                                     and optionally this project's own companion selection
     config.rendered.json             the merged, substituted configuration the server runs
     state.sqlite3                    application state (the default store)
     telemetry/                       the live telemetry corpus
@@ -34,9 +35,9 @@ Two directories share a name and hold different things:
     backups/                         reserved for upgrade backups
   servers/                           project servers' locks, sockets and discovery records
 
-<companion>/                         the user's private repository
-  overlays/<project>.json            the user's overrides for one project
-  approvals/<project>.json           approved hashes of the project's tracked configuration
+<companion>/                         the user's private repository (git-directory adapter)
+  overlay/<project>/overlay.json     the user's overrides for one project
+  approvals/<project>/approvals.json approved hashes of the project's tracked configuration
   policies/*.json                    fragments merged above every project's config.json
   launchers/                         executables configurations name as ${launchers}/...
 ```
@@ -51,8 +52,8 @@ Two directories share a name and hold different things:
 | Command | Effect |
 | --- | --- |
 | `xorchestrate setup [PATH]` | Once per user: create a companion at a new or empty `PATH`, or link an existing companion clone, write `settings.json`, and run the machine checks of `doctor`. |
-| `xorchestrate companion init PATH` | Create the minimal companion layout (`overlays/`, `approvals/`, `policies/`, `launchers/`, a README and an LFS rule for archived telemetry) and register it. |
-| `xorchestrate companion use PATH` | Register an existing companion clone. |
+| `xorchestrate companion init PATH [--project [REPO]]` | Create a companion at `PATH` (the git-directory layout, a README and an LFS rule for archived telemetry) and use it: as this machine's default, or with `--project` for that one project only. |
+| `xorchestrate companion use PATH [--project [REPO]]` | Use an existing companion clone, as the machine default or for one project. |
 | `xorchestrate init [PATH] [--name NAME] [--approve]` | Once per project per machine; see below. |
 | `xorchestrate approve [PATH]` | Approve the tracked `.xorchestrate/` of the worktree at `PATH` (default: the working directory). |
 | `xorchestrate doctor` | Check Python and its SQLite WAL fix, `git`, `uv`, the project's approval, the overlay's overrides, that configured harness commands and `requires` resolve on `PATH`, and that `pass_env` variables are set. Exit status 1 when any check is an error. |
@@ -155,7 +156,7 @@ The configuration a project runs is merged from four layers, later winning
 1. the project's tracked `policies/*.json`, in file-name order;
 2. the project's tracked `config.json`;
 3. the companion's `policies/*.json`, in file-name order;
-4. your overlay, `<companion>/overlays/<project>.json`.
+4. your overlay, the companion's `overlay` record of the project.
 
 Each layer is a JSON merge patch (RFC 7386): objects merge key by key, other
 values replace, and `null` removes a setting. An explicit overlay setting
@@ -207,11 +208,11 @@ Configuration selects what xorchestrate launches, and a tracked configuration
 can be changed by any agent with write access to the repository and by anyone
 whose commits you pull. So:
 
-- `xorchestrate approve` prints a summary of what it approves (the files and
-  their hash, every command the configuration launches, the overrides and the
-  code outside the approval, see below), then records the hash and the file
-  digests in `<companion>/approvals/<project>.json` (D13). Several hashes may
-  be approved, for example one per branch.
+- `xorchestrate approve` records the hash and the file digests in the
+  project's companion (its `approvals` record, D13) and reports a summary of
+  what it approved: the files and their hash, every command the configuration
+  launches, the overrides and the code outside the approval (see below).
+  Several hashes may be approved, for example one per branch.
 - Every tracked file is read once: the approval check and the rendered
   configuration use the same bytes, so a file changed after it was checked is
   never rendered as approved. A symbolic link anywhere in `.xorchestrate/`,
@@ -228,10 +229,15 @@ whose commits you pull. So:
 - A project command checks the approval before it hands off to the release
   `project.json` pins (see below), so an unapproved pin never builds or runs
   a toolchain.
-- The companion must be outside every project: `setup` and `companion
-  init`/`use` refuse a path inside a git worktree that has `.xorchestrate/`
-  (`companion_exposed`), and `doctor` reports an error for a registered
-  companion inside the project's repository, where agents could write approvals.
+- The companion must be outside every project. Each companion adapter
+  validates its own location; the git-directory adapter refuses a path inside
+  a git worktree that has `.xorchestrate/`, where agents could write
+  approvals. `setup` and `companion init`/`use` refuse such a companion
+  (`companion_exposed`), and `doctor` reports it as an error.
+- `doctor` reports the companion's remote (its git `origin`) and whether the
+  hosted repository is private (`companion_remote`): a public repository, or
+  one whose visibility cannot be determined (not GitHub, no token, offline),
+  is a warning.
 
 **What approval does not cover.** Approval covers only the files under
 `.xorchestrate/`. An approved configuration can still run code from elsewhere:
@@ -247,6 +253,37 @@ Processes xorchestrate starts for itself never take code from the worktree:
 the project server is started with `python -P` in the instance directory, and
 the release handoff runs the toolchain with `-P`, so a file or directory named
 `xorchestrate` in the repository cannot run in place of the package.
+
+## Companions, version control and hosting
+
+The operator layer reaches the companion, git and the companion's host only
+through ports (`xorchestrate/ports.py`), with adapters selected by name and
+options like every other adapter (a trusted installed `module:factory` works
+too). Selections live only in the user's home, never in a project's tracked
+`.xorchestrate/`:
+
+| Port | Setting | Built-in adapter |
+| --- | --- | --- |
+| `Companion` | `settings.json` `companion` (machine default), or a project's `instance.json` `companion`, which takes precedence | `git-directory`, options `{"path": "/abs"}` |
+| `VersionControl` | `settings.json` `version_control` | `git` (the git command line), options `executable`, `timeout` |
+| `RepositoryHosting` | `settings.json` `repository_hosting` | `github` (the REST API), options `api_url`, `host`, `token_variables`, `token_command`, `timeout` |
+
+`companion init|use PATH` writes the machine default; with `--project` it
+writes that project's `instance.json`, so one project can keep its records in
+a different companion. A `companion` setting that is a plain path (written by
+earlier builds) is read as `git-directory` at that path and rewritten in the
+adapter shape.
+
+The `Companion` port stores records of one project, or project-independent
+ones, as opaque bytes addressed by kind and key. Each operator capability owns
+a kind and its format (`overlay` and `approvals` per project, `policies` and
+`launchers` independent of projects); a later capability, such as snapshot
+archives, adds a kind without changing the port or its adapters.
+
+The `github` adapter reads a token from `GH_TOKEN` or `GITHUB_TOKEN`, else
+from `gh auth token`, and asks `GET /repos/{owner}/{name}` whether the
+repository is private. Without a token, offline, or when GitHub does not show
+the repository, it answers `unknown` instead of failing.
 
 ## Release handoff
 

@@ -8,58 +8,72 @@ from pathlib import Path
 
 from ..composition import RELEASE
 from ..model import OrchestrationError
-from .companion import exposure, init_companion, is_companion
+from . import companion as records
 from .doctor import doctor
 from .home import Home, read_document, write_document
-from .instance import locate_project, prepare, register, relocate, require_companion
+from .instance import load_instance, locate_project, prepare, register, relocate, resolve_instance
 from .project import default_name, locate_worktree, read_tracked, write_starter
 from .render import launched_commands, merged, repository_references
+from .services import Services, companion_path_selection
 
 MCP_FILE = ".mcp.json"
 MCP_SERVER = "xorchestrate"
 MCP_ENTRY = {"command": "xorchestrate", "args": ["connect"]}
 
 
-def _refuse_exposed(path):
-    reason = exposure(path)
+def _checked(companion):
+    """Refuse a companion whose adapter reports its location unsafe."""
+    reason = companion.validate_location()
     if reason is not None:
         raise OrchestrationError(f"The companion must not be inside a project repository: {reason}. Approvals "
                                  "there could be written by the agents the approvals guard against.",
-                                 "companion_exposed", {"path": str(path)})
+                                 "companion_exposed", {"location": companion.location})
+    return companion
 
 
-def companion_use(path, environ=None):
-    path = Path(path).expanduser().resolve()
-    _refuse_exposed(path)
-    if not is_companion(path):
+def _select(services, selection, project):
+    """Store ``selection`` as the machine default, or as the companion of the project at ``project``."""
+    if project is None:
+        services.home.update_settings(companion=selection)
+        return {"scope": "machine", "settings": str(services.home.settings_path)}
+    tracked = locate_project(project, services.version_control)
+    instance = resolve_instance(services.home, tracked, services.version_control)
+    instance.update(companion=selection)
+    return {"scope": "project", "project": tracked.name, "instance": str(instance.record_path)}
+
+
+def companion_use(path, environ=None, *, project=None):
+    """Use an existing companion: the machine default, or one project's (``project`` is its repository)."""
+    services = Services(Home.locate(environ))
+    selection = companion_path_selection(path)
+    companion = _checked(services.companion_for(selection))
+    if not companion.exists():
         raise OrchestrationError("Not a companion (it needs overlays/ and approvals/); use `companion init`.",
-                                 "companion_required", {"path": str(path)})
-    home = Home.locate(environ)
-    home.update_settings(companion=str(path))
-    return {"companion": str(path), "settings": str(home.settings_path)}
+                                 "companion_required", {"location": companion.location})
+    return {"companion": selection, **_select(services, selection, project)}
 
 
-def companion_init(path, environ=None):
-    _refuse_exposed(Path(path).expanduser().resolve())
-    path, created = init_companion(path)
-    return {**companion_use(path, environ), "created": created}
+def companion_init(path, environ=None, *, project=None):
+    services = Services(Home.locate(environ))
+    created = _checked(services.companion_for(companion_path_selection(path))).initialize()
+    return {**companion_use(path, environ, project=project), "created": created}
 
 
 def setup(path=None, environ=None):
-    """Create or link the companion, then run the machine checks of ``doctor``."""
-    home = Home.locate(environ)
+    """Create or link the machine-default companion, then run the machine checks of ``doctor``."""
+    services = Services(Home.locate(environ))
     if path is not None:
         target = Path(path).expanduser().resolve()
-        _refuse_exposed(target)
-        if is_companion(target):
+        companion = _checked(services.companion_for(companion_path_selection(target)))
+        if companion.exists():
             report = {**companion_use(target, environ), "action": "linked"}
         elif not target.exists() or (target.is_dir() and not any(target.iterdir())):
             report = {**companion_init(target, environ), "action": "created"}
         else:
             raise OrchestrationError("The path exists but is not a companion; choose an empty or new directory, "
                                      "or an existing companion clone.", "invalid_arguments", {"path": str(target)})
-    elif home.companion_path() is not None:
-        report = {"companion": str(home.companion_path()), "action": "unchanged"}
+    elif (selection := services.machine_companion()) is not None:
+        report = {"companion": selection, "action": "unchanged"}
     else:
         raise OrchestrationError("No companion is registered; run `xorchestrate setup PATH` with a new directory "
                                  "or an existing companion clone.", "companion_required")
@@ -99,14 +113,16 @@ def _mcp_entry(worktree, may_write):
 
 def init(path=None, *, name=None, approve=False, relocate_instance=False, environ=None):
     """Set up the project at ``path`` on this machine (see ``docs/projects.md``)."""
-    worktree = locate_worktree(path)
+    home = Home.locate(environ)
+    services = Services(home)
+    worktree = locate_worktree(path, services.version_control)
     if worktree is None:
         raise OrchestrationError("`xorchestrate init` needs a git repository.", "project_required",
                                  {"path": str(Path(path or Path.cwd()).resolve())})
-    home = Home.locate(environ)
-    companion = require_companion(home)
     created = []
     tracked = read_tracked(worktree)
+    # A companion must be selected (the project's own, or the machine default) before anything is written.
+    services.companion(load_instance(home, tracked.name) if tracked is not None else None)
     starter = tracked is None
     if starter:
         created += write_starter(worktree, name or default_name(worktree), RELEASE)
@@ -114,14 +130,15 @@ def init(path=None, *, name=None, approve=False, relocate_instance=False, enviro
     elif name is not None and name != tracked.name:
         raise OrchestrationError("This project is already named in its tracked project.json.", "invalid_arguments",
                                  {"name": tracked.name})
-    if companion.ensure_overlay(tracked.name):
-        created.append(str(companion.overlay_path(tracked.name)))
     if relocate_instance:
         instance, relocated = relocate(home, tracked)
         registered = False
     else:
-        instance, registered = register(home, tracked)
+        instance, registered = register(home, tracked, services.version_control)
         relocated = False
+    companion = services.companion(instance)
+    if records.ensure_overlay(companion, tracked.name):
+        created.append(f"{companion.location}: overlay {tracked.name}")
     # Tracked files of a project that already had .xorchestrate/ are never edited.
     mcp = _mcp_entry(worktree, may_write=starter)
     if mcp["state"] == "written":
@@ -131,10 +148,10 @@ def init(path=None, *, name=None, approve=False, relocate_instance=False, enviro
               "worktree": tracked.identity(), "created": created, "mcp": mcp}
     if starter:
         report["next"] = "Review and commit the starter .xorchestrate/ and .mcp.json, then run `xorchestrate approve`."
-    approved = companion.is_approved(tracked.name, tracked.config_hash)
-    first = not companion.approved_hashes(tracked.name)
+    approved = records.is_approved(companion, tracked.name, tracked.config_hash)
+    first = not records.approved_hashes(companion, tracked.name)
     if not approved and approve and not first:
-        companion.approve(tracked.name, tracked.config_hash, tracked.digests, tracked.identity())
+        records.approve(companion, tracked.name, tracked.config_hash, tracked.digests, tracked.identity())
         approved = True
     if approved:
         prepared = prepare(worktree.root, environ=environ)
@@ -149,18 +166,16 @@ def init(path=None, *, name=None, approve=False, relocate_instance=False, enviro
     return report
 
 
-def approve(path=None, environ=None, *, announce=None):
+def approve(path=None, environ=None):
     """Approve the tracked configuration of the project at ``path`` (several hashes may be approved).
 
-    ``announce(summary)`` is called with what is being approved before the
-    approval is recorded; without it the summary is part of the report.
+    The report includes the summary of what was approved.
     """
-    tracked = locate_project(path)
-    companion = require_companion(Home.locate(environ))
+    home = Home.locate(environ)
+    services = Services(home)
+    tracked = locate_project(path, services.version_control)
+    companion = services.companion(load_instance(home, tracked.name))
     described = summary(tracked, companion)
-    if announce is not None:
-        announce(described)
-    new = companion.approve(tracked.name, tracked.config_hash, tracked.digests, tracked.identity())
-    report = {"project": tracked.name, "config_hash": tracked.config_hash, "newly_approved": new,
-              "approvals": str(companion.approvals_path(tracked.name))}
-    return report if announce is not None else {**report, "summary": described}
+    new = records.approve(companion, tracked.name, tracked.config_hash, tracked.digests, tracked.identity())
+    return {"project": tracked.name, "config_hash": tracked.config_hash, "newly_approved": new,
+            "companion": companion.location, "summary": described}

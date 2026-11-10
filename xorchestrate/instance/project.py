@@ -16,7 +16,6 @@ import hashlib
 import os
 import re
 import stat
-import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -32,20 +31,6 @@ PROJECT_SCHEMA = 1
 NAME = re.compile(r"^[a-z0-9][a-z0-9._-]{0,63}$")
 RELEASE = re.compile(r"^v\d+\.\d+\.\d+(?:[-+.][0-9A-Za-z.+-]+)?$")
 STARTER_CONFIG = {"version": 1}
-GIT_TIMEOUT = 30
-
-
-def git(*arguments, cwd, check=True):
-    """Run git with literal arguments; repository-selecting variables are removed."""
-    environment = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
-    try:
-        result = subprocess.run(["git", *arguments], cwd=cwd, env=environment, capture_output=True, text=True,
-                                timeout=GIT_TIMEOUT, check=False)
-    except FileNotFoundError as exc:
-        raise OrchestrationError("git is required to identify a project.", "git_unavailable") from exc
-    if check and result.returncode != 0:
-        return None
-    return result.stdout.strip()
 
 
 @dataclass(frozen=True)
@@ -80,30 +65,22 @@ class Worktree:
         return value
 
 
-def root_commits(directory):
-    """The root commits of the repository at ``directory`` (empty without history or repository)."""
-    if not Path(directory).is_dir():
-        return set()
-    output = git("rev-list", "--max-parents=0", "--all", cwd=directory)
-    return set(output.split()) if output else set()
+def locate_worktree(path=None, version_control=None):
+    """The worktree containing ``path`` (default: the working directory), or ``None``.
 
-
-def locate_worktree(path=None):
-    """The git worktree containing ``path`` (default: the working directory), or ``None``."""
+    ``version_control`` is the ``VersionControl`` port; by default the one the
+    user's home selects.
+    """
     start = Path(path or Path.cwd()).expanduser().resolve()
     if not start.exists():
         raise OrchestrationError("The project path does not exist.", "project_required", {"path": str(start)})
-    directory = start if start.is_dir() else start.parent
-    root = git("rev-parse", "--show-toplevel", cwd=directory)
-    if not root:
+    if version_control is None:
+        from .services import services
+        version_control = services().version_control
+    location = version_control.worktree(str(start))
+    if location is None:
         return None
-    git_dir = git("rev-parse", "--absolute-git-dir", cwd=directory)
-    common = git("rev-parse", "--path-format=absolute", "--git-common-dir", cwd=directory)
-    if not git_dir or not common:
-        return None
-    common_dir = Path(common)
-    branch = git("symbolic-ref", "--short", "-q", "HEAD", cwd=directory) or None
-    return Worktree(Path(root).resolve(), Path(git_dir).resolve(), common_dir.resolve(), branch)
+    return Worktree(Path(location.root), Path(location.private_dir), Path(location.common_dir), location.branch)
 
 
 STATE_SUFFIXES = (".sqlite3", ".sqlite3-wal", ".sqlite3-shm", ".sqlite3-journal")

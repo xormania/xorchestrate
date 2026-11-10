@@ -23,10 +23,11 @@ from uuid import uuid4
 from .. import __version__
 from ..composition import ProjectContext
 from ..model import OrchestrationError
-from .companion import Companion
+from . import companion as records
 from .home import Home, private_directory, read_document, write_document
-from .project import differing_files, locate_worktree, read_tracked, root_commits
+from .project import differing_files, locate_worktree, read_tracked
 from .render import copy_launchers, render
+from .services import Services
 
 INSTANCE_FILE = "instance.json"
 SCHEMA = 1
@@ -69,7 +70,7 @@ def load_instance(home, name):
     return Instance(home, name, record["instance_id"], record)
 
 
-def _same_project(instance, tracked):
+def _same_project(instance, tracked, version_control):
     """Refuse a repository other than the instance's, saying which case it is.
 
     - The recorded repository is gone: it was probably moved or renamed
@@ -89,7 +90,8 @@ def _same_project(instance, tracked):
             f"The repository of project {tracked.name} is no longer at {instance.record.get('repository')}. If this "
             "is the same repository, moved or renamed, run `xorchestrate init --relocate` here.", "project_moved",
             details)
-    here, there = root_commits(tracked.worktree.root), root_commits(instance.record.get("repository") or recorded)
+    here = version_control.root_commits(str(tracked.worktree.root))
+    there = version_control.root_commits(instance.record.get("repository") or recorded)
     if here & there:
         raise OrchestrationError(
             f"Project {tracked.name} is already set up on this machine from another clone; use a worktree of "
@@ -118,11 +120,11 @@ def relocate(home, tracked):
     return instance, True
 
 
-def register(home, tracked):
+def register(home, tracked, version_control=None):
     """Register the project's instance, or return the existing one; refuse a separate clone."""
     existing = load_instance(home, tracked.name)
     if existing is not None:
-        return _same_project(existing, tracked), False
+        return _same_project(existing, tracked, version_control or Services(home).version_control), False
     home.ensure()
     private_directory(home.projects)
     data_dir = private_directory(home.project_dir(tracked.name))
@@ -139,9 +141,9 @@ def register(home, tracked):
     return Instance(home, tracked.name, instance_id, record), True
 
 
-def locate_project(path=None):
+def locate_project(path=None, version_control=None):
     """The worktree and tracked project at ``path`` (default: the working directory)."""
-    worktree = locate_worktree(path)
+    worktree = locate_worktree(path, version_control)
     if worktree is None:
         raise project_required("Not inside a git repository", path=str(Path(path or Path.cwd()).resolve()))
     tracked = read_tracked(worktree)
@@ -150,26 +152,24 @@ def locate_project(path=None):
     return tracked
 
 
-def resolve_instance(home, tracked):
+def resolve_instance(home, tracked, version_control=None):
     instance = load_instance(home, tracked.name)
     if instance is None:
         raise project_required(f"Project {tracked.name} is not set up on this machine", project=tracked.name)
-    return _same_project(instance, tracked)
+    return _same_project(instance, tracked, version_control or Services(home).version_control)
 
 
-def require_companion(home):
-    path = home.companion_path()
-    if path is None:
-        raise OrchestrationError("No companion is registered; run `xorchestrate setup`.", "companion_required")
-    return Companion.open(path)
+def require_companion(home, instance=None):
+    """The companion selected for ``instance`` (its own, else the machine default)."""
+    return Services(home).companion(instance)
 
 
 def approval_refusal(companion, tracked):
     """``None`` when the tracked configuration is approved, else the refusal naming the changed files."""
-    if companion.is_approved(tracked.name, tracked.config_hash):
+    if records.is_approved(companion, tracked.name, tracked.config_hash):
         return None
-    hashes = companion.approved_hashes(tracked.name)
-    previous = companion.approved_files(tracked.name, hashes[-1]) if hashes else None
+    hashes = records.approved_hashes(companion, tracked.name)
+    previous = records.approved_files(companion, tracked.name, hashes[-1]) if hashes else None
     details = {"project": tracked.name, "config_hash": tracked.config_hash,
                "files": differing_files(previous or {}, tracked.digests)}
     return OrchestrationError(
@@ -188,7 +188,7 @@ class Prepared:
     home: Home
     tracked: object
     instance: Instance
-    companion: Companion
+    companion: object
     context: ProjectContext
     rendered: object
 
@@ -208,9 +208,10 @@ def prepare(path=None, *, environ=None):
     configuration can only be replaced by an approved one.
     """
     home = Home.locate(environ)
-    tracked = locate_project(path)
-    instance = resolve_instance(home, tracked)
-    companion = require_companion(home)
+    services = Services(home)
+    tracked = locate_project(path, services.version_control)
+    instance = resolve_instance(home, tracked, services.version_control)
+    companion = services.companion(instance)
     refusal = approval_refusal(companion, tracked)
     if refusal is not None:
         raise refusal

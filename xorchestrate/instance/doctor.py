@@ -12,10 +12,10 @@ import sys
 from pathlib import Path
 
 from ..model import OrchestrationError
-from .companion import exposure
 from .home import Home
-from .instance import approval_refusal, context_for, locate_project, require_companion, resolve_instance
+from .instance import approval_refusal, context_for, locate_project, resolve_instance
 from .render import launched_commands, render, repository_references
+from .services import Services
 
 MINIMUM_PYTHON = (3, 12)
 
@@ -55,26 +55,47 @@ def _resolves(command):
     return Path(program).is_file() if os.path.isabs(program) else shutil.which(program) is not None
 
 
+def companion_checks(services, companion):
+    """The companion adapter's own location check, and whether its remote is private."""
+    checks = []
+    reason = companion.validate_location()
+    if reason is not None:
+        checks.append(_check("companion", "error", f"The companion {companion.location} is unsafe: {reason}; agents "
+                             "could write its approvals. Move it outside every project and run "
+                             "`xorchestrate companion use`.", location=companion.location))
+    else:
+        checks.append(_check("companion", "ok", f"{companion.location} is outside every project",
+                             location=companion.location))
+    remote = companion.remote()
+    if remote is None:
+        checks.append(_check("companion_remote", "ok", "the companion has no remote", remote=None))
+        return checks
+    report = services.repository_hosting.visibility(remote)
+    details = {"remote": remote, "repository": report.repository, "visibility": report.visibility}
+    if report.visibility == "private":
+        checks.append(_check("companion_remote", "ok", f"{remote} is private", **details))
+    elif report.visibility == "public":
+        checks.append(_check("companion_remote", "warning", f"{remote} is PUBLIC: your approvals, overlays and "
+                             "captured data are visible to anyone. Make the repository private.", **details))
+    else:
+        checks.append(_check("companion_remote", "warning", f"Could not tell whether {remote} is private"
+                             f" ({report.reason}); make sure it is.", reason=report.reason, **details))
+    return checks
+
+
 def project_checks(path=None, environ=None):
     """Approval, overrides, harness binaries and ``pass_env`` of the project at ``path``."""
     checks = []
     try:
-        home = Home.locate(environ)
-        tracked = locate_project(path)
-        instance = resolve_instance(home, tracked)
-        companion = require_companion(home)
+        services = Services(Home.locate(environ))
+        tracked = locate_project(path, services.version_control)
+        instance = resolve_instance(services.home, tracked, services.version_control)
+        companion = services.companion(instance)
     except OrchestrationError as error:
         return [_check("project", "error", str(error), code=error.code)], None
     checks.append(_check("project", "ok", f"{tracked.name} instance {instance.instance_id}",
                          worktree=tracked.identity()))
-    exposed = exposure(companion.root)
-    inside = companion.root.resolve().is_relative_to(tracked.worktree.root)
-    if exposed is not None or inside:
-        checks.append(_check("companion", "error", f"The companion {companion.root} is inside a project repository"
-                             f" ({exposed or tracked.worktree.root}); agents could write its approvals. Move it "
-                             "outside every project and run `xorchestrate companion use`."))
-    else:
-        checks.append(_check("companion", "ok", f"{companion.root} is outside the project"))
+    checks += companion_checks(services, companion)
     refusal = approval_refusal(companion, tracked)
     if refusal is not None:
         checks.append(_check("approval", "error", str(refusal), **refusal.details))

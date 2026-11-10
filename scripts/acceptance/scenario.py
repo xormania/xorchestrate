@@ -23,7 +23,7 @@ from xorchestrate.composition import RELEASE, load_config
 from xorchestrate.instance import operations
 from xorchestrate.instance.home import write_document
 from xorchestrate.instance.instance import prepare
-from xorchestrate.instance.project import git
+from xorchestrate.instance.services import services
 
 from .peers import SCHEMA
 
@@ -209,8 +209,7 @@ def application_project(directory, config):
     atomic_json(directory / "application.json", config)
     repository = (directory / "project").resolve()
     environment = {"XORCHESTRATE_HOME": str((directory / "home").resolve())}
-    repository.mkdir()
-    git("init", "-q", str(repository), cwd=repository)
+    services(environment).version_control.initialize(str(repository))
     write_document(repository / ".xorchestrate" / "project.json",
                    {"schema": 1, "name": "acceptance", "release": RELEASE, "requires": []}, 0o644)
     write_document(repository / ".xorchestrate" / "config.json", config, 0o644)

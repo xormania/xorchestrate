@@ -60,9 +60,9 @@ entries are written.
   (`project_clone_refused`).
 - Operator commands: `setup`, `companion init|use`, `init [--name] [--approve]`,
   `approve` and `doctor`. The user's private companion repository holds
-  per-project overlays (`overlays/<project>.json`, merged last: an explicit
+  per-project overlays (merged last: an explicit
   override wins, guardrails included) and approvals of tracked configurations
-  (`approvals/<project>.json`; several hashes may be approved).
+  (several hashes may be approved).
 - Rendering: the layers are merged as JSON merge patches, substituted with the
   closed placeholder set `${repo}`, `${data}`, `${launchers}`, `${home}`,
   `${instance}`, validated and written to `config.rendered.json`. `${repo}`
@@ -87,6 +87,13 @@ entries are written.
   and adapters outside the `xorchestrate` package). `setup` and
   `companion init`/`use` refuse a companion inside a project worktree
   (`companion_exposed`).
+- Operator ports with adapters selected by name and options from the user's
+  home: `Companion` (project-scoped, extensible records; `git-directory`
+  adapter, which validates its own location), `VersionControl` (`git`
+  command-line adapter) and `RepositoryHosting` (`github` REST adapter).
+  `doctor` reports the companion's remote and warns when it is public or its
+  visibility is unknown. `companion init|use PATH --project` selects a
+  companion for one project, stored in its `instance.json`.
 - `composition.ProjectContext` and `build(config, base_dir, project=...)`:
   a project context supplies the telemetry defaults, the base directory and
   the default worktree.

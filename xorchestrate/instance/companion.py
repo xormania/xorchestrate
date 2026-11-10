@@ -1,152 +1,115 @@
-"""The user's private companion repository: overlays, approvals, policies and launchers.
+"""Typed helpers for the companion record kinds the operator layer owns, over the ``Companion`` port.
 
-```
-<companion>/overlays/<project>.json   the user's own settings for a project (no approval needed)
-<companion>/approvals/<project>.json  approved hashes of the project's tracked configuration
-<companion>/policies/*.json           the user's fragments, merged above every project's config.json
-<companion>/launchers/                executables copied under the home directory at render time
-```
+The port stores opaque records by project, kind and key; each capability here
+defines its kind's scope and format:
 
-Approvals live here (D13) because only the tracked configuration can be
-changed by agents or other people's commits; the companion belongs to the user.
+| Kind | Scope | Key | Format |
+| --- | --- | --- | --- |
+| ``overlay`` | project | ``overlay.json`` | a configuration merge patch (the configuration format's own ``version``) |
+| ``approvals`` | project | ``approvals.json`` | ``{"schema": 1, "project", "approved": [{"hash", "files", "branch", "approved_at"}]}`` |
+| ``policies`` | none | ``<name>.json`` | a configuration merge patch |
+| ``launchers`` | none | file name | executable bytes |
+
+Approvals live in the companion (D13) because only the tracked configuration
+can be changed by agents or other people's commits; the companion is the
+user's. These are thin functions rather than port methods so that the port
+stays a storage contract: a new capability (snapshots, telemetry archives)
+adds a kind and its helpers here, never methods every adapter must implement.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+import json
 from datetime import datetime, timezone
-from pathlib import Path
 
+from ..composition import read_json
 from ..model import OrchestrationError
-from .home import read_document, write_document
 
-LAYOUT = ("overlays", "approvals", "policies", "launchers")
-SCHEMA = 1
-README = """# Xorchestrate companion
-
-This private repository holds your own xorchestrate settings for every project:
-
-- `overlays/<project>.json`: your overrides of a project's configuration. They
-  win over the project's tracked configuration, guardrails included.
-- `approvals/<project>.json`: the hashes of tracked project configurations you
-  approved with `xorchestrate approve`.
-- `policies/*.json`: fragments merged above every project's `config.json`.
-- `launchers/`: executables your configurations reference as `${launchers}`.
-
-Keep it under version control and private.
-"""
-GITATTRIBUTES = "telemetry/**/*.sqlite3 filter=lfs diff=lfs merge=lfs -text\n"
+OVERLAY, APPROVALS, POLICIES, LAUNCHERS = "overlay", "approvals", "policies", "launchers"
+OVERLAY_KEY, APPROVALS_KEY = "overlay.json", "approvals.json"
+APPROVALS_SCHEMA = 1
 
 
-def exposure(path):
-    """Why ``path`` would make approvals agent-writable, or ``None``.
+def _document(data, kind, key):
+    try:
+        value = read_json(data.decode("utf-8"))
+    except (OrchestrationError, UnicodeError) as exc:
+        raise OrchestrationError("A companion record is not valid JSON.", "invalid_configuration",
+                                 {"kind": kind, "key": key}) from exc
+    if not isinstance(value, dict):
+        raise OrchestrationError("A companion record must hold a JSON object.", "invalid_configuration",
+                                 {"kind": kind, "key": key})
+    return value
 
-    A companion inside a git worktree that holds a project's ``.xorchestrate/``
-    (or inside a repository that is set up as a project) can be edited by the
-    agents and commits that approvals are meant to guard against.
-    """
-    from .project import TRACKED_DIRECTORY, locate_worktree
 
-    existing = Path(path).expanduser().resolve()
-    while not existing.exists():
-        existing = existing.parent
-    worktree = locate_worktree(existing)
-    if worktree is not None and (worktree.root / TRACKED_DIRECTORY).exists():
-        return f"it is inside the project worktree {worktree.root}"
+def encode(value):
+    return (json.dumps(value, indent=2, sort_keys=True, allow_nan=False) + "\n").encode()
+
+
+def overlay(companion, project):
+    data = companion.records(project).read(OVERLAY, OVERLAY_KEY)
+    return {} if data is None else _document(data, OVERLAY, project)
+
+
+def ensure_overlay(companion, project):
+    """Create an empty overlay for ``project`` if absent; return whether it was created."""
+    return companion.records(project).write(OVERLAY, OVERLAY_KEY, encode({}), create_only=True)
+
+
+def write_overlay(companion, project, value):
+    companion.records(project).write(OVERLAY, OVERLAY_KEY, encode(value))
+
+
+def policies(companion):
+    records = companion.records(None)
+    return [(key, _document(records.read(POLICIES, key), POLICIES, key))
+            for key in records.keys(POLICIES) if key.endswith(".json")]
+
+
+def write_policy(companion, name, value):
+    companion.records(None).write(POLICIES, name, encode(value))
+
+
+def launchers(companion):
+    records = companion.records(None)
+    return {key: records.read(LAUNCHERS, key) for key in records.keys(LAUNCHERS)}
+
+
+def write_launcher(companion, name, data):
+    companion.records(None).write(LAUNCHERS, name, data)
+
+
+def approvals(companion, project):
+    data = companion.records(project).read(APPROVALS, APPROVALS_KEY)
+    if data is None:
+        return []
+    document = _document(data, APPROVALS, project)
+    if document.get("schema") != APPROVALS_SCHEMA or not isinstance(document.get("approved"), list):
+        raise OrchestrationError("Unsupported approvals record.", "invalid_configuration", {"project": project})
+    return [item for item in document["approved"] if isinstance(item, dict)]
+
+
+def approved_hashes(companion, project):
+    return [item.get("hash") for item in approvals(companion, project)]
+
+
+def is_approved(companion, project, config_hash):
+    return config_hash in approved_hashes(companion, project)
+
+
+def approved_files(companion, project, config_hash):
+    for item in approvals(companion, project):
+        if item.get("hash") == config_hash and isinstance(item.get("files"), dict):
+            return item["files"]
     return None
 
 
-def is_companion(path):
-    path = Path(path)
-    return path.is_dir() and all((path / name).is_dir() for name in ("overlays", "approvals"))
-
-
-def init_companion(path):
-    """Create the minimal companion layout; existing files are never overwritten."""
-    path = Path(path).expanduser().resolve()
-    if path.exists() and not path.is_dir():
-        raise OrchestrationError("The companion path is not a directory.", "invalid_arguments", {"path": str(path)})
-    created = []
-    for name in LAYOUT:
-        directory = path / name
-        if not directory.exists():
-            directory.mkdir(parents=True)
-            created.append(str(directory))
-    for name, text in (("README.md", README), (".gitattributes", GITATTRIBUTES)):
-        target = path / name
-        if not target.exists():
-            target.write_text(text, encoding="utf-8")
-            created.append(str(target))
-    return path, created
-
-
-@dataclass(frozen=True)
-class Companion:
-    root: Path
-
-    @classmethod
-    def open(cls, path):
-        path = Path(path)
-        if not is_companion(path):
-            raise OrchestrationError("The registered companion is missing or incomplete; run xorchestrate setup.",
-                                     "companion_required", {"path": str(path)})
-        return cls(path)
-
-    def overlay_path(self, project):
-        return self.root / "overlays" / f"{project}.json"
-
-    def approvals_path(self, project):
-        return self.root / "approvals" / f"{project}.json"
-
-    @property
-    def policies(self):
-        return self.root / "policies"
-
-    @property
-    def launchers(self):
-        return self.root / "launchers"
-
-    def overlay(self, project):
-        return read_document(self.overlay_path(project), {})
-
-    def ensure_overlay(self, project):
-        """Create an empty overlay for ``project`` if absent; return whether it was created."""
-        path = self.overlay_path(project)
-        if path.exists():
-            return False
-        write_document(path, {}, 0o644)
-        return True
-
-    def approvals(self, project):
-        document = read_document(self.approvals_path(project))
-        if document is None:
-            return None
-        if document.get("schema") != SCHEMA or not isinstance(document.get("approved"), list):
-            raise OrchestrationError("Unsupported approvals file.", "invalid_configuration",
-                                     {"path": str(self.approvals_path(project))})
-        return document
-
-    def approved_hashes(self, project):
-        document = self.approvals(project)
-        return [] if document is None else [item.get("hash") for item in document["approved"] if isinstance(item, dict)]
-
-    def is_approved(self, project, config_hash):
-        return config_hash in self.approved_hashes(project)
-
-    def approve(self, project, config_hash, digests, worktree):
-        """Record ``config_hash`` (several hashes may be approved); return whether it was new."""
-        document = self.approvals(project) or {"schema": SCHEMA, "project": project, "approved": []}
-        if any(isinstance(item, dict) and item.get("hash") == config_hash for item in document["approved"]):
-            return False
-        document["approved"].append({
-            "hash": config_hash, "files": dict(digests), "branch": worktree.get("branch"),
-            "approved_at": datetime.now(timezone.utc).isoformat(),
-        })
-        write_document(self.approvals_path(project), document, 0o644)
-        return True
-
-    def approved_files(self, project, config_hash):
-        document = self.approvals(project) or {"approved": []}
-        for item in document["approved"]:
-            if isinstance(item, dict) and item.get("hash") == config_hash and isinstance(item.get("files"), dict):
-                return item["files"]
-        return None
+def approve(companion, project, config_hash, digests, worktree):
+    """Record ``config_hash`` (several hashes may be approved); return whether it was new."""
+    approved = approvals(companion, project)
+    if any(item.get("hash") == config_hash for item in approved):
+        return False
+    entry = {"hash": config_hash, "files": dict(digests), "branch": worktree.get("branch"),
+             "approved_at": datetime.now(timezone.utc).isoformat()}
+    document = {"schema": APPROVALS_SCHEMA, "project": project, "approved": [*approved, entry]}
+    companion.records(project).write(APPROVALS, APPROVALS_KEY, encode(document))
+    return True

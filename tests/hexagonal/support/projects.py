@@ -15,10 +15,12 @@ import sys
 from pathlib import Path
 
 from xorchestrate.composition import RELEASE
+from xorchestrate.instance import companion as records
 from xorchestrate.instance import operations
 from xorchestrate.instance.home import write_document
 from xorchestrate.instance.instance import prepare
 from xorchestrate.instance.project import CONFIG_FILE, PROJECT_FILE, PROJECT_SCHEMA, TRACKED_DIRECTORY, locate_worktree
+from xorchestrate.instance.services import services
 
 ROOT = Path(__file__).resolve().parents[3]
 MINIMAL_CONFIG = {"version": 1}
@@ -54,7 +56,7 @@ def provision(repository, config, *, name, home, companion, overlay=None, polici
         write_document(tracked_dir / "policies" / filename, fragment, 0o644)
     operations.companion_init(companion, environ)
     if overlay is not None:
-        write_document(companion / "overlays" / f"{name}.json", overlay, 0o644)
+        records.write_overlay(services(environ).companion(), name, overlay)
     operations.init(repository, environ=environ)
     operations.approve(repository, environ)
     return Provisioned(repository, home, companion, name, environ, prepare(repository, environ=environ))
@@ -123,7 +125,21 @@ class ProjectFixture:
             self.approve(worktree)
 
     def write_overlay(self, overlay):
-        write_document(self.companion / "overlays" / f"{self.name}.json", overlay, 0o644)
+        records.write_overlay(self.companion_port, self.name, overlay)
+
+    @property
+    def companion_port(self):
+        """The project's companion through the ``Companion`` port."""
+        return services(self.provisioned.environment).companion()
+
+    def write_policy(self, name, policy):
+        records.write_policy(self.companion_port, name, policy)
+
+    def write_launcher(self, name, data):
+        records.write_launcher(self.companion_port, name, data)
+
+    def approvals(self):
+        return records.approvals(self.companion_port, self.name)
 
     def approve(self, worktree=None):
         return operations.approve(worktree or self.repo, self.provisioned.environment)

@@ -42,11 +42,18 @@ BUILTINS = {
     "guardrail": {"rules": "xorchestrate.adapters.policies:RuleGuardrail"},
     "routing": {"configurable": "xorchestrate.adapters.policies:ConfigurableRouting"},
     "evaluators": {"tool": "xorchestrate.adapters.evaluation:ToolEvaluator", "typesafe": "xorchestrate.adapters.evaluation:TypeSafeEvaluator"},
+    # Operator ports, selected from the user's home by the operator layer, never by project configuration.
+    "companion": {"git-directory": "xorchestrate.adapters.companion_git:GitDirectoryCompanion"},
+    "version_control": {"git": "xorchestrate.adapters.git_cli:GitCLI"},
+    "repository_hosting": {"github": "xorchestrate.adapters.github:GitHubHosting"},
 }
 
 
 # Adapter kinds that are selected inside another adapter's options, not as sections.
 NESTED = frozenset({"telemetry_corpus", "telemetry_artifacts"})
+# Adapter kinds the operator layer selects from the user's home (settings.json,
+# instance.json); a project configuration cannot select them.
+OPERATOR = frozenset({"companion", "version_control", "repository_hosting"})
 
 
 @dataclass(frozen=True)
@@ -180,7 +187,7 @@ SUPPORTED_CONFIG_VERSIONS = frozenset({1})
 
 RELEASE = f"v{__version__}"
 # Nested storage kinds are selected inside telemetry options, never as sections.
-_SECTIONS = (frozenset(BUILTINS) - NESTED) | {"assessment", "session_fallbacks", "version"}
+_SECTIONS = (frozenset(BUILTINS) - NESTED - OPERATOR) | {"assessment", "session_fallbacks", "version"}
 _ADAPTER_FIELDS = frozenset({"adapter", "options", "enabled"})
 # Singleton adapters in construction order, with their defaults.
 _SINGLETONS = {

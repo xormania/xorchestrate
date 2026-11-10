@@ -235,3 +235,119 @@ class ClientTransport(Protocol):
     def close(self) -> None:
         """Stop accepting; already accepted connections remain open."""
         ...
+
+
+# -- operator ports -------------------------------------------------------------
+# Used by the operator layer (``xorchestrate/instance``) to set up projects; the
+# application core never calls them. Adapters are selected by name and options
+# from the user's home (``settings.json``, a project's ``instance.json``).
+
+
+@dataclass(frozen=True)
+class WorktreeLocation:
+    """One version-controlled working tree: its root, its private and shared metadata directories and branch.
+
+    ``common_dir`` is shared by every working tree of one repository, so it
+    identifies a repository on a machine.
+    """
+
+    root: str
+    private_dir: str
+    common_dir: str
+    branch: str | None = None
+
+
+class VersionControl(Protocol):
+    """Local version-control queries and the few operations the operator layer performs."""
+
+    def worktree(self, path: str) -> WorktreeLocation | None:
+        """The working tree containing ``path``, or ``None`` outside any repository."""
+        ...
+
+    def root_commits(self, path: str) -> frozenset[str]:
+        """The history roots of the repository at ``path``; empty without history.
+
+        Two repositories that share a root are clones of one project.
+        """
+        ...
+
+    def remote_url(self, path: str, name: str = "origin") -> str | None:
+        """The URL of remote ``name`` of the repository at ``path``, or ``None``."""
+        ...
+
+    def initialize(self, path: str) -> None:
+        """Create an empty repository at ``path``."""
+        ...
+
+
+class CompanionRecords(Protocol):
+    """The records of one project in a companion, or the project-independent ones (``project`` is ``None``).
+
+    Records are opaque bytes addressed by ``kind`` and ``key``. A kind is a
+    collection owned by one operator capability (overlays, approvals, policies
+    and launchers today; snapshots and telemetry archives later), which
+    defines and versions its records' format. A new capability adds a kind;
+    neither this port nor its adapters change. Kinds and keys are names of
+    letters, digits, ``.``, ``_`` and ``-``, not starting with a dot.
+    """
+
+    project: str | None
+
+    def keys(self, kind: str) -> list[str]:
+        """The keys present in ``kind``, sorted."""
+        ...
+
+    def read(self, kind: str, key: str) -> bytes | None:
+        """The record ``kind/key``, or ``None`` when absent."""
+        ...
+
+    def write(self, kind: str, key: str, data: bytes, *, create_only: bool = False) -> bool:
+        """Store ``kind/key`` atomically; with ``create_only`` an existing record is kept. Return whether it was written."""
+        ...
+
+
+class Companion(Protocol):
+    """The user's private companion: what they capture about their projects, kept away from the projects.
+
+    The adapter chooses the storage and validates its location. Content is
+    reached through scoped records (``records``); typed meaning belongs to the
+    operator capabilities that own each kind.
+    """
+
+    location: str
+    """A human-readable location, for reports."""
+
+    def validate_location(self) -> str | None:
+        """Why this location is unsafe (for example writable by the agents approvals guard against), or ``None``."""
+        ...
+
+    def exists(self) -> bool:
+        """Whether a companion is present at the location."""
+        ...
+
+    def initialize(self) -> list[str]:
+        """Create the companion if absent; return what was created. Existing content is never overwritten."""
+        ...
+
+    def records(self, project: str | None) -> CompanionRecords:
+        """The records of ``project``, or the project-independent records for ``None``."""
+        ...
+
+    def remote(self) -> str | None:
+        """Where the companion is published (a repository URL), or ``None``."""
+        ...
+
+
+@dataclass(frozen=True)
+class HostingVisibility:
+    """Whether a hosted repository is private: ``private``, ``public`` or ``unknown`` (with a reason)."""
+
+    visibility: str
+    repository: str | None = None
+    reason: str | None = None
+
+
+class RepositoryHosting(Protocol):
+    """Questions about where a repository is hosted. Never fails: unanswerable questions are ``unknown``."""
+
+    def visibility(self, remote_url: str) -> HostingVisibility: ...

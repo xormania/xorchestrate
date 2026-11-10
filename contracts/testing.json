@@ -119,7 +119,8 @@
       "modules": {
         "tests/hexagonal/test_projects.py": "composition",
         "tests/hexagonal/test_project_worktrees.py": "composition",
-        "tests/hexagonal/test_release_handoff.py": "composition"
+        "tests/hexagonal/test_release_handoff.py": "composition",
+        "tests/hexagonal/test_operator_ports.py": "adapter"
       }
     },
     "verification": {

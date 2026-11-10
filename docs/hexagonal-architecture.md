@@ -120,6 +120,15 @@ provider, session driver, or evaluator is required for basic work tracking.
 `build()` without a project still works for composition-level callers, with
 no telemetry unless `telemetry_defaults` is supplied.
 
+The operator layer has its own driven ports in `xorchestrate/ports.py`:
+`Companion` (project-scoped, extensible records in the user's companion),
+`VersionControl` (worktree, history and remote queries) and
+`RepositoryHosting` (whether a hosted repository is private). Their adapters
+(`git-directory`, `git`, `github`) are registered in composition's `BUILTINS`
+like every other adapter, but as operator kinds: they are selected from the
+user's home (`settings.json`, a project's `instance.json`), never by a project
+configuration section. See [projects](projects.md#companions-version-control-and-hosting).
+
 The top-level sections are:
 
 | Section | Selection |

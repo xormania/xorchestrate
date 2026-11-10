@@ -127,8 +127,12 @@ def _parser():
     setup.add_argument("path", nargs="?", help="A new or empty directory, or an existing companion clone")
     companion = commands.add_parser("companion", help="Create or register the companion repository")
     companion_commands = companion.add_subparsers(dest="companion_command", required=True)
-    companion_commands.add_parser("init", help="Create the companion layout and register it").add_argument("path")
-    companion_commands.add_parser("use", help="Register an existing companion clone").add_argument("path")
+    project_help = ("Use it for one project only (its repository; default: the working directory), recorded in that "
+                    "project's instance; without it, it becomes this machine's default")
+    for name, text in (("init", "Create a companion at PATH and use it"), ("use", "Use an existing companion")):
+        command = companion_commands.add_parser(name, help=text)
+        command.add_argument("path")
+        command.add_argument("--project", dest="companion_project", nargs="?", const=".", help=project_help)
     init = commands.add_parser("init", help="Set up a project on this machine")
     init.add_argument("path", nargs="?", help="The project's repository (default: the working directory)")
     init.add_argument("--name", help="Project name for a new starter .xorchestrate/")
@@ -220,7 +224,8 @@ def _serve_unix(args, prepared):
 
 def _overrides(tracked):
     try:
-        return merged(tracked, require_companion(Home.locate()))[1]
+        home = Home.locate()
+        return merged(tracked, require_companion(home, resolve_instance(home, tracked)))[1]
     except OrchestrationError:
         return None
 
@@ -290,14 +295,12 @@ def _operator_command(args):
         report = operations.setup(args.path)
     elif args.command == "companion":
         command = operations.companion_init if args.companion_command == "init" else operations.companion_use
-        report = command(args.path)
+        report = command(args.path, project=args.companion_project)
     elif args.command == "init":
         report = operations.init(args.path or args.project, name=args.name, approve=args.approve,
                                  relocate_instance=args.relocate)
     elif args.command == "approve":
-        # What is approved is printed before the approval is recorded.
-        report = operations.approve(args.path or args.project,
-                                    announce=lambda summary: _write({"summary": summary}, sys.stdout))
+        report = operations.approve(args.path or args.project)
     else:
         report = doctor(args.project)
         _write(report, sys.stdout)
@@ -360,9 +363,9 @@ def main(argv=None):
         home = Home.locate()
         # The pinned release is read from project.json, so it is trusted only
         # once the project is set up here and that file is approved.
-        resolve_instance(home, tracked)
+        instance = resolve_instance(home, tracked)
         if tracked.release != RELEASE:
-            refusal = approval_refusal(require_companion(home), tracked)
+            refusal = approval_refusal(require_companion(home, instance), tracked)
             if refusal is not None:
                 raise refusal
         # The pinned release runs the command; this returns only when it is this release.

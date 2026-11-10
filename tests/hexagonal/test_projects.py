@@ -12,6 +12,7 @@ import pytest
 
 from tests.hexagonal.support.projects import ROOT, ProjectFixture, git
 from xorchestrate.composition import RELEASE, build
+from xorchestrate.instance import companion as records
 from xorchestrate.instance import operations
 from xorchestrate.instance.home import Home, account_home
 from xorchestrate.instance.instance import context_for, load_instance, locate_project, prepare, require_companion
@@ -103,11 +104,9 @@ def test_an_unapproved_configuration_refuses_to_run_and_names_the_changed_files(
     error = error_of(refused)
     assert error["code"] == "approval_required" and error["details"]["files"] == ["config.json"]
     assert "xorchestrate approve" in error["message"]
-    result = project.run("approve")
-    announced, approved = (json.loads(line) for line in result.stdout.splitlines())
-    # What is approved is shown first; the approval is recorded after it.
-    assert announced["summary"]["files"].keys() == {"config.json", "project.json"}
-    assert announced["summary"]["config_hash"] == approved["config_hash"] and approved["newly_approved"] is True
+    approved = project.json("approve")
+    assert approved["newly_approved"] is True and approved["summary"]["files"].keys() == {"config.json", "project.json"}
+    assert approved["summary"]["config_hash"] == approved["config_hash"]
     assert project.run("describe").returncode == 0
 
 
@@ -117,8 +116,7 @@ def test_several_configurations_may_be_approved(project):
     project.write_config(second)
     project.write_config(first, approved=False)
     assert project.run("describe").returncode == 0, "the first configuration stays approved"
-    approvals = json.loads((project.companion / "approvals" / "fixture.json").read_text())
-    assert len(approvals["approved"]) == 2
+    assert len(project.approvals()) == 2
     assert operations.approve(project.repo, project.provisioned.environment)["newly_approved"] is False
 
 
@@ -150,7 +148,7 @@ def test_first_init_summarizes_and_requires_a_separate_approve(tmp_path):
     assert (repository / ".xorchestrate" / "project.json").exists()
     assert json.loads((repository / ".mcp.json").read_text()) == {
         "mcpServers": {"xorchestrate": {"command": "xorchestrate", "args": ["connect"]}}}
-    assert (tmp_path / "companion" / "overlays" / "app.json").exists()
+    assert (tmp_path / "companion" / "overlay" / "app" / "overlay.json").exists()
     assert first["approval"]["summary"]["commands"] == []
     operations.approve(repository, environ)
     (repository / ".xorchestrate" / "config.json").write_text(json.dumps({"version": 1, "providers": {"lint": {
@@ -172,7 +170,7 @@ def test_init_never_edits_tracked_files_of_a_cloned_project(project, tmp_path):
     git("clone", "-q", str(project.repo), str(clone), cwd=tmp_path)
     before = {path: path.read_bytes() for path in (clone / ".xorchestrate").rglob("*") if path.is_file()}
     report = operations.init(clone, environ=environ)
-    assert report["created"] == [str(tmp_path / "second-companion" / "overlays" / "fixture.json")]
+    assert report["created"] == [f"{tmp_path / 'second-companion'}: overlay fixture"]
     assert report["mcp"]["state"] == "absent" and not (clone / ".mcp.json").exists()
     assert {path: path.read_bytes() for path in (clone / ".xorchestrate").rglob("*") if path.is_file()} == before
     assert git("status", "--porcelain", cwd=clone) == ""
@@ -182,10 +180,11 @@ def test_setup_creates_or_links_a_companion(tmp_path):
     environ = {"XORCHESTRATE_HOME": str(tmp_path / "home")}
     created = operations.setup(tmp_path / "companion", environ)
     assert created["action"] == "created"
-    assert {path.name for path in (tmp_path / "companion").iterdir()} >= {"overlays", "approvals", "policies",
+    assert {path.name for path in (tmp_path / "companion").iterdir()} >= {"overlay", "approvals", "policies",
                                                                          "launchers", "README.md", ".gitattributes"}
     settings = json.loads((tmp_path / "home" / "settings.json").read_text())
-    assert settings == {"schema": 1, "companion": str(tmp_path / "companion")}
+    assert settings == {"schema": 1, "companion": {"adapter": "git-directory",
+                                                   "options": {"path": str(tmp_path / "companion")}}}
     second = {"XORCHESTRATE_HOME": str(tmp_path / "home2")}
     assert operations.setup(tmp_path / "companion", second)["action"] == "linked"
     occupied = tmp_path / "occupied"
@@ -223,8 +222,7 @@ def test_an_explicit_overlay_override_wins_including_a_guardrail(tmp_path):
 def test_companion_policies_sit_between_the_project_and_the_overlay(tmp_path):
     project = ProjectFixture(tmp_path / "p", {"version": 1, "assessment": {"confidence_threshold": 0.5}},
                              overlay={"assessment": {"uncertain_outcomes": ["unsure"]}})
-    (project.companion / "policies" / "team.json").write_text(json.dumps(
-        {"assessment": {"confidence_threshold": 0.9, "uncertain_outcomes": ["maybe"]}}))
+    project.write_policy("team.json", {"assessment": {"confidence_threshold": 0.9, "uncertain_outcomes": ["maybe"]}})
     assert project.config["assessment"] == {"confidence_threshold": 0.9, "uncertain_outcomes": ["unsure"]}
     sources = {item["path"]: item["source"] for item in project.json("status", expect=3)["overrides"]}
     assert sources["/assessment/confidence_threshold"] == "companion_policy:team.json"
@@ -235,7 +233,7 @@ def test_rendering_substitutes_the_closed_placeholder_set(tmp_path):
                 "cwd": "${repo}"}
     project = ProjectFixture(tmp_path / "p", {"version": 1, "providers": {"tool": {"adapter": "cli",
                                                                                    "options": launcher}}})
-    (project.companion / "launchers" / "tool").write_text("#!/bin/sh\necho launched\n")
+    project.write_launcher("tool", b"#!/bin/sh\necho launched\n")
     rendered_path = project.data_dir / "config.rendered.json"
     config = project.config
     assert json.loads(rendered_path.read_text()) == config
@@ -339,7 +337,7 @@ def test_every_example_project_validates_and_renders(example, tmp_path):
 def test_rendering_uses_exactly_the_bytes_that_were_approved(project):
     environ = project.provisioned.environment
     tracked = locate_project(project.repo)
-    assert require_companion(Home.locate(environ)).is_approved(tracked.name, tracked.config_hash)
+    assert records.is_approved(require_companion(Home.locate(environ)), tracked.name, tracked.config_hash)
     # The tracked file changes after it was read and hashed, before rendering.
     project.write_config({"version": 1, "providers": {"evil": {"adapter": "cli", "options": {
         "command": ["unapproved-tool"]}}}}, approved=False)
@@ -416,8 +414,7 @@ def test_overrides_report_only_effective_differences(tmp_path):
                                                                            "options": {"default": "allow"}}},
                              overlay={"guardrail": {}, "routing": {"adapter": "configurable"},
                                       "assessment": {"confidence_threshold": 0.7}})
-    (project.companion / "policies" / "team.json").write_text(json.dumps(
-        {"guardrail": {"options": {"default": "deny"}}}))
+    project.write_policy("team.json", {"guardrail": {"options": {"default": "deny"}}})
     project.write_overlay({"guardrail": {"options": {"default": "allow"}}, "assessment": {}})
     assert project.json("status", expect=3)["overrides"] == [], \
         "a no-op patch and a value the overlay restores are not overrides"
@@ -461,12 +458,9 @@ def test_a_companion_inside_a_project_is_refused_or_reported(project, tmp_path):
         assert refused.value.code == "companion_exposed"
     assert not inside.exists()
     # A companion registered before this check is reported by doctor.
-    from xorchestrate.instance.companion import init_companion
-    init_companion(inside)
+    import shutil
+    shutil.copytree(project.companion, inside)
     Home(project.home).update_settings(companion=str(inside))
-    for name in ("overlays", "approvals"):
-        for item in (project.companion / name).iterdir():
-            (inside / name / item.name).write_bytes(item.read_bytes())
     checks = {check["check"]: check for check in project.json("doctor", expect=1)["checks"]}
     assert checks["companion"]["status"] == "error"
 

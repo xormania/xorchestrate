@@ -70,7 +70,7 @@ Telemetry is always on for a project: the collector writes to
 `project_id` and the instance id as `collector_id`. `telemetry` shows that a
 telemetry section without an `adapter` only changes options of those defaults,
 here the `dataset_id` and the artifact threshold. The same fragment in your
-overlay (`<companion>/overlays/<project>.json`) keeps a trial's runs apart
+overlay (`<companion>/overlay/<project>/overlay.json`) keeps a trial's runs apart
 without changing the project. The collector needs a Python whose SQLite has the
 WAL fix:
 

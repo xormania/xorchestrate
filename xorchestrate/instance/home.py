@@ -1,7 +1,7 @@
 """The per-user home: ``$XORCHESTRATE_HOME`` (absolute) or ``~/.xorchestrate``.
 
 ```
-<home>/settings.json        {"schema": 1, "companion": "/abs/path"}
+<home>/settings.json        {"schema": 1, "companion": {"adapter": "git-directory", "options": {"path": "/abs"}}}
 <home>/registry.json        instance id -> project name, repository, git common directory
 <home>/toolchains/<release>/ release-keyed environments (see handoff.py)
 <home>/projects/<project>/  one instance per project per machine, shared by all worktrees
@@ -150,16 +150,6 @@ class Home:
         settings = {**self.settings(), **values, "schema": SCHEMA}
         write_document(self.settings_path, settings)
         return settings
-
-    def companion_path(self):
-        """The registered companion, or ``None`` before ``setup``."""
-        value = self.settings().get("companion")
-        if value is None:
-            return None
-        if not isinstance(value, str) or not Path(value).is_absolute():
-            raise OrchestrationError("settings.json companion must be an absolute path.", "invalid_configuration",
-                                     {"path": str(self.settings_path)})
-        return Path(value)
 
     def registry(self):
         registry = read_document(self.registry_path, {"schema": SCHEMA, "instances": {}})
