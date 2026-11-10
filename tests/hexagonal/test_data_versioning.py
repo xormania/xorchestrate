@@ -466,3 +466,21 @@ def test_concurrent_initializer_between_metadata_reads_is_not_unrecognized(tmp_p
         if "store" in other:
             other["store"].close()
     assert raw_state(path)["user_version"] == DATA_VERSION
+
+
+def test_every_committed_fixture_store_migrates_to_the_current_version_and_is_read(tmp_path):
+    """Release gate: one committed store per data version, each migrated by the chain and read by the application."""
+    from tests.hexagonal.support.store_fixtures import FIXTURE_STORES
+
+    fixtures = {int(path.stem.removeprefix("data-v")): path for path in FIXTURE_STORES.glob("data-v*.db")}
+    assert set(fixtures) == set(range(REGISTRY.oldest(), DATA_VERSION + 1)), \
+        "a release that bumps DATA_VERSION commits the fixture store of the new version"
+    for version in sorted(fixtures):
+        store = open_store(copy_fixture(version, tmp_path / f"v{version}" / "state.db"), migrate=True)
+        try:
+            assert store.data_version_info()["status"] == "current" and store.data_version == DATA_VERSION
+            app = application(store)
+            assert "Fixture work retained across data versions" in {
+                item["goal"] for item in app.call("list_work", {})["work"]}
+        finally:
+            store.close()
