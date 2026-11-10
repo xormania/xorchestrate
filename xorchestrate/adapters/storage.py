@@ -307,6 +307,19 @@ class _ReadOnlySQLiteTransaction(_SQLiteTransaction):
         self._refuse()
 
 
+def _read_only_error(exc: sqlite3.Error) -> OrchestrationError:
+    # SQLite reads a WAL-mode database only through its -wal/-shm sidecars and
+    # must create them when absent, so read-only access needs a writable
+    # directory. ``immutable=1`` would avoid that but is unsafe with writers.
+    if getattr(exc, "sqlite_errorcode", 0) & 0xFF in (sqlite3.SQLITE_READONLY, sqlite3.SQLITE_CANTOPEN):
+        return OrchestrationError(
+            "Read-only access to this state store needs write permission on its directory, where SQLite "
+            "creates the store's -wal and -shm files; the database file itself is never written.",
+            "storage_read_only_unavailable", {"retryable": False},
+        )
+    return _storage_error(exc)
+
+
 class SQLiteStore:
     """Durable serializable transactions across threads, instances and processes.
 
@@ -321,8 +334,12 @@ class SQLiteStore:
     ``data_version_unsupported`` and an older one with
     ``data_migration_required``. Only ``migrate=True``, which configuration
     cannot select, stamps a pre-versioned store and runs the migration chain.
+    A file with a nonzero ``user_version`` but no store schema is refused
+    unchanged (``data_version_unsupported`` or ``storage_unrecognized``).
     ``read_only=True`` opens an existing file without any write, write lock or
     schema change and refuses no version; ``data_version_info()`` reports it.
+    SQLite still needs a writable directory for the WAL sidecar files
+    (``storage_read_only_unavailable`` otherwise) and may leave them behind.
     """
 
     def __init__(self, options: dict, *, migrate: bool = False, read_only: bool = False,
@@ -371,16 +388,23 @@ class SQLiteStore:
                 self._open(migrate)
         except sqlite3.Error as exc:
             self._connection.close()
-            raise _storage_error(exc) from exc
+            raise (_read_only_error(exc) if read_only else _storage_error(exc)) from exc
         except BaseException:
             self._connection.close()
             raise
 
     def _open(self, migrate: bool) -> None:
+        # Refuse a file this release cannot use before changing anything in it.
+        refusal = self._refusal(self._read_state())
+        if refusal is not None:
+            raise refusal
         self._connection.execute("PRAGMA journal_mode = WAL")
         self._connection.execute("BEGIN IMMEDIATE")
         try:
             state = self._read_state()
+            refusal = self._refusal(state)
+            if refusal is not None:
+                raise refusal
             if not state["initialized"]:
                 for statement in (*_SCHEMA, _META_SCHEMA):
                     self._connection.execute(statement)
@@ -396,8 +420,6 @@ class SQLiteStore:
             raise
         self._state = state
         stored = self._stored_version(state)
-        if stored > self._migrations.current:
-            raise self._unsupported(state)
         if migrate:
             self._migrate()
         elif stored < self._migrations.current:
@@ -428,13 +450,25 @@ class SQLiteStore:
 
     @staticmethod
     def _stored_version(state: dict) -> int | None:
-        if state["user_version"]:
-            return state["user_version"]
+        if not state["initialized"]:
+            return None
         # A store created before data versioning holds the version 1 schema.
-        return 1 if state["initialized"] else None
+        return state["user_version"] or 1
+
+    def _refusal(self, state: dict) -> OrchestrationError | None:
+        """Why this release must not open (or create a schema in) this file, if it must not."""
+        if state["user_version"] > self._migrations.current:
+            return self._unsupported(state)
+        if not state["initialized"] and state["user_version"]:
+            return OrchestrationError(
+                "The state file declares a data version but has no Xorchestrate store schema; "
+                "it is not an Xorchestrate store and was left unchanged.",
+                "storage_unrecognized", {"user_version": state["user_version"], "retryable": False},
+            )
+        return None
 
     def _unsupported(self, state: dict) -> OrchestrationError:
-        stored = self._stored_version(state)
+        stored = state["user_version"]
         written_by = (state["meta"] or {}).get("written_by")
         return OrchestrationError(
             f"Stored state uses data version {stored}, written by {written_by or 'an unknown release'}; "
@@ -464,9 +498,10 @@ class SQLiteStore:
             try:
                 with self.transaction() as transaction:
                     state = self._read_state()
+                    refusal = self._refusal(state)
+                    if refusal is not None:
+                        raise refusal
                     stored = self._stored_version(state)
-                    if stored > self._migrations.current:
-                        raise self._unsupported(state)
                     if state["user_version"] == 0:
                         self._write_version(1)
                         continue
@@ -486,9 +521,12 @@ class SQLiteStore:
                         "counts": dict(sorted(counts.items())),
                     })
                     self._write_version(source + 1)
-            except OrchestrationError:
-                raise
             except Exception as exc:
+                # Refusals precede step selection and keep their own codes. Any
+                # failure of a selected step, including an OrchestrationError
+                # such as Conflict raised by the step, is a failed migration.
+                if source is None and isinstance(exc, OrchestrationError):
+                    raise
                 raise OrchestrationError(
                     "A data migration step failed; its transaction was rolled back.",
                     "data_migration_failed",
@@ -506,10 +544,10 @@ class SQLiteStore:
         state = self._state
         stored = self._stored_version(state)
         current = self._migrations.current
-        if stored is None:
-            status = "uninitialized"
-        elif stored > current:
-            status = "unsupported"
+        if state["user_version"] > current:
+            status, stored = "unsupported", state["user_version"]
+        elif stored is None:
+            status = "unrecognized" if state["user_version"] else "uninitialized"
         elif stored < self._migrations.oldest():
             status = "migration_unavailable"
         elif stored < current:

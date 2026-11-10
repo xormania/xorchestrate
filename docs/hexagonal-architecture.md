@@ -143,7 +143,7 @@ prints them with `xorchestrate --version`. A configuration's optional top-level
 | absent | Read as `1`; `describe` reports a `configuration_version_missing` warning. A later release will require the key |
 | a supported version | Read as is |
 | newer than every supported version | Refused with `configuration_version_unsupported`, naming the version and this release |
-| older than every supported version | Refused with `configuration_migration_required`, naming the explicit `instance migrate-config` migration (planned operator tooling) |
+| older than every supported version | Refused with `configuration_migration_required`, asking for the configuration to be migrated to the oldest supported version (`target` in the details). The planned `instance migrate-config` operator command will perform that rewrite; it does not exist yet |
 | not a positive integer | Refused with `configuration_error` |
 
 Configuration is never rewritten on load. Both refusals are ordinary
@@ -157,6 +157,19 @@ safely. `build` calls it first and constructs only after it succeeds, so a
 structural error never leaves partially constructed adapters or new state files.
 Adapter option contents remain each factory's contract and are checked at
 construction; `assessment` and `session_fallbacks` remain application-validated.
+
+This changes which error `build` reports for some invalid configurations.
+Structural errors are reported before any factory runs, so a configuration with
+both a structural error and a factory option error (for example `routing: 5`
+and a negative SQLite `busy_timeout_ms`) now reports the structural
+`configuration_error` rather than the factory's `invalid_request`; the factory
+error appears once the structure is valid. Path errors in built-in options have
+specific messages instead of `Cannot construct <kind> adapter <name>.`: a
+non-string path or working directory reports `<kind> adapter <name> paths must
+be strings.` and an unresolvable path (such as one containing a NUL byte)
+reports `Invalid <kind> adapter <name> path.`; the code is still
+`configuration_error`. Within the structural checks, sections are checked in
+construction order.
 An invalid `telemetry` section is not an error in either path: it is reported as a
 `telemetry_configuration_invalid` warning and telemetry is unavailable, as before.
 `describe` prints these warnings beside the operations as `{"operations": [...],

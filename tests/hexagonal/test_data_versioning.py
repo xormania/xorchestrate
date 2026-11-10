@@ -2,17 +2,24 @@
 
 import hashlib
 import json
+import os
+import shutil
 import sqlite3
+import subprocess
+import sys
+import tempfile
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 
 import xorchestrate
+import xorchestrate.adapters.storage as storage_module
 from tests.hexagonal.support.application import application
 from tests.hexagonal.support.store_fixtures import copy_fixture, raw_state, write_pre_versioned_store
 from xorchestrate.adapters.storage import MemoryStore, SQLiteStore
 from xorchestrate.adapters.storage_migrations import DATA_VERSION, REGISTRY, MigrationRegistry
-from xorchestrate.model import OrchestrationError
+from xorchestrate.model import Conflict, OrchestrationError
 
 RELEASE = "v" + xorchestrate.__version__
 PRE_VERSIONED_RECORDS = (
@@ -267,17 +274,133 @@ def test_read_only_open_requires_an_existing_file_and_excludes_migration(tmp_pat
         open_store(tmp_path / "state.db", read_only=True, migrate=True)
 
 
-def test_committed_fixture_store_is_read_by_this_release(tmp_path):
+def test_committed_fixture_store_is_read_by_a_normal_open(tmp_path):
     path = copy_fixture(1, tmp_path / "state.db")
-    store = open_store(path, migrate=True)
+    before = digest(path)
+    store = open_store(path)
     try:
         info = store.data_version_info()
-        assert (info["data_version"], info["status"]) == (1, "current")
+        assert (info["data_version"], info["status"], info["pre_versioned"]) == (1, "current", False)
         assert info["written_by"].startswith("v")
-        assert data_migrated_events(store) == []
         app = application(store)
         assert sorted(item["goal"] for item in app.call("list_work", {})["work"]) == [
             "Fixture work retained across data versions", "Second fixture work"]
         assert [actor["id"] for actor in app.call("list_actors", {})["actors"]] == ["fixture-actor"]
+        with store.transaction() as tx:
+            assert [event for event in tx.events(limit=1000) if event.get("type") == "data_migrated"] == []
     finally:
         store.close()
+    assert digest(path) == before
+    # Explicit migration of a current store is a no-op.
+    migrated = open_store(path, migrate=True)
+    try:
+        assert data_migrated_events(migrated) == [] and migrated.data_version == 1
+    finally:
+        migrated.close()
+    assert digest(path) == before
+
+
+def foreign_file(path, user_version):
+    connection = sqlite3.connect(path, isolation_level=None)
+    try:
+        connection.execute("CREATE TABLE things (x)")
+        connection.execute(f"PRAGMA user_version = {user_version}")
+    finally:
+        connection.close()
+    return path
+
+
+@pytest.mark.parametrize(("user_version", "code", "details"), [
+    (DATA_VERSION + 4, "data_version_unsupported",
+     {"stored": DATA_VERSION + 4, "current": DATA_VERSION, "written_by": None, "release": RELEASE}),
+    (DATA_VERSION, "storage_unrecognized", {"user_version": DATA_VERSION, "retryable": False}),
+])
+def test_versioned_file_without_store_schema_is_refused_unchanged(tmp_path, user_version, code, details):
+    path = foreign_file(tmp_path / "foreign.db", user_version)
+    before = digest(path)
+    for kwargs in ({}, {"migrate": True}):
+        with pytest.raises(OrchestrationError) as refused:
+            open_store(path, **kwargs)
+        assert (refused.value.code, refused.value.details) == (code, details)
+    assert digest(path) == before
+    assert raw_state(path)["tables"] == {"things"} and raw_state(path)["user_version"] == user_version
+    reader = open_store(path, read_only=True)
+    try:
+        assert reader.data_version_info()["status"] == ("unsupported" if code == "data_version_unsupported"
+                                                         else "unrecognized")
+    finally:
+        reader.close()
+
+
+def test_orchestration_errors_from_a_step_are_failed_migrations(tmp_path):
+    path = copy_fixture(1, tmp_path / "state.db")
+
+    def conflicting(tx):
+        record = tx.list("work")[0]
+        tx.put("work", record.key, {**record.data, "changed": True}, record.version)
+        tx.put("work", record.key, record.data, record.version)  # stale version: Conflict
+        return {"work": 1}
+
+    with pytest.raises(OrchestrationError) as failure:
+        open_store(path, migrate=True, migrations=MigrationRegistry(2, {1: conflicting}))
+    assert failure.value.code == "data_migration_failed"
+    assert failure.value.details == {"from": 1, "to": 2, "release": RELEASE}
+    assert type(failure.value.__cause__) is Conflict
+    assert raw_state(path)["user_version"] == 1
+    reader = open_store(path, read_only=True)
+    try:
+        with reader.transaction() as tx:
+            assert all("changed" not in r.data for r in tx.list("work"))
+    finally:
+        reader.close()
+
+
+_READ_ONLY_PROBE = """
+import json, sys
+from xorchestrate.adapters.storage import SQLiteStore
+import xorchestrate.adapters.storage as storage
+from xorchestrate.model import OrchestrationError
+sys.stderr.write(__import__("os").path.realpath(storage.__file__))
+try:
+    SQLiteStore({"path": sys.argv[1]}, read_only=True).close()
+    print(json.dumps({"opened": True}))
+except OrchestrationError as error:
+    print(json.dumps({"code": error.code, "message": str(error)}))
+"""
+
+
+def test_read_only_open_needs_a_writable_directory_for_sqlite_sidecars(tmp_path):
+    directory = Path(tempfile.mkdtemp(prefix="xorchestrate-ro-"))
+    try:
+        path = directory / "state.db"
+        open_store(path).close()
+        assert sorted(item.name for item in directory.iterdir()) == ["state.db"]
+        before = digest(path)
+        # Writable directory: SQLite may leave its -wal/-shm sidecars; the database is unchanged.
+        reader = open_store(path, read_only=True)
+        reader.close()
+        assert set(item.name for item in directory.iterdir()) <= {"state.db", "state.db-wal", "state.db-shm"}
+        assert digest(path) == before
+        for sidecar in ("state.db-wal", "state.db-shm"):
+            (directory / sidecar).unlink(missing_ok=True)
+        os.chmod(path, 0o644)
+        os.chmod(directory, 0o555)  # noqa: S103 - read-only, traversable by the unprivileged probe user
+        command = [sys.executable, "-c", _READ_ONLY_PROBE, str(path)]
+        if os.geteuid() == 0:
+            if shutil.which("setpriv") is None:
+                pytest.skip("Root cannot be denied directory writes without setpriv")
+            command = ["setpriv", "--reuid=65534", "--regid=65534", "--clear-groups", *command]
+        root = str(Path(xorchestrate.__file__).resolve().parents[1])
+        result = subprocess.run(command, capture_output=True, text=True, timeout=60,
+                                env={**os.environ, "PYTHONPATH": root, "PYTHONPYCACHEPREFIX": str(directory / "x")}, cwd="/")
+        # The unprivileged probe must exercise this checkout, not another installation.
+        assert result.stderr == str(Path(storage_module.__file__).resolve()), result.stderr
+        assert json.loads(result.stdout) == {
+            "code": "storage_read_only_unavailable",
+            "message": "Read-only access to this state store needs write permission on its directory, where SQLite "
+                       "creates the store's -wal and -shm files; the database file itself is never written.",
+        }, result.stderr
+        assert digest(path) == before
+    finally:
+        os.chmod(directory, 0o700)
+        shutil.rmtree(directory)

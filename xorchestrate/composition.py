@@ -171,9 +171,9 @@ def config_version(config, supported=SUPPORTED_CONFIG_VERSIONS):
         return version, warnings
     if version < supported[0]:
         raise OrchestrationError(
-            f"Configuration format version {version} is older than this release reads; migrate it with "
-            "`instance migrate-config`. Configuration is never rewritten on load.",
-            "configuration_migration_required", {**details, "migration": "instance migrate-config"},
+            f"Configuration format version {version} is older than this release reads; migrate the "
+            f"configuration to version {supported[0]}. Configuration is never rewritten on load.",
+            "configuration_migration_required", {**details, "target": supported[0]},
         )
     raise OrchestrationError(
         f"Configuration format version {version} is not supported by release {RELEASE}; "
@@ -277,7 +277,10 @@ def validate_config(config=None, base_dir=None):
                 identities[name] = canonical_digest(material)
         collections[kind] = result
 
-    # Same order as construction, so the first reported error is unchanged.
+    # Sections are checked in construction order, so among structural errors
+    # the first one reported is stable. Every structural error is reported
+    # before any factory runs, so a factory's own option error is reported
+    # only when the whole configuration is structurally valid.
     for kind in ("state_engine", "store"):
         adapters[kind] = _select(kind, config.get(kind, _SINGLETONS[kind]), base_dir)
     collection("providers")

@@ -23,11 +23,14 @@ entries are written.
   `data_migration_required`. Migrations run only when explicitly requested
   through the new migration registry, never on a normal open.
 - A read-only SQLite store mode that reports the stored data version without
-  writing.
+  writing to the database. It needs write permission on the store's directory
+  for SQLite's `-wal`/`-shm` files (`storage_read_only_unavailable` otherwise).
 - `xorchestrate --version` prints JSON with the package version, the installed
   commit (for VCS installs, otherwise `null`), the supported configuration
   format versions and the data version.
 - `describe` output gains a `warnings` list beside `operations`.
+- `xorchestrate.bridge` hosts enforce the configuration format version of the
+  configuration they are started with.
 
 ### Upgrade notes
 
@@ -40,6 +43,16 @@ entries are written.
   earlier releases (`user_version` 0) are read as version `1` without any write.
   New stores are stamped at creation; existing stores are stamped only by an
   explicit migration (`SQLiteStore(..., migrate=True)`). No records change.
+  A file with a nonzero `user_version` but no store schema is now refused
+  unchanged (`data_version_unsupported` or `storage_unrecognized`) instead of
+  having a store schema added to it.
+- **Configuration errors:** structural errors are now reported before any
+  adapter factory runs. A configuration with both a structural error and a
+  factory option error now reports the structural `configuration_error`
+  first. Built-in path errors have specific messages (`<kind> adapter <name>
+  paths must be strings.`, `Invalid <kind> adapter <name> path.`) instead of
+  `Cannot construct <kind> adapter <name>.`; the code is still
+  `configuration_error`. Callers matching on messages should match on codes.
 - **Lifecycle definitions:** None.
 - **Adapter options:** None.
 - **Operator source schema:** None.
