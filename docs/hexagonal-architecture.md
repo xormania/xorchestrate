@@ -117,7 +117,7 @@ The top-level sections are:
 | `version` | Configuration format version, a positive integer; see below |
 | `store` | One state-store adapter and its `options` |
 | `state_engine` | Lifecycle state engine; built-in `declared` (default) accepts `definitions` and `guards` options |
-| `telemetry` | Optional observation collector; built-in `local`, absent by default |
+| `telemetry` | Observation collector; built-in `local` with selected `corpus` (`sqlite`) and `artifacts` (`filesystem`) storage; absent by default unless `build()` receives `TelemetryDefaults` |
 | `providers` | Named capability providers, each with `adapter` and `options` |
 | `sessions` | Named session drivers, each with `adapter` and `options` |
 | `guardrail` | An enforcement adapter and its options |
@@ -184,9 +184,12 @@ An invalid `telemetry` section is not an error in either path: it is reported as
 
 Telemetry is an optional output port (`TelemetrySink`: capture, bounded scans,
 scope resolution, payload reads and bundle snapshot/verify/restore). When the `telemetry` section is absent or
-`enabled: false`, no collector is constructed. The `local` adapter bridges
-application, native, capability, evaluator and process observations to the shared
-`agent_telemetry` collector (the `telemetry` installation extra). A failed
+`enabled: false`, no collector is constructed; a caller of `build()` can supply
+`TelemetryDefaults` to construct the local collector for an absent section. The
+`local` adapter bridges application, native, capability, evaluator and process
+observations to the in-tree collector (`xorchestrate/adapters/telemetry_collector`),
+whose corpus and artifact storage are selected adapters (`sqlite` and `filesystem`
+by default). A failed
 construction yields a visible unavailable state rather than preventing unrelated
 work, and capture failure does not change the observed action's result. See
 [active telemetry](telemetry.md) for options and the `telemetry_*` operations.

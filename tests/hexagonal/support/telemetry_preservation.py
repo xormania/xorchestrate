@@ -11,10 +11,10 @@ from dataclasses import asdict
 from pathlib import Path
 from unittest.mock import patch
 
-from agent_telemetry.application import Collector
-from agent_telemetry.artifacts import FileArtifactStore
-from agent_telemetry.domain import ArtifactRef, CaptureContext, Event
-from agent_telemetry.sqlite import SQLiteRepository
+from xorchestrate.adapters.telemetry_collector.application import Collector
+from xorchestrate.adapters.telemetry_collector.artifacts import FileArtifactStore
+from xorchestrate.adapters.telemetry_collector.domain import ArtifactRef, CaptureContext, Event
+from xorchestrate.adapters.telemetry_collector.sqlite import SQLiteRepository
 
 
 class Dataset:

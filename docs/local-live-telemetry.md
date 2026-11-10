@@ -41,10 +41,10 @@ readiness observations, not project assertions or a new executor.
 
 Setup creates the external Python environment, a private native configuration
 template and an evidence root beside the profile. Local telemetry is enabled in
-new native templates. Setup installs the telemetry extra according to the
-**selected configuration**, and preserves existing native configuration bytes.
-Explicit disabled capture stays disabled. Doctor checks the selected
-interpreter's package and the shared collector's actual SQLite compatibility;
+new native templates. Setup installs one dependency set, which includes the
+collector, and preserves existing native configuration bytes. Explicit disabled
+capture stays disabled. When local capture is selected, doctor checks the
+selected interpreter's actual SQLite compatibility (`telemetry_sqlite`);
 it does not log into vendors, launch a model or establish authenticated
 acceptance. A fixed SQLite runtime such as uv Python 3.12.16 can be selected
 before setup. [Source: setup/doctor](../scripts/testkit/adapters/profiles.py).

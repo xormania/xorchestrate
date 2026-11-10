@@ -3,11 +3,6 @@ revision = 5
 requires-python = ">=3.12"
 
 [[package]]
-name = "agent-telemetry"
-version = "0.1.0"
-source = { git = "https://github.com/xormania/cce.git?subdirectory=tools%2Ftelemetry&rev=84229bb7497547d2db91d02a4633ccb3867f740b#84229bb7497547d2db91d02a4633ccb3867f740b" }
-
-[[package]]
 name = "attrs"
 version = "26.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -313,9 +308,6 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
-telemetry = [
-    { name = "agent-telemetry" },
-]
 test = [
     { name = "pytest" },
 ]
@@ -330,11 +322,10 @@ validation = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agent-telemetry", marker = "extra == 'telemetry'", git = "https://github.com/xormania/cce.git?subdirectory=tools%2Ftelemetry&rev=84229bb7497547d2db91d02a4633ccb3867f740b" },
     { name = "jsonschema", specifier = ">=4.22,<5" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8,<10" },
 ]
-provides-extras = ["test", "telemetry"]
+provides-extras = ["test"]
 
 [package.metadata.requires-dev]
 validation = [

@@ -4,11 +4,10 @@ import json
 from dataclasses import asdict
 from unittest.mock import patch
 
-from agent_telemetry.domain import CaptureContext, Event, observation_digest
-
 from tests.hexagonal.support.application import Provider, Sessions
 from tests.hexagonal.support.telemetry import Fixture
 from xorchestrate.adapters.policies import RuleGuardrail
+from xorchestrate.adapters.telemetry_collector.domain import CaptureContext, Event, observation_digest
 from xorchestrate.model import Capability, OrchestrationError
 
 
@@ -126,7 +125,7 @@ class ReviewFixture(Fixture):
                 pass
 
         batches, after = [], 0
-        with patch.object(self.app.telemetry._repository_type, "inspect", side_effect=lambda *args, **kwargs: Repository()):
+        with patch.object(self.app.telemetry.corpus, "inspect", side_effect=lambda *args, **kwargs: Repository()):
             for _ in range(32):
                 before = count["rows"]
                 page = self.event_page(event_type="fixture.sparse", limit=1, after=after, **{resource: wanted})

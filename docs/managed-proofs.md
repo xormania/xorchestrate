@@ -27,9 +27,8 @@ From the checkout:
 ./scripts/proof.sh run --profile "$HOME/.config/xorchestrate/proof.json"
 ```
 
-Setup installs the repository's declared application/test dependencies and the
-telemetry extra when the selected native configuration uses local capture into
-the configured external environment. It creates a private `native.json` template and
+Setup installs the repository's declared application/test dependencies, which
+include the telemetry collector, into the configured external environment. It creates a private `native.json` template and
 workspace beside the profile once, and preserves existing profiles and reusable
 native configuration. The launcher establishes the external Python bytecode
 cache before imports and propagates it to child checks. Keep the environment,
@@ -73,10 +72,10 @@ a model. Missing prerequisites are reported against their dependent checks;
 independent selected checks can still run. A malformed plan is rejected before
 execution. Use `--suite static` for checks that need no native client or tmux.
 
-For selected local capture it checks the collector in the selected interpreter,
-including the shared package's actual SQLite compatibility check. An importable
-collector alone is insufficient. Use a runtime with the required SQLite WAL fix,
-such as uv Python 3.12.16, when doctor reports that requirement.
+For selected local capture it runs the collector's actual SQLite compatibility
+check in the selected interpreter (`telemetry_sqlite`). Use a runtime with the
+required SQLite WAL fix, such as uv Python 3.12.16, when doctor reports that
+requirement.
 
 For selectable story batteries, execution limits and automated tmux scenarios,
 see [local stories](local-stories.md). The same managed controls below apply.

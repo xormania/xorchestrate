@@ -72,8 +72,9 @@ The measured local commit was
 Production Python files, `pyproject.toml`, the measurement procedure, and all
 imported collector Python files were sealed separately before and after the run.
 All seals and the local commit/tree remained unchanged. Python was 3.12.14 with
-linked SQLite 3.53.1; the collector pin was
-[`84229bb7497547d2db91d02a4633ccb3867f740b`](https://github.com/xormania/cce/tree/84229bb7497547d2db91d02a4633ccb3867f740b/tools/telemetry).
+linked SQLite 3.53.1; the measured collector was the then-separate package at
+[`84229bb7497547d2db91d02a4633ccb3867f740b`](https://github.com/xormania/cce/tree/84229bb7497547d2db91d02a4633ccb3867f740b/tools/telemetry),
+which now lives in-tree as `xorchestrate/adapters/telemetry_collector` with the same corpus format.
 The measured procedure SHA256 is
 `a99c843d0a28a6dfd8f6e9d88b187cd3ea0c573d605e9d003bd1f0abb25d78d5`;
 the [raw dataset](telemetry-evidence/calibration-2026-11-08.json) SHA256 is
@@ -98,8 +99,8 @@ active tree; they remain available at that commit.
 
 Each row has three independently initialized trials. The timed workload is
 `create_work` through the active application, with an in-memory authoritative
-state store. Enabled cases use the pinned CCE collector's local SQLite/file
-backend. Small and large content, and serial and four-worker execution, have
+state store. Enabled cases use the collector's local SQLite/file backend (then
+the pinned separate package, now the in-tree `sqlite` and `filesystem` adapters). Small and large content, and serial and four-worker execution, have
 matching disabled controls. Every declared operation's returned goal and final
 work count were checked.
 
@@ -164,8 +165,9 @@ workload, without a separate before/after dependency check. The merged
 commit can have a different Git identity from the measured local commit; the
 recorded file hashes identify the measured production content.
 
-The collector source pin is
-[`84229bb7497547d2db91d02a4633ccb3867f740b`](https://github.com/xormania/cce/tree/84229bb7497547d2db91d02a4633ccb3867f740b/tools/telemetry).
+The measured collector source was the separate package pinned at
+[`84229bb7497547d2db91d02a4633ccb3867f740b`](https://github.com/xormania/cce/tree/84229bb7497547d2db91d02a4633ccb3867f740b/tools/telemetry);
+the in-tree collector is a changed path for these measurements.
 The original capture-only procedure had SHA256
 `67517eb36430f3ac87d7c3998aef6a6090725a522c33427f536effd9d0b4fb86`.
 The [extended procedure](https://github.com/xormania/xorchestrate/blob/957c404/docs/telemetry-evidence/measure_overhead.py) and its
@@ -175,10 +177,10 @@ source and should be refreshed for the changed path.
 
 ## Scoped reproduction
 
-Install the telemetry extra and test dependencies as described in
-[the active guide](telemetry.md), using a runtime accepted by the collector's
-SQLite check. From a checkout of commit `957c404`, the last revision containing
-the procedure, run this finite procedure:
+From a checkout of commit `957c404`, the last revision containing the procedure,
+install that revision's `.[test,telemetry]` dependencies (the collector was then a
+separate package), using a runtime accepted by the collector's SQLite check, and
+run this finite procedure:
 
 ```sh
 TELEMETRY_CALIBRATION_ROOT="$PWD" \

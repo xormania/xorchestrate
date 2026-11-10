@@ -81,22 +81,24 @@ def collect_native_evidence(directory, output):
                 entry["reason"] = selected.get("reason", "external_capture_policy_not_collected")
             else:
                 root = _path(selected["runtime_root"])
-                database, artifacts = _path(selected["database"]), _path(selected["artifacts"])
+                database = _path(selected["database"])
+                # A corpus collected with artifacts disabled has no artifact root.
+                artifacts = None if selected["artifacts"] is None else _path(selected["artifacts"])
                 if (not root.is_relative_to(directory) or not database.is_relative_to(root)
-                        or not artifacts.is_relative_to(root)):
+                        or artifacts is not None and not artifacts.is_relative_to(root)):
                     raise ValueError("Capture storage is not owned by this run")
                 identity = str(database)
                 if identity in seen:
                     continue
                 seen.add(identity)
-                from agent_telemetry.artifacts import FileArtifactStore
-
+                from xorchestrate.adapters.telemetry_collector.artifacts import FileArtifactStore
                 from xorchestrate.adapters.telemetry_snapshot import create_snapshot, invalidate_bundle, restore_bundle
 
                 name = hashlib.sha256(str(source.relative_to(directory)).encode()).hexdigest()[:24]
                 bundle = output / "bundles" / name
                 restored = output / "restored" / name
-                manifest = create_snapshot(database, FileArtifactStore(artifacts), bundle)
+                manifest = create_snapshot(database, None if artifacts is None else FileArtifactStore(artifacts),
+                                           bundle)
                 created.append(bundle)
                 for key in ("dataset_id", "collector_id"):
                     if manifest["source"][key] != selected.get(key):

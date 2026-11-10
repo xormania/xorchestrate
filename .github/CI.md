@@ -11,7 +11,7 @@ export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XX
 export UV_PROJECT_ENVIRONMENT="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-env.XXXXXX")"
 python3 -m scripts.ci.dependencies check
 uv sync --locked --only-group validation --no-install-project --managed-python --python 3.12.16
-uv sync --locked --no-default-groups --group validation --extra test --extra telemetry --no-install-project --managed-python --python 3.12.16 --no-build-isolation-package agent-telemetry
+uv sync --locked --no-default-groups --group validation --extra test --no-install-project --managed-python --python 3.12.16
 uv pip install --python "$UV_PROJECT_ENVIRONMENT/bin/python" --no-deps --no-build-isolation -e .
 export PATH="$UV_PROJECT_ENVIRONMENT/bin:$PATH"
 python3 -m scripts.testkit run --suite static
@@ -159,7 +159,7 @@ implementation as a product acceptance obligation.
 Security-lint calibration belongs to the catalog's architecture family and uses
 the shared Ruff definition with independent expected findings; it runs in the
 tests shard that owns its module, where the pinned Ruff dependency is installed.
-The verification job installs `.[test]` and does not need the telemetry extra. Architecture and tmux
+The verification job installs `.[test]`. Architecture and tmux
 regression tests run through the tests shards; dedicated jobs do not rerun
 the same selected pytest modules.
 
@@ -190,11 +190,11 @@ CI neither requests reviews nor merges branches. xor controls those decisions.
 
 ## Telemetry runtime
 
-Application CI selects the optional pinned CCE collector through the lock's `test` and
-`telemetry` extras. It uses uv 0.13.7 / Python 3.12.16 for the collector's fixed SQLite WAL requirement.
-Static checks remain independent of this extra. The existing application test-kit
+Application CI selects the lock's `test` extra; the telemetry collector ships with the
+application. It uses uv 0.13.7 / Python 3.12.16 for the SQLite corpus adapter's WAL-fix
+requirement. Static checks need no SQLite runtime. The existing application test-kit
 collects the declared telemetry families alongside the current behavior suites.
-Optional collector/exporter failure does not replace the application's required
+Collector or exporter failure does not replace the application's required
 effect, receipt or acceptance recording. See [the active guide](../docs/telemetry.md).
 
 ## Aggregate result and reviewer summary

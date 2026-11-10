@@ -14,10 +14,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest.mock import patch
 
-from agent_telemetry.artifacts import FileArtifactStore
-
 from tests.hexagonal.support.producer_capture import HttpFixture, response_body
 from xorchestrate.adapters.policies import RuleGuardrail
+from xorchestrate.adapters.telemetry_collector.artifacts import FileArtifactStore
 from xorchestrate.composition import build
 from xorchestrate.model import OrchestrationError
 

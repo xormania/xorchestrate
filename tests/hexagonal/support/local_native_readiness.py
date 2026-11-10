@@ -29,10 +29,11 @@ class LocalNativeReadiness:
         self.native = self.profile.parent / "native.json"
 
     @staticmethod
-    def probe(collector=True):
+    def probe(sqlite_ready=True):
+        collector = {"status": "ready", "sqlite_version": "3.53.1"} if sqlite_ready else {
+            "status": "unavailable", "sqlite_version": "3.44.0", "reason": "sqlite_version"}
         return {"version": [3, 12, 14], "virtual": True, "executable": sys.executable,
-            "dependencies": {"jsonschema": True, "pytest": True, "ruff": True, "agent_telemetry": collector},
-            "collector": {"status": "ready" if collector else "unavailable", "sqlite_version": "3.53.1"}}
+            "dependencies": {"jsonschema": True, "pytest": True, "ruff": True}, "collector": collector}
 
     def setup_native(self):
         with patch.object(profiles, "_interpreter_details", return_value=self.probe()):
@@ -48,11 +49,15 @@ class LocalNativeReadiness:
         self.setup_native()
         return before, self.native.read_bytes()
 
-    def doctor_with_missing_collector(self, enabled):
+    def doctor_with_incompatible_sqlite(self, capture):
+        local = {"runtime_root": str(self.root / "corpus")}
+        telemetry = {"sqlite": {"adapter": "local", "options": local},
+            "disabled": {"enabled": False},
+            "other-corpus": {"adapter": "local", "options": {**local, "corpus": {"adapter": "operator.capture:Corpus"}}},
+            "malformed": {"adapter": "local", "options": {**local, "corpus": "sqlite"}}}[capture]
         self.native.write_text(json.dumps({"sessions": {"codex": {"adapter": "codex",
             "options": {"command": ["operator-codex"], "cwd": str(self.root / "project")}}},
-            "telemetry": ({"adapter": "local", "options": {"runtime_root": str(self.root / "corpus")}}
-                if enabled else {"enabled": False})}))
+            "telemetry": telemetry}))
         before = self.profile.read_bytes(), self.native.read_bytes()
         with patch.object(profiles, "_interpreter_details", return_value=self.probe(False)), \
                 patch.object(profiles.shutil, "which", side_effect=lambda name: "/available/" + name):
@@ -98,8 +103,7 @@ class LocalNativeReadiness:
         policies = {"inline": {"adapter": "local", "options": {"runtime_root": "/operator/long-lived-corpus",
             "dataset_id": "old-dataset", "collector_id": "old-collector"}},
             "local-default": {"adapter": "local", "options": {"project_id": "operator-project"}},
-            "disabled": {"enabled": False}, "custom": {"adapter": "operator.capture:Factory", "options": {"chosen": True}},
-            "profile": {"adapter": "local", "options": {"profile": "/operator/private-capture.toml"}}}
+            "disabled": {"enabled": False}, "custom": {"adapter": "operator.capture:Factory", "options": {"chosen": True}}}
         if configured in policies:
             configuration["telemetry"] = policies[configured]
         original = deepcopy(configuration)
@@ -116,9 +120,6 @@ class LocalNativeReadiness:
             "import importlib.util,sqlite3,sys\n"
             + ("sqlite3.sqlite_version_info=(3,44,0)\nsqlite3.sqlite_version='3.44.0'\n"
                if mode == "incompatible" else "")
-            + ("finder=importlib.util.find_spec\n"
-               "importlib.util.find_spec=lambda name,*args,**kwargs: None if name=='agent_telemetry' else finder(name,*args,**kwargs)\n"
-               if mode == "missing" else "")
             + "assert sys.argv[1]=='-c'\nexec(sys.argv[2], {'__name__':'__main__'})\n")
         interpreter.chmod(0o700)
         values = json.loads(self.profile.read_text())
@@ -161,15 +162,15 @@ class LocalNativeReadiness:
         values["config"] = chosen.name
         self.profile.write_text(json.dumps(values))
         before = chosen.read_bytes(), self.native.read_bytes()
-        installed = [False]
+        installed = []
         def install(command, **kwargs):
             extras = next(argument for argument in command if argument.startswith(str(ROOT) + "["))
-            installed[0] = "telemetry" in extras.split("[", 1)[1].rstrip("]").split(",")
+            installed.append(extras.split("[", 1)[1].rstrip("]").split(","))
             return SimpleNamespace(returncode=0)
-        with patch.object(profiles, "_interpreter_details", side_effect=lambda _: self.probe(installed[0])), \
+        with patch.object(profiles, "_interpreter_details", return_value=self.probe()), \
                 patch.object(profiles.subprocess, "run", side_effect=install):
             result = profiles.setup(self.profile, root=ROOT, install=True)
-        return result, before == (chosen.read_bytes(), self.native.read_bytes())
+        return result, installed, before == (chosen.read_bytes(), self.native.read_bytes())
 
     def verify_saved_interpreter(self):
         script = shell_subject(self.root / "bootstrap candidate")
@@ -194,7 +195,6 @@ class LocalNativeReadiness:
         policies = {"local-default": {"adapter": "local", "options": {"project_id": "chosen-project"}},
             "shared-root": {"adapter": "local", "options": {"runtime_root": "../operator shared corpus",
                 "project_id": "chosen-project", "dataset_id": "chosen-dataset", "collector_id": "chosen-collector"}},
-            "profile": {"adapter": "local", "options": {"profile": "../operator-capture.toml"}},
             "custom": {"adapter": "operator.capture:Factory", "options": {"opaque": "../operator-selected"}},
             "disabled": {"enabled": False}}
         if policy in policies:
@@ -207,8 +207,6 @@ class LocalNativeReadiness:
         expected = deepcopy(configuration.get("telemetry"))
         if policy == "shared-root":
             expected["options"]["runtime_root"] = str(self.root / "operator shared corpus")
-        if policy == "profile":
-            expected["options"]["profile"] = str(self.root / "operator-capture.toml")
         return settings, expected, str(workspace), self.native.read_bytes()
 
     @staticmethod

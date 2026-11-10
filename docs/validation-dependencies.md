@@ -5,8 +5,7 @@ package dependency ranges and optional integration selection; its `validation`
 dependency group declares Ruff and packaging tools. Each exact `build-system.requires`
 declaration also appears in that group, so native uv resolution includes the backend
 requirements; update the paired declarations together when changing them. CI selects Python 3.12.16 and
-uv 0.13.7. The lock records transitive packages, artifact identities and the exact
-telemetry source revision. It does not claim to freeze operating-system packages
+uv 0.13.7. The lock records transitive packages and artifact identities. It does not claim to freeze operating-system packages
 or vendor/model services.
 
 Run this before installation to reject a stale lock or a modified generated export:
@@ -26,17 +25,15 @@ Select an environment outside the candidate before a locked installation:
 ```sh
 export UV_PROJECT_ENVIRONMENT="$(mktemp -d "${TMPDIR:-/tmp}/xor-validation.XXXXXX")"
 uv sync --locked --only-group validation --no-install-project --managed-python --python 3.12.16
-uv sync --locked --no-default-groups --group validation --extra test --extra telemetry --no-install-project --managed-python --python 3.12.16 --no-build-isolation-package agent-telemetry
+uv sync --locked --no-default-groups --group validation --extra test --no-install-project --managed-python --python 3.12.16
 uv pip install --python "$UV_PROJECT_ENVIRONMENT/bin/python" --no-deps --no-build-isolation -e .
 export PATH="$UV_PROJECT_ENVIRONMENT/bin:$PATH"
 ```
 
-Omit `--extra telemetry` for tests without the optional collector; omit both extras
-for static/package-build tooling. `--no-install-project` installs the locked tools
-before source builds, so their backend is already installed. The second sync uses
-that backend for the pinned telemetry source instead of resolving an isolated
-build environment. The editable installation
-uses that backend without resolving another build environment. Package builders
+Omit `--extra test` for static/package-build tooling; the telemetry collector ships
+with the application and needs no extra. `--no-install-project` installs the locked
+tools before source builds, so their backend is already installed. The editable
+installation uses that backend without resolving another build environment. Package builders
 likewise use this Python with `python -m build --no-isolation`.
 
 Update the reviewed baseline intentionally:
@@ -58,8 +55,8 @@ python3 -m scripts.ci.dependencies export --profile runtime --output /tmp/xor-ru
 python3 -m scripts.ci.dependencies export --profile validation --output /tmp/xor-build.txt
 ```
 
-The runtime profile excludes validation tools and optional extras. `tests` and
-`telemetry` profiles add their named extras explicitly. Exports omit the source
+The runtime profile excludes validation tools and optional extras. The `tests`
+profile adds the `test` extra explicitly. Exports omit the source
 project and hashes so pip/uv consumers can install the selected wheel or sdist
 while constraining its dependencies; `uv.lock` remains the artifact identity record.
 

@@ -246,7 +246,7 @@ class TelemetryViews:
         sink = self._configured()
         state = sink.status()
         # Dataset-wide counts and cursor positions can reveal denied membership.
-        result = {key: deepcopy(state[key]) for key in ("status", "reason", "schema_version",
+        result = {key: deepcopy(state[key]) for key in ("status", "reason", "cause", "schema_version",
                   "capture_failures", "publication", "configuration_identity") if key in state}
         sources = {name: {"configured": True, "observed": False, "coverage": "unknown"}
                    for name, source in state.get("sources", {}).items() if source.get("configured")}

@@ -22,7 +22,7 @@ def locked_project(tmp_path):
         pytest.skip("native uv is unavailable; CI installs its pinned validation runtime")
     (tmp_path / "pyproject.toml").write_text(
         '[project]\nname = "lock-witness"\nversion = "0.0.0"\nrequires-python = ">=3.12"\ndependencies = []\n'
-        '[project.optional-dependencies]\ntest = []\ntelemetry = []\n[dependency-groups]\nvalidation = []\n')
+        '[project.optional-dependencies]\ntest = []\n[dependency-groups]\nvalidation = []\n')
     created = _command(tmp_path, "update")
     assert created.returncode == 0, created.stderr
     return tmp_path

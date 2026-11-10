@@ -19,6 +19,9 @@ from .ports import ApplicationToolSessionDriver, SessionDriver
 
 BUILTINS = {
     "telemetry": {"local": "xorchestrate.adapters.telemetry:LocalTelemetry"},
+    # Storage selected inside the local telemetry adapter's ``corpus``/``artifacts`` options.
+    "telemetry_corpus": {"sqlite": "xorchestrate.adapters.telemetry_collector.sqlite:corpus"},
+    "telemetry_artifacts": {"filesystem": "xorchestrate.adapters.telemetry_collector.artifacts:filesystem"},
     "state_engine": {"declared": "xorchestrate.adapters.state:ConfiguredStateEngine"},
     "store": {"memory": "xorchestrate.adapters.storage:MemoryStore", "sqlite": "xorchestrate.adapters.storage:SQLiteStore"},
     "providers": {"mcp": "xorchestrate.adapters.capabilities:StdioMCPProvider", "cli": "xorchestrate.adapters.capabilities:CLIProvider"},
@@ -39,6 +42,51 @@ BUILTINS = {
     "routing": {"configurable": "xorchestrate.adapters.policies:ConfigurableRouting"},
     "evaluators": {"tool": "xorchestrate.adapters.evaluation:ToolEvaluator", "typesafe": "xorchestrate.adapters.evaluation:TypeSafeEvaluator"},
 }
+
+
+# Adapter kinds that are selected inside another adapter's options, not as sections.
+NESTED = frozenset({"telemetry_corpus", "telemetry_artifacts"})
+
+
+@dataclass(frozen=True)
+class TelemetryDefaults:
+    """Collector identity a caller supplies when the configuration has no telemetry section.
+
+    With these defaults, an absent ``telemetry`` section constructs the local
+    collector; ``{"enabled": false}`` still disables it, and an explicit section
+    is used as written.
+    """
+
+    runtime_root: str | Path
+    project_id: str
+    collector_id: str
+    dataset_id: str = "default"
+
+    def specification(self):
+        """Return the local telemetry section, refusing defaults an explicit section would refuse."""
+        from .adapters.telemetry_collector.config import text
+        from .adapters.telemetry_collector.domain import TelemetryError
+
+        root = self.runtime_root
+        if not isinstance(root, (str, Path)) or not str(root) or not Path(root).is_absolute():
+            raise OrchestrationError("Telemetry defaults require an absolute runtime root.", "configuration_error")
+        try:
+            for name in ("project_id", "collector_id", "dataset_id"):
+                text(getattr(self, name), name)
+        except TelemetryError as error:
+            raise OrchestrationError(str(error), "configuration_error") from error
+        return {"adapter": "local", "options": {
+            "runtime_root": str(root), "project_id": self.project_id,
+            "dataset_id": self.dataset_id, "collector_id": self.collector_id}}
+
+
+def factory_for(kind, adapter):
+    """Resolve a built-in alias or a trusted installed ``module:factory`` for one adapter kind."""
+    target = BUILTINS[kind].get(adapter, adapter)
+    if not isinstance(target, str) or ":" not in target:
+        raise OrchestrationError(f"Unknown {kind} adapter: {adapter}", "configuration_error")
+    module, name = target.split(":", 1)
+    return getattr(importlib.import_module(module), name)
 
 
 def _reject_constant(value):
@@ -104,7 +152,8 @@ SUPPORTED_CONFIG_VERSIONS = frozenset({1})
 """Configuration format versions this release reads. Absent ``version`` means 1."""
 
 RELEASE = f"v{__version__}"
-_SECTIONS = frozenset(BUILTINS) | {"assessment", "session_fallbacks", "version"}
+# Nested storage kinds are selected inside telemetry options, never as sections.
+_SECTIONS = (frozenset(BUILTINS) - NESTED) | {"assessment", "session_fallbacks", "version"}
 _ADAPTER_FIELDS = frozenset({"adapter", "options", "enabled"})
 # Singleton adapters in construction order, with their defaults.
 _SINGLETONS = {
@@ -145,6 +194,8 @@ class ResolvedConfig:
     provider_configurations: dict
     evaluator_configurations: dict
     warnings: tuple = ()
+    telemetry_cause: dict | None = None
+    """Bounded cause when the telemetry section is structurally invalid."""
 
 
 def config_version(config, supported=SUPPORTED_CONFIG_VERSIONS):
@@ -211,14 +262,12 @@ def _select(kind, specification, base_dir):
     if kind == "store" and adapter == "sqlite":
         path = options.get("path", ".xorchestrate/state.sqlite3")
         options["path"] = path if path == ":memory:" else _resolve_path(base_dir, path, kind, adapter)
-    if kind == "telemetry" and adapter == "local":
-        for field in ("profile", "runtime_root"):
-            if isinstance(options.get(field), str):
-                options[field] = _resolve_path(base_dir, options[field], kind, adapter, strict=False)
+    if kind == "telemetry" and adapter == "local" and isinstance(options.get("runtime_root"), str):
+        options["runtime_root"] = _resolve_path(base_dir, options["runtime_root"], kind, adapter, strict=False)
     return AdapterSelection(kind, adapter, target, options)
 
 
-def validate_config(config=None, base_dir=None):
+def validate_config(config=None, base_dir=None, *, telemetry_defaults=None):
     """Check a configuration's structure and resolve its paths.
 
     This is the structural half of ``build``: format version, section names,
@@ -227,8 +276,14 @@ def validate_config(config=None, base_dir=None):
     nothing, so operator tooling can check a configuration safely. Adapter
     option contents remain each factory's responsibility at construction, and
     application-owned settings (``assessment``, ``session_fallbacks``) are
-    validated by the application.
+    validated by the application. The local telemetry adapter's nested
+    ``corpus``/``artifacts`` selections are its option contents.
+
+    ``telemetry_defaults`` supplies the local collector when the configuration
+    has no telemetry section (absent or ``null``); invalid defaults are refused.
     """
+    if telemetry_defaults is not None and not isinstance(telemetry_defaults, TelemetryDefaults):
+        raise OrchestrationError("Telemetry defaults must be a TelemetryDefaults value.", "configuration_error")
     try:
         config = json.loads(json.dumps({} if config is None else config, allow_nan=False))
     except (TypeError, ValueError, RecursionError) as exc:
@@ -241,14 +296,19 @@ def validate_config(config=None, base_dir=None):
         raise OrchestrationError("Unknown configuration sections.", "configuration_error", {"sections": sorted(unknown)})
     base_dir = Path(base_dir or Path.cwd()).resolve()
 
-    telemetry, telemetry_unavailable = None, False
+    telemetry, telemetry_unavailable, telemetry_cause = None, False, None
+    # An absent section and an explicit ``"telemetry": null`` are the same: no
+    # section. Only ``{"enabled": false}`` disables collection outright.
     specification = config.get("telemetry")
+    if specification is None and telemetry_defaults is not None:
+        specification = telemetry_defaults.specification()
     if specification is not None and not (isinstance(specification, dict) and specification.get("enabled") is False):
         try:
             telemetry = _select("telemetry", specification, base_dir)
-        except OrchestrationError:
-            # Optional diagnostics must not prevent unrelated work.
-            telemetry_unavailable = True
+        except OrchestrationError as error:
+            # Telemetry failure must not prevent unrelated work.
+            # Structural messages name sections and adapters, never option values.
+            telemetry_unavailable, telemetry_cause = True, {"code": error.code, "detail": str(error)[:200]}
             warnings += ({"code": "telemetry_configuration_invalid",
                           "message": "Telemetry configuration is invalid; telemetry will be unavailable."},)
 
@@ -294,12 +354,13 @@ def validate_config(config=None, base_dir=None):
         version=version, base_dir=base_dir, config=config, adapters=adapters, collections=collections,
         telemetry=telemetry, telemetry_unavailable=telemetry_unavailable,
         provider_configurations=provider_configurations, evaluator_configurations=evaluator_configurations,
-        warnings=warnings,
+        warnings=warnings, telemetry_cause=telemetry_cause,
     )
 
 
-def build(config=None, base_dir=None):
-    resolved = validate_config(config, base_dir)
+def build(config=None, base_dir=None, *, telemetry_defaults=None):
+    """Assemble a runtime; ``telemetry_defaults`` enables collection without a telemetry section."""
+    resolved = validate_config(config, base_dir, telemetry_defaults=telemetry_defaults)
     config = resolved.config
     resources = []
     providers = {}
@@ -309,8 +370,13 @@ def build(config=None, base_dir=None):
             module, name = selection.target.split(":", 1)
             factory = getattr(importlib.import_module(module), name)
             options = deepcopy(selection.options)
-            resource = (factory(options, providers) if selection.kind == "evaluators" and selection.adapter == "tool"
-                        else factory(options))
+            if selection.kind == "telemetry" and selection.adapter == "local":
+                resource = factory(options, resolve=lambda component, adapter: factory_for(
+                    "telemetry_" + component, adapter))
+            elif selection.kind == "evaluators" and selection.adapter == "tool":
+                resource = factory(options, providers)
+            else:
+                resource = factory(options)
         except OrchestrationError:
             raise
         except Exception as exc:
@@ -327,13 +393,16 @@ def build(config=None, base_dir=None):
         if resolved.telemetry is not None:
             try:
                 telemetry = construct(resolved.telemetry)
-            except Exception:
-                # Optional diagnostics must not prevent unrelated work. Keep a
-                # safe explicit state; source exceptions may contain credentials.
-                telemetry = None
-        if telemetry is None and (resolved.telemetry is not None or resolved.telemetry_unavailable):
+            except Exception as error:
+                # Telemetry failure must not prevent unrelated work. Keep a safe
+                # explicit state with a bounded cause; source exception text may
+                # contain credentials and is not retained.
+                from .adapters.telemetry import UnavailableTelemetry, construction_cause
+                telemetry = UnavailableTelemetry(cause=construction_cause(error))
+                resources.append(telemetry)
+        elif resolved.telemetry_unavailable:
             from .adapters.telemetry import UnavailableTelemetry
-            telemetry = UnavailableTelemetry()
+            telemetry = UnavailableTelemetry(cause=resolved.telemetry_cause)
             resources.append(telemetry)
         adapters = resolved.adapters
         state_engine = construct(adapters["state_engine"])
