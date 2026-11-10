@@ -11,7 +11,7 @@ CODE_PATHS = (
     "README.txt", "docs", "/README.md", "docs/../xorchestrate/model.py", "",
 )
 HEAVY_JOBS = ("application-tests", "application", "verification", "tmux-acceptance", "architecture", "package")
-ALWAYS_JOBS = ("changes", "architecture-status")
+ALWAYS_JOBS = ("changes", "architecture-status", "ci-result")
 CLASSIFIER_JOB = "paths"
 # Heavy jobs that aggregate other heavy jobs. They still depend on the classifier,
 # but use always() so a cancelled or failed dependency is reported, not skipped.
