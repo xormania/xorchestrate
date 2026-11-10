@@ -299,9 +299,14 @@ class Peer:
             result = self.handler(packet["method"], packet.get("params", {}))
             response = {"id": packet["id"], "result": result}
         except Exception as exc:
-            response = {"id": packet["id"], "error": {"code": getattr(exc, "code", "bridge_error"),
-                "message": str(exc) if isinstance(exc, OrchestrationError) else "Bridge request did not return a verified result.",
-                "details": getattr(exc, "details", {"outcome": "unknown"})}}
+            # Only an expected adapter error is public; arbitrary exceptions can
+            # carry credentials or SDK internals in their text and attributes.
+            if isinstance(exc, OrchestrationError):
+                error = {"code": exc.code, "message": str(exc), "details": exc.details}
+            else:
+                error = {"code": "bridge_error", "message": "Bridge request did not return a verified result.",
+                         "details": {"outcome": "unknown"}}
+            response = {"id": packet["id"], "error": error}
         try:
             self._write(response)
         except Exception:
