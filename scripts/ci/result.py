@@ -19,6 +19,8 @@ ARTIFACTS = {
 }
 JEV_OUTCOMES = {"concern", "no_concern", "insufficient_evidence"}
 JEV_STATUSES = {"complete", "unavailable", "error", "inconclusive", "not_configured"}
+# The public diagnostic selector permits 100 candidates and three named checks.
+JEV_MAX_ASSESSMENTS = 100 * 3
 
 
 def _sha(value, length=64):
@@ -45,7 +47,7 @@ def _diagnostic_scope(value):
 
 
 def _diagnostic_assessments(values):
-    if not isinstance(values, list) or len(values) > 32:
+    if not isinstance(values, list) or len(values) > JEV_MAX_ASSESSMENTS:
         raise ValueError("Invalid diagnostic assessment list")
     result, identities, task_ids = [], set(), set()
     for value in values:
@@ -169,6 +171,11 @@ def jev_evidence(artifacts, needs, *, tested_sha):
             raise ValueError("A complete diagnostic needs its measured context")
         if "execution" in diagnostic:
             base["execution"] = _diagnostic_execution(diagnostic["execution"])
+        if "provider_status" in diagnostic:
+            status_code = diagnostic["provider_status"]
+            if type(status_code) is not int or not 100 <= status_code <= 599:
+                raise ValueError("Invalid diagnostic HTTP status")
+            base["provider_status"] = status_code
         base["concerns"] = sum(row["outcome"] == "concern" for row in assessments)
         if "reason" in diagnostic:
             reason = diagnostic["reason"]
@@ -352,6 +359,8 @@ def markdown(result, run_url):
                  "Current tested revision: " + ("yes" if diagnostic.get("current") else "unverified; no current assessment is claimed") + "."])
     if diagnostic.get("reason"):
         rows.append("Reason: " + text(diagnostic["reason"]) + ".")
+    if "provider_status" in diagnostic:
+        rows.append(f"Provider HTTP status: {diagnostic['provider_status']}.")
     if diagnostic.get("current"):
         if diagnostic.get("model"):
             rows.append("Model: " + text(diagnostic["model"]) + ".")

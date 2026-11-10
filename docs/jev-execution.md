@@ -28,6 +28,8 @@ Provider failures and incomplete batches are never cached. Cache writing is
 atomic and private, using the existing evidence writer. A digest detects damaged
 content; it is not an attestation against a writer who controls this trusted cache.
 
+The complete omission/exclusion ledger stays in the retained report. The model packet replaces those bookkeeping lists with counts, reason counts and SHA-256 bindings, preserving every selected source unit, candidate and contract. Its context hash identifies the exact compact provider state. This avoids spending the context window on thousands of omitted-path and exclusion identifiers.
+
 Reports distinguish provider calls, reused assessments, fresh usage and historical
 reused usage. A hit removes the old usage from the fresh assessment counters;
 unknown provider quantities remain unknown. Partial successful single calls remain
@@ -56,3 +58,5 @@ binding and reuse behavior; the hosted provider's batch response is a separate
 live witness in the PR checks.
 
 After the final stack merge, shared static checks and all **166 architecture cases** passed; **139 reporting/evaluator/producer tests plus eight subtests** also passed. The three review regressions each reproduced the actual predecessor failure and passed after repair. The [compact witness ledger](jev-evidence/efficiency.json) retains test identities, applied patches, source digests and observed command results.
+
+A failed hosted large-packet batch remains recorded in its original CI attempt. The transport now retains bounded HTTP status codes through advisory failure handling, without copying provider error bodies or credentials. Independent 400/529 controls reproduce the lost-status defect and verify the repair. The model packet was also reduced without removing selected source evidence; [TypeSafe documents separate request and question context limits](https://docs.typesafe.ai/models#context-length). Actual live compatibility is reported by the subsequent hosted attempt, not inferred from a green advisory job.

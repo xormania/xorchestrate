@@ -1,6 +1,7 @@
 """Exercise targeted architecture evidence with independent source contracts."""
 from __future__ import annotations
 
+import json
 from copy import deepcopy
 
 import pytest
@@ -163,3 +164,41 @@ def test_whole_new_module_prioritizes_behavior_over_module_metadata(tmp_path):
     assert [item["symbol"] for item in context["candidates"]] == ["compute", "persist"], "NEW_MODULE_BEHAVIOR_SELECTED_BEFORE_METADATA"
     assert [item["kind"] for item in context["sources"] if item["relation"] == "candidate"] == ["FunctionDef", "FunctionDef"]
     assert all(item["path"] == path for item in context["candidates"])
+
+
+def test_cli_retains_broken_relative_import_as_inconclusive_diagnostics(tmp_path, monkeypatch):
+    from scripts.architecture.__main__ import main
+
+    package = tmp_path / "pkg"
+    package.mkdir()
+    (package / "ports.py").write_text("class Store:\n    def read(self):\n        return 'value'\n")
+    work = package / "work.py"
+    work.write_text("from .ports import Store\n\ndef work(port: Store):\n    return port.read()\n")
+    profile = {"schema_version": 1, "id": "relative-import-control", "version": 1, "source_roots": ["pkg"],
+               "roles": {"core": {"modules": ["pkg.*"], "allowed_roles": ["core"],
+                                  "allowed_external": [], "allow_dynamic": False}}}
+    (tmp_path / "profile.json").write_text(json.dumps(profile))
+    (tmp_path / "jev.json").write_text(json.dumps({"endpoint": "https://fixture.invalid", "model": "fixture"}))
+    output = tmp_path / "architecture.json"
+    command = ["--root", str(tmp_path), "--profile", "profile.json", "--jev-config", "jev.json", "--output", str(output)]
+    RecordingEvaluator.calls = []
+    monkeypatch.setattr("scripts.architecture.diagnostics.TypeSafeEvaluator", RecordingEvaluator)
+    assert main(command) == 0
+    healthy = json.loads(output.read_text())
+    assert healthy["status"] == "pass" and healthy["diagnostics"]["status"] == "complete"
+    assert RecordingEvaluator.calls
+    work.write_text("from ...missing import thing\n\ndef work(port):\n    return port.read()\n")
+    RecordingEvaluator.calls = []
+    escaped = None
+    try:
+        exit_status = main(command)
+    except Exception as error:
+        escaped = type(error).__name__
+        exit_status = None
+    assert escaped is None, "RELATIVE_IMPORT_UNAVAILABLE_IS_INCONCLUSIVE"
+    faulty = json.loads(output.read_text())
+    assert exit_status == 1 and faulty["status"] == "error"
+    assert any(item["rule_id"] == "source.readable" for item in faulty["findings"])
+    assert faulty["diagnostics"]["status"] == "inconclusive"
+    assert faulty["diagnostics"]["reason"] == "source_evidence_unavailable_or_changed"
+    assert RecordingEvaluator.calls == []

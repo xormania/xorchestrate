@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sys
+from collections import Counter
 from copy import deepcopy
 from pathlib import Path
 
@@ -197,6 +198,58 @@ def test_diagnose_batch_profile_uses_one_http_request_with_grounded_answers(tmp_
         request = provider["requests"][0]
         assert list(request["questions"]) == ["q0", "q1", "q2"]
         assert [item["instructions"] for item in request["questions"].values()] == [item["question"] for item in assessments]
+
+
+@pytest.mark.parametrize("http_status", [400, 529])
+def test_diagnose_retains_bounded_http_status_without_error_body_or_failed_cache(tmp_path, monkeypatch, http_status):
+    source_root, cache_root = tmp_path / "source", tmp_path / "cache"
+    sources, line, _ = measured_sources(source_root)
+    marker = "private-fixture-provider-diagnostic-body"
+    monkeypatch.setenv("JEV_PROVIDER_STATUS_FIXTURE_KEY", marker)
+    with http_choices() as provider:
+        provider["status"], provider["response"] = http_status, {"error": marker}
+        options = {key: value for key, value in provider["options"].items() if key != "criteria"}
+        options.update(cache_dir=str(cache_root), batch=True, credential_env="JEV_PROVIDER_STATUS_FIXTURE_KEY",
+                       changed_ranges=[{"path": "pkg/work.py", "start_line": line + 2, "end_line": line + 2}])
+        result = diagnose(source_report(sources), source_root, options)
+        assert result.get("provider_status") == http_status, "PROVIDER_HTTP_STATUS_RETAINED"
+        assert result["status"] == "unavailable" and result["reason"] == "evaluation_unavailable"
+        assert result["assessments"] == [] and len(provider["requests"]) == 1
+        assert result["execution"]["provider_calls"] == 1
+        assert marker not in json.dumps(result), "RAW_PROVIDER_BODY_NOT_RETAINED"
+        assert list(cache_root.glob("*.json")) == [], "FAILED_HTTP_ATTEMPT_NOT_CACHED"
+
+
+def test_diagnose_compacts_omission_ledger_only_in_exact_provider_state(tmp_path):
+    sources, line, changed = measured_sources(tmp_path)
+    report = source_report(sources)
+    with http_choices() as provider:
+        options = {key: value for key, value in provider["options"].items() if key != "criteria"}
+        options.update(batch=True, max_files=1,
+                       changed_ranges=[{"path": "pkg/work.py", "start_line": line + 2, "end_line": line + 2}])
+        result = diagnose(report, tmp_path, options)
+        assert result["status"] == "complete" and len(provider["requests"]) == 1
+        wire = provider["requests"][0]["state"]
+        compact, full = wire["source_scope"], result["source_scope"]
+        assert "omitted" not in compact and "excluded" not in compact and "omitted_count" in compact, "OMISSION_LEDGER_COMPACT_ON_WIRE"
+        assert full["omitted"] and full["excluded"], "FULL_OMISSION_LEDGER_RETAINED"
+        for key in ("omitted", "excluded"):
+            encoded = json.dumps(full[key], ensure_ascii=False, sort_keys=True, allow_nan=False).encode()
+            assert compact[key + "_count"] == len(full[key])
+            assert compact[key + "_sha256"] == hashlib.sha256(encoded).hexdigest(), "OMISSION_LEDGER_DIGEST_BOUND"
+        assert compact["excluded_reasons"] == dict(Counter(item["reason"] for item in full["excluded"]))
+        assert {key: value for key, value in compact.items() if key not in {
+            "omitted_count", "omitted_sha256", "excluded_count", "excluded_sha256", "excluded_reasons"
+        }} == {key: value for key, value in full.items() if key not in {"omitted", "excluded"}}
+        assert wire["sources"][0]["source"] == changed
+        assert all(item["path"] == "pkg/work.py" and item["truncated"] is False for item in wire["sources"])
+        assert len(wire["candidates"]) == 1
+        assert wire["candidates"][0]["path"] == "pkg/work.py" and wire["candidates"][0]["start_line"] == line
+        assert wire["profile"] == report["profile"] and wire["subject"] == report["subject"]
+        assert wire["deterministic"] == {key: report[key] for key in ("status", "summary", "findings", "coverage")}
+        assert result["evidence_context"] == wire, "EXACT_PROVIDER_STATE_RETAINED"
+        encoded = json.dumps(wire, ensure_ascii=False, sort_keys=True, allow_nan=False).encode()
+        assert result["context_sha256"] == hashlib.sha256(encoded).hexdigest(), "PROVIDER_STATE_DIGEST_BOUND"
 
 
 @pytest.mark.parametrize("option,value", [

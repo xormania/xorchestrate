@@ -118,7 +118,9 @@ def run_tasks(evaluator, tasks, context, *, cache_dir=None, batch=False, cache_t
                 metadata["provider_calls"] += 1
                 results.append(evaluator.assess(task["question"], context))
     except OrchestrationError as error:
-        raise OrchestrationError(str(error), error.code, {
+        status = error.details.get("status")
+        provider = {"status": status} if type(status) is int and 100 <= status <= 599 else {}
+        raise OrchestrationError(str(error), error.code, {**provider,
             "execution": {**metadata, "fresh_usage": _usage(results), "elapsed_seconds": time.monotonic() - started},
             "completed_assessments": json.loads(canonical([asdict(item) for item in results])),
         }) from None

@@ -1889,6 +1889,250 @@
           }
         }
       ]
+    },
+    {
+      "name": "provider-status",
+      "source_summary_sha256": "8c87b3375b55d77c03ba2dc73779faba6b654dd07823a56b2b340ebebc2624c8",
+      "candidate": {
+        "commit": "b5d445fdc87028c980e277e04ddae5708871920c",
+        "content_sha256": "be7d911701f7fc748646e18dd1e08bd90e526b715c7cd5bf389fee267e1ea3b9"
+      },
+      "passed": true,
+      "witnesses": [
+        {
+          "target": "tests.hexagonal.test_jev_efficiency::test_diagnose_retains_bounded_http_status_without_error_body_or_failed_cache[400]",
+          "classification": "detected",
+          "expected_diagnostic": "PROVIDER_HTTP_STATUS_RETAINED",
+          "mutation_applied": true,
+          "mutation_sha256": "912477ec8143b7ca0f90c71967386301d5c98002f6f91a98804cd65d43788551",
+          "candidate_sha256": "be7d911701f7fc748646e18dd1e08bd90e526b715c7cd5bf389fee267e1ea3b9",
+          "name": "http-400",
+          "mutation_patch": "--- a/scripts/architecture/cache.py\n+++ b/scripts/architecture/cache.py\n@@ -118,9 +118,7 @@\n                 metadata[\"provider_calls\"] += 1\n                 results.append(evaluator.assess(task[\"question\"], context))\n     except OrchestrationError as error:\n-        status = error.details.get(\"status\")\n-        provider = {\"status\": status} if type(status) is int and 100 <= status <= 599 else {}\n-        raise OrchestrationError(str(error), error.code, {**provider,\n+        raise OrchestrationError(str(error), error.code, {\n             \"execution\": {**metadata, \"fresh_usage\": _usage(results), \"elapsed_seconds\": time.monotonic() - started},\n             \"completed_assessments\": json.loads(canonical([asdict(item) for item in results])),\n         }) from None\n",
+          "mutation_patch_sha256": "15013af32908b01adbf8eb0fbdcda58373a4b0213fa97744ff979ff6853a0b31",
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_diagnose_retains_bounded_http_status_without_error_body_or_failed_cache[400]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/provider-status/http-400/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T06:13:58.791777+00:00",
+              "finished_at": "2026-11-10T06:14:00.273282+00:00",
+              "stdout_sha256": "59b9466559aeabf218a54ec041fd83cd357cf9bf1d80a17c47aab62ed0c205bf",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "044ef9899e5fa316637c8dd81f95d9066324a16e5129c2a5e07593f3e084c7b6"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_diagnose_retains_bounded_http_status_without_error_body_or_failed_cache[400]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/provider-status/http-400/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T06:14:00.276598+00:00",
+              "finished_at": "2026-11-10T06:14:01.968169+00:00",
+              "stdout_sha256": "0f2594eef553c0df4e758826a403f906a444f8df3e355c693f7a9c00d610477e",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "0f867e4029040e5f744e25567df83ce8377098c4709ac1dd199d9a68299da8db"
+            }
+          },
+          "http_status": 400
+        },
+        {
+          "target": "tests.hexagonal.test_jev_efficiency::test_diagnose_retains_bounded_http_status_without_error_body_or_failed_cache[529]",
+          "classification": "detected",
+          "expected_diagnostic": "PROVIDER_HTTP_STATUS_RETAINED",
+          "mutation_applied": true,
+          "mutation_sha256": "912477ec8143b7ca0f90c71967386301d5c98002f6f91a98804cd65d43788551",
+          "candidate_sha256": "be7d911701f7fc748646e18dd1e08bd90e526b715c7cd5bf389fee267e1ea3b9",
+          "name": "http-529",
+          "mutation_patch": "--- a/scripts/architecture/cache.py\n+++ b/scripts/architecture/cache.py\n@@ -118,9 +118,7 @@\n                 metadata[\"provider_calls\"] += 1\n                 results.append(evaluator.assess(task[\"question\"], context))\n     except OrchestrationError as error:\n-        status = error.details.get(\"status\")\n-        provider = {\"status\": status} if type(status) is int and 100 <= status <= 599 else {}\n-        raise OrchestrationError(str(error), error.code, {**provider,\n+        raise OrchestrationError(str(error), error.code, {\n             \"execution\": {**metadata, \"fresh_usage\": _usage(results), \"elapsed_seconds\": time.monotonic() - started},\n             \"completed_assessments\": json.loads(canonical([asdict(item) for item in results])),\n         }) from None\n",
+          "mutation_patch_sha256": "15013af32908b01adbf8eb0fbdcda58373a4b0213fa97744ff979ff6853a0b31",
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_diagnose_retains_bounded_http_status_without_error_body_or_failed_cache[529]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/provider-status/http-529/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T06:14:02.232720+00:00",
+              "finished_at": "2026-11-10T06:14:03.735871+00:00",
+              "stdout_sha256": "d2d744b6b2df2bbb0d73cb7a43f6675bd03881bc2a2c2a74e54ecf18667789e2",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "d5ae32561f8b186bcd3de8beff8ef670325175382c9add920932751902a6f901"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_diagnose_retains_bounded_http_status_without_error_body_or_failed_cache[529]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/provider-status/http-529/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T06:14:03.737299+00:00",
+              "finished_at": "2026-11-10T06:14:05.180327+00:00",
+              "stdout_sha256": "e194c51a4f0b571b20d41950349ab2456ddb6b102c521fff47675536d6d7d24f",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "e06b7587be282fecf10fcad889fca892cad6c1c4045c9ccac7be480e3048de49"
+            }
+          },
+          "http_status": 529
+        }
+      ],
+      "defective_source_revision": "b5d445f"
+    },
+    {
+      "name": "compact-packet",
+      "source_summary_sha256": "3edd17618114a70eee6a58b02b8f010b4720bec442244a938e4b956caf2620d7",
+      "candidate": {
+        "commit": "5724b9766dfcf0f84ae383d350b6946a71f5c42b",
+        "content_sha256": "12b33a244b15264616542c115dea873010c0c748f39d2ad5656f40892938dc8c"
+      },
+      "passed": true,
+      "witnesses": [
+        {
+          "target": "tests.hexagonal.test_jev_efficiency::test_diagnose_compacts_omission_ledger_only_in_exact_provider_state",
+          "classification": "detected",
+          "expected_diagnostic": "OMISSION_LEDGER_COMPACT_ON_WIRE",
+          "mutation_applied": true,
+          "mutation_sha256": "620d3e6dcb1854fe92222fb9c23deb3490897e2aa125cf097eebcc15bae7ef90",
+          "candidate_sha256": "12b33a244b15264616542c115dea873010c0c748f39d2ad5656f40892938dc8c",
+          "name": "actual-prefix-ledger",
+          "mutation_patch": "--- a/scripts/architecture/diagnostics.py\n+++ b/scripts/architecture/diagnostics.py\n@@ -9,7 +9,6 @@\n import hashlib\n import json\n import subprocess\n-from collections import Counter\n from dataclasses import asdict\n from pathlib import Path\n \n@@ -119,18 +118,6 @@\n     return tasks\n \n \n-\n-def _provider_context(context):\n-    \"\"\"Keep full evidence but summarize bookkeeping ledgers in the model packet.\"\"\"\n-    scope = dict(context[\"source_scope\"])\n-    for name in (\"omitted\", \"excluded\"):\n-        ledger = scope.pop(name, [])\n-        scope[name + \"_count\"] = len(ledger)\n-        scope[name + \"_sha256\"] = hashlib.sha256(_json_bytes(ledger)).hexdigest()\n-        if name == \"excluded\":\n-            scope[\"excluded_reasons\"] = dict(Counter(item[\"reason\"] for item in ledger))\n-    return {**context, \"source_scope\": scope}\n-\n def diagnose(report: dict, root: Path, options: dict | None = None) -> dict:\n     \"\"\"Return Jev diagnostics without changing the deterministic report.\n \n@@ -154,10 +141,8 @@\n     except (OSError, ValueError, TypeError, SyntaxError, subprocess.TimeoutExpired):\n         evaluator.close()\n         return {**base, \"status\": \"inconclusive\", \"reason\": \"source_evidence_unavailable_or_changed\"}\n-    scope = context[\"source_scope\"]\n-    context = _provider_context(context)\n     base.update({\"context_sha256\": hashlib.sha256(_json_bytes(context)).hexdigest(),\n-                 \"source_scope\": scope, \"model\": transport[\"model\"],\n+                 \"source_scope\": context[\"source_scope\"], \"model\": transport[\"model\"],\n                  \"evidence_context\": context})\n     tasks = evaluation_tasks(context, checks)\n     if not tasks:\n@@ -171,16 +156,13 @@\n         for task, assessment in zip(tasks, assessments):\n             base[\"assessments\"].append({**task,\n                                          **asdict(assessment),\n-                                         \"evidence_scope\": scope[\"selected\"]})\n+                                         \"evidence_scope\": context[\"source_scope\"][\"selected\"]})\n     except OrchestrationError as error:\n-        status = error.details.get(\"status\")\n-        if type(status) is int and 100 <= status <= 599:\n-            base[\"provider_status\"] = status\n         if isinstance(error.details.get(\"execution\"), dict):\n             base[\"execution\"] = error.details[\"execution\"]\n         for task, completed in zip(tasks, error.details.get(\"completed_assessments\", [])):\n             base[\"assessments\"].append({**task, **completed,\n-                                        \"evidence_scope\": scope[\"selected\"]})\n+                                        \"evidence_scope\": context[\"source_scope\"][\"selected\"]})\n         return {**base, \"status\": \"unavailable\" if error.code == \"evaluation_unavailable\" else \"error\",\n                 \"reason\": error.code}\n     finally:\n",
+          "mutation_patch_sha256": "01243aa96a85efa4223b6bb8621c1084492d89511cdc872d4258661dc9216759",
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_diagnose_compacts_omission_ledger_only_in_exact_provider_state",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/compact-packet/actual-prefix-ledger/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T06:16:05.341796+00:00",
+              "finished_at": "2026-11-10T06:16:06.516118+00:00",
+              "stdout_sha256": "8989a153a4f265bdf8bf8abfcbf7ce96cf91c69ee66d543244ebf0fc2c9d041d",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "90236930affd0c30f11e27c07b6d1871803bbb5c9e22ecda1468131ee5164682"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_diagnose_compacts_omission_ledger_only_in_exact_provider_state",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/compact-packet/actual-prefix-ledger/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T06:16:06.518357+00:00",
+              "finished_at": "2026-11-10T06:16:07.736186+00:00",
+              "stdout_sha256": "20f9fd9888b7cbbeaaf0377ecb3aa41d70f7813cb3625afb988dde5cc71b0797",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "150139c5ce09e0c2660a90cdd53fda16ba7d2271f085cbfd8123d4329ad2fd03"
+            }
+          }
+        }
+      ]
     }
-  ]
+  ],
+  "local_verification": {
+    "evidence_kind": "observed local command result",
+    "command": [
+      "/workspace/scratch/150dce018256/jev-venv/bin/python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "tests/hexagonal/test_jev_efficiency.py",
+      "-q"
+    ],
+    "environment": {
+      "PYTHONPYCACHEPREFIX": "/workspace/scratch/150dce018256/pycache-efficiency"
+    },
+    "python": "3.12.16",
+    "exit_status": 0,
+    "passed": 31,
+    "failed": 0,
+    "observed_summary": "31 passed in 0.36s",
+    "binding": "The full-module run completed before commit 472fad2; relevant source and test bytes match the compact-packet calibration candidate below. No new run is claimed by this evidence update.",
+    "relevant_inputs_sha256": {
+      "scripts/architecture/diagnostics.py": "87a9bff09fed84e65fac9cca88bf6a43d2ecf3bba4424b9626aad02e87b5daa6",
+      "scripts/architecture/cache.py": "dedd168d18d82c2cd2909b87ddf90c5beb8a5bfa6175f1727a759001278d0a9e",
+      "xorchestrate/adapters/evaluation.py": "950a0b487a421b86813c4b2533d4368c68190f1be36d284c6755ebcc24c94066",
+      "scripts/architecture/context.py": "d3ad8d705ac9bbc3d677d442ad710d6c847e794471427eb7f6d61049be598ff6",
+      "tests/hexagonal/test_jev_efficiency.py": "a48f9d6a684a0b45ea7f936106ddcc742e36aa742d2f7b54eed4c6ba7554902c"
+    }
+  },
+  "totals": {
+    "witnesses": 35,
+    "detected": 35,
+    "passing_controls": 35
+  }
 }

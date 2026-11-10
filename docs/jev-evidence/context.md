@@ -117,3 +117,30 @@ external bytecode cache; Ruff passed for the new test. Local evidence in
 the healthy run and an initial pass obtained after the parallel production fix
 was already present. This is a focused regression for an observed live issue;
 the earlier 13 detection witnesses were not rerun.
+
+## Codex review repairs
+
+Both practical PR #59 review findings were reproduced and repaired:
+
+| Finding | Repair and independent detection |
+| --- | --- |
+| An unresolved relative import could escape context collection as `ImportError`, losing the diagnostic report | Import resolution now normalizes that failure to `ValueError`, which the diagnostic boundary records as `inconclusive`. A public CLI test first passes a valid relative-import control, then checks an import beyond its package. The deterministic source error, failing exit status and diagnostic evidence remain present, with no provider call. |
+| The summary parser rejected more than 32 assessments despite supporting 100 candidates with three questions each | The consumer now accepts the full declared capacity of 300 assessments. Independent generated 11- and 100-function source populations produce real 33- and 300-task packets through the context/task APIs; all assessments survive reporting with their candidate identities. |
+
+The separate test author ran all three new parameter cases against unchanged
+`257aa43`. All failed their intended assertions, with no setup errors:
+`RELATIVE_IMPORT_UNAVAILABLE_IS_INCONCLUSIVE` and
+`SUPPORTED_TASK_CAPACITY_VISIBLE`. The import exception was caught explicitly by
+the regression before asserting its intended behavior; it was not a test-import
+or collection failure.
+
+```bash
+python -m pytest -p no:cacheprovider tests/hexagonal/test_architecture_context.py::test_cli_retains_broken_relative_import_as_inconclusive_diagnostics tests/hexagonal/test_ci_result.py::test_supported_grounded_task_populations_survive_advisory_reporting -q
+python -m pytest -p no:cacheprovider tests/hexagonal/test_architecture_context.py tests/hexagonal/test_ci_result.py -q
+```
+
+After repair, both affected modules passed **114 tests** on Python 3.12.16 with an
+external bytecode cache. Ruff passed for the changed production modules. Local
+evidence in `evidence-codex-pr59/` retains the independent red and green runs.
+These are focused repairs of the existing review findings; no additional general
+review or repeat of the earlier fault campaign was introduced.
