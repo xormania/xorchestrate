@@ -92,6 +92,9 @@ entries are written.
   root and not group/other-writable unless sticky. A socket directly in
   `/tmp` is therefore refused; use a private subdirectory. Clients also refuse
   a listener run by another user (`peer_untrusted`) before sending anything.
+  Where the platform has no `SO_PEERCRED`, neither side can check the peer's
+  user and both proceed; keep an explicit `--socket` in a directory only you
+  can traverse there (see [project server](docs/project-server.md#known-limitations)).
 - **Lifecycle definitions:** None.
 - **Adapter options:** the local telemetry adapter's `profile` option is
   removed; a configuration that still sets it leaves telemetry unavailable with

@@ -227,9 +227,17 @@ port.
   number of concurrent unfinished hellos (32) are fixed defaults, not CLI
   options.
 - `--detach` does not call drivers' detach operation; it closes the runtime.
-- Without `SO_PEERCRED`, peer uids are not observed by the server or by
-  clients, so an explicit `--socket` in a directory another user can write to
-  is not protected there.
+- Without `SO_PEERCRED`, neither the server nor clients can observe the peer's
+  uid, and both proceed without that check. On such a platform, if the kernel
+  also ignores Unix socket file permissions, an explicit `--socket` in a
+  directory you own but other users can traverse (for example mode `0755`)
+  passes the explicit-socket rule and is reachable by another local user.
+  That user can connect, assert any actor (actors are self-asserted) and make
+  application or control calls, including `down --detach`. Linux, which has
+  `SO_PEERCRED`, and the default private (`0700`) server locations are not
+  affected. On other platforms, put an explicit socket in a directory only you
+  can traverse (`chmod 700`). This is an accepted limitation; the code does not
+  fail closed when peer credentials are unavailable.
 - The explicit-socket rule trusts root-owned enclosing directories; a home
   directory below a directory owned by another non-root user is refused.
 - A server that never drains (a held call that never returns) keeps running
