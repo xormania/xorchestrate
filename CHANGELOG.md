@@ -16,6 +16,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Added
 
+- CI candidate contexts bind the tested merge/base/tree to GitHub checks and
+  immutable per-lane producer artifacts, including successful partial reruns.
+
 - Live test-kit failures keep their reason. A failed scenario check still
   records only its assertion code in the shareable `scenario.json`; the request
   involved, the application's error and the preserved outcome of a failed effect

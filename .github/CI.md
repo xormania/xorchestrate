@@ -76,7 +76,7 @@ pip-compatible export of that group, not a second manually edited pin source.
 See [validation dependencies](../docs/validation-dependencies.md) for intentional
 updates, runtime/build exports and separately labeled fresh-resolution checks.
 
-Static checks run once in their own job. The Jev diagnostic
+Static checks run once in their own job, after the initial candidate context is available. They run regardless of the documentation-only decision. The Jev diagnostic
 calculation remains independent and does not add a second deterministic gate.
 The `tests` suite is the longest validation, so it runs as parallel shards
 balanced by the committed `contracts/test-timings.json`. The shard count N is
@@ -139,22 +139,16 @@ emits nothing, they still run. On a documentation-only pull request the shards
 and the aggregate are skipped together; otherwise the aggregate runs even after a
 shard failure and fails unless the whole matrix succeeded. The aggregate's
 condition uses `always()` instead of `!cancelled()`, so a cancelled run reports
-it as failed or cancelled rather than skipped. Static checks and the `Hexagonal architecture` status
-job do not depend on `paths` and always run. The static suite is cheap and backs
+it as failed or cancelled rather than skipped. Static checks wait for `paths` to receive the candidate context, use an always-running condition, and are never gated on its documentation decision. The `Hexagonal architecture` status always reports their result. The static suite is cheap and backs
 the required status. It does not lint Markdown, so no documentation check is
 lost by skipping the other jobs.
 
-Required status checks: the repository ruleset currently requires only
-`Hexagonal architecture`. It needs only `changes` (Static checks), so it reports
-a real pass or fail for every change. GitHub reports a job skipped by its
-job-level `if` as `skipped`, and a skipped job satisfies a required status
-check. So any heavy job made required later will still pass on documentation-only
-changes instead of staying pending. Do not move this decision to workflow-level
-`paths`/`paths-ignore` filters: a workflow that never starts leaves required
-checks pending. Do not gate `changes` on `paths` either: a skipped static job
-would make `Hexagonal architecture` fail, because it requires
-`needs.changes.result == 'success'`. On code changes the heavy jobs start after
-the short classifier job finishes, roughly 10–20 seconds later.
+Required status checks: the observed repository ruleset requires both
+`CI result` and `Hexagonal architecture`, sourced from GitHub Actions integration
+15368. `Hexagonal architecture` reports the shared static result; `CI result`
+qualifies the complete applicable execution and retained evidence. Keep both
+requirements. Documentation-only applicability remains a job-level decision;
+workflow-level path filters would leave absent required checks pending.
 
 The former historical-runtime and recovered-toolkit jobs, PHP provisioning/tests
 and historical runner have been removed. Historical test sources remain available
@@ -221,19 +215,26 @@ acceptance when that job is present. Jev remains advisory. Only a successful
 to be skipped; an absent decision, failed classifier, missing job or cancellation
 cannot establish a pass. Static checks remain required on documentation PRs.
 
-The aggregate downloads this run's retained artifacts. It checks that the expected
-suite reports passed and identify a clean checkout of the actual tested commit.
-A missing or nonempty candidate Git status cannot stand in for that clean identity. Application inventories
-must contain exactly the workflow's shard set, use the current catalog identity,
-have disjoint selected modules/cases, and cover every catalog module. It checks
-the inventory hashes already qualified by the test-kit. Missing or foreign
-required evidence fails the aggregate, even when GitHub job outcomes say success.
-It does not independently enumerate dynamic tests or assess assertion quality.
+The aggregate authenticates this run's original per-lane producers through
+GitHub jobs, attempts, artifact metadata, check association and immutable Git
+objects. It downloads exact artifact IDs and verifies their archive digests
+before bounded extraction. The actual checkout context, initial captured copy,
+and downstream lane manifests must agree. See
+[candidate evidence](../docs/ci-candidate-evidence.md) for the versioned schema,
+partial-rerun behavior, runtime inputs and qualification limits.
+
+The expected suite reports must pass and identify a clean checkout of the actual
+tested commit. Application inventories must contain exactly the workflow's shard
+set, use the current catalog identity, have disjoint selected modules/cases, and
+cover every catalog module. Inventory hashes remain checked by the existing
+qualifier. Missing or foreign required evidence fails the aggregate even when
+job outcomes say success. It does not independently enumerate dynamic tests or
+assess assertion quality.
 
 The job summary lists source head and tested merge commit separately, job outcomes,
 recorded family/shard pass and skip counts, command durations and the run's artifact
 links. Command durations are not workflow wall time. Full reports remain separate
-artifacts, including `ci-result-evidence/result.json`. The summary states evidence
+artifacts, including `ci-result-evidence--attempt-N/result.json`. The summary states evidence
 qualification; GitHub's final `CI result` job status also includes failures of the
 checkout, artifact download and final upload steps. The same stdlib aggregation
 entrypoint is available locally as `python3 -m scripts.ci.result --help`.
@@ -249,17 +250,13 @@ matching measured subject. Each assessment shows its choice, confidence and
 distribution, followed by selected/omitted/truncated source scope, report/context
 hashes and an artifact link. Model confidence is not a calibrated defect
 probability. Omitted paths are sampled in the summary; the full scope remains in
-`architecture-evidence/diagnostics.json` and `ci-result-evidence/result.json`.
+`architecture-evidence/diagnostics.json` and `ci-result-evidence--attempt-N/result.json`.
 
-### Required-check rollout
+### Required checks and freshness
 
-The active ruleset's existing `Hexagonal architecture` check remains the enforced
-status until this workflow is merged. After merge and a successful `master` run,
-replace its required status entry with **`CI result`**, using GitHub Actions as its
-source integration (15368). Preserve the ruleset's other settings: PRs, resolved
-review threads, merge commits, deletion/force-push protection, and current owner
-review policy. Then read back the actual ruleset and verify a failing required-job
-control cannot produce a successful `CI result`. Do not activate the new required
-name before the workflow exists on `master`: other active PRs would otherwise
-wait for a status their branches cannot yet emit. Repository settings are an
-explicit rollout operation; this document does not claim they were changed.
+The observed active ruleset requires **CI result** and **Hexagonal architecture**
+from GitHub Actions (integration 15368). Preserve both names and the other rules:
+PRs, resolved review threads, merge commits, deletion/force-push protection and
+owner review policy. Strict up-to-date checking remains disabled. Evidence proves
+the tested candidate and its observed base; the target can advance afterward.
+Changing the merge freshness setting remains an explicit owner decision.

@@ -192,7 +192,8 @@ def test_workflow_gates_only_heavy_jobs_on_the_classifier():
             contract.heavy_job_gate(jobs[name], contract.AGGREGATE_JOBS[name], status="always()")
         else:
             contract.heavy_job_gate(jobs[name])
-    contract.always_running(jobs["changes"], needs=[])
+    contract.always_running(jobs["changes"], needs=["paths"])
+    assert jobs["changes"]["if"] == "${{ always() }}"
     contract.always_running(jobs["architecture-status"], needs=["changes"])
     assert set(jobs) == {contract.CLASSIFIER_JOB, *contract.HEAVY_JOBS, *contract.ALWAYS_JOBS}
 
