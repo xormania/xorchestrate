@@ -39,8 +39,13 @@ builder's Python:
 | uvx | `uv tool run --from <wheel>` (what `uvx` runs) | `uvx` |
 
 For each `uv tool install`, the installed launcher's `--version` must report the
-expected source, commit and a `uv tool` upgrade command, and the same consumer
-assertions run with the tool environment's interpreter. The `uvx` run checks
+expected source, commit and exact upgrade command (stated in the acceptance
+script, not taken from the launcher), and the same consumer assertions run with
+the tool environment's interpreter. The index and archive paths also compare
+every package file in the tool environment with the candidate wheel, so a
+same-version wheel from the public index cannot stand in for it. The index path
+installs a pinned `==<version>`, so it must report `uv tool install
+xorchestrate@latest`. The `uvx` run checks
 `--version` and `describe`. Dependencies still come from the configured package
 index under the exported constraints. The public PyPI path and `pipx` are not
 exercised. `--no-install-paths` skips this part.

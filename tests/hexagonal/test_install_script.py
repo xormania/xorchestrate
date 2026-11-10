@@ -24,8 +24,9 @@ def test_missing_uv_is_installed_with_the_official_installer_then_the_launcher(s
     result = sandbox.run(env={"UV_INSTALLER_URL": INSTALLER})
     assert result.returncode == 0, result.stderr
     calls = sandbox.calls()
-    assert calls[0] == ("curl", "-LsSf", INSTALLER)
+    assert calls[0][:3] == ("curl", "-LsSf", INSTALLER) and calls[0][3] == "-o"
     assert calls[1] == ("uv-installer",)
+    assert list(sandbox.tmp.iterdir()) == []
     assert installs(calls) == [("tool", "install", "xorchestrate")]
     assert "uv was not found; installing it for this user from " + INSTALLER in result.stdout
     assert "installed uv at " + str(sandbox.home / ".local/bin/uv") in result.stdout
@@ -87,6 +88,57 @@ def test_without_uv_or_a_downloader_it_stops_with_guidance(sandbox):
     assert result.returncode != 0
     assert "neither curl nor wget is available" in result.stderr
     assert sandbox.calls() == []
+
+
+def test_a_failed_download_stops_before_running_an_installer(sandbox):
+    sandbox.provide_curl(download_fails=True)
+    result = sandbox.run(env={"UV_INSTALLER_URL": INSTALLER})
+    assert result.returncode != 0 and "could not download the uv installer from " + INSTALLER in result.stderr
+    assert [call[0] for call in sandbox.calls()] == ["curl"]
+    assert list(sandbox.tmp.iterdir()) == []
+
+
+def test_uv_under_cargo_home_is_found(sandbox):
+    cargo = sandbox.root / "cargo"
+    (cargo / "bin").mkdir(parents=True)
+    (sandbox.bin / "curl").unlink(missing_ok=True)
+    sandbox.provide_uv()
+    (sandbox.bin / "uv").rename(cargo / "bin" / "uv")
+    result = sandbox.run(env={"CARGO_HOME": str(cargo)})
+    assert result.returncode == 0, result.stderr
+    assert "using uv at " + str(cargo / "bin" / "uv") in result.stdout
+
+
+@pytest.mark.parametrize(("reported", "accepted"), [
+    ("0.4.22", False), ("0.3.9", False), ("0.4.23", True), ("0.5.0", True), ("1.0.0", True), ("0.13.7", True)])
+def test_an_old_uv_is_refused_naming_the_minimum_version(sandbox, reported, accepted):
+    sandbox.provide_uv()
+    result = sandbox.run(env={"FAKE_UV_VERSION": reported})
+    if accepted:
+        assert result.returncode == 0, result.stderr
+    else:
+        assert result.returncode != 0
+        assert f"uv {reported} at {sandbox.bin / 'uv'} is too old; uv 0.4.23 or newer is required" in result.stderr
+        assert installs(sandbox.calls()) == []
+
+
+def test_a_launcher_that_does_not_run_fails_the_script(sandbox):
+    sandbox.provide_uv()
+    sandbox.tool_bin.mkdir(parents=True)
+    (sandbox.tool_bin / "xorchestrate").write_text("#!/bin/sh\nexit 3\n")
+    (sandbox.tool_bin / "xorchestrate").chmod(0o700)
+    result = sandbox.run()
+    assert result.returncode != 0 and "does not run" in result.stderr and "next steps" not in result.stdout
+
+
+def test_a_truncated_download_runs_nothing(sandbox, tmp_path):
+    sandbox.provide_uv()
+    text = SCRIPT.read_text()
+    truncated = tmp_path / "truncated.sh"
+    truncated.write_text(text[:text.index('    say "installing $requirement')])
+    result = subprocess.run([str(sandbox.bin / "sh"), str(truncated)], env={"PATH": str(sandbox.bin),
+                            "HOME": str(sandbox.home)}, capture_output=True, text=True, timeout=60, check=False)
+    assert result.stdout == "" and sandbox.calls() == []
 
 
 def test_a_failed_uv_installation_is_reported(sandbox):

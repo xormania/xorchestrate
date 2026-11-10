@@ -53,13 +53,16 @@ curl -LsSf https://raw.githubusercontent.com/xormania/xorchestrate/master/script
 
 It:
 
-1. uses uv from your `PATH` (or `~/.local/bin`); if there is none, installs uv for
-   your user with uv's official installer (`https://astral.sh/uv/install.sh`);
+1. uses uv from your `PATH` (or `~/.local/bin`, `$CARGO_HOME/bin`); if there is
+   none, downloads uv's official installer (`https://astral.sh/uv/install.sh`) to a
+   temporary file and runs it, installing uv for your user;
 2. runs `uv tool install xorchestrate` (or `xorchestrate==X.Y.Z`, or
    `git+…@REF` with `--git REF`);
 3. prints the installed `--version` and the next steps.
 
-It never uses `sudo`, and running it again is safe: an installed launcher is kept
+It needs uv 0.4.23 or newer and stops with that message for an older uv. The whole
+script runs from a function called on its last line, so a partly downloaded copy
+does nothing. It never uses `sudo`, and running it again is safe: an installed launcher is kept
 unless you ask for another release. Until the first PyPI release, use
 `--git vX.Y.Z`. Settings: `XORCHESTRATE_INDEX_URL` selects another package index,
 `XORCHESTRATE_REPOSITORY` another git repository, and `UV_INSTALLER_URL` another
@@ -86,7 +89,7 @@ These are the same for every path.
    ```
 
    It prints JSON with the release `version`, the `commit` for a git install,
-   `install_source` (`index`, `git`, `local`, `archive` or `uvx`) and the
+   `install_source` (`index`, `git`, `local`, `archive`, `uvx`, or `unknown`) and the
    `upgrade_command` that upgrades the launcher the way it was installed.
 
 2. If the command is not found, uv's tool directory is not on your `PATH`: run
@@ -112,9 +115,16 @@ Run the `upgrade_command` from `xorchestrate --version`. For example:
 | Installed with | Upgrade | Uninstall |
 | --- | --- | --- |
 | `uv tool install xorchestrate` | `uv tool upgrade xorchestrate` | `uv tool uninstall xorchestrate` |
+| `uv tool install xorchestrate==X.Y.Z` (also the install script's `--version`) | `uv tool install xorchestrate@latest` | `uv tool uninstall xorchestrate` |
 | `pipx install xorchestrate` | `pipx upgrade xorchestrate` | `pipx uninstall xorchestrate` |
+| `pipx install xorchestrate==X.Y.Z` | `pipx install --force xorchestrate` | `pipx uninstall xorchestrate` |
 | `uv tool install git+…@vX.Y.Z` | `uv tool install --force git+…@<new tag>` | `uv tool uninstall xorchestrate` |
 | `uvx --from …` | `uvx --from xorchestrate@latest xorchestrate` (index) or a new `--from` | nothing to remove; `uv cache clean` frees the cache |
+
+A pinned install stays pinned: `uv tool upgrade` and `pipx upgrade` keep a
+recorded `==X.Y.Z` (uv says "Nothing to upgrade"), so the launcher reinstalls it
+without the pin instead. If the launcher cannot find its own distribution,
+`install_source` is `unknown` and `upgrade_command` is `null`.
 
 ## Install paths checked in CI
 

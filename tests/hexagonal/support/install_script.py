@@ -1,9 +1,11 @@
 """Run ``scripts/install.sh`` against fake ``uv``, ``curl`` and ``sudo`` programs.
 
-The script runs with a PATH holding only ``sh`` and the selected fake programs,
-and a private HOME, so it can reach nothing real. Every fake program appends its
-name and arguments to one log; the fake uv installer, served by fake ``curl``,
-writes a fake ``uv`` to ``$HOME/.local/bin`` the way the official installer does.
+The script runs with a PATH holding only ``sh``, ``mktemp``, ``rm`` and the
+selected fake programs, and a private HOME and TMPDIR, so it can reach nothing
+real. Every fake program appends its name and arguments to one log; the fake uv
+installer, downloaded by fake ``curl -o``, writes a fake ``uv`` to
+``$HOME/.local/bin`` the way the official installer does. The fake uv reports the
+version in ``FAKE_UV_VERSION`` (default 0.13.7).
 """
 
 import os
@@ -36,6 +38,7 @@ def fake_uv(log, tool_bin, fail_install=False):
     """
     launcher = (f"#!{SHELL}\nprintf '%s\\n' '{{\"version\": \"0.0.0\", \"install_source\": \"index\"}}'\n")
     return _logger("uv", log) + f"""
+if [ "$1" = --version ]; then printf 'uv %s (fake)\n' "${{FAKE_UV_VERSION:-0.13.7}}"; exit 0; fi
 case "$1 $2" in
     "tool dir") printf '%s\\n' {shlex.quote(str(tool_bin))} ;;
     "tool install")
@@ -60,13 +63,17 @@ class InstallSandbox:
         self.home.mkdir()
         self.bin.mkdir()
         self.log.touch()
+        self.tmp = self.root / "tmp"
+        self.tmp.mkdir()
         os.symlink(SHELL, self.bin / "sh")
+        for tool in ("mktemp", "rm"):
+            os.symlink(shutil.which(tool, path=SYSTEM_PATH), self.bin / tool)
         _program(self.bin / "sudo", _logger("sudo", self.log) + "exit 1\n")
 
     def provide_uv(self, *, fail_install=False):
         _program(self.bin / "uv", fake_uv(self.log, self.tool_bin, fail_install))
 
-    def provide_curl(self, *, installs_uv=True):
+    def provide_curl(self, *, installs_uv=True, download_fails=False):
         installer = self.root / "uv-installer.sh"
         target = self.home / ".local" / "bin" / "uv"
         body = (f"mkdir -p {shlex.quote(str(target.parent))}\n"
@@ -74,10 +81,12 @@ class InstallSandbox:
                 f"{fake_uv(self.log, self.tool_bin)}FAKE_UV\nchmod 700 {shlex.quote(str(target))}\n"
                 if installs_uv else "exit 0\n")
         installer.write_text(f"PATH={SYSTEM_PATH}\nexport PATH\n" + _logger("uv-installer", self.log) + body)
-        _program(self.bin / "curl", _logger("curl", self.log) + f"cat {shlex.quote(str(installer))}\n")
+        _program(self.bin / "curl", _logger("curl", self.log) + ("exit 22\n" if download_fails else
+                 'while [ $# -gt 0 ]; do if [ "$1" = -o ]; then output=$2; fi; shift; done\n'
+                 f'cat {shlex.quote(str(installer))} > "$output"\n'))
 
     def run(self, *arguments, env=None):
-        environment = {"PATH": str(self.bin), "HOME": str(self.home), **(env or {})}
+        environment = {"PATH": str(self.bin), "HOME": str(self.home), "TMPDIR": str(self.tmp), **(env or {})}
         result = subprocess.run([SHELL, str(SCRIPT), *arguments], env=environment, cwd=self.root,
                                 capture_output=True, text=True, timeout=60, check=False)
         return result

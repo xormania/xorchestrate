@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import shutil
 import sys
+import zipfile
 from pathlib import Path
 
 from scripts.ci.release_identity import package_version
@@ -96,24 +98,43 @@ print(json.dumps({"status": "passed", "package_path": str(package), "executable"
 def install_paths(*, wheel, version, workspace, uv):
     """Supported launcher install paths that run offline from the candidate.
 
-    Each entry is ``(name, install argv, environment, expected install_source)``.
-    The index path installs the candidate wheel by name from a private flat index;
-    the package index itself is exercised only after a release is published.
+    Each entry is ``(name, install argv, environment, expected install_source,
+    expected upgrade_command, installs the candidate wheel)``. The expected values
+    are stated here, independently of the launcher's own mapping. The index path
+    installs the candidate wheel by a pinned name from a private flat index, so the
+    launcher must offer the unpinned reinstall; the public index is exercised only
+    after a release is published.
     """
     index = workspace / "index"
     index.mkdir(mode=0o700)
     shutil.copy2(wheel, index / wheel.name)
     distribution_version = wheel.name.split("-")[1]
+    repository, local = workspace / "git-source", workspace / "local-source"
     paths = [
-        ("index", ["--find-links", index, f"{PACKAGE}=={distribution_version}"], "index"),
-        ("archive", [wheel], "archive"),
-        ("git", [f"git+{(workspace / 'git-source').as_uri()}@v{version}"], "git"),
-        ("local", [workspace / "local-source"], "local"),
+        ("index", ["--find-links", index, f"{PACKAGE}=={distribution_version}"], "index",
+         ["uv", "tool", "install", f"{PACKAGE}@latest"], True),
+        ("archive", [wheel], "archive", ["uv", "tool", "install", "--force", "<newer wheel or sdist>"], True),
+        ("git", [f"git+{repository.as_uri()}@v{version}"], "git",
+         ["uv", "tool", "install", "--force", f"git+{repository.as_uri()}@<tag>"], False),
+        ("local", [local], "local", ["uv", "tool", "install", "--force", str(local)], False),
     ]
-    for name, target, expected in paths:
+    for name, target, source, upgrade, from_wheel in paths:
         environment = {"UV_TOOL_DIR": str(workspace / f"tools-{name}"),
                        "UV_TOOL_BIN_DIR": str(workspace / f"bin-{name}")}
-        yield name, [uv, "tool", "install", *target], environment, expected
+        yield name, [uv, "tool", "install", *target], environment, source, shlex.join(upgrade), from_wheel
+
+
+def wheel_mismatches(wheel, prefix):
+    """Files of ``wheel`` (outside its metadata) that the environment at ``prefix`` lacks or holds differently."""
+    sites = list(Path(prefix).glob("lib/python*/site-packages"))
+    if len(sites) != 1:
+        return ["site-packages not found"]
+    with zipfile.ZipFile(wheel) as archive:
+        members = [item for item in archive.infolist()
+                   if not item.is_dir() and ".dist-info/" not in item.filename and ".data/" not in item.filename]
+        mismatched = [item.filename for item in members if not (sites[0] / item.filename).is_file()
+                      or (sites[0] / item.filename).read_bytes() != archive.read(item)]
+    return mismatched if members else ["wheel has no package files"]
 
 
 def run(*, root=ROOT, output, artifacts=(), uv="uv", timeout=180, paths=True):
@@ -195,7 +216,7 @@ def run(*, root=ROOT, output, artifacts=(), uv="uv", timeout=180, paths=True):
             commit = command(["git", "-C", repository, "rev-parse", "HEAD"]).strip()
             shared = {"UV_CACHE_DIR": str(workspace / "uv-cache"), "UV_PYTHON_DOWNLOADS": "never"}
             pinned = ["--python", sys.executable, "--constraints", runtime, "--build-constraints", builder]
-            for number, (name, install, environment, expected) in enumerate(
+            for number, (name, install, environment, expected, upgrade, from_wheel) in enumerate(
                     install_paths(wheel=wheels[0], version=version, workspace=workspace, uv=uv)):
                 entry = {"path": name, "installer": "uv-tool", "status": "failed"}
                 report["install_paths"].append(entry)
@@ -208,8 +229,13 @@ def run(*, root=ROOT, output, artifacts=(), uv="uv", timeout=180, paths=True):
                 expected_commit = commit if name == "git" else None
                 if (identity_report.get("install_source") != expected
                         or identity_report.get("commit") != expected_commit
-                        or not identity_report.get("upgrade_command", "").startswith("uv tool ")):
+                        or identity_report.get("upgrade_command") != upgrade):
                     raise ValueError(f"{name} install reported {identity_report}")
+                if from_wheel:
+                    stage = f"{name} candidate files"
+                    mismatched = wheel_mismatches(wheels[0], Path(environment["UV_TOOL_DIR"]) / PACKAGE)
+                    if mismatched:
+                        raise ValueError(f"{name} install does not hold the candidate wheel: {mismatched[:5]}")
                 stage = f"{name} public consumer assertions"
                 working = directory / f"path-work-{number}"
                 working.mkdir(mode=0o700)
@@ -221,7 +247,9 @@ def run(*, root=ROOT, output, artifacts=(), uv="uv", timeout=180, paths=True):
             stage = "uvx launcher identity"
             ephemeral = [uv, "tool", "run", *pinned, "--from", wheels[0], PACKAGE]
             identity_report = json.loads(command([*ephemeral, "--version"], env=shared))
-            if identity_report.get("install_source") != "uvx" or identity_report.get("commit") is not None:
+            if (identity_report.get("install_source") != "uvx" or identity_report.get("commit") is not None
+                    or identity_report.get("upgrade_command") != shlex.join(
+                        ["uvx", "--refresh", "--from", "<newer wheel or sdist>", PACKAGE])):
                 raise ValueError(f"uvx run reported {identity_report}")
             stage = "uvx public consumer assertions"
             working = directory / "path-work-uvx"

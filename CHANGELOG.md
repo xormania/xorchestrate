@@ -38,9 +38,11 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   has no telemetry section.
 - `telemetry_status` reports a bounded `cause` when telemetry is unavailable.
 - `xorchestrate --version` gains `install_source` (`index`, `git`, `local`,
-  `archive` or `uvx`), read from the installed distribution's `direct_url.json`
-  and the installer's environment, and `upgrade_command`, the command that
-  upgrades the launcher the way it was installed.
+  `archive` or `uvx`, or `unknown` when the distribution is not installed), read
+  from the installed distribution's `direct_url.json` and the installer's
+  environment, and `upgrade_command`, the command that upgrades the launcher the
+  way it was installed (`null` when unknown). A pinned `uv tool` or pipx install
+  is reinstalled without its pin, since their upgrade commands keep it.
 - [Install documentation](docs/install.md) for every supported path (package
   index, git, install script, `uvx`) and `scripts/install.sh`, which installs uv
   when missing and then the launcher with `uv tool install`, without `sudo`.

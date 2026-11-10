@@ -67,11 +67,14 @@ def test_absent_or_unreadable_records_read_as_index_installs(text):
     assert installation.installation(distribution(text), prefix="/nonexistent").source == "index"
 
 
-def test_a_missing_distribution_reads_as_index():
-    def missing(name):
-        raise installation.metadata.PackageNotFoundError(name)
+def missing(name):
+    raise installation.metadata.PackageNotFoundError(name)
 
+
+def test_a_missing_distribution_is_unknown_with_no_upgrade_command(tmp_path):
     assert installation.direct_url(missing) is None and cli.installed_commit(missing) is None
+    info = cli.version_info(missing, prefix=environment(tmp_path, "uv-tool"))
+    assert (info["install_source"], info["commit"], info["upgrade_command"]) == ("unknown", None, None)
 
 
 @pytest.mark.parametrize("kind", ["uv-tool", "pipx", "uvx", "environment"])
@@ -119,14 +122,55 @@ def test_the_upgrade_command_names_the_selected_package(tmp_path):
     assert installation.upgrade_command(info, name="xorchestrate-pro") == "uv tool upgrade xorchestrate-pro"
 
 
-@pytest.mark.parametrize(("installer", "record", "reported"), [
-    ("uv-tool", None, "index"), ("uv-tool", GIT, "git"), ("pipx", EDITABLE, "local"),
-    ("environment", ARCHIVE, "archive"), ("uvx", None, "uvx"), ("uvx", ARCHIVE, "uvx"),
+# Receipts as uv 0.13.7 writes them for `uv tool install xorchestrate==0.2.0` and `uv tool install xorchestrate`.
+PINNED_RECEIPT = """[tool]
+requirements = [{ name = "xorchestrate", specifier = "==0.2.0" }]
+python = "3.12"
+entrypoints = [
+    { name = "xorchestrate", install-path = "/home/me/.local/bin/xorchestrate", from = "xorchestrate" },
+]
+"""
+UNPINNED_RECEIPT = PINNED_RECEIPT.replace(', specifier = "==0.2.0"', "")
+
+
+@pytest.mark.parametrize(("receipt", "expected"), [
+    (PINNED_RECEIPT, "uv tool install xorchestrate@latest"),
+    (PINNED_RECEIPT.replace("==0.2.0", ">=0.2,<0.3"), "uv tool install xorchestrate@latest"),
+    (UNPINNED_RECEIPT, "uv tool upgrade xorchestrate"),
+    (PINNED_RECEIPT.replace('name = "xorchestrate", specifier', 'name = "other", specifier'),
+     "uv tool upgrade xorchestrate"),
+    ("not toml [", "uv tool upgrade xorchestrate"),
 ])
-def test_version_reports_the_install_source_and_upgrade_command(tmp_path, installer, record, reported):
-    prefix = environment(tmp_path, installer)
-    info = cli.version_info(distribution(record), prefix=prefix)
-    assert info["install_source"] == reported
-    assert info["commit"] == ("0123abcd" if record is GIT else None)
-    assert info["upgrade_command"] == installation.upgrade_command(
-        installation.installation(distribution(record), prefix=prefix))
+def test_a_pinned_uv_tool_install_is_reinstalled_without_its_pin(tmp_path, receipt, expected):
+    prefix = environment(tmp_path, "uv-tool")
+    (prefix / "uv-receipt.toml").write_text(receipt)
+    assert cli.version_info(distribution(None), prefix=prefix)["upgrade_command"] == expected
+
+
+@pytest.mark.parametrize(("requested", "expected"), [
+    ("xorchestrate==0.2.0", "pipx install --force xorchestrate"),
+    ("Xorchestrate [extra] ~= 0.2", "pipx install --force xorchestrate"),
+    ("xorchestrate", "pipx upgrade xorchestrate"),
+    ("xorchestrate-pro==1.0", "pipx upgrade xorchestrate"),
+])
+def test_a_pinned_pipx_install_is_reinstalled_without_its_pin(tmp_path, requested, expected):
+    prefix = environment(tmp_path, "pipx")
+    (prefix / "pipx_metadata.json").write_text(json.dumps(
+        {"main_package": {"package": "xorchestrate", "package_or_url": requested}, "pipx_metadata_version": "0.5"}))
+    assert cli.version_info(distribution(None), prefix=prefix)["upgrade_command"] == expected
+
+
+@pytest.mark.parametrize(("installer", "record", "expected"), [
+    ("uv-tool", None, ("index", None, "uv tool upgrade xorchestrate")),
+    ("uv-tool", GIT, ("git", "0123abcd",
+                      "uv tool install --force 'git+https://github.com/xormania/xorchestrate@<tag>'")),
+    ("pipx", EDITABLE, ("local", None, "pipx install --force --editable /home/me/checkout")),
+    ("environment", ARCHIVE, ("archive", None,
+                              "uv pip install --python /venv/bin/python --upgrade '<newer wheel or sdist>'")),
+    ("uvx", None, ("uvx", None, "uvx --from xorchestrate@latest xorchestrate")),
+    ("uvx", ARCHIVE, ("uvx", None, "uvx --refresh --from '<newer wheel or sdist>' xorchestrate")),
+])
+def test_version_reports_the_install_source_and_upgrade_command(tmp_path, monkeypatch, installer, record, expected):
+    monkeypatch.setattr(installation.sys, "executable", "/venv/bin/python")
+    info = cli.version_info(distribution(record), prefix=environment(tmp_path, installer))
+    assert (info["install_source"], info["commit"], info["upgrade_command"]) == expected

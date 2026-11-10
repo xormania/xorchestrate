@@ -2,7 +2,6 @@
 import argparse
 import json
 import sys
-from importlib import metadata
 from pathlib import Path
 
 from . import __version__, installation
@@ -17,12 +16,12 @@ def _write(value, stream):
     stream.flush()
 
 
-def installed_commit(distribution=metadata.distribution):
+def installed_commit(distribution=None):
     """The commit a VCS install resolved, from its PEP 610 ``direct_url.json``."""
     return installation.classify_source(installation.direct_url(distribution))[2]
 
 
-def version_info(distribution=metadata.distribution, prefix=None):
+def version_info(distribution=None, prefix=None):
     """Release identity, install source and the format versions this release reads."""
     installed = installation.installation(distribution, prefix)
     return {

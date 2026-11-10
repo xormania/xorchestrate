@@ -60,13 +60,34 @@ is stored anywhere. Only the GitHub release job can write repository contents.
    | Workflow name | `release.yml` |
    | Environment name | `pypi` |
 
-   Repeat on TestPyPI with environment name `testpypi`. A pending publisher
-   reserves the name: the project is created on the first upload from this
-   workflow, and nobody else can claim it in the meantime.
+   Repeat on TestPyPI with environment name `testpypi`. The project is created
+   on the first upload from this workflow.
+
+   **A pending publisher does not reserve the name.** Until the first upload,
+   anyone can register a project called `xorchestrate` on PyPI; if that happens,
+   the pending publisher is invalidated and the name is lost to this project.
+   The name was unclaimed when checked (2026-11-10), but nothing holds it. The
+   only way to hold it is to upload a release, so the gap between this setup and
+   the first publish should be short.
 3. **GitHub environments.** In the repository's *Settings → Environments*, create
-   `pypi` and `testpypi`. For `pypi`, add *Deployment branches and tags* limited to
-   tags matching `v*.*.*`, and optionally *Required reviewers* so a person approves
-   each upload. Nothing else is needed: no secrets.
+   `pypi` and `testpypi`. For `pypi` both of these are required:
+   - *Required reviewers*: one or more maintainers who approve every upload;
+   - *Deployment branches and tags*: only tags matching `v*.*.*`.
+
+   Nothing else is needed: no secrets.
+4. **Tag ruleset.** In *Settings → Rules → Rulesets*, add a tag ruleset targeting
+   `v*` that restricts creation, update and deletion to maintainers (bypass list:
+   the maintainers or the admin role only).
+
+**Why the reviewers and the ruleset matter.** On a tag push GitHub runs
+`release.yml` *as it exists in the tagged commit*. Anyone who can push a `v*` tag
+can tag an unmerged commit whose workflow has been modified, for example to skip
+the checks, and that run can request the `pypi` OIDC token. The identity gate
+(tag, versions, changelog, annotated tag on `master`) runs inside that same
+workflow, so it guards against mistakes, not against someone who controls the
+tagged commit. What stops that is outside the repository: the tag ruleset limits
+who can push release tags, and the required reviewers on `pypi` mean a person
+approves each upload after seeing which commit it comes from.
 
 These are settings outside the repository; this document does not claim they have
 been made.
@@ -101,8 +122,9 @@ been made.
    git push origin vX.Y.Z
    ```
 
-6. **Publish.** The tag push runs the workflow. If `pypi` requires a reviewer,
-   approve the deployment. When it finishes, the release is on PyPI and the GitHub
+6. **Publish.** The tag push runs the workflow. A reviewer checks that the run's
+   commit is the merged release commit on `master`, then approves the `pypi`
+   deployment. When it finishes, the release is on PyPI and the GitHub
    release for the tag has the wheel and sdist attached, with the changelog entry
    as notes if the workflow created it. Check:
 
