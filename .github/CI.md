@@ -238,6 +238,19 @@ qualification; GitHub's final `CI result` job status also includes failures of t
 checkout, artifact download and final upload steps. The same stdlib aggregation
 entrypoint is available locally as `python3 -m scripts.ci.result --help`.
 
+The aggregate waits for the advisory architecture job so its artifact is available
+before rendering the summary. This dependency does not require Jev to succeed:
+its job result, provider status and any missing, invalid or foreign report are
+shown separately and never change deterministic qualification. Advice
+is downloaded separately; failure to transfer optional diagnostics cannot fail
+the required artifact download. Current advice
+requires the diagnostic report's tested commit, empty working-tree status and
+matching measured subject. Each assessment shows its choice, confidence and
+distribution, followed by selected/omitted/truncated source scope, report/context
+hashes and an artifact link. Model confidence is not a calibrated defect
+probability. Omitted paths are sampled in the summary; the full scope remains in
+`architecture-evidence/diagnostics.json` and `ci-result-evidence/result.json`.
+
 ### Required-check rollout
 
 The active ruleset's existing `Hexagonal architecture` check remains the enforced

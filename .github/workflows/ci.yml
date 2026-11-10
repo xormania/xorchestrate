@@ -379,6 +379,9 @@
     },
     "architecture": {
       "name": "Jev architecture diagnostics",
+      "outputs": {
+        "artifact_url": "${{ steps.diagnostic-artifact.outputs.artifact-url }}"
+      },
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 6,
       "needs": [
@@ -442,7 +445,8 @@
             "path": "${{ runner.temp }}/architecture/",
             "if-no-files-found": "error",
             "retention-days": 30
-          }
+          },
+          "id": "diagnostic-artifact"
         }
       ]
     },
@@ -514,6 +518,7 @@
         "verification",
         "tmux-acceptance",
         "architecture-status",
+        "architecture",
         "package"
       ],
       "if": "${{ always() }}",
@@ -527,7 +532,17 @@
         {
           "uses": "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
           "with": {
+            "pattern": "!architecture-evidence",
             "path": "${{ runner.temp }}/ci-result-inputs"
+          }
+        },
+        {
+          "name": "Download advisory architecture evidence",
+          "uses": "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
+          "continue-on-error": true,
+          "with": {
+            "name": "architecture-evidence",
+            "path": "${{ runner.temp }}/ci-result-inputs/architecture-evidence"
           }
         },
         {

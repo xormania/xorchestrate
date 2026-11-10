@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 from collections import Counter
 from pathlib import Path
 
@@ -16,6 +17,131 @@ ARTIFACTS = {
     "composed-protocol-evidence": ("multi-harness",),
     "tmux-acceptance-evidence": ("acceptance", "stories"),
 }
+JEV_OUTCOMES = {"concern", "no_concern", "insufficient_evidence"}
+JEV_STATUSES = {"complete", "unavailable", "error", "inconclusive", "not_configured"}
+
+
+def _sha(value, length=64):
+    return isinstance(value, str) and len(value) == length and all(char in "0123456789abcdef" for char in value)
+
+
+def _bounded_paths(value):
+    return (isinstance(value, list) and len(value) <= 10000
+            and all(isinstance(path, str) and 0 < len(path) <= 1024 for path in value)
+            and len(value) == len(set(value)))
+
+
+def _diagnostic_scope(value):
+    if not isinstance(value, dict) or not all(_bounded_paths(value.get(key)) for key in ("selected", "omitted", "truncated")):
+        raise ValueError("Invalid diagnostic source scope")
+    selected, omitted, truncated = (set(value[key]) for key in ("selected", "omitted", "truncated"))
+    if selected.intersection(omitted) or not truncated.issubset(selected):
+        raise ValueError("Inconsistent diagnostic source scope")
+    if any(type(value.get(key)) is not int for key in ("source_bytes", "max_source_bytes")):
+        raise ValueError("Invalid diagnostic source budget")
+    if not 0 <= value["source_bytes"] <= value["max_source_bytes"] <= 1000000:
+        raise ValueError("Invalid diagnostic source budget")
+    return {key: value[key] for key in ("selected", "omitted", "truncated", "source_bytes", "max_source_bytes")}
+
+
+def _diagnostic_assessments(values):
+    if not isinstance(values, list) or len(values) > 32:
+        raise ValueError("Invalid diagnostic assessment list")
+    result, check_ids = [], set()
+    for value in values:
+        if not isinstance(value, dict):
+            raise ValueError("Invalid diagnostic assessment")
+        check_id, outcome, confidence = (value.get(key) for key in ("check_id", "outcome", "confidence"))
+        if (not isinstance(check_id, str) or not 0 < len(check_id) <= 128 or check_id in check_ids
+                or not isinstance(outcome, str) or outcome not in JEV_OUTCOMES
+                or (confidence is not None and (type(confidence) not in (int, float)
+                    or not math.isfinite(confidence) or not 0 <= confidence <= 1))):
+            raise ValueError("Invalid diagnostic assessment")
+        details = value.get("details", {})
+        if not isinstance(details, dict):
+            raise ValueError("Invalid diagnostic details")
+        kept = {}
+        probabilities = details.get("probabilities")
+        if probabilities is not None:
+            if (not isinstance(probabilities, dict) or set(probabilities) != JEV_OUTCOMES
+                    or any(type(p) not in (int, float) or not math.isfinite(p) or not 0 <= p <= 1 for p in probabilities.values())
+                    or abs(sum(probabilities.values()) - 1) > 0.01):
+                raise ValueError("Invalid diagnostic distribution")
+            kept["probabilities"] = probabilities
+        if "usage" in details:
+            usage = details["usage"]
+            if not isinstance(usage, dict) or any(type(usage.get(key)) is not int or usage[key] < 0 for key in ("input_tokens", "output_tokens")):
+                raise ValueError("Invalid diagnostic usage")
+            kept["usage"] = {key: usage[key] for key in ("input_tokens", "output_tokens")}
+        result.append({"check_id": check_id, "outcome": outcome, "confidence": confidence, "details": kept})
+        check_ids.add(check_id)
+    return result
+
+
+def jev_evidence(artifacts, needs, *, tested_sha):
+    """Describe optional advice without allowing it to qualify deterministic CI.
+
+    Only a report from a clean checkout of the tested revision supplies current
+    assessments. Missing, malformed and foreign reports remain visible diagnoses.
+    """
+    job = needs.get("architecture", {}) if isinstance(needs, dict) else {}
+    job = job if isinstance(job, dict) else {}
+    base = {"provider": "jev", "artifact": "architecture-evidence", "current": False,
+            "job_outcome": job.get("result", "missing"), "assessments": []}
+    try:
+        paths = list((artifacts / "architecture-evidence").glob("**/diagnostics.json"))
+        if not paths:
+            status = "skipped" if job.get("result") == "skipped" else "missing"
+            return {**base, "status": status, "reason": "missing_report"}
+        if len(paths) != 1:
+            return {**base, "status": "invalid", "reason": "multiple_reports"}
+        path = paths[0]
+        if path.stat().st_size > 2097152:
+            raise ValueError("Diagnostic report exceeds the evidence budget")
+        report = _read(path)
+        if type(report.get("schema_version")) is not int or report["schema_version"] != 1:
+            raise ValueError("Unknown architecture report schema")
+        base["report_sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+        execution = report.get("execution", {})
+        if (not isinstance(execution, dict) or not _sha(tested_sha, 40)
+                or execution.get("git_commit") != tested_sha or execution.get("git_status") != ""):
+            return {**base, "status": "foreign", "reason": "foreign_or_dirty_candidate"}
+        diagnostic = report.get("diagnostics")
+        if not isinstance(diagnostic, dict) or diagnostic.get("status") not in JEV_STATUSES:
+            raise ValueError("Invalid diagnostic status")
+        status = diagnostic["status"]
+        subject = report.get("subject")
+        if status == "complete" or "subject" in diagnostic:
+            if (not isinstance(subject, dict) or not all(_sha(subject.get(key)) for key in ("source_sha256", "contract_sha256"))
+                    or diagnostic.get("subject") != subject):
+                return {**base, "status": "foreign", "reason": "diagnostic_subject_mismatch"}
+        assessments = _diagnostic_assessments(diagnostic.get("assessments", []))
+        if status == "complete" and not assessments:
+            raise ValueError("A complete diagnostic needs assessments")
+        base.update(current=True, status=status, assessments=assessments)
+        if "model" in diagnostic:
+            if not isinstance(diagnostic["model"], str) or len(diagnostic["model"]) > 128:
+                raise ValueError("Invalid diagnostic model")
+            base["model"] = diagnostic["model"]
+        if "source_scope" in diagnostic:
+            base["source_scope"] = _diagnostic_scope(diagnostic["source_scope"])
+        if "context_sha256" in diagnostic:
+            if not _sha(diagnostic["context_sha256"]):
+                raise ValueError("Invalid diagnostic context identity")
+            base["context_sha256"] = diagnostic["context_sha256"]
+        if status == "complete" and ("source_scope" not in base or "context_sha256" not in base):
+            raise ValueError("A complete diagnostic needs its measured context")
+        base["concerns"] = sum(row["outcome"] == "concern" for row in assessments)
+        if "reason" in diagnostic:
+            reason = diagnostic["reason"]
+            if not isinstance(reason, str) or len(reason) > 512:
+                raise ValueError("Invalid diagnostic reason")
+            base["reason"] = reason
+        return base
+    except (OSError, ValueError, TypeError, KeyError, RecursionError, OverflowError):
+        return {key: value for key, value in {
+            **base, "current": False, "status": "invalid", "reason": "invalid_report", "assessments": [],
+        }.items() if key not in {"source_scope", "context_sha256", "concerns"}}
 
 
 def job_verdict(needs, *, event, package=False):
@@ -156,13 +282,17 @@ def evaluate(needs, *, event, source_sha, tested_sha, workflow, artifacts, catal
     except (OSError, ValueError, KeyError, TypeError, StopIteration) as error:
         errors.append("Evidence qualification: " + str(error))
     result["status"] = "failed" if errors else "passed"
+    result["jev"] = jev_evidence(artifacts, needs, tested_sha=tested_sha)
     return result
 
 
 def markdown(result, run_url):
     """Render existing observations; counts do not establish assertion quality."""
     def text(value):
-        return str(value).replace("|", "\\|").replace("\n", " ").replace("<", "&lt;")
+        value = str(value).replace("&", "&amp;").replace("<", "&lt;").replace("\n", " ").replace("\r", " ")
+        for char in ("\\", "|", "`", "[", "]"):
+            value = value.replace(char, "\\" + char)
+        return value
     rows = ["## Evidence qualification: " + result["status"], "", f"Source head: `{result['source_sha']}`  ",
             f"Tested commit: `{result['tested_sha']}`", "", "| Job | Outcome |", "|---|---|"]
     for name, job in sorted(result["jobs"].items()):
@@ -178,6 +308,40 @@ def markdown(result, run_url):
             rows.append(f"| {text(name)} | {counts.get('passed', 0)} | {counts.get('skipped', 0)} |")
     if result["documentation_only"]:
         rows.extend(["", "Documentation-only PR: heavy checks explicitly skipped; static evidence retained."])
+    diagnostic = result.get("jev", {})
+    rows.extend(["", "## Jev advisory diagnostics", "",
+                 f"Status: **{text(diagnostic.get('status', 'missing'))}**; diagnostic job: {text(diagnostic.get('job_outcome', 'missing'))}.",
+                 "Current tested revision: " + ("yes" if diagnostic.get("current") else "unverified; no current assessment is claimed") + "."])
+    if diagnostic.get("reason"):
+        rows.append("Reason: " + text(diagnostic["reason"]) + ".")
+    if diagnostic.get("current"):
+        if diagnostic.get("model"):
+            rows.append("Model: " + text(diagnostic["model"]) + ".")
+        rows.extend(["", "| Check | Outcome | Confidence | Distribution |", "|---|---|---:|---|"])
+        for assessment in diagnostic.get("assessments", []):
+            distribution = "; ".join(f"{name}: {value:g}" for name, value in sorted(assessment["details"].get("probabilities", {}).items())) or "not supplied"
+            confidence = assessment["confidence"] if assessment["confidence"] is not None else "not supplied"
+            rows.append(f"| {text(assessment['check_id'])} | {text(assessment['outcome'])} | {confidence} | {distribution} |")
+        scope = diagnostic.get("source_scope")
+        if scope:
+            rows.extend(["", f"Source scope: {len(scope['selected'])} selected; {len(scope['omitted'])} omitted; "
+                         f"{len(scope['truncated'])} truncated; {scope['source_bytes']}/{scope['max_source_bytes']} source bytes.",
+                         "Selected: " + ", ".join(text(path) for path in scope["selected"]) + ".",
+                         "Omitted sample: " + (", ".join(text(path) for path in scope["omitted"][:8]) or "none")
+                         + (f"; {len(scope['omitted']) - 8} more in the artifact" if len(scope["omitted"]) > 8 else "") + ".",
+                         "Truncated: " + (", ".join(text(path) for path in scope["truncated"]) or "none") + "."])
+        if diagnostic.get("context_sha256"):
+            rows.append(f"Context SHA-256: `{diagnostic['context_sha256']}`.")
+    if diagnostic.get("report_sha256"):
+        rows.append(f"Report SHA-256: `{diagnostic['report_sha256']}`.")
+    job = result["jobs"].get("architecture", {})
+    outputs = job.get("outputs", {}) if isinstance(job, dict) else {}
+    artifact_url = outputs.get("artifact_url", "") if isinstance(outputs, dict) else ""
+    prefix = run_url + "/artifacts/"
+    if not isinstance(artifact_url, str) or not artifact_url.startswith(prefix) or not artifact_url[len(prefix):].isdigit():
+        artifact_url = run_url + "#artifacts"
+    rows.extend(["", f"[architecture-evidence artifact]({artifact_url})", "",
+                 "Advisory outcomes do not change deterministic evidence qualification. Confidence and distributions are model outputs, not calibrated defect probabilities."])
     rows.extend(["", f"[Retained artifacts and job logs]({run_url}#artifacts)", "",
                  "The GitHub CI result check is authoritative for the final job outcome, including checkout/download/upload failures.",
                  "Jev remains advisory. Recorded counts describe execution scope; independent assertions establish behavior."])

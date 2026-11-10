@@ -32,6 +32,10 @@ def _identity(root: Path) -> dict:
                              text=True, timeout=5, check=False)
         if git.returncode == 0:
             result["git_commit"] = git.stdout.strip()
+        status = subprocess.run(["git", "status", "--porcelain=v1", "--untracked-files=all"], cwd=root,
+                                capture_output=True, text=True, timeout=5, check=False)
+        if status.returncode == 0:
+            result["git_status"] = status.stdout
     except (OSError, subprocess.TimeoutExpired):
         pass
     return result

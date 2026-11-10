@@ -9,6 +9,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Added
 
+- The CI result summary shows current Jev advisory outcomes, distributions,
+  confidence, bounded source scope and artifact identities. Missing, foreign or
+  invalid advice and optional artifact transfer failures remain separate from
+  deterministic acceptance.
 - Configuration format versions. A configuration may declare a top-level
   integer `version`; this release reads version `1`. A newer version is refused
   with `configuration_version_unsupported`, an older unsupported one with
