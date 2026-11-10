@@ -6,7 +6,14 @@ import shutil
 import pytest
 
 from scripts.testkit.adapters.managed_store import owner_alive
+from tests.hexagonal.contracts.live_diagnostics import PROVIDER_REASON, surfaced_reason
 from tests.hexagonal.contracts.managed_workflow import CONTROL_SCOPES, REPEAT_PROPERTIES, TERMINAL_PHASES
+from tests.hexagonal.support.live_diagnostics import (
+    archive_names,
+    archive_text,
+    native_configuration,
+    peer_session,
+)
 from tests.hexagonal.support.managed_workflow import (
     PublicWorkflow,
     await_condition,
@@ -105,5 +112,42 @@ def test_public_active_close_refuses_and_run_stop_or_deadline_finishes_unsuccess
         collected, receipt = workflow.command("collect", directory)
         assert collected.returncode == 0, collected.stdout + collected.stderr
         assert receipt["archive"]
+    finally:
+        workflow.close()
+
+
+def test_public_failure_reason_reaches_the_operator_but_never_the_saved_state_or_export(tmp_path):
+    candidate = isolated_candidate(tmp_path / "candidate")
+    workflow = PublicWorkflow(candidate, tmp_path / "operator")
+    config = native_configuration(tmp_path / "operator" / "native.json",
+                                  {"refused": peer_session("--refuse-start", root=candidate)}, capture=True)
+    label = "story:native-callback:refused"
+    words = ("configured_native_application_callback", "start_session", PROVIDER_REASON)
+    try:
+        directory, _ = workflow.start(suite="stories", mode="native", story="native-callback", config=config,
+                                      driver="refused", timeout=30)
+        waited, result = workflow.command("wait", directory)
+        assert waited.returncode != 0
+        assert result["outcome"] == "failed"
+        surfaced_reason(result.get("failures"), check=label, words=words)
+        shown, current = workflow.command("status", directory)
+        assert shown.returncode == 0, shown.stdout + shown.stderr
+        surfaced_reason(current.get("failures"), check=label, words=words)
+        summary = [line.removeprefix("Failure: ") for line in (directory / "summary.txt").read_text().splitlines()
+                   if line.startswith("Failure: ")]
+        surfaced_reason(summary, check=label, words=words)
+        collected, receipt = workflow.command("collect", directory)
+        assert collected.returncode == 0, collected.stdout + collected.stderr
+        # Shareable records keep codes: the provider's text stays in the private diagnostics. The export's
+        # separate telemetry corpus retains original action outcomes by design and is not this claim.
+        [scenario] = list((directory / "checks").rglob("scenario.json"))
+        [private] = list((directory / "checks").rglob("diagnostics.json"))
+        assert PROVIDER_REASON in private.read_text()
+        for name, text in (("state.json", (directory / "state.json").read_text()),
+                           ("scenario.json", scenario.read_text()),
+                           ("diagnostics.zip", archive_text(receipt["archive"]))):
+            assert PROVIDER_REASON not in text, f"{name} exposes the provider's reason"
+        assert receipt["telemetry"]["status"] != "disabled", "Captured telemetry must be part of the checked export"
+        assert "diagnostics.json" not in [name.rsplit("/", 1)[-1] for name in archive_names(receipt["archive"])]
     finally:
         workflow.close()

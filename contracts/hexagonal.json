@@ -341,7 +341,8 @@
         "scripts.testkit.adapters.syntax",
         "scripts.testkit.adapters.managed_store",
         "scripts.testkit.adapters.managed_process",
-        "scripts.testkit.adapters.terminals"
+        "scripts.testkit.adapters.terminals",
+        "scripts.testkit.adapters.diagnostics"
       ],
       "allowed_roles": [
         "testkit_foundation",

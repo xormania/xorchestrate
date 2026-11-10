@@ -230,6 +230,7 @@ does not borrow another check's command record.
 Structural plan errors reject the whole plan. Missing tools, selected
 configuration or check-specific preparation block only dependent checks;
 independent checks continue and the aggregate remains unsuccessful. `doctor` uses
-the same readiness definitions without launching a live harness. Native terminal
+the same readiness definitions without launching a live harness; its opt-in
+`--probe` runs the `native-handshake` story through the same executor. Native terminal
 inheritance applies to live checks; static and pytest output stays captured.
 
