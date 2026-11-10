@@ -56,12 +56,10 @@ The identity gate fails the run unless:
 > published, delete the `xcontracts` entry under `[tool.uv.sources]` (the
 > dependency already reads `xcontracts>=0.1,<0.2`), run
 > `python3 -m scripts.ci.dependencies update` and commit `uv.lock`. Until
-> then, the pin is a commit of xcontracts' unmerged `feat/initial-contracts`
-> branch. **Before the xorchestrate pull request that introduced it merges,**
-> merge the xcontracts pull request with a merge commit, repin
-> `[tool.uv.sources]` to the xcontracts `master` commit that contains the
-> pinned work, and run `python3 -m scripts.ci.dependencies update`, so the
-> lock never names a commit only reachable from a deleted branch. When the
+> then, the pin is a commit on xcontracts' `master` (the merge commit of its
+> first pull request), never a commit reachable only from a feature branch
+> that may be deleted; repin to a `master` commit whenever xcontracts changes
+> and run `python3 -m scripts.ci.dependencies update`. When the
 > source is removed, the checkout instructions (README, `docs/live-testkit.md`,
 > `docs/live-acceptance.md`, `docs/telemetry.md`,
 > `docs/behavioral-verification.md`) can return to plain `python3 -m pip
