@@ -445,6 +445,62 @@
           }
         }
       ]
+    },
+    "package": {
+      "name": "Installed package acceptance",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 10,
+      "needs": [
+        "paths"
+      ],
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' }}",
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          },
+          "id": "checkout"
+        },
+        {
+          "name": "Configure external Python cache",
+          "id": "cache",
+          "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/package-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\"\nprintf 'UV_PROJECT_ENVIRONMENT=%s\\n' \"$RUNNER_TEMP/package-builder\" >> \"$GITHUB_ENV\""
+        },
+        {
+          "uses": "astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9",
+          "with": {
+            "version": "0.13.7",
+            "enable-cache": false
+          },
+          "id": "uv"
+        },
+        {
+          "name": "Install locked distribution build tools",
+          "id": "dependencies",
+          "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --managed-python --python 3.12.16 --no-default-groups --group validation --no-install-project"
+        },
+        {
+          "name": "Verify wheel and source distribution consumers",
+          "id": "acceptance",
+          "run": "\"$UV_PROJECT_ENVIRONMENT/bin/python\" -m scripts.ci.package_acceptance --output \"$RUNNER_TEMP/package-acceptance\""
+        },
+        {
+          "name": "Record unavailable package acceptance",
+          "if": "!cancelled() && (steps.checkout.outcome != 'success' || steps.cache.outcome != 'success' || steps.uv.outcome != 'success' || steps.dependencies.outcome != 'success')",
+          "run": "mkdir -p \"$RUNNER_TEMP/package-acceptance\"\ncat > \"$RUNNER_TEMP/package-acceptance/report.json\" <<'JSON'\n{\"schema_version\":1,\"status\":\"failed\",\"artifacts\":[],\"error\":{\"stage\":\"setup\",\"message\":\"Package acceptance prerequisites did not succeed\"}}\nJSON"
+        },
+        {
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+          "if": "always()",
+          "with": {
+            "name": "package-acceptance-evidence",
+            "path": "${{ runner.temp }}/package-acceptance/**/report.json\n${{ runner.temp }}/package-acceptance/**/commands/**\n${{ runner.temp }}/package-acceptance/**/distributions/*\n${{ runner.temp }}/package-acceptance/**/*constraints.txt",
+            "if-no-files-found": "error",
+            "retention-days": 14
+          }
+        }
+      ]
     }
   }
 }
