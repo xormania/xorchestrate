@@ -11,6 +11,7 @@ from .actions import SESSION_CREATIONS
 from .model import JSON, Conflict, OrchestrationError, Record, record_view
 from .outcomes import before_effect
 from .ports import Transaction
+from .worktrees import current_worktree, session_workspace, session_worktree
 
 _CLOSED = {"stopped", "detached", "disconnected", "superseded"}
 _INDEPENDENT = {"poll_session", "stop_session", "detach_session"}
@@ -104,7 +105,11 @@ class SessionLifecycleMixin:
         def perform(operation):
             specification = {**deepcopy(args["specification"]), "context": {
                 **trusted_context, "session_id": operation.data["session_id"]}}
-            return invoke(deepcopy(source["session"]["backend"]), specification) if source else invoke(specification)
+            if not source:
+                return invoke(specification)
+            # A resumed or reconnected session runs where its source was created.
+            with session_workspace(session_worktree(source["session"])):
+                return invoke(deepcopy(source["session"]["backend"]), specification)
         result = self._effect(action, args, actor, context, perform)
         # Also covers an idempotent replay of a start this runtime did not reserve.
         self._owned_session_ids.add(result["session"]["id"])
@@ -119,6 +124,10 @@ class SessionLifecycleMixin:
             driver = self.sessions[name]
 
         def perform(operation: Record) -> Any:
+            with session_workspace(session_worktree(session)):
+                return drive(operation)
+
+        def drive(operation: Record) -> Any:
             backend = deepcopy(operation.data["backend"])
             if action == "send_session":
                 return driver.send(backend, deepcopy(args["message"]))
@@ -197,6 +206,12 @@ class SessionLifecycleMixin:
                     *([source["session"]["pending_operation"]] if source["session"].get("pending_operation") else []),
                 ]))
             resolved = context.get("resolved_driver", args["driver"])
+            # Where the session's processes run (``${repo}``): the creating
+            # worktree, kept across resume and reconnect from other worktrees.
+            source_session = (context.get("resume_source") or {}).get("session") or {}
+            workspace = session_worktree(source_session) or current_worktree()
+            if workspace is not None:
+                provenance["workspace"] = workspace
             session = self._create(tx, "session", actor, {
                 "driver": resolved,
                 "selection": {"requested": args["driver"], "resolved": resolved,

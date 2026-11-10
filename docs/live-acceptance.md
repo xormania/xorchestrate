@@ -49,6 +49,11 @@ python3 -m scripts.acceptance \
   --output ../xorchestrate-acceptance
 ```
 
+The scenario copies that configuration into a disposable
+[project](projects.md) inside its run directory, with a private
+`XORCHESTRATE_HOME` and companion, approves it, and launches the application
+with `--project`; your own home and companion are never touched.
+
 The selected driver must provide the application's tools to the harness. The
 supplied Codex adapter does this with `options.application_tools: true`; other
 compatible drivers can implement the same callback behavior. The scenario asks

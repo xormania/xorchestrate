@@ -319,7 +319,8 @@ class LocalTelemetry:
                 self._sources.setdefault(source, {"configured": False, "observed": False, "coverage": "unknown"})
             flat = {key: deepcopy(scope[key]) for key in ("actor", "action", "work_id", "session_id", "operation_id",
                     "attempt_id", "parent_attempt_id", "native_id", "incarnation", "native_call_id", "turn_id",
-                    "driver", "harness", "source", "source_version", "configuration_id", "run_id", "candidate_id") if key in scope}
+                    "driver", "harness", "source", "source_version", "configuration_id", "run_id", "candidate_id",
+                    "worktree") if key in scope}
             for key, kind in (("work", "work_id"), ("session", "session_id"), ("operation", "operation_id")):
                 if not flat.get(kind) and isinstance(scope.get(key), dict) and scope[key].get("id"):
                     flat[kind] = scope[key]["id"]

@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "telemetry": {
+    "options": {
+      "dataset_id": "agent-work",
+      "artifact_threshold_bytes": 65536
+    }
+  }
+}

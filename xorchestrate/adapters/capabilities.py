@@ -13,6 +13,7 @@ annotations, and descriptions are untrusted content; they do not alter policy.
 from __future__ import annotations
 
 import copy
+import json
 import threading
 import time
 from contextlib import contextmanager
@@ -199,7 +200,10 @@ class StdioMCPProvider(TelemetrySource):
         self.version = self.options.get("protocol_version", self.SUPPORTED_VERSIONS[0])
         if self.version not in self.SUPPORTED_VERSIONS:
             raise OrchestrationError("Configured MCP protocol version is unsupported.", "invalid_configuration")
-        self._client: JsonLineProcess | None = None
+        # One persistent connection per resolved launch (command, cwd, env):
+        # with ``${repo}`` in those options, calls from different worktrees of
+        # a shared project server must never reuse another worktree's process.
+        self._clients: dict[str, JsonLineProcess] = {}
         self._closed = False
         self._capabilities: dict[str, Capability] = {}
         self._outputs: dict = {}
@@ -212,7 +216,7 @@ class StdioMCPProvider(TelemetrySource):
     @contextmanager
     def _telemetry_binding(self):
         with self._snapshot_lock:
-            if self._client is not None:
+            if self._clients:
                 raise OrchestrationError("Bind telemetry before connecting the provider.", "conflict")
             yield
 
@@ -225,10 +229,19 @@ class StdioMCPProvider(TelemetrySource):
             raise OrchestrationError("MCP operation exceeded its deadline.", "provider_timeout", {"outcome": "not_started"})
         return remaining
 
-    def _disconnect(self):
-        if self._client is not None:
-            self._client.close()
-            self._client = None
+    def _launch_key(self) -> str:
+        """The resolved launch of this call (``${repo}`` resolved for the calling worktree)."""
+        launch = command_options(self.options)
+        return json.dumps([launch["args"], launch["cwd"], sorted(launch["env"].items())])
+
+    def _disconnect(self, every=False):
+        if every:
+            clients, self._clients = list(self._clients.values()), {}
+        else:
+            client = self._clients.pop(self._launch_key(), None)
+            clients = [client] if client is not None else []
+        for client in clients:
+            client.close()
         self._observed_capabilities = {}
         self._observed_outputs = {}
         # Keep the caller's authorized descriptors across reconnection. Newly
@@ -238,11 +251,13 @@ class StdioMCPProvider(TelemetrySource):
     def _connection(self, deadline: float) -> JsonLineProcess:
         if self._closed:
             raise OrchestrationError("Capability provider is closed.", "provider_unavailable", {"outcome": "not_started"})
-        if self._client is None:
-            self._client = JsonLineProcess(self.options, telemetry_observer=self._telemetry_observer,
-                                          telemetry_context={"purpose": "mcp_connection"})
+        key = self._launch_key()
+        client = self._clients.get(key)
+        if client is None:
+            client = self._clients[key] = JsonLineProcess(self.options, telemetry_observer=self._telemetry_observer,
+                                                          telemetry_context={"purpose": "mcp_connection"})
             try:
-                result = self._client.request("initialize", {
+                result = client.request("initialize", {
                     "protocolVersion": self.version,
                     "capabilities": {},
                     "clientInfo": {"name": "xorchestrate", "version": __version__},
@@ -254,11 +269,11 @@ class StdioMCPProvider(TelemetrySource):
                     raise OrchestrationError("MCP server did not advertise tools support.", "provider_protocol")
                 if not isinstance(info, dict) or not isinstance(info.get("name"), str) or not isinstance(info.get("version"), str):
                     raise OrchestrationError("MCP server returned invalid implementation information.", "provider_protocol")
-                self._client.notify("notifications/initialized")
+                client.notify("notifications/initialized")
             except Exception:
                 self._disconnect()
                 raise
-        return self._client
+        return client
 
     def discover(self) -> list[Capability]:
         with self._snapshot_lock:
@@ -379,5 +394,6 @@ class StdioMCPProvider(TelemetrySource):
 
     def close(self) -> None:
         self._closed = True
-        self._disconnect()
+        with self._snapshot_lock:
+            self._disconnect(every=True)
         self._close_telemetry()

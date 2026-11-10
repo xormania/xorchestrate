@@ -410,7 +410,8 @@ class CapabilityTests(unittest.TestCase):
     def test_close_reaps_mcp_process_and_is_idempotent(self):
         provider = self.mcp()
         provider.discover()
-        process = provider._client.process
+        (client,) = provider._clients.values()
+        process = client.process
         provider.close()
         provider.close()
         self.assertIsNotNone(process.poll())

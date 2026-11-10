@@ -139,7 +139,7 @@ class UnixClientTransport:
     """Owner-only listening socket yielding one ``UnixConnection`` per verified client.
 
     ``admission``, when set (see ``set_admission``), decides each verified hello:
-    ``admit(peer)`` returns ``None`` to welcome the peer or ``(code, message)`` to
+    ``admit(peer)`` returns ``None`` to welcome the peer or ``(code, message[, details])`` to
     refuse it; ``cancel(peer)`` undoes an admission whose welcome could not be
     delivered.
     """
@@ -193,10 +193,13 @@ class UnixClientTransport:
         except queue.Empty:
             return None
 
-    def _refuse(self, connection, code, message):
+    def _refuse(self, connection, code, message, details=None):
+        error = {"code": code, "message": message}
+        if details:
+            error["details"] = details
         try:
             connection.settimeout(1.0)
-            connection.sendall(_encode({"xorchestrate": "refused", "error": {"code": code, "message": message}}) + b"\n")
+            connection.sendall(_encode({"xorchestrate": "refused", "error": error}) + b"\n")
         except OSError:
             pass
         connection.close()
@@ -304,8 +307,12 @@ class UnixClient:
                 reason = error.get("code", "closed") if isinstance(error, dict) else "closed"
                 if reason == "handshake_timeout":
                     raise OrchestrationError(_REFUSALS[reason], "handshake_timeout", {"reason": reason})
-                raise OrchestrationError(_REFUSALS.get(reason, "The server refused the connection."),
-                                         "connection_refused", {"reason": reason})
+                details = error.get("details") if isinstance(error, dict) else None
+                message = error.get("message") if isinstance(error, dict) else None
+                raise OrchestrationError(
+                    _REFUSALS.get(reason) or (message if isinstance(message, str) and message else
+                                              "The server refused the connection."),
+                    "connection_refused", {"reason": reason, **(details if isinstance(details, dict) else {})})
             self.welcome = reply
             self.socket.settimeout(None)
         except BaseException:

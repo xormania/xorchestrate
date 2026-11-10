@@ -99,6 +99,34 @@ def check_socket_directory(path, *, uid=None) -> Path:
     return path
 
 
+def check_private_location(path, *, uid=None) -> Path:
+    """Refuse a private directory, existing or about to be created, that another user could tamper with.
+
+    An existing ``path`` follows the ``check_socket_directory`` rule for its
+    directory: owned by this user, not writable by group or others, and every
+    ancestor owned by this user or root and not group/other-writable unless
+    sticky. A missing ``path`` will be created in its nearest existing
+    ancestor, so that ancestor and the ones above it follow the ancestor rule.
+    Raises ``OrchestrationError`` coded ``socket_path_unsafe`` naming the
+    directory and the reason.
+    """
+    uid = os.getuid() if uid is None else uid
+    path = Path(path)
+    if path.exists():
+        check_socket_directory(path / "entry", uid=uid)
+        return path
+    existing = path
+    while not existing.exists() and existing != existing.parent:
+        existing = existing.parent
+    for ancestor in dict.fromkeys([existing, *existing.parents, *existing.resolve().parents]):
+        metadata = os.stat(ancestor)
+        if metadata.st_uid not in (uid, 0):
+            raise _unsafe(ancestor, "an enclosing directory is owned by another user")
+        if metadata.st_mode & 0o022 and not metadata.st_mode & stat.S_ISVTX:
+            raise _unsafe(ancestor, "an enclosing directory is writable by others without the sticky bit")
+    return path
+
+
 # The umask is process-wide; serialize the binds that narrow it.
 _UMASK_LOCK = threading.Lock()
 

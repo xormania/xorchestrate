@@ -124,7 +124,7 @@ before the heavy jobs are skipped:
    symlinks. `docs/implementation/owner-brief.md` is excluded because the
    protocol suites read it as input. Everything else is code, including
    `.github/**` (also `CI.md`), `contracts/**`, `scripts/**`, `tests/**`,
-   `xorchestrate/**`, `examples/*.json`, `pyproject.toml` and `ruff.toml`. A
+   `xorchestrate/**`, the example projects' `examples/*/.xorchestrate/*.json`, `pyproject.toml` and `ruff.toml`. A
    missing or null base, a failed or malformed diff and an empty change set all
    count as code.
 

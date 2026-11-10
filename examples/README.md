@@ -1,62 +1,81 @@
 # Configuration examples
 
-These files illustrate composition choices. They do not prescribe a project stack,
-agent hierarchy, model, workflow, or production policy.
+These example projects illustrate composition choices. They do not prescribe a
+project stack, agent hierarchy, model, workflow, or production policy.
 
-Each example declares `"version": 1`, the configuration format version. A
+Each example is a project's tracked configuration, `<name>/.xorchestrate/`:
+
+- `project.json` names the project, the release it pins and the programs it
+  requires;
+- `config.json` is the product configuration, free of machine-specific paths:
+  it refers to the user's launchers as `${launchers}` and to the worktree a
+  session runs in as `${repo}` (see [projects](../docs/projects.md)).
+
+Each `config.json` declares `"version": 1`, the configuration format version. A
 configuration without `version` is still read as version 1, with a
 `configuration_version_missing` warning in `describe`; a later release will
 require it. A release refuses a newer format with
 `configuration_version_unsupported` and an older unsupported one with
 `configuration_migration_required`, and never rewrites the file.
-`python3 -m xorchestrate --version` lists the format versions the installed
-release reads. See
-[format version and structural validation](../docs/hexagonal-architecture.md#format-version-and-structural-validation).
+`xorchestrate --version` lists the format versions the installed release reads.
+See [format version and structural validation](../docs/hexagonal-architecture.md#format-version-and-structural-validation).
+
+## Using an example
+
+Xorchestrate runs only inside a set-up project. Once per user, create (or link)
+your private companion repository; then copy an example's `.xorchestrate/` into
+a git repository and set it up:
+
+```bash
+xorchestrate setup ~/companion             # once per user: overlays and approvals live here
+cp -r examples/minimal/.xorchestrate my-project/
+cd my-project                              # a git repository
+xorchestrate init                          # registers the instance, shows what would be launched
+xorchestrate approve                       # approve the tracked configuration
+```
+
+Each example pins `release` in `project.json`; set it to the release you have
+installed, or the launcher builds that release's toolchain with uv and runs it
+(see [release handoff](../docs/projects.md#release-handoff)).
 
 ## Minimal local use
 
-After `python3 -m pip install -e .`, run these commands from the repository root:
+`minimal` is runnable without external tools, model accounts, or credentials.
+State lives in the project's instance directory, `~/.xorchestrate/projects/minimal/`,
+never in the repository:
 
 ```bash
-python3 -m xorchestrate --config examples/minimal.json describe
-python3 -m xorchestrate --config examples/minimal.json call create_work --json '{"goal":"Investigate a feature and retain the evidence"}'
-python3 -m xorchestrate --config examples/minimal.json call list_work --json '{}'
+xorchestrate describe
+xorchestrate call create_work --json '{"goal":"Investigate a feature and retain the evidence"}'
+xorchestrate call list_work --json '{}'
 ```
 
-This example is runnable without external tools, model accounts, or credentials.
-It stores records at `examples/.xorchestrate/minimal.sqlite3`. Paths for the SQLite
-adapter resolve against the config file's directory. Use a private state location
-appropriate for your work when copying this config elsewhere.
+`init` writes Claude Code's tracked `.mcp.json` with the project's MCP entry:
 
-The same configuration can expose the application as a stdio MCP server:
-
-```bash
-python3 -m xorchestrate --config examples/minimal.json serve
+```json
+{"mcpServers": {"xorchestrate": {"command": "xorchestrate", "args": ["connect"]}}}
 ```
 
-An MCP client launches that command, initializes the connection, and uses
-`tools/list` and `tools/call`. The application tool names and schemas are the same
-ones shown by CLI `describe`.
-
-To let several harnesses share one server and its live sessions, launch
-`connect` instead; it starts the shared server on first use
-([project server](../docs/project-server.md)):
-
-```bash
-python3 -m xorchestrate --config examples/minimal.json connect --actor worker
-```
+The harness launches `xorchestrate connect`, which starts the project's shared
+server on first use and relays MCP ([project server](../docs/project-server.md)).
+Harnesses that keep MCP servers in user-level configuration need the same entry
+there; `init` prints it. `xorchestrate serve` still serves one MCP client over
+stdio for direct use. The application tool names and schemas are the ones `describe`
+shows.
 
 ## Local telemetry
 
-`telemetry.json` adds the optional `local` telemetry adapter to SQLite work
-tracking. It retains application, native, capability, evaluator and process
-observations in a local corpus whose `runtime_root` resolves against this
-directory to `../../xorchestrate-telemetry-state`, outside the checkout. Change
-`project_id`, `dataset_id` and `collector_id` for your deployment. The collector
-ships with the application; it needs a Python whose SQLite has the WAL fix:
+Telemetry is always on for a project: the collector writes to
+`~/.xorchestrate/projects/<project>/telemetry` with the project name as
+`project_id` and the instance id as `collector_id`. `telemetry` shows that a
+telemetry section without an `adapter` only changes options of those defaults,
+here the `dataset_id` and the artifact threshold. The same fragment in your
+overlay (`<companion>/overlay/<project>/overlay.json`) keeps a trial's runs apart
+without changing the project. The collector needs a Python whose SQLite has the
+WAL fix:
 
 ```bash
-python3 -m xorchestrate --config examples/telemetry.json call telemetry_status --json '{}'
+xorchestrate call telemetry_status --json '{}'
 ```
 
 See [active telemetry](../docs/telemetry.md) for runtime requirements, options and
@@ -64,10 +83,13 @@ the `telemetry_*` operations.
 
 ## Connecting tools, a worker, and optional assessment
 
-`connected.json` is an executable-dependent template. Its external entries are
-initially disabled. Before enabling an entry, replace the placeholder paths,
-model names, and environment-variable names with the values for your installed
-tools. The repository does not supply `project-tools` or `assessment-bridge`.
+`connected` is an executable-dependent template. Its external entries are
+initially disabled. Before enabling an entry, put the launchers it names
+(`${launchers}/project-tools`, `${launchers}/assessment-bridge`) in your
+companion's `launchers/` directory, and replace the model names and
+environment-variable names with the values for your installed tools; enabling
+an entry in your overlay leaves the project's file unchanged. The repository
+does not supply `project-tools` or `assessment-bridge`.
 `codex` must be installed and authenticated if you enable that session driver.
 
 | Entry | Expected implementation |
@@ -161,7 +183,7 @@ delegate correspondingly broader native configuration choices.
 After enabling and configuring the required connected entries, launch:
 
 ```bash
-python3 -m xorchestrate --config examples/connected.json run
+xorchestrate run
 ```
 
 Keep this process open. Send the following JSON requests one line at a time,
