@@ -1,0 +1,235 @@
+{
+  "name": "Release",
+  "on": {
+    "push": {
+      "tags": [
+        "v*.*.*"
+      ]
+    },
+    "workflow_dispatch": {}
+  },
+  "permissions": {},
+  "concurrency": {
+    "group": "release-${{ github.ref }}",
+    "cancel-in-progress": false
+  },
+  "env": {
+    "PACKAGE_NAME": "xorchestrate",
+    "RELEASE_BRANCH": "master",
+    "PYPI_UPLOAD_URL": "https://upload.pypi.org/legacy/",
+    "PYPI_PROJECT_URL": "https://pypi.org/project/",
+    "TESTPYPI_UPLOAD_URL": "https://test.pypi.org/legacy/",
+    "TESTPYPI_PROJECT_URL": "https://test.pypi.org/project/"
+  },
+  "jobs": {
+    "build": {
+      "name": "Build distributions and check release identity",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 10,
+      "permissions": {
+        "contents": "read"
+      },
+      "outputs": {
+        "tag": "${{ steps.identity.outputs.tag }}",
+        "version": "${{ steps.identity.outputs.version }}",
+        "prerelease": "${{ steps.identity.outputs.prerelease }}",
+        "upload_url": "${{ steps.index.outputs.upload_url }}",
+        "project_url": "${{ steps.index.outputs.project_url }}"
+      },
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false,
+            "fetch-depth": 0
+          }
+        },
+        {
+          "name": "Configure external Python cache",
+          "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/release-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\"\nprintf 'UV_PROJECT_ENVIRONMENT=%s\\n' \"$RUNNER_TEMP/release-builder\" >> \"$GITHUB_ENV\""
+        },
+        {
+          "name": "Install pinned validation runtime manager",
+          "uses": "astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9",
+          "with": {
+            "version": "0.13.7",
+            "enable-cache": false
+          }
+        },
+        {
+          "name": "Install locked distribution build tools",
+          "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --managed-python --python 3.12.16 --no-default-groups --group validation --no-install-project"
+        },
+        {
+          "name": "Build wheel and source distribution",
+          "run": "\"$UV_PROJECT_ENVIRONMENT/bin/python\" -m build --no-isolation --outdir \"$RUNNER_TEMP/dist\" ."
+        },
+        {
+          "name": "Check release identity",
+          "id": "identity",
+          "shell": "bash",
+          "env": {
+            "EVENT_NAME": "${{ github.event_name }}",
+            "TAG": "${{ github.ref_name }}"
+          },
+          "run": "set -- --root . --package \"$PACKAGE_NAME\" --dist \"$RUNNER_TEMP/dist\" --notes-output \"$RUNNER_TEMP/release-notes.md\" --github-output \"$GITHUB_OUTPUT\"\nif [ \"$EVENT_NAME\" = push ]; then\n  set -- \"$@\" --tag \"$TAG\" --annotated --ancestor-of \"refs/remotes/origin/$RELEASE_BRANCH\"\nfi\n\"$UV_PROJECT_ENVIRONMENT/bin/python\" -I -B scripts/ci/release_identity.py \"$@\" | tee \"$RUNNER_TEMP/release-identity.json\""
+        },
+        {
+          "name": "Select package index",
+          "id": "index",
+          "env": {
+            "EVENT_NAME": "${{ github.event_name }}",
+            "VERSION": "${{ steps.identity.outputs.distribution_version }}"
+          },
+          "run": "if [ \"$EVENT_NAME\" = push ]; then\n  upload=\"$PYPI_UPLOAD_URL\" project=\"$PYPI_PROJECT_URL\"\nelse\n  upload=\"$TESTPYPI_UPLOAD_URL\" project=\"$TESTPYPI_PROJECT_URL\"\nfi\nprintf 'upload_url=%s\\nproject_url=%s%s/%s/\\n' \"$upload\" \"$project\" \"$PACKAGE_NAME\" \"$VERSION\" >> \"$GITHUB_OUTPUT\""
+        },
+        {
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+          "with": {
+            "name": "distributions",
+            "path": "${{ runner.temp }}/dist/*",
+            "if-no-files-found": "error",
+            "retention-days": 30
+          }
+        },
+        {
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+          "if": "always()",
+          "with": {
+            "name": "release-identity",
+            "path": "${{ runner.temp }}/release-identity.json\n${{ runner.temp }}/release-notes.md",
+            "if-no-files-found": "warn",
+            "retention-days": 30
+          }
+        }
+      ]
+    },
+    "check": {
+      "name": "Installed package acceptance of the built distributions",
+      "needs": [
+        "build"
+      ],
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 10,
+      "permissions": {
+        "contents": "read"
+      },
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "name": "Configure external Python cache",
+          "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/package-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\"\nprintf 'UV_PROJECT_ENVIRONMENT=%s\\n' \"$RUNNER_TEMP/package-builder\" >> \"$GITHUB_ENV\""
+        },
+        {
+          "uses": "astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9",
+          "with": {
+            "version": "0.13.7",
+            "enable-cache": false
+          }
+        },
+        {
+          "name": "Install locked distribution build tools",
+          "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --managed-python --python 3.12.16 --no-default-groups --group validation --no-install-project"
+        },
+        {
+          "uses": "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
+          "with": {
+            "name": "distributions",
+            "path": "${{ runner.temp }}/dist"
+          }
+        },
+        {
+          "name": "Verify the built wheel and source distribution in clean consumers",
+          "run": "set --\nfor artifact in \"$RUNNER_TEMP\"/dist/*.whl \"$RUNNER_TEMP\"/dist/*.tar.gz; do\n  set -- \"$@\" --artifact \"$artifact\"\ndone\n\"$UV_PROJECT_ENVIRONMENT/bin/python\" -m scripts.ci.package_acceptance --output \"$RUNNER_TEMP/package-acceptance\" \"$@\""
+        },
+        {
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+          "if": "always()",
+          "with": {
+            "name": "release-package-acceptance-evidence",
+            "path": "${{ runner.temp }}/package-acceptance/**/report.json\n${{ runner.temp }}/package-acceptance/**/commands/**\n${{ runner.temp }}/package-acceptance/**/*constraints.txt",
+            "if-no-files-found": "error",
+            "retention-days": 30
+          }
+        }
+      ]
+    },
+    "publish": {
+      "name": "Publish to ${{ github.event_name == 'push' && 'PyPI' || 'TestPyPI (dry run)' }}",
+      "needs": [
+        "build",
+        "check"
+      ],
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 10,
+      "environment": {
+        "name": "${{ github.event_name == 'push' && 'pypi' || 'testpypi' }}",
+        "url": "${{ needs.build.outputs.project_url }}"
+      },
+      "permissions": {
+        "id-token": "write"
+      },
+      "steps": [
+        {
+          "uses": "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
+          "with": {
+            "name": "distributions",
+            "path": "dist"
+          }
+        },
+        {
+          "name": "Publish with trusted publishing",
+          "uses": "pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086",
+          "with": {
+            "packages-dir": "dist/",
+            "repository-url": "${{ needs.build.outputs.upload_url }}"
+          }
+        }
+      ]
+    },
+    "github-release": {
+      "name": "Attach distributions to the GitHub release",
+      "needs": [
+        "build",
+        "publish"
+      ],
+      "if": "${{ github.event_name == 'push' }}",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 5,
+      "permissions": {
+        "contents": "write"
+      },
+      "steps": [
+        {
+          "uses": "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
+          "with": {
+            "name": "distributions",
+            "path": "${{ runner.temp }}/dist"
+          }
+        },
+        {
+          "uses": "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
+          "with": {
+            "name": "release-identity",
+            "path": "${{ runner.temp }}/identity"
+          }
+        },
+        {
+          "name": "Create or update the release for the tag",
+          "env": {
+            "GH_TOKEN": "${{ github.token }}",
+            "GH_REPO": "${{ github.repository }}",
+            "TAG": "${{ needs.build.outputs.tag }}",
+            "PRERELEASE": "${{ needs.build.outputs.prerelease }}"
+          },
+          "run": "if gh release view \"$TAG\" >/dev/null 2>&1; then\n  gh release upload \"$TAG\" \"$RUNNER_TEMP\"/dist/* --clobber\nelse\n  set -- --verify-tag --title \"$TAG\" --notes-file \"$RUNNER_TEMP/identity/release-notes.md\"\n  if [ \"$PRERELEASE\" = true ]; then set -- \"$@\" --prerelease; fi\n  gh release create \"$TAG\" \"$RUNNER_TEMP\"/dist/* \"$@\"\nfi"
+        }
+      ]
+    }
+  }
+}

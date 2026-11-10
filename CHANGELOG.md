@@ -1,9 +1,9 @@
 # Changelog
 
-Each release has an entry. Its **Upgrade notes** state, for every category,
-the change and the migration it needs, or "None". Releases are annotated tags
-`vMAJOR.MINOR.PATCH` on master; see [PR quality](docs/pr-quality.md) for when
-entries are written.
+Each release has an entry headed `## X.Y.Z`. Its **Upgrade notes** state, for
+every category, the change and the migration it needs, or "None". Releases are
+annotated tags `vMAJOR.MINOR.PATCH` on master; see [PR quality](docs/pr-quality.md)
+for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ## Unreleased
 
@@ -51,6 +51,23 @@ entries are written.
     live unless `--detach` is given.
 - `ClientTransport`, `ClientConnection` and `PeerIdentity` ports, with `stdio`
   and `unix` adapters.
+- `xorchestrate --version` gains `install_source` (`index`, `git`, `local`,
+  `archive` or `uvx`, or `unknown` when the distribution is not installed), read
+  from the installed distribution's `direct_url.json` and the installer's
+  environment, and `upgrade_command`, the command that upgrades the launcher the
+  way it was installed (`null` when unknown). A pinned `uv tool` or pipx install
+  is reinstalled without its pin, since their upgrade commands keep it.
+- [Install documentation](docs/install.md) for every supported path (package
+  index, git, install script, `uvx`) and `scripts/install.sh`, which installs uv
+  when missing and then the launcher with `uv tool install`, without `sudo`.
+- A release workflow: pushing a `vX.Y.Z` tag checks that the tag,
+  `__version__`, `pyproject.toml` and the changelog agree, runs installed-package
+  acceptance on the built wheel and sdist, publishes them to PyPI with trusted
+  publishing and attaches them to the GitHub release. A manual run is a TestPyPI
+  dry run. See [releases](docs/releases.md).
+- Installed-package acceptance also installs the launcher with `uv tool install`
+  from a flat index, the wheel, a git tag and a source directory, and runs it
+  through `uvx`, checking the reported `install_source` for each.
 
 ### Upgrade notes
 
@@ -114,3 +131,6 @@ entries are written.
   corpora and bundles open unchanged. When telemetry is unavailable,
   `telemetry_status` gains a `cause` field (`{"code": ..., "detail": ...}`);
   the detail names options or adapters, never option values.
+- **Command line:** `--version` output gains the `install_source` and
+  `upgrade_command` keys; existing keys are unchanged. Tools that compare the
+  whole object must accept the new keys.

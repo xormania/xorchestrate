@@ -23,13 +23,42 @@ telemetry collector was installed with it, and that pytest, Ruff and build tools
 were not installed as runtime dependencies.
 The two consumers do not share state or dependencies.
 
+## Launcher install paths
+
+With a wheel selected, the run also exercises each [install path](install.md)
+that works without a published release. Each `uv tool install` gets its own tool
+and executable directories inside the run, the same locked constraints and the
+builder's Python:
+
+| Path | Installed from | Expected `install_source` |
+| --- | --- | --- |
+| index | `xorchestrate==<version>` from a private flat index holding only the candidate wheel (`--find-links`) | `index` |
+| archive | the wheel file | `archive` |
+| git | `git+file://…@v<version>`: an annotated tag in a fresh local repository of the snapshot | `git`, with that commit |
+| local | a copy of the snapshot directory | `local` |
+| uvx | `uv tool run --from <wheel>` (what `uvx` runs) | `uvx` |
+
+For each `uv tool install`, the installed launcher's `--version` must report the
+expected source, commit and exact upgrade command (stated in the acceptance
+script, not taken from the launcher), and the same consumer assertions run with
+the tool environment's interpreter. The index and archive paths also compare
+every package file in the tool environment with the candidate wheel, so a
+same-version wheel from the public index cannot stand in for it. The index path
+installs a pinned `==<version>`, so it must report `uv tool install
+xorchestrate@latest`. The `uvx` run checks
+`--version` and `describe`. Dependencies still come from the configured package
+index under the exported constraints. The public PyPI path and `pipx` are not
+exercised. `--no-install-paths` skips this part.
+
 The report binds artifact filenames, sizes and SHA-256 values to the candidate,
 runtime and dependency exports. Existing command receipts retain build, install
 and protocol failures. Nested consumer failures retain each output stream's final
 16,384 characters, with an explicit marker when truncated. CI retains
 `package-acceptance-evidence`, including the
 report, command logs and the actual distribution files. These are test artifacts;
-the workflow does not publish a release.
+the CI workflow does not publish a release. The [release workflow](releases.md)
+runs the same acceptance on the distributions it publishes, selected with
+`--artifact`.
 
 For a disposable fault witness, `--artifact /path/to/package.whl` checks an existing
 artifact instead of building. For example, remove an essential runtime module

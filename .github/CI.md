@@ -41,6 +41,11 @@ installs the actual wheel and source distribution into independent runtime-only
 consumers. It records CLI, persistent-state, stdio MCP and absolute gateway launch
 checks outside the source checkout, using locked dependency constraints.
 
+The job also installs the launcher through each offline [install path](../docs/install.md)
+(`uv tool install` from a flat index, the wheel, a local git tag and a source
+directory, and `uv tool run --from <wheel>`) and checks the `install_source` each
+reports.
+
 CI runs on GitHub-hosted Ubuntu. Pinned actions have read-only repository
 permissions. Pull requests, pushes to master and manual runs invoke:
 
@@ -187,6 +192,15 @@ create requirements from findings. See
 [architecture enforcement](../docs/architecture-enforcement.md).
 
 CI neither requests reviews nor merges branches. xor controls those decisions.
+
+## Release workflow
+
+`.github/workflows/release.yml` is separate from CI. It runs on a pushed
+`v*.*.*` tag (publishing to PyPI) or manually (a TestPyPI dry run), with the same
+pinned actions, uv 0.13.7 and Python 3.12.16. The workflow has no default
+permissions; build and check jobs read contents, only the publish job may request
+an OIDC token for trusted publishing, and only the GitHub release job writes
+contents. See [releases](../docs/releases.md).
 
 ## Telemetry runtime
 
