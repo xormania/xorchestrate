@@ -1,10 +1,12 @@
 """Qualified PR reuse preserves current validation through metadata event bursts."""
 
+import json
 from copy import deepcopy
 from itertools import permutations
 
 import pytest
 
+from scripts.ci import result as aggregate
 from scripts.ci import reuse as subject
 from scripts.ci.reuse import compatible_context, run_title, unstarted_metadata
 from tests.hexagonal.contracts.ci_reuse import (
@@ -16,6 +18,7 @@ from tests.hexagonal.contracts.ci_reuse import (
     assert_reused,
     replace_path,
 )
+from tests.hexagonal.support.ci_receipts import write_json
 from tests.hexagonal.support.ci_reuse import (
     TEST_LANE,
     TMUX_LANE,
@@ -31,6 +34,101 @@ from tests.hexagonal.support.ci_reuse_api import ProducerAPI
 @pytest.fixture
 def evidence():
     return ReuseEvidence()
+
+
+def _collect_current(peer, context, needs, directory, monkeypatch):
+    write_json(directory / "workflow.json", peer.workflow)
+    write_json(directory / "needs.json", needs)
+    monkeypatch.setenv("CI_CANDIDATE_CONTEXT", json.dumps(context))
+    monkeypatch.setenv("GITHUB_TOKEN", "fixture-token")
+    code = subject.candidate.main(["collect", "--output", str(directory / "metadata.json"),
+        "--artifacts", str(directory / "artifacts"), "--workflow", str(directory / "workflow.json"),
+        "--needs", str(directory / "needs.json")])
+    return code, directory / "artifacts"
+
+
+def test_collect_uses_bound_native_reuse_plan_before_requesting_current_behavioral_jobs(producer_api, tmp_path, monkeypatch):
+    context, needs, _ = producer_api.collection()
+    assert needs["paths"]["outputs"]["reuse"] == "true"
+    assert needs["application-tests"]["result"] == "skipped"
+    placeholder = producer_api.workflow["jobs"]["application-tests"]["name"]
+    assert any(row["name"] == placeholder and row["conclusion"] == "skipped"
+               for row in producer_api.metadata[201]["jobs"])
+    code, artifacts = _collect_current(producer_api, context, needs, tmp_path / "collect", monkeypatch)
+    assert code == 0, "CI_REUSE_NATIVE_COLLECT_STATIC_CONTEXT"
+    assert (artifacts / "candidate-context--attempt-1/context.json").is_file()
+    assert (artifacts / "static-checks-python-3.12--attempt-1/producer.json").is_file()
+    assert {path.name for path in artifacts.iterdir()} == {
+        "candidate-context--attempt-1", "static-checks-python-3.12--attempt-1"}
+    assert not any(path.startswith("/actions/runs/101/") for path in producer_api.requests), \
+        "Original producer requalification remains the final aggregate's job"
+
+
+@pytest.mark.parametrize("fault", (
+    "missing_plan", "malformed_plan", "schema", "float_schema", "boolean_schema", "decision", "candidate",
+    "consumer_run", "classifier_failed", "reuse_flag", "missing_current_context",
+))
+def test_collect_cannot_treat_unbound_reuse_headers_as_current_static_scope(producer_api, tmp_path, monkeypatch, fault):
+    context, needs, plan = producer_api.collection()
+    outputs = needs["paths"]["outputs"]
+    if fault == "missing_plan":
+        del outputs["reuse_plan"]
+    elif fault == "malformed_plan":
+        outputs["reuse_plan"] = "{not-json"
+    elif fault == "schema":
+        plan["schema_version"] = 999
+    elif fault == "float_schema":
+        plan["schema_version"] = 1.0
+    elif fault == "boolean_schema":
+        plan["schema_version"] = True
+    elif fault == "decision":
+        plan["decision"] = "execute"
+    elif fault == "candidate":
+        plan["current_context"]["checkout"]["tree"] = "f" * 40
+    elif fault == "consumer_run":
+        plan["current_context"]["producer"]["run_id"] += 1
+    elif fault == "classifier_failed":
+        needs["paths"]["result"] = "failure"
+    elif fault == "reuse_flag":
+        outputs["reuse"] = True
+    else:
+        del plan["current_context"]
+    if fault not in {"missing_plan", "malformed_plan"}:
+        outputs["reuse_plan"] = json.dumps(plan)
+    code, _ = _collect_current(producer_api, context, needs, tmp_path / "collect", monkeypatch)
+    assert code != 0, "CI_REUSE_UNVERIFIED_HEADER_CANNOT_HIDE_MISSING_CURRENT_EXECUTION"
+
+
+def test_collect_reuse_inputs_cannot_qualify_missing_current_static_evidence(producer_api, tmp_path, monkeypatch):
+    context, needs, _ = producer_api.collection()
+    metadata = producer_api.metadata[201]
+    metadata["artifacts"] = [row for row in metadata["artifacts"]
+                             if not row["name"].startswith("static-checks-python-3.12--attempt-")]
+    directory = tmp_path / "collect"
+    code, artifacts = _collect_current(producer_api, context, needs, directory, monkeypatch)
+    if code == 0:
+        with pytest.raises(ValueError):
+            aggregate.qualify_static(context, metadata, producer_api.workflow, artifacts, needs=needs)
+    else:
+        assert json.loads((directory / "metadata.json").read_text()).get("error"), \
+            "Collection failure must remain explicit instead of claiming qualification"
+
+
+@pytest.mark.parametrize("mode", ("full", "documentation"))
+def test_collect_preserves_full_and_documentation_execution_scope(producer_api, tmp_path, monkeypatch, mode):
+    if mode == "full":
+        context = producer_api.original
+        needs = deepcopy(producer_api.results[101]["jobs"])
+        wanted = {row["artifact_name"] for row in producer_api.results[101]["evidence_references"]}
+        wanted.add("candidate-context--attempt-1")
+    else:
+        context, needs, plan = producer_api.collection()
+        plan["decision"] = "execute"
+        needs["paths"]["outputs"].update(code="false", reuse="false", reuse_plan=json.dumps(plan))
+        wanted = {"candidate-context--attempt-1", "static-checks-python-3.12--attempt-1"}
+    code, artifacts = _collect_current(producer_api, context, needs, tmp_path / "collect", monkeypatch)
+    assert code == 0
+    assert {path.name for path in artifacts.iterdir()} == wanted
 
 
 def test_same_candidate_reuse_retains_original_producer_and_detached_evidence(evidence):

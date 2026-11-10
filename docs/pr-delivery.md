@@ -13,6 +13,7 @@ Configure it in the project's approved configuration:
     "delivery": {
       "adapter": "pr",
       "options": {
+        "read_repositories": ["owner/read-only-repository"],
         "github": {"token_variables": ["GH_TOKEN"], "token_command": []},
         "git": {
           "workspaces": {
@@ -36,6 +37,25 @@ options. `required_checks` defaults to `CI result` and `Hexagonal architecture`;
 `max_pages` bounds each remote collection. Configure these names for another
 repository. The Git adapter accepts an executable, timeout and commit attribution.
 Workspace names resolve only to the configured owned roots.
+
+The built-in provider's PR read scope is the union of configured workspace
+repositories and the optional `read_repositories` list. Names are compared without
+case sensitivity. An omitted or empty list adds no repositories; a provider with
+neither workspaces nor explicit read repositories denies every PR read.
+`read_repositories` can configure a provider used only for inspection, with no Git
+workspace. It grants no publication or refresh capability for those repositories.
+
+`pr.inspect` and `pr.handoff` reject an out-of-scope repository before hosting or
+credential lookup, including direct calls to the configured provider's inspection
+method. Hosting reads use the same scope for derived source-repository lookups,
+including canonical branch freshness and review applicability; add a fork's
+repository explicitly if those lookups are wanted. An out-of-scope fork leaves
+inspection incomplete with `pr_repository_denied`, without querying that source
+repository.
+The existing application guardrail still controls which actors may invoke these
+capabilities. The lower-level `PullRequestOperations` class accepts an explicit
+read scope when composed programmatically; omitting that scope is for a trusted
+host composition, rather than the built-in untrusted capability surface.
 
 Invoke these through the existing `invoke` application/MCP action, for example
 `delivery/pr.inspect`. Use a fresh invocation key for each current observation.

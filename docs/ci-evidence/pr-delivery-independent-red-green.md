@@ -140,3 +140,31 @@ canonical identities. The tests also require the reported source, tested base
 and tested merge to retain their original identities; current branch refs do
 not rewrite evidence about an older execution. This is a time-bound observation,
 not an atomic promise that a branch cannot move afterward.
+
+## Legal tracked names: NUL-delimited Git path observations
+
+PR #66 [review comment 4530869800](https://github.com/xormania/xorchestrate/pull/66#discussion_r4530869800)
+identified that Git's quoted `--name-only` display was compared with literal
+selected paths. A tracked `café.txt` could be rejected as unrelated work; tabs
+and newlines required the same correction. The narrow repair uses NUL-delimited
+Git output for both dirty-path selection and recoverable conflict reporting.
+
+Independent test commit `a0c89ee` reuses the existing real-repository fixture and
+Git helper. Its table covers ASCII, Unicode, tab and newline names in successful
+and conflicted refreshes. Assertions inspect the actual immutable checkpoint's
+NUL-delimited changed paths and file bytes, the literal returned conflict path,
+and Git's retained unmerged index. An additional case requires an unrelated
+tracked change to remain refused and preserved.
+
+The exact predecessor `ffc49303b3006feb5fc83107a0e562a3bc991e74` produced **seven
+intended assertion failures and two passing ASCII controls**. With the repair,
+all **24 workspace cases passed**, including the existing custody and credential
+isolation scenarios. A separate fault restored only the old conflict parser,
+leaving dirty-path parsing repaired: the three non-ASCII/control-character cases
+failed on literal conflict reporting while ASCII passed. Restoring the repair
+made all four conflict cases pass.
+
+The [pathname regression record](pr-delivery-legal-pathnames-regression.json)
+retains input/mutant hashes, the exact narrow source diff, commands and failing
+assertions. These are local real-Git witnesses; they require no remote mutation
+or credentials.

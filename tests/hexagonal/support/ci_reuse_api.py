@@ -152,6 +152,38 @@ class ProducerAPI:
         self.rewrite_result(identifier)
         return context
 
+    def collection(self, identifier=201):
+        """Native current-run shape after a bound plan skips behavioral jobs.
+
+        GitHub emits one unexpanded skipped matrix job, not numeric shard jobs.
+        Only this run's static/context archives exist; originals belong to 101.
+        """
+        context = self.summary(identifier)
+        original = self.results[101]
+        references = [deepcopy(row) for row in original["evidence_references"]
+                      if row["lane"] != "static-checks-python-3.12"]
+        original_artifact = next(row for row in self.metadata[101]["artifacts"]
+            if row["name"] == "ci-result-evidence--attempt-1")
+        plan = {"schema_version": 1, "decision": "reuse", "reason": "exact_candidate",
+            "current_context": deepcopy(context), "original_context": deepcopy(self.original),
+            "producer": {"run_id": 101, "run_attempt": 1, "status": "completed", "conclusion": "success"},
+            "references": references, "history": [],
+            "result_artifact": {key: original_artifact[key] for key in ("id", "name", "digest")},
+            "lanes": {row["lane"]: json.loads((self.root / "101/receipts" / row["artifact_name"] / "producer.json").read_text())
+                      for row in references}}
+        needs = deepcopy(self.results[identifier]["jobs"])
+        needs["paths"]["outputs"].update(context=json.dumps(context), reuse_plan=json.dumps(plan))
+        metadata = self.metadata[identifier]
+        skipped_names = [self.workflow["jobs"][key]["name"]
+                         for key in ("application-tests", "verification", "tmux-acceptance", "package")]
+        metadata["jobs"].extend({"id": identifier * 100 + 200 + index, "name": name,
+            "run_id": identifier, "run_attempt": 1, "head_sha": context["source_sha"],
+            "status": "completed", "conclusion": "skipped"} for index, name in enumerate(skipped_names))
+        metadata["artifacts"] = [row for row in metadata["artifacts"]
+                                 if not row["name"].startswith("ci-result-evidence--attempt-")]
+        metadata["run"].update(status="in_progress", conclusion=None)
+        return context, needs, plan
+
     def rewrite_result(self, identifier, *, attempt=1):
         metadata = self.metadata[identifier]
         name = f"ci-result-evidence--attempt-{attempt}"

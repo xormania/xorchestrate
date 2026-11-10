@@ -174,7 +174,8 @@ class GitPRWorkspace:
                     raise OrchestrationError("Resolve the existing Git operation before refreshing.", "pr_existing_git_operation")
                 target = self._git(root, "rev-parse", "--verify", target + "^{commit}").strip()
                 selected = self._paths(root, paths)
-                dirty = set(self._git(root, "diff", "--name-only", "--no-ext-diff", "--no-textconv", "HEAD", "--").splitlines())
+                dirty = {path for path in self._git(root, "diff", "--name-only", "-z", "--no-ext-diff",
+                    "--no-textconv", "HEAD", "--").split("\0") if path}
                 if dirty - set(selected):
                     raise OrchestrationError("Tracked changes outside the selected checkpoint require an explicit selection.",
                         "pr_checkpoint_conflict", {"paths": sorted(dirty - set(selected))[:100]})
@@ -194,7 +195,8 @@ class GitPRWorkspace:
                     raise OrchestrationError("External work changed after checkpoint; resolve it before merging.",
                         "pr_checkpoint_conflict", {"checkpoint": checkpoint})
             result = self._git(root, "merge", "--no-edit", "--no-verify", target, check=False)
-            conflicts = self._git(root, "diff", "--name-only", "--diff-filter=U", "--no-ext-diff", "--no-textconv").splitlines()
+            conflicts = [path for path in self._git(root, "diff", "--name-only", "-z", "--diff-filter=U",
+                "--no-ext-diff", "--no-textconv").split("\0") if path]
             if result.returncode and not conflicts:
                 raise OrchestrationError("The target could not be merged; checkpoint and Git state were preserved.", "pr_refresh_rejected")
             return {"status": "needs_resolution" if conflicts else "updated", **self.identity(name),
