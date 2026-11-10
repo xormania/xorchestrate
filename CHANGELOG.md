@@ -28,6 +28,18 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   receive a deep copy of their options, so an adapter cannot change the
   stored selection. Companion record names with a trailing newline are now
   refused like any other invalid name.
+- The `git-directory` companion keeps each record kind in one scope: the
+  first write records it in `<kind>/.scope`, and project-scoped and
+  project-independent use of one kind no longer see or block each other's
+  records (it is refused instead). Writes go through a unique temporary file,
+  so an interrupted write leaves no partial record and concurrent writers no
+  longer collide.
+- `doctor` no longer fails on a malformed GitHub response; the companion
+  remote's visibility is reported as unknown. A non-string `api_url` and an
+  unimportable operator adapter reference are reported as configuration
+  errors.
+- The `git` version-control adapter answers for a file or new entry inside a
+  repository through its directory, as it already did for worktrees.
 - The release identity gate refuses a release while a runtime dependency comes
   from a git, path or URL source (until xcontracts 0.1.0 is on PyPI,
   development uses a pinned git source).
@@ -224,6 +236,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   that import from `xorchestrate.ports` or `xorchestrate.model` keep working;
   new adapters should depend on `xcontracts>=0.1,<0.2` instead. `xcontracts`
   is a new runtime dependency.
+- **Companion layout:** a `git-directory` companion gains a `<kind>/.scope`
+  file in each record kind's directory on its next write (`project` or
+  `shared`); commit it with the records. Existing records stay where they are
+  and need no migration.
 - **Configuration format:** the optional top-level `version` key is introduced
   at format version `1`. A configuration without it is read as version `1` and
   `describe` reports a `configuration_version_missing` warning; add

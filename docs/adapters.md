@@ -17,9 +17,18 @@ An adapter is selected in configuration by a trusted, installed reference:
 ```
 
 Xorchestrate imports `my_package.policies`, reads its top-level `DenyActions`
-and calls it with a private deep copy of `options`. Only `companion` factories
-get more: `factory(options, *, version_control=...)`. Project adapters with
+and calls it with a private deep copy of `options` as its only argument. The
+one public exception is `companion`: `factory(options, *, version_control=...)`.
+Some built-in aliases get host internals (the built-in `tool` evaluator gets
+the constructed providers, the built-in `local` telemetry collector gets
+`resolve=`); a `module:Name` reference never does. Project adapters with
 `close()` are closed in reverse construction order when the runtime ends.
+
+A factory refuses invalid options by raising `OrchestrationError` with a
+public message; its code is passed on as is (the built-in adapters mostly use
+`invalid_configuration`). Any other exception, and a reference whose module or
+attribute cannot be imported, is reported as `configuration_error` without
+its text.
 
 Options are rendered and checked before your factory sees them:
 
@@ -31,11 +40,13 @@ Options are rendered and checked before your factory sees them:
   `env` options of `providers`, `sessions` and `evaluators`, and stays
   unresolved: the built-in process adapters resolve it per call to the
   caller's worktree, while your factory receives the literal text.
-- For every provider and evaluator, composition resolves `options["cwd"]`
-  (default `"."`) to identify the configuration, so a non-string `cwd` is
-  refused with `configuration_error`; your factory still receives `cwd` as
-  written. Only built-in aliases receive resolved paths (`cwd`, the SQLite
-  `path`, the telemetry `runtime_root`).
+- For every provider and evaluator, composition also resolves
+  `options["cwd"]` (default `"."`), only to identify the configuration, so a
+  non-string `cwd` is refused with `configuration_error`; your factory still
+  receives `cwd` as written.
+- Only built-in aliases receive resolved paths: built-in providers and
+  sessions an absolute `cwd`, the SQLite store its `path`, the local telemetry
+  its `runtime_root`. Built-in evaluators receive `cwd` as written.
 - Operator settings in the user's home are not rendered.
 
 So accept absolute paths (`${data}` gives one) or document what yours are
@@ -89,3 +100,13 @@ Behavioral checks cover `StateStore`, `Companion`, `VersionControl` and
 `tests/hexagonal/test_xcontracts.py`). For the other ports the kit checks
 structure, and the behavior they must support is described in each port's
 docstring and in [the application architecture](hexagonal-architecture.md).
+
+## Companion records
+
+A companion kind is used either project-scoped (`records(project)`) or
+project-independent (`records(None)`), never both. The `git-directory`
+adapter keeps project records at `<kind>/<project>/<key>` and
+project-independent ones at `<kind>/<key>`, so it records each kind's scope in
+`<kind>/.scope` on its first write and refuses the kind in the other scope.
+Changing that layout (for example a reserved segment for project-independent
+records, with a migration) is a possible later decision.

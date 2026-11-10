@@ -9,6 +9,19 @@ A key with ``/`` separators is a path below that directory, for example
 ``telemetry/app/<instance>/<bundle>/telemetry.sqlite3``. No component may be a
 symbolic link.
 
+Because project records (``<kind>/<project>/<key>``) and project-independent
+ones (``<kind>/<key>``) share a kind's directory, a kind is used in one scope
+only. The first write records it in ``<kind>/.scope`` (``project`` or
+``shared``; a dot-led name is never a record), and any use of the kind in the
+other scope is refused with ``invalid_arguments``. A kind directory written by
+an earlier release has no marker: top-level files show it is project-
+independent, and a project-independent write whose first key segment is an
+existing directory is refused, since that directory may be a project's.
+
+Writes go to a unique temporary file beside the record: a plain write
+replaces the record with it, and a ``create_only`` write links it into place,
+so an interrupted write never leaves a partial record.
+
 Options: ``path``, absolute. The location is unsafe inside a working tree
 that holds a project's ``.xorchestrate/``: agents and other people's commits
 could then write the approvals meant to guard against them. ``remote()`` is
@@ -18,6 +31,7 @@ from __future__ import annotations
 
 import os
 import re
+import tempfile
 from pathlib import Path
 
 from ..model import OrchestrationError
@@ -66,6 +80,43 @@ def _key(value):
     return parts
 
 
+SCOPE_MARKER = ".scope"
+SCOPES = ("project", "shared")
+
+
+def _publish(path, data, *, exclusive):
+    """Write ``data`` to a unique dot-led temporary file beside ``path``, then put it in place.
+
+    ``exclusive`` links it into place and returns ``False`` when ``path``
+    exists; otherwise it replaces ``path``. Either way an interrupted write
+    leaves no partial file at ``path``, and concurrent writers never share a
+    temporary file.
+    """
+    descriptor, name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    temporary = Path(name)
+    try:
+        with os.fdopen(descriptor, "wb") as target:
+            target.write(data)
+        os.chmod(temporary, 0o644)
+        if exclusive:
+            try:
+                os.link(temporary, path)
+            except FileExistsError:
+                return False
+            return True
+        os.replace(temporary, path)
+        temporary = None
+        return True
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
+def _scope_error(kind, held):
+    label = "project-scoped" if held == "project" else "project-independent"
+    return OrchestrationError(f"Companion record kind {kind} is {label}.", "invalid_arguments", {"kind": kind})
+
+
 class DirectoryRecords:
     """One project's records as ``<kind>/<project>/<key>``, or project-independent ones as ``<kind>/<key>``."""
 
@@ -92,7 +143,45 @@ class DirectoryRecords:
             path = path / part
         return path
 
+    def _held_scope(self, kind):
+        """The scope a kind directory holds: from its marker, or inferred for an unmarked earlier directory."""
+        directory = self.root / kind
+        marker = directory / SCOPE_MARKER
+        if marker.is_symlink() or (marker.exists() and not marker.is_file()):
+            raise OrchestrationError("A companion kind's scope marker is not a file.", "invalid_arguments",
+                                     {"kind": kind})
+        if marker.is_file():
+            held = marker.read_text(encoding="utf-8").strip()
+            if held not in SCOPES:
+                raise OrchestrationError("A companion kind's scope marker is invalid.", "invalid_arguments",
+                                         {"kind": kind})
+            return held
+        if directory.is_dir() and not directory.is_symlink() and any(
+                entry.is_file() and NAME.fullmatch(entry.name) for entry in directory.iterdir()):
+            return "shared"
+        return None
+
+    def _scope(self, kind, key=None, *, claim=False):
+        """Refuse a kind in the other scope from the one it holds; with ``claim``, record this scope."""
+        _name(kind, "kind")
+        scope = "shared" if self.project is None else "project"
+        held = self._held_scope(kind)
+        if held is not None and held != scope:
+            raise _scope_error(kind, held)
+        directory = self.root / kind
+        if held is None and scope == "shared" and key is not None and (directory / key.split("/")[0]).is_dir():
+            # Unmarked: the directory may be a project's records.
+            raise OrchestrationError("A project-independent companion record cannot use an existing directory of "
+                                     "an unmarked kind.", "invalid_arguments", {"kind": kind, "key": key})
+        if claim and held is None:
+            directory.mkdir(parents=True, exist_ok=True)
+            if not _publish(directory / SCOPE_MARKER, (scope + "\n").encode(), exclusive=True):
+                held = self._held_scope(kind)
+                if held != scope:
+                    raise _scope_error(kind, held)
+
     def keys(self, kind, *, recursive=False):
+        self._scope(kind)
         directory = self._directory(kind)
         if not directory.is_dir() or directory.is_symlink() or (self.root / kind).is_symlink():
             return []
@@ -111,6 +200,7 @@ class DirectoryRecords:
 
     def read(self, kind, key):
         path = self._path(kind, key)
+        self._scope(kind, key)
         return None if path.is_symlink() or not path.is_file() else path.read_bytes()
 
     def write(self, kind, key, data, *, create_only=False):
@@ -120,19 +210,9 @@ class DirectoryRecords:
         if path.is_symlink() or path.is_dir():
             raise OrchestrationError("A companion record cannot replace a link or a directory.", "invalid_arguments",
                                      {"key": key})
+        self._scope(kind, key, claim=True)
         path.parent.mkdir(parents=True, exist_ok=True)
-        if create_only:
-            try:
-                descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644)
-            except FileExistsError:
-                return False
-            with os.fdopen(descriptor, "wb") as target:
-                target.write(data)
-            return True
-        temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
-        temporary.write_bytes(data)
-        os.replace(temporary, path)
-        return True
+        return _publish(path, data, exclusive=create_only)
 
 
 class GitDirectoryCompanion:

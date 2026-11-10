@@ -17,6 +17,7 @@ missing).
 """
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import re
@@ -62,7 +63,8 @@ class GitHubHosting:
         if not isinstance(options, dict) or options.keys() - allowed:
             raise OrchestrationError("The github adapter accepts " + ", ".join(sorted(allowed)) + ".",
                                      "invalid_configuration")
-        self.api_url = options.get("api_url", "https://api.github.com").rstrip("/")
+        api_url = options.get("api_url", "https://api.github.com")
+        self.api_url = api_url.rstrip("/") if isinstance(api_url, str) else api_url
         self.host = options.get("host", "github.com")
         self.token_variables = options.get("token_variables", ["GH_TOKEN", "GITHUB_TOKEN"])
         self.token_command = options.get("token_command", ["gh", "auth", "token"])
@@ -114,6 +116,9 @@ class GitHubHosting:
             return HostingVisibility("unknown", repository, reason)
         except (urllib.error.URLError, OSError, ValueError, TimeoutError):
             return HostingVisibility("unknown", repository, "GitHub could not be reached")
+        except http.client.HTTPException:
+            # A malformed or truncated response (for example a bad status line): never fail, as the port requires.
+            return HostingVisibility("unknown", repository, "GitHub returned a malformed response")
         private = data.get("private") if isinstance(data, dict) else None
         if not isinstance(private, bool):
             return HostingVisibility("unknown", repository, "GitHub did not report the visibility")

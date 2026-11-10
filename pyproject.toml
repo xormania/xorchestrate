@@ -24,7 +24,7 @@ xorchestrate = "xorchestrate.cli:main"
 # pinned commit. Remove this entry (and run `python -m scripts.ci.dependencies
 # update`) once xcontracts 0.1.0 is published; the release identity gate refuses
 # a release while any runtime dependency comes from a git, path or URL source.
-xcontracts = { git = "https://github.com/xormania/xcontracts", rev = "05c60bdc05c6b0233b8b66f8690b0892305064bb" }
+xcontracts = { git = "https://github.com/xormania/xcontracts", rev = "6b39089c418ec8221d75cf453755fd45d7a6c172" }
 
 [tool.setuptools.packages.find]
 include = ["xorchestrate*"]

@@ -40,8 +40,9 @@ def selection(kind, specification, where):
 
 def construct(kind, specification, where, **dependencies):
     adapter, options = selection(kind, specification, where)
-    factory = factory_for(kind, adapter)
     try:
+        # An unimportable reference is a configuration error like a failing factory.
+        factory = factory_for(kind, adapter)
         return factory(options, **dependencies)
     except OrchestrationError:
         raise
