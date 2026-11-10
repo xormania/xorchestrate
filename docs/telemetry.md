@@ -171,7 +171,8 @@ upgrade) with `snapshot_failed`, naming the triggers, the bundle path and the
 cause, and leaves the previous rendered configuration in place. The global
 option `--skip-snapshots` (for example `xorchestrate --skip-snapshots describe`
 or `xorchestrate --skip-snapshots upgrade`) proceeds without the snapshot and
-records it as skipped in `instance.json` `snapshots` (or the upgrade report).
+records it as skipped in `instance.json` `snapshots` (or the upgrade report);
+`up` and `connect` pass it on to the server they start.
 `"triggers": []` selects none. A
 configuration with telemetry disabled takes none. An unknown trigger name,
 including `manual`, is refused when rendering (`configuration_error`) and by the

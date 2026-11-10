@@ -61,7 +61,7 @@ from uuid import uuid4
 from ..adapters.local_socket import InstanceLock, lock_is_held
 from ..adapters.storage import SQLiteStore
 from ..adapters.storage_migrations import DATA_VERSION
-from ..composition import RELEASE, SUPPORTED_CONFIG_VERSIONS, build_telemetry
+from ..composition import RELEASE, SUPPORTED_CONFIG_VERSIONS, build_telemetry, sqlite_store_path
 from ..model import OrchestrationError, canonical_digest
 from . import snapshots
 from .handoff import build_toolchain
@@ -97,16 +97,22 @@ def _stamp(moment):
 # -- steps run by the target release ---------------------------------------------
 
 def _store_path(config, data_dir):
-    """The SQLite store a rendered configuration uses, or ``None`` for another adapter."""
+    """The SQLite file a rendered configuration's store opens, or ``None`` for another adapter.
+
+    Resolved with the runtime's own rule (``composition.sqlite_store_path``,
+    relative paths against the instance directory), never against the current
+    directory, so the backup, the dry run and the migration address the store
+    the project actually uses.
+    """
     store = config.get("store") if isinstance(config, dict) else None
     if store is None:
         return Path(data_dir) / "state.sqlite3"
     if isinstance(store, dict) and store.get("adapter") == "sqlite":
         options = store.get("options") or {}
-        path = options.get("path") if isinstance(options, dict) else None
-        if path == ":memory:":
-            return None
-        return Path(path) if isinstance(path, str) else Path(data_dir) / "state.sqlite3"
+        if not isinstance(options, dict) or "path" not in options:
+            return Path(data_dir) / "state.sqlite3"
+        path = sqlite_store_path(options, data_dir)
+        return None if path == ":memory:" else Path(path)
     return None
 
 
@@ -432,25 +438,33 @@ def _upgrade(home, services, tracked, instance, *, to, plan_only, detach, server
                 _procedure(home, instance, tracked, companion, journal, source, target, root, runner,
                            skip_snapshots)
                 instance = load_instance(home, tracked.name)
-        chain = toolchain(home, target, root, runner=runner)
-        code, described, error = chain.run("describe")
-        if code != 0:
-            raise OrchestrationError(
-                f"Release {target} was recorded but `describe` failed with it; see the details, fix the cause and "
-                "run `xorchestrate upgrade` again, or roll back (docs/upgrade.md).", "upgrade_verification_failed",
-                {"error": error, "backup": steps.get("backup", {}).get("path")})
-        _code, doctor_report, _error = chain.run("doctor")
-        steps["verify"] = {"describe": "ok", "operations": len((described or {}).get("operations", [])),
-                           "doctor_ok": (doctor_report or {}).get("ok")}
+        if "verify" not in steps:
+            chain = toolchain(home, target, root, runner=runner)
+            code, described, error = chain.run("describe")
+            if code != 0:
+                raise OrchestrationError(
+                    f"Release {target} was recorded but `describe` failed with it; see the details, fix the cause "
+                    "and run `xorchestrate upgrade` again, or roll back (docs/upgrade.md).",
+                    "upgrade_verification_failed", {"error": error, "backup": steps.get("backup", {}).get("path")})
+            _code, doctor_report, _error = chain.run("doctor")
+            steps["verify"] = {"describe": "ok", "operations": len((described or {}).get("operations", [])),
+                               "doctor_ok": (doctor_report or {}).get("ok")}
+            _save(instance, journal)
         started = None
         if journal["server"].get("was_running") and server is not None:
             started = server.start()
+            if not isinstance(started, dict) or "error" in started:
+                # The release is recorded and verified; only the restart is left for a re-run.
+                raise OrchestrationError(
+                    f"Release {target} is recorded and verified, but the server that was running did not start "
+                    "again; fix the cause and run `xorchestrate upgrade` again to restart it, or run "
+                    "`xorchestrate up`.", "upgrade_restart_failed", {"start": started})
         _journal_path(instance).unlink(missing_ok=True)
         return {**report, "status": "upgraded", "steps": steps, "server": {**journal["server"], "started": started}}
     except OrchestrationError as error:
         if _journal_path(instance).exists():
-            journal["status"] = {"upgrade_blocked": "blocked",
-                                 "upgrade_verification_failed": "verify_failed"}.get(error.code, "failed")
+            journal["status"] = {"upgrade_blocked": "blocked", "upgrade_verification_failed": "verify_failed",
+                                 "upgrade_restart_failed": "restart_failed"}.get(error.code, "failed")
             journal["error"] = {"code": error.code, "message": str(error)}
             _save(instance, journal)
         raise
@@ -486,6 +500,10 @@ def _procedure(home, instance, tracked, companion, journal, source, target, root
         # The approved change moves the store: the backup and the migration would not be the same store.
         blockers.append({"area": "store", "status": "moved", "from": steps["backup"].get("store"),
                          "to": planned_store})
+    had_data = "state.sqlite3" in steps["backup"].get("files", {}) or instance.record.get("data_version") is not None
+    if (plan.get("data") or {}).get("status") == "absent" and had_data:
+        # The instance has had state: a store the target cannot find is a wrong path, not a new project.
+        blockers.append({"area": "data", "status": "absent", "path": planned_store})
     if not plan.get("ready") or blockers:
         raise OrchestrationError(f"Release {target} cannot run this project as it is; nothing was migrated. See "
                                  "the blockers.", "upgrade_blocked", {"blockers": blockers})

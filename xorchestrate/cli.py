@@ -192,6 +192,9 @@ def _forwarded(args, project_root):
     forwarded = ["--project", str(project_root)]
     for option in ("max_frame_bytes", "request_workers", "control_workers", "max_pending_requests"):
         forwarded += ["--" + option.replace("_", "-"), str(getattr(args, option))]
+    if args.skip_snapshots:
+        # The detached server renders the configuration, so it takes (or skips) the snapshots.
+        forwarded.append("--skip-snapshots")
     return forwarded
 
 

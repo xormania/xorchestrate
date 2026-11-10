@@ -342,6 +342,16 @@ def _resolve_path(base_dir, value, kind, adapter, strict=True):
         raise OrchestrationError(f"Invalid {kind} adapter {adapter} path.", "configuration_error") from exc
 
 
+def sqlite_store_path(options, base_dir):
+    """The file the ``sqlite`` store opens for ``options``: its ``path`` resolved against ``base_dir``.
+
+    Construction and operator tooling (backups, upgrades) use this one rule, so
+    they always address the same file. ``:memory:`` is returned unchanged.
+    """
+    path = options.get("path", ".xorchestrate/state.sqlite3") if isinstance(options, dict) else None
+    return path if path == ":memory:" else _resolve_path(Path(base_dir).resolve(), path, "store", "sqlite")
+
+
 def _select(kind, specification, base_dir):
     if not isinstance(specification, dict) or not isinstance(specification.get("adapter"), str):
         raise OrchestrationError(f"{kind} requires an adapter and options object.", "configuration_error")
@@ -360,8 +370,7 @@ def _select(kind, specification, base_dir):
     if kind in {"providers", "sessions"} and adapter in BUILTINS[kind]:
         options["cwd"] = _resolve_path(base_dir, options.get("cwd", "."), kind, adapter)
     if kind == "store" and adapter == "sqlite":
-        path = options.get("path", ".xorchestrate/state.sqlite3")
-        options["path"] = path if path == ":memory:" else _resolve_path(base_dir, path, kind, adapter)
+        options["path"] = sqlite_store_path(options, base_dir)
     if kind == "telemetry" and adapter == "local" and isinstance(options.get("runtime_root"), str):
         options["runtime_root"] = _resolve_path(base_dir, options["runtime_root"], kind, adapter, strict=False)
     return AdapterSelection(kind, adapter, target, options)

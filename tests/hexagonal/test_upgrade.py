@@ -6,6 +6,7 @@ reads data version 2 with a migration step that marks every work record.
 Expectations are stated from the documented procedure and read back through
 SQLite, the instance record and the files on disk, not from the upgrade report.
 """
+import contextlib
 import json
 import shutil
 import subprocess
@@ -17,12 +18,14 @@ import pytest
 import xorchestrate.instance.upgrade as upgrade_module
 from tests.hexagonal.contracts.project_server import initialize, rpc
 from tests.hexagonal.support.project_server import CliEnvironment
+from tests.hexagonal.support.projects import ProjectFixture
 from tests.hexagonal.support.store_fixtures import raw_state
 from tests.hexagonal.support.upgrades import UpgradeMachine, fake_uv, pin_release, raw_store
 from xorchestrate.adapters.local_socket import InstanceLock, lock_is_held
 from xorchestrate.adapters.telemetry_snapshot import verify_bundle
 from xorchestrate.cli import ServerControl
 from xorchestrate.composition import RELEASE
+from xorchestrate.model import OrchestrationError
 from xorchestrate.server import ServerFiles, server_identity
 
 SESSION_FIXTURE = Path(__file__).resolve().parent / "fixtures" / "session_server.py"
@@ -302,3 +305,86 @@ def test_a_crash_after_recording_the_release_does_not_record_it_twice(machine, i
     assert machine.instance()["release"] == "v9.9.9"
     in_process()
     assert [(entry["from"], entry["to"]) for entry in machine.instance()["upgrades"]] == [("v8.0.0", "v9.9.9")]
+
+
+# -- Codex review fixes: store resolution, restart failures, forwarded options --------------------
+
+def test_a_relative_store_path_is_backed_up_and_migrated_where_the_runtime_opens_it(tmp_path):
+    config = {"version": 1, "store": {"adapter": "sqlite", "options": {"path": "custom.sqlite3"}}}
+    machine = UpgradeMachine(tmp_path, release="v8.0.0", config=config)
+    machine.json("call", "create_work", "--json", '{"goal": "Kept in a relatively named store"}')
+    store = machine.data_dir / "custom.sqlite3"
+    assert raw_store(store)["user_version"] == 1 and not machine.store.exists()
+    machine.pin("v9.9.9")
+    report = machine.json("upgrade", FAKE_UV_DATA_VERSION="2")
+    assert report["steps"]["plan"]["data"]["path"] == str(store)
+    backup = Path(report["steps"]["backup"]["path"])
+    assert raw_store(backup / "state.sqlite3")["user_version"] == 1, "the real store was backed up"
+    assert raw_store(store)["user_version"] == 2, "the real store was migrated"
+    assert [item["fixture_migrated"] for item in raw_store(store)["work"]] == [2]
+
+
+def test_a_store_that_disappeared_after_the_instance_had_data_blocks_the_upgrade(machine):
+    machine.pin("v9.9.9")
+    machine.json("upgrade", FAKE_UV_DATA_VERSION="2")
+    for name in ("state.sqlite3", "state.sqlite3-wal", "state.sqlite3-shm"):
+        (machine.data_dir / name).unlink(missing_ok=True)
+    machine.pin("v9.9.10")
+    error = machine.json("upgrade", expect=2, FAKE_UV_DATA_VERSION="2")["error"]
+    assert error["code"] == "upgrade_blocked"
+    assert {"area": "data", "status": "absent", "path": str(machine.store)} in error["details"]["blockers"]
+    assert machine.instance()["release"] == "v9.9.9"
+
+
+class RecordingServer:
+    """A server control for a server that was running; ``start`` fails until ``healthy``."""
+
+    def __init__(self):
+        self.healthy, self.starts = False, 0
+
+    def stop(self, detach):
+        return {"was_running": True}
+
+    def hold(self):
+        return contextlib.nullcontext()
+
+    def start(self):
+        self.starts += 1
+        return {"running": True, "started": True} if self.healthy else {"error": "simulated start failure"}
+
+
+def test_a_failed_restart_is_reported_and_a_rerun_resumes_only_the_restart(machine, monkeypatch):
+    for key, value in machine.environment.items():
+        monkeypatch.setenv(key, value)
+    server = RecordingServer()
+    machine.pin("v9.9.9")
+    with pytest.raises(OrchestrationError) as failed:
+        upgrade_module.upgrade(machine.repo, server=server)
+    assert failed.value.code == "upgrade_restart_failed"
+    journal = machine.journal()
+    assert (journal["status"], journal["flipped"]) == ("restart_failed", True) and "verify" in journal["steps"]
+    assert machine.instance()["release"] == "v9.9.9"
+    server.healthy = True
+    describes = []
+    runner = lambda command, **options: (describes.append(command[-1]), subprocess.run(command, **options))[1]  # noqa: E731
+    report = upgrade_module.upgrade(machine.repo, server=server, runner=runner)
+    assert report["status"] == "upgraded" and report["server"]["started"]["started"] is True
+    assert server.starts == 2 and describes == [], "only the restart was repeated"
+    assert machine.journal() is None
+
+
+def test_skip_snapshots_reaches_the_detached_server(tmp_path):
+    project = ProjectFixture(tmp_path, overlay={"telemetry": {"options": {"snapshots": {"triggers": ["before_sync"]}}}})
+    project.json("call", "create_work", "--json", '{"goal": "Observed"}')
+    exports = project.data_dir / "telemetry" / "exports"
+    shutil.rmtree(exports, ignore_errors=True)
+    exports.write_text("not a directory")  # every snapshot fails
+    project.write_overlay({"telemetry": {"options": {"snapshots": {"triggers": ["before_sync"]}}},
+                           "guardrail": {"adapter": "rules", "options": {}}})
+    try:
+        started = project.json("--skip-snapshots", "up", "--start-timeout", "15", timeout=60)
+        assert started["started"] is True and started["running"] is True
+        record = json.loads((project.data_dir / "instance.json").read_text())
+        assert record["snapshots"][-1]["reason"] == "skip_requested"
+    finally:
+        project.run("down", "--detach")

@@ -72,7 +72,10 @@ The steps, each reported in the JSON output:
    Anything it cannot read is a blocker: the upgrade stops with
    `upgrade_blocked` before migrating. So is an approved change that moves the
    state store (`{"area": "store", "status": "moved"}`): the backup and the
-   migration must be the same store; move the store in a separate change. A configuration in an older format needs
+   migration must be the same store; move the store in a separate change.
+   Store paths are resolved as the runtime resolves them (relative to the
+   instance directory), and a store the target cannot find after the instance
+   has had state is a blocker too (`{"area": "data", "status": "absent"}`). A configuration in an older format needs
    [`migrate-config`](#configuration-format-rewrites) and a new approval first.
 6. **Migrate.** The target release (`upgrade-step migrate`) runs the explicit
    [data migration chain](state-management.md); then the dry run is repeated to
@@ -121,6 +124,7 @@ What each failure leaves:
 | Before the flip (snapshot, backup, toolchain, dry run, blockers) | The instance still records the old release; the data is unchanged; the server is stopped. | Fix the cause and re-run, or restore the pin. |
 | During migration | Each step is one transaction, so a failed step is rolled back and the store stays at the last committed data version. With a multi-step chain, earlier steps may have committed, so the old release may no longer read the store. | Re-run to resume, or roll back (below). |
 | After the flip (verification) | The new release is recorded and the data migrated. | Fix the cause and re-run (only verification and `up` repeat), or roll back. |
+| Restarting the server (`upgrade_restart_failed`) | The new release is recorded and verified; the server is stopped; `upgrade.json` has `status` `restart_failed`. | Fix the cause and re-run (only `up` repeats), or run `xorchestrate up`. |
 
 **Rollback.** Restore the pin in `project.json` to the old release (the earlier
 configuration is still approved) and, if data was migrated, copy the backup's
