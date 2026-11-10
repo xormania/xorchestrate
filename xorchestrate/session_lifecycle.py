@@ -143,6 +143,16 @@ class SessionLifecycleMixin:
     def _detach_session(self, args, actor, context):
         return self._session_effect("detach_session", args, actor, context)
 
+    def live_sessions(self) -> list[str]:
+        """Sessions this runtime's drivers own and that are not yet closed.
+
+        Closing the runtime records these as disconnected; a long-running input
+        adapter uses this to decide whether stopping would end live work.
+        """
+        with self.store.transaction() as tx:
+            return sorted(key for key in self._owned_session_ids
+                          if (record := tx.get("session", key)) and record.data["status"] not in _CLOSED | {"failed"})
+
     def runtime_closed(self):
         with self.store.transaction() as tx:
             for session_id in self._owned_session_ids:

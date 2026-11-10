@@ -95,6 +95,13 @@ also keeps the runtime open. Use a persistent input connection for session work;
 one-shot commands are appropriate for durable work records and discrete tool
 operations.
 
+MCP input reaches the application through the driving-side `ClientTransport`
+port: the `stdio` adapter serves the launching process, and the `unix` adapter
+serves the long-running [project server](project-server.md) that agent
+harnesses reach through `connect`. Each connection is its own MCP session with
+its own actor; all sessions share one application and one set of bounded
+worker pools.
+
 ## Composition and configuration
 
 Use `--config PATH` to select a JSON configuration explicitly. Built-in SQLite
@@ -145,7 +152,8 @@ not replacement executable paths or shell fragments. Provider invocation uses
 configured argument arrays and JSON data, not shell interpolation.
 
 The default actor is `owner`. A local CLI invocation or stdio MCP server binds its
-chosen actor when started. This is a local trust boundary, not remote login or
+chosen actor when started; the project server binds the actor each connection
+asserts. This is a local trust boundary, not remote login or
 multi-tenant authentication. A future network adapter must establish its caller's
 identity before calling the same application boundary.
 

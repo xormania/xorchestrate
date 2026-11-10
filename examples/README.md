@@ -28,6 +28,14 @@ An MCP client launches that command, initializes the connection, and uses
 `tools/list` and `tools/call`. The application tool names and schemas are the same
 ones shown by CLI `describe`.
 
+To let several harnesses share one server and its live sessions, launch
+`connect` instead; it starts the shared server on first use
+([project server](../docs/project-server.md)):
+
+```bash
+python3 -m xorchestrate --config examples/minimal.json connect --actor worker
+```
+
 ## Local telemetry
 
 `telemetry.json` adds the optional `local` telemetry adapter to SQLite work
@@ -204,7 +212,8 @@ work complete or grant permission. When finished with the conversation, stop it:
 {"action":"stop_session","arguments":{"session_id":"<SESSION_ID>","idempotency_key":"example-stop-1"}}
 ```
 
-`run` and MCP `serve` preserve driver instances until their connection ends.
+`run` and MCP `serve` preserve driver instances until their connection ends;
+the shared server started by `connect` preserves them until the server stops.
 One-shot `call` closes its owned drivers at exit, so a series of independent
 `call` invocations cannot share a live session handle. A resumable driver can open
 a new connection from a stored application session:
