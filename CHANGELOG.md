@@ -37,6 +37,20 @@ entries are written.
   `telemetry_defaults` to construct the local collector when a configuration
   has no telemetry section.
 - `telemetry_status` reports a bounded `cause` when telemetry is unavailable.
+- A shared project server, so several agent harnesses use one application,
+  state store and set of live sessions (see
+  [Project server](docs/project-server.md)):
+  - `serve --transport unix [--socket PATH] [--max-connections N]` runs the
+    configuration's server in the foreground.
+  - `connect [--socket PATH] [--actor NAME] [--start-timeout S]` is the
+    harness's MCP command: it relays stdio to the server and starts a detached
+    server if none is running. Each connection is its own MCP session with its
+    own actor; disconnecting does not end the sessions it started.
+  - `up`, `down [--detach] [--timeout S]` and `status` start, drain and stop,
+    and inspect the server. `down` is refused while server-owned sessions are
+    live unless `--detach` is given.
+- `ClientTransport`, `ClientConnection` and `PeerIdentity` ports, with `stdio`
+  and `unix` adapters.
 
 ### Upgrade notes
 
@@ -59,6 +73,19 @@ entries are written.
   paths must be strings.`, `Invalid <kind> adapter <name> path.`) instead of
   `Cannot construct <kind> adapter <name>.`; the code is still
   `configuration_error`. Callers matching on messages should match on codes.
+- **Project server:** `serve` without `--transport` (or with
+  `--transport stdio`) is unchanged, so existing harness entries keep working;
+  switch them to `connect` to share one server. A configuration has at most
+  one server, keyed by its resolved `--config` path (or the working directory
+  when there is none). Its lock, start lock, log and discovery record live in
+  `$XORCHESTRATE_HOME/servers/` (absolute; default `~/.xorchestrate/servers/`
+  in the account's home from the user database). Socket path rule: the server
+  listens on `--socket` if given; else in `$XORCHESTRATE_RUNTIME_DIR` (must be
+  absolute); else `<home>/servers/<key>.sock` when it fits the Unix socket
+  limit (107 bytes on Linux, 103 elsewhere); else `$XDG_RUNTIME_DIR/xorchestrate`;
+  else `<tmp>/xorchestrate-<uid>`. Clients find it through the discovery record,
+  not their own environment. Socket paths over the limit are refused, and
+  server directories and files must be private and owned by the user.
 - **Lifecycle definitions:** None.
 - **Adapter options:** the local telemetry adapter's `profile` option is
   removed; a configuration that still sets it leaves telemetry unavailable with
