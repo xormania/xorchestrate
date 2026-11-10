@@ -31,7 +31,7 @@ A PR REST object can lag its branches. A matching PR observation is called
 `current` only after canonical source and target branch refs also match, using
 the source repository for a fork head. PR-observed, event and tested identities
 remain distinct from `canonical_refs`; advanced or unavailable refs never qualify
-current-candidate reuse.
+current-candidate reuse. An older head's receipts cannot clear a newer source head.
 
 Workflow-generated run titles contain only the event/action, PR number and Git
 identities. They positively identify cancelled metadata runs with **zero jobs in
