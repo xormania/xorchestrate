@@ -23,6 +23,12 @@ def _name(value, what):
     return value
 
 
+def _key(value):
+    if not isinstance(value, str) or not all(NAME.match(part) for part in value.split("/")):
+        raise OrchestrationError("Invalid companion record key.", "invalid_arguments", {"key": value})
+    return value
+
+
 class _MemoryRecords:
     def __init__(self, store, project):
         self.store = store
@@ -34,10 +40,15 @@ class _MemoryRecords:
                       if project == self.project and stored_kind == kind)
 
     def read(self, kind, key):
-        return self.store.get((self.project, _name(kind, "kind"), _name(key, "key")))
+        return self.store.get((self.project, _name(kind, "kind"), _key(key)))
 
     def write(self, kind, key, data, *, create_only=False):
-        address = (self.project, _name(kind, "kind"), _name(key, "key"))
+        address = (self.project, _name(kind, "kind"), _key(key))
+        # A record cannot also be the prefix of another key (a directory in a file-backed adapter).
+        if any(stored[:2] == address[:2] and (stored[2].startswith(key + "/") or key.startswith(stored[2] + "/"))
+               for stored in self.store):
+            raise OrchestrationError("A companion record cannot be the prefix of another.", "invalid_arguments",
+                                     {"key": key})
         if create_only and address in self.store:
             return False
         self.store[address] = bytes(data)
@@ -52,6 +63,7 @@ class MemoryCompanion:
         self.location = options.get("name", "memory")
         self.unsafe = options.get("unsafe")
         self.remote_url = options.get("remote")
+        self.revision_id = options.get("revision")
         self.store = {}
         self.initialized = False
 
@@ -72,6 +84,9 @@ class MemoryCompanion:
 
     def remote(self):
         return self.remote_url
+
+    def revision(self):
+        return self.revision_id
 
 
 class FakeVersionControl:
@@ -101,6 +116,12 @@ class FakeVersionControl:
         if location is None:
             return None
         return self.repositories[location.common_dir.split("/")[2]].get("remotes", {}).get(name)
+
+    def revision(self, path):
+        location = self.worktree(path)
+        if location is None:
+            return None
+        return self.repositories[location.common_dir.split("/")[2]].get("head")
 
     def initialize(self, path):
         self.repositories[path] = {"worktrees": [path], "roots": []}

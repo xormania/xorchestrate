@@ -18,7 +18,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from ..model import OrchestrationError
-from ..telemetry import canonical, protect
+from ..telemetry import canonical, protect, snapshot_policy
 from .telemetry_capture import TelemetryDispatch
 from .telemetry_collector import config
 from .telemetry_collector.application import Collector
@@ -28,7 +28,7 @@ from .telemetry_collector.ports import CollectorScope
 
 _OPTIONS = {"project_id", "dataset_id", "collector_id", "producer_id", "runtime_root", "corpus", "artifacts",
             "database", "artifact_root", "export_root", "capture_lock_timeout_ms", "known_secrets",
-            "artifact_threshold_bytes", "sources", "operational", "snapshot_timeout"}
+            "artifact_threshold_bytes", "sources", "operational", "snapshot_timeout", "snapshots"}
 # Shorthand options for the default storage adapters, kept for existing configurations.
 _CORPUS_SHORTHAND = {"database": "database", "capture_lock_timeout_ms": "capture_lock_timeout_ms"}
 _ARTIFACTS_SHORTHAND = {"artifact_root": "root"}
@@ -176,12 +176,19 @@ class LocalTelemetry:
         if not isinstance(secrets, list) or any(not isinstance(value, str) or not value for value in secrets):
             raise _configuration("Telemetry known_secrets must be explicit nonempty strings.")
         self._secrets = tuple(secrets)
+        try:
+            # Read by the operator layer, which takes the snapshots; validated here too so
+            # telemetry_status reports an unknown trigger.
+            self.snapshot_triggers, self.snapshot_archive = snapshot_policy(options.get("snapshots"))
+        except OrchestrationError as error:
+            raise _configuration("Invalid telemetry snapshots option.", "invalid_option", "snapshots") from error
         self.root = config.runtime_root(options.get("runtime_root"))
         self.project_id = config.text(options.get("project_id"), "project_id")
         self.dataset_id = config.text(options.get("dataset_id"), "dataset_id")
         self.collector_id = config.text(options.get("collector_id"), "collector_id")
         self.producer_id = config.text(options.get("producer_id", "xorchestrate"), "producer_id")
-        material = {key: value for key, value in options.items() if key != "known_secrets"}
+        # Secrets and the operator's snapshot moments do not change what is collected.
+        material = {key: value for key, value in options.items() if key not in {"known_secrets", "snapshots"}}
         self.configuration_identity = hashlib.sha256(canonical(material).encode()).hexdigest()
         scope = CollectorScope(self.root, self.dataset_id, self.collector_id)
         adapter, corpus_options, enabled = _storage(options, "corpus", _CORPUS_SHORTHAND, "sqlite")

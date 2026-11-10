@@ -279,6 +279,10 @@ class VersionControl(Protocol):
         """Create an empty repository at ``path``."""
         ...
 
+    def revision(self, path: str) -> str | None:
+        """The commit checked out in the working tree containing ``path``, or ``None`` (no repository or history)."""
+        ...
+
 
 class CompanionRecords(Protocol):
     """The records of one project in a companion, or the project-independent ones (``project`` is ``None``).
@@ -287,14 +291,17 @@ class CompanionRecords(Protocol):
     collection owned by one operator capability (overlays, approvals, policies
     and launchers today; snapshots and telemetry archives later), which
     defines and versions its records' format. A new capability adds a kind;
-    neither this port nor its adapters change. Kinds and keys are names of
-    letters, digits, ``.``, ``_`` and ``-``, not starting with a dot.
+    neither this port nor its adapters change. Kinds and projects are names of
+    letters, digits, ``.``, ``_`` and ``-``, not starting with a dot. A key is
+    one or more such names separated by ``/``, so a capability can keep a tree
+    of records (archived telemetry bundles: ``<instance>/<bundle>/<file>``); a
+    key that is a record cannot also be the prefix of another key.
     """
 
     project: str | None
 
     def keys(self, kind: str) -> list[str]:
-        """The keys present in ``kind``, sorted."""
+        """The keys present in ``kind``, including ``/``-separated ones, sorted."""
         ...
 
     def read(self, kind: str, key: str) -> bytes | None:
@@ -335,6 +342,13 @@ class Companion(Protocol):
 
     def remote(self) -> str | None:
         """Where the companion is published (a repository URL), or ``None``."""
+        ...
+
+    def revision(self) -> str | None:
+        """The committed revision the companion's content is at (a git commit), or ``None`` when unversioned.
+
+        Uncommitted records are not part of it; the operator layer never commits for the user.
+        """
         ...
 
 

@@ -139,6 +139,36 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   `scripts/install.sh` installs it with `XORCHESTRATE_PACKAGE=xork`, refuses to
   install one name while uv has the other installed, and stops when another
   program's `xo` is in uv's executable directory.
+- `xorchestrate upgrade [--to TAG] [--plan-only] [--detach]` moves this
+  machine's instance to the approved release `project.json` pins: it stops the
+  server (refused while sessions are live unless `--detach`), takes the
+  `before_upgrade` telemetry snapshot, backs up the state store, builds the
+  target toolchain, lets the target release check and migrate the data, records
+  the new release in `instance.json` (with an `upgrades` entry), verifies it and
+  starts the server again. An interrupted or failed upgrade resumes when run
+  again. See [upgrading](docs/upgrade.md).
+- `xorchestrate migrate-config [FILE] [--write]` rewrites a configuration (by
+  default the tracked `config.json`) to the current format version, showing the
+  steps and a unified diff; it writes only with `--write`, keeps the original
+  under `~/.xorchestrate/backups/`, refuses newer versions and never approves.
+  `composition.ConfigMigrations` holds the release's ordered rewrite steps.
+- Telemetry snapshots at chosen moments: the `snapshots` telemetry option
+  (`{"triggers": [...], "archive": bool}`) selects `before_upgrade` (the
+  default), `before_sync` and `before_approve`; `xorchestrate telemetry snapshot`
+  takes a manual one. Unknown triggers are refused.
+- `xorchestrate telemetry archive BUNDLE` copies a complete, verified bundle into
+  the companion (`telemetry/<project>/<instance>/<bundle_id>/`) with an
+  `archive` manifest object (`companion_commit`, `config_sha256`,
+  `overlay_sha256`, `release`) that is not part of the bundle identity. It never
+  commits. Companions track archived `*.sqlite3` with Git LFS.
+- `doctor` reports a `release` check: an error while the instance does not run
+  the pinned release.
+- Release gates: committed configuration fixtures per format version
+  (`tests/fixtures/configs/`) must load and rewrite to the current fixture byte
+  for byte; every committed data-version fixture store must migrate and be read;
+  upgrade tests run between two fake release toolchains; installed package
+  acceptance runs `upgrade --plan-only`, `telemetry snapshot`/`archive` and
+  `migrate-config` on the installed launcher.
 
 ### Upgrade notes
 
@@ -224,6 +254,16 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   first; the install script stops when it finds one. Install only one of
   `xorchestrate` and `xork`: they own the same commands (see
   [install](docs/install.md#package-index)).
+- **Changing a project's release:** a changed `release` in `project.json` is a
+  tracked change that must be approved, and it now takes effect only through
+  `xorchestrate upgrade`. Until then project commands are refused with
+  `upgrade_required` (`down` and `status` keep running with the installed
+  release). `instance.json` `release` now records the installed release, which
+  only `init` and `upgrade` set. Run `xorchestrate upgrade` after approving a
+  new pin.
+- **Rendering:** a render no longer records `release` in `instance.json`. A
+  telemetry snapshot selected by `before_sync` or `before_approve` that fails
+  refuses the render, leaving the previous rendered configuration in place.
 - **Lifecycle definitions:** None.
 - **Adapter options:** the local telemetry adapter's `profile` option is
   removed; a configuration that still sets it leaves telemetry unavailable with
@@ -237,6 +277,18 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   and cannot be combined with them. `telemetry_corpus` and
   `telemetry_artifacts` are refused as top-level configuration sections.
 - **Operator source schema:** None.
+- **Operator ports:** `Companion` gains `revision()` and `VersionControl` gains
+  `revision(path)` (the checked-out commit); companion record keys may now be
+  `/`-separated paths of names. A custom companion or version-control adapter
+  must add these. The git-directory companion's README mentions archived
+  telemetry.
+- **Telemetry options:** the local adapter accepts `snapshots`; it is excluded
+  from the configuration identity, so the identity of existing configurations is
+  unchanged.
+- **Telemetry bundles:** a bundle manifest may carry an `archive` object, which
+  verification excludes from the bundle identity. Earlier releases do not
+  exclude it, so they cannot verify a bundle archived by this release; bundles in
+  the export root are unchanged.
 - **Telemetry collector:** the collector is now part of xorchestrate and the
   `telemetry` installation extra is removed; install `.[test]` (or the package
   alone) instead. The corpus and bundle formats are unchanged, so existing

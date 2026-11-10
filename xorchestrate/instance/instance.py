@@ -24,6 +24,7 @@ from .. import __version__
 from ..composition import ProjectContext
 from ..model import OrchestrationError
 from . import companion as records
+from . import snapshots
 from .home import Home, private_directory, read_document, write_document
 from .project import differing_files, locate_worktree, read_tracked
 from .render import copy_launchers, render
@@ -177,6 +178,29 @@ def approval_refusal(companion, tracked):
         "approval_required", details)
 
 
+def installed_release(instance, tracked=None):
+    """The release this machine's instance was set up or last upgraded for."""
+    return instance.record.get("release", None if tracked is None else tracked.release)
+
+
+def upgrade_refusal(instance, tracked):
+    """``None`` when the instance runs the release ``project.json`` pins, else the refusal naming ``upgrade``.
+
+    A changed pin is a tracked change: it is approved like any other, and it
+    takes effect only through ``xorchestrate upgrade``, which stops the
+    server, backs up and migrates the instance's data before recording the new
+    release. Until then project commands are refused, so no release runs
+    against data or a configuration it was not upgraded for.
+    """
+    installed = installed_release(instance, tracked)
+    if installed == tracked.release:
+        return None
+    return OrchestrationError(
+        f"Project {tracked.name} pins release {tracked.release}, but this machine's instance runs {installed}; run "
+        f"`xorchestrate upgrade` to upgrade it, or restore the pin to {installed}.", "upgrade_required",
+        {"project": tracked.name, "pinned": tracked.release, "installed": installed})
+
+
 def context_for(instance, tracked, dataset_id="default"):
     return ProjectContext(tracked.name, instance.instance_id, instance.data_dir, tracked.identity(), dataset_id)
 
@@ -191,6 +215,8 @@ class Prepared:
     companion: object
     context: ProjectContext
     rendered: object
+    snapshots: tuple = ()
+    """Reports of the telemetry snapshots this render triggered (``before_approve``, ``before_sync``)."""
 
     @property
     def config(self):
@@ -201,24 +227,62 @@ class Prepared:
         return self.context.worktree
 
 
+SNAPSHOT_HISTORY = 20
+
+
+def _triggered_snapshots(instance, tracked, companion, context, rendered):
+    """Take the snapshots the running configuration selects before this render replaces it.
+
+    ``before_approve`` fires when the tracked configuration's hash differs from
+    the one last rendered (a newly approved configuration takes effect);
+    ``before_sync`` when the rendered configuration itself changes. The
+    running (previous) configuration's corpus and ``snapshots`` option are
+    used. A selected snapshot that fails refuses the render, so the previous
+    rendered file stays in place.
+    """
+    try:
+        previous = read_document(rendered.path)
+    except OrchestrationError:
+        previous = None
+    if previous is None:
+        return ()
+    moments = []
+    if instance.record.get("approval_hash") not in (None, tracked.config_hash):
+        moments.append("before_approve")
+    if previous != rendered.config:
+        moments.append("before_sync")
+    configured = snapshots.policy(previous)[0] if moments else ()
+    selected = [moment for moment in moments if moment in configured]
+    if not selected:
+        return ()
+    return (snapshots.snapshot(previous, context, selected, companion=companion, instance=instance,
+                               tracked=tracked),)
+
+
 def prepare(path=None, *, environ=None):
-    """Find the project at ``path``, check its approval and render it.
+    """Find the project at ``path``, check its approval and release, and render it.
 
     The approval is checked before every render, so a running server's
-    configuration can only be replaced by an approved one.
+    configuration can only be replaced by an approved one, and the instance
+    must run the pinned release (``upgrade_required`` otherwise). Snapshots
+    the running configuration selects for this moment are taken before the
+    rendered file is replaced.
     """
     home = Home.locate(environ)
     services = Services(home)
     tracked = locate_project(path, services.version_control)
     instance = resolve_instance(home, tracked, services.version_control)
     companion = services.companion(instance)
-    refusal = approval_refusal(companion, tracked)
-    if refusal is not None:
-        raise refusal
+    for refusal in (approval_refusal(companion, tracked), upgrade_refusal(instance, tracked)):
+        if refusal is not None:
+            raise refusal
     context = context_for(instance, tracked)
+    rendered = render(tracked, companion, context, write=False)
+    taken = _triggered_snapshots(instance, tracked, companion, context, rendered)
     launchers = copy_launchers(companion, instance.data_dir)
-    rendered = render(tracked, companion, context)
-    instance = instance.update(release=tracked.release, approval_hash=tracked.config_hash,
-                               rendered_at=datetime.now(timezone.utc).isoformat(), launchers=launchers,
-                               versions={"xorchestrate": __version__})
-    return Prepared(home, tracked, instance, companion, context, rendered)
+    write_document(rendered.path, rendered.config)
+    history = [*instance.record.get("snapshots", []), *taken][-SNAPSHOT_HISTORY:]
+    instance = instance.update(approval_hash=tracked.config_hash, rendered_at=datetime.now(timezone.utc).isoformat(),
+                               launchers=launchers, versions={"xorchestrate": __version__},
+                               **({"snapshots": history} if taken else {}))
+    return Prepared(home, tracked, instance, companion, context, rendered, taken)

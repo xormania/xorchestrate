@@ -61,6 +61,11 @@ class GitCLI:
             return None
         return self._run("remote", "get-url", name, cwd=path) or None
 
+    def revision(self, path):
+        if not Path(path).is_dir():
+            return None
+        return self._run("rev-parse", "--verify", "-q", "HEAD", cwd=path) or None
+
     def initialize(self, path):
         Path(path).mkdir(parents=True, exist_ok=True)
         if self._run("init", "-q", str(path), cwd=path) is None:

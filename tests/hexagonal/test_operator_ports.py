@@ -51,7 +51,7 @@ def test_version_control_adapters_identify_worktrees_and_history(subject, tmp_pa
         vcs = GitCLI()
     else:
         vcs = FakeVersionControl({"repositories": {"repo": {"worktrees": [str(repository), str(linked)],
-                                                            "roots": ["abc"]}}})
+                                                            "roots": ["abc"], "head": "abc"}}})
     contract.version_control(vcs, repository, linked, elsewhere)
 
 

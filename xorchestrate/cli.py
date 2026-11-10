@@ -4,18 +4,21 @@ People use these commands directly. Agent harnesses use ``connect``, which
 relays MCP between the harness's stdio and the project's long-running server.
 
 Every command that runs the application (``describe``, ``call``, ``run``,
-``serve``, ``connect``, ``up``, ``down``, ``status``) needs a set-up project:
-it is found from the working directory, or named with ``--project PATH``, and
-refused otherwise with a message naming ``xorchestrate init`` (D15). The
-operator commands (``setup``, ``companion``, ``init``, ``approve``,
-``doctor``) prepare one.
+``serve``, ``connect``, ``up``, ``down``, ``status``, ``telemetry``) needs a
+set-up project: it is found from the working directory, or named with
+``--project PATH``, and refused otherwise with a message naming
+``xorchestrate init`` (D15). The operator commands (``setup``, ``companion``,
+``init``, ``approve``, ``doctor``, ``upgrade``, ``migrate-config``) prepare,
+upgrade or migrate one and run with the installed release.
 """
 import argparse
 import json
 import os
 import signal
+import subprocess
 import sys
 import threading
+from contextlib import contextmanager
 from pathlib import Path
 
 from . import __version__, installation
@@ -23,13 +26,23 @@ from .adapters.local_socket import InstanceLock, check_socket_directory, check_s
 from .adapters.storage_migrations import DATA_VERSION
 from .adapters.unix import UnixClientTransport
 from .composition import RELEASE, SUPPORTED_CONFIG_VERSIONS, build, describe, read_json
-from .instance import operations
+from .instance import operations, snapshots
 from .instance.doctor import doctor
 from .instance.handoff import HANDOFF_VARIABLE, handoff
 from .instance.home import Home
-from .instance.instance import approval_refusal, locate_project, prepare, require_companion, resolve_instance
+from .instance.instance import (
+    approval_refusal,
+    installed_release,
+    locate_project,
+    prepare,
+    require_companion,
+    resolve_instance,
+    upgrade_refusal,
+)
+from .instance.migrate_config import migrate_config
 from .instance.project import differing_files
 from .instance.render import merged
+from .instance.upgrade import upgrade, upgrade_step
 from .mcp import MCPDispatcher, failure, frames, serve
 from .model import OrchestrationError
 from .server import (
@@ -47,7 +60,9 @@ from .server import (
 )
 
 SERVER_COMMANDS = {"connect", "up", "down", "status"}
-PROJECT_COMMANDS = SERVER_COMMANDS | {"describe", "call", "run", "serve"}
+PROJECT_COMMANDS = SERVER_COMMANDS | {"describe", "call", "run", "serve", "telemetry"}
+# Run with the instance's installed release while an upgrade to a newly pinned one is pending.
+INSTALLED_RELEASE_COMMANDS = {"down", "status"}
 
 
 def _write(value, stream):
@@ -137,6 +152,24 @@ def _parser():
     approve = commands.add_parser("approve", help="Approve the project's tracked .xorchestrate/ configuration")
     approve.add_argument("path", nargs="?", help="The project's repository (default: the working directory)")
     commands.add_parser("doctor", help="Check this machine and the current project")
+    telemetry = commands.add_parser("telemetry", help="Snapshot the project's telemetry or archive a snapshot")
+    telemetry_commands = telemetry.add_subparsers(dest="telemetry_command", required=True)
+    snapshot = telemetry_commands.add_parser("snapshot", help="Take a manual snapshot bundle of the telemetry corpus")
+    snapshot.add_argument("--destination", help="Bundle name inside the export root (default: manual-<UTC time>)")
+    snapshot.add_argument("--archive", action="store_true", help="Also archive it into the companion")
+    archive = telemetry_commands.add_parser("archive", help="Copy a complete, verified bundle into the companion")
+    archive.add_argument("bundle", help="Bundle name (or path) inside the telemetry export root")
+    upgrade_command = commands.add_parser("upgrade", help="Upgrade this machine's instance to the pinned release")
+    upgrade_command.add_argument("--to", help="Expected target release; must equal the approved pin unless --plan-only")
+    upgrade_command.add_argument("--plan-only", action="store_true",
+                                 help="Build the target toolchain and print its dry-run plan; change nothing")
+    upgrade_command.add_argument("--detach", action="store_true", help="Stop the server even while sessions are live")
+    upgrade_command.add_argument("--timeout", type=float, default=60.0, help="Seconds to wait for the server to stop")
+    migrate = commands.add_parser("migrate-config", help="Rewrite a configuration to the current format version")
+    migrate.add_argument("file", nargs="?", help="Configuration file (default: the project's tracked config.json)")
+    migrate.add_argument("--write", action="store_true", help="Rewrite the file (default: show the diff only)")
+    step = commands.add_parser("upgrade-step", help="Internal: one upgrade step, run by `upgrade` with the target release")
+    step.add_argument("step", choices=("check", "migrate"))
     return parser
 
 
@@ -285,8 +318,71 @@ def _server_command(args, tracked):
     return 0 if reply.get("stopped", True) else 2
 
 
+class ServerControl:
+    """How ``upgrade`` stops, holds and restarts a project's server."""
+
+    def __init__(self, instance_id, project_root, timeout):
+        self.files = ServerFiles.locate(server_identity(instance_id))
+        self.project_root, self.timeout = project_root, timeout
+
+    def stop(self, detach):
+        target = discover(self.files)
+        try:
+            if target is None:
+                raise FileNotFoundError("no server record")
+            client = open_client(target, actor="owner", purpose="control")
+        except OSError:
+            return {"was_running": False}
+        try:
+            reply = client.request({"command": "down", "detach": detach}, self.timeout)
+        except TimeoutError as exc:
+            raise OrchestrationError("The server is still draining in-flight requests.", "drain_timeout") from exc
+        finally:
+            client.close()
+        if "error" in reply:
+            error = reply["error"]
+            raise OrchestrationError(error.get("message", "The server refused to stop."), error.get("code", "refused"),
+                                     error.get("details") or {})
+        if not wait_stopped(self.files, self.timeout):
+            raise OrchestrationError("The server did not stop in time.", "drain_timeout")
+        return {"was_running": True, "detached_sessions": reply.get("detached_sessions", [])}
+
+    @contextmanager
+    def hold(self):
+        lock = InstanceLock(self.files.ensure().lock)
+        if not lock.acquire(wait=SERVER_LOCK_WAIT):
+            raise OrchestrationError("A server for this project started during the upgrade.", "server_running")
+        try:
+            yield
+        finally:
+            lock.release()
+
+    def start(self):
+        """``up`` through the launcher, which now hands off to the upgraded release."""
+        result = subprocess.run([sys.executable, "-P", "-m", "xorchestrate", "--project", str(self.project_root), "up"],
+                                capture_output=True, text=True, timeout=120, check=False)
+        lines = result.stdout.strip().splitlines()
+        try:
+            return json.loads(lines[-1]) if result.returncode == 0 and lines else {"error": result.stderr[-2000:]}
+        except ValueError:
+            return {"error": result.stdout[-2000:]}
+
+
+def _upgrade_command(args):
+    tracked = locate_project(args.project)
+    instance = resolve_instance(Home.locate(), tracked)
+    control = ServerControl(instance.instance_id, tracked.worktree.root, args.timeout)
+    return upgrade(args.project, to=args.to, plan_only=args.plan_only, detach=args.detach, server=control)
+
+
 def _operator_command(args):
-    if args.command == "setup":
+    if args.command == "upgrade":
+        report = _upgrade_command(args)
+    elif args.command == "upgrade-step":
+        report = upgrade_step(args.step, args.project)
+    elif args.command == "migrate-config":
+        report = migrate_config(args.file, write=args.write, path=args.project)
+    elif args.command == "setup":
         report = operations.setup(args.path)
     elif args.command == "companion":
         command = operations.companion_init if args.companion_command == "init" else operations.companion_use
@@ -300,6 +396,17 @@ def _operator_command(args):
         report = doctor(args.project)
         _write(report, sys.stdout)
         return 0 if report["ok"] else 1
+    _write(report, sys.stdout)
+    return 0
+
+
+def _telemetry_command(args, prepared):
+    common = {"companion": prepared.companion, "instance": prepared.instance, "tracked": prepared.tracked}
+    if args.telemetry_command == "snapshot":
+        report = snapshots.snapshot(prepared.config, prepared.context, [snapshots.MANUAL_SNAPSHOT],
+                                    destination=args.destination, archive=True if args.archive else None, **common)
+    else:
+        report = snapshots.archive_bundle(args.bundle, config=prepared.config, context=prepared.context, **common)
     _write(report, sys.stdout)
     return 0
 
@@ -359,12 +466,18 @@ def main(argv=None):
         # The pinned release is read from project.json, so it is trusted only
         # once the project is set up here and that file is approved.
         instance = resolve_instance(home, tracked)
-        if tracked.release != RELEASE:
-            refusal = approval_refusal(require_companion(home, instance), tracked)
-            if refusal is not None:
-                raise refusal
-        # The pinned release runs the command; this returns only when it is this release.
-        handoff(home, tracked.release, argv)
+        release = tracked.release
+        if installed_release(instance, tracked) != release and args.command in INSTALLED_RELEASE_COMMANDS:
+            # A newly pinned release takes effect through `upgrade`; until then the
+            # installed release (recorded in the home) stops and inspects its server.
+            release = installed_release(instance, tracked)
+        elif release != RELEASE or installed_release(instance, tracked) != release:
+            for refusal in (approval_refusal(require_companion(home, instance), tracked),
+                            upgrade_refusal(instance, tracked)):
+                if refusal is not None:
+                    raise refusal
+        # The selected release runs the command; this returns only when it is this release.
+        handoff(home, release, argv)
         os.environ.pop(HANDOFF_VARIABLE, None)
         if args.command in SERVER_COMMANDS:
             return _server_command(args, tracked)
@@ -372,6 +485,8 @@ def main(argv=None):
         if args.command == "serve" and args.transport == "unix":
             _serve_unix(args, prepared)
             return 0
+        if args.command == "telemetry":
+            return _telemetry_command(args, prepared)
         return _application_command(args, prepared)
     except OrchestrationError as exc:
         _write({"error": failure(exc)}, sys.stderr)
