@@ -1,0 +1,593 @@
+{
+  "schema_version": 1,
+  "scope": "Independent tests of candidate provenance, current-run lane lineage, authenticated artifact boundaries and final aggregate binding. Deliberate faults executed only in disposable copies.",
+  "runtime": {
+    "local_python": "3.12.14",
+    "hosted_python": "Not executed by this evidence record; CI configuration pins 3.12.16."
+  },
+  "snapshots": {
+    "initial": {
+      "source_sha256": {
+        "scripts/ci/candidate.py": "787b24bc4973c9632ffc74dfe5cc17e21560fee49c149947a1b2b9e20e4108b0",
+        "scripts/ci/result.py": "c5dbb29995d675f36b7c91baaf084578f8187ab2368b1b54700984f404860394"
+      },
+      "healthy_command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py",
+        "-q"
+      ],
+      "healthy_exit": 0,
+      "healthy_result": "64 passed"
+    },
+    "final_guards": {
+      "source_sha256": {
+        "scripts/ci/candidate.py": "c1489d1b688c27fcda75c2346b3cf5412e089f633e89dc781edd04f0d4db975b",
+        "scripts/ci/result.py": "9bca7c6b73fd34ad2c8db9fea1a84424c570a0195d1762321f95ccdbdec61386"
+      },
+      "healthy_command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py",
+        "-q"
+      ],
+      "healthy_exit": 0,
+      "healthy_result": "66 passed"
+    }
+  },
+  "targeted_control": {
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "tests/hexagonal/test_candidate_evidence.py",
+      "tests/hexagonal/test_ci_result.py",
+      "tests/hexagonal/test_ci_changes.py",
+      "-q"
+    ],
+    "result": "221 passed; one expected zipfile warning from a deliberately duplicated ZIP member."
+  },
+  "faults": [
+    {
+      "id": "checkout_event",
+      "snapshot": "initial",
+      "file": "scripts/ci/candidate.py",
+      "replace": "if context[\"checkout\"][\"commit\"] != env.get(\"GITHUB_SHA\"):",
+      "with": "if False:",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py::test_actual_checkout_cannot_certify_an_unrelated_platform_event[old_check]",
+        "-q"
+      ],
+      "observed_exit": 1,
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "      Failed: DID NOT RAISE ValueError"
+      ],
+      "mutated_file_sha256": "13b7730bb1db2c13cf7d06c46df57234d97b66dc4567013fe4558c1577bfc234"
+    },
+    {
+      "id": "context_check",
+      "snapshot": "initial",
+      "file": "scripts/ci/candidate.py",
+      "replace": "or producer.get(\"check_sha\") != context[\"source_sha\"]",
+      "with": "",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py::test_manifest_revalidation_rejects_contradictory_identity[different_check]",
+        "-q"
+      ],
+      "observed_exit": 1,
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "      Failed: DID NOT RAISE ValueError"
+      ],
+      "mutated_file_sha256": "025ef913f14924d0d467f4747124aba5cfdc42f54d728c6eb49c5331c2c606b3"
+    },
+    {
+      "id": "tested_base",
+      "snapshot": "initial",
+      "file": "scripts/ci/candidate.py",
+      "replace": "or context.get(\"tested_base_sha\") != parents[0]",
+      "with": "",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py::test_manifest_revalidation_rejects_contradictory_identity[wrong_tested_base]",
+        "-q"
+      ],
+      "observed_exit": 1,
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "      Failed: DID NOT RAISE ValueError"
+      ],
+      "mutated_file_sha256": "541726f848a26d957f5c35ce391e9d15813402861d1d969cf77032fea24137ee"
+    },
+    {
+      "id": "platform_check",
+      "snapshot": "initial",
+      "file": "scripts/ci/candidate.py",
+      "replace": "or check.get(\"head_sha\") != producer[\"check_sha\"]",
+      "with": "",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py::test_partial_rerun_cannot_borrow_foreign_or_contradictory_lane_evidence[wrong_check]",
+        "-q"
+      ],
+      "observed_exit": 1,
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "      Failed: DID NOT RAISE ValueError"
+      ],
+      "mutated_file_sha256": "773691c64369fec6e2d3c99029222744e06cbb6e3165144cdd9fba55bb3bc948"
+    },
+    {
+      "id": "newer_failed_lane",
+      "snapshot": "initial",
+      "file": "scripts/ci/candidate.py",
+      "replace": "if job.get(\"name\") == name]",
+      "with": "if job.get(\"name\") == name and job.get(\"conclusion\") == \"success\"]",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py::test_partial_rerun_cannot_borrow_foreign_or_contradictory_lane_evidence[newer_failed_lane]",
+        "-q"
+      ],
+      "observed_exit": 1,
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "      Failed: DID NOT RAISE ValueError"
+      ],
+      "mutated_file_sha256": "7670bb3581534ddbb5601e6240b55919a7e9f6c248bc243f97416a19607f9bf3"
+    },
+    {
+      "id": "duplicate_artifact",
+      "snapshot": "initial",
+      "file": "scripts/ci/candidate.py",
+      "replace": "if len(artifacts) != 1:",
+      "with": "if not artifacts:",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py::test_partial_rerun_cannot_borrow_foreign_or_contradictory_lane_evidence[duplicate_artifact]",
+        "-q"
+      ],
+      "observed_exit": 1,
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "      Failed: DID NOT RAISE ValueError"
+      ],
+      "mutated_file_sha256": "22fcc5b81517563b7bb5dee3ee467888ef1f3b7dc9f9072d5820d5ae8cbb7e1d"
+    },
+    {
+      "id": "archive_alias",
+      "snapshot": "initial",
+      "file": "scripts/ci/candidate.py",
+      "replace": "member.filename != canonical or ",
+      "with": "",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py::test_archive_consumer_rejects_unsafe_or_ambiguous_members_before_writing[alias]",
+        "-q"
+      ],
+      "observed_exit": 1,
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "      AssertionError: Reject the whole unsafe archive before extracting safe-looking members",
+        "      assert not True",
+        "       +  where True = exists()"
+      ],
+      "mutated_file_sha256": "ab4c87c120111a91a4dfa26949391c63b9fe9e82174fa7715f5af468fb87b163"
+    },
+    {
+      "id": "archive_digest",
+      "snapshot": "initial",
+      "file": "scripts/ci/candidate.py",
+      "replace": "or \"sha256:\" + hashlib.sha256(payload).hexdigest() != digest",
+      "with": "",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py::test_archive_consumer_verifies_api_digest_before_extracting",
+        "-q"
+      ],
+      "observed_exit": 1,
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "      Failed: DID NOT RAISE ValueError"
+      ],
+      "mutated_file_sha256": "2bbe49cf8e2048e7323bfdd6217ed6f99ef9440003d69bfff9f21c5c4faf158c"
+    },
+    {
+      "id": "archive_size",
+      "snapshot": "initial",
+      "file": "scripts/ci/candidate.py",
+      "replace": "len(payload) > MAX_ARCHIVE",
+      "with": "False",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py::test_archive_consumer_enforces_each_configured_resource_bound[MAX_ARCHIVE]",
+        "-q"
+      ],
+      "observed_exit": 1,
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "      Failed: DID NOT RAISE ValueError"
+      ],
+      "mutated_file_sha256": "74bb8c13b2ea875ce308f0b8d0665e68ead7cdc9f6f06a0a7789772f1492fee5"
+    },
+    {
+      "id": "expanded_size",
+      "snapshot": "initial",
+      "file": "scripts/ci/candidate.py",
+      "replace": "or size > MAX_EXPANDED",
+      "with": "",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py::test_archive_consumer_enforces_each_configured_resource_bound[MAX_EXPANDED]",
+        "-q"
+      ],
+      "observed_exit": 1,
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "      Failed: DID NOT RAISE ValueError"
+      ],
+      "mutated_file_sha256": "3a9c0dfb968b6209afab55633f112889af2fb4a48c91ad62b72d096003523ff5"
+    },
+    {
+      "id": "member_count",
+      "snapshot": "initial",
+      "file": "scripts/ci/candidate.py",
+      "replace": "or len(members) > MAX_MEMBERS",
+      "with": "",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py::test_archive_consumer_enforces_each_configured_resource_bound[MAX_MEMBERS]",
+        "-q"
+      ],
+      "observed_exit": 1,
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "      Failed: DID NOT RAISE ValueError"
+      ],
+      "mutated_file_sha256": "c3aa1c24cd3d48cf974c972aa28abd594eee60183f996d120a43e6c54e450d4d"
+    },
+    {
+      "id": "api_origin",
+      "snapshot": "initial",
+      "file": "scripts/ci/candidate.py",
+      "replace": "if (origin.scheme != \"https\"",
+      "with": "if False and (origin.scheme != \"https\"",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py::test_api_reader_does_not_contact_an_unapproved_origin[https://other.invalid/archive.zip]",
+        "-q"
+      ],
+      "observed_exit": 1,
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "      Failed: An invalid credential destination must be rejected before HTTP I/O"
+      ],
+      "mutated_file_sha256": "9706f812e93d3be28e6f1e22cb5d42ab8746f4efae9fcea8c250292b68d67835"
+    },
+    {
+      "id": "original_context",
+      "snapshot": "initial",
+      "file": "scripts/ci/result.py",
+      "replace": "if captured != context:",
+      "with": "if False:",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py::test_strict_aggregate_cannot_change_the_captured_candidate[changed_original]",
+        "-q"
+      ],
+      "observed_exit": 1,
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "      AssertionError: assert 'passed' == 'failed'",
+        "        ",
+        "        - failed"
+      ],
+      "mutated_file_sha256": "c27adf3721c43b2ce686d40c96531cffe591ee45bab4cb442938d5acd8c3d0d5"
+    },
+    {
+      "id": "receipt_tree",
+      "snapshot": "final_guards",
+      "file": "scripts/ci/result.py",
+      "replace": "and (tested_tree is None or candidate.get(\"tree\") == tested_tree)",
+      "with": "and True",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py::test_strict_aggregate_cannot_change_the_captured_candidate[receipt_tree]",
+        "-q"
+      ],
+      "observed_exit": 1,
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "      AssertionError: assert 'passed' == 'failed'",
+        "        ",
+        "        - failed"
+      ],
+      "mutated_file_sha256": "cc460b27f29f9570c49c534c3285ed15c5338451ecfd2fe7ba91d0782140dead"
+    },
+    {
+      "id": "archive_file_prefix",
+      "snapshot": "final_guards",
+      "file": "scripts/ci/candidate.py",
+      "replace": "if (member.is_dir() and path.as_posix() in files) or any(parent.as_posix() in files for parent in path.parents):",
+      "with": "if False:",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py::test_archive_consumer_rejects_unsafe_or_ambiguous_members_before_writing[file_prefix]",
+        "-q"
+      ],
+      "observed_exit": 1,
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "      AssertionError: Reject the whole unsafe archive before extracting safe-looking members",
+        "      assert not True",
+        "       +  where True = exists()"
+      ],
+      "mutated_file_sha256": "5ee3509337fc7369fefb2f7bb0482c92c526cb5333236ca640baa51b73eeccbb"
+    },
+    {
+      "id": "git_tree",
+      "snapshot": "final_guards",
+      "file": "scripts/ci/candidate.py",
+      "replace": "or commit.get(\"tree\", {}).get(\"sha\") != context[\"checkout\"][\"tree\"]",
+      "with": "",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py::test_partial_rerun_cannot_borrow_foreign_or_contradictory_lane_evidence[git_tree]",
+        "-q"
+      ],
+      "observed_exit": 1,
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "      Failed: DID NOT RAISE ValueError"
+      ],
+      "mutated_file_sha256": "093bd261a9982380a812109aed987c378b8cd99b9594f2ca203d36129785d0e6"
+    },
+    {
+      "id": "git_parent",
+      "snapshot": "final_guards",
+      "file": "scripts/ci/candidate.py",
+      "replace": "or [parent.get(\"sha\") for parent in commit.get(\"parents\", [])] != context[\"checkout\"][\"parents\"]",
+      "with": "",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py::test_partial_rerun_cannot_borrow_foreign_or_contradictory_lane_evidence[git_parent]",
+        "-q"
+      ],
+      "observed_exit": 1,
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "      Failed: DID NOT RAISE ValueError"
+      ],
+      "mutated_file_sha256": "55bad0e8f374b8a506c018d78c7ab714e9fbffb24945ddb578d37d83c2bc6468"
+    },
+    {
+      "id": "check_app",
+      "snapshot": "final_guards",
+      "file": "scripts/ci/candidate.py",
+      "replace": "or check.get(\"app\", {}).get(\"id\") != 15368",
+      "with": "",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py::test_partial_rerun_cannot_borrow_foreign_or_contradictory_lane_evidence[check_app]",
+        "-q"
+      ],
+      "observed_exit": 1,
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "      Failed: DID NOT RAISE ValueError"
+      ],
+      "mutated_file_sha256": "c2ebdc499a77f6938b7ec3dec2f24904e78eaf86a233bf86d7b3be0283461b83"
+    },
+    {
+      "id": "check_suite",
+      "snapshot": "final_guards",
+      "file": "scripts/ci/candidate.py",
+      "replace": "or check.get(\"id\") != run.get(\"check_suite_id\")",
+      "with": "",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py::test_partial_rerun_cannot_borrow_foreign_or_contradictory_lane_evidence[check_suite]",
+        "-q"
+      ],
+      "observed_exit": 1,
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "      Failed: DID NOT RAISE ValueError"
+      ],
+      "mutated_file_sha256": "8d96dbc39014497b0ae0290abc2188f1d0ce2e5912a99a96128bb93e7d68d251"
+    },
+    {
+      "id": "head_branch",
+      "snapshot": "final_guards",
+      "file": "scripts/ci/candidate.py",
+      "replace": "run.get(\"head_branch\") != context[\"pr\"][\"source_ref\"]",
+      "with": "False",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py::test_partial_rerun_cannot_borrow_foreign_or_contradictory_lane_evidence[head_branch]",
+        "-q"
+      ],
+      "observed_exit": 1,
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "      Failed: DID NOT RAISE ValueError"
+      ],
+      "mutated_file_sha256": "f673c714fa0af75a2141e8a8883211c4ec9f4727b898382365cd6d3d535209de"
+    },
+    {
+      "id": "head_repository",
+      "snapshot": "final_guards",
+      "file": "scripts/ci/candidate.py",
+      "replace": "or {key: remote.get(key) for key in (\"id\", \"full_name\")} != context[\"source_repository\"]",
+      "with": "",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_candidate_evidence.py::test_partial_rerun_cannot_borrow_foreign_or_contradictory_lane_evidence[head_repository]",
+        "-q"
+      ],
+      "observed_exit": 1,
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "      Failed: DID NOT RAISE ValueError"
+      ],
+      "mutated_file_sha256": "654492042c4d19ccb862bd891f1316d9b3a542bbaf63fe4ee5fa543223b58997"
+    }
+  ],
+  "limits": [
+    "These are source-snapshot fault witnesses, not assertions that every subsequent commit was executed. Reuse applies to unchanged guarded behavior.",
+    "Hosted PR check association and partial-rerun event wiring require their separate GitHub witnesses.",
+    "The final snapshot predates a failure-output robustness adjustment; the valid-path guards covered here are unchanged."
+  ],
+  "review_repairs": {
+    "scope": "Two focused pre-draft review repairs: authenticate the PR relation and hash workflow bytes fetched at the reported immutable revision.",
+    "red_source_revision": "27622faf721bc2677a5a273d7c82ec55664e6a59",
+    "red_candidate_sha256": "dcda28565757ded3188dac73808e22ada7c7c873a2b9ab8d655d81f2bf90f542",
+    "green_candidate_sha256": "e9858adb1b978be7463601f2b0e44bf44e9d08806322a3d3c3d42229f5101946",
+    "test_sha256": "07692f00c540b95b0636527d08647a602eee5dcef1aee92fb7f276ba5d14a7ec",
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "tests/hexagonal/test_candidate_evidence.py",
+      "-k",
+      "pr_relation or metadata_collector_hashes or partial_rerun_qualifies",
+      "-q"
+    ],
+    "red": {
+      "exit": 1,
+      "result": "9 failed,2 passed,65 deselected",
+      "assertions": [
+        "Eight inconsistent or absent PR relation/workflow-digest cases failed with DID NOT RAISE ValueError.",
+        "The collector returned no workflow_bytes_sha256 instead of the independently expected digest."
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "result": "11 passed,65 deselected"
+    },
+    "regressions": [
+      {
+        "test": "test_pr_relation_and_immutable_workflow_are_authoritative",
+        "cases": [
+          "number",
+          "target",
+          "source_repository",
+          "base_repository",
+          "missing_relation",
+          "duplicate_relation",
+          "workflow_digest",
+          "missing_workflow_digest"
+        ],
+        "boundary": "A claim changed coherently across all uploaded contexts cannot substitute for the authoritative run PR edge or immutable workflow bytes."
+      },
+      {
+        "test": "test_metadata_collector_hashes_workflow_bytes_at_the_reported_immutable_revision",
+        "boundary": "The mocked API receives the exact immutable ref; the resulting hash matches independently supplied workflow bytes."
+      }
+    ],
+    "healthy_controls": [
+      "test_partial_rerun_qualifies_each_original_producer_without_hiding_failure",
+      "test_pr_relation_retains_base_observation_without_replacing_proven_tested_base"
+    ],
+    "limits": [
+      "API transport is controlled in these tests; hosted event/check association remains separate evidence.",
+      "The PR relation base SHA is an observation and is not required to equal the proven tested merge parent."
+    ]
+  }
+}

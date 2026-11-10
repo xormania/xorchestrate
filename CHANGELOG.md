@@ -16,6 +16,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Added
 
+- CI candidate contexts bind the tested merge/base/tree to GitHub checks and
+  immutable per-lane producer artifacts, including successful partial reruns.
+
 - Exact-request Jev diagnostic reuse and shared-state question batches reduce repeated calls; CI reports fresh versus historical usage separately.
 
 - A paired architecture-effectiveness pilot measures Jev against unchanged deterministic checks, retaining misses, false alarms, abstentions, usage and scope limits separately from fixture verification.

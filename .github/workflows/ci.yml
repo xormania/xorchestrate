@@ -22,7 +22,8 @@
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 3,
       "outputs": {
-        "code": "${{ steps.guard.outputs.force == 'false' && steps.classify.outputs.code || 'true' }}"
+        "code": "${{ steps.guard.outputs.force == 'false' && steps.classify.outputs.code || 'true' }}",
+        "context": "${{ steps.candidate.outputs.context }}"
       },
       "steps": [
         {
@@ -32,6 +33,11 @@
             "fetch-depth": 0
           },
           "id": "checkout"
+        },
+        {
+          "name": "Capture the actual validation candidate",
+          "id": "candidate",
+          "run": "python3 -I -B scripts/ci/candidate.py context --output \"$RUNNER_TEMP/ci-context/context.json\" --github-output \"$GITHUB_OUTPUT\""
         },
         {
           "name": "Force full validation for classifier and validation changes",
@@ -51,6 +57,16 @@
             "PULL_REQUEST_BASE": "${{ github.event.pull_request.base.sha }}"
           },
           "run": "python3 -I -B scripts/ci/classify_changes.py --event \"$EVENT_NAME\" --pull-request-base \"$PULL_REQUEST_BASE\" --head HEAD --github-output \"$GITHUB_OUTPUT\""
+        },
+        {
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+          "if": "always()",
+          "with": {
+            "name": "candidate-context--attempt-${{ github.run_attempt }}",
+            "path": "${{ runner.temp }}/ci-context/context.json",
+            "if-no-files-found": "error",
+            "retention-days": 30
+          }
         }
       ]
     },
@@ -62,7 +78,8 @@
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
           "with": {
-            "persist-credentials": false
+            "persist-credentials": false,
+            "fetch-depth": 0
           },
           "id": "checkout"
         },
@@ -93,6 +110,11 @@
           "id": "dependencies"
         },
         {
+          "name": "Bind lane evidence to the captured candidate",
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
+          "run": "python3 -I -B scripts/ci/candidate.py lane --lane \"static-checks-python-3.12\" --output \"$RUNNER_TEMP/xor-static/producer.json\""
+        },
+        {
           "name": "Run shared static checks",
           "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
           "run": "python3 -m scripts.testkit run --suite static --output \"$RUNNER_TEMP/xor-static\" --check-timeout 120"
@@ -106,13 +128,20 @@
           "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
-            "name": "static-checks-python-3.12",
+            "name": "static-checks-python-3.12--attempt-${{ github.run_attempt }}",
             "path": "${{ runner.temp }}/xor-static/**/*.json\n${{ runner.temp }}/xor-static/**/*.log\n${{ runner.temp }}/xor-static/**/*.txt\n!${{ runner.temp }}/xor-static/**/snapshot/**",
             "if-no-files-found": "error",
             "retention-days": 30
           }
         }
-      ]
+      ],
+      "needs": [
+        "paths"
+      ],
+      "env": {
+        "CI_CANDIDATE_CONTEXT": "${{ needs.paths.outputs.context }}"
+      },
+      "if": "${{ always() }}"
     },
     "application-tests": {
       "name": "Application tests shard ${{ matrix.shard }}/${{ matrix.shards }} (Python 3.12)",
@@ -140,7 +169,8 @@
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
           "with": {
-            "persist-credentials": false
+            "persist-credentials": false,
+            "fetch-depth": 0
           },
           "id": "checkout"
         },
@@ -171,6 +201,11 @@
           "id": "dependencies"
         },
         {
+          "name": "Bind lane evidence to the captured candidate",
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
+          "run": "python3 -I -B scripts/ci/candidate.py lane --lane \"framework-tests-python-3.12-shard-${{ matrix.shard }}-of-${{ matrix.shards }}\" --output \"$RUNNER_TEMP/xor-checks/producer.json\""
+        },
+        {
           "name": "Run tests shard ${{ matrix.shard }}/${{ matrix.shards }}",
           "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
           "run": "mkdir -p \"$RUNNER_TEMP/xor-checks\"\ngit show -s --format='%H%n%T%n%P' HEAD > \"$RUNNER_TEMP/xor-checks/identity.txt\"\npython3 -m scripts.testkit run --suite tests --shard \"${{ matrix.shard }}/${{ matrix.shards }}\" --output \"$RUNNER_TEMP/xor-checks/tests\" --check-timeout 600"
@@ -184,13 +219,16 @@
           "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
-            "name": "framework-tests-python-3.12-shard-${{ matrix.shard }}-of-${{ matrix.shards }}",
+            "name": "framework-tests-python-3.12-shard-${{ matrix.shard }}-of-${{ matrix.shards }}--attempt-${{ github.run_attempt }}",
             "path": "${{ runner.temp }}/xor-checks/**/*.json\n${{ runner.temp }}/xor-checks/**/*.xml\n${{ runner.temp }}/xor-checks/**/*.log\n${{ runner.temp }}/xor-checks/**/*.txt\n!${{ runner.temp }}/xor-checks/**/snapshot/**\n!${{ runner.temp }}/xor-checks/**/control/**\n!${{ runner.temp }}/xor-checks/**/mutant/**\n!${{ runner.temp }}/xor-checks/**/candidate/**",
             "if-no-files-found": "error",
             "retention-days": 30
           }
         }
-      ]
+      ],
+      "env": {
+        "CI_CANDIDATE_CONTEXT": "${{ needs.paths.outputs.context }}"
+      }
     },
     "application": {
       "name": "Application and adapter tests (Python 3.12)",
@@ -223,7 +261,8 @@
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
           "with": {
-            "persist-credentials": false
+            "persist-credentials": false,
+            "fetch-depth": 0
           },
           "id": "checkout"
         },
@@ -254,9 +293,19 @@
           "id": "dependencies"
         },
         {
+          "name": "Bind lane evidence to the captured candidate",
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
+          "run": "python3 -I -B scripts/ci/candidate.py lane --lane \"calibration-python-3.12\" --output \"$RUNNER_TEMP/xor-calibration/producer.json\""
+        },
+        {
           "name": "Calibrate independent verification through the shared framework",
           "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
           "run": "python3 -m scripts.testkit run --suite calibration --output \"$RUNNER_TEMP/xor-calibration\" --check-timeout 600"
+        },
+        {
+          "name": "Bind lane evidence to the captured candidate",
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
+          "run": "python3 -I -B scripts/ci/candidate.py lane --lane composed-protocol-evidence --output \"$RUNNER_TEMP/xor-verification/producer.json\""
         },
         {
           "name": "Run composed three-harness protocol acceptance",
@@ -272,7 +321,7 @@
           "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
-            "name": "composed-protocol-evidence",
+            "name": "composed-protocol-evidence--attempt-${{ github.run_attempt }}",
             "path": "${{ runner.temp }}/xor-verification/**",
             "if-no-files-found": "warn",
             "retention-days": 7
@@ -282,13 +331,16 @@
           "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
-            "name": "calibration-python-3.12",
+            "name": "calibration-python-3.12--attempt-${{ github.run_attempt }}",
             "path": "${{ runner.temp }}/xor-calibration/**/*.json\n${{ runner.temp }}/xor-calibration/**/*.xml\n${{ runner.temp }}/xor-calibration/**/*.log\n${{ runner.temp }}/xor-calibration/**/*.txt\n!${{ runner.temp }}/xor-calibration/**/snapshot/**\n!${{ runner.temp }}/xor-calibration/**/control/**\n!${{ runner.temp }}/xor-calibration/**/mutant/**\n!${{ runner.temp }}/xor-calibration/**/candidate/**",
             "if-no-files-found": "error",
             "retention-days": 30
           }
         }
-      ]
+      ],
+      "env": {
+        "CI_CANDIDATE_CONTEXT": "${{ needs.paths.outputs.context }}"
+      }
     },
     "tmux-acceptance": {
       "name": "Tmux live acceptance (protocol fixture)",
@@ -302,7 +354,8 @@
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
           "with": {
-            "persist-credentials": false
+            "persist-credentials": false,
+            "fetch-depth": 0
           },
           "id": "checkout"
         },
@@ -333,6 +386,11 @@
           "id": "dependencies"
         },
         {
+          "name": "Bind lane evidence to the captured candidate",
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
+          "run": "python3 -I -B scripts/ci/candidate.py lane --lane \"tmux-acceptance-evidence\" --output \"$RUNNER_TEMP/acceptance-evidence/producer.json\""
+        },
+        {
           "name": "Run reusable tmux acceptance fixture",
           "run": "python3 -m scripts.testkit run --suite acceptance --mode protocol-fixture --output \"$RUNNER_TEMP/acceptance-evidence\" --timeout 120",
           "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'"
@@ -351,13 +409,16 @@
           "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
-            "name": "tmux-acceptance-evidence",
-            "path": "${{ runner.temp }}/acceptance-evidence/**/report.json\n${{ runner.temp }}/acceptance-evidence/**/scenario.json\n${{ runner.temp }}/acceptance-evidence/**/commands/**/*.json\n${{ runner.temp }}/acceptance-evidence/**/commands/**/*.log\n${{ runner.temp }}/acceptance-evidence/setup.json\n${{ runner.temp }}/acceptance-evidence/**/candidate.json",
+            "name": "tmux-acceptance-evidence--attempt-${{ github.run_attempt }}",
+            "path": "${{ runner.temp }}/acceptance-evidence/**/report.json\n${{ runner.temp }}/acceptance-evidence/**/scenario.json\n${{ runner.temp }}/acceptance-evidence/**/commands/**/*.json\n${{ runner.temp }}/acceptance-evidence/**/commands/**/*.log\n${{ runner.temp }}/acceptance-evidence/setup.json\n${{ runner.temp }}/acceptance-evidence/**/candidate.json\n${{ runner.temp }}/acceptance-evidence/producer.json",
             "if-no-files-found": "error",
             "retention-days": 7
           }
         }
-      ]
+      ],
+      "env": {
+        "CI_CANDIDATE_CONTEXT": "${{ needs.paths.outputs.context }}"
+      }
     },
     "architecture-status": {
       "name": "Hexagonal architecture",
@@ -464,7 +525,7 @@
           "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
-            "name": "architecture-evidence",
+            "name": "architecture-evidence--attempt-${{ github.run_attempt }}",
             "path": "${{ runner.temp }}/architecture/",
             "if-no-files-found": "error",
             "retention-days": 30
@@ -485,7 +546,8 @@
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
           "with": {
-            "persist-credentials": false
+            "persist-credentials": false,
+            "fetch-depth": 0
           },
           "id": "checkout"
         },
@@ -508,6 +570,11 @@
           "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --managed-python --python 3.12.16 --no-default-groups --group validation --no-install-project"
         },
         {
+          "name": "Bind lane evidence to the captured candidate",
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.dependencies.outcome == 'success'",
+          "run": "\"$UV_PROJECT_ENVIRONMENT/bin/python\" -I -B scripts/ci/candidate.py lane --lane \"package-acceptance-evidence\" --output \"$RUNNER_TEMP/package-acceptance/producer.json\""
+        },
+        {
           "name": "Verify wheel and source distribution consumers",
           "id": "acceptance",
           "run": "\"$UV_PROJECT_ENVIRONMENT/bin/python\" -m scripts.ci.package_acceptance --output \"$RUNNER_TEMP/package-acceptance\""
@@ -521,13 +588,16 @@
           "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
-            "name": "package-acceptance-evidence",
-            "path": "${{ runner.temp }}/package-acceptance/**/report.json\n${{ runner.temp }}/package-acceptance/**/commands/**\n${{ runner.temp }}/package-acceptance/**/distributions/*\n${{ runner.temp }}/package-acceptance/**/*constraints.txt",
+            "name": "package-acceptance-evidence--attempt-${{ github.run_attempt }}",
+            "path": "${{ runner.temp }}/package-acceptance/**/report.json\n${{ runner.temp }}/package-acceptance/**/commands/**\n${{ runner.temp }}/package-acceptance/**/distributions/*\n${{ runner.temp }}/package-acceptance/**/*constraints.txt\n${{ runner.temp }}/package-acceptance/producer.json",
             "if-no-files-found": "error",
             "retention-days": 14
           }
         }
-      ]
+      ],
+      "env": {
+        "CI_CANDIDATE_CONTEXT": "${{ needs.paths.outputs.context }}"
+      }
     },
     "ci-result": {
       "name": "CI result",
@@ -549,23 +619,8 @@
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
           "with": {
-            "persist-credentials": false
-          }
-        },
-        {
-          "uses": "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
-          "with": {
-            "pattern": "!architecture-evidence",
-            "path": "${{ runner.temp }}/ci-result-inputs"
-          }
-        },
-        {
-          "name": "Download advisory architecture evidence",
-          "uses": "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
-          "continue-on-error": true,
-          "with": {
-            "name": "architecture-evidence",
-            "path": "${{ runner.temp }}/ci-result-inputs/architecture-evidence"
+            "persist-credentials": false,
+            "fetch-depth": 0
           }
         },
         {
@@ -576,21 +631,30 @@
             "EVENT_NAME": "${{ github.event_name }}",
             "SOURCE_SHA": "${{ github.event.pull_request.head.sha || github.sha }}",
             "TESTED_SHA": "${{ github.sha }}",
-            "RUN_URL": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            "RUN_URL": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+            "GITHUB_TOKEN": "${{ github.token }}"
           },
-          "run": "mkdir -p \"$RUNNER_TEMP/ci-result\"\nprintf '%s\\n' \"$JOB_OUTCOMES\" > \"$RUNNER_TEMP/ci-result/needs.json\"\npython3 -I -B scripts/ci/result.py --needs \"$RUNNER_TEMP/ci-result/needs.json\" --workflow .github/workflows/ci.yml --catalog contracts/testing.json --artifacts \"$RUNNER_TEMP/ci-result-inputs\" --event \"$EVENT_NAME\" --source-sha \"$SOURCE_SHA\" --tested-sha \"$TESTED_SHA\" --run-url \"$RUN_URL\" --summary \"$GITHUB_STEP_SUMMARY\" --output \"$RUNNER_TEMP/ci-result/result.json\""
+          "run": "mkdir -p \"$RUNNER_TEMP/ci-result\"\nprintf '%s\\n' \"$JOB_OUTCOMES\" > \"$RUNNER_TEMP/ci-result/needs.json\"\nprintf '%s\\n' \"$CI_CANDIDATE_CONTEXT\" > \"$RUNNER_TEMP/ci-result/context.json\"\ncollection_status=0\npython3 -I -B scripts/ci/candidate.py collect --output \"$RUNNER_TEMP/ci-result/metadata.json\" --artifacts \"$RUNNER_TEMP/ci-result-inputs\" --workflow .github/workflows/ci.yml --needs \"$RUNNER_TEMP/ci-result/needs.json\" || collection_status=$?\npython3 -I -B scripts/ci/result.py --needs \"$RUNNER_TEMP/ci-result/needs.json\" --workflow .github/workflows/ci.yml --catalog contracts/testing.json --artifacts \"$RUNNER_TEMP/ci-result-inputs\" --event \"$EVENT_NAME\" --source-sha \"$SOURCE_SHA\" --tested-sha \"$TESTED_SHA\" --run-url \"$RUN_URL\" --context \"$RUNNER_TEMP/ci-result/context.json\" --metadata \"$RUNNER_TEMP/ci-result/metadata.json\" --summary \"$GITHUB_STEP_SUMMARY\" --output \"$RUNNER_TEMP/ci-result/result.json\"\nexit \"$collection_status\""
         },
         {
           "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
-            "name": "ci-result-evidence",
+            "name": "ci-result-evidence--attempt-${{ github.run_attempt }}",
             "path": "${{ runner.temp }}/ci-result/",
             "if-no-files-found": "error",
             "retention-days": 30
           }
         }
-      ]
+      ],
+      "env": {
+        "CI_CANDIDATE_CONTEXT": "${{ needs.paths.outputs.context }}"
+      },
+      "permissions": {
+        "contents": "read",
+        "actions": "read",
+        "checks": "read"
+      }
     }
   }
 }

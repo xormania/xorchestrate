@@ -4,10 +4,16 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import math
 from collections import Counter
 from pathlib import Path
+
+# Keep the isolated direct-file CLI usable without importing candidate packages.
+_spec = importlib.util.spec_from_file_location("ci_candidate", Path(__file__).with_name("candidate.py"))
+candidate_evidence = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(candidate_evidence)
 
 ALWAYS = ("paths", "changes", "architecture-status")
 HEAVY = ("application-tests", "application", "verification", "tmux-acceptance")
@@ -215,23 +221,26 @@ def job_verdict(needs, *, event, package=False):
 def _read(path):
     if path.is_symlink() or not path.is_file():
         raise ValueError("Required evidence is missing or is not a regular file: " + str(path))
+    if path.stat().st_size > candidate_evidence.MAX_ARCHIVE:
+        raise ValueError("Evidence JSON exceeds its byte limit")
     value = json.loads(path.read_text())
     if not isinstance(value, dict):
         raise ValueError("Expected an evidence object: " + str(path))
     return value
 
 
-def _clean_candidate(candidate, tested_sha):
-    return isinstance(candidate, dict) and candidate.get("commit") == tested_sha and candidate.get("status") == ""
+def _clean_candidate(candidate, tested_sha, tested_tree=None):
+    return (isinstance(candidate, dict) and candidate.get("commit") == tested_sha and candidate.get("status") == ""
+            and (tested_tree is None or candidate.get("tree") == tested_tree))
 
 
-def _reports(directory, suites, tested_sha):
+def _reports(directory, suites, tested_sha, tested_tree=None):
     reports = []
     for path in sorted(directory.glob("**/report.json")):
         value = _read(path)
         if value.get("schema_version") == 2 and value.get("suite") in suites:
             candidate = _read(path.parent / "candidate.json")
-            if not _clean_candidate(candidate, tested_sha):
+            if not _clean_candidate(candidate, tested_sha, tested_tree):
                 raise ValueError("Suite evidence does not identify the clean tested commit: " + value["suite"])
             reports.append((path, value))
     for suite in suites:
@@ -241,7 +250,7 @@ def _reports(directory, suites, tested_sha):
     return reports
 
 
-def shard_evidence(artifacts, workflow, *, tested_sha, catalog):
+def shard_evidence(artifacts, workflow, *, tested_sha, catalog, directories=None, tested_tree=None):
     """Reconcile the shard set using the workflow and existing catalog/receipts."""
     matrix = workflow["jobs"]["application-tests"]["strategy"]["matrix"]
     counts, indices = matrix["shards"], matrix["shard"]
@@ -255,7 +264,7 @@ def shard_evidence(artifacts, workflow, *, tested_sha, catalog):
     modules, cases, families, rows = set(), set(), {}, []
     for index in indices:
         artifact = f"framework-tests-python-3.12-shard-{index}-of-{total}"
-        directory = artifacts / artifact
+        directory = (directories or {}).get(artifact, artifacts / artifact)
         inventories = list(directory.glob("**/inventory.json"))
         if len(inventories) != 1:
             raise ValueError("Expected one inventory for " + artifact)
@@ -265,7 +274,7 @@ def shard_evidence(artifacts, workflow, *, tested_sha, catalog):
         candidate = _read(path.parent / "candidate.json")
         shard = inventory.get("shard", {})
         if (report.get("schema_version") != 2 or type(inventory.get("schema_version")) is not int
-                or inventory["schema_version"] != 1 or not _clean_candidate(candidate, tested_sha)
+                or inventory["schema_version"] != 1 or not _clean_candidate(candidate, tested_sha, tested_tree)
                 or report.get("status") != "passed"
                 or report.get("suite") != "tests" or report.get("shard") != f"{index}/{total}"
                 or inventory.get("status") != "passed" or inventory.get("exit_status") != 0
@@ -301,30 +310,52 @@ def shard_evidence(artifacts, workflow, *, tested_sha, catalog):
     return rows, {name: dict(counts) for name, counts in sorted(families.items())}
 
 
-def evaluate(needs, *, event, source_sha, tested_sha, workflow, artifacts, catalog):
+def evaluate(needs, *, event, source_sha, tested_sha, workflow, artifacts, catalog, context=None, metadata=None):
     package = "package" in workflow["jobs"]
     docs, errors = job_verdict(needs, event=event, package=package)
-    result = {"schema_version": 1, "status": "failed", "source_sha": source_sha, "tested_sha": tested_sha,
+    result = {"schema_version": 2 if context is not None or metadata is not None else 1,
+              "status": "failed", "source_sha": source_sha, "tested_sha": tested_sha,
               "documentation_only": docs, "jobs": needs if isinstance(needs, dict) else {}, "shards": [], "families": {}, "suites": [], "errors": errors}
     try:
+        directories, tested_tree = {}, None
+        if context is not None or metadata is not None:
+            candidate_evidence.validate_context(context)
+            result["candidate_context"] = context
+            if (context["source_sha"] != source_sha or context["checkout"]["commit"] != tested_sha
+                    or context["event"]["name"] != event):
+                raise ValueError("Aggregate inputs contradict the captured candidate")
+            captured = _read(artifacts / f"candidate-context--attempt-{context['producer']['run_attempt']}" / "context.json")
+            if captured != context:
+                raise ValueError("Aggregate context does not match the original captured context")
+            expected = candidate_evidence.expected_lanes(workflow, documentation_only=docs)
+            manifests = {}
+            for path in artifacts.glob("*--attempt-*/producer.json"):
+                manifests[path.parent.name] = _read(path)
+            references = candidate_evidence.qualify_lineage(context, manifests, metadata, expected)
+            tested_tree = context["checkout"]["tree"]
+            directories = {row["lane"]: artifacts / row["artifact_name"] for row in references}
+            result.update(schema_version=2, candidate_context=context, evidence_references=references,
+                          attempts=[{key: job.get(key) for key in ("id", "name", "run_attempt", "status", "conclusion")}
+                                    for job in metadata["jobs"]])
         for name, suites in ARTIFACTS.items():
             if docs and name != "static-checks-python-3.12":
                 continue
-            for _, report in _reports(artifacts / name, suites, tested_sha):
+            for _, report in _reports(directories.get(name, artifacts / name), suites, tested_sha, tested_tree):
                 result["suites"].append({"suite": report["suite"], "status": report["status"], "artifact": name})
         if not docs:
-            result["shards"], result["families"] = shard_evidence(artifacts, workflow, tested_sha=tested_sha, catalog=catalog)
+            result["shards"], result["families"] = shard_evidence(artifacts, workflow, tested_sha=tested_sha, catalog=catalog,
+                                                               directories=directories, tested_tree=tested_tree)
             if package:
-                reports = list((artifacts / "package-acceptance-evidence").glob("**/report.json"))
+                reports = list(directories.get("package-acceptance-evidence", artifacts / "package-acceptance-evidence").glob("**/report.json"))
                 if len(reports) != 1:
                     raise ValueError("Expected one installed-package report")
                 report = _read(reports[0])
                 if (type(report.get("schema_version")) is not int or report["schema_version"] != 1
-                        or report.get("status") != "passed" or not _clean_candidate(report.get("candidate"), tested_sha)):
+                        or report.get("status") != "passed" or not _clean_candidate(report.get("candidate"), tested_sha, tested_tree)):
                     raise ValueError("Installed-package evidence has an unclean/foreign identity or did not pass")
                 result["suites"].append({"suite": "installed-package", "status": "passed",
                                          "artifact": "package-acceptance-evidence"})
-    except (OSError, ValueError, KeyError, TypeError, StopIteration) as error:
+    except (OSError, ValueError, KeyError, TypeError, StopIteration, RecursionError) as error:
         errors.append("Evidence qualification: " + str(error))
     result["status"] = "failed" if errors else "passed"
     result["jev"] = jev_evidence(artifacts, needs, tested_sha=tested_sha)
@@ -340,6 +371,11 @@ def markdown(result, run_url):
         return value
     rows = ["## Evidence qualification: " + result["status"], "", f"Source head: `{result['source_sha']}`  ",
             f"Tested commit: `{result['tested_sha']}`", "", "| Job | Outcome |", "|---|---|"]
+    context = result.get("candidate_context")
+    if isinstance(context, dict) and "checkout" in context:
+        rows[4:4] = [f"Tested base: `{context.get('tested_base_sha') or 'not applicable'}`  ",
+                     f"Tested tree: `{context['checkout'].get('tree', 'unknown')}`  ",
+                     f"GitHub check association: `{context.get('producer', {}).get('check_sha', 'unknown')}`", ""]
     for name, job in sorted(result["jobs"].items()):
         outcome = job.get("result", "missing") if isinstance(job, dict) else "malformed"
         rows.append(f"| {text(name)} | {text(outcome)} |")
@@ -347,6 +383,11 @@ def markdown(result, run_url):
     for shard in result["shards"]:
         counts = shard["outcomes"]
         rows.append(f"| {shard['shard']} | {counts.get('passed', 0)} | {counts.get('skipped', 0)} | {shard['command_seconds']} |")
+    if result.get("evidence_references"):
+        rows.extend(["", "| Evidence lane | Original run / attempt | Job | Artifact |", "|---|---|---|---|"])
+        for reference in result["evidence_references"]:
+            rows.append(f"| {text(reference['lane'])} | {reference['run_id']} / {reference['run_attempt']} | "
+                        f"{reference['job_id']} | {reference['artifact_id']} |")
     if result["families"]:
         rows.extend(["", "| Family | Passed | Skipped |", "|---|---:|---:|"])
         for name, counts in result["families"].items():
@@ -415,9 +456,12 @@ def main(argv=None):
         parser.add_argument("--" + name, required=True, type=Path)
     for name in ("event", "source-sha", "tested-sha", "run-url"):
         parser.add_argument("--" + name, required=True)
+    parser.add_argument("--context", required=True, type=Path)
+    parser.add_argument("--metadata", required=True, type=Path)
     args = parser.parse_args(argv)
     result = evaluate(_read(args.needs), event=args.event, source_sha=args.source_sha, tested_sha=args.tested_sha,
-                      workflow=_read(args.workflow), artifacts=args.artifacts, catalog=_read(args.catalog))
+                      workflow=_read(args.workflow), artifacts=args.artifacts, catalog=_read(args.catalog),
+                      context=_read(args.context), metadata=_read(args.metadata))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     with args.summary.open("a") as stream:

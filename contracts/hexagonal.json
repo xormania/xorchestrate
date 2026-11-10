@@ -909,7 +909,8 @@
         "scripts.ci.classify_changes",
         "scripts.ci.dependencies",
         "scripts.ci.release_identity",
-        "scripts.ci.result"
+        "scripts.ci.result",
+        "scripts.ci.candidate"
       ],
       "allowed_roles": [
         "ci_tooling"
