@@ -15,11 +15,16 @@ passing an old implementation is not a prerequisite for changing Xorchestrate.
 Python 3.12 is the validation baseline; package support starts at 3.12 without an
 upper bound. Hosted compatibility evidence applies to the interpreter exercised.
 From a checkout, establish an external bytecode cache before starting Python,
-then install the application/test dependencies and pinned Ruff:
+then install the locked application/test and validation dependencies with uv 0.13.7:
 
 ```bash
 export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XXXXXX")"
-python3 -m pip install -e '.[test,telemetry]' -r .github/requirements-ci.txt
+export UV_PROJECT_ENVIRONMENT="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-env.XXXXXX")"
+python3 -m scripts.ci.dependencies check
+uv sync --locked --only-group validation --no-install-project --managed-python --python 3.12.16
+uv sync --locked --no-default-groups --group validation --extra test --extra telemetry --no-install-project --managed-python --python 3.12.16 --no-build-isolation-package agent-telemetry
+uv pip install --python "$UV_PROJECT_ENVIRONMENT/bin/python" --no-deps --no-build-isolation -e .
+export PATH="$UV_PROJECT_ENVIRONMENT/bin:$PATH"
 
 # Ruff lint/security, current-source syntax and deterministic architecture.
 python3 -m scripts.testkit run --suite static
@@ -139,7 +144,7 @@ controller requests, native callback selection and managed tmux automation.
 |---|---|
 | Behavioral family, guarantee and test layer | [`contracts/testing.json`](../contracts/testing.json) |
 | Static check definitions and suite membership | Shared test-kit composition and static adapter |
-| Ruff policy and pin | `ruff.toml`, `.github/requirements-ci.txt` |
+| Ruff policy and validation dependency pin | `ruff.toml`, `pyproject.toml` validation group; generated `.github/requirements-ci.txt` |
 | Catalog validation and selection | `scripts/testkit/catalog.py` |
 | Shard specification, balanced module partition and timings format | `scripts/testkit/sharding.py`, `contracts/test-timings.json` |
 | Timings regeneration from JUnit | `scripts/testkit/adapters/timings.py`, `python3 -m scripts.testkit.timings` |
