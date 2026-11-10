@@ -508,7 +508,10 @@ def test_requests_on_a_stopped_dispatcher_release_their_admission():
     frames = [initialize(), rpc(2, "tools/call", {"name": "late"}), rpc(3, "tools/call", {"name": "later"})]
     output = io.StringIO()
     source = io.BytesIO(b"".join(json.dumps(frame).encode() + b"\n" for frame in frames))
-    dispatcher.serve_connection(StdioConnection(source, output))
+    runner = threading.Thread(target=dispatcher.serve_connection, args=(StdioConnection(source, output),), daemon=True)
+    runner.start()
+    runner.join(5)
+    assert not runner.is_alive(), "a request that never started is still counted as pending"
     replies = {reply["id"]: reply for reply in map(json.loads, output.getvalue().splitlines())}
     assert replies[2]["error"]["code"] == -32003 and replies[3]["error"]["code"] == -32003, replies
     assert dispatcher.in_flight == 0
@@ -565,16 +568,16 @@ def test_lock_probes_never_make_a_starting_server_give_up(directory):
     stop = threading.Event()
 
     def probe():
-        # Clients poll (wait_stopped, ensure_server) every few milliseconds.
+        # Back-to-back probes, as from several clients polling at once; a single
+        # non-blocking attempt by the server loses to them regularly.
         while not stop.is_set():
             lock_is_held(lock_path)
-            stop.wait(0.002)
 
-    probes = [threading.Thread(target=probe, daemon=True) for _ in range(4)]
+    probes = [threading.Thread(target=probe, daemon=True) for _ in range(2)]
     for thread in probes:
         thread.start()
     try:
-        for _ in range(20):
+        for _ in range(50):
             lock = InstanceLock(lock_path)
             assert lock.acquire(wait=SERVER_LOCK_WAIT), "a probe made the server's lock acquisition fail"
             assert lock_is_held(lock_path)
