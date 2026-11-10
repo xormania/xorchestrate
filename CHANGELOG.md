@@ -16,6 +16,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Added
 
+- PR edit/readiness observations preserve useful running validation and reuse
+  authenticated exact-candidate behavior evidence, retaining original lane
+  identities and flat references across repeated metadata activity.
+
 - A configurable PR capability provider observes candidate-bound checks and
   discussions, checkpoints and refreshes owned branches, publishes reviewed
   source trees as drafts, and retains target custody and progress for uncertain
@@ -188,6 +192,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   `migrate-config` on the installed launcher.
 
 ### Upgrade notes
+
+- **CI policy:** edited/readiness PR events now run current observations.
+  `CI_REUSE_ENABLED=false` disables behavioral reuse without weakening ordinary
+  validation. Existing required status names and merge freshness settings remain.
 
 - **Journal diagnostics:** existing operation diagnostics remain stored. Public
   projection hides unversioned diagnostic content; this is not a historical-data

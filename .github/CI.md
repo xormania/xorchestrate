@@ -47,7 +47,11 @@ a local git tag and a source directory, and `uv tool run --from <wheel>`) and
 checks the `install_source` each reports, through both `xo` and `xorchestrate`.
 
 CI runs on GitHub-hosted Ubuntu. Pinned actions have read-only repository
-permissions. Pull requests, pushes to master and manual runs invoke:
+permissions. PR open/source/reopen/edit/readiness events receive candidate
+observations; eligible deterministic lanes may reuse exact qualified evidence.
+Pushes to master and manual runs execute full validation. See
+[PR lifecycle validation](../docs/pr-lifecycle-ci.md) for event handling, original
+evidence links and the `CI_REUSE_ENABLED=false` recovery switch. Selected jobs are:
 
 | Job | Purpose |
 |---|---|
@@ -92,13 +96,12 @@ launching dependent validation. Available evidence uploads even on failure.
 
 ### Documentation-only changes
 
-Only pull requests can skip validation. Pushes (including every push to
-`master`), manual runs and every other event always run the full pipeline. The
-concurrency group cancels an in-progress run when a newer push arrives on the
-same ref. If a docs-only push could skip, a docs-only merge could cancel the
-full run of a code merge just before it. The integrated `master` tree would then
-never be fully validated, because the ruleset does not require branches to be up
-to date.
+Only pull requests can omit fresh behavioral execution through the independently
+guarded documentation decision or qualified reuse. Pushes (including every push
+to `master`) and manual runs always run the full pipeline. Non-PR concurrency
+cancels older work on the same ref; PR concurrency preserves active validation
+and separates source/base candidates. A documentation-only master merge still
+receives full validation of the integrated tree.
 
 For a pull request, the `paths` job (Classify changed paths) checks out full
 history and diffs `HEAD` (the merge commit) against
@@ -133,13 +136,17 @@ The job output is
 It is `false` only when the guard ran and allowed classification and the
 classifier reported `false`. The tests shards, the application aggregate, the
 verification, tmux acceptance and Jev diagnostics jobs declare `needs: paths` and
-the job-level condition `!cancelled() && needs.paths.outputs.code != 'false'`
-(the application aggregate also needs the shard matrix). If either step fails or
-emits nothing, they still run. On a documentation-only pull request the shards
-and the aggregate are skipped together; otherwise the aggregate runs even after a
-shard failure and fails unless the whole matrix succeeded. The aggregate's
-condition uses `always()` instead of `!cancelled()`, so a cancelled run reports
-it as failed or cancelled rather than skipped. Static checks wait for `paths` to receive the candidate context, use an always-running condition, and are never gated on its documentation decision. The `Hexagonal architecture` status always reports their result. The static suite is cheap and backs
+the documentation condition `!cancelled() && needs.paths.outputs.code != 'false'`
+(the application aggregate also needs the shard matrix). The deterministic
+behavioral jobs additionally require `needs.paths.outputs.reuse != 'true'`;
+the advisory Jev job remains fresh for code-bearing candidates. An unavailable
+classifier or reuse planner cannot skip validation. On a documentation-only or
+qualified-reuse PR the shards and application aggregate skip together. Otherwise
+the application aggregate uses `always()` and fails unless the whole matrix
+succeeded. The final `CI result` always authenticates the explicit applicability
+or reuse decision. Static checks wait for `paths` to receive the candidate context,
+use an always-running condition, and are never gated on either decision. The
+`Hexagonal architecture` status always reports their result. The static suite backs
 the required status. It does not lint Markdown, so no documentation check is
 lost by skipping the other jobs.
 
@@ -210,10 +217,12 @@ effect, receipt or acceptance recording. See [the active guide](../docs/telemetr
 `CI result` is an always-running final job. It requires successful path
 classification, static checks, every application shard and its aggregate,
 calibration/multi-harness verification, tmux acceptance, and installed-package
-acceptance when that job is present. Jev remains advisory. Only a successful
-`pull_request` classifier explicitly reporting `code=false` permits heavy jobs
-to be skipped; an absent decision, failed classifier, missing job or cancellation
-cannot establish a pass. Static checks remain required on documentation PRs.
+acceptance when that job is present, either executed now or independently
+qualified from the same candidate. Jev remains advisory. Heavy jobs can skip for
+an explicit successful documentation-only decision, or an authenticated reuse
+plan whose original receipts are requalified. An absent decision, failed
+classifier, missing proof or cancellation cannot establish a pass. Static checks
+remain required on every selected run.
 
 The aggregate authenticates this run's original per-lane producers through
 GitHub jobs, attempts, artifact metadata, check association and immutable Git
