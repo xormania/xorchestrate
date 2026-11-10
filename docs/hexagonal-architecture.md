@@ -107,6 +107,7 @@ The top-level sections are:
 
 | Section | Selection |
 | --- | --- |
+| `version` | Configuration format version, a positive integer; see below |
 | `store` | One state-store adapter and its `options` |
 | `state_engine` | Lifecycle state engine; built-in `declared` (default) accepts `definitions` and `guards` options |
 | `telemetry` | Optional observation collector; built-in `local`, absent by default |
@@ -129,6 +130,37 @@ built-in adapters assembled by composition. Disabled named entries (`enabled:
 false`) are not activated. Configuration is read for the assembled application;
 unrelated historical source edits do not invalidate ongoing work or retained
 results. Restart with the intended configuration to activate a change.
+
+### Format version and structural validation
+
+Each release declares the configuration format versions it reads in
+`SUPPORTED_CONFIG_VERSIONS` (`xorchestrate/composition.py`; currently `{1}`) and
+prints them with `xorchestrate --version`. A configuration's optional top-level
+`version` selects one:
+
+| `version` | Result |
+| --- | --- |
+| absent | Read as `1`; `describe` reports a `configuration_version_missing` warning. A later release will require the key |
+| a supported version | Read as is |
+| newer than every supported version | Refused with `configuration_version_unsupported`, naming the version and this release |
+| older than every supported version | Refused with `configuration_migration_required`, naming the explicit `instance migrate-config` migration (planned operator tooling) |
+| not a positive integer | Refused with `configuration_error` |
+
+Configuration is never rewritten on load. Both refusals are ordinary
+`OrchestrationError` codes, rendered by CLI and MCP like every other failure.
+
+`validate_config(config, base_dir)` is the structural half of `build`: format
+version, section names, adapter shapes, option containers and path resolution.
+It returns a `ResolvedConfig` and imports no factory module, constructs no adapter,
+launches no process and writes nothing, so tooling can check a configuration
+safely. `build` calls it first and constructs only after it succeeds, so a
+structural error never leaves partially constructed adapters or new state files.
+Adapter option contents remain each factory's contract and are checked at
+construction; `assessment` and `session_fallbacks` remain application-validated.
+An invalid `telemetry` section is not an error in either path: it is reported as a
+`telemetry_configuration_invalid` warning and telemetry is unavailable, as before.
+`describe` prints these warnings beside the operations as `{"operations": [...],
+"warnings": [...]}`.
 
 Telemetry is an optional output port (`TelemetrySink`: capture, bounded scans,
 scope resolution, payload reads and bundle snapshot/verify/restore). When the `telemetry` section is absent or

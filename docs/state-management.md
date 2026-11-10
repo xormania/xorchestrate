@@ -77,6 +77,27 @@ Native activity tracks identities of outstanding work. Aggregate activity is der
 
 Work/contribution status labels remain caller-defined. Requirements and candidate selection remain versioned, acceptance currentness remains computed from evidence, and acknowledgements remain per recipient. The finite lifecycle census in the goal document records this boundary explicitly.
 
+## Data versions and migrations
+
+Persisted record shapes have a data version. `DATA_VERSION` in [`storage_migrations.py`](../xorchestrate/adapters/storage_migrations.py) is the version this release reads and writes (currently `1`, the schema every earlier release wrote); `xorchestrate --version` prints it. A data version bump is a change a reader must handle differently: a changed record shape, a new required field or a changed status meaning. A new record kind or a lifecycle definition version alone is not a bump, because transition history already retains definition versions.
+
+The SQLite store records the version in `PRAGMA user_version` and in a meta record `{"data_version", "written_by", "migrated_at"}`, written in the same transaction that creates the schema. The meta record lives in its own `meta` table rather than in `records`: no application kind can collide with it, `list`, `get` and `events` never return it, and it needs no optimistic record version. The memory store is always current and reports `DATA_VERSION` as a constant.
+
+Opening a store compares the stored version with `DATA_VERSION`:
+
+| Stored version | Normal open (`serve`, `run`, `call`, composition) | `migrate=True` |
+| --- | --- | --- |
+| equal | proceeds | proceeds; nothing to do |
+| `user_version` 0 with the store schema (pre-versioned) | read as version 1; **nothing is written** | stamped as version 1 (`user_version` and meta record), then the chain runs |
+| older | refused with `data_migration_required` | each registered step runs, in order |
+| newer | refused with `data_version_unsupported`, naming the meta record's `written_by` | refused the same way |
+
+`migrate=True` is a constructor argument that configuration cannot select, so the product never migrates on load; explicit operator tooling (a later `instance upgrade`) is its intended caller. Each step in the registry is keyed by its source version `N` and transforms `N` to `N + 1` inside one store transaction, using that transaction's own `list`, `get`, `put`, `delete` and `emit` so record versions advance as for any write. It returns the records it changed per kind. In the same transaction the store retains `{"type": "data_migrated", "from", "to", "release", "counts", "at"}`, rewrites the meta record and advances `user_version`; a failing step (`data_migration_failed`) rolls all of that back and leaves the store at the last committed version, so re-running resumes there. A stored version older than the registry's first step is `data_migration_unavailable`. The registry is empty today.
+
+`read_only=True` opens an existing file with SQLite `mode=ro`: no journal-mode change, no `BEGIN IMMEDIATE`, no schema creation and no version refusal. Its transactions read a consistent snapshot and refuse writes with `storage_read_only`. `data_version_info()` reports the stored version, its status (`current`, `migration_required`, `migration_unavailable`, `unsupported` or `uninitialized`), whether the store is pre-versioned, the pending steps and the meta record's `written_by` and `migrated_at`, for a dry-run scan before migrating. SQLite may still create its `-wal`/`-shm` sidecar files beside a WAL-mode database while reading; the database file itself is not modified.
+
+Fixture stores in [`tests/fixtures/stores/`](../tests/fixtures/stores/), one per data version and written by the release that introduced it, keep every migration step tested against real input. The release that bumps `DATA_VERSION` adds the new fixture with `python3 -m tests.hexagonal.support.store_fixtures tests/fixtures/stores/data-vN.db`; existing fixtures are never regenerated.
+
 ## Evidence
 
 The shared contracts in [`contracts/state.py`](../tests/hexagonal/contracts/state.py) run against independent Memory and SQLite fixtures. The application contracts exercise actual creation, all seven durable lifecycle families and restart/reconciliation. Native held-work, callback, bridge and completion contracts remain independent of the production verdict. Deliberate source-fault calibrations require their specific assertion witness and an unaffected positive control; collection/setup errors and skips cannot count as detection.

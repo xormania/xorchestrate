@@ -6,12 +6,13 @@ receive their options as a dict; incoming tool arguments never choose factories.
 import importlib
 import json
 from copy import deepcopy
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import cast
 from uuid import uuid4
 
+from . import __version__
 from .application import Application
 from .model import OrchestrationError, canonical_digest, unique_keys
 from .ports import ApplicationToolSessionDriver, SessionDriver
@@ -67,9 +68,11 @@ def load_config(path=None):
 
 
 class Runtime:
-    def __init__(self, application, resources):
+    def __init__(self, application, resources, warnings=()):
         self.application = application
         self._resources = resources
+        # Non-fatal configuration findings, such as a missing format version.
+        self.warnings = tuple(warnings)
 
     def close(self):
         errors = []
@@ -97,56 +100,160 @@ class Runtime:
                 raise
 
 
-def build(config=None, base_dir=None):
+SUPPORTED_CONFIG_VERSIONS = frozenset({1})
+"""Configuration format versions this release reads. Absent ``version`` means 1."""
+
+RELEASE = f"v{__version__}"
+_SECTIONS = frozenset(BUILTINS) | {"assessment", "session_fallbacks", "version"}
+_ADAPTER_FIELDS = frozenset({"adapter", "options", "enabled"})
+# Singleton adapters in construction order, with their defaults.
+_SINGLETONS = {
+    "state_engine": {"adapter": "declared"},
+    "store": {"adapter": "sqlite"},
+    "guardrail": {"adapter": "rules"},
+    "routing": {"adapter": "configurable"},
+    "acceptance": {"adapter": "required-checks"},
+    "session_selection": {"adapter": "latest"},
+    "delivery_scheduler": {"adapter": "manual"},
+    "retry_policy": {"adapter": "definite-failure"},
+    "receipt_policy": {"adapter": "complete-exchange"},
+}
+_COLLECTIONS = ("providers", "sessions", "evaluators")
+
+
+@dataclass(frozen=True)
+class AdapterSelection:
+    """One enabled adapter: its factory target and the options it will receive."""
+
+    kind: str
+    adapter: str
+    target: str
+    options: dict
+
+
+@dataclass(frozen=True)
+class ResolvedConfig:
+    """A structurally valid configuration with paths resolved and nothing constructed."""
+
+    version: int
+    base_dir: Path
+    config: dict
+    adapters: dict
+    collections: dict
+    telemetry: AdapterSelection | None
+    telemetry_unavailable: bool
+    provider_configurations: dict
+    evaluator_configurations: dict
+    warnings: tuple = ()
+
+
+def config_version(config, supported=SUPPORTED_CONFIG_VERSIONS):
+    """Return the configuration format version and any warning about it.
+
+    Configuration is never rewritten here; an unreadable version is refused.
+    """
+    supported = sorted(supported)
+    warnings = ()
+    if "version" not in config:
+        version = 1
+        warnings = ({
+            "code": "configuration_version_missing",
+            "message": "Configuration has no format version; it is read as version 1. "
+                       "Add \"version\": 1 because a later release will require it.",
+            "assumed_version": version,
+        },)
+    else:
+        version = config["version"]
+        if type(version) is not int or version < 1:
+            raise OrchestrationError("Configuration version must be a positive integer.", "configuration_error")
+    details = {"version": version, "supported": supported, "release": RELEASE}
+    if version in supported:
+        return version, warnings
+    if version < supported[0]:
+        raise OrchestrationError(
+            f"Configuration format version {version} is older than this release reads; migrate it with "
+            "`instance migrate-config`. Configuration is never rewritten on load.",
+            "configuration_migration_required", {**details, "migration": "instance migrate-config"},
+        )
+    raise OrchestrationError(
+        f"Configuration format version {version} is not supported by release {RELEASE}; "
+        "use a release that reads it.",
+        "configuration_version_unsupported", details,
+    )
+
+
+def _resolve_path(base_dir, value, kind, adapter, strict=True):
+    if not isinstance(value, str):
+        raise OrchestrationError(f"{kind} adapter {adapter} paths must be strings.", "configuration_error")
+    try:
+        return str((base_dir / value).resolve()) if strict else str(base_dir / value)
+    except (TypeError, ValueError, OSError, RuntimeError) as exc:
+        raise OrchestrationError(f"Invalid {kind} adapter {adapter} path.", "configuration_error") from exc
+
+
+def _select(kind, specification, base_dir):
+    if not isinstance(specification, dict) or not isinstance(specification.get("adapter"), str):
+        raise OrchestrationError(f"{kind} requires an adapter and options object.", "configuration_error")
+    if specification.keys() - _ADAPTER_FIELDS:
+        raise OrchestrationError(f"Unknown {kind} adapter configuration fields.", "configuration_error")
+    if "enabled" in specification and type(specification["enabled"]) is not bool:
+        raise OrchestrationError(f"{kind} enabled must be a boolean.", "configuration_error")
+    options = specification.get("options", {})
+    if not isinstance(options, dict):
+        raise OrchestrationError(f"{kind} options must be an object.", "configuration_error")
+    options = deepcopy(options)
+    adapter = specification["adapter"]
+    target = BUILTINS[kind].get(adapter, adapter)
+    if ":" not in target:
+        raise OrchestrationError(f"Unknown {kind} adapter: {adapter}", "configuration_error")
+    if kind in {"providers", "sessions"} and adapter in BUILTINS[kind]:
+        options["cwd"] = _resolve_path(base_dir, options.get("cwd", "."), kind, adapter)
+    if kind == "store" and adapter == "sqlite":
+        path = options.get("path", ".xorchestrate/state.sqlite3")
+        options["path"] = path if path == ":memory:" else _resolve_path(base_dir, path, kind, adapter)
+    if kind == "telemetry" and adapter == "local":
+        for field in ("profile", "runtime_root"):
+            if isinstance(options.get(field), str):
+                options[field] = _resolve_path(base_dir, options[field], kind, adapter, strict=False)
+    return AdapterSelection(kind, adapter, target, options)
+
+
+def validate_config(config=None, base_dir=None):
+    """Check a configuration's structure and resolve its paths.
+
+    This is the structural half of ``build``: format version, section names,
+    adapter shapes, option containers and path resolution. It imports no
+    factory module, constructs no adapter, launches no process and writes
+    nothing, so operator tooling can check a configuration safely. Adapter
+    option contents remain each factory's responsibility at construction, and
+    application-owned settings (``assessment``, ``session_fallbacks``) are
+    validated by the application.
+    """
     try:
         config = json.loads(json.dumps({} if config is None else config, allow_nan=False))
     except (TypeError, ValueError, RecursionError) as exc:
         raise OrchestrationError("Configuration must contain JSON values.", "configuration_error") from exc
     if not isinstance(config, dict):
         raise OrchestrationError("Configuration must be an object.", "configuration_error")
-    unknown = set(config) - set(BUILTINS) - {"assessment", "session_fallbacks"}
+    version, warnings = config_version(config)
+    unknown = set(config) - _SECTIONS
     if unknown:
         raise OrchestrationError("Unknown configuration sections.", "configuration_error", {"sections": sorted(unknown)})
     base_dir = Path(base_dir or Path.cwd()).resolve()
-    resources = []
-    providers = {}
-    provider_configurations = {}
-    evaluator_configurations = {}
 
-    def construct(kind, specification):
-        if not isinstance(specification, dict) or not isinstance(specification.get("adapter"), str):
-            raise OrchestrationError(f"{kind} requires an adapter and options object.", "configuration_error")
-        if specification.keys() - {"adapter", "options", "enabled"}:
-            raise OrchestrationError(f"Unknown {kind} adapter configuration fields.", "configuration_error")
-        if "enabled" in specification and type(specification["enabled"]) is not bool:
-            raise OrchestrationError(f"{kind} enabled must be a boolean.", "configuration_error")
-        options = specification.get("options", {})
-        if not isinstance(options, dict):
-            raise OrchestrationError(f"{kind} options must be an object.", "configuration_error")
-        options = dict(options)
-        adapter = specification["adapter"]
-        target = BUILTINS[kind].get(adapter, adapter)
-        if ":" not in target:
-            raise OrchestrationError(f"Unknown {kind} adapter: {adapter}", "configuration_error")
+    telemetry, telemetry_unavailable = None, False
+    specification = config.get("telemetry")
+    if specification is not None and not (isinstance(specification, dict) and specification.get("enabled") is False):
         try:
-            if kind in {"providers", "sessions"} and adapter in BUILTINS[kind]:
-                options["cwd"] = str((base_dir / options.get("cwd", ".")).resolve())
-            if kind == "store" and adapter == "sqlite":
-                path = options.get("path", ".xorchestrate/state.sqlite3")
-                options["path"] = path if path == ":memory:" else str((base_dir / path).resolve())
-            if kind == "telemetry" and adapter == "local":
-                for field in ("profile", "runtime_root"):
-                    if isinstance(options.get(field), str):
-                        options[field] = str(base_dir / options[field])
-            module, name = target.split(":", 1)
-            factory = getattr(importlib.import_module(module), name)
-            resource = factory(options, providers) if kind == "evaluators" and adapter == "tool" else factory(options)
+            telemetry = _select("telemetry", specification, base_dir)
         except OrchestrationError:
-            raise
-        except Exception as exc:
-            raise OrchestrationError(f"Cannot construct {kind} adapter {adapter}.", "configuration_error") from exc
-        resources.append(resource)
-        return resource
+            # Optional diagnostics must not prevent unrelated work.
+            telemetry_unavailable = True
+            warnings += ({"code": "telemetry_configuration_invalid",
+                          "message": "Telemetry configuration is invalid; telemetry will be unavailable."},)
+
+    adapters, collections = {}, {}
+    provider_configurations, evaluator_configurations = {}, {}
 
     def collection(kind):
         specifications = config.get(kind, {})
@@ -158,48 +265,94 @@ def build(config=None, base_dir=None):
                 raise OrchestrationError(f"Invalid {kind} name.", "configuration_error")
             if isinstance(specification, dict) and specification.get("enabled") is False:
                 continue
-            result[name] = construct(kind, specification)
+            result[name] = selection = _select(kind, specification, base_dir)
             if kind in {"providers", "evaluators"}:
                 material = deepcopy(specification)
-                material.setdefault("options", {})["cwd"] = str((base_dir / material.get("options", {}).get("cwd", ".")).resolve())
+                material_options = material.setdefault("options", {})
+                material_options["cwd"] = _resolve_path(base_dir, material_options.get("cwd", "."), kind, selection.adapter)
                 if kind == "evaluators" and specification.get("adapter") == "tool":
                     provider = material["options"].get("provider")
                     material["measurement_provider_configuration"] = provider_configurations.get(provider)
                 identities = provider_configurations if kind == "providers" else evaluator_configurations
                 identities[name] = canonical_digest(material)
-        return result
+        collections[kind] = result
+
+    # Same order as construction, so the first reported error is unchanged.
+    for kind in ("state_engine", "store"):
+        adapters[kind] = _select(kind, config.get(kind, _SINGLETONS[kind]), base_dir)
+    collection("providers")
+    collection("sessions")
+    for kind in ("guardrail", "routing"):
+        adapters[kind] = _select(kind, config.get(kind, _SINGLETONS[kind]), base_dir)
+    collection("evaluators")
+    for kind in ("acceptance", "session_selection", "delivery_scheduler", "retry_policy", "receipt_policy"):
+        adapters[kind] = _select(kind, config.get(kind, _SINGLETONS[kind]), base_dir)
+    return ResolvedConfig(
+        version=version, base_dir=base_dir, config=config, adapters=adapters, collections=collections,
+        telemetry=telemetry, telemetry_unavailable=telemetry_unavailable,
+        provider_configurations=provider_configurations, evaluator_configurations=evaluator_configurations,
+        warnings=warnings,
+    )
+
+
+def build(config=None, base_dir=None):
+    resolved = validate_config(config, base_dir)
+    config = resolved.config
+    resources = []
+    providers = {}
+
+    def construct(selection):
+        try:
+            module, name = selection.target.split(":", 1)
+            factory = getattr(importlib.import_module(module), name)
+            options = deepcopy(selection.options)
+            resource = (factory(options, providers) if selection.kind == "evaluators" and selection.adapter == "tool"
+                        else factory(options))
+        except OrchestrationError:
+            raise
+        except Exception as exc:
+            raise OrchestrationError(f"Cannot construct {selection.kind} adapter {selection.adapter}.",
+                                     "configuration_error") from exc
+        resources.append(resource)
+        return resource
+
+    def collection(kind):
+        return {name: construct(selection) for name, selection in resolved.collections[kind].items()}
 
     try:
         telemetry = None
-        specification = config.get("telemetry")
-        if specification is not None and not (isinstance(specification, dict) and specification.get("enabled") is False):
+        if resolved.telemetry is not None:
             try:
-                telemetry = construct("telemetry", specification)
+                telemetry = construct(resolved.telemetry)
             except Exception:
                 # Optional diagnostics must not prevent unrelated work. Keep a
                 # safe explicit state; source exceptions may contain credentials.
-                from .adapters.telemetry import UnavailableTelemetry
-                telemetry = UnavailableTelemetry()
-                resources.append(telemetry)
-        state_engine = construct("state_engine", config.get("state_engine", {"adapter": "declared"}))
-        store = construct("store", config.get("store", {"adapter": "sqlite"}))
+                telemetry = None
+        if telemetry is None and (resolved.telemetry is not None or resolved.telemetry_unavailable):
+            from .adapters.telemetry import UnavailableTelemetry
+            telemetry = UnavailableTelemetry()
+            resources.append(telemetry)
+        adapters = resolved.adapters
+        state_engine = construct(adapters["state_engine"])
+        store = construct(adapters["store"])
         providers.update(collection("providers"))
         sessions = collection("sessions")
-        guardrail = construct("guardrail", config.get("guardrail", {"adapter": "rules"}))
-        routing = construct("routing", config.get("routing", {"adapter": "configurable"}))
+        guardrail = construct(adapters["guardrail"])
+        routing = construct(adapters["routing"])
         evaluators = collection("evaluators")
         application = Application(
             store=store, providers=providers, sessions=sessions, guardrail=guardrail,
             routing=routing, evaluators=evaluators,
             clock=lambda: datetime.now(timezone.utc).isoformat(), identifiers=lambda: uuid4().hex,
             assessment=config.get("assessment"),
-            acceptance=construct("acceptance", config.get("acceptance", {"adapter": "required-checks"})),
-            session_selection=construct("session_selection", config.get("session_selection", {"adapter": "latest"})),
-            delivery_scheduler=construct("delivery_scheduler", config.get("delivery_scheduler", {"adapter": "manual"})),
-            retry_policy=construct("retry_policy", config.get("retry_policy", {"adapter": "definite-failure"})),
-            receipt_policy=construct("receipt_policy", config.get("receipt_policy", {"adapter": "complete-exchange"})),
-            session_fallbacks=config.get("session_fallbacks"), provider_configurations=provider_configurations,
-            evaluator_configurations=evaluator_configurations,
+            acceptance=construct(adapters["acceptance"]),
+            session_selection=construct(adapters["session_selection"]),
+            delivery_scheduler=construct(adapters["delivery_scheduler"]),
+            retry_policy=construct(adapters["retry_policy"]),
+            receipt_policy=construct(adapters["receipt_policy"]),
+            session_fallbacks=config.get("session_fallbacks"),
+            provider_configurations=resolved.provider_configurations,
+            evaluator_configurations=resolved.evaluator_configurations,
             state_engine=state_engine,
             telemetry=telemetry,
         )
@@ -223,7 +376,7 @@ def build(config=None, base_dir=None):
             specification = config["sessions"][name]
             if specification.get("options", {}).get("application_tools", False):
                 _wire_application_tools(name, driver, application)
-        return Runtime(application, resources)
+        return Runtime(application, resources, resolved.warnings)
     except BaseException:
         # Construction is transactional with respect to owned process/connection lifetimes.
         try:
