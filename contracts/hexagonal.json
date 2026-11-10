@@ -49,6 +49,7 @@
         "xorchestrate.exchange",
         "xorchestrate.lifecycles",
         "xorchestrate.outcomes",
+        "xorchestrate.pr",
         "xorchestrate.schema",
         "xorchestrate.session_lifecycle",
         "xorchestrate.state",
@@ -1023,7 +1024,8 @@
         "test_fixtures",
         "test_support",
         "telemetry",
-        "telemetry_views"
+        "telemetry_views",
+        "ci_tooling"
       ],
       "allowed_external": [
         "stdlib:*",

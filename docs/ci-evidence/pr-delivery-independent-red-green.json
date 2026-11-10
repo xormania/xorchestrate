@@ -1,0 +1,813 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-10",
+  "python": "3.12.14",
+  "scope": "Independent contract, real disposable Git/worktree, loopback HTTP and inert-credential publication verification.",
+  "limits": [
+    "No authenticated GitHub product-adapter publication or eligible required-PR-check event was executed by these witnesses.",
+    "HTTPS publication uses actual local Git preparation and a controlled transport, not a live GitHub push.",
+    "The earlier source-hash-bound probes precede the final committed implementation; their repaired properties are also exercised by the final healthy control."
+  ],
+  "final": {
+    "tests_commit": "1d69a5c",
+    "production_commit": "182044c",
+    "faults": [
+      {
+        "label": "source-check-association-disabled",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_github.py",
+          "-k",
+          "incorrect_source_check"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "1 failed, 17 deselected in 0.68s",
+        "source_sha256": "6f47a28cccd9cbe4c8a4ffef74c55e9e8a8f7e7ff4acfdcfa132568a6125fd81",
+        "replacement": {
+          "before": "            and row.get(\"head_sha\") == pr[\"head\"]\n",
+          "after": ""
+        },
+        "failure_excerpt": [
+          "E       AssertionError: assert 'passed' != 'passed'",
+          "FAILED tests/hexagonal/test_pr_github.py::test_incorrect_source_check_association_cannot_qualify_the_candidate"
+        ]
+      },
+      {
+        "label": "producer-workflow-association-disabled",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_github.py",
+          "-k",
+          "foreign_candidate and workflow"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "1 failed, 17 deselected in 0.73s",
+        "source_sha256": "26f0072decbbfb74cb151ba06c0dddb66944f559ee8a81470a7eb83bd7181cb9",
+        "replacement": {
+          "before": "producer[\"workflow_ref\"].startswith(repository + \"/.github/workflows/ci.yml@\")",
+          "after": "True"
+        },
+        "failure_excerpt": [
+          "E       AssertionError: assert 'qualified' != 'qualified'",
+          "FAILED tests/hexagonal/test_pr_github.py::test_foreign_candidate_evidence_cannot_qualify_the_handoff[workflow]"
+        ]
+      },
+      {
+        "label": "latest-attempt-selection-reversed",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_github.py",
+          "-k",
+          "latest_failed_attempt"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "1 failed, 17 deselected in 0.40s",
+        "source_sha256": "2eb2495086df2e70d1a5bacbe778f909092538bb7dd61c59937310e1ab44097b",
+        "replacement": {
+          "before": "run = max(relevant,",
+          "after": "run = min(relevant,"
+        },
+        "failure_excerpt": [
+          "E       assert 1 == 2",
+          "FAILED tests/hexagonal/test_pr_github.py::test_latest_failed_attempt_cannot_disappear_behind_an_older_success"
+        ]
+      },
+      {
+        "label": "authoritative-digest-optional",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_github.py",
+          "-k",
+          "missing_authoritative"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "1 failed, 17 deselected in 0.44s",
+        "source_sha256": "be16adc9d6371e006cc2cb304a4f4014b8db89caf00a56400fb71faeed06086a",
+        "replacement": {
+          "before": "if digest != \"sha256:\" + hashlib.sha256(archive).hexdigest():",
+          "after": "if digest and digest != \"sha256:\" + hashlib.sha256(archive).hexdigest():"
+        },
+        "failure_excerpt": [
+          "E       AssertionError: assert 'qualified' != 'qualified'",
+          "FAILED tests/hexagonal/test_pr_github.py::test_missing_authoritative_artifact_digest_cannot_qualify_evidence"
+        ]
+      },
+      {
+        "label": "valid-partial-rerun-context-rejected",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_github.py",
+          "-k",
+          "partial_rerun"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "1 failed, 17 deselected in 0.41s",
+        "source_sha256": "b3a64ddd812180d8db5a81027e64ec4f89172bd5d45ca76386e4e7f167df0e00",
+        "replacement": {
+          "before": "1 <= producer[\"run_attempt\"] <= run[\"run_attempt\"]",
+          "after": "producer[\"run_attempt\"] == run[\"run_attempt\"]"
+        },
+        "failure_excerpt": [
+          "E       AssertionError: assert 'invalid' == 'qualified'",
+          "E         ",
+          "E         - qualified",
+          "E         + invalid",
+          "FAILED tests/hexagonal/test_pr_github.py::test_partial_rerun_can_retain_its_original_captured_context"
+        ]
+      },
+      {
+        "label": "unsafe-archive-member-denial-disabled",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_github.py",
+          "-k",
+          "archive_guards and (traversal or symlink)"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "2 failed, 16 deselected in 0.44s",
+        "source_sha256": "38a04b4461891fa47bc9ef2f4b777da766e3f4e3a37a1589c70b45fafc7a5551",
+        "replacement": {
+          "before": "raise ValueError(\"unsafe archive member\")",
+          "after": "pass"
+        },
+        "failure_excerpt": [
+          "E           Failed: DID NOT RAISE ValueError",
+          "E           Failed: DID NOT RAISE ValueError",
+          "FAILED tests/hexagonal/test_pr_github.py::test_artifact_archive_guards_reject_unsafe_or_unbounded_members[traversal]",
+          "FAILED tests/hexagonal/test_pr_github.py::test_artifact_archive_guards_reject_unsafe_or_unbounded_members[symlink]"
+        ]
+      },
+      {
+        "label": "duplicate-archive-member-check-disabled",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_github.py",
+          "-k",
+          "archive_guards and duplicate"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "1 failed, 17 deselected in 0.30s",
+        "source_sha256": "060f4202b8a369f6bdde28de4a05ae53b75e66274d5593b046bc2886acae2a5e",
+        "replacement": {
+          "before": "if len(names) != len(set(names)):",
+          "after": "if False:"
+        },
+        "failure_excerpt": [
+          "E           Failed: DID NOT RAISE ValueError",
+          "FAILED tests/hexagonal/test_pr_github.py::test_artifact_archive_guards_reject_unsafe_or_unbounded_members[duplicate]"
+        ]
+      },
+      {
+        "label": "expanded-archive-bound-disabled",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_github.py",
+          "-k",
+          "archive_guards and expanded_size"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "1 failed, 17 deselected in 0.41s",
+        "source_sha256": "457fb0fffaaf0c9293004833b9ab026f178b47398be3ec344721d14bd45b7347",
+        "replacement": {
+          "before": "len(entries) > 100 or sum(row.file_size for row in entries) > 16_777_216",
+          "after": "len(entries) > 100"
+        },
+        "failure_excerpt": [
+          "E           Failed: DID NOT RAISE ValueError",
+          "FAILED tests/hexagonal/test_pr_github.py::test_artifact_archive_guards_reject_unsafe_or_unbounded_members[expanded_size]"
+        ]
+      },
+      {
+        "label": "artifact-redirect-forwards-api-credential",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_github.py",
+          "-k",
+          "signed_artifact_redirect"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "1 failed, 17 deselected in 0.38s",
+        "source_sha256": "efafbd3facf4b4abaa9423cc231a1105e1c2af7afc2cf07ecd0ebd819e399244",
+        "replacement": {
+          "before": "urllib.request.Request(location)",
+          "after": "urllib.request.Request(location, headers={\"Authorization\": \"Bearer \" + token})"
+        },
+        "failure_excerpt": [
+          "E       AssertionError: assert 'Bearer inert-pr-test-token' is None",
+          "E        +  where 'Bearer inert-pr-test-token' = get_header('Authorization')",
+          "E        +    where get_header = <urllib.request.Request object at 0x7f536af04e90>.get_header",
+          "FAILED tests/hexagonal/test_pr_github.py::test_signed_artifact_redirect_drops_the_api_credential"
+        ]
+      },
+      {
+        "label": "rest-page-exhaustion-treated-complete",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_github.py",
+          "-k",
+          "rest_pagination"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "1 failed, 17 deselected in 0.34s",
+        "source_sha256": "30d75c1ff77154cd2ea530148ccec714de254b92fb3348443238acec44bf04d1",
+        "replacement": {
+          "before": "raise OrchestrationError(\"The observation exceeded its configured page budget.\", \"pr_incomplete\")",
+          "after": "return result"
+        },
+        "failure_excerpt": [
+          "E           Failed: DID NOT RAISE OrchestrationError",
+          "FAILED tests/hexagonal/test_pr_github.py::test_rest_pagination_reads_all_pages_and_reports_exhausted_budget"
+        ]
+      },
+      {
+        "label": "isolated-publication-force-enabled",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_workspace.py",
+          "-k",
+          "normal_publication"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "1 failed, 12 deselected in 0.63s",
+        "source_sha256": "6941cc12934d265218e381b49052000cb2fb397169bb30f0e1e1deac0515ed05",
+        "replacement": {
+          "before": "publish_command(\"push\", \"--no-verify\", remote,",
+          "after": "publish_command(\"push\", \"--force\", \"--no-verify\", remote,"
+        },
+        "failure_excerpt": [
+          "E       Failed: DID NOT RAISE OrchestrationError",
+          "FAILED tests/hexagonal/test_pr_workspace.py::test_normal_publication_refuses_remote_advancement_without_overwriting_it"
+        ]
+      },
+      {
+        "label": "review-tree-applicability-check-disabled",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_operations.py",
+          "-k",
+          "review_evidence_reports and tree"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "2 failed, 42 deselected in 0.26s",
+        "source_sha256": "b84f60c8cda4d2cf285c9920a9a199cd16a131d6d3b6fa7fd466279d732196d5",
+        "replacement": {
+          "before": "\"applicable\" if source.get(\"tree\") == review[\"tree\"] else \"historical\"",
+          "after": "\"applicable\""
+        },
+        "failure_excerpt": [
+          "E       AssertionError: assert 'applicable' == 'historical'",
+          "E         ",
+          "E         - historical",
+          "E         + applicable",
+          "E       AssertionError: assert 'applicable' == 'historical'",
+          "E         ",
+          "E         - historical",
+          "E         + applicable",
+          "FAILED tests/hexagonal/test_pr_operations.py::test_review_evidence_reports_source_applicability_without_certifying_independence[memory-tree-historical]",
+          "FAILED tests/hexagonal/test_pr_operations.py::test_review_evidence_reports_source_applicability_without_certifying_independence[sqlite-tree-historical]"
+        ]
+      },
+      {
+        "label": "publication-origin-guard-disabled",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_workspace.py",
+          "-k",
+          "untrusted_https_origin"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "1 failed, 12 deselected in 0.34s",
+        "source_sha256": "94693ba5e3a0b00d1bbb5dbf9116e057ce25487544ac7e3e937e7232098e87c1",
+        "replacement": {
+          "before": "if repository_of(remote, self.hosting_host) != item[\"repository\"]:",
+          "after": "if False:"
+        },
+        "failure_excerpt": [
+          "E       AssertionError: assert 'pr_publish_unavailable' == 'pr_remote_mismatch'",
+          "E         ",
+          "E         - pr_remote_mismatch",
+          "E         + pr_publish_unavailable",
+          "FAILED tests/hexagonal/test_pr_workspace.py::test_untrusted_https_origin_is_rejected_before_loading_publication_credential"
+        ]
+      },
+      {
+        "label": "configured-progress-engine-ignored",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_operations.py",
+          "-k",
+          "configured_operation_progress_guard"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "2 failed, 42 deselected in 0.20s",
+        "source_sha256": "18d907404515cae2916a1659c72bb070a19259528daac5f14647cb92f170c0ec",
+        "replacement": {
+          "before": "self.state_engine = state_engine if state_engine is not None else StateEngine(default_definitions())",
+          "after": "self.state_engine = StateEngine(default_definitions())"
+        },
+        "failure_excerpt": [
+          "E       Failed: DID NOT RAISE OrchestrationError",
+          "E       Failed: DID NOT RAISE OrchestrationError",
+          "FAILED tests/hexagonal/test_pr_operations.py::test_configured_operation_progress_guard_can_refuse_before_any_external_write[memory]",
+          "FAILED tests/hexagonal/test_pr_operations.py::test_configured_operation_progress_guard_can_refuse_before_any_external_write[sqlite]"
+        ]
+      },
+      {
+        "label": "publisher-proxy-trust-not-forwarded",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_workspace.py",
+          "-k",
+          "https_publication_credentials"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "1 failed, 12 deselected in 0.33s",
+        "source_sha256": "8df3f29c1978188a202dd5348c19906faeb37aa55a49d2a6ccdecd30707f3840",
+        "replacement": {
+          "before": "environment[variable] = os.environ[variable]",
+          "after": "pass"
+        },
+        "failure_excerpt": [
+          "E       assert False",
+          "E        +  where False = all(<generator object test_https_publication_credentials_only_reach_isolated_git_directory.<locals>.controlled_https.<locals>.<genexpr> at 0x7f9ca09edc40>)",
+          "FAILED tests/hexagonal/test_pr_workspace.py::test_https_publication_credentials_only_reach_isolated_git_directory"
+        ]
+      },
+      {
+        "label": "creation-draft-field-disabled",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_github.py",
+          "-k",
+          "http_creation_explicitly"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "1 failed, 17 deselected in 0.34s",
+        "source_sha256": "eaf4f98083977e334ad74672af0eeb46f662afa2a4cb8173ef2cb273443d3711",
+        "replacement": {
+          "before": "\"body\": body, \"draft\": True",
+          "after": "\"body\": body, \"draft\": False"
+        },
+        "failure_excerpt": [
+          "E       AssertionError: assert {'head': 'fea...l text)', ...} == {'head': 'fea...l text)', ...}",
+          "E         ",
+          "E         Omitting 4 identical items, use -vv to show",
+          "E         Differing items:",
+          "E         {'draft': False} != {'draft': True}",
+          "E         Use -v to get more diff",
+          "FAILED tests/hexagonal/test_pr_github.py::test_http_creation_explicitly_opens_a_draft_with_literal_supplied_metadata"
+        ]
+      }
+    ],
+    "source_sha256": {
+      "xorchestrate/pr.py": "27f37f36e303a92280fd1ff5630fb0fff89d2b73cf843c071805f660cf357fd2",
+      "xorchestrate/adapters/pr_workspace.py": "107ae6eca7056146dd84318fc7556030eb2004eaac0556dd6e6e35f684135243",
+      "xorchestrate/adapters/pr_github.py": "e4a7de342db34a03ad6afeae8ff07384b00ee6594f60b4c7adf5364758d94c87",
+      "xorchestrate/ports.py": "dc22db16d7ccff43c6d51eea9e081fc137966648fca9cb881b16e93bed8c77da",
+      "xorchestrate/composition.py": "c0a7bd638e0cedc1497141ce2594ca0d06fa95c95bb721f5db1ae722aa5bc12f",
+      "xorchestrate/adapters/pr.py": "f49792cfef924c598ef7a92ae4cc244b86f7839b8824d7eaff2fa1656d8a5de5",
+      "xorchestrate/lifecycles.py": "d82baf2416cdc175eeb132239e7970b705e5393f0a8b10a77b57552b47bb23f2",
+      "xorchestrate/effects.py": "8ecbe7e6be99f958d2ba465ce4c32a6e68a3c3f8c8384c73075e5ac36061633d",
+      "xorchestrate/model.py": "4cc3fefc480955e25cafdf3f50d029f9f632b9f05b2affa5762de75c8e2b2900",
+      "xorchestrate/outcomes.py": "91260a80734ba70bc61601c2265f79c781d9437ff4e5007b90595ddbaa8449d8",
+      "xorchestrate/inspection.py": "f7615d3039c82ab5245b19e457281bc04e8c7a4375bbe8cd931938c9b1cbba59",
+      "xorchestrate/mcp.py": "37ef0c79f720635092e42e002406a737e0c17d1505409d707fa802de54d6d7f4",
+      "scripts/ci/candidate.py": "dcda28565757ded3188dac73808e22ada7c7c873a2b9ab8d655d81f2bf90f542"
+    },
+    "healthy": {
+      "label": "final-healthy",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/hexagonal/test_pr_operations.py",
+        "tests/hexagonal/test_pr_workspace.py",
+        "tests/hexagonal/test_pr_github.py"
+      ],
+      "exit_code": 0,
+      "assertion_failure": false,
+      "summary": "75 passed in 8.75s"
+    },
+    "restored_control": {
+      "label": "final-restored-healthy",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/hexagonal/test_pr_operations.py",
+        "tests/hexagonal/test_pr_workspace.py",
+        "tests/hexagonal/test_pr_github.py"
+      ],
+      "exit_code": 0,
+      "assertion_failure": false,
+      "summary": "75 passed in 7.66s"
+    }
+  },
+  "earlier": {
+    "tests_commit": "ee33c2d",
+    "baseline": "7903ab01efb1bcb0a497aa810ce5aa3cda6c5590",
+    "faults": [
+      {
+        "label": "mutable-observation-comparison-disabled",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_operations.py",
+          "-k",
+          "fixed_git_identity"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "10 failed, 22 deselected in 0.31s",
+        "source_sha256": "bae3e4f958cb796f7fe47e8eaa6e4256db4df47f1735e7cf505067eb6db7c954",
+        "replacement": {
+          "before": "changed = self._stable(first) != self._stable(final)",
+          "after": "changed = False"
+        },
+        "failure_excerpt": [
+          "E       AssertionError: assert 'observed' == 'superseded'",
+          "E         ",
+          "E         - superseded",
+          "E         + observed",
+          "E       AssertionError: assert 'observed' == 'superseded'",
+          "E         ",
+          "E         - superseded",
+          "E         + observed",
+          "E       AssertionError: assert 'observed' == 'superseded'",
+          "E         ",
+          "E         - superseded",
+          "E         + observed",
+          "E       AssertionError: assert 'observed' == 'superseded'",
+          "E         ",
+          "E         - superseded",
+          "E         + observed",
+          "E       AssertionError: assert 'observed' == 'superseded'",
+          "E         ",
+          "E         - superseded",
+          "E         + observed",
+          "E       AssertionError: assert 'observed' == 'superseded'",
+          "E         ",
+          "E         - superseded",
+          "E         + observed",
+          "E       AssertionError: assert 'observed' == 'superseded'",
+          "E         ",
+          "E         - superseded",
+          "E         + observed",
+          "E       AssertionError: assert 'observed' == 'superseded'",
+          "E         ",
+          "E         - superseded",
+          "E         + observed",
+          "E       AssertionError: assert 'observed' == 'superseded'",
+          "E         ",
+          "E         - superseded",
+          "E         + observed",
+          "E       AssertionError: assert 'observed' == 'superseded'",
+          "E         ",
+          "E         - superseded",
+          "E         + observed",
+          "FAILED tests/hexagonal/test_pr_operations.py::test_fixed_git_identity_does_not_hide_changed_blockers_or_pr_state[memory-new_attempt]",
+          "FAILED tests/hexagonal/test_pr_operations.py::test_fixed_git_identity_does_not_hide_changed_blockers_or_pr_state[memory-reopened_thread]",
+          "FAILED tests/hexagonal/test_pr_operations.py::test_fixed_git_identity_does_not_hide_changed_blockers_or_pr_state[memory-ready]",
+          "FAILED tests/hexagonal/test_pr_operations.py::test_fixed_git_identity_does_not_hide_changed_blockers_or_pr_state[memory-closed]",
+          "FAILED tests/hexagonal/test_pr_operations.py::test_fixed_git_identity_does_not_hide_changed_blockers_or_pr_state[memory-retargeted]",
+          "FAILED tests/hexagonal/test_pr_operations.py::test_fixed_git_identity_does_not_hide_changed_blockers_or_pr_state[sqlite-new_attempt]",
+          "FAILED tests/hexagonal/test_pr_operations.py::test_fixed_git_identity_does_not_hide_changed_blockers_or_pr_state[sqlite-reopened_thread]",
+          "FAILED tests/hexagonal/test_pr_operations.py::test_fixed_git_identity_does_not_hide_changed_blockers_or_pr_state[sqlite-ready]",
+          "FAILED tests/hexagonal/test_pr_operations.py::test_fixed_git_identity_does_not_hide_changed_blockers_or_pr_state[sqlite-closed]",
+          "FAILED tests/hexagonal/test_pr_operations.py::test_fixed_git_identity_does_not_hide_changed_blockers_or_pr_state[sqlite-retargeted]"
+        ]
+      },
+      {
+        "label": "target-exclusion-disabled",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_operations.py",
+          "-k",
+          "distinct_operation_keys"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "2 failed, 30 deselected in 0.17s",
+        "source_sha256": "d9f20ba0307ae24a4e4a34ebbad600587ea92ca83653b9f65947ad47d8fa411c",
+        "replacement": {
+          "before": "prior.key != key and prior.data.get(\"pr_target\") == target_key",
+          "after": "False and prior.data.get(\"pr_target\") == target_key"
+        },
+        "failure_excerpt": [
+          "E               Failed: DID NOT RAISE OrchestrationError",
+          "E               Failed: DID NOT RAISE OrchestrationError",
+          "FAILED tests/hexagonal/test_pr_operations.py::test_distinct_operation_keys_cannot_write_the_same_target_concurrently[memory]",
+          "FAILED tests/hexagonal/test_pr_operations.py::test_distinct_operation_keys_cannot_write_the_same_target_concurrently[sqlite]"
+        ]
+      },
+      {
+        "label": "review-tree-comparison-disabled",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_operations.py",
+          "-k",
+          "review_for_another_tree"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "2 failed, 30 deselected in 0.15s",
+        "source_sha256": "673be7ec3e326387e668520f1fdc21098c2842fbb8f5297b91dec44c4c26a0e9",
+        "replacement": {
+          "before": "review.get(\"tree\") != identity[\"tree\"]",
+          "after": "False"
+        },
+        "failure_excerpt": [
+          "E       Failed: DID NOT RAISE OrchestrationError",
+          "E       Failed: DID NOT RAISE OrchestrationError",
+          "FAILED tests/hexagonal/test_pr_operations.py::test_review_for_another_tree_cannot_authorize_publication[memory]",
+          "FAILED tests/hexagonal/test_pr_operations.py::test_review_for_another_tree_cannot_authorize_publication[sqlite]"
+        ]
+      },
+      {
+        "label": "uncertain-create-completed-as-json",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_operations.py",
+          "-k",
+          "unknown_creation"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "2 failed, 30 deselected in 0.15s",
+        "source_sha256": "1ec296d31fbb228e184ada6a70c485890aa1e24184d1112250939ecb69427615",
+        "replacement": {
+          "before": "            pr = self.host.create(arguments[\"repository\"], arguments[\"branch\"], arguments[\"base\"],\n                arguments[\"title\"], arguments[\"body\"])",
+          "after": "            try:\n                pr = self.host.create(arguments[\"repository\"], arguments[\"branch\"], arguments[\"base\"],\n                    arguments[\"title\"], arguments[\"body\"])\n            except TimeoutError:\n                return {\"status\": \"unknown\"}"
+        },
+        "failure_excerpt": [
+          "E       assert False is True",
+          "E       assert False is True",
+          "FAILED tests/hexagonal/test_pr_operations.py::test_unknown_creation_is_retained_through_mcp_and_reconciled_without_repeating_write[memory]",
+          "FAILED tests/hexagonal/test_pr_operations.py::test_unknown_creation_is_retained_through_mcp_and_reconciled_without_repeating_write[sqlite]"
+        ]
+      },
+      {
+        "label": "existing-draft-creation-repeated",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_operations.py",
+          "-k",
+          "adopting_an_existing_draft"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "2 failed, 30 deselected in 0.14s",
+        "source_sha256": "581cb04120afa74ef3c5442fee3823a74359265bbc45be1056285a467c15032a",
+        "replacement": {
+          "before": "        if found:\n            pr = found[0]",
+          "after": "        if False:\n            pr = found[0]"
+        },
+        "failure_excerpt": [
+          "E       AssertionError: assert 'Proposed gen...d description' == 'Owner text e...ted proposal.'",
+          "E         ",
+          "E         - Owner text edited after an earlier automated proposal.",
+          "E         + Proposed generated description",
+          "E       AssertionError: assert 'Proposed gen...d description' == 'Owner text e...ted proposal.'",
+          "E         ",
+          "E         - Owner text edited after an earlier automated proposal.",
+          "E         + Proposed generated description",
+          "FAILED tests/hexagonal/test_pr_operations.py::test_adopting_an_existing_draft_preserves_owner_body[memory]",
+          "FAILED tests/hexagonal/test_pr_operations.py::test_adopting_an_existing_draft_preserves_owner_body[sqlite]"
+        ]
+      },
+      {
+        "label": "expected-head-comparison-disabled",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_workspace.py",
+          "-k",
+          "stale_expected"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "1 failed, 10 deselected in 0.30s",
+        "source_sha256": "c6000f2c5e1ea1ca3b6d6be9d30ff64bba559959ca367a7d8d21444161180a32",
+        "replacement": {
+          "before": "if self._git(root, \"rev-parse\", \"HEAD\").strip() != expected_head:",
+          "after": "if False:"
+        },
+        "failure_excerpt": [
+          "E       Failed: DID NOT RAISE OrchestrationError",
+          "FAILED tests/hexagonal/test_pr_workspace.py::test_stale_expected_revision_cannot_checkpoint_or_merge"
+        ]
+      },
+      {
+        "label": "checkpoint-byte-comparison-disabled",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_workspace.py",
+          "-k",
+          "editor_changes"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "1 failed, 10 deselected in 0.34s",
+        "source_sha256": "837d3acbfadb0b6a5d5e24345b35b2652ae6da9fbc03cc100120a6ade78aed27",
+        "replacement": {
+          "before": "if staged != original_diff:",
+          "after": "if False:"
+        },
+        "failure_excerpt": [
+          "E           Failed: DID NOT RAISE OrchestrationError",
+          "FAILED tests/hexagonal/test_pr_workspace.py::test_editor_changes_during_checkpoint_do_not_enter_an_unreviewed_commit"
+        ]
+      },
+      {
+        "label": "candidate-hook-isolation-disabled",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_workspace.py",
+          "-k",
+          "candidate_git_hooks"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "1 failed, 10 deselected in 0.35s",
+        "source_sha256": "d1e0ee3aa2515015fad1ea1e3886e4f0d33fbbe5af113a0a3adc28f698fcf761",
+        "replacement": {
+          "before": "\"-c\", \"core.hooksPath=\" + os.devnull, ",
+          "after": ""
+        },
+        "failure_excerpt": [
+          "E       AssertionError: candidate-controlled Git hooks ran in the controller path",
+          "E       assert not True",
+          "E        +  where True = exists()",
+          "E        +    where exists = PosixPath('/tmp/pytest-of-agent/pytest-29/test_candidate_git_hooks_and_a0/hook-ran').exists",
+          "FAILED tests/hexagonal/test_pr_workspace.py::test_candidate_git_hooks_and_ambient_credentials_are_not_executed_by_refresh"
+        ]
+      },
+      {
+        "label": "nonforce-publication-disabled",
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-q",
+          "tests/hexagonal/test_pr_workspace.py",
+          "-k",
+          "normal_publication"
+        ],
+        "exit_code": 1,
+        "assertion_failure": true,
+        "summary": "1 failed, 10 deselected in 0.36s",
+        "source_sha256": "4d6398b8c79d43a7e89366008f41f12f1a3d12886be91138b17031833158548d",
+        "replacement": {
+          "before": "\"push\", \"--no-verify\", remote,",
+          "after": "\"push\", \"--force\", \"--no-verify\", remote,"
+        },
+        "failure_excerpt": [
+          "E       Failed: DID NOT RAISE OrchestrationError",
+          "FAILED tests/hexagonal/test_pr_workspace.py::test_normal_publication_refuses_remote_advancement_without_overwriting_it"
+        ]
+      }
+    ],
+    "original_defect": {
+      "label": "incomplete-observation-before-fix",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/hexagonal/test_pr_operations.py",
+        "-k",
+        "incomplete_collection"
+      ],
+      "exit_code": 1,
+      "assertion_failure": true,
+      "summary": "2 failed, 30 deselected in 0.17s",
+      "failure_excerpt": [
+        "E       AssertionError: assert 'passed' != 'passed'",
+        "E       AssertionError: assert 'passed' != 'passed'",
+        "FAILED tests/hexagonal/test_pr_operations.py::test_incomplete_collection_cannot_be_reported_as_no_blockers[memory]",
+        "FAILED tests/hexagonal/test_pr_operations.py::test_incomplete_collection_cannot_be_reported_as_no_blockers[sqlite]"
+      ]
+    },
+    "original_defect_source_sha256": "8a1d18871cf3fe02e859a457788af886395f50eb1616e01f43d16f0ebaeb5d5a",
+    "healthy_source_sha256": {
+      "xorchestrate/pr.py": "23a280dc6df8480bff28d62dd9938d6e1c6bf5a50fd524460391f13d6b0df1f7",
+      "xorchestrate/adapters/pr_workspace.py": "23d7105abc07135dfad704457ffc5467449685f96f238bb121a0814790937715"
+    },
+    "healthy": {
+      "label": "healthy-full-contract",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/hexagonal/test_pr_operations.py",
+        "tests/hexagonal/test_pr_workspace.py"
+      ],
+      "exit_code": 0,
+      "assertion_failure": false,
+      "summary": "43 passed in 2.30s"
+    },
+    "restored_control": {
+      "label": "restored-healthy-full-contract",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-q",
+        "tests/hexagonal/test_pr_operations.py",
+        "tests/hexagonal/test_pr_workspace.py"
+      ],
+      "exit_code": 0,
+      "assertion_failure": false,
+      "summary": "43 passed in 2.52s"
+    }
+  }
+}

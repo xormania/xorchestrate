@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "defective_commit": "232c4cb",
+  "test_commit": "35a36170fb124de92a55ce641e40975fc26c42a9",
+  "path": "xorchestrate/adapters/pr_github.py",
+  "defective_sha256": "5d3dc104b5872b65702a8e585be80bc6df84e48abe0321a1339786aa50ef715e",
+  "red": {
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-q",
+      "tests/hexagonal/test_pr_github.py",
+      "-k",
+      "advanced_canonical_branch_refs or http_observation_joins_source_checks"
+    ],
+    "exit_code": 1,
+    "summary": "2 failed, 1 passed, 20 deselected in 1.29s",
+    "failure_excerpt": [
+      "E       AssertionError: unchanged PR metadata concealed a newer canonical branch revision",
+      "E       assert True is False",
+      "E       AssertionError: unchanged PR metadata concealed a newer canonical branch revision",
+      "E       assert True is False",
+      "FAILED tests/hexagonal/test_pr_github.py::test_unchanged_stale_pr_payload_cannot_clear_advanced_canonical_branch_refs[source]",
+      "FAILED tests/hexagonal/test_pr_github.py::test_unchanged_stale_pr_payload_cannot_clear_advanced_canonical_branch_refs[base]"
+    ]
+  },
+  "repaired_commit": "82ca3889fe089d0691b1a80eeb5c2121766fcefc",
+  "repaired_sha256": "592b9b76add825e719ed4b4fee99264c80a24eb2f739fa08655666addf246c86",
+  "test_source_sha256": {
+    "tests/hexagonal/support/pr_http.py": "4196a7a6a4b068cbf09f32519f68a63d2beab3371d23986dea694fa78686dda1",
+    "tests/hexagonal/test_pr_github.py": "fc4c6d2b61965374a1e2e3412c894e023a7b85b3c5a4c3d96602e134990bfb3b"
+  },
+  "green": {
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-q",
+      "tests/hexagonal/test_pr_github.py"
+    ],
+    "exit_code": 0,
+    "summary": "23 passed in 5.35s"
+  },
+  "witness": "PR payload and retained tested merge stay unchanged while independently returned canonical source or base branch ref advances; technical qualification must be incomplete, and reported tested identities remain separate.",
+  "limits": [
+    "Loopback HTTP observations simulate the platform stale-payload counterexample; this run did not perform GitHub mutations.",
+    "A current-ref observation is time-bound and is not an atomic guarantee about future branch movement."
+  ]
+}
