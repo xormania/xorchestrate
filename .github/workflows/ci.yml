@@ -392,7 +392,8 @@
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
           "with": {
-            "persist-credentials": false
+            "persist-credentials": false,
+            "fetch-depth": 0
           },
           "id": "checkout"
         },
@@ -428,9 +429,10 @@
           "env": {
             "TYPESAFE_API_KEY": "${{ secrets.TYPESAFE_API_KEY || secrets.JEV_API_KEY }}",
             "JEV_ENDPOINT": "${{ vars.JEV_ENDPOINT }}",
-            "JEV_MODEL": "${{ vars.JEV_MODEL }}"
+            "JEV_MODEL": "${{ vars.JEV_MODEL }}",
+            "JEV_BASE_REF": "${{ github.event.pull_request.base.sha || github.event.before }}"
           },
-          "run": "python3 -m scripts.architecture --jev-config contracts/hexagonal-jev.json --diagnostics-only --output \"$RUNNER_TEMP/architecture/diagnostics.json\""
+          "run": "jev_base_ref=\"$JEV_BASE_REF\"\nif [ -z \"$jev_base_ref\" ] || [ \"$jev_base_ref\" = \"0000000000000000000000000000000000000000\" ]; then\n  jev_base_ref=\"$(git rev-parse HEAD^)\"\nfi\npython3 -m scripts.architecture --jev-config contracts/hexagonal-jev.json --base-ref \"$jev_base_ref\" --diagnostics-only --output \"$RUNNER_TEMP/architecture/diagnostics.json\""
         },
         {
           "name": "Record unavailable diagnostics",

@@ -22,6 +22,8 @@ requirements or modify the contract.
 ```bash
 python3 -m scripts.architecture --output .xorchestrate/architecture.json
 python3 -m scripts.architecture --jev-config contracts/hexagonal-jev.json --output .xorchestrate/architecture-with-diagnostics.json
+# Review the current worktree's changes against an existing commit, with related source.
+python3 -m scripts.architecture --jev-config contracts/hexagonal-jev.json --base-ref HEAD~1 --output .xorchestrate/architecture-changes.json
 ```
 
 Both commands enforce the deterministic result through their process exit status.
@@ -53,13 +55,36 @@ repository secret `TYPESAFE_API_KEY` (or `JEV_API_KEY` as fallback). Optional
 `JEV_ENDPOINT` and `JEV_MODEL` environment variables/repository variables override
 the profile's deployment values.
 
-Three typed assessments examine semantic boundary leaks, concrete coupling in
-ports, and coverage/composition gaps. Inputs include the declared contract,
-deterministic findings and bounded source excerpts. Selected source hashes must
-still match the deterministic inventory. Omitted and truncated files remain
-explicit. The existing TypeSafe protocol returns choices and distributions, not
-freeform explanations: reports retain each question, outcome, confidence, model,
-usage when supplied, and the exact source scope/context hash.
+Three typed checks examine semantic boundary leaks, concrete coupling in ports,
+and coverage/composition gaps for each selected candidate. `--base-ref` identifies
+new-side changed lines through Git; an unavailable base is inconclusive rather
+than silently reviewing unrelated source. JSON configuration may instead supply
+`changed_ranges`: objects with `path`, `start_line` and `end_line`. Paths must
+belong to the measured inventory. Changes outside that inventory remain explicit
+exclusions. Without a change selection, inventory selection prioritizes configured
+`source_paths`, deterministic findings, and constrained roles. The shipped profile
+has no fixed source list and permits at most three candidates; the reusable default
+is one. `max_candidates`, `max_files`, `max_source_bytes` and `checks` bound the work.
+
+Candidates contain complete Python AST units, including decorators and complete
+function/method bodies. Related imports, imported definitions, callers and test
+callers come from the measured import inventory and source AST. They are static
+relationships, not proof of execution or behavioral coverage. Candidate units get
+the budget before related evidence. A unit that cannot fit is omitted whole;
+reports expose excluded units, oversize candidates, omitted files and the budget.
+They never turn a clipped prefix into a complete function. No fitting candidate
+is `inconclusive` and makes no provider call. Source bytes are revalidated against
+the deterministic hashes before building the packet.
+
+Each question names its `candidate_id`, path, complete line span, declared role
+contract and check. Its predeclared claim receives `concern`, `no_concern` or
+`insufficient_evidence`; omitted context should lead to abstention when necessary.
+A concern is an unverified investigation candidate. Reviewers must inspect its
+grounding and independently confirm it before counting a detected defect. The
+existing TypeSafe protocol returns choices and distributions, not freeform
+explanations. The report retains each claim/question, outcome, confidence, model,
+usage when supplied, and `evidence_context`: the exact source packet with its
+context hash. It does not invent a model rationale or claim the model cited lines.
 
 No configuration is `not_configured`; absent credentials or an unreachable service
 is `unavailable`; malformed responses/configuration are `error`; changed or missing

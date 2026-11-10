@@ -849,7 +849,8 @@
     "architecture_adapters": {
       "modules": [
         "scripts.architecture.python",
-        "scripts.architecture.diagnostics"
+        "scripts.architecture.diagnostics",
+        "scripts.architecture.context"
       ],
       "allowed_roles": [
         "architecture_foundation",

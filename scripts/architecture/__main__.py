@@ -47,6 +47,7 @@ def main(argv=None) -> int:
     parser.add_argument("--profile", default="contracts/hexagonal.json")
     parser.add_argument("--output", type=Path, help="JSON evidence (stdout when omitted)")
     parser.add_argument("--jev-config", help="Diagnostic adapter JSON configuration; credentials stay in the environment")
+    parser.add_argument("--base-ref", help="Select diagnostic candidates from changed lines against this Git reference")
     parser.add_argument("--diagnostics-only", action="store_true",
                         help="Report diagnostics without changing the separate deterministic CI gate")
     args = parser.parse_args(argv)
@@ -63,6 +64,8 @@ def main(argv=None) -> int:
 
         try:
             options = _read(root, args.jev_config)
+            if args.base_ref is not None:
+                options["base_ref"] = args.base_ref
             # Operators can select a deployment without editing the reusable profile.
             for key, variable in (("endpoint", "JEV_ENDPOINT"), ("model", "JEV_MODEL")):
                 if os.environ.get(variable):

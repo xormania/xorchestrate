@@ -102,17 +102,18 @@ def test_no_concern_never_clears_deterministic_violation(tmp_path, report, provi
     assert len(provider["requests"]) == 1
 
 
-def test_source_selection_priorities_and_truncation_are_explicit(tmp_path, report, provider):
+def test_source_selection_budget_omits_whole_units_explicitly(tmp_path, report, provider):
     report["findings"] = [{"path": "app/adapters/store.py", "message": "Inspect this source"}]
     result = diagnose(report, tmp_path, {**provider["options"], "max_source_bytes": 20,
                                        "max_files": 2, "source_paths": ["app/ports.py"]})
-    assert result["status"] == "complete"
+    assert result["status"] == "inconclusive"
     scope = result["source_scope"]
-    assert scope["selected"] == ["app/ports.py", "app/adapters/store.py"]
-    assert scope["omitted"] == ["app/core.py"]
-    assert scope["truncated"] == scope["selected"]
+    assert scope["selected"] == []
+    assert set(scope["omitted"]) == {"app/ports.py", "app/adapters/store.py", "app/core.py"}
+    assert scope["truncated"] == []
+    assert scope["oversize"]
     assert scope["source_bytes"] <= 20
-    assert all(item["evidence_scope"] == scope["selected"] for item in result["assessments"])
+    assert result["assessments"] == [] and provider["requests"] == []
 
 
 def test_missing_configuration_is_visible_without_provider_execution(tmp_path, report):
