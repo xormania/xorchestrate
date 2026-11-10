@@ -12,7 +12,7 @@ import pytest
 
 import xorchestrate
 from tests.hexagonal.support.projects import ProjectFixture
-from xorchestrate import bridge, cli, composition
+from xorchestrate import bridge, cli, composition, installation
 from xorchestrate.composition import SUPPORTED_CONFIG_VERSIONS, build, config_version, load_config, validate_config
 from xorchestrate.model import OrchestrationError
 
@@ -199,17 +199,36 @@ def test_installed_commit_comes_only_from_vcs_direct_url():
         assert cli.installed_commit(lambda name, text=text: Distribution(text)) is None
 
     def missing(name):
-        raise cli.metadata.PackageNotFoundError(name)
+        raise installation.metadata.PackageNotFoundError(name)
 
     assert cli.installed_commit(missing) is None
 
 
-def test_version_flag_prints_release_identity_from_the_installed_entrypoint():
+def test_version_flag_prints_release_identity_for_a_controlled_installation(tmp_path, monkeypatch):
+    prefix = tmp_path / "tools" / "xorchestrate"
+    prefix.mkdir(parents=True)
+    (prefix / "uv-receipt.toml").write_text('[tool]\nrequirements = [{ name = "xorchestrate", '
+                                            'git = "https://example.invalid/repo.git?tag=v0.2.0" }]\n')
+    vcs = json.dumps({"url": "https://example.invalid/repo.git",
+                      "vcs_info": {"vcs": "git", "commit_id": "0123abcd", "requested_revision": "v0.2.0"}})
+    monkeypatch.setattr(installation.metadata, "distribution", lambda name: Distribution(vcs))
+    monkeypatch.setattr(sys, "prefix", str(prefix))
+    status, output = run_cli("--version")
+    assert status == 0
+    assert json.loads(output) == {
+        "version": xorchestrate.__version__, "commit": "0123abcd", "install_source": "git",
+        "upgrade_command": "uv tool install --force 'git+https://example.invalid/repo.git@<tag>'",
+        "config_versions": [1], "data_version": 1}
+
+
+def test_version_flag_matches_between_the_module_entrypoint_and_the_cli():
     status, output = run_cli("--version")
     assert status == 0
     reply = json.loads(output)
-    assert reply == {"version": xorchestrate.__version__, "commit": cli.installed_commit(),
-                     "config_versions": [1], "data_version": 1}
+    assert list(reply) == ["version", "commit", "install_source", "upgrade_command", "config_versions",
+                           "data_version"]
+    assert reply["version"] == xorchestrate.__version__
+    assert reply["install_source"] in {"index", "git", "local", "archive", "uvx", "unknown"}
     process = subprocess.run([sys.executable, "-m", "xorchestrate", "--version"], capture_output=True,
                              text=True, timeout=60, check=True)
     assert json.loads(process.stdout) == reply

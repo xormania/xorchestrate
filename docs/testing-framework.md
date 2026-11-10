@@ -156,6 +156,7 @@ controller requests, native callback selection and managed tmux automation.
 | Raw observations and independent normalized evidence fixtures | `tests/hexagonal/support/raw_evidence.py`, `verification_evidence.py` and identity adapters |
 | Shared memory/SQLite fixture lifetime | `tests/hexagonal/conftest.py` |
 | Fixture projects (`project`, `worktree`): a git repository with tracked `.xorchestrate/`, a private `XORCHESTRATE_HOME`, a companion with the approval, the `ProjectContext` for `build()` and a CLI runner inside the project | `tests/hexagonal/conftest.py`, `tests/hexagonal/support/projects.py` |
+| Install script sandbox with fake `uv`, `curl` and `sudo` programs | `tests/hexagonal/support/install_script.py` |
 | Committed store per data version, its regeneration command and pre-versioned store construction | `tests/fixtures/stores/`, `tests/hexagonal/support/store_fixtures.py` |
 | Snapshot, exact mutation, trusted assertion observer and captured calibration command | Shared services in `scripts/verification/__main__.py` using the kit's evidence/command adapters |
 | Hex dependency and forbidden protocol-literal checks | One generic `scripts/architecture` engine and `contracts/hexagonal.json` |

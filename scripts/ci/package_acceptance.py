@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import shutil
 import sys
+import zipfile
 from pathlib import Path
 
+from scripts.ci.release_identity import package_version
 from scripts.testkit.adapters.evidence import (
     RecordingRunner,
     allocate_run,
@@ -18,6 +21,7 @@ from scripts.testkit.adapters.evidence import (
 )
 
 ROOT = Path(__file__).resolve().parents[2]
+PACKAGE = "xorchestrate"
 
 # Runs under the consumer's isolated interpreter, from outside the checkout.
 # Expected behavior is stated at the CLI/MCP boundary, not read from source.
@@ -105,7 +109,49 @@ print(json.dumps({"status": "passed", "package_path": str(package), "executable"
 '''
 
 
-def run(*, root=ROOT, output, artifacts=(), uv="uv", timeout=180):
+def install_paths(*, wheel, version, workspace, uv):
+    """Supported launcher install paths that run offline from the candidate.
+
+    Each entry is ``(name, install argv, environment, expected install_source,
+    expected upgrade_command, installs the candidate wheel)``. The expected values
+    are stated here, independently of the launcher's own mapping. The index path
+    installs the candidate wheel by a pinned name from a private flat index, so the
+    launcher must offer the unpinned reinstall; the public index is exercised only
+    after a release is published.
+    """
+    index = workspace / "index"
+    index.mkdir(mode=0o700)
+    shutil.copy2(wheel, index / wheel.name)
+    distribution_version = wheel.name.split("-")[1]
+    repository, local = workspace / "git-source", workspace / "local-source"
+    paths = [
+        ("index", ["--find-links", index, f"{PACKAGE}=={distribution_version}"], "index",
+         ["uv", "tool", "install", f"{PACKAGE}@latest"], True),
+        ("archive", [wheel], "archive", ["uv", "tool", "install", "--force", "<newer wheel or sdist>"], True),
+        ("git", [f"git+{repository.as_uri()}@v{version}"], "git",
+         ["uv", "tool", "install", "--force", f"git+{repository.as_uri()}@<tag>"], False),
+        ("local", [local], "local", ["uv", "tool", "install", "--force", str(local)], False),
+    ]
+    for name, target, source, upgrade, from_wheel in paths:
+        environment = {"UV_TOOL_DIR": str(workspace / f"tools-{name}"),
+                       "UV_TOOL_BIN_DIR": str(workspace / f"bin-{name}")}
+        yield name, [uv, "tool", "install", *target], environment, source, shlex.join(upgrade), from_wheel
+
+
+def wheel_mismatches(wheel, prefix):
+    """Files of ``wheel`` (outside its metadata) that the environment at ``prefix`` lacks or holds differently."""
+    sites = list(Path(prefix).glob("lib/python*/site-packages"))
+    if len(sites) != 1:
+        return ["site-packages not found"]
+    with zipfile.ZipFile(wheel) as archive:
+        members = [item for item in archive.infolist()
+                   if not item.is_dir() and ".dist-info/" not in item.filename and ".data/" not in item.filename]
+        mismatched = [item.filename for item in members if not (sites[0] / item.filename).is_file()
+                      or (sites[0] / item.filename).read_bytes() != archive.read(item)]
+    return mismatched if members else ["wheel has no package files"]
+
+
+def run(*, root=ROOT, output, artifacts=(), uv="uv", timeout=180, paths=True):
     """Retain build/install/protocol receipts for fresh runtime-only consumers."""
     root, output = Path(root).resolve(), Path(output).resolve()
     if output.is_relative_to(root):
@@ -116,8 +162,9 @@ def run(*, root=ROOT, output, artifacts=(), uv="uv", timeout=180):
               "runtime": {"python": sys.version}, "artifacts": []}
     stage = "snapshot"
 
-    def command(argv, *, cwd=directory):
-        result = runner.run(tuple(map(str, argv)), cwd=str(cwd), env={"PYTHONPATH": "", "PYTHONHOME": ""}, timeout=timeout)
+    def command(argv, *, cwd=directory, env=None):
+        result = runner.run(tuple(map(str, argv)), cwd=str(cwd), env={"PYTHONPATH": "", "PYTHONHOME": "", **(env or {})},
+                            timeout=timeout)
         if result.exit != 0:
             raise RuntimeError(f"{stage} command failed (exit {result.exit}); inspect retained command receipts")
         return result.stdout
@@ -164,6 +211,74 @@ def run(*, root=ROOT, output, artifacts=(), uv="uv", timeout=180):
             working.mkdir(mode=0o700)
             observations = json.loads(command([python, "-I", "-c", CONSUMER], cwd=working))
             entry.update(status="passed", consumer=observations)
+        wheels = [path for path in selected if path.suffix == ".whl"]
+        if paths and len(wheels) == 1:
+            report["install_paths"] = []
+            workspace = directory / "install-paths"
+            workspace.mkdir(mode=0o700)
+            version = package_version(source, PACKAGE)
+            stage = "git install source"
+            repository = workspace / "git-source"
+            shutil.copytree(source, repository, symlinks=True)
+            shutil.copytree(source, workspace / "local-source", symlinks=True)
+            identity = ["git", "-c", "user.name=package-acceptance", "-c", "user.email=package-acceptance@invalid",
+                        "-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false"]
+            command(["git", "init", "-q", repository])
+            command(["git", "-C", repository, "add", "-A"])
+            command([*identity, "-C", repository, "commit", "-q", "-m", "candidate"])
+            command([*identity, "-C", repository, "tag", "-a", f"v{version}", "-m", f"v{version}"])
+            commit = command(["git", "-C", repository, "rev-parse", "HEAD"]).strip()
+            shared = {"UV_CACHE_DIR": str(workspace / "uv-cache"), "UV_PYTHON_DOWNLOADS": "never"}
+            pinned = ["--python", sys.executable, "--constraints", runtime, "--build-constraints", builder]
+            for number, (name, install, environment, expected, upgrade, from_wheel) in enumerate(
+                    install_paths(wheel=wheels[0], version=version, workspace=workspace, uv=uv)):
+                entry = {"path": name, "installer": "uv-tool", "status": "failed"}
+                report["install_paths"].append(entry)
+                environment = {**shared, **environment}
+                stage = f"{name} tool install"
+                command([*install, *pinned], env=environment)
+                launcher = Path(environment["UV_TOOL_BIN_DIR"]) / PACKAGE
+                stage = f"{name} launcher identity"
+                identity_report = json.loads(command([launcher, "--version"], env=environment))
+                expected_commit = commit if name == "git" else None
+                if (identity_report.get("install_source") != expected
+                        or identity_report.get("commit") != expected_commit
+                        or identity_report.get("upgrade_command") != upgrade):
+                    raise ValueError(f"{name} install reported {identity_report}")
+                if from_wheel:
+                    stage = f"{name} candidate files"
+                    mismatched = wheel_mismatches(wheels[0], Path(environment["UV_TOOL_DIR"]) / PACKAGE)
+                    if mismatched:
+                        raise ValueError(f"{name} install does not hold the candidate wheel: {mismatched[:5]}")
+                stage = f"{name} public consumer assertions"
+                working = directory / f"path-work-{number}"
+                working.mkdir(mode=0o700)
+                python = Path(environment["UV_TOOL_DIR"]) / PACKAGE / "bin/python"
+                observations = json.loads(command([python, "-I", "-c", CONSUMER], cwd=working))
+                entry.update(status="passed", version=identity_report, consumer=observations)
+            entry = {"path": "uvx", "installer": "uvx", "status": "failed"}
+            report["install_paths"].append(entry)
+            stage = "uvx launcher identity"
+            ephemeral = [uv, "tool", "run", *pinned, "--from", wheels[0], PACKAGE]
+            identity_report = json.loads(command([*ephemeral, "--version"], env=shared))
+            if (identity_report.get("install_source") != "uvx" or identity_report.get("commit") is not None
+                    or identity_report.get("upgrade_command") != shlex.join(
+                        ["uvx", "--refresh", "--from", "<newer wheel or sdist>", PACKAGE])):
+                raise ValueError(f"uvx run reported {identity_report}")
+            stage = "uvx public consumer assertions"
+            working = directory / "path-work-uvx"
+            working.mkdir(mode=0o700)
+            # The application runs only inside a set-up project, with a private home.
+            scoped = {**shared, "XORCHESTRATE_HOME": str(working / "home")}
+            command([*ephemeral, "setup", working / "companion"], cwd=working, env=scoped)
+            command(["git", "init", "-q", working / "app"])
+            command([*ephemeral, "init", working / "app"], cwd=working, env=scoped)
+            command([*ephemeral, "approve", working / "app"], cwd=working, env=scoped)
+            described = json.loads(command([*ephemeral, "--project", working / "app", "describe"], cwd=working,
+                                           env=scoped))
+            if "list_work" not in {item["name"] for item in described["operations"]}:
+                raise ValueError("uvx describe did not list application operations")
+            entry.update(status="passed", version=identity_report)
         report["candidate_integrity"] = verify_candidate(root, report["candidate"])
         if not report["candidate_integrity"]["passed"]:
             raise ValueError("Package candidate changed during verification")
@@ -181,8 +296,10 @@ def main(argv=None):
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--artifact", type=Path, action="append", default=[], help="Verify a prebuilt artifact instead of building")
     parser.add_argument("--uv", default=shutil.which("uv") or "uv")
+    parser.add_argument("--no-install-paths", dest="paths", action="store_false",
+                        help="Skip the uv tool, git, local and uvx launcher install paths")
     args = parser.parse_args(argv)
-    report = run(output=args.output, artifacts=args.artifact, uv=args.uv)
+    report = run(output=args.output, artifacts=args.artifact, uv=args.uv, paths=args.paths)
     print(json.dumps(report, allow_nan=False))
     return 0 if report["status"] == "passed" else 1
 

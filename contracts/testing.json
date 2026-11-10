@@ -27,6 +27,15 @@
         "tests/hexagonal/test_data_versioning.py": "adapter"
       }
     },
+    "release": {
+      "guarantee": "A release tag, the package version and the changelog agree before publishing; the launcher reports how it was installed and the matching upgrade command; the install script provides uv and installs the launcher without elevated privileges.",
+      "modules": {
+        "tests/hexagonal/test_release_identity.py": "contract",
+        "tests/hexagonal/test_release_workflow.py": "contract",
+        "tests/hexagonal/test_install_source.py": "adapter",
+        "tests/hexagonal/test_install_script.py": "adapter"
+      }
+    },
     "capabilities": {
       "guarantee": "Configured capability providers and evaluators preserve discovery, invocation, permissions and assessment evidence across process adapters.",
       "modules": {

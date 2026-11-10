@@ -48,6 +48,19 @@ owned battery with `./scripts/proof.sh start --suite stories --detach`.
 Use `--story ID` to select scenarios and set per-story session, turn-submission
 and controller-request limits alongside the existing deadlines.
 
+## Install
+
+Install the `xorchestrate` launcher with uv, pipx, the install script or `uvx`;
+see [install](docs/install.md) for every supported path and the next steps.
+For example, from a release tag:
+
+```bash
+uv tool install git+https://github.com/xormania/xorchestrate@vX.Y.Z
+xorchestrate --version
+```
+
+Maintainers publish releases as described in [releases](docs/releases.md).
+
 ## Run locally
 
 Use Python 3.12 or newer. From the checkout:
