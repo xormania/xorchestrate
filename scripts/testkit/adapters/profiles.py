@@ -19,7 +19,7 @@ from pathlib import Path
 from ..model import MODES, SUITES
 from ..sharding import suite_shard
 from ..stories import select_stories, validate_limits
-from .configuration import local_capture
+from .configuration import capture_storage, local_capture
 from .evidence import write_json
 
 FIELDS = frozenset({"schema_version", "suite", "mode", "drivers", "families", "shard", "config", "brief",
@@ -121,19 +121,22 @@ def load_profile(path, *, root, overrides=None):
 
 
 def _interpreter_details(interpreter):
+    # The collector ships with the application; probe this checkout's own
+    # SQLite requirement in the selected interpreter.
+    root = Path(__file__).resolve().parents[3]
     program = """import importlib.util,json,sqlite3,sys
-dependencies={name:importlib.util.find_spec(name) is not None for name in ('jsonschema','pytest','ruff','agent_telemetry')}
+dependencies={name:importlib.util.find_spec(name) is not None for name in ('jsonschema','pytest','ruff')}
 collector={'status':'unavailable','sqlite_version':sqlite3.sqlite_version}
-if dependencies['agent_telemetry']:
-    try:
-        from agent_telemetry.sqlite import require_sqlite
-        require_sqlite()
-        collector['status']='ready'
-    except Exception as error:
-        collector['reason']=getattr(error,'code','collector_unavailable')
+try:
+    sys.path.insert(0, %r)
+    from xorchestrate.adapters.telemetry_collector.sqlite import require_sqlite
+    require_sqlite()
+    collector['status']='ready'
+except Exception as error:
+    collector['reason']=getattr(error,'code','collector_unavailable')
 print(json.dumps({'version':list(sys.version_info[:3]),'virtual':sys.prefix!=sys.base_prefix,
                   'executable':sys.executable,'dependencies':dependencies,'collector':collector}))
-"""
+""" % str(root)
     command = [str(interpreter), "-c", program]
     result = subprocess.run(command, capture_output=True, text=True, timeout=15, check=True)
     details = json.loads(result.stdout)
@@ -202,12 +205,8 @@ def _setup(profile_path, *, root, install, overrides=None):
     if install:
         if not details["virtual"]:
             raise ValueError("Refusing dependency installation into a global interpreter; configure a virtual environment")
-        source = json.loads(profile_path.read_text(encoding="utf-8"))
-        chosen = (profile_path.parent / Path(source.get("config") or "native.json").expanduser()).resolve()
-        native = json.loads(chosen.read_text(encoding="utf-8"))
-        capture = native.get("telemetry")
-        extras = "test,telemetry" if capture is None or capture.get("enabled", True) and capture.get("adapter") == "local" else "test"
-        command = [str(interpreter), "-m", "pip", "install", "-e", str(root) + "[" + extras + "]",
+        # The telemetry collector is part of the application; no capture extra exists.
+        command = [str(interpreter), "-m", "pip", "install", "-e", str(root) + "[test]",
                    "-r", str(root / ".github/requirements-ci.txt")]
         subprocess.run(command, check=True, timeout=600)
         receipts.append(command)
@@ -233,22 +232,27 @@ def doctor(profile_path, *, root, overrides=None):
             required_dependencies.add("ruff")
         if profile["suite"] in {"all", "checks", "tests"}:
             required_dependencies.add("pytest")
+        sqlite_corpus_selected = False
         if profile["mode"] == "native" and profile.get("config"):
             configuration = json.loads(Path(profile["config"]).read_text(encoding="utf-8"))
             capture = configuration.get("telemetry")
-            if capture is None or capture.get("enabled", True) and capture.get("adapter") == "local":
-                required_dependencies.add("agent_telemetry")
+            try:
+                # Setup gives an unconfigured native run local capture with the default corpus.
+                storage = capture_storage({"adapter": "local"} if capture is None else capture)
+                sqlite_corpus_selected = storage is not None and storage["corpus"] == "sqlite"
+            except ValueError as error:
+                observations.append({"name": "telemetry_configuration", "passed": False, "required": True,
+                                     "reason": str(error)})
         for name in sorted(set(details["dependencies"]) | required_dependencies):
-            if name == "agent_telemetry" and name not in required_dependencies:
-                continue
             available = details["dependencies"].get(name, False)
             observations.append({"name": name, "passed": available, "required": name in required_dependencies,
                                  "observation_interpreter": interpreter})
-        if "agent_telemetry" in required_dependencies and details["dependencies"].get("agent_telemetry"):
+        if sqlite_corpus_selected:
             collector = details.get("collector", {})
             observations.append({"name": "telemetry_sqlite", "passed": collector.get("status") == "ready", "required": True,
                 "version": collector.get("sqlite_version"), "reason": collector.get("reason"),
-                "needed": "Select a Python runtime with the CCE-required SQLite WAL fix (for example uv Python 3.12.16); rerun setup and doctor.",
+                "needed": "Select a Python runtime whose SQLite has the WAL fix the telemetry corpus requires "
+                          "(for example uv Python 3.12.16); rerun setup and doctor.",
                 "observation_interpreter": interpreter})
     except (OSError, ValueError, subprocess.SubprocessError) as error:
         observations.append({"name": "interpreter", "passed": False, "path": interpreter,

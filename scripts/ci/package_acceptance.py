@@ -30,13 +30,15 @@ import sys
 
 import xorchestrate
 from xorchestrate.adapters.native_gateway import LocalGateway
+from xorchestrate.adapters.telemetry_collector import sqlite as telemetry_corpus  # the collector ships in the package
 
 prefix = pathlib.Path(sys.prefix).resolve()
 package = pathlib.Path(xorchestrate.__file__).resolve()
 assert package.is_relative_to(prefix), ("not an installed consumer", str(package))
+assert pathlib.Path(telemetry_corpus.__file__).resolve().is_relative_to(prefix), "collector missing from package"
 installed = {item.metadata["Name"].lower().replace("_", "-"): item.version
              for item in importlib.metadata.distributions()}
-assert not {"agent-telemetry", "pytest", "ruff", "build"}.intersection(installed), installed
+assert not {"pytest", "ruff", "build"}.intersection(installed), installed
 console = prefix / "bin" / "xorchestrate"
 
 def invoke(arguments, requests=None):

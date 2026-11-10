@@ -18,8 +18,9 @@ script filename and verifies its local transport. This gateway fixture does not
 establish authenticated Claude, Grok or Codex acceptance.
 
 The consumer runs from a private directory with isolated Python inputs. It checks
-that the imported package belongs to the consumer environment and that optional
-telemetry, pytest, Ruff and build tools were not installed as runtime dependencies.
+that the imported package belongs to the consumer environment, that the bundled
+telemetry collector was installed with it, and that pytest, Ruff and build tools
+were not installed as runtime dependencies.
 The two consumers do not share state or dependencies.
 
 The report binds artifact filenames, sizes and SHA-256 values to the candidate,

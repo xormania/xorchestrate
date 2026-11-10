@@ -12,6 +12,9 @@ __pycache__/
 # Local runtime state and editable-install metadata
 .xorchestrate/
 *.egg-info/
+# Committed compatibility fixtures written by the standalone collector.
+!tests/fixtures/telemetry/corpus/events.sqlite3
+!tests/fixtures/telemetry/bundle/telemetry.sqlite3
 
 # SQLite sidecars created when a committed fixture store is opened in place
 tests/fixtures/stores/*-wal

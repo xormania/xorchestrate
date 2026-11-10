@@ -31,6 +31,12 @@ entries are written.
 - `describe` output gains a `warnings` list beside `operations`.
 - `xorchestrate.bridge` hosts enforce the configuration format version of the
   configuration they are started with.
+- The telemetry collector ships with xorchestrate
+  (`xorchestrate.adapters.telemetry_collector`); corpus and artifact storage
+  are selected adapters (`corpus`, `artifacts`). `composition.build()` accepts
+  `telemetry_defaults` to construct the local collector when a configuration
+  has no telemetry section.
+- `telemetry_status` reports a bounded `cause` when telemetry is unavailable.
 
 ### Upgrade notes
 
@@ -54,6 +60,21 @@ entries are written.
   `Cannot construct <kind> adapter <name>.`; the code is still
   `configuration_error`. Callers matching on messages should match on codes.
 - **Lifecycle definitions:** None.
-- **Adapter options:** None.
+- **Adapter options:** the local telemetry adapter's `profile` option is
+  removed; a configuration that still sets it leaves telemetry unavailable with
+  `cause` `{"code": "unknown_option", "detail": "profile"}`. Move the profile's
+  settings to inline options (see [telemetry](docs/telemetry.md#migrating-from-the-profile-option)).
+  Profiles defaulted `database` to `live.sqlite3` while inline options default
+  to `events.sqlite3`, so set `"database": "live.sqlite3"` explicitly to keep
+  an existing corpus. New `corpus` and `artifacts` options select the corpus and
+  artifact storage adapters (`sqlite` and `filesystem` by default); the
+  `database`, `capture_lock_timeout_ms` and `artifact_root` shorthands remain
+  and cannot be combined with them. `telemetry_corpus` and
+  `telemetry_artifacts` are refused as top-level configuration sections.
 - **Operator source schema:** None.
-- **Telemetry collector (`cce` commit):** None.
+- **Telemetry collector:** the collector is now part of xorchestrate and the
+  `telemetry` installation extra is removed; install `.[test]` (or the package
+  alone) instead. The corpus and bundle formats are unchanged, so existing
+  corpora and bundles open unchanged. When telemetry is unavailable,
+  `telemetry_status` gains a `cause` field (`{"code": ..., "detail": ...}`);
+  the detail names options or adapters, never option values.

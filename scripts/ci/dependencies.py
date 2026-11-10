@@ -11,7 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 VALIDATION_EXPORT = Path(".github/requirements-ci.txt")
 PROFILES = {"runtime": (), "validation": ("--only-group", "validation"),
-            "tests": ("--extra", "test"), "telemetry": ("--extra", "test", "--extra", "telemetry")}
+            "tests": ("--extra", "test")}
 
 
 def _run(root, arguments, *, uv="uv", offline=False):

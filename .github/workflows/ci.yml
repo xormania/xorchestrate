@@ -89,7 +89,7 @@
         },
         {
           "name": "Install pinned linter",
-          "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --only-group validation --no-install-project --managed-python --python 3.12.16\nuv sync --locked --no-default-groups --group validation --no-install-project --managed-python --python 3.12.16 --no-build-isolation-package agent-telemetry\nuv pip install --python \"$UV_PROJECT_ENVIRONMENT/bin/python\" --no-deps --no-build-isolation -e .\necho \"$UV_PROJECT_ENVIRONMENT/bin\" >> \"$GITHUB_PATH\"",
+          "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --only-group validation --no-install-project --managed-python --python 3.12.16\nuv sync --locked --no-default-groups --group validation --no-install-project --managed-python --python 3.12.16\nuv pip install --python \"$UV_PROJECT_ENVIRONMENT/bin/python\" --no-deps --no-build-isolation -e .\necho \"$UV_PROJECT_ENVIRONMENT/bin\" >> \"$GITHUB_PATH\"",
           "id": "dependencies"
         },
         {
@@ -167,7 +167,7 @@
         },
         {
           "name": "Install application dependencies",
-          "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --only-group validation --no-install-project --managed-python --python 3.12.16\nuv sync --locked --no-default-groups --group validation --no-install-project --managed-python --python 3.12.16 --no-build-isolation-package agent-telemetry --extra test --extra telemetry\nuv pip install --python \"$UV_PROJECT_ENVIRONMENT/bin/python\" --no-deps --no-build-isolation -e .\necho \"$UV_PROJECT_ENVIRONMENT/bin\" >> \"$GITHUB_PATH\"",
+          "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --only-group validation --no-install-project --managed-python --python 3.12.16\nuv sync --locked --no-default-groups --group validation --no-install-project --managed-python --python 3.12.16 --extra test\nuv pip install --python \"$UV_PROJECT_ENVIRONMENT/bin/python\" --no-deps --no-build-isolation -e .\necho \"$UV_PROJECT_ENVIRONMENT/bin\" >> \"$GITHUB_PATH\"",
           "id": "dependencies"
         },
         {
@@ -250,7 +250,7 @@
         },
         {
           "name": "Install verification dependencies",
-          "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --only-group validation --no-install-project --managed-python --python 3.12.16\nuv sync --locked --no-default-groups --group validation --no-install-project --managed-python --python 3.12.16 --no-build-isolation-package agent-telemetry --extra test\nuv pip install --python \"$UV_PROJECT_ENVIRONMENT/bin/python\" --no-deps --no-build-isolation -e .\necho \"$UV_PROJECT_ENVIRONMENT/bin\" >> \"$GITHUB_PATH\"",
+          "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --only-group validation --no-install-project --managed-python --python 3.12.16\nuv sync --locked --no-default-groups --group validation --no-install-project --managed-python --python 3.12.16 --extra test\nuv pip install --python \"$UV_PROJECT_ENVIRONMENT/bin/python\" --no-deps --no-build-isolation -e .\necho \"$UV_PROJECT_ENVIRONMENT/bin\" >> \"$GITHUB_PATH\"",
           "id": "dependencies"
         },
         {
@@ -329,7 +329,7 @@
         },
         {
           "name": "Install application and tmux",
-          "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --only-group validation --no-install-project --managed-python --python 3.12.16\nuv sync --locked --no-default-groups --group validation --no-install-project --managed-python --python 3.12.16 --no-build-isolation-package agent-telemetry --extra test\nuv pip install --python \"$UV_PROJECT_ENVIRONMENT/bin/python\" --no-deps --no-build-isolation -e .\necho \"$UV_PROJECT_ENVIRONMENT/bin\" >> \"$GITHUB_PATH\"\nif ! command -v tmux >/dev/null 2>&1; then\n  sudo apt-get update\n  sudo apt-get install -y tmux\nfi\ntmux -V",
+          "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --only-group validation --no-install-project --managed-python --python 3.12.16\nuv sync --locked --no-default-groups --group validation --no-install-project --managed-python --python 3.12.16 --extra test\nuv pip install --python \"$UV_PROJECT_ENVIRONMENT/bin/python\" --no-deps --no-build-isolation -e .\necho \"$UV_PROJECT_ENVIRONMENT/bin\" >> \"$GITHUB_PATH\"\nif ! command -v tmux >/dev/null 2>&1; then\n  sudo apt-get update\n  sudo apt-get install -y tmux\nfi\ntmux -V",
           "id": "dependencies"
         },
         {
@@ -416,7 +416,7 @@
         },
         {
           "name": "Install test and diagnostic dependencies",
-          "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --only-group validation --no-install-project --managed-python --python 3.12.16\nuv sync --locked --no-default-groups --group validation --no-install-project --managed-python --python 3.12.16 --no-build-isolation-package agent-telemetry --extra test\nuv pip install --python \"$UV_PROJECT_ENVIRONMENT/bin/python\" --no-deps --no-build-isolation -e .\necho \"$UV_PROJECT_ENVIRONMENT/bin\" >> \"$GITHUB_PATH\"",
+          "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --only-group validation --no-install-project --managed-python --python 3.12.16\nuv sync --locked --no-default-groups --group validation --no-install-project --managed-python --python 3.12.16 --extra test\nuv pip install --python \"$UV_PROJECT_ENVIRONMENT/bin/python\" --no-deps --no-build-isolation -e .\necho \"$UV_PROJECT_ENVIRONMENT/bin\" >> \"$GITHUB_PATH\"",
           "id": "dependencies"
         },
         {

@@ -44,11 +44,10 @@ ones shown by CLI `describe`.
 tracking. It retains application, native, capability, evaluator and process
 observations in a local corpus whose `runtime_root` resolves against this
 directory to `../../xorchestrate-telemetry-state`, outside the checkout. Change
-`project_id`, `dataset_id` and `collector_id` for your deployment. It requires the
-optional collector extra:
+`project_id`, `dataset_id` and `collector_id` for your deployment. The collector
+ships with the application; it needs a Python whose SQLite has the WAL fix:
 
 ```bash
-python3 -m pip install -e '.[telemetry]'
 python3 -m xorchestrate --config examples/telemetry.json call telemetry_status --json '{}'
 ```
 
