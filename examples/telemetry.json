@@ -1,4 +1,5 @@
 {
+  "version": 1,
   "store": {"adapter": "sqlite", "options": {"path": "../.xorchestrate/state.sqlite3"}},
   "telemetry": {
     "adapter": "local",
