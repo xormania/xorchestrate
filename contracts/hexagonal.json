@@ -213,7 +213,8 @@
         "xorchestrate.bridge",
         "xorchestrate.cli",
         "xorchestrate.installation",
-        "xorchestrate.mcp"
+        "xorchestrate.mcp",
+        "xorchestrate.server"
       ],
       "allowed_roles": [
         "foundation",

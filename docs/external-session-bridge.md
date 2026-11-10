@@ -63,7 +63,9 @@ external host. The host removes only its owned endpoint.
 ## Transport and recovery
 
 `unix` is the default transport: a mode-`0600` Unix socket with a same-user peer
-check where the operating system exposes peer credentials. `fifo` uses an
+check where the operating system exposes peer credentials. The listener and
+peer check are the shared owner-only socket helper also used by the
+[project server](project-server.md); the bridge keeps its own protocol. `fifo` uses an
 owner-only endpoint directory and mode-`0600` named pipes. It is an explicit
 alternative for environments that prohibit Unix socket creation. Both use the
 same bounded bidirectional request/callback protocol, worker limits, frame

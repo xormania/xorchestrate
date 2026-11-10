@@ -12,9 +12,7 @@ import hmac
 import json
 import os
 import queue
-import socket
 import stat
-import struct
 import tempfile
 import threading
 import uuid
@@ -30,6 +28,7 @@ from ..model import OrchestrationError, canonical_digest, public_error_message
 from ..outcomes import before_effect, effect_outcome
 from ..ports import ApplicationToolSessionDriver, SessionDriver
 from .bridge_transport import FifoListener, Peer, bridge_error, copy_json, positive_option
+from .local_socket import OwnerSocketListener
 from .process import decode_json
 
 
@@ -113,10 +112,7 @@ class SessionBridgeHost:
             if self.transport == "fifo":
                 self._socket = FifoListener(self.endpoint)
             else:
-                self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-                self._socket.bind(str(self.endpoint))
-                os.chmod(self.endpoint, 0o600)
-                self._socket.listen(16)
+                self._socket = OwnerSocketListener(self.endpoint, 16)
             self._save_state()
         except Exception:
             if self._socket is not None:
@@ -189,11 +185,6 @@ class SessionBridgeHost:
                 connection, _ = self._socket.accept()
             except OSError:
                 break
-            if self.transport == "unix" and hasattr(socket, "SO_PEERCRED"):
-                _, uid, _ = struct.unpack("3i", connection.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))
-                if uid != os.getuid():
-                    connection.close()
-                    continue
             with self._lock:
                 self._peers = {item for item in self._peers if not item.closed}
                 if len(self._peers) >= self.max_connections:
@@ -515,10 +506,7 @@ class SessionBridgeHost:
         if self._closed:
             return
         self._closed = True
-        try:
-            self._socket.shutdown(socket.SHUT_RDWR)
-        except OSError:
-            pass
+        self._socket.shutdown()
         if threading.current_thread() is not self.thread:
             self.thread.join()
         self._socket.close()
@@ -528,10 +516,5 @@ class SessionBridgeHost:
         for peer in peers:
             peer.close()
         self.driver.close()
-        try:
-            if self.transport == "unix":
-                self.endpoint.unlink()
-        except FileNotFoundError:
-            pass
 
 
