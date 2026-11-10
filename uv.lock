@@ -302,7 +302,7 @@ wheels = [
 [[package]]
 name = "xcontracts"
 version = "0.1.0"
-source = { git = "https://github.com/xormania/xcontracts?rev=cc2d6eb5f9d20ab2746f916dd3b4269de24ab3a8#cc2d6eb5f9d20ab2746f916dd3b4269de24ab3a8" }
+source = { git = "https://github.com/xormania/xcontracts?rev=05c60bdc05c6b0233b8b66f8690b0892305064bb#05c60bdc05c6b0233b8b66f8690b0892305064bb" }
 
 [[package]]
 name = "xorchestrate"
@@ -330,7 +330,7 @@ validation = [
 requires-dist = [
     { name = "jsonschema", specifier = ">=4.22,<5" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8,<10" },
-    { name = "xcontracts", git = "https://github.com/xormania/xcontracts?rev=cc2d6eb5f9d20ab2746f916dd3b4269de24ab3a8" },
+    { name = "xcontracts", git = "https://github.com/xormania/xcontracts?rev=05c60bdc05c6b0233b8b66f8690b0892305064bb" },
 ]
 provides-extras = ["test"]
 
