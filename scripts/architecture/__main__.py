@@ -47,6 +47,8 @@ def main(argv=None) -> int:
     parser.add_argument("--profile", default="contracts/hexagonal.json")
     parser.add_argument("--output", type=Path, help="JSON evidence (stdout when omitted)")
     parser.add_argument("--jev-config", help="Diagnostic adapter JSON configuration; credentials stay in the environment")
+    parser.add_argument("--cache-dir", type=Path, help="Trusted external directory for exact-request advisory reuse")
+    parser.add_argument("--batch", action="store_true", help="Ask independent questions in one shared-state request")
     parser.add_argument("--base-ref", help="Select diagnostic candidates from changed lines against this Git reference")
     parser.add_argument("--diagnostics-only", action="store_true",
                         help="Report diagnostics without changing the separate deterministic CI gate")
@@ -70,6 +72,10 @@ def main(argv=None) -> int:
             for key, variable in (("endpoint", "JEV_ENDPOINT"), ("model", "JEV_MODEL")):
                 if os.environ.get(variable):
                     options[key] = os.environ[variable]
+            if args.cache_dir is not None:
+                options["cache_dir"] = str(args.cache_dir.expanduser().resolve())
+            if args.batch:
+                options["batch"] = True
             report["diagnostics"] = diagnose(report, root, options)
         except (OSError, ValueError, TypeError):
             report["diagnostics"] = {"status": "error", "reason": "diagnostic_configuration_invalid"}

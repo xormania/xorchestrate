@@ -445,6 +445,44 @@ def test_architecture_producer_retains_actual_working_tree_identity(tmp_path, di
     assert receipt["git_commit"] == expected_commit
 
 
+@pytest.mark.parametrize("scenario", ("single_fresh", "batch_fresh", "cache_hit", "invalid_usage"))
+def test_advisory_execution_distinguishes_new_provider_usage_from_reused_history(tmp_path, scenario):
+    needs, workflow, catalog = _complete_receipts(tmp_path)
+    document = _jev_report()
+    sample = document["diagnostics"]["assessments"][0]
+    sample["details"]["usage"] = {"input_tokens": 20, "output_tokens": 3}
+    document["diagnostics"]["assessments"] = [
+        {**deepcopy(sample), "check_id": name}
+        for name in ("evidence_coverage", "semantic_boundaries", "port_abstraction")
+    ]
+    hit = scenario == "cache_hit"
+    metadata = {
+        "request_sha256": "4" * 64, "mode": "single" if scenario == "single_fresh" else "batch",
+        "cache_status": "hit" if hit else "disabled" if scenario == "single_fresh" else "miss",
+        "provider_calls": 0 if hit else 3 if scenario == "single_fresh" else 1,
+        "reused_assessments": 3 if hit else 0,
+        "fresh_usage": {"input_tokens": 0 if hit else 60, "output_tokens": 0 if hit else 9},
+        "reused_usage": {"input_tokens": 60, "output_tokens": 9} if hit else None,
+    }
+    if scenario == "invalid_usage":
+        metadata["fresh_usage"]["input_tokens"] = -1
+    document["diagnostics"]["execution"] = metadata
+    _write(tmp_path / "architecture-evidence/diagnostics.json", document)
+    result = _evaluate_complete(tmp_path, needs, workflow, catalog)
+    assert result["status"] == "passed" and result["errors"] == []
+    if scenario == "invalid_usage":
+        assert result.get("jev", {}).get("status") == "invalid"
+        assert result["jev"]["current"] is False
+        return
+    assert result.get("jev", {}).get("execution") == metadata
+    rendered = subject.markdown(result, "https://example.invalid/run/1")
+    assert f"Assessment execution: {metadata['mode']}; cache {metadata['cache_status']}" in rendered
+    assert f"provider calls {metadata['provider_calls']}; reused assessments {metadata['reused_assessments']}" in rendered
+    fresh = metadata["fresh_usage"]
+    assert f"Fresh provider usage: {fresh['input_tokens']} input / {fresh['output_tokens']} output tokens" in rendered
+    assert ("Historical reused usage: 60 input / 9 output tokens" if hit else "Historical reused usage: unknown") in rendered
+
+
 @pytest.mark.parametrize("explicit_task_ids", (True, False))
 def test_grounded_candidate_reports_keep_distinct_claims_and_source_locations(tmp_path, explicit_task_ids):
     needs, workflow, catalog = _complete_receipts(tmp_path)
