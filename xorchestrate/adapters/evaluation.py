@@ -22,6 +22,9 @@ class _TelemetryEvaluator(TelemetrySource):
         self._close_telemetry()
 
     def assess(self, question: str, context: JSON) -> Assessment:
+        return self._observe(context, lambda observer, origin, secrets: self._assess(question, context, observer, origin, secrets))
+
+    def _observe(self, context, operation):
         origin = capture_origin(context)
         observer = self._telemetry_observer
         credential = os.environ.get(self.credential_env, "") if getattr(self, "credential_env", None) else ""
@@ -36,13 +39,15 @@ class _TelemetryEvaluator(TelemetrySource):
             observer = None
         try:
             try:
-                result = self._assess(question, context, observer, origin, secrets)
+                result = operation(observer, origin, secrets)
             except BaseException as error:
                 code = getattr(error, "code", "evaluation_unavailable")
                 status = "unavailable" if code == "evaluation_unavailable" else "invalid"
                 observe_telemetry(observer, "evaluator.validation", {"status": status, "code": code}, origin, secrets=secrets)
                 raise
-            observe_telemetry(observer, "evaluator.validation", {"status": "valid", "assessment": asdict(result)}, origin, secrets=secrets)
+            validated = ({"assessments": {key: asdict(item) for key, item in result.items()}}
+                         if isinstance(result, dict) else {"assessment": asdict(result)})
+            observe_telemetry(observer, "evaluator.validation", {"status": "valid", **validated}, origin, secrets=secrets)
             return result
         finally:
             if isinstance(observer, TelemetryDispatch):
@@ -192,14 +197,29 @@ class TypeSafeEvaluator(_TelemetryEvaluator):
         self.endpoint, self.model, self.timeout, self.credential_env = endpoint, model, timeout, credential
         self.criteria = json.loads(_json(criteria, "invalid_configuration"))
 
+    def assess_many(self, questions: dict[str, str], context: JSON) -> dict[str, Assessment]:
+        """Assess named independent questions in one request over a shared state.
+
+        Request-wide usage appears once, on the first answer. Every answer marks
+        the shared batch scope so consumers must not multiply that usage.
+        """
+        return self._observe(context, lambda observer, origin, secrets:
+                             self._assess_questions(questions, context, observer, origin, secrets, batch=True))
+
     def _assess(self, question: str, context: JSON, observer, origin, secrets) -> Assessment:
-        if not isinstance(question, str) or not question.strip() or not isinstance(context, dict):
-            raise OrchestrationError("Assessment requires a question and an object context.")
+        return self._assess_questions({"assessment": question}, context, observer, origin, secrets)["assessment"]
+
+    def _assess_questions(self, questions, context, observer, origin, secrets, *, batch=False):
+        if (not isinstance(questions, dict) or not questions or not isinstance(context, dict)
+                or any(not isinstance(key, str) or not key.strip() or not isinstance(question, str)
+                       or not question.strip() for key, question in questions.items())):
+            raise OrchestrationError("Assessment requires named questions and an object context.")
         credential = os.environ.get(self.credential_env, "") if self.credential_env else ""
         if self.credential_env and not credential:
             raise OrchestrationError("The configured assessment credential is unavailable.", "evaluation_unavailable", {"cause": "credentials_unavailable"})
         payload = _json({"model": self.model, "state": context,
-                         "questions": {"assessment": {"type": "choice", "instructions": question, "criteria": self.criteria}}})
+                         "questions": {key: {"type": "choice", "instructions": question, "criteria": self.criteria}
+                                       for key, question in questions.items()}})
         observe_wire(observer, "evaluator.request", payload[:self.limits["max_request_bytes"] + 1], origin, secrets=secrets,
                      complete=len(payload) <= self.limits["max_request_bytes"] + 1, total_bytes=len(payload),
                      phase="serialized", model=self.model)
@@ -305,24 +325,29 @@ class TypeSafeEvaluator(_TelemetryEvaluator):
         if not isinstance(value, dict) or value.get("model") != self.model:
             raise _invalid("Assessment provider returned an unexpected model.")
         answers = value.get("answers")
-        if not isinstance(answers, dict) or answers.keys() != {"assessment"}:
+        if not isinstance(answers, dict) or answers.keys() != questions.keys():
             raise _invalid("Assessment provider returned an incomplete answer set.")
-        answer = answers["assessment"]
-        if not isinstance(answer, dict) or answer.get("type") != "choice":
-            raise _invalid("Assessment provider returned an invalid answer type.")
-        probabilities = answer.get("probabilities")
-        if (not isinstance(probabilities, dict) or probabilities.keys() != self.criteria.keys()
-                or not all(_number(v) for v in probabilities.values()) or abs(sum(probabilities.values()) - 1) > 0.01
-                or not isinstance(answer.get("choice"), str) or answer["choice"] not in self.criteria
-                or not _number(answer.get("confidence"))):
-            raise _invalid("Assessment provider returned an invalid choice distribution.")
-        details = {"model": self.model, "probabilities": probabilities}
+        results = {}
+        for key in questions:
+            answer = answers[key]
+            if not isinstance(answer, dict) or answer.get("type") != "choice":
+                raise _invalid("Assessment provider returned an invalid answer type.")
+            probabilities = answer.get("probabilities")
+            if (not isinstance(probabilities, dict) or probabilities.keys() != self.criteria.keys()
+                    or not all(_number(v) for v in probabilities.values()) or abs(sum(probabilities.values()) - 1) > 0.01
+                    or not isinstance(answer.get("choice"), str) or answer["choice"] not in self.criteria
+                    or not _number(answer.get("confidence"))):
+                raise _invalid("Assessment provider returned an invalid choice distribution.")
+            details = {"model": self.model, "probabilities": probabilities}
+            if batch:
+                details.update({"usage_scope": "batch", "batch_question_ids": list(questions)})
+            results[key] = checked_assessment({"outcome": answer["choice"], "confidence": answer["confidence"], "details": details})
         if "usage" in value:
             usage = value["usage"]
             if not isinstance(usage, dict) or any(type(usage.get(k)) is not int or usage[k] < 0 for k in ("input_tokens", "output_tokens")):
                 raise _invalid("Assessment provider returned invalid usage data.")
-            details["usage"] = {key: usage[key] for key in ("input_tokens", "output_tokens")}
+            results[next(iter(questions))].details["usage"] = {key: usage[key] for key in ("input_tokens", "output_tokens")}
             observe_telemetry(observer, "evaluator.usage", {"usage": usage, "counter_semantics": "incremental",
                               "usage_stream_id": origin["attempt_id"], "source_version": "typesafe-choice-v1"},
                               origin, secrets=secrets, event_id="evaluator-usage:" + origin["attempt_id"])
-        return checked_assessment({"outcome": answer["choice"], "confidence": answer["confidence"], "details": details})
+        return results

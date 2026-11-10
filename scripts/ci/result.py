@@ -97,6 +97,23 @@ def _diagnostic_assessments(values):
     return result
 
 
+
+def _diagnostic_execution(value):
+    if (not isinstance(value, dict) or value.get("mode") not in {"single", "batch"}
+            or value.get("cache_status") not in {"disabled", "miss", "unusable", "hit", "write_unavailable"}
+            or not _sha(value.get("request_sha256"))
+            or any(type(value.get(key)) is not int or value[key] < 0
+                   for key in ("provider_calls", "reused_assessments"))):
+        raise ValueError("Invalid diagnostic execution")
+    kept = {key: value[key] for key in ("mode", "cache_status", "request_sha256", "provider_calls", "reused_assessments")}
+    for name in ("fresh_usage", "reused_usage"):
+        usage = value.get(name)
+        if usage is not None and (not isinstance(usage, dict) or any(type(usage.get(key)) is not int or usage[key] < 0
+                                                                   for key in ("input_tokens", "output_tokens"))):
+            raise ValueError("Invalid diagnostic execution usage")
+        kept[name] = usage
+    return kept
+
 def jev_evidence(artifacts, needs, *, tested_sha):
     """Describe optional advice without allowing it to qualify deterministic CI.
 
@@ -150,6 +167,8 @@ def jev_evidence(artifacts, needs, *, tested_sha):
             base["context_sha256"] = diagnostic["context_sha256"]
         if status == "complete" and ("source_scope" not in base or "context_sha256" not in base):
             raise ValueError("A complete diagnostic needs its measured context")
+        if "execution" in diagnostic:
+            base["execution"] = _diagnostic_execution(diagnostic["execution"])
         base["concerns"] = sum(row["outcome"] == "concern" for row in assessments)
         if "reason" in diagnostic:
             reason = diagnostic["reason"]
@@ -345,6 +364,15 @@ def markdown(result, run_url):
             if "candidate_id" in assessment:
                 location += " (" + assessment["candidate_id"] + ")"
             rows.append(f"| {text(location)} | {text(assessment['check_id'])} | {text(assessment['outcome'])} | {confidence} | {distribution} |")
+        execution = diagnostic.get("execution")
+        if execution:
+            rows.append(f"Assessment execution: {execution['mode']}; cache {execution['cache_status']}; "
+                        f"provider calls {execution['provider_calls']}; reused assessments {execution['reused_assessments']}.")
+            for label, name in (("Fresh provider usage", "fresh_usage"), ("Historical reused usage", "reused_usage")):
+                usage = execution[name]
+                rows.append(label + ": " + (f"{usage['input_tokens']} input / {usage['output_tokens']} output tokens"
+                                             if usage is not None else "unknown") + ".")
+
         scope = diagnostic.get("source_scope")
         if scope:
             rows.extend(["", f"Source scope: {len(scope['selected'])} selected; {len(scope['omitted'])} omitted; "

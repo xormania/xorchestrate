@@ -9,6 +9,8 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Added
 
+- Exact-request Jev diagnostic reuse and shared-state question batches reduce repeated calls; CI reports fresh versus historical usage separately.
+
 - A paired architecture-effectiveness pilot measures Jev against unchanged deterministic checks, retaining misses, false alarms, abstentions, usage and scope limits separately from fixture verification.
 
 - Jev diagnostics select complete changed Python units with related contracts, callers and test sources; each advisory claim retains its candidate, source span and role contract.

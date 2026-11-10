@@ -850,7 +850,8 @@
       "modules": [
         "scripts.architecture.python",
         "scripts.architecture.diagnostics",
-        "scripts.architecture.context"
+        "scripts.architecture.context",
+        "scripts.architecture.cache"
       ],
       "allowed_roles": [
         "architecture_foundation",
@@ -862,7 +863,10 @@
         "core",
         "work_acceptance",
         "inspection",
-        "adapters"
+        "adapters",
+        "testkit_adapters",
+        "testkit_foundation",
+        "testkit_core"
       ],
       "allowed_external": [
         "stdlib:*",

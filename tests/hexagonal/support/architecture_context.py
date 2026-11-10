@@ -56,10 +56,12 @@ class RecordingEvaluator:
 
     def __init__(self, options):
         self.options = deepcopy(options)
+        self.endpoint, self.model, self.criteria = options["endpoint"], options["model"], deepcopy(options["criteria"])
 
     def assess(self, question, context):
         self.calls.append({"question": question, "context": deepcopy(context)})
-        return Assessment(self.choice, 0.7, "", (), {"model": self.options["model"]})
+        return Assessment(self.choice, 0.7, "", (), {"model": self.options["model"],
+                          "probabilities": {key: int(key == self.choice) for key in self.criteria}})
 
     def close(self):
         pass

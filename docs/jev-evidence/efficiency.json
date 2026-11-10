@@ -1,0 +1,1894 @@
+{
+  "schema_version": 1,
+  "suites": [
+    {
+      "name": "unit",
+      "source_summary_sha256": "d36b3a42ee9a99f3878f2acfbbab6a0d3445e0dcda98115522b43ca0502a96b0",
+      "candidate": {
+        "commit": "f8ea1a93877bcedc1b6378efd0dd98f22bc65ec1",
+        "content_sha256": "99ba0d17fa025f33a3b631c3b5ef8ba12b989a13317ab5be6679361abec017c2"
+      },
+      "passed": true,
+      "witnesses": [
+        {
+          "name": "batch-answer-binding",
+          "target": "tests.hexagonal.test_jev_efficiency::test_batch_http_preserves_question_identity_and_counts_request_usage_once",
+          "classification": "detected",
+          "expected_diagnostic": "BATCH_ANSWERS_BOUND",
+          "mutation_applied": true,
+          "mutation_sha256": "3b2dfcabb4f4aab832b88f08729df649d0e0279389b0da2417fb4e967b52290a",
+          "candidate_sha256": "99ba0d17fa025f33a3b631c3b5ef8ba12b989a13317ab5be6679361abec017c2",
+          "mutation_patch": "--- a/xorchestrate/adapters/evaluation.py\n+++ b/xorchestrate/adapters/evaluation.py\n@@ -350,4 +350,4 @@\n             observe_telemetry(observer, \"evaluator.usage\", {\"usage\": usage, \"counter_semantics\": \"incremental\",\n                               \"usage_stream_id\": origin[\"attempt_id\"], \"source_version\": \"typesafe-choice-v1\"},\n                               origin, secrets=secrets, event_id=\"evaluator-usage:\" + origin[\"attempt_id\"])\n-        return results\n+        return dict(zip(reversed(list(results)), results.values()))\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_batch_http_preserves_question_identity_and_counts_request_usage_once",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/batch-answer-binding/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:21.926267+00:00",
+              "finished_at": "2026-11-10T05:48:23.406504+00:00",
+              "stdout_sha256": "c9bcb144c21494e85f380ae0032b056c0b060b27bbfcfada9bc048d41195af09",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_batch_http_preserves_question_identity_and_counts_request_usage_once",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/batch-answer-binding/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:23.409817+00:00",
+              "finished_at": "2026-11-10T05:48:24.722641+00:00",
+              "stdout_sha256": "076148f3f0aba8a78426a6dea9af9dc830dafb35e41dad9c72b727558eff5a55",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "batch-answer-set",
+          "target": "tests.hexagonal.test_jev_efficiency::test_invalid_batch_cannot_return_partial_or_foreign_answers[extra]",
+          "classification": "detected",
+          "expected_diagnostic": "INVALID_BATCH_REJECTED",
+          "mutation_applied": true,
+          "mutation_sha256": "fe3982f0b50e0c41f41adcdb68387ee6655410b438e2f265ce13a863a8773f49",
+          "candidate_sha256": "99ba0d17fa025f33a3b631c3b5ef8ba12b989a13317ab5be6679361abec017c2",
+          "mutation_patch": "--- a/xorchestrate/adapters/evaluation.py\n+++ b/xorchestrate/adapters/evaluation.py\n@@ -325,7 +325,7 @@\n         if not isinstance(value, dict) or value.get(\"model\") != self.model:\n             raise _invalid(\"Assessment provider returned an unexpected model.\")\n         answers = value.get(\"answers\")\n-        if not isinstance(answers, dict) or answers.keys() != questions.keys():\n+        if not isinstance(answers, dict) or not questions.keys() <= answers.keys():\n             raise _invalid(\"Assessment provider returned an incomplete answer set.\")\n         results = {}\n         for key in questions:\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_invalid_batch_cannot_return_partial_or_foreign_answers[extra]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/batch-answer-set/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:24.926365+00:00",
+              "finished_at": "2026-11-10T05:48:26.233564+00:00",
+              "stdout_sha256": "fa8e3e1f0a4b084326a7027307e5cc3a94f799f9733ea598c3b878fa3c70f37c",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_invalid_batch_cannot_return_partial_or_foreign_answers[extra]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/batch-answer-set/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:26.236614+00:00",
+              "finished_at": "2026-11-10T05:48:27.486733+00:00",
+              "stdout_sha256": "1866cb28e59334fdb57c61d06e9e7858ca0366eeb90124e57d3fb8184cc0e62f",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "batch-model",
+          "target": "tests.hexagonal.test_jev_efficiency::test_invalid_batch_cannot_return_partial_or_foreign_answers[model]",
+          "classification": "detected",
+          "expected_diagnostic": "INVALID_BATCH_REJECTED",
+          "mutation_applied": true,
+          "mutation_sha256": "f4ff21ece5cc7128a18c847026d38bb219d63fcd7d9187d8c485fb4ffa5b82ba",
+          "candidate_sha256": "99ba0d17fa025f33a3b631c3b5ef8ba12b989a13317ab5be6679361abec017c2",
+          "mutation_patch": "--- a/xorchestrate/adapters/evaluation.py\n+++ b/xorchestrate/adapters/evaluation.py\n@@ -322,7 +322,7 @@\n             value = json.loads(body)\n         except (ValueError, UnicodeError, RecursionError):\n             raise _invalid(\"Assessment provider returned invalid JSON.\") from None\n-        if not isinstance(value, dict) or value.get(\"model\") != self.model:\n+        if not isinstance(value, dict):\n             raise _invalid(\"Assessment provider returned an unexpected model.\")\n         answers = value.get(\"answers\")\n         if not isinstance(answers, dict) or answers.keys() != questions.keys():\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_invalid_batch_cannot_return_partial_or_foreign_answers[model]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/batch-model/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:27.737346+00:00",
+              "finished_at": "2026-11-10T05:48:28.957466+00:00",
+              "stdout_sha256": "fa8e3e1f0a4b084326a7027307e5cc3a94f799f9733ea598c3b878fa3c70f37c",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_invalid_batch_cannot_return_partial_or_foreign_answers[model]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/batch-model/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:28.958712+00:00",
+              "finished_at": "2026-11-10T05:48:30.286091+00:00",
+              "stdout_sha256": "aa70d5b7110cf72e3096db16aadbdf8a8214b7cef886511d231cf9d7a575d9b2",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "batch-distribution",
+          "target": "tests.hexagonal.test_jev_efficiency::test_invalid_batch_cannot_return_partial_or_foreign_answers[distribution]",
+          "classification": "detected",
+          "expected_diagnostic": "INVALID_BATCH_REJECTED",
+          "mutation_applied": true,
+          "mutation_sha256": "53944ce947811e1c3b6980cefa091c6f4a99f0af030d77bdd7f1804d70898ee0",
+          "candidate_sha256": "99ba0d17fa025f33a3b631c3b5ef8ba12b989a13317ab5be6679361abec017c2",
+          "mutation_patch": "--- a/xorchestrate/adapters/evaluation.py\n+++ b/xorchestrate/adapters/evaluation.py\n@@ -334,7 +334,7 @@\n                 raise _invalid(\"Assessment provider returned an invalid answer type.\")\n             probabilities = answer.get(\"probabilities\")\n             if (not isinstance(probabilities, dict) or probabilities.keys() != self.criteria.keys()\n-                    or not all(_number(v) for v in probabilities.values()) or abs(sum(probabilities.values()) - 1) > 0.01\n+                    or not all(_number(v) for v in probabilities.values()) or False\n                     or not isinstance(answer.get(\"choice\"), str) or answer[\"choice\"] not in self.criteria\n                     or not _number(answer.get(\"confidence\"))):\n                 raise _invalid(\"Assessment provider returned an invalid choice distribution.\")\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_invalid_batch_cannot_return_partial_or_foreign_answers[distribution]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/batch-distribution/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:30.605470+00:00",
+              "finished_at": "2026-11-10T05:48:31.901627+00:00",
+              "stdout_sha256": "f69b41b567fe2583118441e8e8390afa756eecb8625fa01f5e10bcff2c1cef10",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_invalid_batch_cannot_return_partial_or_foreign_answers[distribution]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/batch-distribution/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:31.904452+00:00",
+              "finished_at": "2026-11-10T05:48:33.827856+00:00",
+              "stdout_sha256": "711c70bb0b549f4e8ca32550ddbd215e229e82c8bd736473bfd0db598e2e25e6",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "batch-usage-once",
+          "target": "tests.hexagonal.test_jev_efficiency::test_batch_http_preserves_question_identity_and_counts_request_usage_once",
+          "classification": "detected",
+          "expected_diagnostic": "BATCH_USAGE_ONCE",
+          "mutation_applied": true,
+          "mutation_sha256": "13c61f51892b994394004f96b7f6588964479fa3e2eed33f4c8e51d8e8419510",
+          "candidate_sha256": "99ba0d17fa025f33a3b631c3b5ef8ba12b989a13317ab5be6679361abec017c2",
+          "mutation_patch": "--- a/xorchestrate/adapters/evaluation.py\n+++ b/xorchestrate/adapters/evaluation.py\n@@ -346,7 +346,8 @@\n             usage = value[\"usage\"]\n             if not isinstance(usage, dict) or any(type(usage.get(k)) is not int or usage[k] < 0 for k in (\"input_tokens\", \"output_tokens\")):\n                 raise _invalid(\"Assessment provider returned invalid usage data.\")\n-            results[next(iter(questions))].details[\"usage\"] = {key: usage[key] for key in (\"input_tokens\", \"output_tokens\")}\n+            for answer in results.values():\n+                answer.details[\"usage\"] = {key: usage[key] for key in (\"input_tokens\", \"output_tokens\")}\n             observe_telemetry(observer, \"evaluator.usage\", {\"usage\": usage, \"counter_semantics\": \"incremental\",\n                               \"usage_stream_id\": origin[\"attempt_id\"], \"source_version\": \"typesafe-choice-v1\"},\n                               origin, secrets=secrets, event_id=\"evaluator-usage:\" + origin[\"attempt_id\"])\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_batch_http_preserves_question_identity_and_counts_request_usage_once",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/batch-usage-once/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:34.073828+00:00",
+              "finished_at": "2026-11-10T05:48:35.937675+00:00",
+              "stdout_sha256": "36ee6125777253800df314c891baf72e42248a17540db95c6bdb02de742e24de",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_batch_http_preserves_question_identity_and_counts_request_usage_once",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/batch-usage-once/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:35.940925+00:00",
+              "finished_at": "2026-11-10T05:48:37.491865+00:00",
+              "stdout_sha256": "a918fe16875b825813bdcbe153cf6fd85c6567f2fc6c8cd4e0fb012d0346fc60",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "cache-hit",
+          "target": "tests.hexagonal.test_jev_efficiency::test_exact_cache_reuse_keeps_historical_usage_out_of_fresh_usage[False]",
+          "classification": "detected",
+          "expected_diagnostic": "EXACT_REQUEST_REUSED",
+          "mutation_applied": true,
+          "mutation_sha256": "d7ab11e09dfdc4a2d6471fba77560d5eea08851266e68c41ef18e7ffadb03d46",
+          "candidate_sha256": "99ba0d17fa025f33a3b631c3b5ef8ba12b989a13317ab5be6679361abec017c2",
+          "mutation_patch": "--- a/scripts/architecture/cache.py\n+++ b/scripts/architecture/cache.py\n@@ -73,7 +73,7 @@\n                  \"criteria\": evaluator.criteria, \"batch\": batch, \"tasks\": tasks, \"context\": context})\n     metadata = {\"request_sha256\": key, \"mode\": \"batch\" if batch else \"single\", \"cache_status\": \"disabled\",\n                 \"provider_calls\": 0, \"reused_assessments\": 0, \"fresh_usage\": None, \"reused_usage\": None}\n-    path = Path(cache_dir).expanduser() / (key + \".json\") if cache_dir is not None else None\n+    path = Path(cache_dir).expanduser() / (key + \".json\") if False else None\n     if path is not None:\n         metadata[\"cache_status\"] = \"miss\"\n         try:\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_exact_cache_reuse_keeps_historical_usage_out_of_fresh_usage[False]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/cache-hit/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:38.110994+00:00",
+              "finished_at": "2026-11-10T05:48:39.327490+00:00",
+              "stdout_sha256": "76af71df60bb5f93ea635e8763126ecf98e837672c9980e80aefde989b203765",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_exact_cache_reuse_keeps_historical_usage_out_of_fresh_usage[False]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/cache-hit/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:39.331346+00:00",
+              "finished_at": "2026-11-10T05:48:40.676249+00:00",
+              "stdout_sha256": "a8066adbc5d72025eeb8d5d485c1f3b01f77b3b68d042d4f6c5bb36dd23d8cba",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "cached-fresh-usage",
+          "target": "tests.hexagonal.test_jev_efficiency::test_exact_cache_reuse_keeps_historical_usage_out_of_fresh_usage[False]",
+          "classification": "detected",
+          "expected_diagnostic": "REUSE_HAS_NO_FRESH_USAGE",
+          "mutation_applied": true,
+          "mutation_sha256": "c56e855176de8403714c974ce0a060cf4320543b35daab887a36736df1d50bc9",
+          "candidate_sha256": "99ba0d17fa025f33a3b631c3b5ef8ba12b989a13317ab5be6679361abec017c2",
+          "mutation_patch": "--- a/scripts/architecture/cache.py\n+++ b/scripts/architecture/cache.py\n@@ -87,7 +87,7 @@\n             metadata[\"cache_status\"] = \"unusable\"\n         else:\n             metadata.update({\"cache_status\": \"hit\", \"reused_assessments\": len(results), \"reused_usage\": _usage(results),\n-                             \"fresh_usage\": {\"input_tokens\": 0, \"output_tokens\": 0}, \"original_created_at\": entry[\"created_at\"]})\n+                             \"fresh_usage\": _usage(results), \"original_created_at\": entry[\"created_at\"]})\n             reused = []\n             for item in results:\n                 details = dict(item.details)\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_exact_cache_reuse_keeps_historical_usage_out_of_fresh_usage[False]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/cached-fresh-usage/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:40.948311+00:00",
+              "finished_at": "2026-11-10T05:48:42.346743+00:00",
+              "stdout_sha256": "76af71df60bb5f93ea635e8763126ecf98e837672c9980e80aefde989b203765",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_exact_cache_reuse_keeps_historical_usage_out_of_fresh_usage[False]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/cached-fresh-usage/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:42.349037+00:00",
+              "finished_at": "2026-11-10T05:48:43.782124+00:00",
+              "stdout_sha256": "f67a1be6992b3f51e603d4344fd999ef60f6ec815a29613d9fb1cfc7c50ad229",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "cached-answer-usage",
+          "target": "tests.hexagonal.test_jev_efficiency::test_exact_cache_reuse_keeps_historical_usage_out_of_fresh_usage[True]",
+          "classification": "detected",
+          "expected_diagnostic": "REUSED_USAGE_NOT_DOUBLE_COUNTED",
+          "mutation_applied": true,
+          "mutation_sha256": "049cf458ebac596a14d6cfb674c61be5264c4e916c45095ab2915129685becfa",
+          "candidate_sha256": "99ba0d17fa025f33a3b631c3b5ef8ba12b989a13317ab5be6679361abec017c2",
+          "mutation_patch": "--- a/scripts/architecture/cache.py\n+++ b/scripts/architecture/cache.py\n@@ -92,7 +92,7 @@\n             for item in results:\n                 details = dict(item.details)\n                 if \"usage\" in details:\n-                    details[\"original_usage\"] = details.pop(\"usage\")\n+                    details[\"original_usage\"] = details[\"usage\"]\n                 details[\"cache_reused\"] = True\n                 reused.append(replace(item, details=details))\n             return reused, {**metadata, \"elapsed_seconds\": time.monotonic() - started}\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_exact_cache_reuse_keeps_historical_usage_out_of_fresh_usage[True]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/cached-answer-usage/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:44.015284+00:00",
+              "finished_at": "2026-11-10T05:48:45.541721+00:00",
+              "stdout_sha256": "7fefcaf66f6e7137767bc25d16d128cbf7b8617ad0b6f14fbf9a0b8e7fdd81cd",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_exact_cache_reuse_keeps_historical_usage_out_of_fresh_usage[True]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/cached-answer-usage/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:45.543011+00:00",
+              "finished_at": "2026-11-10T05:48:46.889005+00:00",
+              "stdout_sha256": "9b2792832aa1f3c9162f144ac356af795403e83856cbc1eb8158665eb95fd2c8",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "cache-ttl",
+          "target": "tests.hexagonal.test_jev_efficiency::test_unusable_cache_is_recomputed_without_trusting_stale_choices[expired]",
+          "classification": "detected",
+          "expected_diagnostic": "UNUSABLE_CACHE_RECOMPUTED",
+          "mutation_applied": true,
+          "mutation_sha256": "c740bacf1cd6fa14b2fb040fd95aed74050ed4d229d191a2342b79626170b163",
+          "candidate_sha256": "99ba0d17fa025f33a3b631c3b5ef8ba12b989a13317ab5be6679361abec017c2",
+          "mutation_patch": "--- a/scripts/architecture/cache.py\n+++ b/scripts/architecture/cache.py\n@@ -38,7 +38,7 @@\n     if (not isinstance(value, dict) or value.get(\"schema_version\") != _SCHEMA\n             or value.get(\"request_sha256\") != key\n             or type(value.get(\"created_at\")) not in {int, float}\n-            or not math.isfinite(value[\"created_at\"]) or not 0 <= now - value[\"created_at\"] <= ttl\n+            or not math.isfinite(value[\"created_at\"]) or False\n             or not isinstance(value.get(\"assessments\"), list) or len(value[\"assessments\"]) != count\n             or value.get(\"results_sha256\") != _hash(value[\"assessments\"])):\n         raise ValueError(\"Unusable advisory cache entry\")\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_unusable_cache_is_recomputed_without_trusting_stale_choices[expired]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/cache-ttl/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:47.101121+00:00",
+              "finished_at": "2026-11-10T05:48:48.717592+00:00",
+              "stdout_sha256": "fa8e3e1f0a4b084326a7027307e5cc3a94f799f9733ea598c3b878fa3c70f37c",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_unusable_cache_is_recomputed_without_trusting_stale_choices[expired]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/cache-ttl/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:48.719274+00:00",
+              "finished_at": "2026-11-10T05:48:50.234625+00:00",
+              "stdout_sha256": "824870589eb1700ff997ec68129402b27ba4d352706d24ae893687c09ff29fb2",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "cache-choice-validation",
+          "target": "tests.hexagonal.test_jev_efficiency::test_unusable_cache_is_recomputed_without_trusting_stale_choices[resealed-invalid-choice]",
+          "classification": "detected",
+          "expected_diagnostic": "UNUSABLE_CACHE_RECOMPUTED",
+          "mutation_applied": true,
+          "mutation_sha256": "9c4097882f89c3487819d80af048e9344cf169c0525c396b05b95aa0981ac0a4",
+          "candidate_sha256": "99ba0d17fa025f33a3b631c3b5ef8ba12b989a13317ab5be6679361abec017c2",
+          "mutation_patch": "--- a/scripts/architecture/cache.py\n+++ b/scripts/architecture/cache.py\n@@ -45,7 +45,7 @@\n     results = [checked_assessment(item) for item in value[\"assessments\"]]\n     for item in results:\n         probabilities = item.details.get(\"probabilities\")\n-        if (item.outcome not in evaluator.criteria or item.details.get(\"model\") != evaluator.model\n+        if (False or item.details.get(\"model\") != evaluator.model\n                 or not isinstance(probabilities, dict) or probabilities.keys() != evaluator.criteria.keys()\n                 or any(type(p) not in {int, float} or not math.isfinite(p) or not 0 <= p <= 1\n                        for p in probabilities.values()) or abs(sum(probabilities.values()) - 1) > .01):\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_unusable_cache_is_recomputed_without_trusting_stale_choices[resealed-invalid-choice]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/cache-choice-validation/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:50.456124+00:00",
+              "finished_at": "2026-11-10T05:48:51.782507+00:00",
+              "stdout_sha256": "7fefcaf66f6e7137767bc25d16d128cbf7b8617ad0b6f14fbf9a0b8e7fdd81cd",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_unusable_cache_is_recomputed_without_trusting_stale_choices[resealed-invalid-choice]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/cache-choice-validation/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:51.784180+00:00",
+              "finished_at": "2026-11-10T05:48:53.065689+00:00",
+              "stdout_sha256": "1ef602f795c0d6a99db6f53854d73a5d5c2cc0a5d837ffcc21feeabf2e12af98",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "cache-error-persistence",
+          "target": "tests.hexagonal.test_jev_efficiency::test_failed_provider_attempt_is_never_cached",
+          "classification": "detected",
+          "expected_diagnostic": "FAILED_ATTEMPT_NOT_CACHED",
+          "mutation_applied": true,
+          "mutation_sha256": "30c8c5512642c5b0f81367c38d7244f357dc5a8209a4a34e05200afab5293584",
+          "candidate_sha256": "99ba0d17fa025f33a3b631c3b5ef8ba12b989a13317ab5be6679361abec017c2",
+          "mutation_patch": "--- a/scripts/architecture/cache.py\n+++ b/scripts/architecture/cache.py\n@@ -104,7 +104,11 @@\n         results = [answers[key] for key in questions]\n         metadata[\"provider_calls\"] = 1\n     else:\n-        results = [evaluator.assess(task[\"question\"], context) for task in tasks]\n+        try:\n+            results = [evaluator.assess(task[\"question\"], context) for task in tasks]\n+        except OrchestrationError:\n+            write_json(path, {\"error\": \"evaluation_unavailable\"})\n+            raise\n         metadata[\"provider_calls\"] = len(tasks)\n     # Keep the same independent validation on writes as on reads.\n     rows = json.loads(canonical([asdict(item) for item in results]))\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_failed_provider_attempt_is_never_cached",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/cache-error-persistence/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:53.273220+00:00",
+              "finished_at": "2026-11-10T05:48:54.704207+00:00",
+              "stdout_sha256": "7fefcaf66f6e7137767bc25d16d128cbf7b8617ad0b6f14fbf9a0b8e7fdd81cd",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_failed_provider_attempt_is_never_cached",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/cache-error-persistence/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:54.706428+00:00",
+              "finished_at": "2026-11-10T05:48:56.151777+00:00",
+              "stdout_sha256": "3b336aebbc7209e4b67bedcd1dc81f15a5e079948f3c792ebe4e728d26b482bd",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "identity-context",
+          "target": "tests.hexagonal.test_jev_efficiency::test_cache_identity_includes_every_semantic_request_dimension[context]",
+          "classification": "detected",
+          "expected_diagnostic": "CHANGED_REQUEST_IDENTITY",
+          "mutation_applied": true,
+          "mutation_sha256": "f0580a542b82fe278c904d42c23e462b57458d90dc6c53ba5b217260ac61c083",
+          "candidate_sha256": "99ba0d17fa025f33a3b631c3b5ef8ba12b989a13317ab5be6679361abec017c2",
+          "mutation_patch": "--- a/scripts/architecture/cache.py\n+++ b/scripts/architecture/cache.py\n@@ -70,7 +70,7 @@\n         raise OrchestrationError(\"Invalid advisory execution options or tasks.\", \"invalid_configuration\")\n     started, now = time.monotonic(), time.time()\n     key = _hash({\"schema_version\": _SCHEMA, \"endpoint\": evaluator.endpoint, \"model\": evaluator.model,\n-                 \"criteria\": evaluator.criteria, \"batch\": batch, \"tasks\": tasks, \"context\": context})\n+                 \"criteria\": evaluator.criteria, \"batch\": batch, \"tasks\": tasks, \"context\": {}})\n     metadata = {\"request_sha256\": key, \"mode\": \"batch\" if batch else \"single\", \"cache_status\": \"disabled\",\n                 \"provider_calls\": 0, \"reused_assessments\": 0, \"fresh_usage\": None, \"reused_usage\": None}\n     path = Path(cache_dir).expanduser() / (key + \".json\") if cache_dir is not None else None\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_cache_identity_includes_every_semantic_request_dimension[context]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/identity-context/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:56.382342+00:00",
+              "finished_at": "2026-11-10T05:48:57.688182+00:00",
+              "stdout_sha256": "fa8e3e1f0a4b084326a7027307e5cc3a94f799f9733ea598c3b878fa3c70f37c",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_cache_identity_includes_every_semantic_request_dimension[context]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/identity-context/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:57.690172+00:00",
+              "finished_at": "2026-11-10T05:48:59.258229+00:00",
+              "stdout_sha256": "1126898038580dbb2812057ec4c669f30a74dd039dada33878aee2f5edf66a16",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "identity-question",
+          "target": "tests.hexagonal.test_jev_efficiency::test_cache_identity_includes_every_semantic_request_dimension[question]",
+          "classification": "detected",
+          "expected_diagnostic": "CHANGED_REQUEST_IDENTITY",
+          "mutation_applied": true,
+          "mutation_sha256": "8e10240451253012bcfff46a7764b4af97081abbf49aee7a025cf9b3dc6e8bec",
+          "candidate_sha256": "99ba0d17fa025f33a3b631c3b5ef8ba12b989a13317ab5be6679361abec017c2",
+          "mutation_patch": "--- a/scripts/architecture/cache.py\n+++ b/scripts/architecture/cache.py\n@@ -70,7 +70,7 @@\n         raise OrchestrationError(\"Invalid advisory execution options or tasks.\", \"invalid_configuration\")\n     started, now = time.monotonic(), time.time()\n     key = _hash({\"schema_version\": _SCHEMA, \"endpoint\": evaluator.endpoint, \"model\": evaluator.model,\n-                 \"criteria\": evaluator.criteria, \"batch\": batch, \"tasks\": tasks, \"context\": context})\n+                 \"criteria\": evaluator.criteria, \"batch\": batch, \"tasks\": [{\"task_id\": task[\"task_id\"]} for task in tasks], \"context\": context})\n     metadata = {\"request_sha256\": key, \"mode\": \"batch\" if batch else \"single\", \"cache_status\": \"disabled\",\n                 \"provider_calls\": 0, \"reused_assessments\": 0, \"fresh_usage\": None, \"reused_usage\": None}\n     path = Path(cache_dir).expanduser() / (key + \".json\") if cache_dir is not None else None\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_cache_identity_includes_every_semantic_request_dimension[question]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/identity-question/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:48:59.538480+00:00",
+              "finished_at": "2026-11-10T05:49:01.328422+00:00",
+              "stdout_sha256": "d2d744b6b2df2bbb0d73cb7a43f6675bd03881bc2a2c2a74e54ecf18667789e2",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_cache_identity_includes_every_semantic_request_dimension[question]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/identity-question/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:49:01.330298+00:00",
+              "finished_at": "2026-11-10T05:49:02.880032+00:00",
+              "stdout_sha256": "493cdd848347562e8586e121932264ae0f5ed4a934dd2f7574077077837bb78a",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "identity-task_id",
+          "target": "tests.hexagonal.test_jev_efficiency::test_cache_identity_includes_every_semantic_request_dimension[task_id]",
+          "classification": "detected",
+          "expected_diagnostic": "CHANGED_REQUEST_IDENTITY",
+          "mutation_applied": true,
+          "mutation_sha256": "e38067dab60615baacf6f0818724f3eee09508b396ff4f7bd6655a158d6ee300",
+          "candidate_sha256": "99ba0d17fa025f33a3b631c3b5ef8ba12b989a13317ab5be6679361abec017c2",
+          "mutation_patch": "--- a/scripts/architecture/cache.py\n+++ b/scripts/architecture/cache.py\n@@ -70,7 +70,7 @@\n         raise OrchestrationError(\"Invalid advisory execution options or tasks.\", \"invalid_configuration\")\n     started, now = time.monotonic(), time.time()\n     key = _hash({\"schema_version\": _SCHEMA, \"endpoint\": evaluator.endpoint, \"model\": evaluator.model,\n-                 \"criteria\": evaluator.criteria, \"batch\": batch, \"tasks\": tasks, \"context\": context})\n+                 \"criteria\": evaluator.criteria, \"batch\": batch, \"tasks\": [{\"question\": task[\"question\"]} for task in tasks], \"context\": context})\n     metadata = {\"request_sha256\": key, \"mode\": \"batch\" if batch else \"single\", \"cache_status\": \"disabled\",\n                 \"provider_calls\": 0, \"reused_assessments\": 0, \"fresh_usage\": None, \"reused_usage\": None}\n     path = Path(cache_dir).expanduser() / (key + \".json\") if cache_dir is not None else None\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_cache_identity_includes_every_semantic_request_dimension[task_id]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/identity-task_id/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:49:03.137417+00:00",
+              "finished_at": "2026-11-10T05:49:04.841571+00:00",
+              "stdout_sha256": "d2d744b6b2df2bbb0d73cb7a43f6675bd03881bc2a2c2a74e54ecf18667789e2",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_cache_identity_includes_every_semantic_request_dimension[task_id]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/identity-task_id/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:49:04.845929+00:00",
+              "finished_at": "2026-11-10T05:49:06.345486+00:00",
+              "stdout_sha256": "cf84deb7c9d38b99e4b9022e5efbc86cd029c0a8fed6ac4240a33238450247bf",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "identity-criteria",
+          "target": "tests.hexagonal.test_jev_efficiency::test_cache_identity_includes_every_semantic_request_dimension[criteria]",
+          "classification": "detected",
+          "expected_diagnostic": "CHANGED_REQUEST_IDENTITY",
+          "mutation_applied": true,
+          "mutation_sha256": "17e260d5cecd3883027f95dac48e46e52adceb74b3f4add8521d9016970bd915",
+          "candidate_sha256": "99ba0d17fa025f33a3b631c3b5ef8ba12b989a13317ab5be6679361abec017c2",
+          "mutation_patch": "--- a/scripts/architecture/cache.py\n+++ b/scripts/architecture/cache.py\n@@ -70,7 +70,7 @@\n         raise OrchestrationError(\"Invalid advisory execution options or tasks.\", \"invalid_configuration\")\n     started, now = time.monotonic(), time.time()\n     key = _hash({\"schema_version\": _SCHEMA, \"endpoint\": evaluator.endpoint, \"model\": evaluator.model,\n-                 \"criteria\": evaluator.criteria, \"batch\": batch, \"tasks\": tasks, \"context\": context})\n+                 \"criteria\": {}, \"batch\": batch, \"tasks\": tasks, \"context\": context})\n     metadata = {\"request_sha256\": key, \"mode\": \"batch\" if batch else \"single\", \"cache_status\": \"disabled\",\n                 \"provider_calls\": 0, \"reused_assessments\": 0, \"fresh_usage\": None, \"reused_usage\": None}\n     path = Path(cache_dir).expanduser() / (key + \".json\") if cache_dir is not None else None\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_cache_identity_includes_every_semantic_request_dimension[criteria]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/identity-criteria/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:49:06.609370+00:00",
+              "finished_at": "2026-11-10T05:49:08.215834+00:00",
+              "stdout_sha256": "8989a153a4f265bdf8bf8abfcbf7ce96cf91c69ee66d543244ebf0fc2c9d041d",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_cache_identity_includes_every_semantic_request_dimension[criteria]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/identity-criteria/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:49:08.217283+00:00",
+              "finished_at": "2026-11-10T05:49:09.693327+00:00",
+              "stdout_sha256": "dfc1affc22e44814bf2efb3342d343536903955da6deae0ed5894d73f585a08f",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "identity-model",
+          "target": "tests.hexagonal.test_jev_efficiency::test_cache_identity_includes_every_semantic_request_dimension[model]",
+          "classification": "detected",
+          "expected_diagnostic": "CHANGED_REQUEST_IDENTITY",
+          "mutation_applied": true,
+          "mutation_sha256": "c3beb51616d14ae126c541ab02d711b2e75dafa18d1d214d0f94e7fada7fa693",
+          "candidate_sha256": "99ba0d17fa025f33a3b631c3b5ef8ba12b989a13317ab5be6679361abec017c2",
+          "mutation_patch": "--- a/scripts/architecture/cache.py\n+++ b/scripts/architecture/cache.py\n@@ -69,7 +69,7 @@\n             or len({task[\"task_id\"] for task in tasks}) != len(tasks)):\n         raise OrchestrationError(\"Invalid advisory execution options or tasks.\", \"invalid_configuration\")\n     started, now = time.monotonic(), time.time()\n-    key = _hash({\"schema_version\": _SCHEMA, \"endpoint\": evaluator.endpoint, \"model\": evaluator.model,\n+    key = _hash({\"schema_version\": _SCHEMA, \"endpoint\": evaluator.endpoint, \"model\": \"fixed\",\n                  \"criteria\": evaluator.criteria, \"batch\": batch, \"tasks\": tasks, \"context\": context})\n     metadata = {\"request_sha256\": key, \"mode\": \"batch\" if batch else \"single\", \"cache_status\": \"disabled\",\n                 \"provider_calls\": 0, \"reused_assessments\": 0, \"fresh_usage\": None, \"reused_usage\": None}\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_cache_identity_includes_every_semantic_request_dimension[model]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/identity-model/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:49:09.935825+00:00",
+              "finished_at": "2026-11-10T05:49:11.606820+00:00",
+              "stdout_sha256": "016a4093788648644b08006f7d1d171ca7639313677f5aa929f004d4a3e52465",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_cache_identity_includes_every_semantic_request_dimension[model]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/identity-model/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:49:11.608388+00:00",
+              "finished_at": "2026-11-10T05:49:13.351710+00:00",
+              "stdout_sha256": "2029f6f4aa61da8ba1722fabc3bbb3dbe8e652b9b370eb3cca4cf1ebd26b7b72",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "identity-endpoint",
+          "target": "tests.hexagonal.test_jev_efficiency::test_cache_identity_includes_every_semantic_request_dimension[endpoint]",
+          "classification": "detected",
+          "expected_diagnostic": "CHANGED_REQUEST_IDENTITY",
+          "mutation_applied": true,
+          "mutation_sha256": "36d3c3e1432e0a148038d6dd8ad8f8c92643edd059bba6be9c697029e8cb1d2c",
+          "candidate_sha256": "99ba0d17fa025f33a3b631c3b5ef8ba12b989a13317ab5be6679361abec017c2",
+          "mutation_patch": "--- a/scripts/architecture/cache.py\n+++ b/scripts/architecture/cache.py\n@@ -69,7 +69,7 @@\n             or len({task[\"task_id\"] for task in tasks}) != len(tasks)):\n         raise OrchestrationError(\"Invalid advisory execution options or tasks.\", \"invalid_configuration\")\n     started, now = time.monotonic(), time.time()\n-    key = _hash({\"schema_version\": _SCHEMA, \"endpoint\": evaluator.endpoint, \"model\": evaluator.model,\n+    key = _hash({\"schema_version\": _SCHEMA, \"endpoint\": \"fixed\", \"model\": evaluator.model,\n                  \"criteria\": evaluator.criteria, \"batch\": batch, \"tasks\": tasks, \"context\": context})\n     metadata = {\"request_sha256\": key, \"mode\": \"batch\" if batch else \"single\", \"cache_status\": \"disabled\",\n                 \"provider_calls\": 0, \"reused_assessments\": 0, \"fresh_usage\": None, \"reused_usage\": None}\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_cache_identity_includes_every_semantic_request_dimension[endpoint]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/identity-endpoint/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:49:13.663499+00:00",
+              "finished_at": "2026-11-10T05:49:15.314831+00:00",
+              "stdout_sha256": "8989a153a4f265bdf8bf8abfcbf7ce96cf91c69ee66d543244ebf0fc2c9d041d",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_cache_identity_includes_every_semantic_request_dimension[endpoint]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/identity-endpoint/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:49:15.317284+00:00",
+              "finished_at": "2026-11-10T05:49:16.726922+00:00",
+              "stdout_sha256": "4ba83f81c27fa6ca806e69318a66144b385d5f47775e3df06a7b2ddb9ad036be",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "identity-mode",
+          "target": "tests.hexagonal.test_jev_efficiency::test_cache_identity_includes_every_semantic_request_dimension[mode]",
+          "classification": "detected",
+          "expected_diagnostic": "CHANGED_REQUEST_IDENTITY",
+          "mutation_applied": true,
+          "mutation_sha256": "1023a355a2b411a5e6fbfe6dd3fd8dafd18312adfaf81fdfe14f7bf06d6e302a",
+          "candidate_sha256": "99ba0d17fa025f33a3b631c3b5ef8ba12b989a13317ab5be6679361abec017c2",
+          "mutation_patch": "--- a/scripts/architecture/cache.py\n+++ b/scripts/architecture/cache.py\n@@ -70,7 +70,7 @@\n         raise OrchestrationError(\"Invalid advisory execution options or tasks.\", \"invalid_configuration\")\n     started, now = time.monotonic(), time.time()\n     key = _hash({\"schema_version\": _SCHEMA, \"endpoint\": evaluator.endpoint, \"model\": evaluator.model,\n-                 \"criteria\": evaluator.criteria, \"batch\": batch, \"tasks\": tasks, \"context\": context})\n+                 \"criteria\": evaluator.criteria, \"batch\": False, \"tasks\": tasks, \"context\": context})\n     metadata = {\"request_sha256\": key, \"mode\": \"batch\" if batch else \"single\", \"cache_status\": \"disabled\",\n                 \"provider_calls\": 0, \"reused_assessments\": 0, \"fresh_usage\": None, \"reused_usage\": None}\n     path = Path(cache_dir).expanduser() / (key + \".json\") if cache_dir is not None else None\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_cache_identity_includes_every_semantic_request_dimension[mode]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/identity-mode/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:49:16.951386+00:00",
+              "finished_at": "2026-11-10T05:49:18.196018+00:00",
+              "stdout_sha256": "76af71df60bb5f93ea635e8763126ecf98e837672c9980e80aefde989b203765",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_cache_identity_includes_every_semantic_request_dimension[mode]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/identity-mode/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:49:18.200767+00:00",
+              "finished_at": "2026-11-10T05:49:19.666699+00:00",
+              "stdout_sha256": "5b0d7e20d026c508d371a83fb1e94bab15e70d7acc9fe1fadf6f58148ce8a985",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "integration",
+      "source_summary_sha256": "f0bd53d9d06903e3a6b8d621565e6661a7fc2efa552a4774631e2c6de55eebed",
+      "candidate": {
+        "commit": "d70eebc4b28d07b3ba989284d34cf209dd09b019",
+        "content_sha256": "19a503c4cecf65b74173a23133d0b0c2c6f124e25ace425d205aabf6aca9aba2"
+      },
+      "passed": true,
+      "witnesses": [
+        {
+          "name": "integration-diagnose-cache",
+          "target": "tests.hexagonal.test_jev_efficiency::test_diagnose_cold_and_warm_http_requests_report_real_reuse",
+          "classification": "detected",
+          "expected_diagnostic": "DIAGNOSE_CACHE_PREVENTS_REPEAT_REQUESTS",
+          "mutation_applied": true,
+          "mutation_sha256": "6b84c93bcf6766adb2ad8daebc36deecdb0dc94e0c1ccf732db4e2c3fb46e236",
+          "candidate_sha256": "19a503c4cecf65b74173a23133d0b0c2c6f124e25ace425d205aabf6aca9aba2",
+          "mutation_patch": "--- a/scripts/architecture/diagnostics.py\n+++ b/scripts/architecture/diagnostics.py\n@@ -149,7 +149,7 @@\n         evaluator.close()\n         return {**base, \"status\": \"inconclusive\", \"reason\": \"no_complete_candidate\"}\n     try:\n-        assessments, execution = run_tasks(evaluator, tasks, context, cache_dir=options.get(\"cache_dir\"),\n+        assessments, execution = run_tasks(evaluator, tasks, context, cache_dir=None,\n                                            batch=options.get(\"batch\", False),\n                                            cache_ttl_seconds=options.get(\"cache_ttl_seconds\", 86400))\n         base[\"execution\"] = execution\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_diagnose_cold_and_warm_http_requests_report_real_reuse",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/integration-diagnose-cache/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:54:47.636121+00:00",
+              "finished_at": "2026-11-10T05:54:48.879626+00:00",
+              "stdout_sha256": "d2d744b6b2df2bbb0d73cb7a43f6675bd03881bc2a2c2a74e54ecf18667789e2",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_diagnose_cold_and_warm_http_requests_report_real_reuse",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/integration-diagnose-cache/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:54:48.881591+00:00",
+              "finished_at": "2026-11-10T05:54:50.127645+00:00",
+              "stdout_sha256": "e525b007195741dc8dd2f922de4ffb37dbe704f00d614a147c85dc78097f708a",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "integration-diagnose-batch",
+          "target": "tests.hexagonal.test_jev_efficiency::test_diagnose_batch_profile_uses_one_http_request_with_grounded_answers",
+          "classification": "detected",
+          "expected_diagnostic": "DIAGNOSE_BATCH_SINGLE_WIRE_REQUEST",
+          "mutation_applied": true,
+          "mutation_sha256": "cc25d03e29cf92af10ac57b49dd3fed06b0b368aa5add909fb834d9aaea6224a",
+          "candidate_sha256": "19a503c4cecf65b74173a23133d0b0c2c6f124e25ace425d205aabf6aca9aba2",
+          "mutation_patch": "--- a/scripts/architecture/diagnostics.py\n+++ b/scripts/architecture/diagnostics.py\n@@ -150,7 +150,7 @@\n         return {**base, \"status\": \"inconclusive\", \"reason\": \"no_complete_candidate\"}\n     try:\n         assessments, execution = run_tasks(evaluator, tasks, context, cache_dir=options.get(\"cache_dir\"),\n-                                           batch=options.get(\"batch\", False),\n+                                           batch=False,\n                                            cache_ttl_seconds=options.get(\"cache_ttl_seconds\", 86400))\n         base[\"execution\"] = execution\n         for task, assessment in zip(tasks, assessments):\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_diagnose_batch_profile_uses_one_http_request_with_grounded_answers",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/integration-diagnose-batch/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:54:50.348410+00:00",
+              "finished_at": "2026-11-10T05:54:51.561705+00:00",
+              "stdout_sha256": "8989a153a4f265bdf8bf8abfcbf7ce96cf91c69ee66d543244ebf0fc2c9d041d",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_diagnose_batch_profile_uses_one_http_request_with_grounded_answers",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/integration-diagnose-batch/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:54:51.563614+00:00",
+              "finished_at": "2026-11-10T05:54:52.772635+00:00",
+              "stdout_sha256": "4fd2bcf40072f7fd9dd796abd57322fe2973f6b8b9fe8029b398f51bfe78c329",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "integration-diagnose-usage",
+          "target": "tests.hexagonal.test_jev_efficiency::test_diagnose_cold_and_warm_http_requests_report_real_reuse",
+          "classification": "detected",
+          "expected_diagnostic": "DIAGNOSE_REUSE_USAGE_ZERO",
+          "mutation_applied": true,
+          "mutation_sha256": "2c569ca72e8dc13bbedf43b5d52f688e35db71107a8972a6ff40a1d91031ba80",
+          "candidate_sha256": "19a503c4cecf65b74173a23133d0b0c2c6f124e25ace425d205aabf6aca9aba2",
+          "mutation_patch": "--- a/scripts/architecture/diagnostics.py\n+++ b/scripts/architecture/diagnostics.py\n@@ -152,7 +152,7 @@\n         assessments, execution = run_tasks(evaluator, tasks, context, cache_dir=options.get(\"cache_dir\"),\n                                            batch=options.get(\"batch\", False),\n                                            cache_ttl_seconds=options.get(\"cache_ttl_seconds\", 86400))\n-        base[\"execution\"] = execution\n+        base[\"execution\"] = {**execution, \"fresh_usage\": None}\n         for task, assessment in zip(tasks, assessments):\n             base[\"assessments\"].append({**task,\n                                          **asdict(assessment),\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_diagnose_cold_and_warm_http_requests_report_real_reuse",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/integration-diagnose-usage/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:54:52.972663+00:00",
+              "finished_at": "2026-11-10T05:54:54.186049+00:00",
+              "stdout_sha256": "93c97c10af4fc8b54296201243c032c5e8295479ca6b4adc06019033d6f9e282",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_diagnose_cold_and_warm_http_requests_report_real_reuse",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/integration-diagnose-usage/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:54:54.187286+00:00",
+              "finished_at": "2026-11-10T05:54:55.404937+00:00",
+              "stdout_sha256": "9c3c002a93ca3aed6d3656d01ba4c9c98deb4addb473874a288afe184c88903d",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "integration-candidate-binding",
+          "target": "tests.hexagonal.test_jev_efficiency::test_diagnose_batch_profile_uses_one_http_request_with_grounded_answers",
+          "classification": "detected",
+          "expected_diagnostic": "BATCH_CANDIDATE_BINDING_PRESERVED",
+          "mutation_applied": true,
+          "mutation_sha256": "5139137b4abd42cfffe7838af361ae3568dcf4e1d020828caba6a47e09d56ac4",
+          "candidate_sha256": "19a503c4cecf65b74173a23133d0b0c2c6f124e25ace425d205aabf6aca9aba2",
+          "mutation_patch": "--- a/scripts/architecture/diagnostics.py\n+++ b/scripts/architecture/diagnostics.py\n@@ -154,7 +154,7 @@\n                                            cache_ttl_seconds=options.get(\"cache_ttl_seconds\", 86400))\n         base[\"execution\"] = execution\n         for task, assessment in zip(tasks, assessments):\n-            base[\"assessments\"].append({**task,\n+            base[\"assessments\"].append({**task, \"path\": \"unrelated.py\",\n                                          **asdict(assessment),\n                                          \"evidence_scope\": context[\"source_scope\"][\"selected\"]})\n     except OrchestrationError as error:\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_diagnose_batch_profile_uses_one_http_request_with_grounded_answers",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/integration-candidate-binding/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:54:55.635188+00:00",
+              "finished_at": "2026-11-10T05:54:56.821137+00:00",
+              "stdout_sha256": "f69b41b567fe2583118441e8e8390afa756eecb8625fa01f5e10bcff2c1cef10",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_diagnose_batch_profile_uses_one_http_request_with_grounded_answers",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/integration-candidate-binding/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:54:56.822587+00:00",
+              "finished_at": "2026-11-10T05:54:58.035783+00:00",
+              "stdout_sha256": "f286a21874f176c8835a7f135e0c28df3bab4334d4f9d66e107203cb3994b7db",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "integration-invalid-cache-option",
+          "target": "tests.hexagonal.test_jev_efficiency::test_diagnose_invalid_cache_options_are_visible_configuration_errors[cache_dir-value0]",
+          "classification": "detected",
+          "expected_diagnostic": "CACHE_OPTIONS_VALIDATED",
+          "mutation_applied": true,
+          "mutation_sha256": "6ee44120c36351778a16e46f71aae020ead80628c1324f1bd0446b9dfa9b4143",
+          "candidate_sha256": "19a503c4cecf65b74173a23133d0b0c2c6f124e25ace425d205aabf6aca9aba2",
+          "mutation_patch": "--- a/scripts/architecture/cache.py\n+++ b/scripts/architecture/cache.py\n@@ -61,7 +61,7 @@\n     does not attest a writer. Errors and partial batches are never cached. Batch\n     mode is explicit because joint questions can change provider judgments.\n     \"\"\"\n-    if ((cache_dir is not None and (not isinstance(cache_dir, (str, Path)) or not str(cache_dir) or \"\\0\" in str(cache_dir)))\n+    if ((False)\n             or type(batch) is not bool or type(cache_ttl_seconds) not in {int, float}\n             or not math.isfinite(cache_ttl_seconds) or cache_ttl_seconds <= 0\n             or not isinstance(tasks, list) or not tasks\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_diagnose_invalid_cache_options_are_visible_configuration_errors[cache_dir-value0]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/integration-invalid-cache-option/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:54:58.242100+00:00",
+              "finished_at": "2026-11-10T05:54:59.500131+00:00",
+              "stdout_sha256": "f69b41b567fe2583118441e8e8390afa756eecb8625fa01f5e10bcff2c1cef10",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_diagnose_invalid_cache_options_are_visible_configuration_errors[cache_dir-value0]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/integration-invalid-cache-option/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:54:59.501772+00:00",
+              "finished_at": "2026-11-10T05:55:00.874854+00:00",
+              "stdout_sha256": "5e26a0bc0397f632462304d921faef5581156cb05483fe6e3a3cf2693ebf5097",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "integration-cli-cache",
+          "target": "tests.hexagonal.test_jev_efficiency::test_cli_cache_and_batch_flags_reach_diagnostics",
+          "classification": "detected",
+          "expected_diagnostic": "CLI_CACHE_AND_BATCH_APPLIED",
+          "mutation_applied": true,
+          "mutation_sha256": "a358fd1398d462568b87cbb97ae34fd5af709741b09d63d226e39b27bb74cd74",
+          "candidate_sha256": "19a503c4cecf65b74173a23133d0b0c2c6f124e25ace425d205aabf6aca9aba2",
+          "mutation_patch": "--- a/scripts/architecture/__main__.py\n+++ b/scripts/architecture/__main__.py\n@@ -73,7 +73,7 @@\n                 if os.environ.get(variable):\n                     options[key] = os.environ[variable]\n             if args.cache_dir is not None:\n-                options[\"cache_dir\"] = str(args.cache_dir.expanduser().resolve())\n+                options[\"cache_dir\"] = None\n             if args.batch:\n                 options[\"batch\"] = True\n             report[\"diagnostics\"] = diagnose(report, root, options)\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_cli_cache_and_batch_flags_reach_diagnostics",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/integration-cli-cache/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:55:01.120051+00:00",
+              "finished_at": "2026-11-10T05:55:02.355821+00:00",
+              "stdout_sha256": "016a4093788648644b08006f7d1d171ca7639313677f5aa929f004d4a3e52465",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_cli_cache_and_batch_flags_reach_diagnostics",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/integration-cli-cache/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:55:02.357973+00:00",
+              "finished_at": "2026-11-10T05:55:03.920661+00:00",
+              "stdout_sha256": "367b676970e563d9846bbd8bc38505779029b731be6e75a036862e06c9245785",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "integration-cli-batch",
+          "target": "tests.hexagonal.test_jev_efficiency::test_cli_cache_and_batch_flags_reach_diagnostics",
+          "classification": "detected",
+          "expected_diagnostic": "CLI_CACHE_AND_BATCH_APPLIED",
+          "mutation_applied": true,
+          "mutation_sha256": "f4fa995c3bfb47fcb258cba87ff0f683cf755d1707e2ba67d54040dc6f2bd365",
+          "candidate_sha256": "19a503c4cecf65b74173a23133d0b0c2c6f124e25ace425d205aabf6aca9aba2",
+          "mutation_patch": "--- a/scripts/architecture/__main__.py\n+++ b/scripts/architecture/__main__.py\n@@ -75,7 +75,7 @@\n             if args.cache_dir is not None:\n                 options[\"cache_dir\"] = str(args.cache_dir.expanduser().resolve())\n             if args.batch:\n-                options[\"batch\"] = True\n+                options[\"batch\"] = False\n             report[\"diagnostics\"] = diagnose(report, root, options)\n         except (OSError, ValueError, TypeError):\n             report[\"diagnostics\"] = {\"status\": \"error\", \"reason\": \"diagnostic_configuration_invalid\"}\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_cli_cache_and_batch_flags_reach_diagnostics",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/integration-cli-batch/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:55:04.190640+00:00",
+              "finished_at": "2026-11-10T05:55:05.424904+00:00",
+              "stdout_sha256": "36ee6125777253800df314c891baf72e42248a17540db95c6bdb02de742e24de",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_cli_cache_and_batch_flags_reach_diagnostics",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/integration-cli-batch/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:55:05.426580+00:00",
+              "finished_at": "2026-11-10T05:55:06.665792+00:00",
+              "stdout_sha256": "364aba1a380a35d23086c4b52179b423e10c48c47d9e7aeab2dad4f9c2bd7525",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "integration-ci-removed",
+          "target": "tests.hexagonal.test_jev_efficiency::test_ci_restores_external_advisory_cache_and_invokes_it",
+          "classification": "detected",
+          "expected_diagnostic": "CI_ADVISORY_CACHE_RESTORED",
+          "mutation_applied": true,
+          "mutation_sha256": "4838f1da9428c1e33cbe543f6a2ee77b3864efe1b53f7caac57b0e14d96bfb83",
+          "candidate_sha256": "19a503c4cecf65b74173a23133d0b0c2c6f124e25ace425d205aabf6aca9aba2",
+          "mutation_patch": "--- a/.github/workflows/ci.yml\n+++ b/.github/workflows/ci.yml\n@@ -423,16 +423,6 @@\n           \"id\": \"dependencies\"\n         },\n         {\n-          \"name\": \"Restore exact-request advisory cache\",\n-          \"uses\": \"actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830\",\n-          \"continue-on-error\": true,\n-          \"with\": {\n-            \"path\": \"${{ runner.temp }}/jev-assessment-cache\",\n-            \"key\": \"${{ runner.os }}-jev-v1-${{ hashFiles('scripts/architecture/*.py', 'xorchestrate/adapters/evaluation.py', 'contracts/hexagonal*.json') }}-${{ github.run_id }}-${{ github.run_attempt }}\",\n-            \"restore-keys\": \"${{ runner.os }}-jev-v1-\"\n-          }\n-        },\n-        {\n           \"name\": \"Jev architecture diagnostics\",\n           \"if\": \"!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'\",\n           \"env\": {\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_ci_restores_external_advisory_cache_and_invokes_it",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/integration-ci-removed/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:55:06.878248+00:00",
+              "finished_at": "2026-11-10T05:55:08.034831+00:00",
+              "stdout_sha256": "7fefcaf66f6e7137767bc25d16d128cbf7b8617ad0b6f14fbf9a0b8e7fdd81cd",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_ci_restores_external_advisory_cache_and_invokes_it",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/integration-ci-removed/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:55:08.036751+00:00",
+              "finished_at": "2026-11-10T05:55:09.244818+00:00",
+              "stdout_sha256": "797868b737bbd17da1e48ea669fbbfd5fede6023d6f5cb49763ce11b5d439016",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "integration-ci-inside-candidate",
+          "target": "tests.hexagonal.test_jev_efficiency::test_ci_restores_external_advisory_cache_and_invokes_it",
+          "classification": "detected",
+          "expected_diagnostic": "CI_CACHE_OUTSIDE_CANDIDATE",
+          "mutation_applied": true,
+          "mutation_sha256": "46fbbaac7ccfc27da799cd3a371093dbae3afd8a03aa47855200223fcb16d092",
+          "candidate_sha256": "19a503c4cecf65b74173a23133d0b0c2c6f124e25ace425d205aabf6aca9aba2",
+          "mutation_patch": "--- a/.github/workflows/ci.yml\n+++ b/.github/workflows/ci.yml\n@@ -427,7 +427,7 @@\n           \"uses\": \"actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830\",\n           \"continue-on-error\": true,\n           \"with\": {\n-            \"path\": \"${{ runner.temp }}/jev-assessment-cache\",\n+            \"path\": \"${{ github.workspace }}/jev-assessment-cache\",\n             \"key\": \"${{ runner.os }}-jev-v1-${{ hashFiles('scripts/architecture/*.py', 'xorchestrate/adapters/evaluation.py', 'contracts/hexagonal*.json') }}-${{ github.run_id }}-${{ github.run_attempt }}\",\n             \"restore-keys\": \"${{ runner.os }}-jev-v1-\"\n           }\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_ci_restores_external_advisory_cache_and_invokes_it",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/integration-ci-inside-candidate/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:55:09.456036+00:00",
+              "finished_at": "2026-11-10T05:55:10.664344+00:00",
+              "stdout_sha256": "fa8e3e1f0a4b084326a7027307e5cc3a94f799f9733ea598c3b878fa3c70f37c",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_ci_restores_external_advisory_cache_and_invokes_it",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/integration-ci-inside-candidate/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:55:10.666203+00:00",
+              "finished_at": "2026-11-10T05:55:11.924465+00:00",
+              "stdout_sha256": "fc024da8a4f5757b9ea99a470c71b4314f858c786869c3ecec3cfccf8f1501e5",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "integration-ci-blocking",
+          "target": "tests.hexagonal.test_jev_efficiency::test_ci_restores_external_advisory_cache_and_invokes_it",
+          "classification": "detected",
+          "expected_diagnostic": "CI_CACHE_FAILURE_ADVISORY",
+          "mutation_applied": true,
+          "mutation_sha256": "4d5169249999b91ae2c17ae25d8e71c86924fa9287176a741219d6724ddf5aa7",
+          "candidate_sha256": "19a503c4cecf65b74173a23133d0b0c2c6f124e25ace425d205aabf6aca9aba2",
+          "mutation_patch": "--- a/.github/workflows/ci.yml\n+++ b/.github/workflows/ci.yml\n@@ -425,7 +425,7 @@\n         {\n           \"name\": \"Restore exact-request advisory cache\",\n           \"uses\": \"actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830\",\n-          \"continue-on-error\": true,\n+          \"continue-on-error\": false,\n           \"with\": {\n             \"path\": \"${{ runner.temp }}/jev-assessment-cache\",\n             \"key\": \"${{ runner.os }}-jev-v1-${{ hashFiles('scripts/architecture/*.py', 'xorchestrate/adapters/evaluation.py', 'contracts/hexagonal*.json') }}-${{ github.run_id }}-${{ github.run_attempt }}\",\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_ci_restores_external_advisory_cache_and_invokes_it",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/integration-ci-blocking/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:55:12.139024+00:00",
+              "finished_at": "2026-11-10T05:55:13.536717+00:00",
+              "stdout_sha256": "f69b41b567fe2583118441e8e8390afa756eecb8625fa01f5e10bcff2c1cef10",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_ci_restores_external_advisory_cache_and_invokes_it",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/integration-ci-blocking/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:55:13.543162+00:00",
+              "finished_at": "2026-11-10T05:55:14.891028+00:00",
+              "stdout_sha256": "74de1e1bef62213141732face6497ae9d7b64a927cfb986d979752440d56eafd",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "integration-ci-not-invoked",
+          "target": "tests.hexagonal.test_jev_efficiency::test_ci_restores_external_advisory_cache_and_invokes_it",
+          "classification": "detected",
+          "expected_diagnostic": "CI_CACHE_INVOKED",
+          "mutation_applied": true,
+          "mutation_sha256": "a6db8198dfd0d777722e9d422602f99b0bcff364e9b4d932f99a4d6e7415d0ed",
+          "candidate_sha256": "19a503c4cecf65b74173a23133d0b0c2c6f124e25ace425d205aabf6aca9aba2",
+          "mutation_patch": "--- a/.github/workflows/ci.yml\n+++ b/.github/workflows/ci.yml\n@@ -440,7 +440,7 @@\n             \"JEV_ENDPOINT\": \"${{ vars.JEV_ENDPOINT }}\",\n             \"JEV_MODEL\": \"${{ vars.JEV_MODEL }}\"\n           },\n-          \"run\": \"python3 -m scripts.architecture --jev-config contracts/hexagonal-jev.json --cache-dir \\\"$RUNNER_TEMP/jev-assessment-cache\\\" --diagnostics-only --output \\\"$RUNNER_TEMP/architecture/diagnostics.json\\\"\"\n+          \"run\": \"python3 -m scripts.architecture --jev-config contracts/hexagonal-jev.json --diagnostics-only --output \\\"$RUNNER_TEMP/architecture/diagnostics.json\\\"\"\n         },\n         {\n           \"name\": \"Record unavailable diagnostics\",\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_ci_restores_external_advisory_cache_and_invokes_it",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/integration-ci-not-invoked/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:55:15.132758+00:00",
+              "finished_at": "2026-11-10T05:55:16.398092+00:00",
+              "stdout_sha256": "fa8e3e1f0a4b084326a7027307e5cc3a94f799f9733ea598c3b878fa3c70f37c",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_ci_restores_external_advisory_cache_and_invokes_it",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/integration-ci-not-invoked/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T05:55:16.399309+00:00",
+              "finished_at": "2026-11-10T05:55:17.589120+00:00",
+              "stdout_sha256": "242b4d5d0142c8609b967a15bfd7909ad2f9a07792803ddae1f4ad4385a60e55",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "review",
+      "source_summary_sha256": "019c3081a7a9e547248cee1d835d4f794ca8ad47c58d47e94d64443dac3dec5a",
+      "candidate": {
+        "commit": "2e73e1ff9fe58352350f4d71ec7170eb91dc83d7",
+        "content_sha256": "4e881e435025f1e356c30d795f6e0e9d5bb1adfebfb486f50146825bc23e8809"
+      },
+      "passed": true,
+      "witnesses": [
+        {
+          "name": "overflow-timestamp",
+          "target": "tests.hexagonal.test_jev_efficiency::test_exceptional_cache_corruption_is_contained_and_recomputed[overflow-timestamp]",
+          "classification": "detected",
+          "expected_diagnostic": "CACHE_CORRUPTION_CONTAINED",
+          "mutation_applied": true,
+          "mutation_sha256": "5f16e1929ea98e1028f372d065a3238b77f0bacd4278dcdd5a5206998ffd6ea0",
+          "candidate_sha256": "4e881e435025f1e356c30d795f6e0e9d5bb1adfebfb486f50146825bc23e8809",
+          "mutation_patch": "--- a/scripts/architecture/cache.py\n+++ b/scripts/architecture/cache.py\n@@ -54,13 +54,6 @@\n     return results\n \n \n-def _valid_ttl(value):\n-    try:\n-        return type(value) in {int, float} and math.isfinite(value) and value > 0\n-    except OverflowError:\n-        return False\n-\n-\n def run_tasks(evaluator, tasks, context, *, cache_dir=None, batch=False, cache_ttl_seconds=86400):\n     \"\"\"Return aligned assessments and execution facts; cached usage is never fresh.\n \n@@ -69,7 +62,8 @@\n     mode is explicit because joint questions can change provider judgments.\n     \"\"\"\n     if ((cache_dir is not None and (not isinstance(cache_dir, (str, Path)) or not str(cache_dir) or \"\\0\" in str(cache_dir)))\n-            or type(batch) is not bool or not _valid_ttl(cache_ttl_seconds)\n+            or type(batch) is not bool or type(cache_ttl_seconds) not in {int, float}\n+            or not math.isfinite(cache_ttl_seconds) or cache_ttl_seconds <= 0\n             or not isinstance(tasks, list) or not tasks\n             or any(not isinstance(task, dict) or not isinstance(task.get(\"task_id\"), str)\n                    or not task[\"task_id\"] or not isinstance(task.get(\"question\"), str)\n@@ -91,7 +85,7 @@\n             results = _cached_results(entry, key=key, evaluator=evaluator, count=len(tasks), now=now, ttl=cache_ttl_seconds)\n         except FileNotFoundError:\n             pass\n-        except (OSError, ValueError, TypeError, KeyError, OverflowError, RecursionError, OrchestrationError):\n+        except (OSError, ValueError, TypeError, KeyError, OrchestrationError):\n             metadata[\"cache_status\"] = \"unusable\"\n         else:\n             metadata.update({\"cache_status\": \"hit\", \"reused_assessments\": len(results), \"reused_usage\": _usage(results),\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_exceptional_cache_corruption_is_contained_and_recomputed[overflow-timestamp]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/review-containment/overflow-timestamp/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T06:02:15.467575+00:00",
+              "finished_at": "2026-11-10T06:02:16.821639+00:00",
+              "stdout_sha256": "8989a153a4f265bdf8bf8abfcbf7ce96cf91c69ee66d543244ebf0fc2c9d041d",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_exceptional_cache_corruption_is_contained_and_recomputed[overflow-timestamp]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/review-containment/overflow-timestamp/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T06:02:16.823703+00:00",
+              "finished_at": "2026-11-10T06:02:18.131492+00:00",
+              "stdout_sha256": "b0393a4dffb80fc433ab98af13f64ddc58469be1557f479b0f043d045e55d13d",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "deep-json",
+          "target": "tests.hexagonal.test_jev_efficiency::test_exceptional_cache_corruption_is_contained_and_recomputed[deep-json]",
+          "classification": "detected",
+          "expected_diagnostic": "CACHE_CORRUPTION_CONTAINED",
+          "mutation_applied": true,
+          "mutation_sha256": "5f16e1929ea98e1028f372d065a3238b77f0bacd4278dcdd5a5206998ffd6ea0",
+          "candidate_sha256": "4e881e435025f1e356c30d795f6e0e9d5bb1adfebfb486f50146825bc23e8809",
+          "mutation_patch": "--- a/scripts/architecture/cache.py\n+++ b/scripts/architecture/cache.py\n@@ -54,13 +54,6 @@\n     return results\n \n \n-def _valid_ttl(value):\n-    try:\n-        return type(value) in {int, float} and math.isfinite(value) and value > 0\n-    except OverflowError:\n-        return False\n-\n-\n def run_tasks(evaluator, tasks, context, *, cache_dir=None, batch=False, cache_ttl_seconds=86400):\n     \"\"\"Return aligned assessments and execution facts; cached usage is never fresh.\n \n@@ -69,7 +62,8 @@\n     mode is explicit because joint questions can change provider judgments.\n     \"\"\"\n     if ((cache_dir is not None and (not isinstance(cache_dir, (str, Path)) or not str(cache_dir) or \"\\0\" in str(cache_dir)))\n-            or type(batch) is not bool or not _valid_ttl(cache_ttl_seconds)\n+            or type(batch) is not bool or type(cache_ttl_seconds) not in {int, float}\n+            or not math.isfinite(cache_ttl_seconds) or cache_ttl_seconds <= 0\n             or not isinstance(tasks, list) or not tasks\n             or any(not isinstance(task, dict) or not isinstance(task.get(\"task_id\"), str)\n                    or not task[\"task_id\"] or not isinstance(task.get(\"question\"), str)\n@@ -91,7 +85,7 @@\n             results = _cached_results(entry, key=key, evaluator=evaluator, count=len(tasks), now=now, ttl=cache_ttl_seconds)\n         except FileNotFoundError:\n             pass\n-        except (OSError, ValueError, TypeError, KeyError, OverflowError, RecursionError, OrchestrationError):\n+        except (OSError, ValueError, TypeError, KeyError, OrchestrationError):\n             metadata[\"cache_status\"] = \"unusable\"\n         else:\n             metadata.update({\"cache_status\": \"hit\", \"reused_assessments\": len(results), \"reused_usage\": _usage(results),\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_exceptional_cache_corruption_is_contained_and_recomputed[deep-json]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/review-containment/deep-json/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T06:02:18.327069+00:00",
+              "finished_at": "2026-11-10T06:02:19.585959+00:00",
+              "stdout_sha256": "93c97c10af4fc8b54296201243c032c5e8295479ca6b4adc06019033d6f9e282",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_exceptional_cache_corruption_is_contained_and_recomputed[deep-json]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/review-containment/deep-json/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T06:02:19.587244+00:00",
+              "finished_at": "2026-11-10T06:02:20.909923+00:00",
+              "stdout_sha256": "22c833a1ec7954a4a587d5e958ca96ca0846517f4e89f92a6f0380860cba49dd",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        },
+        {
+          "name": "overflow-ttl",
+          "target": "tests.hexagonal.test_jev_efficiency::test_diagnose_invalid_cache_options_are_visible_configuration_errors[overflow-ttl]",
+          "classification": "detected",
+          "expected_diagnostic": "CACHE_OPTIONS_VALIDATED",
+          "mutation_applied": true,
+          "mutation_sha256": "5f16e1929ea98e1028f372d065a3238b77f0bacd4278dcdd5a5206998ffd6ea0",
+          "candidate_sha256": "4e881e435025f1e356c30d795f6e0e9d5bb1adfebfb486f50146825bc23e8809",
+          "mutation_patch": "--- a/scripts/architecture/cache.py\n+++ b/scripts/architecture/cache.py\n@@ -54,13 +54,6 @@\n     return results\n \n \n-def _valid_ttl(value):\n-    try:\n-        return type(value) in {int, float} and math.isfinite(value) and value > 0\n-    except OverflowError:\n-        return False\n-\n-\n def run_tasks(evaluator, tasks, context, *, cache_dir=None, batch=False, cache_ttl_seconds=86400):\n     \"\"\"Return aligned assessments and execution facts; cached usage is never fresh.\n \n@@ -69,7 +62,8 @@\n     mode is explicit because joint questions can change provider judgments.\n     \"\"\"\n     if ((cache_dir is not None and (not isinstance(cache_dir, (str, Path)) or not str(cache_dir) or \"\\0\" in str(cache_dir)))\n-            or type(batch) is not bool or not _valid_ttl(cache_ttl_seconds)\n+            or type(batch) is not bool or type(cache_ttl_seconds) not in {int, float}\n+            or not math.isfinite(cache_ttl_seconds) or cache_ttl_seconds <= 0\n             or not isinstance(tasks, list) or not tasks\n             or any(not isinstance(task, dict) or not isinstance(task.get(\"task_id\"), str)\n                    or not task[\"task_id\"] or not isinstance(task.get(\"question\"), str)\n@@ -91,7 +85,7 @@\n             results = _cached_results(entry, key=key, evaluator=evaluator, count=len(tasks), now=now, ttl=cache_ttl_seconds)\n         except FileNotFoundError:\n             pass\n-        except (OSError, ValueError, TypeError, KeyError, OverflowError, RecursionError, OrchestrationError):\n+        except (OSError, ValueError, TypeError, KeyError, OrchestrationError):\n             metadata[\"cache_status\"] = \"unusable\"\n         else:\n             metadata.update({\"cache_status\": \"hit\", \"reused_assessments\": len(results), \"reused_usage\": _usage(results),\n",
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_diagnose_invalid_cache_options_are_visible_configuration_errors[overflow-ttl]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/review-containment/overflow-ttl/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T06:02:21.119625+00:00",
+              "finished_at": "2026-11-10T06:02:22.448161+00:00",
+              "stdout_sha256": "016a4093788648644b08006f7d1d171ca7639313677f5aa929f004d4a3e52465",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_jev_efficiency.py::test_diagnose_invalid_cache_options_are_visible_configuration_errors[overflow-ttl]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-efficiency/review-containment/overflow-ttl/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-10T06:02:22.449657+00:00",
+              "finished_at": "2026-11-10T06:02:23.654435+00:00",
+              "stdout_sha256": "ef1b5cd5a73bbdd5c7d10990e6e98acbca9dfa6815204f3fb902b9c529122fc6",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
