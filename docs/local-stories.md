@@ -29,6 +29,7 @@ stories for the chosen mode. Unknown, duplicate and unsupported IDs are errors.
 | `effects-recovery` | Real CLI/MCP effects, idempotent replay, denied effects and uncertain effects fenced across restart | Protocol peers |
 | `session-lifecycle` | Start, send, poll and stop a bridge session | Protocol peers |
 | `work-acceptance` | Measure actual private artifact bytes through a subprocess; accept, revise requirements, reject stale measurement and changed artifact; retain history after restart | Protocol peers |
+| `native-handshake` | Start the configured harness session and stop it; no turn is admitted | Protocol peers or configured native harness |
 | `native-callback` | Actor-bound harness tool callback, exact nonce, session shutdown and retained result after restart | Protocol peers or configured native harness |
 
 Protocol mode uses real application processes and controlled peers without vendor
@@ -45,7 +46,14 @@ normal local authentication, with no protocol fallback:
   --timeout 120 --run-timeout 180 --detach
 ```
 
-Each selected driver gets a separate attempt. The other stories explicitly report
+Each selected driver gets a separate attempt. `native-handshake` is the cheaper
+of the two native stories: it reaches session start, where launch and session options are exercised (and
+authentication, for adapters that authenticate at session start), and its turn
+limit is zero, so
+a turn is refused before dispatch whatever `--max-turns` allows. Its receipt
+records that effective limit. [`doctor --probe`](managed-proofs.md#set-up-once)
+runs it for the selected drivers. Omitting `--story` in native mode selects both
+native stories for each driver. The other stories explicitly report
 unsupported native selection; their controlled failure schedules have not been
 qualified against installed vendors. The existing full multi-harness suite
 remains available separately.
@@ -95,6 +103,6 @@ verified cleanup. Missing required assertions fail the story. Preserve these
 original receipts when telemetry imports their references; telemetry export
 success is not a behavioral verdict.
 
-CI runs the five protocol stories in the existing tmux job, and tests exercise
+CI runs the six protocol stories in the existing tmux job, and tests exercise
 selection, pre-dispatch budget rejection, actual effects, managed repetition and
 failure cleanup. Installed vendor qualification remains a local measurement.

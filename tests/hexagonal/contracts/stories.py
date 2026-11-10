@@ -1,7 +1,10 @@
 """Observable contracts for selected, bounded public-process stories."""
 
-STORIES = ("coordination", "effects-recovery", "session-lifecycle", "work-acceptance", "native-callback")
+STORIES = ("coordination", "effects-recovery", "session-lifecycle", "work-acceptance", "native-handshake",
+           "native-callback")
 LIMITS = {"sessions": 2, "turns": 4, "tool_calls": 5000}
+# A story may admit less than the operator allows; the handshake never submits a turn.
+STORY_LIMITS = {"native-handshake": {"turns": 0}}
 ASSERTIONS = {
     "coordination": {"coordination_and_acknowledgement", "coordination_survives_restart"},
     "effects-recovery": {"cli_and_mcp_effects_are_idempotent", "declared_guardrail_prevents_effect",
@@ -10,8 +13,13 @@ ASSERTIONS = {
     "work-acceptance": {"work_requirements_candidate_and_contribution", "measured_artifact_is_accepted",
                         "requirements_revision_invalidates_acceptance_and_replay",
                         "new_measurement_and_changed_artifact_survive_restart"},
+    "native-handshake": {"configured_native_session_handshake", "handshake_admitted_no_turn"},
     "native-callback": {"configured_native_application_callback", "native_callback_survives_restart"},
 }
+
+
+def effective_limits(story):
+    return {**LIMITS, **STORY_LIMITS.get(story, {})}
 
 
 def completed_story(receipt, story):
@@ -27,8 +35,11 @@ def completed_story(receipt, story):
     assert all(row["status"] == "passed" for row in receipt["checks"])
     assert receipt["evidence_scope"] == "local_protocol_fixture"
     assert receipt["budget"]["scope"] == "controller_requests_and_harness_submissions"
-    assert receipt["budget"]["limits"] == LIMITS
-    assert all(0 <= receipt["budget"]["consumed"][key] <= value for key, value in LIMITS.items())
+    limits = effective_limits(story)
+    assert receipt["budget"]["limits"] == limits
+    assert all(0 <= receipt["budget"]["consumed"][key] <= value for key, value in limits.items())
+    if limits["turns"] == 0:
+        assert receipt["budget"]["consumed"]["turns"] == 0, "A story admitting no turn submitted one"
 
 
 def rejected_before_dispatch(subject, action, arguments):

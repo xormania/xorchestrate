@@ -72,6 +72,35 @@ a model. Missing prerequisites are reported against their dependent checks;
 independent selected checks can still run. A malformed plan is rejected before
 execution. Use `--suite static` for checks that need no native client or tmux.
 
+Acceptance and story checks provision their disposable project and private
+application home inside the run directory, and the product refuses a home that
+another user could replace. `doctor` therefore asks the product's own rule about
+the evidence root and reports it as `run_location`: every enclosing directory
+must be owned by you or root and must not be group- or other-writable unless it
+is sticky. A refusal names the directory at fault. The same readiness blocks the
+check before launch at execution, with that reason, instead of failing inside a
+launched scenario. Select another `--output`/profile `output`, or remove the
+write permission.
+
+`doctor --probe` (native mode, opt-in) additionally takes each selected driver
+through its session handshake: it runs the [`native-handshake` story](local-stories.md),
+which starts the configured harness session and stops it. Starting a session
+makes the driver launch its process, initialize and open its native session, so
+an unusable executable or a rejected session option is reported here, per
+driver, with its reason. The probe reaches whatever the driver's adapter does at
+session start: an adapter that authenticates there (Grok, ACP) also reports a
+missing login, while a driver that checks its login only when a turn is
+submitted can pass the probe and still fail its first turn. The story admits
+no turn: nothing is submitted to a model. The probe uses the foreground
+executor's configuration, as `run` does; a `--project` override that `start`
+would apply to the launched sessions is not applied to it. It still launches your installed
+harness under your account and writes an ordinary run directory beneath the
+evidence root, which is why plain `doctor` never does it. The launched story
+writes its own progress lines first; the doctor report is the final line of
+output. The probe is skipped when readiness has already failed. A harness that waits for terminal input
+during startup (for example a workspace trust prompt) does not complete an
+unattended probe; it fails at the scenario timeout.
+
 For selected local capture it runs the collector's actual SQLite compatibility
 check in the selected interpreter (`telemetry_sqlite`). Use a runtime with the
 required SQLite WAL fix, such as uv Python 3.12.16, when doctor reports that
@@ -126,6 +155,25 @@ dashboard, enter a terminal number to select an identified owned target, `w` to
 follow current targets or `q` to leave the viewer. An initial target can also be
 selected with `attach RUN_DIRECTORY --target 1`. Selection is checked against
 the current owned-target list.
+
+`status` and `wait` include a `failures` list when a check did not succeed: one
+line per check blocked before launch (its readiness reason) and per failed
+scenario check (the request involved and the application's error). The run's
+private `summary.txt` carries the same lines as `Failure:` entries. These lines
+are computed from the private [scenario diagnostics](live-acceptance.md#read-the-result)
+when you ask. A failed scenario check's line is not stored in the saved state,
+and the diagnostics file is not a member of the collected `diagnostics.zip`,
+whose receipts keep assertion codes only. A readiness reason is different: as
+before this change, the reason a check was blocked before launch is part of the
+check report, the saved state and the collected archive, and a `run_location`
+reason names local directories. The output of `status`, `wait`, `list` and
+`doctor --probe` therefore contains private reason text; treat that output as
+private rather than pasting or logging it somewhere shared. Reading a failed
+effect's preserved outcome is one more application request and counts toward
+the scenario's tool-call budget. The separate `telemetry.zip` is unchanged: where local
+capture is enabled, the product's corpus retains original action outcomes under
+its own [content policy](local-live-telemetry.md#what-is-retained), which can
+include a provider's error text. Review it before sharing, as before.
 
 `wait` is the command to use when a caller needs the final result. Its exit status
 reflects authoritative proof evidence and required operational finalization.

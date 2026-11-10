@@ -48,7 +48,9 @@ def write_json(path, value):
 def allocate_run(output):
     """Allocate an exclusive private run beneath a reusable output root."""
     output = Path(output).expanduser().resolve()
-    output.mkdir(parents=True, exist_ok=True, mode=0o700)
+    # Missing ancestors are created private as well; left to the umask they can make the run location unsafe.
+    for missing in reversed([item for item in (output, *output.parents) if not item.exists()]):
+        missing.mkdir(exist_ok=True, mode=0o700)
     directory = output / (datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid4().hex[:12])
     directory.mkdir(mode=0o700)
     return directory

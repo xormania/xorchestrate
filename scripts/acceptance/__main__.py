@@ -7,6 +7,7 @@ import os
 import sys
 from pathlib import Path
 
+from scripts.testkit.adapters.diagnostics import NAME as DIAGNOSTICS
 from scripts.testkit.adapters.evidence import allocate_run
 from scripts.testkit.adapters.tmux import supervise
 from scripts.testkit.stories import select_stories, validate_limits
@@ -58,7 +59,11 @@ def main(argv=None):
     root = Path(__file__).resolve().parents[2]
     report = supervise(command, run_dir, profile=args.profile, timeout=args.timeout, cwd=root,
                        grace=args.shutdown_grace, cleanup_budget=args.cleanup_budget)
-    print(json.dumps({"status": report["status"], "report": str(run_dir / "report.json")}))
+    summary = {"status": report["status"], "report": str(run_dir / "report.json")}
+    if (run_dir / DIAGNOSTICS).is_file():
+        # Only the location: the reasons themselves stay in the private file.
+        summary["diagnostics"] = str(run_dir / DIAGNOSTICS)
+    print(json.dumps(summary))
     return 0 if report["status"] == "passed" else 1
 
 
