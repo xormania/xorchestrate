@@ -27,6 +27,7 @@ from pathlib import Path
 
 from ..composition import ProjectContext, validate_config
 from ..model import OrchestrationError
+from ..telemetry import snapshot_policy
 from . import companion as records
 from .home import account_home, write_document
 from .project import CONFIG_FILE, POLICIES_DIRECTORY
@@ -181,6 +182,14 @@ def _complete_telemetry(config, context):
         config["telemetry"] = completed
 
 
+def _check_snapshot_policy(config):
+    """Refuse an invalid ``snapshots`` telemetry option, such as an unknown trigger, when rendering."""
+    section = config.get("telemetry")
+    options = section.get("options") if isinstance(section, dict) else None
+    if isinstance(options, dict) and "snapshots" in options:
+        snapshot_policy(options["snapshots"])
+
+
 def _default_store(config, data_dir):
     store = config.get("store")
     if store is None:
@@ -282,6 +291,7 @@ def render(tracked, companion, context, *, write=True):
     config = substitute(config, values)
     _default_store(config, data_dir)
     _complete_telemetry(config, context)
+    _check_snapshot_policy(config)
     resolved = validate_config(config, data_dir, telemetry_defaults=context.telemetry_defaults())
     path = data_dir / RENDERED_FILE
     if write:

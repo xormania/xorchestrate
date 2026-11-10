@@ -13,7 +13,7 @@ from pathlib import Path
 
 from ..model import OrchestrationError
 from .home import Home
-from .instance import approval_refusal, context_for, locate_project, resolve_instance
+from .instance import approval_refusal, context_for, locate_project, resolve_instance, upgrade_refusal
 from .render import launched_commands, render, repository_references
 from .services import Services
 
@@ -101,6 +101,11 @@ def project_checks(path=None, environ=None):
         checks.append(_check("approval", "error", str(refusal), **refusal.details))
     else:
         checks.append(_check("approval", "ok", f"configuration {tracked.config_hash[:12]} is approved"))
+    pending = upgrade_refusal(instance, tracked)
+    if pending is not None:
+        checks.append(_check("release", "error", str(pending), code=pending.code, **pending.details))
+    else:
+        checks.append(_check("release", "ok", f"the instance runs the pinned release {tracked.release}"))
     for program in tracked.requires:
         checks.append(_check("requires", "ok" if shutil.which(program) else "error",
                              f"{program} {'resolves' if shutil.which(program) else 'is not on PATH'}"))

@@ -26,13 +26,14 @@ Two directories share a name and hold different things:
   registry.json                      instance id -> project name, repository, git common directory
   toolchains/<release>/              release-keyed environments (see release handoff)
   projects/<project>/                one instance per project per machine, shared by all worktrees
-    instance.json                    instance id, git common directory, release, approval hash, versions,
-                                     and optionally this project's own companion selection
+    instance.json                    instance id, git common directory, installed release, approval hash,
+                                     versions, upgrades, and optionally this project's own companion selection
     config.rendered.json             the merged, substituted configuration the server runs
     state.sqlite3                    application state (the default store)
     telemetry/                       the live telemetry corpus
     launchers/                       launchers copied from the companion (mode 0755)
-    backups/                         reserved for upgrade backups
+    backups/                         upgrade backups (see upgrade.md)
+    upgrade.json                     progress of an unfinished upgrade
   servers/                           project servers' locks, sockets and discovery records
 
 <companion>/                         the user's private repository (git-directory adapter)
@@ -40,6 +41,8 @@ Two directories share a name and hold different things:
   approvals/<project>/approvals.json approved hashes of the project's tracked configuration
   policies/*.json                    fragments merged above every project's config.json
   launchers/                         executables configurations name as ${launchers}/...
+  telemetry/<project>/<instance>/<bundle_id>/  archived telemetry snapshot bundles
+  .gitattributes                     tracks telemetry/**/*.sqlite3 with Git LFS
 ```
 
 `project.json` fields: `schema` (1), `name` (lowercase letters, digits, `.`,
@@ -58,6 +61,10 @@ Two directories share a name and hold different things:
 | `xorchestrate approve [PATH]` | Approve the tracked `.xorchestrate/` of the worktree at `PATH` (default: the working directory). |
 | `xorchestrate doctor` | Check Python and its SQLite WAL fix, `git`, `uv`, the project's approval, the overlay's overrides, that configured harness commands and `requires` resolve on `PATH`, and that `pass_env` variables are set. Exit status 1 when any check is an error. |
 | `describe`, `call`, `run`, `serve`, `connect`, `up`, `down`, `status` | Run the application for the project found from the working directory, or the one named by `--project PATH`. |
+| `xorchestrate telemetry snapshot [--destination NAME] [--archive]` | Take a manual snapshot bundle of the project's telemetry corpus (see [telemetry](telemetry.md#snapshots-at-chosen-moments)). |
+| `xorchestrate telemetry archive BUNDLE` | Copy a complete, verified bundle into the companion. |
+| `xorchestrate upgrade [--to TAG] [--plan-only] [--detach]` | Move this machine's instance to the approved pinned release (see [upgrading](upgrade.md)). |
+| `xorchestrate migrate-config [FILE] [--write]` | Rewrite a configuration to the current format version, showing the diff (see [upgrading](upgrade.md#configuration-format-rewrites)). |
 
 All commands print JSON. Errors are `{"error": {"code", "message", "details"}}`
 on standard error with exit status 2.
@@ -285,9 +292,16 @@ adapter shape.
 
 The `Companion` port stores records of one project, or project-independent
 ones, as opaque bytes addressed by kind and key. Each operator capability owns
-a kind and its format (`overlay` and `approvals` per project, `policies` and
-`launchers` independent of projects); a later capability, such as snapshot
-archives, adds a kind without changing the port or its adapters.
+a kind and its format (`overlay`, `approvals` and `telemetry` per project,
+`policies` and `launchers` independent of projects); a later capability adds a
+kind without changing the port or its adapters. A key is one or more names
+separated by `/`, so a capability can keep a tree of records: archived bundles
+are `telemetry` records keyed `<instance>/<bundle_id>/<file>`. `keys(kind)`
+lists only single-name keys, so the flat kinds ignore subdirectories (a launcher
+library in `launchers/lib/`, a parked policy in `policies/disabled/`);
+`keys(kind, recursive=True)` lists every key. `revision()`
+reports the companion's committed revision (its git `HEAD`), which archived
+bundles record; xorchestrate writes companion records but never commits them.
 
 The `github` adapter reads a token from `GH_TOKEN` or `GITHUB_TOKEN`, else
 from `gh auth token`, and asks `GET /repos/{owner}/{name}` whether the
@@ -308,8 +322,15 @@ permissions.
 
 The installed `xorchestrate` reads `release` from `project.json`. When it is a
 different release, the project commands (`describe`, `call`, `run`, `serve`,
-`connect`, `up`, `down`, `status`) execute the same command line through
-`~/.xorchestrate/toolchains/<release>/`. A missing toolchain is built with uv
+`connect`, `up`, `telemetry`) execute the same command line through
+`~/.xorchestrate/toolchains/<release>/`. `down` and `status` only talk to the
+server's socket and always run in the installed launcher. The pin must also be
+the release this machine's instance was set up or upgraded for
+(`instance.json` `release`): a newly pinned release takes effect only through
+[`xorchestrate upgrade`](upgrade.md), and until then the other project commands
+are refused with `upgrade_required`. A process that was handed a command for one
+release never hands it on to another (`handoff_loop`), so releases that
+disagree about which one runs a command cannot loop. A missing toolchain is built with uv
 first:
 
 1. `uv python install <python>`;
@@ -330,8 +351,8 @@ is not approved, is refused before any handoff.
 `toolchain_python` (default `3.12`) and `toolchain_source`, a PEP 508
 requirement with `{release}` (default
 `xorchestrate @ git+https://github.com/xormania/xorchestrate@{release}`).
-The operator commands (`setup`, `companion`, `init`, `approve`, `doctor`) run
-with the installed release.
+The operator commands (`setup`, `companion`, `init`, `approve`, `doctor`,
+`upgrade`, `migrate-config`) run with the installed release.
 
 ## Known limitations
 

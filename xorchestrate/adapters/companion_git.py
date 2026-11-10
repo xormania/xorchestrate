@@ -5,6 +5,10 @@
 <path>/<kind>/<key>             project-independent records, for example policies/team.json
 ```
 
+A key with ``/`` separators is a path below that directory, for example
+``telemetry/app/<instance>/<bundle>/telemetry.sqlite3``. No component may be a
+symbolic link.
+
 Options: ``path``, absolute. The location is unsafe inside a working tree
 that holds a project's ``.xorchestrate/``: agents and other people's commits
 could then write the approvals meant to guard against them. ``remote()`` is
@@ -33,8 +37,12 @@ This private repository holds your own xorchestrate records for every project:
   configurations you approved with `xorchestrate approve`.
 - `policies/*.json`: fragments merged above every project's `config.json`.
 - `launchers/`: executables your configurations reference as `${launchers}`.
+- `telemetry/<project>/<instance>/<bundle>/`: telemetry snapshot bundles
+  archived with `xorchestrate telemetry archive`. Their `*.sqlite3` files are
+  tracked with Git LFS (see `.gitattributes`); run `git lfs install` once.
 
-Keep it under version control and private.
+Xorchestrate writes these files but never commits them; review and commit them
+yourself. Keep it under version control and private.
 """
 GITATTRIBUTES = "telemetry/**/*.sqlite3 filter=lfs diff=lfs merge=lfs -text\n"
 
@@ -48,6 +56,16 @@ def _name(value, what):
     return value
 
 
+def _key(value):
+    """A key: one or more names separated by ``/``; returns its components."""
+    if not isinstance(value, str):
+        raise OrchestrationError("Invalid companion record key.", "invalid_arguments", {"key": value})
+    parts = value.split("/")
+    if not all(NAME.fullmatch(part) for part in parts):
+        raise OrchestrationError("Invalid companion record key.", "invalid_arguments", {"key": value})
+    return parts
+
+
 class DirectoryRecords:
     """One project's records as ``<kind>/<project>/<key>``, or project-independent ones as ``<kind>/<key>``."""
 
@@ -59,21 +77,49 @@ class DirectoryRecords:
         directory = self.root / _name(kind, "kind")
         return directory / self.project if self.project is not None else directory
 
-    def keys(self, kind):
+    def _path(self, kind, key):
+        """The record's path, refusing a symbolic link or a record where a directory is needed."""
+        kind_directory = self.root / _name(kind, "kind")
+        path = self._directory(kind)
+        for parent in (kind_directory, path) if path != kind_directory else (path,):
+            if parent.is_symlink():
+                raise OrchestrationError("A companion record path crosses a symbolic link.", "invalid_arguments",
+                                         {"key": key})
+        for part in _key(key):
+            if path.is_symlink() or (path.exists() and not path.is_dir()):
+                raise OrchestrationError("A companion record path crosses a symbolic link or another record.",
+                                         "invalid_arguments", {"key": key})
+            path = path / part
+        return path
+
+    def keys(self, kind, *, recursive=False):
         directory = self._directory(kind)
-        if not directory.is_dir():
+        if not directory.is_dir() or directory.is_symlink() or (self.root / kind).is_symlink():
             return []
-        return sorted(path.name for path in directory.iterdir()
-                      if path.is_file() and not path.is_symlink() and NAME.match(path.name))
+        if not recursive:
+            return sorted(path.name for path in directory.iterdir()
+                          if path.is_file() and not path.is_symlink() and NAME.fullmatch(path.name))
+        found = []
+        for current, directories, files in os.walk(directory, followlinks=False):
+            relative = Path(current).relative_to(directory)
+            if any(not NAME.fullmatch(part) for part in relative.parts):
+                directories[:] = []
+                continue
+            found += [(relative / name).as_posix() for name in files
+                      if NAME.fullmatch(name) and not (Path(current) / name).is_symlink()]
+        return sorted(found)
 
     def read(self, kind, key):
-        path = self._directory(kind) / _name(key, "key")
+        path = self._path(kind, key)
         return None if path.is_symlink() or not path.is_file() else path.read_bytes()
 
     def write(self, kind, key, data, *, create_only=False):
-        path = self._directory(kind) / _name(key, "key")
+        path = self._path(kind, key)
         if not isinstance(data, bytes):
             raise OrchestrationError("Companion records are bytes.", "invalid_arguments")
+        if path.is_symlink() or path.is_dir():
+            raise OrchestrationError("A companion record cannot replace a link or a directory.", "invalid_arguments",
+                                     {"key": key})
         path.parent.mkdir(parents=True, exist_ok=True)
         if create_only:
             try:
@@ -158,3 +204,7 @@ class GitDirectoryCompanion:
     def remote(self):
         worktree = self.version_control.worktree(str(self.root)) if self.root.is_dir() else None
         return None if worktree is None else self.version_control.remote_url(worktree.root)
+
+    def revision(self):
+        worktree = self.version_control.worktree(str(self.root)) if self.root.is_dir() else None
+        return None if worktree is None else self.version_control.revision(worktree.root)

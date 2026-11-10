@@ -280,3 +280,99 @@ def test_bridge_host_enforces_the_configuration_version(tmp_path, monkeypatch):
         bridge.main()
     assert refused.value.code == "configuration_version_unsupported"
     assert files_under(tmp_path) == ["config.json"]
+
+
+# -- explicit configuration rewrites (migrate-config) and the configuration release gate --------
+
+CONFIG_FIXTURES = Path(__file__).resolve().parents[2] / "tests" / "fixtures" / "configs"
+CURRENT = max(SUPPORTED_CONFIG_VERSIONS)
+
+
+def fixture_version(path):
+    suffix = path.stem.removeprefix("config-")
+    return None if suffix == "unversioned" else int(suffix.removeprefix("v"))
+
+
+def test_a_configuration_fixture_exists_for_every_supported_version():
+    versions = {fixture_version(path) for path in CONFIG_FIXTURES.glob("config-*.json")}
+    assert SUPPORTED_CONFIG_VERSIONS <= versions and None in versions
+
+
+@pytest.mark.parametrize("fixture", sorted(CONFIG_FIXTURES.glob("config-*.json")), ids=lambda path: path.stem)
+def test_every_configuration_fixture_loads_and_migrates_to_the_current_fixture_byte_for_byte(tmp_path, fixture):
+    from xorchestrate.instance.migrate_config import migrate_config
+
+    target = tmp_path / "config.json"
+    shutil.copyfile(fixture, target)
+    report = migrate_config(target, write=True, environ={"XORCHESTRATE_HOME": str(tmp_path / "home")})
+    assert target.read_bytes() == (CONFIG_FIXTURES / f"config-v{CURRENT}.json").read_bytes()
+    assert report["to"] == CURRENT and report["changed"] is (fixture_version(fixture) != CURRENT)
+    assert validate_config(json.loads(target.read_text()), tmp_path).version == CURRENT
+    if report["changed"]:
+        assert Path(report["original"]).read_bytes() == fixture.read_bytes(), "the original is kept"
+
+
+def test_a_configuration_one_version_ahead_is_refused_and_left_unchanged(tmp_path):
+    from xorchestrate.instance.migrate_config import migrate_config
+
+    target = tmp_path / "config.json"
+    target.write_text(json.dumps({"version": CURRENT + 1}))
+    before = target.read_bytes()
+    code, _message, details = failure(lambda: migrate_config(target, write=True,
+                                                             environ={"XORCHESTRATE_HOME": str(tmp_path / "home")}))
+    assert code == "configuration_version_unsupported" and details["version"] == CURRENT + 1
+    assert target.read_bytes() == before
+    assert failure(lambda: validate_config({"version": CURRENT + 1}, tmp_path))[0] == \
+        "configuration_version_unsupported"
+
+
+def test_rewrites_run_in_order_and_set_each_version():
+    ran = []
+
+    def step(source):
+        def rewrite(config):
+            ran.append((source, config["version"]))
+            return {**config, "renamed": [*config.get("renamed", []), source]}
+        return rewrite
+
+    chain = composition.ConfigMigrations(3, {1: step(1), 2: step(2)})
+    document, version, applied = chain.migrate({"store": {"adapter": "memory"}})
+    assert (version, applied, ran) == (1, [[1, 2], [2, 3]], [(1, 1), (2, 2)])
+    assert document == {"store": {"adapter": "memory"}, "renamed": [1, 2], "version": 3}
+    assert chain.migrate({"version": 3}) == ({"version": 3}, 3, [])
+    code, _message, details = failure(lambda: composition.ConfigMigrations(3, {2: step(2)}).migrate({"version": 1}))
+    assert code == "configuration_migration_unavailable" and details["oldest_migratable"] == 2
+    with pytest.raises(ValueError):
+        composition.ConfigMigrations(4, {1: step(1), 3: step(3)})
+
+
+def test_migrate_config_shows_the_diff_writes_only_on_request_and_needs_approval_again(tmp_path):
+    project = ProjectFixture(tmp_path, {"store": {"adapter": "sqlite"}})
+    tracked = project.tracked / "config.json"
+    before = tracked.read_bytes()
+    described = project.json("describe")
+    assert [item["code"] for item in described["warnings"]] == ["configuration_version_missing"]
+
+    shown = project.json("migrate-config")
+    assert (shown["changed"], shown["written"], shown["from"], shown["to"]) == (True, False, None, CURRENT)
+    assert '+  "version": 1' in shown["diff"] and tracked.read_bytes() == before
+
+    written = project.json("migrate-config", "--write")
+    assert written["written"] is True and written["approval"]["state"] == "required"
+    assert json.loads(tracked.read_text()) == {"store": {"adapter": "sqlite"}, "version": CURRENT}
+    assert Path(written["original"]).read_bytes() == before
+    assert not Path(written["original"]).is_relative_to(project.repo), "the original is kept outside the project"
+    refused = project.json("describe", expect=2)["error"]
+    assert refused["code"] == "approval_required" and refused["details"]["files"] == ["config.json"]
+    project.approve()
+    assert project.json("describe")["warnings"] == []
+    assert project.json("migrate-config")["changed"] is False
+
+
+def test_migrate_config_refuses_a_newer_tracked_configuration(tmp_path):
+    project = ProjectFixture(tmp_path)
+    project.write_config({"version": CURRENT + 1}, approved=False)
+    before = (project.tracked / "config.json").read_bytes()
+    error = project.json("migrate-config", "--write", expect=2)["error"]
+    assert error["code"] == "configuration_version_unsupported"
+    assert (project.tracked / "config.json").read_bytes() == before

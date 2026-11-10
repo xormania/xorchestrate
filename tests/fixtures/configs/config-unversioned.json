@@ -1,0 +1,35 @@
+{
+  "guardrail": {
+    "adapter": "rules",
+    "options": {
+      "default": "allow"
+    }
+  },
+  "sessions": {
+    "worker": {
+      "adapter": "jsonrpc",
+      "options": {
+        "command": [
+          "${launchers}/worker",
+          "serve"
+        ],
+        "cwd": "${repo}",
+        "timeout": 30
+      }
+    }
+  },
+  "store": {
+    "adapter": "sqlite"
+  },
+  "telemetry": {
+    "options": {
+      "dataset_id": "fixture",
+      "snapshots": {
+        "triggers": [
+          "before_upgrade",
+          "before_sync"
+        ]
+      }
+    }
+  }
+}

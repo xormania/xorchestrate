@@ -108,6 +108,19 @@ assert "list_work" in {item["name"] for item in by_id[2]["result"]["tools"]}
 assert by_id[3]["result"]["isError"] is False
 assert work["id"] in {item["id"] for item in by_id[3]["result"]["structuredContent"]["work"]}
 
+# Upgrade dry run: the installed release plans an upgrade of the project to itself and changes nothing;
+# the operator's snapshot, archive and configuration rewrite run from the installed package.
+plan, = invoke([str(console), "upgrade", "--plan-only"])
+assert plan["plan"]["release"] == "v" + xorchestrate.__version__ and plan["plan"]["ready"] is True, plan
+assert plan["plan"]["data"]["status"] == "current" and plan["plan"]["config"]["status"] == "ok", plan
+assert invoke([str(console), "upgrade"]) == [{**{key: plan[key] for key in ("project", "instance_id", "from", "to")},
+                                             "status": "current"}]
+snapshot, = invoke([str(console), "telemetry", "snapshot", "--destination", "installed-witness"])
+assert snapshot["status"] == "complete" and snapshot["event_count"] > 0, snapshot
+archived, = invoke([str(console), "telemetry", "archive", "installed-witness"])
+assert archived["status"] == "archived" and archived["bundle_id"] == snapshot["bundle_id"], archived
+assert invoke([str(console), "migrate-config"])[0]["changed"] is False
+
 # The native launcher executes its installed file by absolute path using only
 # stdlib imports. This checks gateway transport, not authenticated agent behavior.
 gateway = LocalGateway(lambda action, payload: {"tools": [{"name": "installed-witness", "inputSchema": {"type": "object"}}]})
@@ -122,7 +135,7 @@ finally:
     gateway.close()
 print(json.dumps({"status": "passed", "package_path": str(package), "executable": str(console), "cwd": str(pathlib.Path.cwd()),
                   "installed": installed, "checks": ["xcontracts_ports", "short_command", "no_project_refusal", "project_setup", "console_describe", "persisted_cli", "mcp_read",
-                             "absolute_gateway"]}))
+                             "upgrade_plan", "telemetry_archive", "migrate_config", "absolute_gateway"]}))
 '''
 
 

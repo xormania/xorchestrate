@@ -171,9 +171,27 @@ been made.
    uvx --from xork==X.Y.Z xo --version
    ```
 
-7. **Roll out.** In the companion, open a pull request changing `default_release`
-   or specific projects' `release`; merge when ready, then upgrade instances one by
-   one.
+7. **Roll out.** In each project, open a pull request changing `release` in
+   `.xorchestrate/project.json`; merge when ready. On each machine, pull it,
+   `xorchestrate approve` it and run `xorchestrate upgrade` (see
+   [upgrading](upgrade.md)).
+
+## Release gates in CI
+
+Besides the identity gate above, the ordinary suites carry these release gates
+on every pull request:
+
+| Gate | Where | Checks |
+| --- | --- | --- |
+| Configuration compatibility | `tests/hexagonal/test_config_versioning.py`, fixtures in [`tests/fixtures/configs/`](../tests/fixtures/configs/README.md) | a fixture exists for every supported format version and loads; `migrate-config` rewrites each older one, and an unversioned one, to the current fixture byte for byte; a configuration one version ahead is refused |
+| Data migration chain | `tests/hexagonal/test_data_versioning.py`, fixtures in `tests/fixtures/stores/` | a fixture store exists for every data version the chain migrates from; each is migrated to the current version and read by the application; a newer store is refused |
+| Pre-versioned store | `tests/hexagonal/test_data_versioning.py` | a store with `user_version` 0 opens as version 1 |
+| Upgrade | `tests/hexagonal/test_upgrade.py` | an end-to-end upgrade between two fake release toolchains migrates with the target release, resumes after a failed migration and is refused while sessions are live |
+| Installed upgrade dry run | [installed package acceptance](package-acceptance.md) | the installed launcher plans an upgrade of a fresh project (`upgrade --plan-only`), snapshots and archives its telemetry and checks its configuration format |
+
+A release that bumps the data version commits the new version's fixture store
+(`python3 -m tests.hexagonal.support.store_fixtures tests/fixtures/stores/data-vN.db`);
+one that bumps the configuration format adds `tests/fixtures/configs/config-vN.json`.
 
 A failed run publishes nothing until the publish job; fix the cause, delete and
 recreate the tag only if nothing was uploaded, and push again. A version that
