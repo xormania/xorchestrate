@@ -4,8 +4,8 @@ A release is an annotated tag ``vMAJOR.MINOR.PATCH`` (optionally ``-rc.N``) whos
 commit sets ``__version__`` and the ``pyproject.toml`` version to the same string
 without the ``v``. ``CHANGELOG.md`` has a ``## X.Y.Z`` entry with a non-empty
 ``### Upgrade notes`` section. Each alias project (by default ``packaging/xork``)
-declares the same version and depends only on exactly that release of the
-package. Built distributions, when given, are one wheel and one sdist of the
+declares the same version, depends only on exactly that release of the
+package and declares the package's console scripts. Built distributions, when given, are one wheel and one sdist of the
 package and of each alias, all carrying the version. Without ``--tag`` (a manual
 dry run) the expected tag is ``v`` + ``__version__``.
 """
@@ -51,7 +51,7 @@ def project_metadata(root):
 
 
 def check_alias(root, directory, package, version, errors):
-    """An alias project declares ``version`` and depends only on ``package==version``."""
+    """An alias project declares ``version``, depends only on ``package==version`` and has its console scripts."""
     location = Path(root) / directory
     if not (location / "pyproject.toml").is_file():
         errors.append(f"Alias project {directory} has no pyproject.toml")
@@ -69,6 +69,10 @@ def check_alias(root, directory, package, version, errors):
         errors.append(f"Alias {name} dependencies {dependencies!r} are not exactly [{pin!r}]")
     if project.get("optional-dependencies") or "dependencies" in project.get("dynamic", []):
         errors.append(f"Alias {name} must not declare optional or dynamic dependencies")
+    # Installers expose only the requested package's commands, so the alias declares the package's own.
+    expected, scripts = _project(root).get("scripts", {}), project.get("scripts", {})
+    if scripts != expected or "scripts" in project.get("dynamic", []):
+        errors.append(f"Alias {name} console scripts {scripts!r} are not {package}'s {expected!r}")
     return report
 
 

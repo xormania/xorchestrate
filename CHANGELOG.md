@@ -121,8 +121,14 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   code that depends only on `xorchestrate` of exactly its own version and
   provides the same commands. Every release builds, checks and publishes it with
   `xorchestrate`; the identity gate refuses a `xork` version or pin that differs
-  from the package version. When `xork` is installed, `--version` reports its
-  install source and upgrade command (for example `uv tool upgrade xork`).
+  from the package version or declares other console scripts. When `xork` is
+  the package the user installed (the installer records it as requested, or,
+  without such a record, `xorchestrate` came from an index as its dependency),
+  `--version` reports its install source and upgrade command (for example
+  `uv tool upgrade xork`).
+  `scripts/install.sh` installs it with `XORCHESTRATE_PACKAGE=xork`, refuses to
+  install one name while uv has the other installed, and stops when another
+  program's `xo` is in uv's executable directory.
 
 ### Upgrade notes
 
@@ -199,10 +205,15 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   Where the platform has no `SO_PEERCRED`, neither side can check the peer's
   user and both proceed; keep an explicit `--socket` in a directory only you
   can traverse there (see [project server](docs/project-server.md#known-limitations)).
-- **Commands:** the new `xo` command needs nothing; `xorchestrate` keeps
-  working and existing harness entries stay valid. `uv tool install` refuses to
-  replace an `xo` it did not install in its executable directory; remove or
-  rename that file, or keep using `xorchestrate`.
+- **Commands:** `xorchestrate` keeps working and existing harness entries stay
+  valid. Before installing or upgrading with uv, check
+  `ls -l "$(uv tool dir --bin)/xo"`: if another program's `xo` is there, a fresh
+  `uv tool install` fails, a pinned reinstall (`uv tool install
+  xorchestrate@latest`) fails and removes the installed launcher, and
+  `uv tool upgrade` silently replaces the other `xo`. Move the other `xo` away
+  first; the install script stops when it finds one. Install only one of
+  `xorchestrate` and `xork`: they own the same commands (see
+  [install](docs/install.md#package-index)).
 - **Lifecycle definitions:** None.
 - **Adapter options:** the local telemetry adapter's `profile` option is
   removed; a configuration that still sets it leaves telemetry unavailable with

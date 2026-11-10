@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import configparser
 import json
 import shlex
 import shutil
@@ -126,6 +127,18 @@ def distribution_name(artifact):
     return stem.lower().replace("_", "-").replace(".", "-")
 
 
+def console_scripts(wheel):
+    """The ``console_scripts`` entry points a wheel declares, as ``{name: object reference}``."""
+    with zipfile.ZipFile(wheel) as archive:
+        names = [item for item in archive.namelist() if item.endswith(".dist-info/entry_points.txt")]
+        if len(names) != 1:
+            return {}
+        parser = configparser.ConfigParser(delimiters=("=",), interpolation=None)
+        parser.optionxform = str
+        parser.read_string(archive.read(names[0]).decode("utf-8"))
+    return dict(parser["console_scripts"]) if parser.has_section("console_scripts") else {}
+
+
 def install_paths(*, wheel, version, workspace, uv, alias_wheel=None):
     """Supported launcher install paths that run offline from the candidate.
 
@@ -230,6 +243,13 @@ def run(*, root=ROOT, output, artifacts=(), uv="uv", timeout=180, paths=True):
         aliased = [path for path in selected if distribution_name(path) == ALIAS]
         if aliased and len(wheels) != 1:
             raise ValueError(f"{ALIAS} artifacts need exactly one candidate {PACKAGE} wheel to install with")
+        # Installers expose only the requested package's commands: the alias must declare the same ones.
+        # Under uv the package's own scripts can mask a broken alias entry point, so compare the metadata.
+        stage = "alias entry points"
+        for alias_wheel in alias_wheels:
+            if console_scripts(alias_wheel) != console_scripts(wheels[0]):
+                raise ValueError(f"{alias_wheel.name} console scripts {console_scripts(alias_wheel)} are not "
+                                 f"{wheels[0].name}'s {console_scripts(wheels[0])}")
         # The alias resolves xorchestrate from a private flat index holding only the candidate wheel.
         candidates = directory / "candidate-index"
         if aliased:

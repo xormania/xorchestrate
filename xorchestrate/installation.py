@@ -124,8 +124,29 @@ def pinned_requirement(prefix, installer, name=DISTRIBUTION):
     return False
 
 
+def requested(prefix, installer):
+    """Normalized names the installer recorded as requested; ``None`` when it keeps no such record."""
+    prefix = Path(prefix)
+    try:
+        if installer == "uv-tool":
+            receipt = tomllib.loads((prefix / "uv-receipt.toml").read_text(encoding="utf-8"))
+            return {_normalized(str(item.get("name", ""))) for item in receipt.get("tool", {}).get("requirements", [])
+                    if isinstance(item, dict)}
+        if installer == "pipx":
+            data = json.loads((prefix / "pipx_metadata.json").read_text(encoding="utf-8"))
+            return {_normalized(str(data.get("main_package", {}).get("package", "")))}
+    except (OSError, UnicodeError, ValueError, AttributeError):
+        return set()
+    return None
+
+
 def installation(distribution=None, prefix=None, python=None, name=DISTRIBUTION, aliases=ALIASES):
-    """How the environment at ``prefix`` got ``name``, or the first of ``aliases`` installed with it."""
+    """How the environment at ``prefix`` got ``name``, or the alias the user installed it through.
+
+    An alias counts only when the installer recorded it, and not ``name``, as the
+    requested package; without such a record (``uvx``, a plain environment), only
+    when ``name`` itself came from an index, as the alias's dependency does.
+    """
     prefix = sys.prefix if prefix is None else prefix
     installer = detect_installer(prefix)
     python = sys.executable if python is None else python
@@ -134,9 +155,15 @@ def installation(distribution=None, prefix=None, python=None, name=DISTRIBUTION,
         found = lookup(name)
     except metadata.PackageNotFoundError:
         return Installation("unknown", installer, python=python, name=name)
+    record = _record(found)
     # The commit is the running code's; the source is how the user installed it.
-    commit = classify_source(_record(found))[2]
+    commit = classify_source(record)[2]
+    names = requested(prefix, installer)
     for alias in aliases:
+        chosen = (_normalized(alias) in names and _normalized(name) not in names) if names is not None \
+            else record is None
+        if not chosen:
+            continue
         try:
             found, name = lookup(alias), alias
             break

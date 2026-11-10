@@ -6,7 +6,9 @@ builds a wheel and source distribution of `xorchestrate` and of its alias `xork`
 fresh environment outside the checkout. A `xork` artifact is installed with a
 private flat index holding only the candidate `xorchestrate` wheel, and the
 consumer environment must then hold exactly that wheel's files, so `xork`
-installs the candidate and not a published release. Run it using the locked
+installs the candidate and not a published release. Each `xork` wheel must
+declare exactly the candidate `xorchestrate` wheel's console scripts; under uv the
+package's own scripts would otherwise hide a broken alias entry point. Run it using the locked
 validation environment described in [CI](../.github/CI.md). The builder needs the
 `validation` group; the consumers install only the package's base runtime.
 

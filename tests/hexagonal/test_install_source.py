@@ -185,19 +185,21 @@ def test_version_reports_the_install_source_and_upgrade_command(tmp_path, monkey
 
 # `uv tool install xork` and `pipx install xork` record the alias, not the package it depends on.
 XORK_RECEIPT = PINNED_RECEIPT.replace('name = "xorchestrate", specifier', 'name = "xork", specifier')
+UNPINNED_XORK_RECEIPT = UNPINNED_RECEIPT.replace('name = "xorchestrate" }', 'name = "xork" }')
+# `uv tool install xorchestrate --with xork`: the package is requested, the alias only rides along.
+WITH_XORK_RECEIPT = UNPINNED_RECEIPT.replace('name = "xorchestrate" }', 'name = "xorchestrate" }, { name = "xork" }')
 
 
 @pytest.mark.parametrize(("installer", "record", "receipt", "expected"), [
-    ("uv-tool", None, UNPINNED_RECEIPT.replace('name = "xorchestrate" }', 'name = "xork" }'),
-     ("index", None, "uv tool upgrade xork")),
+    ("uv-tool", None, UNPINNED_XORK_RECEIPT, ("index", None, "uv tool upgrade xork")),
     ("uv-tool", None, XORK_RECEIPT, ("index", None, "uv tool install xork@latest")),
     ("pipx", None, {"main_package": {"package": "xork", "package_or_url": "xork==0.2.0"}},
      ("index", None, "pipx install --force xork")),
     ("pipx", None, {"main_package": {"package": "xork", "package_or_url": "xork"}}, ("index", None, "pipx upgrade xork")),
     ("uvx", None, None, ("uvx", None, "uvx --from xork@latest xorchestrate")),
-    ("uv-tool", ARCHIVE, None, ("archive", None, "uv tool install --force '<newer wheel or sdist>'")),
+    ("uv-tool", ARCHIVE, UNPINNED_XORK_RECEIPT, ("archive", None, "uv tool install --force '<newer wheel or sdist>'")),
     # The commit is the running package's; here it came from the index.
-    ("uv-tool", GIT, None, ("git", None, "uv tool install --force 'git+https://github.com/xormania/xorchestrate@<tag>'")),
+    ("uv-tool", GIT, UNPINNED_XORK_RECEIPT, ("git", None, "uv tool install --force 'git+https://github.com/xormania/xorchestrate@<tag>'")),
     ("environment", None, None, ("index", None, "uv pip install --python /venv/bin/python --upgrade xork")),
 ])
 def test_an_installed_xork_alias_is_what_the_launcher_reports_and_upgrades(tmp_path, monkeypatch, installer, record,
@@ -220,3 +222,24 @@ def test_without_the_package_an_alias_alone_is_unknown(tmp_path):
         return Distribution(None)
     info = cli.version_info(only_alias, prefix=environment(tmp_path, "uv-tool"))
     assert (info["install_source"], info["upgrade_command"]) == ("unknown", None)
+
+
+@pytest.mark.parametrize(("installer", "receipt", "own", "expected"), [
+    # An editable checkout with xork also installed: the checkout is what runs and what to upgrade.
+    ("environment", None, EDITABLE,
+     ("local", None, "uv pip install --python /venv/bin/python --upgrade --editable /home/me/checkout")),
+    ("uvx", None, ARCHIVE, ("uvx", None, "uvx --refresh --from '<newer wheel or sdist>' xorchestrate")),
+    ("uv-tool", WITH_XORK_RECEIPT, None, ("index", None, "uv tool upgrade xorchestrate")),
+    ("pipx", {"main_package": {"package": "xorchestrate", "package_or_url": "xorchestrate"}}, None,
+     ("index", None, "pipx upgrade xorchestrate")),
+])
+def test_an_alias_the_user_did_not_request_does_not_take_over(tmp_path, monkeypatch, installer, receipt, own,
+                                                              expected):
+    monkeypatch.setattr(installation.sys, "executable", "/venv/bin/python")
+    prefix = environment(tmp_path, installer)
+    if isinstance(receipt, str):
+        (prefix / "uv-receipt.toml").write_text(receipt)
+    elif receipt is not None:
+        (prefix / "pipx_metadata.json").write_text(json.dumps(receipt))
+    info = cli.version_info(distribution(own, xork=None), prefix=prefix)
+    assert (info["install_source"], info["commit"], info["upgrade_command"]) == expected

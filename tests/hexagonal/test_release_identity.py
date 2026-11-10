@@ -27,17 +27,20 @@ ENTRY = """## {version} - 2026-11-10
 """
 
 
-def alias(root, *, version="1.2.3", dependencies=('xorchestrate==1.2.3',), name="xork", extra=""):
+SCRIPTS = '[project.scripts]\nxo = "xorchestrate.cli:main"\nxorchestrate = "xorchestrate.cli:main"\n'
+
+
+def alias(root, *, version="1.2.3", dependencies=('xorchestrate==1.2.3',), name="xork", extra="", scripts=SCRIPTS):
     (root / "packaging/xork").mkdir(parents=True, exist_ok=True)
     listed = ", ".join(f'"{item}"' for item in dependencies)
     (root / "packaging/xork/pyproject.toml").write_text(
-        f'[project]\nname = "{name}"\nversion = "{version}"\ndependencies = [{listed}]\n{extra}')
+        f'[project]\nname = "{name}"\nversion = "{version}"\ndependencies = [{listed}]\n{scripts}{extra}')
 
 
 def project(root, *, init="1.2.3", pyproject="1.2.3", name="xorchestrate", changelog=None, alias_version=None):
     (root / "xorchestrate").mkdir(parents=True)
     (root / "xorchestrate/__init__.py").write_text(f'"""Package."""\n\n__version__ = "{init}"\n')
-    (root / "pyproject.toml").write_text(f'[project]\nname = "{name}"\nversion = "{pyproject}"\n')
+    (root / "pyproject.toml").write_text(f'[project]\nname = "{name}"\nversion = "{pyproject}"\n{SCRIPTS}')
     version = alias_version or pyproject
     alias(root, version=version, dependencies=(f"xorchestrate=={version}",))
     text = "# Changelog\n\n## Unreleased\n\n### Upgrade notes\n\n- None.\n\n" + ENTRY.format(version="1.2.3") \
@@ -167,6 +170,11 @@ def test_both_distributions_of_the_version_pass(tmp_path):
     ({"dependencies": ()}, "are not exactly ['xorchestrate==1.2.3']"),
     ({"name": "xorchestrate"}, "is not a distinct distribution name"),
     ({"extra": '[project.optional-dependencies]\nmore = ["requests"]\n'}, "must not declare optional or dynamic"),
+    ({"scripts": ""}, "console scripts {} are not xorchestrate's"),
+    ({"scripts": SCRIPTS.replace('xo = "xorchestrate.cli:main"\n', "")}, "console scripts {'xorchestrate'"),
+    ({"scripts": SCRIPTS.replace('xo = "xorchestrate.cli:main"', 'xo = "xorchestrate.cli:other"')},
+     "console scripts {'xo': 'xorchestrate.cli:other'"),
+    ({"scripts": SCRIPTS + 'xork = "xorchestrate.cli:main"\n'}, "console scripts"),
 ])
 def test_an_alias_with_another_version_or_pin_is_refused(tmp_path, arguments, message):
     root = project(tmp_path / "candidate")

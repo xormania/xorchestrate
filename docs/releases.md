@@ -36,8 +36,9 @@ The identity gate fails the run unless:
 - the tag matches `vMAJOR.MINOR.PATCH` or `vMAJOR.MINOR.PATCH-rc.N`;
 - `__version__` in `xorchestrate/__init__.py` and `version` in `pyproject.toml`
   both equal the tag without the `v`;
-- `packaging/xork/pyproject.toml` declares that same version and exactly one
-  dependency, `xorchestrate==` that version;
+- `packaging/xork/pyproject.toml` declares that same version, exactly one
+  dependency, `xorchestrate==` that version, and the same console scripts as
+  `pyproject.toml`;
 - `CHANGELOG.md` has an entry headed `## X.Y.Z` (also accepted: `## [X.Y.Z]`,
   `## vX.Y.Z`, optionally followed by a date) with a non-empty `### Upgrade notes`
   section;
@@ -76,8 +77,10 @@ is stored anywhere. Only the GitHub release job can write repository contents.
    Do this for `xorchestrate` and for `xork`, then repeat both on TestPyPI with
    environment name `testpypi`. One publish step uploads both projects' files
    in name order (`xorchestrate` first), so a missing `xork` publisher fails
-   the run after `xorchestrate` was uploaded; that version then cannot be
-   completed and needs a new patch release. Add all four publishers before tagging.
+   the run after `xorchestrate` was uploaded. The step does not skip existing
+   files, so a rerun then fails on the `xorchestrate` files already on the
+   index; that version cannot be completed and needs a new patch release. Add
+   all four publishers before tagging.
    The placeholders stay in each project's history; a real release has a higher
    version, so installs never pick them unless someone asks for `==0.0.1`.
 3. **GitHub environments.** In the repository's *Settings → Environments*, create
@@ -130,7 +133,8 @@ been made.
    to TestPyPI. TestPyPI never accepts the same file name twice, so a repeated dry
    run of the same version fails at upload; rehearse again with an `-rc.N` version
    if needed. Check the result with
-   `uvx --index https://test.pypi.org/simple/ --index-strategy unsafe-best-match --from xorchestrate==X.Y.Z xorchestrate --version`.
+   `uvx --index https://test.pypi.org/simple/ --index-strategy unsafe-best-match --from xorchestrate==X.Y.Z xorchestrate --version`,
+   and the alias with `--from xork==X.Y.Z` instead.
 5. **Tag.** Merge, then tag the merge commit on `master` with an annotated tag
    carrying the upgrade notes, and push it:
 
@@ -158,3 +162,7 @@ been made.
 A failed run publishes nothing until the publish job; fix the cause, delete and
 recreate the tag only if nothing was uploaded, and push again. A version that
 reached PyPI cannot be uploaded again: release a new patch version instead.
+
+To yank a release, yank it for both `xorchestrate` and `xork`. A yanked
+`xorchestrate` is still installed by `xork==X.Y.Z`, because its exact pin
+selects the yanked version.
