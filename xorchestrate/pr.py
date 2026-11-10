@@ -4,6 +4,7 @@ The application journal owns invocation replay. These operations add narrow,
 target-scoped custody and progress to that same operation, without a second queue.
 GitHub remains the authority for readiness and integration.
 """
+import re
 from copy import deepcopy
 
 from .lifecycles import default_definitions
@@ -25,9 +26,26 @@ def _capability(name, description, fields, required, read=False):
 class PullRequestOperations:
     """Capability provider for observed handoffs and recoverable draft preparation."""
 
-    def __init__(self, host: PullRequestHost, workspace: PullRequestWorkspace, store: StateStore, clock, *, state_engine=None):
+    def __init__(self, host: PullRequestHost, workspace: PullRequestWorkspace, store: StateStore, clock, *, state_engine=None,
+                 read_repositories=None):
         self.host, self.workspace, self.store, self.clock = host, workspace, store, clock
         self.state_engine = state_engine if state_engine is not None else StateEngine(default_definitions())
+        # None is reserved for a trusted programmatic host composition. The
+        # built-in capability provider always supplies its explicit read scope.
+        if read_repositories is not None:
+            if (not isinstance(read_repositories, (list, tuple, set, frozenset))
+                    or any(not isinstance(value, str) or len(value) > REPOSITORY["maxLength"]
+                        or re.fullmatch(REPOSITORY["pattern"], value) is None for value in read_repositories)):
+                raise OrchestrationError("PR read repositories must be repository names.", "invalid_configuration")
+            read_repositories = frozenset(value.casefold() for value in read_repositories)
+        self.read_repositories = read_repositories
+
+    def _authorize_read_repository(self, repository):
+        with before_effect():
+            if (self.read_repositories is not None
+                    and (not isinstance(repository, str) or repository.casefold() not in self.read_repositories)):
+                raise OrchestrationError("The repository is outside this provider's configured PR read scope.",
+                    "pr_repository_denied")
 
     def discover(self):
         observed = {"repository": REPOSITORY, "number": {"type": "integer", "minimum": 1},
@@ -84,6 +102,7 @@ class PullRequestOperations:
             result["status"] = "historical"
             return result
         try:
+            self._authorize_read_repository(candidate["source_repository"])
             source = self.host.branch(candidate["source_repository"], candidate["head"])
             if source and source.get("sha") == review["head"]:
                 result["status"] = "applicable" if source.get("tree") == review["tree"] else "historical"
@@ -101,13 +120,16 @@ class PullRequestOperations:
         return canonical_digest({key: value for key, value in snapshot.items() if key != "observed_at"})
 
     def inspect(self, arguments):
+        self._authorize_read_repository(arguments["repository"])
         started = self.clock()
         try:
             first = self.host.snapshot(arguments["repository"], arguments["number"])
             final = self.host.snapshot(arguments["repository"], arguments["number"])
-        except Exception:
+        except Exception as error:
+            reason = ("pr_repository_denied" if isinstance(error, OrchestrationError)
+                and error.code == "pr_repository_denied" else "hosting_observation_unavailable")
             return {"status": "incomplete", "technical_validation": "unknown",
-                "blockers": ["hosting_observation_unavailable"],
+                "blockers": [reason],
                 "observation": {"started_at": started, "finished_at": self.clock()}}
         changed = self._stable(first) != self._stable(final)
         changed = changed or (arguments.get("expected_head") is not None and arguments["expected_head"] != final.get("head"))

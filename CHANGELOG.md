@@ -9,6 +9,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Fixed
 
+- The built-in PR provider limits authenticated inspection and handoff reads to
+  configured workspace repositories plus explicit `read_repositories` entries.
+  Out-of-scope reads are rejected before hosting or credential lookup.
 - Effect-journal responses and new retained failures omit arbitrary exception
   attributes and class names. Legacy diagnostics are projected conservatively
   without deleting stored history; malformed completion metadata preserves the
@@ -306,9 +309,12 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   and cannot be combined with them. `telemetry_corpus` and
   `telemetry_artifacts` are refused as top-level configuration sections.
   A new optional `pr` capability provider accepts `github` and `git` adapter
-  options; its owned workspace paths are explicit absolute paths. No existing
-  provider configuration changes. Uncertain PR writes retain custody until
-  explicit journal reconciliation; see [PR preparation](docs/pr-delivery.md).
+  options; its owned workspace paths are explicit absolute paths. Its optional
+  `read_repositories` list grants inspection outside those workspace repositories;
+  configure this list for a provider used only for reads. An empty read scope
+  denies all hosted inspection. Other provider configuration is unchanged.
+  Uncertain PR writes retain custody until explicit journal reconciliation;
+  see [PR preparation](docs/pr-delivery.md).
 - **Operator source schema:** None.
 - **Operator ports:** `Companion` gains `revision()` and `VersionControl` gains
   `revision(path)` (the checked-out commit); companion record keys may now be

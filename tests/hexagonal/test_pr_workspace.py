@@ -292,3 +292,55 @@ def test_option_like_remote_cannot_execute_a_candidate_upload_pack_program(repos
     assert not marker.exists(), "candidate upload-pack command executed in the trusted publication process"
     assert transport_calls == [], "an option-like remote reached Git publication before rejection"
     assert repository.head(repository.feature) == source
+
+
+@pytest.mark.parametrize("name", ["ascii.txt", "café.txt", "tab\tname.txt", "line\nbreak.txt"],
+                         ids=["ascii", "unicode", "tab", "newline"])
+@pytest.mark.parametrize("conflict", [False, True], ids=["updated", "conflicted"])
+def test_selected_legal_tracked_names_preserve_checkpoint_bytes_and_literal_conflict_paths(repository, name, conflict):
+    (repository.main / name).write_bytes(b"original named file\n")
+    common = repository.commit(repository.main, [name], "track legal filename")
+    git("merge", "--ff-only", common, cwd=repository.feature)
+    source = repository.head(repository.feature)
+    target = repository.advance_base(name if conflict else "base.txt", "target version\n")
+    selected = repository.feature / name
+    selected.write_bytes(b"selected named file bytes\n")
+    try:
+        result = workspace(repository).refresh("owned", source, target, [name])
+    except OrchestrationError as error:
+        result = {"status": "rejected", "code": error.code, "details": error.details}
+    expected = "needs_resolution" if conflict else "updated"
+    assert result["status"] == expected, ("legal selected tracked pathname was rejected or misclassified", name, result)
+    checkpoint = result["checkpoint"]
+    names = git("diff-tree", "--no-commit-id", "--name-only", "-z", "-r", checkpoint,
+                cwd=repository.feature).split("\0")
+    assert [value for value in names if value] == [name]
+    assert git("show", f"{checkpoint}:{name}", cwd=repository.feature) == "selected named file bytes"
+    assert result["paths"] == [name]
+    if conflict:
+        assert result["conflicts"] == [name], "conflict reporting must retain the literal tracked pathname"
+        entries = git("ls-files", "--unmerged", "-z", cwd=repository.feature).split("\0")
+        assert [entry.partition("\t")[2] for entry in entries if entry] == [name] * 3
+        assert git("rev-parse", "MERGE_HEAD", cwd=repository.feature) == target
+    else:
+        assert result["conflicts"] == []
+        assert selected.read_bytes() == b"selected named file bytes\n"
+        assert (repository.feature / "base.txt").read_text() == "target version\n"
+
+
+def test_selected_unicode_name_does_not_authorize_unrelated_tracked_changes(repository):
+    name = "café.txt"
+    selected = repository.feature / name
+    selected.write_bytes(b"original named file\n")
+    source = repository.commit(repository.feature, [name], "track legal filename")
+    target = repository.advance_base()
+    selected.write_bytes(b"selected named file bytes\n")
+    unrelated = repository.feature / "shared.txt"
+    unrelated.write_bytes(b"unrelated tracked bytes\n")
+    with pytest.raises(OrchestrationError) as error:
+        workspace(repository).refresh("owned", source, target, [name])
+    assert error.value.code == "pr_checkpoint_conflict"
+    assert error.value.details["paths"] == ["shared.txt"], "only actual unrelated paths should be reported"
+    assert repository.head(repository.feature) == source
+    assert selected.read_bytes() == b"selected named file bytes\n"
+    assert unrelated.read_bytes() == b"unrelated tracked bytes\n"

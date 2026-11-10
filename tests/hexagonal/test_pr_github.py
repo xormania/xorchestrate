@@ -11,8 +11,10 @@ from unittest.mock import patch
 
 import pytest
 
+from tests.hexagonal.contracts.pr_read_scope import READ_ENTRIES, assert_read_allowed, assert_read_denied
 from tests.hexagonal.support.ci_candidate import artifact_zip
 from tests.hexagonal.support.pr_http import PullRequestAPI, pull_request_api
+from tests.hexagonal.support.pr_read_scope import scoped_provider
 from xorchestrate.adapters.pr_github import GitHubPRHost
 from xorchestrate.composition import build
 from xorchestrate.model import OrchestrationError
@@ -75,6 +77,74 @@ def test_configured_pr_provider_is_active_through_project_application_compositio
     assert result["status"] == "observed"
     assert result["technical_validation"] == "passed"
     assert "unresolved_review_threads" in result["blockers"]
+
+
+@pytest.mark.parametrize("boundary,operation", READ_ENTRIES)
+def test_default_repository_read_scope_denies_unlisted_before_any_io(store, remote, tmp_path, boundary, operation):
+    with pull_request_api(remote) as api, scoped_provider(store, remote, api, tmp_path) as subject:
+        # Old-supported configuration: owned repository A and a broad token do
+        # not authorize an unrelated repository B, under any entry point.
+        repository = "OUTSIDE/PRIVATE" if boundary == "mcp" else "outside/private"
+        assert subject.io_counts == (0, 0, 0)
+        assert_read_denied(subject, boundary, operation, repository)
+        assert subject.io_counts == (0, 0, 0)
+
+
+@pytest.mark.parametrize("boundary,operation", READ_ENTRIES)
+def test_default_repository_read_scope_allows_configured_workspace(store, remote, tmp_path, boundary, operation):
+    with pull_request_api(remote) as api, scoped_provider(store, remote, api, tmp_path) as subject:
+        assert_read_allowed(subject, boundary, operation, remote.repository)
+
+
+@pytest.mark.parametrize("boundary,operation", (("application", "pr.inspect"), ("mcp", "pr.handoff")))
+def test_explicit_repository_read_scope_supports_readonly_without_workspaces(store, remote, tmp_path, boundary, operation):
+    with pull_request_api(remote) as api, scoped_provider(store, remote, api, tmp_path,
+            workspace_repositories=[], read_repositories=[remote.repository]) as subject:
+        assert_read_allowed(subject, boundary, operation, remote.repository)
+        assert_read_denied(subject, boundary, operation, "outside/private")
+
+
+def test_explicit_repository_read_scope_is_added_to_workspace_scope(store, remote, tmp_path):
+    with pull_request_api(remote) as api, scoped_provider(store, remote, api, tmp_path,
+            read_repositories=["separate/readonly"]) as subject:
+        assert_read_allowed(subject, "application", "pr.inspect", remote.repository)
+        assert_read_allowed(subject, "application", "pr.inspect", "separate/readonly", qualified=False)
+        assert_read_denied(subject, "application", "pr.inspect", "outside/private")
+
+
+@pytest.mark.parametrize("configured_upper", (False, True))
+def test_repository_read_scope_membership_is_case_insensitive(store, remote, tmp_path, configured_upper):
+    configured = remote.repository.upper() if configured_upper else remote.repository
+    requested = remote.repository if configured_upper else remote.repository.upper()
+    with pull_request_api(remote) as api, scoped_provider(store, remote, api, tmp_path,
+            workspace_repositories=[configured]) as subject:
+        assert_read_allowed(subject, "application", "pr.inspect", requested, qualified=configured_upper)
+
+
+def test_builtin_provider_without_any_repository_scope_denies_reads(store, remote, tmp_path):
+    with pull_request_api(remote) as api, scoped_provider(store, remote, api, tmp_path,
+            workspace_repositories=[]) as subject:
+        assert_read_denied(subject, "direct", "pr.inspect", remote.repository)
+
+
+@pytest.mark.parametrize("allow_source", (False, True))
+def test_allowed_pr_repository_confines_derived_fork_reads_before_credentials(store, remote, tmp_path, allow_source):
+    source = "outside/private"
+    remote.pr["head"]["repo"] = {"id": 9876, "full_name": source}
+    options = {"read_repositories": [source]} if allow_source else {}
+    with pull_request_api(remote) as api, scoped_provider(store, remote, api, tmp_path, **options) as subject:
+        result = subject.read("provider", "pr.handoff", remote.repository)
+        assert "error" not in result
+        assert result["result"]["status"] == "incomplete"
+        forbidden_prefix = "/repos/" + source + "/"
+        requests = [path for path in subject.request_paths if path.startswith(forbidden_prefix)]
+        credentials = [path for path in subject.token_paths if path.startswith(forbidden_prefix)]
+        received = [row for row in remote.requests if row["path"].startswith(forbidden_prefix)]
+        if allow_source:
+            assert requests and credentials and received, "PR_READ_EXPLICIT_FORK_SCOPE_REACHES_HOST"
+        else:
+            assert requests == credentials == received == [], "PR_READ_DERIVED_FORK_MUST_BE_ADMITTED_BEFORE_REQUEST_OR_TOKEN"
+            assert "pr_repository_denied" in result["result"]["blockers"]
 
 
 def test_http_creation_explicitly_opens_a_draft_with_literal_supplied_metadata(remote):

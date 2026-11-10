@@ -1,0 +1,294 @@
+{
+  "schema_version": 1,
+  "scope": "Caller-selected repository admission at builtin PR entry points before host reads or credential lookup. Configured workspaces form the default scope; explicit readonly repositories add to it.",
+  "runtime": {
+    "local_python": "3.12.14",
+    "hosted_evidence": "Not established by this local record; hosted CI is separate."
+  },
+  "red_source_revision": "ffc4930",
+  "test_revision": "9ede718",
+  "green_source_revision": "191d7de88ccec04703b1a4061acb3ab5d7ab86b9",
+  "red": {
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "tests/hexagonal/test_pr_github.py",
+      "-k",
+      "default_repository_read_scope",
+      "-q",
+      "--tb=short"
+    ],
+    "exit": 1,
+    "result": "12 failed, 12 passed, 35 deselected in 6.54s",
+    "source_sha256": {
+      "xorchestrate/pr.py": "27f37f36e303a92280fd1ff5630fb0fff89d2b73cf843c071805f660cf357fd2",
+      "xorchestrate/adapters/pr.py": "f49792cfef924c598ef7a92ae4cc244b86f7839b8824d7eaff2fa1656d8a5de5",
+      "tests/hexagonal/test_pr_github.py": "d9bfeb84949fd6c735ba1188422fd7fcd64e22ebace8a7dce600f4cb74316bcf",
+      "tests/hexagonal/support/pr_read_scope.py": "e3e5d51a52d701a41a56cae7ebf55f64cb5e03e65a5eb4eaa00eba834248326c",
+      "tests/hexagonal/contracts/pr_read_scope.py": "a450a94acaa17d765a6ab6ca7f44808e72ffa8cfa8c1596cf06e051328684a70"
+    },
+    "log_sha256": "18f18e34c53a5aa6fe51e668bc688c1ddc04522d636c05050927287ee0f5916d",
+    "intended_assertion": "PR_READ_SCOPE_MUST_DENY_BEFORE_HOST_TOKEN_OR_HTTP"
+  },
+  "green_superset": {
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "tests/hexagonal/test_pr_github.py",
+      "-k",
+      "repository_read_scope or repository_scope_denies",
+      "-q",
+      "--tb=short"
+    ],
+    "exit": 0,
+    "result": "36 passed, 23 deselected in 17.91s",
+    "source_sha256": {
+      "xorchestrate/pr.py": "23fbbbc56e6acde6d9c6d23a1167ee0cf06c1cb74dddadf6d6d4395bc720ab4d",
+      "xorchestrate/adapters/pr.py": "41f1afdd9a75271142706ee683e14a2af044a97836752430869f8985daa9ae32",
+      "tests/hexagonal/test_pr_github.py": "d9bfeb84949fd6c735ba1188422fd7fcd64e22ebace8a7dce600f4cb74316bcf",
+      "tests/hexagonal/support/pr_read_scope.py": "e3e5d51a52d701a41a56cae7ebf55f64cb5e03e65a5eb4eaa00eba834248326c",
+      "tests/hexagonal/contracts/pr_read_scope.py": "a450a94acaa17d765a6ab6ca7f44808e72ffa8cfa8c1596cf06e051328684a70"
+    },
+    "log_sha256": "d10632652264902b7d9312e094ac61ea283de2969cce2d09b63508aa996f729c"
+  },
+  "predecessor_setup": {
+    "options": "Only options already accepted by ffc4930: github transport/token settings and one git.workspaces entry for repository A. No read_repositories option is supplied in the red selection.",
+    "scope_A": "The configured workspace repository supplied by the real GitHub fixture.",
+    "request_B": "outside/private, including an uppercase variant through MCP.",
+    "credential": "Inert loopback-only token; fixture accepts it for requests independently of repository name.",
+    "observation": "All twelve denied-boundary cases failed the before-IO assertion; all twelve configured-workspace controls passed through real HTTP. No constructor or import failure is credited."
+  },
+  "boundaries": [
+    "direct builtin provider.inspect",
+    "direct builtin provider.invoke(pr.handoff)",
+    "application journal invoke(pr.inspect/pr.handoff)",
+    "MCP tools/call invoke(pr.inspect/pr.handoff)"
+  ],
+  "storage": [
+    "memory",
+    "sqlite"
+  ],
+  "io_oracles": [
+    "Host snapshot wrapper counts every remote-observation entry.",
+    "GitHubHosting._token wrapper counts credential resolution.",
+    "Loopback HTTP peer retains received requests. Denied operations must leave all three counts unchanged; fresh denied subjects remain (0,0,0)."
+  ],
+  "healthy_config_controls": [
+    "Configured workspaces still produce qualified observations.",
+    "Explicit read_repositories enables readonly use with no workspaces; unlisted requests remain denied.",
+    "Explicit readonly entries and workspace entries form a union.",
+    "Repository scope membership compares identity case-insensitively.",
+    "A builtin provider with no workspace or explicit repository scope denies reads."
+  ],
+  "new_option_evidence": "Explicit-list cases are healthy controls exercised after implementation. They are excluded from predecessor red because ffc4930 correctly does not recognize that new option.",
+  "completed_targeted_config_faults": [
+    {
+      "fault": "workspace_union_removed",
+      "exit": 1,
+      "result": "14 failed, 45 deselected in 78.29s (0:01:18)",
+      "log_sha256": "01d000e44e69808d672a8dbbb32ba045a2f727a6228499c8ec1e4e1ccfe386f5",
+      "assertions": [
+        "E   AssertionError: PR_READ_SCOPE_ALLOWED_REPOSITORY"
+      ],
+      "mutation_python": "builtin_change('read_repositories=read_repositories')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_pr_github.py",
+        "-k",
+        "allows_configured_workspace or is_added_to_workspace_scope",
+        "-q",
+        "--tb=short"
+      ],
+      "intended_assertion_failed": true
+    },
+    {
+      "fault": "explicit_allowlist_removed",
+      "exit": 1,
+      "result": "6 failed, 53 deselected in 45.75s",
+      "log_sha256": "88824941656e31710a6d39e02f1c1b98982824ebc717525ad623903e262fc053",
+      "assertions": [
+        "E   AssertionError: PR_READ_SCOPE_ALLOWED_REPOSITORY"
+      ],
+      "mutation_python": "builtin_change('read_repositories=[*(item[\"repository\"] for item in workspace.workspaces.values())]')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_pr_github.py",
+        "-k",
+        "supports_readonly_without_workspaces or is_added_to_workspace_scope",
+        "-q",
+        "--tb=short"
+      ],
+      "intended_assertion_failed": true
+    },
+    {
+      "fault": "configuration_casefold_removed",
+      "exit": 1,
+      "result": "2 failed, 2 passed, 55 deselected in 31.31s",
+      "log_sha256": "6d3db6d7143f4c36b5fc0ddf7d7aec7f1cd4879869394f1a8eba99e1e7c08ea9",
+      "assertions": [
+        "E   AssertionError: PR_READ_SCOPE_ALLOWED_REPOSITORY"
+      ],
+      "mutation_python": "core_change(\"__init__\", 'frozenset(value.casefold() for value in read_repositories)', 'frozenset(read_repositories)')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_pr_github.py",
+        "-k",
+        "membership_is_case_insensitive",
+        "-q",
+        "--tb=short"
+      ],
+      "intended_assertion_failed": true
+    },
+    {
+      "fault": "request_casefold_removed",
+      "exit": 1,
+      "result": "2 failed, 2 passed, 55 deselected in 18.63s",
+      "log_sha256": "320cf7c6f8f9cd6468b3e901ee2a0bc1997489a35dfa5694f4a18c3f44f6f864",
+      "assertions": [
+        "E   AssertionError: PR_READ_SCOPE_ALLOWED_REPOSITORY"
+      ],
+      "mutation_python": "core_change(\"_authorize_read_repository\", 'repository.casefold() not in self.read_repositories', 'repository not in self.read_repositories')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_pr_github.py",
+        "-k",
+        "membership_is_case_insensitive",
+        "-q",
+        "--tb=short"
+      ],
+      "intended_assertion_failed": true
+    },
+    {
+      "fault": "builtin_unconfined",
+      "exit": 1,
+      "result": "2 failed, 57 deselected in 17.91s",
+      "log_sha256": "7f81bd9d418dc1014937047b9aad78b447d7833c70eb0e95170ff11dda39cc12",
+      "assertions": [
+        "E   AssertionError: PR_READ_SCOPE_MUST_DENY_BEFORE_HOST_TOKEN_OR_HTTP"
+      ],
+      "mutation_python": "builtin_change('read_repositories=None')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_pr_github.py",
+        "-k",
+        "without_any_repository_scope_denies_reads",
+        "-q",
+        "--tb=short"
+      ],
+      "intended_assertion_failed": true
+    }
+  ],
+  "limits": [
+    "HTTP is real loopback transport with inert credentials. Live GitHub permission boundaries are separate evidence.",
+    "Case-variant and secondary-repository controls verify scope admission; technical CI qualification is asserted using the fixture canonical repository spelling.",
+    "This protects the builtin provider entry points. A trusted programmatic PullRequestOperations composition may deliberately use its own authorization policy.",
+    "This predecessor witness covers caller-selected repositories. Derived fork-repository reads are a separate scope boundary with their own focused before/after evidence."
+  ],
+  "targeted_config_fault_reproduction": {
+    "imports": "import inspect, textwrap; import xorchestrate.adapters.pr as builtin; import xorchestrate.pr as core",
+    "helper_python": "union = 'read_repositories=[*read_repositories, *(item[\"repository\"] for item in workspace.workspaces.values())]'\n\ndef builtin_change(replacement):\n    source = textwrap.dedent(inspect.getsource(builtin.PullRequestProvider))\n    if source.count(union) != 1:\n        raise RuntimeError(\"Scope mutation target did not match exactly once\")\n    namespace = dict(vars(builtin))\n    exec(compile(source.replace(union, replacement), \"<builtin-read-scope-fault>\", \"exec\"), namespace)\n    builtin.PullRequestProvider = namespace[\"PullRequestProvider\"]\n\ndef core_change(name, old, replacement):\n    source = textwrap.dedent(inspect.getsource(getattr(core.PullRequestOperations, name)))\n    if source.count(old) != 1:\n        raise RuntimeError(\"Scope mutation target did not match exactly once\")\n    namespace = dict(vars(core))\n    exec(compile(source.replace(old, replacement), \"<core-read-scope-fault>\", \"exec\"), namespace)\n    setattr(core.PullRequestOperations, name, namespace[name])",
+    "instruction": "In an isolated interpreter at the recorded green source, define the helper, execute the mutation, then call pytest.main(command[3:]). Source targets must match exactly once; setup failures are not credited."
+  },
+  "derived_fork_read_scope": {
+    "test_revision": "7405e30",
+    "scope": "An admitted base repository can describe a fork source repository. Builtin repository scope also applies to that derived source lookup before request construction or token lookup.",
+    "red": {
+      "source_revision": "191d7de88ccec04703b1a4061acb3ab5d7ab86b9",
+      "hosting_source_identical_to_ffc4930": true,
+      "source_sha256": {
+        "xorchestrate/pr.py": "23fbbbc56e6acde6d9c6d23a1167ee0cf06c1cb74dddadf6d6d4395bc720ab4d",
+        "xorchestrate/adapters/pr.py": "41f1afdd9a75271142706ee683e14a2af044a97836752430869f8985daa9ae32",
+        "xorchestrate/adapters/pr_github.py": "592b9b76add825e719ed4b4fee99264c80a24eb2f739fa08655666addf246c86",
+        "tests/hexagonal/test_pr_github.py": "7bc1398bedacd26344a429d58e6c92410a5180e91f4a03d0543c09a539f9e843",
+        "tests/hexagonal/support/pr_read_scope.py": "a94a0693865228b7f0a13477ffb3ab61808970bbd01cdeda5b571da26c71b3fd"
+      },
+      "command": [
+        "/workspace/scratch/8c1ec8be15af/validation-env/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_pr_github.py",
+        "-k",
+        "confines_derived_fork_reads",
+        "-q",
+        "--tb=short"
+      ],
+      "exit": 1,
+      "result": "2 failed, 2 passed, 59 deselected in 2.34s",
+      "log_sha256": "4b8df5912fb98462ae59a09e70a49e6bf730853a17359053e316cea5c2bfc629"
+    },
+    "green": {
+      "source_revision": "9a34e25",
+      "source_sha256": {
+        "xorchestrate/pr.py": "f463b90f710d481b83849774a035775c334f57a53c80e6299d1a5cd9ed33de74",
+        "xorchestrate/adapters/pr.py": "cdca87773694a0603994befd55bdc4e4481920c6db58651d97696d1bae63c5a9",
+        "xorchestrate/adapters/pr_github.py": "0c44dac61d7496efade64b7053411c559be03dd8fd73984ab30a48ace5cb954e",
+        "tests/hexagonal/test_pr_github.py": "7bc1398bedacd26344a429d58e6c92410a5180e91f4a03d0543c09a539f9e843",
+        "tests/hexagonal/support/pr_read_scope.py": "a94a0693865228b7f0a13477ffb3ab61808970bbd01cdeda5b571da26c71b3fd"
+      },
+      "command": [
+        "/workspace/scratch/8c1ec8be15af/validation-env/bin/python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_pr_github.py",
+        "-k",
+        "confines_derived_fork_reads",
+        "-q",
+        "--tb=short"
+      ],
+      "exit": 0,
+      "result": "4 passed, 59 deselected in 1.82s",
+      "log_sha256": "357b6e4733d24554412c42a4622bcf6d1c9bab40073ec794845004f4cdb69859"
+    },
+    "predecessor_setup": {
+      "base_repository": "Configured workspace repository accepted by the existing entry guard.",
+      "derived_source_repository": "outside/private supplied by the native pull request head repository field.",
+      "read_entry": "Builtin provider pr.handoff, through inspect and the real GitHub host snapshot/branch path.",
+      "credential": "Inert loopback-only token.",
+      "source_boundary": "Entry-only repair 191d7de; GitHub host source is byte-identical to ffc4930. This isolates the derived-read gap after caller-selected entry admission was repaired."
+    },
+    "red_assertion": "PR_READ_DERIVED_FORK_MUST_BE_ADMITTED_BEFORE_REQUEST_OR_TOKEN",
+    "red_observation": "Both unlisted-source cases reached /repos/outside/private/commits/refs%2Fheads%2Ffeature with the inert bearer token. Both explicit-source controls reached the permitted derived read. The failures are behavioral assertions, with no import or constructor failures.",
+    "green_observation": "The identical four cases pass. Unlisted-source observations are incomplete with blocker pr_repository_denied and zero outside-repository request, token lookup, or HTTP events. Explicit source permission still reaches all three.",
+    "io_oracles": [
+      "GitHub host _request wrapper records each request path before transport.",
+      "Token lookup wrapper records its active request path, distinguishing admitted base reads from the refused fork read.",
+      "The real loopback HTTP peer records received paths independently."
+    ],
+    "storage": [
+      "memory",
+      "sqlite"
+    ],
+    "healthy_control_limit": "The explicit source control proves read admission. The fixture has no qualified fork CI evidence and an incomplete observation is expected.",
+    "reproduction": "Check out the recorded source revision, apply test-only commit 7405e30 and its test dependencies, then run the recorded pytest selection with an equivalent Python 3.12 environment. No production monkeypatch is required."
+  }
+}

@@ -21,19 +21,26 @@ from .github import _OPENER, GitHubHosting
 
 
 class GitHubPRHost:
-    def __init__(self, options=None):
+    def __init__(self, options=None, *, read_admission=None):
         options = options or {}
         allowed = {"api_url", "host", "token_variables", "token_command", "timeout", "required_checks", "max_pages"}
         if not isinstance(options, dict) or options.keys() - allowed:
             raise OrchestrationError("Invalid PR hosting options.", "invalid_configuration")
         self.connection = GitHubHosting({key: value for key, value in options.items()
             if key not in {"required_checks", "max_pages"}})
+        if read_admission is not None and not callable(read_admission):
+            raise OrchestrationError("PR read admission must be callable.", "invalid_configuration")
+        self.read_admission = read_admission
         self.required_checks = options.get("required_checks", ["CI result", "Hexagonal architecture"])
         self.max_pages = options.get("max_pages", 20)
         if (not isinstance(self.required_checks, list) or not self.required_checks
                 or not all(isinstance(value, str) and value for value in self.required_checks)
                 or type(self.max_pages) is not int or not 1 <= self.max_pages <= 100):
             raise OrchestrationError("Invalid PR check or pagination options.", "invalid_configuration")
+
+    def _admit_read(self, repository):
+        if self.read_admission is not None:
+            self.read_admission(repository)
 
     def _request(self, method, path, body=None):
         token = self.connection._token()
@@ -81,6 +88,7 @@ class GitHubPRHost:
             "url": pr["html_url"]}
 
     def branch(self, repository, ref):
+        self._admit_read(repository)
         try:
             commit = self._request("GET", f"/repos/{repository}/commits/" + urllib.parse.quote(ref, safe=""))
         except OrchestrationError as error:
@@ -90,6 +98,7 @@ class GitHubPRHost:
         return {"sha": commit["sha"], "tree": commit["commit"]["tree"]["sha"]}
 
     def find(self, repository, branch):
+        self._admit_read(repository)
         query = urllib.parse.urlencode({"state": "all", "head": repository.split("/")[0] + ":" + branch})
         return [self._short(pr) for pr in self._all(f"/repos/{repository}/pulls?{query}")]
 
@@ -225,6 +234,7 @@ class GitHubPRHost:
         return ordered[0][1]
 
     def snapshot(self, repository, number):
+        self._admit_read(repository)
         root = f"/repos/{repository}"
         pr = self._short(self._request("GET", root + f"/pulls/{number}"))
         canonical = {
