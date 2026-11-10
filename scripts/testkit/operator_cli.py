@@ -45,6 +45,8 @@ def parser():
     value.add_argument("--output", type=Path)
     value.add_argument("--detach", action="store_true")
     value.add_argument("--target", type=int, help="One-based owned terminal number")
+    value.add_argument("--probe", action="store_true",
+                       help="doctor: also launch each selected native harness through session start and stop; no turn is submitted")
     return value
 
 
@@ -182,6 +184,8 @@ def main(argv=None, *, direct_runner, preflight):
             raise ValueError("--detach belongs to start")
         if args.target is not None and args.action != "attach":
             raise ValueError("--target belongs to attach")
+        if args.probe and args.action != "doctor":
+            raise ValueError("--probe belongs to doctor")
         if args.source and args.action != "start":
             raise ValueError("--from creates a fresh managed start")
         if args.action == "stories":
@@ -254,11 +258,23 @@ def main(argv=None, *, direct_runner, preflight):
                           "run_timeout": options.get("run_timeout"), "tokens": "unknown",
                           "limit_scope": "per-story controller requests; native internal calls and tokens are not counted"}
             elif args.action == "doctor":
-                result = preflight(root=ROOT, shutdown_grace=options["shutdown_grace"], **managed.execution_options(options))
+                if args.probe:
+                    # Refused before any readiness work, so the answer never depends on it.
+                    managed.probe_selection(options)
+                result = preflight(root=ROOT, shutdown_grace=options["shutdown_grace"], output=options["output"],
+                                   **managed.execution_options(options))
                 if args.profile:
                     environment = profiles.doctor(args.profile, root=ROOT, overrides=overrides(args))
                     result["profile_readiness"] = environment
                     if environment["status"] != "passed":
+                        result["status"] = "setup_error"
+                if args.probe:
+                    if result["status"] == "passed":
+                        result["probe"] = managed.probe(options, direct_runner)
+                    else:
+                        # A harness is not launched over prerequisites already known to be missing.
+                        result["probe"] = {"status": "not_run", "reason": "readiness is not passed"}
+                    if result["probe"]["status"] != "passed":
                         result["status"] = "setup_error"
             elif args.action == "run":
                 result = managed.foreground(options, direct_runner)

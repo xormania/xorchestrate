@@ -27,11 +27,13 @@ def acceptance(output, story, *options):
 
 
 class DispatchProbe:
-    def __init__(self, directory, **limits):
-        from scripts.acceptance.scenario import Client, Scenario
+    def __init__(self, directory, story=None, **limits):
+        from scripts.acceptance.scenario import STORY_LIMITS, Client, Scenario
 
         self.scenario = Scenario(directory, 30, "fixture", **limits)
         self.budget = self.scenario.budget
+        # The selected story narrows the operator's limits, as the worker applies them.
+        self.budget.limits.update(STORY_LIMITS.get(story, {}))
         self.dispatched = []
         self.client = Client.__new__(Client)
         self.client.budget = self.budget

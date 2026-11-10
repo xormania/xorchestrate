@@ -185,8 +185,38 @@ def _native_readiness(check, *, config, driver):
     return items
 
 
-def readiness(check, *, root, mode, config=None, driver=None, brief=None, families=(), shard=None):
-    """One side-effect-free prerequisite definition for doctor and execution."""
+def _run_location(output):
+    """Whether the product will accept a private application home beneath this evidence root.
+
+    Acceptance and story scenarios provision their disposable project, home and
+    companion inside the run directory. The product refuses a home that another
+    user could replace; ask its own rule here instead of discovering the refusal
+    inside a launched scenario.
+    """
+    from xorchestrate.instance.home import Home
+    from xorchestrate.model import OrchestrationError
+
+    location = Path(output).expanduser().resolve()
+    try:
+        # The same entry a scenario's application uses, for a home that does not
+        # exist yet: the rule then applies to the nearest existing directory and
+        # everything above it. Locating a home creates nothing.
+        Home.locate({"XORCHESTRATE_HOME": str(location / "xorchestrate-run-location" / "home")})
+    except OrchestrationError as error:
+        directory, reason = error.details.get("directory"), error.details.get("reason")
+        return {"name": "run_location", "passed": False, "path": str(location), "directory": directory,
+                "reason": f"Run location {location} is unsafe for the application home: {directory}: {reason}",
+                "needed": "Select an evidence root (--output, or the profile's output) with no group/other-writable "
+                          "enclosing directory, or remove that write permission."}
+    return {"name": "run_location", "passed": True, "path": str(location)}
+
+
+def readiness(check, *, root, mode, config=None, driver=None, brief=None, families=(), shard=None, output=None):
+    """One side-effect-free prerequisite definition for doctor and execution.
+
+    ``output`` is the evidence root (or run directory) the selected checks will
+    write beneath; without it the location is not assessed.
+    """
     items = []
     try:
         missing = required_inputs(check, inputs=FileInputs(), cwd=str(root))
@@ -206,6 +236,8 @@ def readiness(check, *, root, mode, config=None, driver=None, brief=None, famili
         if check.name == "acceptance" or check.name.startswith(("acceptance:", "story:")):
             binary = shutil.which("tmux")
             items.append({"name": "tmux", "passed": binary is not None, "path": binary})
+            if output is not None:
+                items.append(_run_location(output))
         if check.name == "multi-harness":
             source = _brief(root, brief)
             items.append({"name": "owner_brief", "passed": source.is_file(), "path": str(source)})
@@ -220,7 +252,7 @@ def readiness(check, *, root, mode, config=None, driver=None, brief=None, famili
 
 def preflight(*, suite, mode, config=None, driver=None, timeout=180, root=ROOT,
               families=(), check_timeout=600, brief=None, drivers=(), shutdown_grace=10.0,
-              stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000, shard=None):
+              stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000, shard=None, output=None):
     root = Path(root).resolve()
     cache_environment(root)
     checks = plan(directory=root.parent / "testkit-preflight", suite=suite, mode=mode, config=config,
@@ -241,7 +273,7 @@ def preflight(*, suite, mode, config=None, driver=None, timeout=180, root=ROOT,
         else:
             select_families(assignments, families)
     rows = [readiness(check, root=root, mode=mode, config=config, driver=driver, brief=brief, families=families,
-                      shard=shard) for check in checks]
+                      shard=shard, output=output) for check in checks]
     return {"status": "passed" if all(row["status"] == "passed" for row in rows) else "setup_error",
             "suite": suite, "mode": mode, "shard": shard, "checks": rows,
             "authentication": "verified by live callbacks only" if mode == "native" else "not used"}
@@ -302,7 +334,7 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
         ready = preflight(suite=suite, mode=mode, config=config, driver=driver, timeout=timeout, root=root,
                           brief=brief, families=families, check_timeout=check_timeout, drivers=drivers,
                           shutdown_grace=shutdown_grace, stories=stories, max_sessions=max_sessions,
-                          max_turns=max_turns, max_tool_calls=max_tool_calls, shard=shard)
+                          max_turns=max_turns, max_tool_calls=max_tool_calls, shard=shard, output=directory)
         write_json(directory / "preflight.json", ready)
         report["preflight"] = ready
         before = candidate_identity(root) if (root / ".git").exists() else None
@@ -326,7 +358,7 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
 
         def prepare(check):
             row = readiness(check, root=root, mode=mode, config=config, driver=driver, brief=brief, families=families,
-                            shard=shard)
+                            shard=shard, output=directory)
             if row["status"] != "passed":
                 raise ValueError(row["reason"])
             prepared = check

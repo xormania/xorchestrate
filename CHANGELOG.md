@@ -19,6 +19,23 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 - CI candidate contexts bind the tested merge/base/tree to GitHub checks and
   immutable per-lane producer artifacts, including successful partial reruns.
 
+- Live test-kit failures keep their reason. A failed scenario check still
+  records only its assertion code in the shareable `scenario.json`; the request
+  involved, the application's error and the preserved outcome of a failed effect
+  are retained in a private `diagnostics.json` beside it, shown in the pane, and
+  listed as `failures` by `proof.sh status`/`wait` and in the run's private
+  `summary.txt`. A scenario's reason is not added to saved state or collected
+  archives; readiness reasons for a check blocked before launch remain part of
+  both, as before. Captured telemetry keeps its existing content policy.
+- `proof.sh doctor` reports `run_location`: whether the evidence root can hold
+  the scenario's private application home under the product's own rule. An
+  unsafe location now blocks acceptance and story checks before launch, naming
+  the directory at fault.
+- A `native-handshake` story starts and stops a configured harness session and
+  admits no turn. `proof.sh doctor --probe` runs it for each selected native
+  driver and reports each outcome with its reason. Omitting `--story` in native
+  mode now selects this story as well as `native-callback`.
+
 - Exact-request Jev diagnostic reuse and shared-state question batches reduce repeated calls; CI reports fresh versus historical usage separately.
 
 - A paired architecture-effectiveness pilot measures Jev against unchanged deterministic checks, retaining misses, false alarms, abstentions, usage and scope limits separately from fixture verification.
