@@ -288,3 +288,158 @@ def test_package_evidence_uses_its_known_native_schema(tmp_path, schema):
     result = _evaluate_complete(tmp_path, needs, workflow, catalog)
     assert result["status"] == "failed", schema
     assert any("Installed-package" in error for error in result["errors"]), result["errors"]
+
+
+def _jev_report(*, status="complete"):
+    binding = {"source_sha256": "1" * 64, "contract_sha256": "2" * 64}
+    diagnostic = {
+        "provider": "jev", "status": status, "subject": deepcopy(binding),
+        "context_sha256": "3" * 64, "model": "jev-fixture",
+        "source_scope": {"selected": ["src/core.py"], "omitted": ["src/adapter.py"],
+                         "truncated": ["src/core.py"], "max_source_bytes": 24000, "source_bytes": 3000},
+        "assessments": [{"check_id": "evidence_coverage", "question": "Does this span violate its contract?",
+                         "outcome": "concern", "confidence": 0.72, "rationale": "", "evidence": [],
+                         "details": {"model": "jev-fixture", "probabilities": {
+                             "concern": 0.81, "no_concern": 0.09, "insufficient_evidence": 0.1},
+                             "usage": {"input_tokens": 19000, "output_tokens": 48}}}],
+    }
+    if status != "complete":
+        diagnostic.update(reason="fixture_provider_unavailable", assessments=[])
+    return {"schema_version": 1, "status": "pass", "subject": binding,
+            "execution": {"git_commit": "a" * 40, "git_status": ""}, "diagnostics": diagnostic}
+
+
+@pytest.mark.parametrize("required_passed", (True, False))
+def test_jev_observations_are_visible_without_changing_required_qualification(tmp_path, required_passed):
+    needs, workflow, catalog = _complete_receipts(tmp_path)
+    if not required_passed:
+        needs["changes"]["result"] = "failure"
+    _write(tmp_path / "architecture-evidence/diagnostics.json", _jev_report())
+    result = _evaluate_complete(tmp_path, needs, workflow, catalog)
+    rendered = subject.markdown(result, "https://example.invalid/run/1")
+    assert "evidence_coverage" in rendered and "concern" in rendered
+    assert "0.72" in rendered and "0.81" in rendered
+    assert "jev-fixture" in rendered
+    assert "src/core.py" in rendered and "src/adapter.py" in rendered
+    assert "truncated" in rendered.lower()
+    assert "architecture-evidence" in rendered and "https://example.invalid/run/1" in rendered
+    assert result.get("jev", {}).get("current") is True
+    assert result["status"] == ("passed" if required_passed else "failed")
+    assert bool(result["errors"]) is not required_passed
+
+
+@pytest.mark.parametrize("status", ("unavailable", "error", "inconclusive", "not_configured"))
+def test_current_jev_provider_gaps_remain_explicit_advice(tmp_path, status):
+    needs, workflow, catalog = _complete_receipts(tmp_path)
+    _write(tmp_path / "architecture-evidence/diagnostics.json", _jev_report(status=status))
+    result = _evaluate_complete(tmp_path, needs, workflow, catalog)
+    assert result.get("jev", {}).get("status") == status
+    rendered = subject.markdown(result, "https://example.invalid/run/1")
+    assert status in rendered and "fixture_provider_unavailable" in rendered
+    assert result["status"] == "passed" and result["errors"] == []
+
+
+@pytest.mark.parametrize("fault, expected", (
+    ("missing", "missing"), ("foreign", "foreign"), ("dirty", "foreign"),
+    ("unknown_worktree", "foreign"), ("different_subject", "foreign"),
+    ("invalid_hash", "invalid"), ("bad_confidence", "invalid"),
+    ("bad_distribution", "invalid"), ("unknown_outcome", "invalid"),
+    ("malformed_json", "invalid"), ("duplicate", "invalid"),
+    ("missing_schema", "invalid"), ("boolean_schema", "invalid"),
+    ("unknown_schema", "invalid"), ("deep_json", "invalid"),
+    ("huge_confidence", "invalid"), ("huge_probability", "invalid"),
+))
+def test_jev_missing_foreign_and_invalid_artifacts_cannot_look_current(tmp_path, fault, expected):
+    needs, workflow, catalog = _complete_receipts(tmp_path)
+    document = _jev_report()
+    if fault == "foreign":
+        document["execution"]["git_commit"] = "b" * 40
+    elif fault == "dirty":
+        document["execution"]["git_status"] = " M src/core.py"
+    elif fault == "unknown_worktree":
+        del document["execution"]["git_status"]
+    elif fault == "different_subject":
+        document["diagnostics"]["subject"]["source_sha256"] = "f" * 64
+    elif fault == "invalid_hash":
+        document["diagnostics"]["context_sha256"] = "not-a-digest"
+    elif fault == "bad_confidence":
+        document["diagnostics"]["assessments"][0]["confidence"] = 2
+    elif fault == "bad_distribution":
+        document["diagnostics"]["assessments"][0]["details"]["probabilities"]["concern"] = 0.01
+    elif fault == "unknown_outcome":
+        document["diagnostics"]["assessments"][0]["outcome"] = "all-clear"
+    elif fault == "missing_schema":
+        del document["schema_version"]
+    elif fault == "boolean_schema":
+        document["schema_version"] = True
+    elif fault == "unknown_schema":
+        document["schema_version"] = 2
+    elif fault == "huge_confidence":
+        document["diagnostics"]["assessments"][0]["confidence"] = 10 ** 400
+    elif fault == "huge_probability":
+        document["diagnostics"]["assessments"][0]["details"]["probabilities"]["concern"] = 10 ** 400
+    if fault != "missing":
+        path = tmp_path / "architecture-evidence/diagnostics.json"
+        _write(path, document)
+        if fault == "malformed_json":
+            path.write_text("{broken JSON")
+        elif fault == "deep_json":
+            path.write_text("[" * 5000 + "0" + "]" * 5000)
+        elif fault == "duplicate":
+            _write(path.parent / "nested/diagnostics.json", document)
+    result = _evaluate_complete(tmp_path, needs, workflow, catalog)
+    assert result.get("jev", {}).get("status") == expected
+    assert result.get("jev", {}).get("current") is False
+    rendered = subject.markdown(result, "https://example.invalid/run/1")
+    assert expected in rendered
+    assert "evidence_coverage" not in rendered
+    assert result["status"] == "passed" and result["errors"] == []
+
+
+def test_ci_summary_waits_for_advisory_artifact_without_requiring_jev_success():
+    workflow = json.loads((Path(__file__).parents[2] / ".github/workflows/ci.yml").read_text())
+    aggregate = workflow["jobs"]["ci-result"]
+    assert "architecture" in aggregate["needs"]
+    assert aggregate["if"] == "${{ always() }}"
+    docs, errors = subject.job_verdict(_needs(), event="pull_request")
+    assert docs is False and errors == []
+
+
+def test_ci_advisory_link_is_exported_from_the_actual_artifact_upload():
+    workflow = json.loads((Path(__file__).parents[2] / ".github/workflows/ci.yml").read_text())
+    diagnostic = workflow["jobs"]["architecture"]
+    upload = next(step for step in diagnostic["steps"] if step.get("with", {}).get("name") == "architecture-evidence")
+    assert upload.get("id"), "The retained upload must expose its own artifact URL"
+    assert diagnostic.get("outputs", {}).get("artifact_url") == "${{ steps." + upload["id"] + ".outputs.artifact-url }}"
+
+
+def test_optional_advisory_transfer_cannot_fail_required_evidence_download():
+    workflow = json.loads((Path(__file__).parents[2] / ".github/workflows/ci.yml").read_text())
+    downloads = [step for step in workflow["jobs"]["ci-result"]["steps"]
+                 if step.get("uses", "").startswith("actions/download-artifact@")]
+    required = [step for step in downloads if not step.get("continue-on-error", False)]
+    assert len(required) == 1 and required[0].get("with", {}).get("pattern") == "!architecture-evidence"
+    optional = [step for step in downloads if step.get("with", {}).get("name") == "architecture-evidence"]
+    assert len(optional) == 1 and optional[0].get("continue-on-error") is True
+    assert optional[0]["with"]["path"] == "${{ runner.temp }}/ci-result-inputs/architecture-evidence"
+
+
+@pytest.mark.parametrize("dirty", (False, True))
+def test_architecture_producer_retains_actual_working_tree_identity(tmp_path, dirty):
+    from scripts.architecture.__main__ import _identity
+
+    def git(*arguments):
+        return subprocess.run(["git", *arguments], cwd=tmp_path, check=True, capture_output=True, text=True).stdout.strip()
+
+    git("init", "-q")
+    git("config", "user.name", "fixture")
+    git("config", "user.email", "fixture@example.invalid")
+    (tmp_path / "source.py").write_text("VALUE = 1\n")
+    git("add", "source.py")
+    git("commit", "-qm", "fixture")
+    expected_commit = git("rev-parse", "HEAD")
+    if dirty:
+        (tmp_path / "source.py").write_text("VALUE = 2\n")
+    receipt = _identity(tmp_path)
+    assert receipt.get("git_status") == (" M source.py\n" if dirty else "")
+    assert receipt["git_commit"] == expected_commit

@@ -67,6 +67,14 @@ source evidence is `inconclusive`. None means Jev found no concern. A completed
 diagnostic only covers the supplied scope. Live provider output and HTTP fixture
 results are distinct evidence.
 
+The final CI summary exposes these advisory assessments, their confidence and
+distributions, and selected, omitted and truncated scope. It links the diagnostic
+artifact and records report/context hashes. Advice is shown as current only when
+the report identifies a clean checkout of the tested revision and the diagnostic
+subject matches the measured subject. Missing, foreign or malformed advice stays
+visible without changing deterministic acceptance. Confidence and distributions
+are model outputs rather than calibrated probabilities of an actual defect.
+
 CI runs diagnostics even after a deterministic failure. Its explicit
 `--diagnostics-only` invocation does not determine the separate blocking gate's
 exit status. The deterministic and behavioral steps have no continue-on-error.
