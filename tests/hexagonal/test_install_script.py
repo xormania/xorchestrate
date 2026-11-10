@@ -78,6 +78,93 @@ def test_the_next_steps_name_the_short_command_when_the_release_provides_it(sand
     assert result.returncode == 0, result.stderr
     assert f"  {named} --version   show the release" in result.stdout
     assert (sandbox.tool_bin / "xo").exists() is short
+    assert "warning: another xo" not in result.stdout
+
+
+def foreign_xo(sandbox, kind):
+    """An ``xo`` in uv's executable directory that another program put there."""
+    sandbox.tool_bin.mkdir(parents=True)
+    xo = sandbox.tool_bin / "xo"
+    if kind == "file":
+        xo.write_text("#!/bin/sh\necho linter\n")
+        xo.chmod(0o700)
+    else:
+        target = sandbox.root / "node" / "bin" / "xo"
+        target.parent.mkdir(parents=True)
+        target.write_text("#!/bin/sh\necho linter\n")
+        xo.symlink_to(target)
+    return xo
+
+
+@pytest.mark.parametrize(("kind", "detail"), [("file", "it is not a link into"), ("link", "it links to")])
+def test_a_foreign_xo_stops_the_script_before_uv_installs_anything(sandbox, kind, detail):
+    sandbox.provide_uv()
+    xo = foreign_xo(sandbox, kind)
+    result = sandbox.run()
+    assert result.returncode != 0
+    assert f"{xo} already exists and is not part of the xorchestrate install ({detail}" in result.stderr
+    assert "Move or remove it and re-run, or install with" in result.stderr and "--force xorchestrate" in result.stderr
+    assert installs(sandbox.calls()) == []
+    assert xo.read_text().endswith("echo linter\n") if kind == "file" else xo.is_symlink()
+
+
+def test_an_xo_whose_owner_cannot_be_told_is_left_to_uv_and_not_named(sandbox):
+    """Without readlink the script cannot tell a link's owner; uv decides, and the next steps use the long name."""
+    (sandbox.bin / "readlink").unlink()
+    sandbox.provide_uv(short=False)
+    foreign_xo(sandbox, "link")
+    result = sandbox.run()
+    assert result.returncode == 0, result.stderr
+    assert installs(sandbox.calls()) == [("tool", "install", "xorchestrate")]
+    assert "  xorchestrate --version   show the release" in result.stdout
+
+
+def test_an_xo_of_the_same_install_is_kept_on_a_rerun(sandbox):
+    sandbox.provide_uv()
+    assert sandbox.run().returncode == 0
+    result = sandbox.run("--version", "1.2.3")
+    assert result.returncode == 0, result.stderr
+    assert installs(sandbox.calls())[-1] == ("tool", "install", "xorchestrate==1.2.3")
+
+
+@pytest.mark.parametrize(("package", "other"), [("xorchestrate", "xork"), ("xork", "xorchestrate")])
+def test_the_other_name_of_the_launcher_already_installed_stops_the_script(sandbox, package, other):
+    sandbox.provide_uv()
+    (sandbox.tool_dir / other / "bin").mkdir(parents=True)
+    result = sandbox.run(env={"XORCHESTRATE_PACKAGE": package})
+    assert result.returncode != 0
+    assert f"{other} is already installed with uv tool install and provides the same commands as {package}" \
+        in result.stderr
+    assert f"uv tool uninstall {other}" in result.stderr
+    assert installs(sandbox.calls()) == []
+
+
+def test_the_alias_installs_and_runs_the_xorchestrate_command(sandbox):
+    sandbox.provide_uv()
+    result = sandbox.run("--version", "1.2.3", env={"XORCHESTRATE_PACKAGE": "xork"})
+    assert result.returncode == 0, result.stderr
+    assert installs(sandbox.calls()) == [("tool", "install", "xork==1.2.3")]
+    assert "installed: {" in result.stdout and "  xo --version   show the release" in result.stdout
+    assert (sandbox.tool_bin / "xorchestrate").resolve().parent == sandbox.tool_dir / "xork" / "bin"
+
+
+def test_the_alias_cannot_be_installed_from_git(sandbox):
+    sandbox.provide_uv()
+    result = sandbox.run("--git", "v1.2.3", env={"XORCHESTRATE_PACKAGE": "xork"})
+    assert result.returncode != 0 and "--git installs xorchestrate from the repository" in result.stderr
+    assert sandbox.calls() == []
+
+
+def test_another_xo_earlier_on_path_is_reported(sandbox):
+    sandbox.provide_uv()
+    linter = sandbox.root / "node"
+    linter.mkdir()
+    (linter / "xo").write_text("#!/bin/sh\necho linter\n")
+    (linter / "xo").chmod(0o700)
+    result = sandbox.run(env={"PATH": f"{linter}:{sandbox.bin}:{sandbox.tool_bin}"})
+    assert result.returncode == 0, result.stderr
+    assert f"warning: another xo comes first on your PATH ({linter / 'xo'}); use xorchestrate" in result.stdout
+    assert "is not on your PATH" not in result.stdout
 
 
 @pytest.mark.parametrize(("arguments", "message"), [

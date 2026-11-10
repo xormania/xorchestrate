@@ -11,6 +11,21 @@ entry from `init`, use `xorchestrate`, the name no other program is likely to
 have (`xo` is also, for example, the name of a JavaScript linter). If another
 `xo` comes first on your `PATH`, use `xorchestrate`.
 
+**Another program's `xo` in uv's executable directory.** Check before installing
+or upgrading with uv:
+
+```sh
+ls -l "$(uv tool dir --bin)/xo"
+```
+
+If it exists and is not a link into uv's `xorchestrate` or `xork` tool
+environment, it belongs to another program, and uv handles it badly: a fresh
+`uv tool install` fails ("Executable already exists: xo"), a pinned reinstall
+such as `uv tool install xorchestrate@latest` fails *and removes the installed
+launcher*, and `uv tool upgrade` replaces the other program's `xo` without
+asking. Move that program's `xo` elsewhere first. The install script checks this
+and stops before running uv.
+
 xorchestrate needs Python 3.12 or newer, which uv provides when your system has
 none. uv is the only hard requirement; the install script installs it if missing.
 
@@ -18,7 +33,7 @@ none. uv is the only hard requirement; the install script installs it if missing
 
 | Path | Command | Status |
 | --- | --- | --- |
-| Package index | `uv tool install xork` (short for `uv tool install xorchestrate`), or `pipx install xork` | works once the first release is published to PyPI (see below) |
+| Package index | `uv tool install xork` or `uv tool install xorchestrate` (the same launcher; install one of the two), or the same with `pipx install` | works once the first release is published to PyPI (see below) |
 | Git | `uv tool install git+https://github.com/xormania/xorchestrate@vX.Y.Z` | works today |
 | Install script | `curl -LsSf https://raw.githubusercontent.com/xormania/xorchestrate/master/scripts/install.sh \| sh` | installs uv if missing, then the launcher from the package index (or git) |
 | No install | `uvx --from <source> xo <command>` | runs the launcher from uv's cache each time |
@@ -38,6 +53,16 @@ uv tool install xorchestrate          # the same, by the package's full name
 the `xorchestrate` release of exactly the same version, and which provides the
 same `xo` and `xorchestrate` commands. Every release publishes both, with the
 same version. Upgrade and uninstall by the name you installed.
+
+**Install only one of the two names.** Both distributions own the same two
+commands. Installing one with `uv tool install` while the other is installed
+fails, and uninstalling one removes the commands the other relies on wherever
+both are in one environment (pip or `uv pip`, `uv tool install --force`, pipx).
+To switch names, uninstall the one you have first (`uv tool uninstall xork`,
+then `uv tool install xorchestrate`, or the reverse). If you removed `xork` from
+a pip or `uv pip` environment that still holds `xorchestrate`, reinstall it
+(`uv pip install --reinstall xorchestrate`) to restore its commands. The install
+script refuses to install one name while uv has the other installed.
 
 **Not available yet.** Releases are published to PyPI automatically when a
 release tag is pushed, but no release has been published so far; both names are
@@ -74,6 +99,14 @@ It:
    `git+…@REF` with `--git REF`);
 3. prints the installed `--version` and the next steps, naming `xo` when the
    installed release provides it.
+
+Before installing, it stops if uv already has the other name (`xork` for
+`xorchestrate`, or the reverse) installed, or if another program's `xo` is in
+uv's executable directory, naming the file and the options.
+`XORCHESTRATE_PACKAGE=xork` installs the alias instead (not with `--git`, which
+always installs `xorchestrate`). It names `xo` in the next steps only when that
+`xo` belongs to this install, and warns when another `xo` comes first on your
+`PATH`.
 
 It needs uv 0.4.23 or newer and stops with that message for an older uv. The whole
 script runs from a function called on its last line, so a partly downloaded copy
@@ -133,6 +166,8 @@ Run the `upgrade_command` from `xo --version`. For example:
 | Installed with | Upgrade | Uninstall |
 | --- | --- | --- |
 | `uv tool install xork` | `uv tool upgrade xork` | `uv tool uninstall xork` |
+| `uv tool install xork==X.Y.Z` | `uv tool install xork@latest` | `uv tool uninstall xork` |
+| `pipx install xork` | `pipx upgrade xork` | `pipx uninstall xork` |
 | `uv tool install xorchestrate` | `uv tool upgrade xorchestrate` | `uv tool uninstall xorchestrate` |
 | `uv tool install xorchestrate==X.Y.Z` (also the install script's `--version`) | `uv tool install xorchestrate@latest` | `uv tool uninstall xorchestrate` |
 | `pipx install xorchestrate` | `pipx upgrade xorchestrate` | `pipx uninstall xorchestrate` |

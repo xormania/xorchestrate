@@ -10,7 +10,7 @@
 # again is safe: an installed launcher is kept unless you ask for another release.
 #
 # Settings (environment variables):
-#   XORCHESTRATE_PACKAGE     package name                (default: xorchestrate)
+#   XORCHESTRATE_PACKAGE     package name                (default: xorchestrate; or its alias xork)
 #   XORCHESTRATE_INDEX_URL   package index for the launcher and its dependencies
 #                            (default: uv's default index, PyPI)
 #   XORCHESTRATE_REPOSITORY  git repository for --git    (default: https://github.com/xormania/xorchestrate)
@@ -84,6 +84,61 @@ require_uv_version() {
     fi
 }
 
+# The other name of the same launcher, for xorchestrate and its alias xork.
+other_name() {
+    case $1 in
+        xorchestrate) printf '%s\n' xork ;;
+        xork) printf '%s\n' xorchestrate ;;
+    esac
+}
+
+# The command that runs the launcher: xork has no command of its own.
+launcher_name() {
+    case $1 in
+        xork) printf '%s\n' xorchestrate ;;
+        *) printf '%s\n' "$1" ;;
+    esac
+}
+
+# Whether `uv tool list` shows the tool $1.
+tool_installed() {
+    "$uv" tool list 2>/dev/null | {
+        while IFS= read -r line; do
+            case $line in "$1 "*) exit 0 ;; esac
+        done
+        exit 1
+    }
+}
+
+# The uv tool environment the command $1 links into; nothing when $1 does not exist,
+# `foreign` when it is not a link into uv's tool directory, `unknown` when it cannot be told.
+owner_of() {
+    if [ ! -e "$1" ] && [ ! -L "$1" ]; then
+        return 0
+    fi
+    if [ ! -L "$1" ]; then
+        printf '%s\n' foreign
+        return 0
+    fi
+    if ! command -v readlink >/dev/null 2>&1; then
+        printf '%s\n' unknown
+        return 0
+    fi
+    target=$(readlink "$1") || { printf '%s\n' unknown; return 0; }
+    case $target in
+        "$tool_dir"/*/bin/*) owner=${target#"$tool_dir"/}; printf '%s\n' "${owner%%/*}" ;;
+        *) printf '%s\n' foreign ;;
+    esac
+}
+
+describe_xo() {
+    if [ -L "$1" ] && command -v readlink >/dev/null 2>&1; then
+        printf 'it links to %s' "$(readlink "$1")"
+    else
+        printf 'it is not a link into %s' "$tool_dir"
+    fi
+}
+
 main() {
     package=${XORCHESTRATE_PACKAGE:-xorchestrate}
     repository=${XORCHESTRATE_REPOSITORY:-https://github.com/xormania/xorchestrate}
@@ -103,6 +158,8 @@ main() {
         esac
     done
     [ -z "$version" ] || [ -z "$git_ref" ] || fail "use either --version or --git, not both"
+    [ "$package" != xork ] || [ -z "$git_ref" ] \
+        || fail "--git installs xorchestrate from the repository; unset XORCHESTRATE_PACKAGE to use it"
 
     if uv=$(find_uv); then
         say "using uv at $uv"
@@ -121,6 +178,23 @@ main() {
         requirement=$package
     fi
 
+    bin_dir=$("$uv" tool dir --bin)
+    tool_dir=$("$uv" tool dir)
+
+    # xorchestrate and its alias xork install the same commands; only one may be installed.
+    other=$(other_name "$package")
+    if [ -n "$other" ] && tool_installed "$other"; then
+        fail "$other is already installed with uv tool install and provides the same commands as $package;" \
+            "uninstall it first ('$uv tool uninstall $other') and re-run, or keep using $other"
+    fi
+    # uv refuses to replace an `xo` it did not install, and a failed reinstall removes the existing
+    # launcher; an `xo` from another program is only replaced by an upgrade, silently.
+    xo_owner=$(owner_of "$bin_dir/xo")
+    if [ -n "$xo_owner" ] && [ "$xo_owner" != "$package" ] && [ "$xo_owner" != unknown ]; then
+        fail "$bin_dir/xo already exists and is not part of the $package install ($(describe_xo "$bin_dir/xo"))." \
+            "Move or remove it and re-run, or install with '$uv tool install --force $requirement', which replaces it"
+    fi
+
     say "installing $requirement with uv tool install"
     if [ -n "$index_url" ]; then
         "$uv" tool install --default-index "$index_url" "$requirement"
@@ -128,8 +202,7 @@ main() {
         "$uv" tool install "$requirement"
     fi
 
-    bin_dir=$("$uv" tool dir --bin)
-    launcher="$bin_dir/$package"
+    launcher="$bin_dir/$(launcher_name "$package")"
     [ -x "$launcher" ] || fail "uv did not install $launcher"
     identity=$("$launcher" --version) || fail "the installed launcher $launcher does not run"
     say "installed: $identity"
@@ -139,15 +212,18 @@ main() {
         *) on_path=no ;;
     esac
 
-    # The package also installs the short command `xo`; name it when the release has it.
-    command_name=$package
-    if [ -x "$bin_dir/xo" ]; then
+    # Name the short command `xo` only when it belongs to this install.
+    command_name=$(launcher_name "$package")
+    if [ "$(owner_of "$bin_dir/xo")" = "$package" ]; then
         command_name=xo
     fi
 
     say "next steps:"
     if [ "$on_path" = no ]; then
         say "  $bin_dir is not on your PATH; run '$uv tool update-shell' and open a new shell"
+    elif [ "$command_name" = xo ] && [ "$(command -v xo || true)" != "$bin_dir/xo" ]; then
+        say "  warning: another xo comes first on your PATH ($(command -v xo)); use $(launcher_name "$package")" \
+            "or put $bin_dir earlier on your PATH"
     fi
     say "  $command_name --version   show the release, how it was installed and its upgrade_command"
     say "  then follow the next steps in $repository/blob/master/docs/install.md"

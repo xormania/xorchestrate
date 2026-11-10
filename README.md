@@ -60,8 +60,8 @@ uv tool install git+https://github.com/xormania/xorchestrate@vX.Y.Z
 xo --version
 ```
 
-Once a release is on PyPI, `uv tool install xork` is the short form of
-`uv tool install xorchestrate`.
+Once a release is on PyPI, `uv tool install xork` installs the same launcher
+under a shorter package name; install either `xork` or `xorchestrate`, not both.
 
 Maintainers publish releases as described in [releases](docs/releases.md).
 
