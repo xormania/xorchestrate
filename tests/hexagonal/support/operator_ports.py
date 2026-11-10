@@ -120,17 +120,27 @@ class FakeHosting:
 
 
 @contextmanager
-def github_api(repositories, token="test-token"):
+def github_api(repositories, token="test-token", redirects=None, requests=None):
     """A local HTTP stand-in for ``GET /repos/{owner}/{name}``; no external network.
 
     ``repositories`` maps ``owner/name`` to ``private`` (bool). Requests without
-    ``Bearer <token>`` get 401; unknown repositories 404.
+    ``Bearer <token>`` get 401; unknown repositories 404. ``redirects`` maps a
+    repository to a URL answered with 302. Each request's path and
+    ``Authorization`` header is appended to ``requests`` when given.
     """
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):  # noqa: N802 - http.server naming
+            if requests is not None:
+                requests.append((self.path, self.headers.get("Authorization")))
+            name = self.path.removeprefix("/repos/")
+            if redirects and name in redirects:
+                self.send_response(302)
+                self.send_header("Location", redirects[name])
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return None
             if self.headers.get("Authorization") != f"Bearer {token}":
                 return self._reply(401, {"message": "Requires authentication"})
-            name = self.path.removeprefix("/repos/")
             if not self.path.startswith("/repos/") or name not in repositories:
                 return self._reply(404, {"message": "Not Found"})
             return self._reply(200, {"full_name": name, "private": repositories[name]})

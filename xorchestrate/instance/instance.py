@@ -61,7 +61,7 @@ class Instance:
 
 
 def load_instance(home, name):
-    record = read_document(home.project_dir(name) / INSTANCE_FILE)
+    record = read_document(home.project_dir(name) / INSTANCE_FILE, private=True)
     if record is None:
         return None
     if record.get("schema") != SCHEMA or not isinstance(record.get("instance_id"), str):

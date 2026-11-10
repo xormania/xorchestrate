@@ -14,11 +14,10 @@ from __future__ import annotations
 
 import os
 import re
-import stat
 from pathlib import Path
 
 from ..model import OrchestrationError
-from .local_socket import check_socket_directory
+from .local_socket import check_private_location
 
 LAYOUT = ("overlay", "approvals", "policies", "launchers")
 REQUIRED = ("overlay", "approvals")
@@ -118,20 +117,10 @@ class GitDirectoryCompanion:
         existing = self.root
         while not existing.exists() and existing != existing.parent:
             existing = existing.parent
-        if existing == self.root:
-            try:
-                check_socket_directory(self.root / "companion")
-            except OrchestrationError as error:
-                return f"{error.details.get('directory')} is unsafe: {error.details.get('reason')}"
-        else:
-            # Not created yet: the directories it will be created in are enclosing directories.
-            uid = os.getuid()
-            for ancestor in dict.fromkeys([existing, *existing.parents, *existing.resolve().parents]):
-                metadata = os.stat(ancestor)
-                if metadata.st_uid not in (uid, 0):
-                    return f"{ancestor} is unsafe: an enclosing directory is owned by another user"
-                if metadata.st_mode & 0o022 and not metadata.st_mode & stat.S_ISVTX:
-                    return f"{ancestor} is unsafe: an enclosing directory is writable by others without the sticky bit"
+        try:
+            check_private_location(self.root)
+        except OrchestrationError as error:
+            return f"{error.details.get('directory')} is unsafe: {error.details.get('reason')}"
         for directory in dict.fromkeys([self.root, *self.root.parents, *existing.resolve().parents]):
             if (directory / TRACKED_DIRECTORY / "project.json").is_file():
                 return f"it is inside the project at {directory}"

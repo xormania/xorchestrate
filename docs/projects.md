@@ -292,7 +292,17 @@ archives, adds a kind without changing the port or its adapters.
 The `github` adapter reads a token from `GH_TOKEN` or `GITHUB_TOKEN`, else
 from `gh auth token`, and asks `GET /repos/{owner}/{name}` whether the
 repository is private. Without a token, offline, or when GitHub does not show
-the repository, it answers `unknown` instead of failing.
+the repository, it answers `unknown` instead of failing. Its `api_url` must be
+`https` (plain `http` only to a loopback host), and it never follows a
+redirect, so the token is not sent anywhere else.
+
+The home itself (`~/.xorchestrate` or `$XORCHESTRATE_HOME`) chooses programs
+xorchestrate runs, so every command refuses a home that another user could
+replace: it must be owned by you and not writable by group or others, and
+every enclosing directory owned by you or root and not writable by others
+unless sticky. `settings.json`, `registry.json` and `instance.json` must be
+regular files (not symbolic links) owned by you with no group or other
+permissions.
 
 ## Release handoff
 

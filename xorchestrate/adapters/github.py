@@ -2,7 +2,8 @@
 
 Options:
 
-- ``api_url`` (default ``https://api.github.com``) and ``host`` (default
+- ``api_url`` (default ``https://api.github.com``; ``https`` only, or ``http``
+  to a loopback host) and ``host`` (default
   ``github.com``, the host remote URLs must name);
 - ``token_variables`` (default ``["GH_TOKEN", "GITHUB_TOKEN"]``): environment
   variables tried for a token, then ``token_command`` (default
@@ -21,12 +22,22 @@ import os
 import re
 import subprocess
 import urllib.error
+import urllib.parse
 import urllib.request
 
 from ..model import OrchestrationError
 from ..ports import HostingVisibility
 from .process import positive_number
 
+LOOPBACK = frozenset({"127.0.0.1", "::1", "localhost"})
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *arguments, **options):
+        return None
+
+
+_OPENER = urllib.request.build_opener(_NoRedirect)
 _PATTERNS = (
     re.compile(r"^(?:https?|ssh|git)://(?:[^@/]+@)?(?P<host>[^/:]+)(?::\d+)?/(?P<path>[^?#]+?)(?:\.git)?/?$"),
     re.compile(r"^(?:[^@/]+@)?(?P<host>[^/:]+):(?P<path>[^?#]+?)(?:\.git)?/?$"),
@@ -56,11 +67,18 @@ class GitHubHosting:
         self.token_variables = options.get("token_variables", ["GH_TOKEN", "GITHUB_TOKEN"])
         self.token_command = options.get("token_command", ["gh", "auth", "token"])
         self.timeout = positive_number(options, "timeout", 5)
-        if (not isinstance(self.api_url, str) or not self.api_url.startswith(("https://", "http://"))
+        if (not isinstance(self.api_url, str) or not self._secure(self.api_url)
                 or not isinstance(self.host, str) or not self.host
                 or not isinstance(self.token_variables, list) or not all(isinstance(v, str) for v in self.token_variables)
                 or not isinstance(self.token_command, list) or not all(isinstance(v, str) for v in self.token_command)):
-            raise OrchestrationError("Invalid github adapter options.", "invalid_configuration")
+            raise OrchestrationError("Invalid github adapter options; api_url must be https (http only for a "
+                                     "loopback host).", "invalid_configuration")
+
+    @staticmethod
+    def _secure(url):
+        """``https``, or ``http`` to a loopback host: the token is never sent in clear over a network."""
+        parsed = urllib.parse.urlsplit(url)
+        return parsed.scheme == "https" or (parsed.scheme == "http" and parsed.hostname in LOOPBACK)
 
     def _token(self):
         for name in self.token_variables:
@@ -87,10 +105,12 @@ class GitHubHosting:
             "Accept": "application/vnd.github+json", "Authorization": f"Bearer {token}",
             "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "xorchestrate-doctor"})
         try:
-            with urllib.request.urlopen(request, timeout=self.timeout) as response:  # noqa: S310 - configured https API
+            # Redirects are not followed, so the token never reaches another origin or plain http.
+            with _OPENER.open(request, timeout=self.timeout) as response:
                 data = json.loads(response.read(1_048_576))
         except urllib.error.HTTPError as error:
-            reason = "not visible to this token" if error.code == 404 else f"HTTP {error.code}"
+            reason = ("not visible to this token" if error.code == 404 else
+                      "redirect not followed" if 300 <= error.code < 400 else f"HTTP {error.code}")
             return HostingVisibility("unknown", repository, reason)
         except (urllib.error.URLError, OSError, ValueError, TimeoutError):
             return HostingVisibility("unknown", repository, "GitHub could not be reached")

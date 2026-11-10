@@ -207,3 +207,55 @@ def test_a_companion_nested_in_its_own_repository_inside_a_project_is_refused(pr
     Home(project.home).update_settings(companion={"adapter": "git-directory", "options": {"path": str(nested)}})
     error = json.loads(project.run("describe").stderr)["error"]
     assert error["code"] == "companion_exposed"
+
+
+def test_github_adapter_refuses_plain_http_except_loopback():
+    for url in ("http://api.github.example", "http://10.0.0.1:8080", "ftp://127.0.0.1"):
+        with pytest.raises(OrchestrationError) as refused:
+            GitHubHosting({"api_url": url})
+        assert refused.value.code == "invalid_configuration", url
+    for url in ("https://ghe.example/api/v3", "http://127.0.0.1:9", "http://[::1]:9", "http://localhost:9"):
+        GitHubHosting({"api_url": url})
+
+
+def test_github_adapter_never_follows_a_redirect_with_the_token(monkeypatch):
+    monkeypatch.setenv("XO_TEST_GITHUB_TOKEN", "test-token")
+    elsewhere = []
+    with github_api({"owner/companion": True}, requests=elsewhere) as other:
+        with github_api({}, redirects={"owner/companion": f"{other}/repos/owner/companion"}) as api:
+            report = GitHubHosting({"api_url": api, "token_variables": ["XO_TEST_GITHUB_TOKEN"],
+                                    "token_command": []}).visibility("https://github.com/owner/companion.git")
+    assert report.visibility == "unknown" and report.reason == "redirect not followed"
+    assert elsewhere == [], "the token was not sent to the redirect target"
+
+
+def test_an_xorchestrate_home_others_can_replace_is_refused(tmp_path):
+    loose = tmp_path / "loose"
+    loose.mkdir()
+    loose.chmod(0o777)
+    for home in (loose / "home", loose):
+        with pytest.raises(OrchestrationError) as refused:
+            Home.locate({"XORCHESTRATE_HOME": str(home)})
+        assert refused.value.code == "invalid_configuration" and "unsafe" in str(refused.value)
+    # Through the CLI, before any setting (such as a version-control program) is used.
+    project = ProjectFixture(tmp_path / "p")
+    project.home.chmod(0o755)
+    project.home.chmod(0o775)
+    error = json.loads(project.run("describe").stderr)["error"]
+    assert error["code"] == "invalid_configuration" and str(project.home) in error["message"]
+    project.home.chmod(0o700)
+    assert project.run("describe").returncode == 0
+    # The account's default home stays usable.
+    assert Home.locate({}).root.name == ".xorchestrate"
+
+
+def test_home_documents_must_be_private_regular_files(project):
+    settings = project.home / "settings.json"
+    settings.chmod(0o644)
+    error = json.loads(project.run("describe").stderr)["error"]
+    assert error["code"] == "invalid_configuration"
+    settings.chmod(0o600)
+    moved = project.home / "real-settings.json"
+    settings.rename(moved)
+    settings.symlink_to(moved)
+    assert json.loads(project.run("describe").stderr)["error"]["code"] == "invalid_configuration"

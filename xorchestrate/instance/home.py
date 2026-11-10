@@ -14,12 +14,14 @@ tracked configuration.
 """
 from __future__ import annotations
 
+import errno
 import json
 import os
 import pwd
 from dataclasses import dataclass
 from pathlib import Path
 
+from ..adapters.local_socket import check_private_location, open_private_file
 from ..composition import read_json
 from ..model import OrchestrationError
 
@@ -65,14 +67,29 @@ def private_directory(path):
     return path
 
 
-def read_document(path, default=None):
-    """Read a JSON object, or return ``default`` when the file does not exist."""
+def read_document(path, default=None, *, private=False):
+    """Read a JSON object, or return ``default`` when the file does not exist.
+
+    ``private`` files (the home's settings, registry and instance records) are
+    opened without following symbolic links and must be regular files owned
+    by this user with no group or other permissions.
+    """
     path = Path(path)
     try:
-        text = path.read_text(encoding="utf-8")
+        if private:
+            with os.fdopen(open_private_file(path, os.O_RDONLY), "rb") as source:
+                text = source.read().decode("utf-8")
+        else:
+            text = path.read_text(encoding="utf-8")
     except FileNotFoundError:
         return default
+    except UnicodeError as exc:
+        raise OrchestrationError("A required file is not valid JSON.", "invalid_configuration",
+                                 {"path": str(path)}) from exc
     except OSError as exc:
+        if private and exc.errno == errno.ELOOP:
+            raise OrchestrationError("A home file must be a private regular file, not a symbolic link.",
+                                     "invalid_configuration", {"path": str(path)}) from exc
         raise OrchestrationError("Cannot read a required file.", "io_error", {"path": str(path)}) from exc
     try:
         value = read_json(text)
@@ -109,7 +126,19 @@ class Home:
 
     @classmethod
     def locate(cls, environ=None):
-        return cls(xorchestrate_home(environ))
+        """The home, refused unless it is (or will be created as) a private directory no other user can replace.
+
+        Its settings choose programs xorchestrate runs (for example the
+        version-control adapter), so the private-directory rule of the server
+        sockets applies on every open, not only on creation.
+        """
+        root = xorchestrate_home(environ)
+        try:
+            check_private_location(root)
+        except OrchestrationError as error:
+            raise OrchestrationError(f"The xorchestrate home {root} is unsafe: {error.details.get('reason')}.",
+                                     "invalid_configuration", {"path": str(root), **error.details}) from error
+        return cls(root)
 
     def ensure(self):
         private_directory(self.root)
@@ -139,7 +168,7 @@ class Home:
         return self.projects / name
 
     def settings(self):
-        settings = read_document(self.settings_path, {"schema": SCHEMA})
+        settings = read_document(self.settings_path, {"schema": SCHEMA}, private=True)
         if settings.get("schema") != SCHEMA:
             raise OrchestrationError("Unsupported settings schema.", "invalid_configuration",
                                      {"path": str(self.settings_path)})
@@ -152,7 +181,7 @@ class Home:
         return settings
 
     def registry(self):
-        registry = read_document(self.registry_path, {"schema": SCHEMA, "instances": {}})
+        registry = read_document(self.registry_path, {"schema": SCHEMA, "instances": {}}, private=True)
         if registry.get("schema") != SCHEMA or not isinstance(registry.get("instances"), dict):
             raise OrchestrationError("Unsupported registry schema.", "invalid_configuration",
                                      {"path": str(self.registry_path)})
