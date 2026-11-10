@@ -12,9 +12,10 @@ import sys
 from pathlib import Path
 
 from ..model import OrchestrationError
+from .companion import exposure
 from .home import Home
 from .instance import approval_refusal, context_for, locate_project, require_companion, resolve_instance
-from .render import launched_commands, render
+from .render import launched_commands, render, repository_references
 
 MINIMUM_PYTHON = (3, 12)
 
@@ -66,6 +67,14 @@ def project_checks(path=None, environ=None):
         return [_check("project", "error", str(error), code=error.code)], None
     checks.append(_check("project", "ok", f"{tracked.name} instance {instance.instance_id}",
                          worktree=tracked.identity()))
+    exposed = exposure(companion.root)
+    inside = companion.root.resolve().is_relative_to(tracked.worktree.root)
+    if exposed is not None or inside:
+        checks.append(_check("companion", "error", f"The companion {companion.root} is inside a project repository"
+                             f" ({exposed or tracked.worktree.root}); agents could write its approvals. Move it "
+                             "outside every project and run `xorchestrate companion use`."))
+    else:
+        checks.append(_check("companion", "ok", f"{companion.root} is outside the project"))
     refusal = approval_refusal(companion, tracked)
     if refusal is not None:
         checks.append(_check("approval", "error", str(refusal), **refusal.details))
@@ -83,6 +92,10 @@ def project_checks(path=None, environ=None):
                          "renders and validates", warnings=list(rendered.warnings)))
     checks.append(_check("overrides", "ok", f"{len(rendered.overrides)} setting(s) overridden by the companion",
                          overrides=rendered.overrides))
+    for reference in repository_references(rendered.config):
+        checks.append(_check("repository_code", "warning",
+                             f"{reference['where']} runs code from outside the approved .xorchestrate/ "
+                             "(the repository or the Python path); approval does not cover it.", **reference))
     for item in launched_commands(rendered.config):
         label = f"{item['kind']}.{item['name']}"
         checks.append(_check("harness", "ok" if _resolves(item["command"]) else "error",

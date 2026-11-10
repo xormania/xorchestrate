@@ -72,9 +72,17 @@ on standard error with exit status 2.
    tracks `.xorchestrate/` is never edited;
 3. creates your empty overlay in the companion if absent;
 4. registers this machine's instance (`projects/<name>/`), or reuses it from
-   another worktree of the same repository. In a separate clone of a project
-   already set up on this machine it is refused with `project_clone_refused`,
-   naming the existing instance: use `git worktree add` instead;
+   another worktree of the same repository. Instances are keyed by project
+   name, so another repository with the same name is refused, naming the
+   existing instance:
+   - a separate clone of the same project (they share a root commit):
+     `project_clone_refused`; use `git worktree add` instead;
+   - an unrelated repository: `project_name_conflict`; rename one of the
+     projects in its `project.json`;
+   - the instance's repository no longer exists where it was recorded (it was
+     moved or renamed): `project_moved`. Run `xorchestrate init --relocate` in
+     the repository's new location to re-point the instance; it refuses while
+     the recorded repository still exists (`project_not_moved`);
 5. writes Claude Code's tracked `.mcp.json` when it creates the starter (and
    the file is absent), and prints the same entry for harnesses that keep MCP
    servers in user-level configuration, which `init` never edits;
@@ -114,6 +122,13 @@ resolve `${repo}` in their command, `cwd` and `env` values to that worktree's
 root. CLI commands bind their own worktree the same way. A launch outside any
 worktree leaves `${repo}` unresolved and fails as an unavailable command.
 
+A session keeps the worktree it was started from (its `workspace`): later
+`send_session`, `poll_session`, `stop_session` and `detach_session` calls, a
+resume or reconnect (the new session inherits its source's workspace), and
+the native application-tool calls its process makes all run with that
+worktree, whichever connection drives them. Native tool calls are attributed
+to that worktree (`created_worktree`, `worktree`, guardrail context).
+
 The server runs one configuration: the approved one of the worktree it was
 started from. A connection from a worktree whose tracked configuration hash
 differs is refused with `configuration_mismatch`, naming the differing files,
@@ -132,10 +147,6 @@ place:
   `worktree` entry, so the rules adapter can already match it, for example
   `{"effect": "deny", "actions": ["create_work"], "where": {"worktree.name": "review"}}`.
 
-Calls that arrive through a session's native application tools use the
-server's starting worktree, not the worktree of the connection that started
-the session.
-
 ## Configuration layers and rendering
 
 The configuration a project runs is merged from four layers, later winning
@@ -150,9 +161,12 @@ Each layer is a JSON merge patch (RFC 7386): objects merge key by key, other
 values replace, and `null` removes a setting. An explicit overlay setting
 therefore wins over the project for everything, guardrails included. The
 overlay is yours and needs no approval. `status` and `doctor` list every
-setting the companion layers change, as `{"path": "/guardrail/options/default",
-"source": "overlay", "project": "allow", "value": "deny"}` (`"removed": true`
-for a removal; no `project` key when the project did not set it).
+setting whose effective value differs from the project's own layers, as
+`{"path": "/guardrail/options/default", "source": "overlay", "project": "allow",
+"value": "deny"}` (`"removed": true` for a removal; no `project` key when the
+project did not set it; `source` is the last companion layer that touched the
+setting). A patch that changes nothing, or a change a later layer reverts, is
+not listed.
 
 The merged document is substituted with a closed placeholder set:
 
@@ -164,7 +178,10 @@ The merged document is substituted with a closed placeholder set:
 | `${home}` | the account's home directory |
 | `${instance}` | the instance id |
 
-Any other `${...}` is refused with `configuration_error`. A SQLite store
+Any other `${...}` is refused with `configuration_error`, and so is
+`${repo}` anywhere other than the `command`, `discovery_command`, `cwd` and
+`env` options of providers, sessions and evaluators: elsewhere (a store path,
+the telemetry root) it could not be resolved per call. A SQLite store
 without a `path` (and an absent `store` section) uses `${data}/state.sqlite3`,
 so no durable state lands in the repository. Relative paths resolve against
 the instance directory. A `telemetry` section without an `adapter` changes
@@ -190,10 +207,17 @@ Configuration selects what xorchestrate launches, and a tracked configuration
 can be changed by any agent with write access to the repository and by anyone
 whose commits you pull. So:
 
-- `xorchestrate approve` hashes every regular file under the worktree's
-  `.xorchestrate/` (symbolic links are refused) and records the hash and the
-  file digests in `<companion>/approvals/<project>.json` (D13). Several hashes
-  may be approved, for example one per branch.
+- `xorchestrate approve` prints a summary of what it approves (the files and
+  their hash, every command the configuration launches, the overrides and the
+  code outside the approval, see below), then records the hash and the file
+  digests in `<companion>/approvals/<project>.json` (D13). Several hashes may
+  be approved, for example one per branch.
+- Every tracked file is read once: the approval check and the rendered
+  configuration use the same bytes, so a file changed after it was checked is
+  never rendered as approved. A symbolic link anywhere in `.xorchestrate/`,
+  including the directory itself, is refused, and so are SQLite state files
+  (`*.sqlite3`, `-wal`, `-shm`, `-journal`) that earlier releases kept there:
+  move them to `~/.xorchestrate/projects/<project>/` or delete them.
 - Every render checks the approval first and refuses with `approval_required`,
   naming the files that differ from the last approved configuration. The CLI
   and the server render before they build, so neither runs an unapproved
@@ -201,7 +225,28 @@ whose commits you pull. So:
 - The project server renders once, at start. It refuses connections from
   worktrees whose tracked configuration differs from the one it runs.
 
-`.mcp.json` is outside `.xorchestrate/` and is not part of the hash.
+- A project command checks the approval before it hands off to the release
+  `project.json` pins (see below), so an unapproved pin never builds or runs
+  a toolchain.
+- The companion must be outside every project: `setup` and `companion
+  init`/`use` refuse a path inside a git worktree that has `.xorchestrate/`
+  (`companion_exposed`), and `doctor` reports an error for a registered
+  companion inside the project's repository, where agents could write approvals.
+
+**What approval does not cover.** Approval covers only the files under
+`.xorchestrate/`. An approved configuration can still run code from elsewhere:
+a command that names `${repo}` runs a file from the worktree, and a
+`module:factory` adapter outside the `xorchestrate` package is imported from
+the Python path, which can include the repository. Those files can change
+without changing the hash. The approval summary lists them as
+`repository_code` and `doctor` warns about each one; review them, and the
+repository changes you pull, as you would any code you run. `.mcp.json` is
+outside `.xorchestrate/` and is not part of the hash either.
+
+Processes xorchestrate starts for itself never take code from the worktree:
+the project server is started with `python -P` in the instance directory, and
+the release handoff runs the toolchain with `-P`, so a file or directory named
+`xorchestrate` in the repository cannot run in place of the package.
 
 ## Release handoff
 
@@ -218,9 +263,12 @@ first:
 The toolchain is built in a temporary directory under `toolchains/` and renamed
 into place, so a partial build is never used; a failed build leaves nothing
 behind (`toolchain_failed`, with uv's error output). The command then runs as
-`<toolchain>/.venv/bin/python -m xorchestrate ...` with
+`<toolchain>/.venv/bin/python -P -m xorchestrate ...` with
 `XORCHESTRATE_HANDOFF=<release>` set; a toolchain that turns out to run another
-release is refused with `toolchain_mismatch` instead of handing off again.
+release is refused with `toolchain_mismatch` instead of handing off again. The
+handed-off process removes the marker from its environment, so the tools it
+launches never see it. A project that is not set up, or whose `project.json`
+is not approved, is refused before any handoff.
 
 `settings.json` may set `uv` (an absolute path; default: `uv` on `PATH`),
 `toolchain_python` (default `3.12`) and `toolchain_source`, a PEP 508
@@ -238,7 +286,9 @@ with the installed release.
 - The server does not re-render while it runs: an approved change, or an
   overlay change, takes effect when the server restarts.
 - `${repo}` is resolved in launched process commands, `cwd` and `env`, not in
-  other adapter options.
+  other adapter options; rendering refuses it elsewhere.
+- The worktree identity a connection reports is asserted by `connect`, a
+  process run by the same user, like the actor.
 - If a home directory is so long that the server socket does not fit, the
   socket falls back to a short runtime directory recorded in the server's
   discovery record under `servers/`, not in `instance.json`.

@@ -19,8 +19,11 @@ from scripts.testkit.adapters.configuration import isolated_config
 from scripts.testkit.adapters.evidence import write_json as atomic_json
 from scripts.testkit.core import CheckRecorder, ResourceScope
 from scripts.testkit.stories import select_stories, validate_limits
-from xorchestrate.composition import load_config
-from xorchestrate.instance.operations import provision
+from xorchestrate.composition import RELEASE, load_config
+from xorchestrate.instance import operations
+from xorchestrate.instance.home import write_document
+from xorchestrate.instance.instance import prepare
+from xorchestrate.instance.project import git
 
 from .peers import SCHEMA
 
@@ -204,8 +207,26 @@ def application_project(directory, config):
     clients select the home through the returned project's environment.
     """
     atomic_json(directory / "application.json", config)
-    return provision(directory / "project", config, name="acceptance", home=directory / "home",
-                     companion=directory / "companion")
+    repository = (directory / "project").resolve()
+    environment = {"XORCHESTRATE_HOME": str((directory / "home").resolve())}
+    repository.mkdir()
+    git("init", "-q", str(repository), cwd=repository)
+    write_document(repository / ".xorchestrate" / "project.json",
+                   {"schema": 1, "name": "acceptance", "release": RELEASE, "requires": []}, 0o644)
+    write_document(repository / ".xorchestrate" / "config.json", config, 0o644)
+    operations.companion_init(directory / "companion", environment)
+    operations.init(repository, environ=environment)
+    operations.approve(repository, environment)
+    prepare(repository, environ=environment)
+    return AcceptanceProject(repository, environment)
+
+
+class AcceptanceProject:
+    """The disposable project a scenario's clients run in, and the environment selecting its home."""
+
+    def __init__(self, repository, environment):
+        self.repository = repository
+        self.environment = environment
 
 
 def fixture_config(directory):

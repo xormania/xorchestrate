@@ -11,8 +11,10 @@ is absent:
 
 The toolchain is built in a temporary directory under ``toolchains/`` and
 renamed into place, so a partial build is never used, and it is never modified
-afterwards. The command runs as ``.venv/bin/python -m xorchestrate``, which
-keeps working after the rename (console-script shebangs would not).
+afterwards. The command runs as ``.venv/bin/python -P -m xorchestrate``, which
+keeps working after the rename (console-script shebangs would not); ``-P``
+keeps the working directory, usually the project's worktree, off ``sys.path``
+so repository files cannot shadow the release's package.
 
 uv is found on ``PATH`` unless ``settings.json`` names it (``"uv"``); the
 release source and interpreter are ``"toolchain_source"`` (``{release}`` is
@@ -121,4 +123,4 @@ def handoff(home, release, argv, *, execute=os.execve, runner=subprocess.run):
                                  {"release": release, "running": RELEASE})
     python = build_toolchain(home, release, runner=runner)
     environment = {**os.environ, HANDOFF_VARIABLE: release}
-    return execute(str(python), [str(python), "-m", "xorchestrate", *argv], environment)
+    return execute(str(python), [str(python), "-P", "-m", "xorchestrate", *argv], environment)

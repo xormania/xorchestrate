@@ -16,6 +16,7 @@ from . import __version__
 from .application import Application
 from .model import OrchestrationError, canonical_digest, unique_keys
 from .ports import ApplicationToolSessionDriver, SessionDriver
+from .worktrees import bound_worktree, session_worktree
 
 BUILTINS = {
     "telemetry": {"local": "xorchestrate.adapters.telemetry:LocalTelemetry"},
@@ -524,6 +525,12 @@ def _wire_application_tools(name: str, driver: SessionDriver, application: Appli
                 raise OrchestrationError("This application tool requires a stable invocation key.")
             else:
                 arguments["idempotency_key"] = "session:" + json.dumps([name, idempotency_key], separators=(",", ":"))
+        # Native tool calls come from a session's own process: they carry the
+        # worktree that created the session, whichever thread delivers them.
+        with bound_worktree(_session_worktree(application, context.get("session_id"))):
+            return dispatch(action, arguments, context, replay_only)
+
+    def dispatch(action, arguments, context, replay_only):
         # The driver supplies the owned session's principal separately from tool arguments.
         observed = all(context.get(field) for field in ("session_id", "native_id", "incarnation", "call_id"))
         if observed:
@@ -542,6 +549,17 @@ def _wire_application_tools(name: str, driver: SessionDriver, application: Appli
     if callable(replay):
         replay(lambda action, arguments, context, key=None:
                handle(action, arguments, context, key, replay_only=True))
+
+
+def _session_worktree(application, session_id):
+    if not isinstance(session_id, str) or not session_id:
+        return None
+    try:
+        with application.store.transaction() as tx:
+            session = tx.get("session", session_id)
+    except Exception:
+        return None
+    return session_worktree(session.data) if session is not None else None
 
 
 def describe(application):

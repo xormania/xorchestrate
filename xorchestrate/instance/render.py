@@ -60,34 +60,43 @@ def _fragments(directory, source):
 
 
 def layers(tracked, companion):
-    """The ordered ``(source, document)`` layers of a project's configuration."""
-    config = read_document(tracked.directory / CONFIG_FILE)
+    """The ordered ``(source, document)`` layers of a project's configuration.
+
+    The project's layers are parsed from the bytes that were hashed for
+    approval, never re-read from disk.
+    """
+    config = tracked.document(CONFIG_FILE)
     if config is None:
         raise OrchestrationError("The project has no .xorchestrate/config.json.", "project_invalid",
                                  {"path": str(tracked.directory / CONFIG_FILE)})
     return [
-        *_fragments(tracked.directory / POLICIES_DIRECTORY, "project_policy"),
+        *((f"project_policy:{name}", document) for name, document in tracked.fragments(POLICIES_DIRECTORY)),
         ("project_config", config),
         *_fragments(companion.policies, "companion_policy"),
         ("overlay", companion.overlay(tracked.name)),
     ]
 
 
-def _leaves(patch, prefix=()):
-    for key, value in patch.items():
-        path = (*prefix, key)
-        if isinstance(value, dict) and value:
-            yield from _leaves(value, path)
-        else:
-            yield path, value
+def _differences(project, effective, path=()):
+    """Leaf paths where the effective configuration differs from the project's own."""
+    if isinstance(effective, dict) and (isinstance(project, dict) or project is ABSENT):
+        # Recurse into added objects too, so each new leaf is reported (an empty one is no change).
+        before = project if isinstance(project, dict) else {}
+        for key in sorted(set(before) | set(effective), key=str):
+            yield from _differences(before.get(key, ABSENT), effective.get(key, ABSENT), (*path, key))
+    elif project != effective:
+        yield path, project, effective
 
 
-def _lookup(document, path):
+def _touches(patch, path):
+    """Whether a merge patch sets, replaces or removes ``path`` (or an enclosing value)."""
     for key in path:
-        if not isinstance(document, dict) or key not in document:
-            return ABSENT
-        document = document[key]
-    return document
+        if not isinstance(patch, dict):
+            return True
+        if key not in patch:
+            return False
+        patch = patch[key]
+    return True
 
 
 def _pointer(path):
@@ -95,27 +104,54 @@ def _pointer(path):
 
 
 def overrides(ordered):
-    """Every setting the companion layers change relative to the project's own layers."""
-    project = {}
-    index = 0
-    for index, (source, document) in enumerate(ordered):
-        if not source.startswith("project_"):
-            break
-        project = merge_patch(project, document)
-    else:
-        index = len(ordered)
+    """Every setting whose effective value differs from the project's own layers.
+
+    Computed from the effective difference, so a no-op patch, or a change a
+    later layer reverts, is not reported. ``source`` is the last companion
+    layer that touched the setting.
+    """
+    project = effective = {}
+    companion = []
+    for source, document in ordered:
+        if source.startswith("project_"):
+            project = merge_patch(project, document)
+        else:
+            companion.append((source, document))
+        effective = merge_patch(effective, document)
     found = []
-    for source, document in ordered[index:]:
-        for path, value in _leaves(document):
-            before = _lookup(project, path)
-            if (before is ABSENT and value is None) or before == value:
-                continue
-            item = {"path": _pointer(path), "source": source}
-            if before is not ABSENT:
-                item["project"] = before
-            item.update({"removed": True} if value is None else {"value": value})
-            found.append(item)
+    for path, before, after in _differences(project, effective):
+        source = next((name for name, document in reversed(companion) if _touches(document, path)), "companion")
+        item = {"path": _pointer(path), "source": source}
+        if before is not ABSENT:
+            item["project"] = before
+        item.update({"removed": True} if after is ABSENT else {"value": after})
+        found.append(item)
     return found
+
+
+# Where ${repo} may appear: values a launched process receives for one call.
+REPO_ALLOWED_OPTIONS = frozenset({"command", "discovery_command", "cwd", "env"})
+
+
+def check_repo_placeholders(value, path=()):
+    """Refuse ``${repo}`` outside process commands, ``cwd`` and ``env`` of providers, sessions and evaluators.
+
+    Only those are resolved per call; elsewhere (a store path, the telemetry
+    root) it would be used literally, or shared across worktrees.
+    """
+    if isinstance(value, dict):
+        for key, item in value.items():
+            check_repo_placeholders(item, (*path, key))
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            check_repo_placeholders(item, (*path, index))
+    elif isinstance(value, str) and "${repo}" in value:
+        allowed = (len(path) >= 4 and path[0] in {"providers", "sessions", "evaluators"} and path[2] == "options"
+                   and path[3] in REPO_ALLOWED_OPTIONS)
+        if not allowed:
+            raise OrchestrationError(
+                f"${{repo}} is resolved only in process command, cwd and env options; it is not allowed at {_pointer(path)}.",
+                "configuration_error", {"path": _pointer(path)})
 
 
 def substitute(value, values):
@@ -186,6 +222,46 @@ def launched_commands(config):
     return commands
 
 
+ADAPTER_SECTIONS = ("state_engine", "store", "guardrail", "routing", "acceptance", "session_selection",
+                    "delivery_scheduler", "retry_policy", "receipt_policy", "telemetry")
+
+
+def repository_references(config):
+    """Settings whose code comes from outside ``.xorchestrate/`` and so outside the approval.
+
+    Commands that name ``${repo}`` run files from the worktree, and
+    ``module:factory`` adapters outside the ``xorchestrate`` package are
+    imported from wherever Python finds them, which can include the repository.
+    """
+    found = []
+
+    def adapter(where, specification):
+        if not isinstance(specification, dict):
+            return
+        target = specification.get("adapter")
+        if isinstance(target, str) and ":" in target and not target.startswith("xorchestrate."):
+            found.append({"where": where, "kind": "module", "adapter": target})
+        options = specification.get("options")
+        if isinstance(options, dict):
+            for nested in ("corpus", "artifacts"):
+                if isinstance(options.get(nested), dict):
+                    adapter(f"{where}.options.{nested}", options[nested])
+
+    for section in ADAPTER_SECTIONS:
+        adapter(section, config.get(section))
+    for item in launched_commands(config):
+        if any("${repo}" in argument for argument in item["command"]):
+            found.append({"where": f"{item['kind']}.{item['name']}.{item['option']}", "kind": "repository_command",
+                          "command": item["command"]})
+    for kind in ("providers", "sessions", "evaluators"):
+        entries = config.get(kind)
+        if isinstance(entries, dict):
+            for name, specification in entries.items():
+                if not (isinstance(specification, dict) and specification.get("enabled") is False):
+                    adapter(f"{kind}.{name}", specification)
+    return found
+
+
 @dataclass(frozen=True)
 class Rendered:
     config: dict
@@ -211,6 +287,7 @@ def render(tracked, companion, context, *, write=True):
     config, found = merged(tracked, companion)
     values = {"data": str(data_dir), "launchers": str(data_dir / "launchers"), "home": str(account_home()),
               "instance": context.instance_id}
+    check_repo_placeholders(config)
     config = substitute(config, values)
     _default_store(config, data_dir)
     _complete_telemetry(config, context)

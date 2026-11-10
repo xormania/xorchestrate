@@ -13,8 +13,9 @@ import pytest
 from tests.hexagonal.support.projects import ROOT, ProjectFixture, git
 from xorchestrate.composition import RELEASE, build
 from xorchestrate.instance import operations
-from xorchestrate.instance.home import account_home
-from xorchestrate.instance.instance import prepare
+from xorchestrate.instance.home import Home, account_home
+from xorchestrate.instance.instance import context_for, load_instance, locate_project, prepare, require_companion
+from xorchestrate.instance.render import render
 from xorchestrate.model import OrchestrationError
 
 ENTRYPOINTS = (["describe"], ["call", "list_work", "--json", "{}"], ["run"], ["serve"], ["connect"], ["up"],
@@ -102,8 +103,11 @@ def test_an_unapproved_configuration_refuses_to_run_and_names_the_changed_files(
     error = error_of(refused)
     assert error["code"] == "approval_required" and error["details"]["files"] == ["config.json"]
     assert "xorchestrate approve" in error["message"]
-    approved = project.json("approve")
-    assert approved["newly_approved"] is True and approved["summary"]["files"].keys() == {"config.json", "project.json"}
+    result = project.run("approve")
+    announced, approved = (json.loads(line) for line in result.stdout.splitlines())
+    # What is approved is shown first; the approval is recorded after it.
+    assert announced["summary"]["files"].keys() == {"config.json", "project.json"}
+    assert announced["summary"]["config_hash"] == approved["config_hash"] and approved["newly_approved"] is True
     assert project.run("describe").returncode == 0
 
 
@@ -328,3 +332,151 @@ def test_every_example_project_validates_and_renders(example, tmp_path):
     assert rendered.config["store"]["options"]["path"] == str(project.data_dir / "state.sqlite3")
     with build(rendered.config, project=rendered.context) as runtime:
         assert runtime.application.call("list_work", {}) == {"work": []}
+
+
+# -- review regressions ------------------------------------------------------------
+
+def test_rendering_uses_exactly_the_bytes_that_were_approved(project):
+    environ = project.provisioned.environment
+    tracked = locate_project(project.repo)
+    assert require_companion(Home.locate(environ)).is_approved(tracked.name, tracked.config_hash)
+    # The tracked file changes after it was read and hashed, before rendering.
+    project.write_config({"version": 1, "providers": {"evil": {"adapter": "cli", "options": {
+        "command": ["unapproved-tool"]}}}}, approved=False)
+    home = Home.locate(environ)
+    rendered = render(tracked, require_companion(home), context_for(load_instance(home, project.name), tracked),
+                      write=False)
+    assert "providers" not in rendered.config, "the rendered configuration is the approved one"
+
+
+def test_a_symlinked_tracked_directory_is_refused(project, tmp_path):
+    elsewhere = tmp_path / "elsewhere"
+    (project.repo / ".xorchestrate").rename(elsewhere)
+    (project.repo / ".xorchestrate").symlink_to(elsewhere)
+    error = error_of(project.run("describe"))
+    assert error["code"] == "project_invalid" and "symbolic link" in error["message"]
+
+
+def test_tracked_directory_without_project_file_is_a_clear_error(tmp_path):
+    environ = {"XORCHESTRATE_HOME": str(tmp_path / "home")}
+    operations.setup(tmp_path / "companion", environ)
+    repository = tmp_path / "half"
+    git("init", "-q", str(repository), cwd=tmp_path)
+    (repository / ".xorchestrate").mkdir()
+    (repository / ".xorchestrate" / "config.json").write_text("{}")
+    with pytest.raises(OrchestrationError) as refused:
+        operations.init(repository, environ=environ)
+    assert refused.value.code == "project_invalid" and "project.json" in str(refused.value)
+
+
+def test_legacy_state_inside_the_tracked_directory_is_refused(project):
+    (project.tracked / "state.sqlite3").write_bytes(b"SQLite format 3\x00")
+    error = error_of(project.run("describe"))
+    assert error["code"] == "project_invalid" and "state.sqlite3" in error["details"]["path"]
+    assert "move it" in error["message"]
+
+
+def test_unrelated_repositories_with_the_same_name_get_a_distinct_refusal(project, tmp_path):
+    project.commit()
+    unrelated = tmp_path / "unrelated"
+    git("init", "-q", str(unrelated), cwd=tmp_path)
+    (unrelated / ".xorchestrate").mkdir()
+    (unrelated / ".xorchestrate" / "project.json").write_text(json.dumps(
+        {"schema": 1, "name": "fixture", "release": RELEASE, "requires": []}))
+    (unrelated / ".xorchestrate" / "config.json").write_text("{}")
+    git("add", "-A", cwd=unrelated)
+    git("commit", "-q", "-m", "unrelated history", cwd=unrelated)
+    with pytest.raises(OrchestrationError) as refused:
+        operations.init(unrelated, environ=project.provisioned.environment)
+    assert refused.value.code == "project_name_conflict"
+    assert "rename" in str(refused.value) and refused.value.details["repository"] == str(project.repo)
+
+
+def test_a_moved_repository_is_relocated_explicitly(project, tmp_path):
+    project.commit()
+    instance_id = project.prepared().instance.instance_id
+    moved = tmp_path / "moved"
+    project.repo.rename(moved)
+    environ = project.provisioned.environment
+    with pytest.raises(OrchestrationError) as refused:
+        prepare(moved, environ=environ)
+    assert refused.value.code == "project_moved" and "--relocate" in str(refused.value)
+    report = operations.init(moved, relocate_instance=True, environ=environ)
+    assert report["relocated"] is True and report["instance_id"] == instance_id
+    assert prepare(moved, environ=environ).instance.instance_id == instance_id
+    with pytest.raises(OrchestrationError) as live:
+        clone = tmp_path / "clone"
+        git("clone", "-q", str(moved), str(clone), cwd=tmp_path)
+        operations.init(clone, relocate_instance=True, environ=environ)
+    assert live.value.code == "project_not_moved"
+
+
+def test_overrides_report_only_effective_differences(tmp_path):
+    project = ProjectFixture(tmp_path / "p", {"version": 1, "guardrail": {"adapter": "rules",
+                                                                           "options": {"default": "allow"}}},
+                             overlay={"guardrail": {}, "routing": {"adapter": "configurable"},
+                                      "assessment": {"confidence_threshold": 0.7}})
+    (project.companion / "policies" / "team.json").write_text(json.dumps(
+        {"guardrail": {"options": {"default": "deny"}}}))
+    project.write_overlay({"guardrail": {"options": {"default": "allow"}}, "assessment": {}})
+    assert project.json("status", expect=3)["overrides"] == [], \
+        "a no-op patch and a value the overlay restores are not overrides"
+    project.write_overlay({"telemetry": {"options": {"dataset_id": "trial"}}})
+    assert project.json("status", expect=3)["overrides"] == [
+        {"path": "/guardrail/options/default", "source": "companion_policy:team.json", "project": "allow",
+         "value": "deny"},
+        {"path": "/telemetry/options/dataset_id", "source": "overlay", "value": "trial"}]
+
+
+def test_repo_placeholder_is_refused_outside_process_options(project):
+    for config, pointer in (({"version": 1, "store": {"adapter": "sqlite", "options": {"path": "${repo}/s.sqlite3"}}},
+                             "/store/options/path"),
+                            ({"version": 1, "telemetry": {"options": {"runtime_root": "${repo}/t"}}},
+                             "/telemetry/options/runtime_root")):
+        project.write_config(config)
+        with pytest.raises(OrchestrationError) as refused:
+            project.prepared()
+        assert refused.value.code == "configuration_error" and refused.value.details == {"path": pointer}
+
+
+def test_approval_summary_and_doctor_flag_code_outside_the_approval(project):
+    project.write_config({"version": 1, "guardrail": {"adapter": "projectpolicies.rules:Guardrail"},
+                          "providers": {"local": {"adapter": "cli", "options": {
+                              "command": ["${repo}/bin/tool", "--check"]}}}}, approved=False)
+    summary = operations.approve(project.repo, project.provisioned.environment)["summary"]
+    assert summary["repository_code"] == [
+        {"where": "guardrail", "kind": "module", "adapter": "projectpolicies.rules:Guardrail"},
+        {"where": "providers.local.command", "kind": "repository_command", "command": ["${repo}/bin/tool", "--check"]}]
+    flagged = [check for check in project.json("doctor")["checks"] if check["check"] == "repository_code"]
+    assert [check["where"] for check in flagged] == ["guardrail", "providers.local.command"]
+    assert all(check["status"] == "warning" for check in flagged)
+
+
+def test_a_companion_inside_a_project_is_refused_or_reported(project, tmp_path):
+    environ = {"XORCHESTRATE_HOME": str(tmp_path / "other-home")}
+    inside = project.repo / "notes" / "companion"
+    for attempt in (lambda: operations.setup(inside, environ), lambda: operations.companion_init(inside, environ)):
+        with pytest.raises(OrchestrationError) as refused:
+            attempt()
+        assert refused.value.code == "companion_exposed"
+    assert not inside.exists()
+    # A companion registered before this check is reported by doctor.
+    from xorchestrate.instance.companion import init_companion
+    init_companion(inside)
+    Home(project.home).update_settings(companion=str(inside))
+    for name in ("overlays", "approvals"):
+        for item in (project.companion / name).iterdir():
+            (inside / name / item.name).write_bytes(item.read_bytes())
+    checks = {check["check"]: check for check in project.json("doctor", expect=1)["checks"]}
+    assert checks["companion"]["status"] == "error"
+
+
+def test_init_skips_a_malformed_mcp_file(tmp_path):
+    environ = {"XORCHESTRATE_HOME": str(tmp_path / "home")}
+    operations.setup(tmp_path / "companion", environ)
+    repository = tmp_path / "app"
+    git("init", "-q", str(repository), cwd=tmp_path)
+    (repository / ".mcp.json").write_text("{not json")
+    report = operations.init(repository, environ=environ)
+    assert report["mcp"]["state"] == "invalid"
+    assert (repository / ".mcp.json").read_text() == "{not json"

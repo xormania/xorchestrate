@@ -15,12 +15,14 @@ from __future__ import annotations
 import hashlib
 import os
 import re
+import stat
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from ..composition import read_json
 from ..model import OrchestrationError, canonical_digest
-from .home import read_document, write_document
+from .home import write_document
 
 TRACKED_DIRECTORY = ".xorchestrate"
 PROJECT_FILE = "project.json"
@@ -78,6 +80,14 @@ class Worktree:
         return value
 
 
+def root_commits(directory):
+    """The root commits of the repository at ``directory`` (empty without history or repository)."""
+    if not Path(directory).is_dir():
+        return set()
+    output = git("rev-list", "--max-parents=0", "--all", cwd=directory)
+    return set(output.split()) if output else set()
+
+
 def locate_worktree(path=None):
     """The git worktree containing ``path`` (default: the working directory), or ``None``."""
     start = Path(path or Path.cwd()).expanduser().resolve()
@@ -96,13 +106,22 @@ def locate_worktree(path=None):
     return Worktree(Path(root).resolve(), Path(git_dir).resolve(), common_dir.resolve(), branch)
 
 
-def tracked_digests(directory):
-    """SHA-256 of every regular file under ``directory``, keyed by its relative POSIX path.
+STATE_SUFFIXES = (".sqlite3", ".sqlite3-wal", ".sqlite3-shm", ".sqlite3-journal")
 
-    Symbolic links are refused: what is approved must be exactly what is read.
+
+def read_tracked_files(directory):
+    """Read every regular file under ``directory`` exactly once, keyed by its relative POSIX path.
+
+    The approval hash and the rendered configuration are both computed from
+    these bytes, so a file changed after it was hashed can never be rendered
+    as approved. Symbolic links, including the directory itself, are refused,
+    and so are SQLite state files left by earlier releases.
     """
     directory = Path(directory)
-    digests = {}
+    if directory.is_symlink() or not directory.is_dir():
+        raise OrchestrationError("The tracked .xorchestrate must be a directory, not a symbolic link.",
+                                 "project_invalid", {"path": str(directory)})
+    contents = {}
     for current, directories, files in os.walk(directory, followlinks=False):
         for name in sorted(directories):
             if (Path(current) / name).is_symlink():
@@ -110,11 +129,26 @@ def tracked_digests(directory):
                                          "project_invalid", {"path": str(Path(current) / name)})
         for name in files:
             path = Path(current) / name
-            if path.is_symlink() or not path.is_file():
+            if name.endswith(STATE_SUFFIXES):
+                raise OrchestrationError(
+                    "Application state from an earlier release is inside the tracked .xorchestrate/; move it to "
+                    "the instance directory (~/.xorchestrate/projects/<project>/state.sqlite3) or delete it.",
+                    "project_invalid", {"path": str(path)})
+            try:
+                descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+            except OSError as exc:
                 raise OrchestrationError("Tracked project configuration may contain only regular files.",
-                                         "project_invalid", {"path": str(path)})
-            digests[path.relative_to(directory).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
-    return dict(sorted(digests.items()))
+                                         "project_invalid", {"path": str(path)}) from exc
+            with os.fdopen(descriptor, "rb") as source:
+                if not stat.S_ISREG(os.fstat(source.fileno()).st_mode):
+                    raise OrchestrationError("Tracked project configuration may contain only regular files.",
+                                             "project_invalid", {"path": str(path)})
+                contents[path.relative_to(directory).as_posix()] = source.read()
+    return dict(sorted(contents.items()))
+
+
+def digests_of(contents):
+    return {path: hashlib.sha256(data).hexdigest() for path, data in contents.items()}
 
 
 def configuration_hash(digests):
@@ -135,11 +169,29 @@ class TrackedProject:
     name: str
     release: str
     requires: tuple
-    digests: dict = field(default_factory=dict)
+    contents: dict = field(default_factory=dict)
+    """The bytes of every tracked file, read once; hashing and rendering both use them."""
 
     @property
     def directory(self):
         return self.worktree.tracked
+
+    @property
+    def digests(self):
+        return digests_of(self.contents)
+
+    def document(self, relative):
+        """The JSON object in the tracked file ``relative``, parsed from the hashed bytes; ``None`` if absent."""
+        if relative not in self.contents:
+            return None
+        return parse_document(self.contents[relative], self.directory / relative)
+
+    def fragments(self, directory):
+        """The ``*.json`` files directly in the tracked ``directory``, sorted by name, as ``(name, object)``."""
+        prefix = directory.rstrip("/") + "/"
+        names = sorted(path for path in self.contents
+                       if path.startswith(prefix) and "/" not in path[len(prefix):] and path.endswith(".json"))
+        return [(name[len(prefix):], self.document(name)) for name in names]
 
     @property
     def config_hash(self):
@@ -169,14 +221,32 @@ def validate_project_document(document, path):
     return name, release, tuple(requires)
 
 
+def parse_document(data, path):
+    try:
+        value = read_json(data.decode("utf-8"))
+    except (OrchestrationError, UnicodeError) as exc:
+        raise OrchestrationError("A tracked file is not valid JSON.", "project_invalid", {"path": str(path)}) from exc
+    if not isinstance(value, dict):
+        raise OrchestrationError("A tracked file must hold a JSON object.", "project_invalid", {"path": str(path)})
+    return value
+
+
 def read_tracked(worktree):
-    """Read and check the worktree's tracked project; ``None`` when it has no ``project.json``."""
-    path = worktree.tracked / PROJECT_FILE
-    document = read_document(path)
-    if document is None:
+    """Read and check the worktree's tracked project once.
+
+    ``None`` when the worktree has no ``.xorchestrate/``; ``project_invalid``
+    when it has one without ``project.json``.
+    """
+    if not worktree.tracked.exists() and not worktree.tracked.is_symlink():
         return None
-    name, release, requires = validate_project_document(document, path)
-    return TrackedProject(worktree, name, release, requires, tracked_digests(worktree.tracked))
+    contents = read_tracked_files(worktree.tracked)
+    if PROJECT_FILE not in contents:
+        raise OrchestrationError("The repository has .xorchestrate/ but no .xorchestrate/project.json; add one "
+                                 "(see docs/projects.md) or remove the directory and run `xorchestrate init`.",
+                                 "project_invalid", {"path": str(worktree.tracked / PROJECT_FILE)})
+    path = worktree.tracked / PROJECT_FILE
+    name, release, requires = validate_project_document(parse_document(contents[PROJECT_FILE], path), path)
+    return TrackedProject(worktree, name, release, requires, contents)
 
 
 def write_starter(worktree, name, release):

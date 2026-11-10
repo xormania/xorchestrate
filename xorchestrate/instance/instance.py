@@ -25,7 +25,7 @@ from ..composition import ProjectContext
 from ..model import OrchestrationError
 from .companion import Companion
 from .home import Home, private_directory, read_document, write_document
-from .project import differing_files, locate_worktree, read_tracked
+from .project import differing_files, locate_worktree, read_tracked, root_commits
 from .render import copy_launchers, render
 
 INSTANCE_FILE = "instance.json"
@@ -70,13 +70,52 @@ def load_instance(home, name):
 
 
 def _same_project(instance, tracked):
-    if instance.record.get("git_common_dir") != str(tracked.worktree.common_dir):
+    """Refuse a repository other than the instance's, saying which case it is.
+
+    - The recorded repository is gone: it was probably moved or renamed
+      (``project_moved``; ``init --relocate`` re-points the instance).
+    - Both repositories share a root commit: a separate clone of the same
+      project (``project_clone_refused``; use a worktree instead).
+    - Otherwise: an unrelated repository that uses the same project name
+      (``project_name_conflict``; rename one of them in its project.json).
+    """
+    recorded = instance.record.get("git_common_dir")
+    if recorded == str(tracked.worktree.common_dir):
+        return instance
+    details = {"project": tracked.name, "instance_id": instance.instance_id,
+               "repository": instance.record.get("repository"), "git_common_dir": recorded}
+    if not recorded or not Path(recorded).exists():
+        raise OrchestrationError(
+            f"The repository of project {tracked.name} is no longer at {instance.record.get('repository')}. If this "
+            "is the same repository, moved or renamed, run `xorchestrate init --relocate` here.", "project_moved",
+            details)
+    here, there = root_commits(tracked.worktree.root), root_commits(instance.record.get("repository") or recorded)
+    if here & there:
         raise OrchestrationError(
             f"Project {tracked.name} is already set up on this machine from another clone; use a worktree of "
-            "that clone (git worktree add) instead of a separate clone.", "project_clone_refused",
-            {"project": tracked.name, "instance_id": instance.instance_id,
-             "repository": instance.record.get("repository"), "git_common_dir": instance.record.get("git_common_dir")})
-    return instance
+            "that clone (git worktree add) instead of a separate clone.", "project_clone_refused", details)
+    raise OrchestrationError(
+        f"Another repository ({instance.record.get('repository')}) already uses the project name {tracked.name} on "
+        "this machine; if they are different projects, rename one in its .xorchestrate/project.json.",
+        "project_name_conflict", details)
+
+
+def relocate(home, tracked):
+    """Re-point an instance whose recorded repository no longer exists to this repository."""
+    instance = load_instance(home, tracked.name)
+    if instance is None:
+        raise project_required(f"Project {tracked.name} is not set up on this machine", project=tracked.name)
+    recorded = instance.record.get("git_common_dir")
+    if recorded == str(tracked.worktree.common_dir):
+        return instance, False
+    if recorded and Path(recorded).exists():
+        raise OrchestrationError("The instance's recorded repository still exists; --relocate only re-points an "
+                                 "instance whose repository was moved or removed.", "project_not_moved",
+                                 {"repository": instance.record.get("repository"), "git_common_dir": recorded})
+    instance = instance.update(git_common_dir=str(tracked.worktree.common_dir), repository=str(tracked.worktree.root))
+    home.register(instance.instance_id, {"project": tracked.name, "repository": str(tracked.worktree.root),
+                                         "git_common_dir": str(tracked.worktree.common_dir)})
+    return instance, True
 
 
 def register(home, tracked):

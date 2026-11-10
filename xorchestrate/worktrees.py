@@ -14,6 +14,7 @@ from typing import Any
 WORKTREE_FIELDS = ("root", "name", "branch", "config_hash")
 
 _CALL_WORKTREE: ContextVar = ContextVar("xorchestrate_call_worktree", default=None)
+_SESSION_WORKTREE: ContextVar = ContextVar("xorchestrate_session_worktree", default=None)
 
 
 def worktree_identity(value: Any) -> dict | None:
@@ -23,10 +24,45 @@ def worktree_identity(value: Any) -> dict | None:
     return {key: value[key] for key in WORKTREE_FIELDS if isinstance(value.get(key), str)}
 
 
+def session_worktree(session: Any) -> dict | None:
+    """The worktree a session record runs in: its ``workspace``, else the worktree that created it."""
+    if not isinstance(session, dict):
+        return None
+    return worktree_identity(session.get("workspace")) or worktree_identity(session.get("created_worktree"))
+
+
 def current_worktree() -> dict | None:
     """The worktree bound to the application call running in this context, if any."""
     value = _CALL_WORKTREE.get()
     return deepcopy(value) if value is not None else None
+
+
+def workspace_root() -> str | None:
+    """The root ``${repo}`` resolves to for a process launched now.
+
+    A session's own worktree when an existing session is relaunched, resumed,
+    reconnected or driven; otherwise the calling worktree.
+    """
+    for variable in (_SESSION_WORKTREE, _CALL_WORKTREE):
+        value = variable.get()
+        if value is not None:
+            return value["root"]
+    return None
+
+
+@contextmanager
+def session_workspace(worktree: dict | None):
+    """Resolve ``${repo}`` to an existing session's creating worktree while its driver runs.
+
+    ``None`` (a session recorded without a worktree) leaves the calling worktree in effect.
+    """
+    identity = worktree_identity(worktree)
+    token = _SESSION_WORKTREE.set(identity) if identity is not None else None
+    try:
+        yield
+    finally:
+        if token is not None:
+            _SESSION_WORKTREE.reset(token)
 
 
 @contextmanager

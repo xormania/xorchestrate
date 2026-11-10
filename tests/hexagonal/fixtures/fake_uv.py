@@ -4,8 +4,11 @@
 in ``$FAKE_UV_LOG``. ``sync`` creates ``DIR/.venv/bin/python``: a stand-in
 interpreter that answers ``python -m xorchestrate ...`` with one JSON line
 naming the release it was built for, its arguments and the handoff marker.
-``$FAKE_UV_FAIL=sync`` makes ``sync`` fail. The release is read from the
-toolchain's ``pyproject.toml`` dependency (``fake-release=<release>``).
+``$FAKE_UV_FAIL=sync`` makes ``sync`` fail. With ``$FAKE_UV_REAL=1`` the
+stand-in interpreter is this Python itself, so the "toolchain" runs the
+current xorchestrate: a release that reports a version other than the pinned
+one. The release is read from the toolchain's ``pyproject.toml`` dependency
+(``fake-release=<release>``).
 """
 import json
 import os
@@ -38,7 +41,11 @@ def main(arguments):
         release = re.search(r"fake-release=([^\"\s]+)", (project / "pyproject.toml").read_text()).group(1)
         interpreter = project / ".venv" / "bin" / "python"
         interpreter.parent.mkdir(parents=True)
-        interpreter.write_text(f'#!/bin/sh\nexec "{sys.executable}" "{Path(__file__).resolve()}" toolchain {release} "$@"\n')
+        if os.environ.get("FAKE_UV_REAL") == "1":
+            interpreter.write_text(f'#!/bin/sh\nexec "{sys.executable}" "$@"\n')
+        else:
+            interpreter.write_text(
+                f'#!/bin/sh\nexec "{sys.executable}" "{Path(__file__).resolve()}" toolchain {release} "$@"\n')
         interpreter.chmod(0o755)
         return 0
     print(f"unexpected uv arguments: {arguments}", file=sys.stderr)

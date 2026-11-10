@@ -175,10 +175,12 @@ listens on it; a live server is never replaced even if its lock file is gone.
 If the started server exits during startup, the client reports
 `server_unavailable` with its exit code and the log path.
 
-The detached server is started with this interpreter, the client's global
-options (`--project` set to the client's worktree root, frame and worker
-limits), `--socket` if the client gave one, and the worktree root as its
-working directory. It checks the approval of that worktree's configuration,
+The detached server is started with this interpreter (with `-P`, so the
+working directory is not on `sys.path`), the client's global options
+(`--project` set to the client's worktree root, frame and worker limits),
+`--socket` if the client gave one, and the project's instance directory as its
+working directory, so nothing in the repository can run in place of the
+package. It checks the approval of that worktree's configuration,
 renders it to `config.rendered.json` and builds from it; an unapproved
 configuration makes it exit with `approval_required` in its log. The
 transport is a machine-level choice made by the command, not by configuration.

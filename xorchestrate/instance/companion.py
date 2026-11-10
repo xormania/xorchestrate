@@ -37,6 +37,24 @@ Keep it under version control and private.
 GITATTRIBUTES = "telemetry/**/*.sqlite3 filter=lfs diff=lfs merge=lfs -text\n"
 
 
+def exposure(path):
+    """Why ``path`` would make approvals agent-writable, or ``None``.
+
+    A companion inside a git worktree that holds a project's ``.xorchestrate/``
+    (or inside a repository that is set up as a project) can be edited by the
+    agents and commits that approvals are meant to guard against.
+    """
+    from .project import TRACKED_DIRECTORY, locate_worktree
+
+    existing = Path(path).expanduser().resolve()
+    while not existing.exists():
+        existing = existing.parent
+    worktree = locate_worktree(existing)
+    if worktree is not None and (worktree.root / TRACKED_DIRECTORY).exists():
+        return f"it is inside the project worktree {worktree.root}"
+    return None
+
+
 def is_companion(path):
     path = Path(path)
     return path.is_dir() and all((path / name).is_dir() for name in ("overlays", "approvals"))

@@ -480,6 +480,13 @@ def relay(client, stdin_fd, stdout):
 
 
 def server_command(arguments, explicit_socket=None):
-    """The detached server command: this interpreter, the same global options, ``serve --transport unix``."""
-    command = [sys.executable, "-m", "xorchestrate", *arguments, "serve", "--transport", "unix"]
+    """The detached server command: this interpreter, the same global options, ``serve --transport unix``.
+
+    ``-P`` keeps the working directory off ``sys.path``, so a directory or
+    module named ``xorchestrate`` there can never run in place of the package.
+    ``PYTHONPATH`` and the user's site packages stay in effect: they are the
+    user's own environment (``-I`` would also drop them and break source
+    checkouts and editable development installs).
+    """
+    command = [sys.executable, "-P", "-m", "xorchestrate", *arguments, "serve", "--transport", "unix"]
     return command + (["--socket", str(check_socket_path(explicit_socket))] if explicit_socket else [])

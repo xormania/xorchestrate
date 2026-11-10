@@ -2,7 +2,7 @@
 
 Every run of xorchestrate needs a set-up project (D15), so tests, scripts and
 examples run inside one. ``ProjectFixture`` provisions it through the product's
-own operator workflow (setup, init, approve), returns the explicit
+own operator workflow (companion, init, approve), returns the explicit
 ``ProjectContext`` for direct ``build()`` calls and runs the real CLI inside
 the project with ``XORCHESTRATE_HOME`` pointing at the private home.
 """
@@ -14,10 +14,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+from xorchestrate.composition import RELEASE
+from xorchestrate.instance import operations
 from xorchestrate.instance.home import write_document
 from xorchestrate.instance.instance import prepare
-from xorchestrate.instance.operations import approve, provision
-from xorchestrate.instance.project import CONFIG_FILE, TRACKED_DIRECTORY
+from xorchestrate.instance.project import CONFIG_FILE, PROJECT_FILE, PROJECT_SCHEMA, TRACKED_DIRECTORY, locate_worktree
 
 ROOT = Path(__file__).resolve().parents[3]
 MINIMAL_CONFIG = {"version": 1}
@@ -29,6 +30,50 @@ def git(*arguments, cwd):
     environment = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
     return subprocess.run(["git", *GIT_IDENTITY, *arguments], cwd=cwd, env=environment, check=True,
                           capture_output=True, text=True, timeout=30).stdout.strip()
+
+
+def provision(repository, config, *, name, home, companion, overlay=None, policies=None, release=RELEASE):
+    """Create a ready-to-run project non-interactively: companion, tracked files, init and approve.
+
+    ``home`` becomes ``XORCHESTRATE_HOME`` for every command that uses the
+    project (pass the returned ``environment``). ``config`` is written as the
+    tracked ``config.json`` and ``policies`` as tracked ``policies/<name>``.
+    """
+    repository, home, companion = (Path(item).expanduser().resolve() for item in (repository, home, companion))
+    environ = {"XORCHESTRATE_HOME": str(home)}
+    repository.mkdir(parents=True, exist_ok=True)
+    found = locate_worktree(repository)
+    if found is None or found.root != repository:
+        git("init", "-q", str(repository), cwd=repository)
+    tracked_dir = repository / TRACKED_DIRECTORY
+    tracked_dir.mkdir(exist_ok=True)
+    write_document(tracked_dir / PROJECT_FILE,
+                   {"schema": PROJECT_SCHEMA, "name": name, "release": release, "requires": []}, 0o644)
+    write_document(tracked_dir / CONFIG_FILE, json.loads(json.dumps(config)), 0o644)
+    for filename, fragment in (policies or {}).items():
+        write_document(tracked_dir / "policies" / filename, fragment, 0o644)
+    operations.companion_init(companion, environ)
+    if overlay is not None:
+        write_document(companion / "overlays" / f"{name}.json", overlay, 0o644)
+    operations.init(repository, environ=environ)
+    operations.approve(repository, environ)
+    return Provisioned(repository, home, companion, name, environ, prepare(repository, environ=environ))
+
+
+class Provisioned:
+    """A provisioned project and the environment that selects its home."""
+
+    def __init__(self, repository, home, companion, name, environment, prepared):
+        self.repository = repository
+        self.home = home
+        self.companion = companion
+        self.name = name
+        self.environment = environment
+        self.prepared = prepared
+
+    @property
+    def context(self):
+        return self.prepared.context
 
 
 class ProjectFixture:
@@ -81,7 +126,7 @@ class ProjectFixture:
         write_document(self.companion / "overlays" / f"{self.name}.json", overlay, 0o644)
 
     def approve(self, worktree=None):
-        return approve(worktree or self.repo, self.provisioned.environment)
+        return operations.approve(worktree or self.repo, self.provisioned.environment)
 
     # -- git -------------------------------------------------------------------
 

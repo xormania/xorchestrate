@@ -1,40 +1,36 @@
 """Operator workflows behind ``setup``, ``companion``, ``init`` and ``approve``.
 
-Each returns a JSON-ready report; the CLI prints it. ``provision`` performs
-setup, init and approve in one non-interactive call for scripts and tests that
-need a disposable project.
+Each returns a JSON-ready report; the CLI prints it.
 """
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from ..composition import RELEASE
 from ..model import OrchestrationError
-from .companion import init_companion, is_companion
+from .companion import exposure, init_companion, is_companion
 from .doctor import doctor
 from .home import Home, read_document, write_document
-from .instance import locate_project, prepare, register, require_companion
-from .project import (
-    CONFIG_FILE,
-    PROJECT_FILE,
-    PROJECT_SCHEMA,
-    TRACKED_DIRECTORY,
-    default_name,
-    git,
-    locate_worktree,
-    read_tracked,
-    write_starter,
-)
-from .render import launched_commands, merged
+from .instance import locate_project, prepare, register, relocate, require_companion
+from .project import default_name, locate_worktree, read_tracked, write_starter
+from .render import launched_commands, merged, repository_references
 
 MCP_FILE = ".mcp.json"
 MCP_SERVER = "xorchestrate"
 MCP_ENTRY = {"command": "xorchestrate", "args": ["connect"]}
 
 
+def _refuse_exposed(path):
+    reason = exposure(path)
+    if reason is not None:
+        raise OrchestrationError(f"The companion must not be inside a project repository: {reason}. Approvals "
+                                 "there could be written by the agents the approvals guard against.",
+                                 "companion_exposed", {"path": str(path)})
+
+
 def companion_use(path, environ=None):
     path = Path(path).expanduser().resolve()
+    _refuse_exposed(path)
     if not is_companion(path):
         raise OrchestrationError("Not a companion (it needs overlays/ and approvals/); use `companion init`.",
                                  "companion_required", {"path": str(path)})
@@ -44,6 +40,7 @@ def companion_use(path, environ=None):
 
 
 def companion_init(path, environ=None):
+    _refuse_exposed(Path(path).expanduser().resolve())
     path, created = init_companion(path)
     return {**companion_use(path, environ), "created": created}
 
@@ -53,6 +50,7 @@ def setup(path=None, environ=None):
     home = Home.locate(environ)
     if path is not None:
         target = Path(path).expanduser().resolve()
+        _refuse_exposed(target)
         if is_companion(target):
             report = {**companion_use(target, environ), "action": "linked"}
         elif not target.exists() or (target.is_dir() and not any(target.iterdir())):
@@ -72,13 +70,20 @@ def summary(tracked, companion):
     """What approving would allow: the tracked files, their hash and the commands that would be launched."""
     config, overrides = merged(tracked, companion)
     return {"project": tracked.name, "release": tracked.release, "config_hash": tracked.config_hash,
-            "files": tracked.digests, "commands": launched_commands(config), "overrides": overrides}
+            "files": tracked.digests, "commands": launched_commands(config),
+            # Approval covers .xorchestrate/ only; these run code from the repository itself.
+            "repository_code": repository_references(config), "overrides": overrides}
 
 
 def _mcp_entry(worktree, may_write):
     path = worktree.root / MCP_FILE
     snippet = {"mcpServers": {MCP_SERVER: MCP_ENTRY}}
-    document = read_document(path)
+    try:
+        document = read_document(path)
+    except OrchestrationError:
+        return {"path": str(path), "state": "invalid", "snippet": snippet,
+                "note": "The existing .mcp.json is not a valid JSON object; it was left unchanged. Add the entry "
+                        "by hand."}
     if document is None and may_write:
         write_document(path, snippet, 0o644)
         state = "written"
@@ -92,7 +97,7 @@ def _mcp_entry(worktree, may_write):
             "note": "Harnesses that keep MCP servers in user-level configuration need this entry added there."}
 
 
-def init(path=None, *, name=None, approve=False, environ=None):
+def init(path=None, *, name=None, approve=False, relocate_instance=False, environ=None):
     """Set up the project at ``path`` on this machine (see ``docs/projects.md``)."""
     worktree = locate_worktree(path)
     if worktree is None:
@@ -111,12 +116,18 @@ def init(path=None, *, name=None, approve=False, environ=None):
                                  {"name": tracked.name})
     if companion.ensure_overlay(tracked.name):
         created.append(str(companion.overlay_path(tracked.name)))
-    instance, registered = register(home, tracked)
+    if relocate_instance:
+        instance, relocated = relocate(home, tracked)
+        registered = False
+    else:
+        instance, registered = register(home, tracked)
+        relocated = False
     # Tracked files of a project that already had .xorchestrate/ are never edited.
     mcp = _mcp_entry(worktree, may_write=starter)
     if mcp["state"] == "written":
         created.append(mcp["path"])
     report = {"project": tracked.name, "instance_id": instance.instance_id, "registered": registered,
+              "relocated": relocated,
               "worktree": tracked.identity(), "created": created, "mcp": mcp}
     if starter:
         report["next"] = "Review and commit the starter .xorchestrate/ and .mcp.json, then run `xorchestrate approve`."
@@ -138,55 +149,18 @@ def init(path=None, *, name=None, approve=False, environ=None):
     return report
 
 
-def approve(path=None, environ=None):
-    """Approve the tracked configuration of the project at ``path`` (several hashes may be approved)."""
+def approve(path=None, environ=None, *, announce=None):
+    """Approve the tracked configuration of the project at ``path`` (several hashes may be approved).
+
+    ``announce(summary)`` is called with what is being approved before the
+    approval is recorded; without it the summary is part of the report.
+    """
     tracked = locate_project(path)
     companion = require_companion(Home.locate(environ))
+    described = summary(tracked, companion)
+    if announce is not None:
+        announce(described)
     new = companion.approve(tracked.name, tracked.config_hash, tracked.digests, tracked.identity())
-    return {"project": tracked.name, "config_hash": tracked.config_hash, "newly_approved": new,
-            "approvals": str(companion.approvals_path(tracked.name)), "summary": summary(tracked, companion)}
-
-
-def provision(repository, config, *, name, home, companion, overlay=None, policies=None, release=RELEASE):
-    """Create a ready-to-run project non-interactively: setup, init and approve.
-
-    ``home`` becomes ``XORCHESTRATE_HOME`` for every command that uses the
-    project (pass the returned ``environment``). ``config`` is written as the
-    tracked ``config.json`` and ``policies`` as tracked ``policies/<name>``.
-    """
-    repository, home, companion = (Path(item).expanduser().resolve() for item in (repository, home, companion))
-    environ = {"XORCHESTRATE_HOME": str(home)}
-    repository.mkdir(parents=True, exist_ok=True)
-    if locate_worktree(repository) is None or locate_worktree(repository).root != repository:
-        if git("init", "-q", str(repository), cwd=repository) is None:
-            raise OrchestrationError("git init failed for the provisioned project.", "git_unavailable")
-    tracked_dir = repository / TRACKED_DIRECTORY
-    tracked_dir.mkdir(exist_ok=True)
-    write_document(tracked_dir / PROJECT_FILE,
-                   {"schema": PROJECT_SCHEMA, "name": name, "release": release, "requires": []}, 0o644)
-    write_document(tracked_dir / CONFIG_FILE, json.loads(json.dumps(config)), 0o644)
-    for filename, fragment in (policies or {}).items():
-        write_document(tracked_dir / "policies" / filename, fragment, 0o644)
-    companion_init(companion, environ)
-    if overlay is not None:
-        write_document(companion / "overlays" / f"{name}.json", overlay, 0o644)
-    init(repository, environ=environ)
-    approve(repository, environ)
-    prepared = prepare(repository, environ=environ)
-    return Provisioned(repository, home, companion, name, environ, prepared)
-
-
-class Provisioned:
-    """A provisioned project and the environment that selects its home."""
-
-    def __init__(self, repository, home, companion, name, environment, prepared):
-        self.repository = repository
-        self.home = home
-        self.companion = companion
-        self.name = name
-        self.environment = environment
-        self.prepared = prepared
-
-    @property
-    def context(self):
-        return self.prepared.context
+    report = {"project": tracked.name, "config_hash": tracked.config_hash, "newly_approved": new,
+              "approvals": str(companion.approvals_path(tracked.name))}
+    return report if announce is not None else {**report, "summary": described}

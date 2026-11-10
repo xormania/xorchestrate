@@ -23,12 +23,12 @@ from . import __version__
 from .adapters.local_socket import InstanceLock, check_socket_directory, check_socket_path
 from .adapters.storage_migrations import DATA_VERSION
 from .adapters.unix import UnixClientTransport
-from .composition import SUPPORTED_CONFIG_VERSIONS, build, describe, read_json
+from .composition import RELEASE, SUPPORTED_CONFIG_VERSIONS, build, describe, read_json
 from .instance import operations
 from .instance.doctor import doctor
-from .instance.handoff import handoff
+from .instance.handoff import HANDOFF_VARIABLE, handoff
 from .instance.home import Home
-from .instance.instance import locate_project, prepare, require_companion, resolve_instance
+from .instance.instance import approval_refusal, locate_project, prepare, require_companion, resolve_instance
 from .instance.project import differing_files
 from .instance.render import merged
 from .mcp import MCPDispatcher, failure, frames, serve
@@ -133,6 +133,8 @@ def _parser():
     init.add_argument("path", nargs="?", help="The project's repository (default: the working directory)")
     init.add_argument("--name", help="Project name for a new starter .xorchestrate/")
     init.add_argument("--approve", action="store_true", help="Also approve the tracked configuration (not the first time)")
+    init.add_argument("--relocate", action="store_true",
+                      help="Re-point this project's instance to this repository after the old one was moved")
     approve = commands.add_parser("approve", help="Approve the project's tracked .xorchestrate/ configuration")
     approve.add_argument("path", nargs="?", help="The project's repository (default: the working directory)")
     commands.add_parser("doctor", help="Check this machine and the current project")
@@ -232,9 +234,11 @@ def _server_command(args, tracked):
         actor = (args.connection_actor or args.actor) if args.command == "connect" else args.actor
         attributes = {"worktree": {**tracked.identity(), "config_files": tracked.digests}} if purpose == "mcp" else None
         root = tracked.worktree.root
+        # The server starts in the instance directory, never in the worktree, so
+        # nothing in the repository can shadow the package (see server_command).
         client, started = ensure_server(files, server_command(_forwarded(args, root), explicit),
                                         explicit_socket=explicit, actor=actor, purpose=purpose,
-                                        attributes=attributes, timeout=args.start_timeout, cwd=str(root))
+                                        attributes=attributes, timeout=args.start_timeout, cwd=str(instance.data_dir))
         try:
             if args.command == "up":
                 reply = client.request({"command": "status"}, args.start_timeout)
@@ -288,9 +292,12 @@ def _operator_command(args):
         command = operations.companion_init if args.companion_command == "init" else operations.companion_use
         report = command(args.path)
     elif args.command == "init":
-        report = operations.init(args.path or args.project, name=args.name, approve=args.approve)
+        report = operations.init(args.path or args.project, name=args.name, approve=args.approve,
+                                 relocate_instance=args.relocate)
     elif args.command == "approve":
-        report = operations.approve(args.path or args.project)
+        # What is approved is printed before the approval is recorded.
+        report = operations.approve(args.path or args.project,
+                                    announce=lambda summary: _write({"summary": summary}, sys.stdout))
     else:
         report = doctor(args.project)
         _write(report, sys.stdout)
@@ -350,8 +357,17 @@ def main(argv=None):
             return _operator_command(args)
         # No project, no run (D15): the refusal names `xorchestrate init`.
         tracked = locate_project(args.project)
+        home = Home.locate()
+        # The pinned release is read from project.json, so it is trusted only
+        # once the project is set up here and that file is approved.
+        resolve_instance(home, tracked)
+        if tracked.release != RELEASE:
+            refusal = approval_refusal(require_companion(home), tracked)
+            if refusal is not None:
+                raise refusal
         # The pinned release runs the command; this returns only when it is this release.
-        handoff(Home.locate(), tracked.release, argv)
+        handoff(home, tracked.release, argv)
+        os.environ.pop(HANDOFF_VARIABLE, None)
         if args.command in SERVER_COMMANDS:
             return _server_command(args, tracked)
         prepared = prepare(tracked.worktree.root)

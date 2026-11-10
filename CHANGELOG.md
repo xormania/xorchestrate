@@ -77,7 +77,16 @@ entries are written.
   (`worktree_required`).
 - Release handoff: when a project's `release` is not the installed release,
   project commands run through `~/.xorchestrate/toolchains/<release>/`, built
-  with uv on first use.
+  with uv on first use, after the project's approval is checked.
+- `init --relocate` re-points an instance whose repository was moved or
+  renamed. Another repository with an instance's name is refused as a
+  separate clone (`project_clone_refused`), an unrelated project
+  (`project_name_conflict`) or a moved repository (`project_moved`).
+- The approval summary and `doctor` list code an approved configuration runs
+  from outside `.xorchestrate/` (`repository_code`: commands naming `${repo}`
+  and adapters outside the `xorchestrate` package). `setup` and
+  `companion init`/`use` refuse a companion inside a project worktree
+  (`companion_exposed`).
 - `composition.ProjectContext` and `build(config, base_dir, project=...)`:
   a project context supplies the telemetry defaults, the base directory and
   the default worktree.
@@ -113,6 +122,13 @@ entries are written.
   such as `env` in your overlay), then run `xorchestrate init` and
   `xorchestrate approve` in the repository. Scripts pass `--project PATH` and set
   `XORCHESTRATE_HOME`.
+- **Legacy state inside `.xorchestrate/`:** a project whose tracked
+  `.xorchestrate/` contains SQLite state from an earlier release
+  (`state.sqlite3` and its `-wal`, `-shm`, `-journal` files) is refused with
+  `project_invalid` until they are moved out, because they would change the
+  approval hash on every write. Move them to
+  `~/.xorchestrate/projects/<project>/state.sqlite3` (or delete them) and
+  remove them from git.
 - **Rendered configuration and state:** the configuration a project runs is
   rendered to `~/.xorchestrate/projects/<project>/config.rendered.json`. The
   SQLite state store defaults to `${data}/state.sqlite3`

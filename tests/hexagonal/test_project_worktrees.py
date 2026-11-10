@@ -6,7 +6,9 @@ import sys
 import pytest
 
 from tests.hexagonal.contracts.project_server import INITIALIZED, initialize, rpc
+from tests.hexagonal.support.native import peer_options
 from tests.hexagonal.support.project_server import SESSION_FIXTURE, CliEnvironment, short_directory
+from xorchestrate.composition import build
 
 
 @pytest.fixture
@@ -134,3 +136,47 @@ def test_a_server_starts_only_on_an_approved_configuration(cli):
     cli.project.approve()
     assert cli.json("up")["started"] is True
     assert cli.json("down")["stopped"] is True
+
+
+def test_an_auto_started_server_never_runs_repository_code_as_the_package(cli):
+    marker = cli.directory / "shadow-ran"
+    planted = cli.repo / "xorchestrate"
+    planted.mkdir()
+    (planted / "__init__.py").write_text("")
+    (planted / "__main__.py").write_text(f"open({str(marker)!r}, 'w').write('ran')\n")
+    # The client itself runs from outside the worktree; the server it starts must not run inside it.
+    started = cli.json("--project", str(cli.repo), "up", cwd=cli.directory)
+    assert started["started"] is True
+    assert not marker.exists(), "a module in the worktree ran in place of the server"
+    assert cli.json("--project", str(cli.repo), "down", cwd=cli.directory)["stopped"] is True
+
+
+def test_sessions_keep_their_creating_worktree_for_resume_and_native_tools(tmp_path):
+    first, second = tmp_path / "first", tmp_path / "second"
+    (first / "only-here").mkdir(parents=True)
+    second.mkdir()
+    a = {"root": str(first), "name": "first", "branch": "a"}
+    b = {"root": str(second), "name": "second", "branch": "b"}
+    options = peer_options("codex", fixture="session", cwd="${repo}/only-here", application_tools=True)
+    config = {"version": 1, "store": {"adapter": "sqlite", "options": {"path": str(tmp_path / "state.sqlite3")}},
+              "sessions": {"agent": {"adapter": "codex", "options": options}}}
+    with build(config, tmp_path) as runtime:
+        app = runtime.application
+        work = app.call("create_work", {"goal": "where sessions run"}, worktree=a)["work"]
+        source = app.call("start_session", {"driver": "agent", "specification": {}, "work_id": work["id"],
+                                            "idempotency_key": "start"}, worktree=a)["session"]
+        assert source["workspace"] == a
+        # Driven from the other worktree, its native tool calls still come from the first.
+        output = app.call("send_session", {"session_id": source["id"], "message": {"text": "record"},
+                                           "idempotency_key": "send"}, worktree=b)["output"]
+        assert output["tool_response"]["result"]["success"] is True
+        evidence = app.call("get_work", {"work_id": work["id"]})["evidence"]
+        assert [item["created_worktree"] for item in evidence if item["result"] == "from-native"] == [a]
+    with build(config, tmp_path) as runtime:
+        app = runtime.application
+        # Resumed from the second worktree, which lacks ``only-here``: it relaunches in the first.
+        resumed = app.call("start_session", {"driver": "agent", "resume_session_id": source["id"],
+                                             "specification": {}, "work_id": work["id"],
+                                             "idempotency_key": "resume"}, worktree=b)["session"]
+        assert resumed["workspace"] == a and resumed["created_worktree"] == b
+        assert resumed["backend"]["native_id"] == source["backend"]["native_id"]
