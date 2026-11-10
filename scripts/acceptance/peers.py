@@ -24,6 +24,8 @@ def main(argv=None):
     parser.add_argument("mode", choices=("cli", "mcp", "bridge", "codex"))
     parser.add_argument("--marker", type=Path)
     parser.add_argument("--text-only", action="store_true")
+    parser.add_argument("--trace", type=Path, help="Append each received request method, for an independent observer")
+    parser.add_argument("--refuse-start", action="store_true", help="Answer native session start with an error")
     args = parser.parse_args(argv)
     if args.mode == "cli":
         request = json.load(sys.stdin)
@@ -36,6 +38,13 @@ def main(argv=None):
         if "id" not in request:
             continue
         method, params = request["method"], request.get("params", {})
+        if args.trace:
+            with args.trace.open("a", encoding="utf-8") as output:
+                output.write(json.dumps({"method": method}) + "\n")
+        if args.refuse_start and method in ("thread/start", "thread/resume"):
+            emit({"id": request["id"], "error": {"code": -32602, "message": "Invalid params",
+                                                  "data": "missing field `cwd`"}})
+            continue
         result = {}
         if method == "initialize":
             result = {"protocolVersion": params.get("protocolVersion", "2025-06-18"),

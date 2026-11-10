@@ -8,7 +8,9 @@ import pytest
 from scripts.testkit import __main__ as cli
 from scripts.testkit import composition
 from scripts.testkit.adapters import profiles
+from tests.hexagonal.contracts.live_diagnostics import PROVIDER_REASON
 from tests.hexagonal.contracts.stories import STORIES, completed_story, rejected_before_dispatch
+from tests.hexagonal.support.live_diagnostics import native_configuration, pane_text, peer_session
 from tests.hexagonal.support.managed_workflow import PublicWorkflow, isolated_candidate
 from tests.hexagonal.support.stories import DispatchProbe, acceptance
 
@@ -129,6 +131,15 @@ def test_exhausted_limit_rejects_before_dispatch_without_partial_admission(tmp_p
     rejected_before_dispatch(subject, action, {"marker": "must-not-dispatch"})
 
 
+def test_handshake_story_refuses_any_turn_before_dispatch_while_admitting_its_session(tmp_path):
+    subject = DispatchProbe(tmp_path, story="native-handshake", max_sessions=2, max_turns=4, max_tool_calls=30)
+    assert subject.budget.limits == {"sessions": 2, "turns": 0, "tool_calls": 30}
+    subject.client.tool("start_session", {})
+    assert subject.budget.consumed == {"sessions": 1, "turns": 0, "tool_calls": 1}
+    subject.dispatched.clear()
+    rejected_before_dispatch(subject, "send_session", {"marker": "must-not-dispatch"})
+
+
 def test_valid_dispatch_consumes_only_applicable_limits(tmp_path):
     subject = DispatchProbe(tmp_path, max_sessions=2, max_turns=2, max_tool_calls=3)
     subject.client.tool("start_session", {})
@@ -205,6 +216,26 @@ def test_budget_exhaustion_fails_story_and_still_cleans_owned_tmux_resources(tmp
     assert receipt["budget"]["consumed"]["sessions"] == 0
     assert lifecycle["status"] == "failed"
     assert lifecycle["cleanup"]["verified"]
+
+
+@pytest.mark.skipif(shutil.which("tmux") is None, reason="Real tmux is required for story automation")
+def test_wrapper_names_only_the_private_diagnostics_location_of_a_failed_story(tmp_path):
+    config = native_configuration(tmp_path / "operator" / "native.json", {"refused": peer_session("--refuse-start")})
+    result, rows, receipt, _, directory = acceptance(tmp_path / "runs", "native-callback", "--profile", "native",
+                                                     "--config", str(config), "--driver", "refused")
+    assert result.returncode != 0
+    assert receipt["status"] == "failed"
+    assert rows[-1]["status"] == "failed"
+    assert rows[-1].get("diagnostics") == str(directory / "diagnostics.json")
+    assert PROVIDER_REASON in (directory / "diagnostics.json").read_text()
+    assert PROVIDER_REASON not in result.stdout + result.stderr
+    # The operator watching the owned pane sees the reason as it happens.
+    shown = pane_text(directory)
+    assert "FAILED configured_native_application_callback: application_tool_failed: start_session" in shown, shown
+    assert PROVIDER_REASON in shown, shown
+    passed, rows, _, _, _ = acceptance(tmp_path / "control", "native-handshake")
+    assert passed.returncode == 0, passed.stdout + passed.stderr
+    assert "diagnostics" not in rows[-1]
 
 
 def test_native_unsupported_story_does_not_allocate_or_fallback(tmp_path):

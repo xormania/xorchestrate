@@ -22,6 +22,7 @@ STORIES = (
     Story("effects-recovery", 1, _PROTOCOL, "Fence denied, repeated and uncertain external effects across restart."),
     Story("session-lifecycle", 1, _PROTOCOL, "Start, communicate with and stop a bridge session."),
     Story("work-acceptance", 1, _PROTOCOL, "Measure an artifact, accept it and invalidate acceptance after revision."),
+    Story("native-handshake", 1, (*_PROTOCOL, "native"), "Start and stop a configured harness session; no turn is admitted."),
     Story("native-callback", 1, (*_PROTOCOL, "native"), "Observe an actor-bound harness callback and retained result."),
 )
 

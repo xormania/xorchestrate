@@ -16,6 +16,8 @@ from uuid import uuid4
 
 from scripts.testkit.adapters.clock import SystemClock
 from scripts.testkit.adapters.configuration import isolated_config
+from scripts.testkit.adapters.diagnostics import NAME as DIAGNOSTICS
+from scripts.testkit.adapters.diagnostics import describe, failure, write_failures
 from scripts.testkit.adapters.evidence import write_json as atomic_json
 from scripts.testkit.core import CheckRecorder, ResourceScope
 from scripts.testkit.stories import select_stories, validate_limits
@@ -32,12 +34,22 @@ MAX_FRAME = 1_048_576
 
 
 class AcceptanceFailure(Exception):
-    """A deliberately non-sensitive assertion code."""
+    """A deliberately non-sensitive assertion code.
+
+    The code is the only part an exportable receipt carries. ``detail`` names
+    the request involved and any application error; it stays in the private
+    diagnostics beside the receipt.
+    """
+
+    def __init__(self, code, detail=None):
+        super().__init__(code)
+        self.code = code
+        self.detail = detail
 
 
-def require(condition, code):
+def require(condition, code, detail=None):
     if not condition:
-        raise AcceptanceFailure(code)
+        raise AcceptanceFailure(code, detail)
 
 
 def marker_records(path):
@@ -70,7 +82,11 @@ class Budget:
 
 
 class Client:
-    """Small independent MCP client; outputs are inspected, never logged."""
+    """Small independent MCP client; outputs are inspected, never logged.
+
+    The error of an unexpectedly failed tool call is the one exception: it is
+    attached to the assertion failure for the private diagnostics.
+    """
 
     def __init__(self, project, deadline, actor="owner", budget=None):
         self.deadline = deadline
@@ -118,17 +134,51 @@ class Client:
         return packet["result"]
 
     def tool(self, name, arguments, expected_error=None):
-        if self.budget is not None:
-            self.budget.consume(name)
-        reply = self.call("tools/call", {"name": name, "arguments": arguments})
+        try:
+            if self.budget is not None:
+                self.budget.consume(name)
+            reply = self.call("tools/call", {"name": name, "arguments": arguments})
+        except AcceptanceFailure as refused:
+            # Budget, deadline, transport and interruption failures name the request they met.
+            if refused.detail is None:
+                refused.detail = {"tool": name}
+            raise
         result = reply.get("structuredContent")
-        require(isinstance(result, dict), "tool_result_object")
+        require(isinstance(result, dict), "tool_result_object", {"tool": name})
         if expected_error:
             require(reply.get("isError") is True and result.get("error", {}).get("code") == expected_error,
-                    "expected_tool_error")
-        else:
-            require(reply.get("isError") is False, "application_tool_failed")
+                    "expected_tool_error", {"tool": name, "expected": expected_error, "error": result.get("error")})
+        elif reply.get("isError") is not False:
+            detail = {"tool": name, "error": result.get("error")}
+            retained = self.retained_operation(result.get("error"))
+            if retained is not None:
+                detail["operation"] = retained
+            raise AcceptanceFailure("application_tool_failed", detail)
         return result
+
+    def retained_operation(self, error):
+        """The outcome the application preserved for a failed effect, read through its public inspection.
+
+        A failed effect's response names its operation and a summary; the
+        preserved outcome can hold the provider's own explanation. This is a
+        best-effort diagnostic read: it never replaces the failure it explains.
+        """
+        details = error.get("details") if isinstance(error, dict) else None
+        identifier = details.get("operation_id") if isinstance(details, dict) else None
+        if not isinstance(identifier, str) or not identifier:
+            return None
+        try:
+            if self.budget is not None:
+                self.budget.consume("get_operation")
+            reply = self.call("tools/call", {"name": "get_operation", "arguments": {"operation_id": identifier}})
+            operation = reply["structuredContent"]["operation"]
+            return {key: operation[key] for key in ("action", "status", "error") if key in operation}
+        except AcceptanceFailure as refused:
+            if str(refused) == "interrupted":
+                raise  # A stop request ends the scenario; it is not a diagnostic that failed to load.
+            return None
+        except (OSError, ValueError, KeyError, TypeError):
+            return None
 
     def close(self):
         if self.process.stdin and not self.process.stdin.closed:
@@ -164,6 +214,9 @@ class Scenario:
         self.resources = ResourceScope()
         self.clients = []
         self._client_tokens = {}
+        # Private reasons for failed checks; the receipt keeps codes only.
+        self.diagnostics = []
+        self.diagnosed = None
 
     @contextmanager
     def check(self, name):
@@ -180,7 +233,24 @@ class Scenario:
                     "type": type(exc).__name__,
                     "code": str(exc) if isinstance(exc, AcceptanceFailure) else "scenario_error",
                 }
+                self.diagnose(name, exc)
             raise
+
+    def diagnose(self, name, exc):
+        """Retain one failure's reason privately and show it in the owned pane."""
+        if exc is self.diagnosed:
+            return
+        self.diagnosed = exc
+        row = failure(name, exc)
+        cause = {key: value for key, value in row.items() if key != "check"}
+        if row.get("details") and any(cause == {key: value for key, value in seen.items() if key != "check"}
+                                      for seen in self.diagnostics):
+            return  # The same cause, met again while unwinding, is one failure.
+        self.diagnostics.append(row)
+        try:
+            print("FAILED " + describe(row), flush=True)
+        except (OSError, ValueError):
+            pass  # A closed pane, or one that cannot encode the line, cannot replace the failure being reported.
 
     def client(self, config, actor="owner"):
         client = Client(config, self.deadline, actor, budget=self.budget)
@@ -191,13 +261,13 @@ class Scenario:
     def close(self, client):
         error = self.resources.release(self._client_tokens.pop(client))
         self.clients.remove(client)
-        require(error is None, "runtime_cleanup_failed")
+        require(error is None, "runtime_cleanup_failed", {"cleanup": [error]})
 
     def cleanup(self):
         errors = self.resources.close()
         self.clients.clear()
         self._client_tokens.clear()
-        require(not errors, "runtime_cleanup_failed")
+        require(not errors, "runtime_cleanup_failed", {"cleanup": errors})
 
 
 def application_project(directory, config):
@@ -406,6 +476,31 @@ def run_native(scenario, config, driver):
                     for item in evidence), "native_evidence_persistence")
 
 
+def run_handshake(scenario, config, driver):
+    """Launch the configured harness through session start, then stop it.
+
+    Starting a session makes the driver launch its process, initialize and open
+    its native session, which is where an unavailable executable or a rejected
+    session option shows, and a missing login for adapters that authenticate at
+    session start. The story admits no turn, so nothing is submitted to a model.
+    """
+    with scenario.check("configured_native_session_handshake"):
+        client = scenario.client(config)
+        actor = "acceptance-" + uuid4().hex
+        client.tool("add_actor", {"actor_id": actor, "roles": ["acceptance-participant"]})
+        work = client.tool("create_work", {"goal": "Start and stop a configured session without submitting a turn"})["work"]
+        session = client.tool("start_session", {"driver": driver, "specification": {}, "work_id": work["id"],
+                                               "actor_id": actor, "idempotency_key": "handshake-start"})["session"]
+        stopped = client.tool("stop_session", {"session_id": session["id"], "idempotency_key": "handshake-stop"})
+        require(stopped["session"]["status"] == "stopped", "handshake_session_stop")
+    with scenario.check("handshake_admitted_no_turn"):
+        require(scenario.budget.limits["turns"] == 0 and scenario.budget.consumed["turns"] == 0,
+                "handshake_turn_admitted")
+        sessions = client.tool("list_sessions", {"work_id": work["id"]})["sessions"]
+        require([row.get("id") for row in sessions] == [session["id"]] and sessions[0].get("status") == "stopped",
+                "handshake_session_record")
+
+
 def work_acceptance_config(directory, config):
     """Use the existing CLI provider to measure real bytes in a private fixture."""
     (directory / "product.txt").write_bytes(b"works\n")
@@ -471,12 +566,17 @@ STORY_CHECKS = {
     "work-acceptance": ("mcp_initialize_and_discover", "work_requirements_candidate_and_contribution", "measured_artifact_is_accepted",
                         "requirements_revision_invalidates_acceptance_and_replay", "new_measurement_and_changed_artifact_survive_restart"),
     "native-callback": ("configured_native_application_callback", "native_callback_survives_restart"),
+    "native-handshake": ("configured_native_session_handshake", "handshake_admitted_no_turn"),
 }
+# A story may admit less than the operator allows; the receipt records the effective limit.
+STORY_LIMITS = {"native-handshake": {"turns": 0}}
 
 
 def run_story(scenario, config, story, driver=None):
     if story == "native-callback":
         return run_native(scenario, config, driver if scenario.profile == "native" else "callback")
+    if story == "native-handshake":
+        return run_handshake(scenario, config, driver if scenario.profile == "native" else "callback")
     client = discover(scenario, config)
     if story == "coordination":
         work = coordinate(scenario, client, config)
@@ -545,6 +645,7 @@ def main(argv=None):
     directory.mkdir(mode=0o700, parents=True, exist_ok=True)
     scenario = Scenario(directory, args.timeout, args.profile, max_sessions=args.max_sessions,
                         max_turns=args.max_turns, max_tool_calls=args.max_tool_calls)
+    scenario.budget.limits.update(STORY_LIMITS.get(args.story, {}))
     receipt = {"schema_version": 1, "profile": args.profile, "status": "failed", "checks": scenario.checks,
                "evidence_scope": "local_protocol_fixture" if args.profile == "fixture" else "configured_native_callback",
                "store_override": "isolated_sqlite", "private_artifacts": ["application.json", "state.sqlite3"]}
@@ -589,13 +690,15 @@ def main(argv=None):
         receipt["status"] = "passed"
     except BaseException as exc:
         receipt["error"] = {"type": type(exc).__name__, "code": str(exc) if isinstance(exc, AcceptanceFailure) else "scenario_error"}
+        scenario.diagnose(None, exc)
     finally:
         try:
             try:
                 scenario.cleanup()
-            except BaseException:
+            except BaseException as exc:
                 receipt["status"] = "failed"
                 receipt["cleanup_error"] = "runtime_cleanup_failed"
+                scenario.diagnose("runtime_cleanup", exc)
             if selected:
                 receipt["story"]["executed_checks"] = [check["name"] for check in scenario.checks]
                 receipt["story"]["missing_checks"] = [name for name in receipt["story"]["expected_checks"]
@@ -603,6 +706,13 @@ def main(argv=None):
                 if receipt["status"] == "passed" and receipt["story"]["missing_checks"]:
                     receipt["status"] = "failed"
                     receipt["error"] = {"type": "AcceptanceFailure", "code": "story_checks_missing"}
+            if scenario.diagnostics:
+                # The receipt names the private file; only the file holds the reasons.
+                try:
+                    write_failures(directory, scenario.diagnostics)
+                    receipt["private_artifacts"].append(DIAGNOSTICS)
+                except OSError:
+                    pass  # Unwritable diagnostics cannot cost the run its receipt.
             atomic_json(directory / "scenario.json", receipt)
         finally:
             for number, handler in previous_handlers.items():
