@@ -14,7 +14,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from xcontracts.testing.fakes import FakeHosting, FakeVersionControl, MemoryCompanion
 
-__all__ = ["FakeHosting", "FakeVersionControl", "MemoryCompanion", "github_api"]
+__all__ = ["FakeHosting", "FakeVersionControl", "MemoryCompanion", "MutatingHosting", "github_api"]
 
 @contextmanager
 def github_api(repositories, token="test-token", redirects=None, requests=None):
@@ -62,3 +62,11 @@ def github_api(repositories, token="test-token", redirects=None, requests=None):
         server.shutdown()
         server.server_close()
         thread.join(5)
+
+
+class MutatingHosting(FakeHosting):
+    """A hosting factory that changes the nested options it is given, as a careless adapter might."""
+
+    def __init__(self, options=None):
+        super().__init__(options)
+        (options or {}).setdefault("visibility", {})["https://example.test/mutated"] = "public"

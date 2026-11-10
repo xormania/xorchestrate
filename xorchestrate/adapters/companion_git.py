@@ -39,11 +39,11 @@ Keep it under version control and private.
 GITATTRIBUTES = "telemetry/**/*.sqlite3 filter=lfs diff=lfs merge=lfs -text\n"
 
 
-NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
 
 
 def _name(value, what):
-    if not isinstance(value, str) or not NAME.match(value):
+    if not isinstance(value, str) or not NAME.fullmatch(value):
         raise OrchestrationError(f"Invalid companion record {what}.", "invalid_arguments", {what: value})
     return value
 

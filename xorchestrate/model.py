@@ -14,7 +14,8 @@ from xcontracts.model import JSON, Assessment, Capability, Conflict, Orchestrati
 
 __all__ = [
     "JSON", "Assessment", "Capability", "Conflict", "OrchestrationError", "Record", "Verdict", "action_spec",
-    "canonical_digest", "public_error_message", "record_view", "unique_keys",
+    "canonical_digest", "project_operation_errors", "public_error", "public_error_message", "record_view",
+    "unique_keys",
 ]
 
 

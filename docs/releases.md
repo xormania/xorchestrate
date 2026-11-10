@@ -56,8 +56,12 @@ The identity gate fails the run unless:
 > published, delete the `xcontracts` entry under `[tool.uv.sources]` (the
 > dependency already reads `xcontracts>=0.1,<0.2`), run
 > `python3 -m scripts.ci.dependencies update` and commit `uv.lock`. Until
-> then, repin the git source to xcontracts' `master` once its first pull
-> request merges, so the pinned commit cannot disappear with its branch.
+> then, the pin is a commit of xcontracts' unmerged `feat/initial-contracts`
+> branch. **Before the xorchestrate pull request that introduced it merges,**
+> merge the xcontracts pull request with a merge commit, repin
+> `[tool.uv.sources]` to the xcontracts `master` commit that contains the
+> pinned work, and run `python3 -m scripts.ci.dependencies update`, so the
+> lock never names a commit only reachable from a deleted branch.
 
 Run the gate locally before tagging:
 

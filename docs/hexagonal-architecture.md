@@ -65,9 +65,13 @@ checked without depending on Xorchestrate. `ports.py` and `model.py` re-export
 them unchanged; the application and adapters keep importing from there. The
 driving-side client transport ports (`ClientTransport`, `ClientConnection`,
 `PeerIdentity`) stay in `ports.py`: entrypoints choose them, not
-configuration, and they evolve with the project server. The architecture
-profile allows `xcontracts` as an external dependency of the foundation and
-core; xcontracts never imports Xorchestrate. See [writing an adapter](adapters.md).
+configuration, and they evolve with the project server. In the architecture
+profile (`contracts/hexagonal.json`), the foundation and every role that
+reaches it may import only `xcontracts.ports` and `xcontracts.model`; the
+conformance kit (`xcontracts.testing`) and the factory types are allowed only
+in test support (`tests.hexagonal.support.*`) and collected tests. xcontracts
+never imports Xorchestrate: its own boundary test and
+`tests/hexagonal/test_xcontracts.py` check that. See [writing an adapter](adapters.md).
 
 Public inspection is shared by work, acceptance, delivery and native-history
 reads. `InspectionProjector` owns typed record projection, nested historical

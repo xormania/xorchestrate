@@ -5,7 +5,8 @@ commit sets ``__version__`` and the ``pyproject.toml`` version to the same strin
 without the ``v``. ``CHANGELOG.md`` has a ``## X.Y.Z`` entry with a non-empty
 ``### Upgrade notes`` section. Every runtime dependency resolves from a package
 index: no direct reference, no ``[tool.uv.sources]`` git, path, URL or workspace
-source, and only registry packages in ``uv.lock`` (a development git source
+source, and only registry packages in the runtime closure of ``uv.lock``
+(dependency groups are not published; a development git source
 such as xcontracts' must switch to its published range first). Each alias project (by default ``packaging/xork``)
 declares the same version, depends only on exactly that release of the
 package and declares the package's console scripts. Built distributions, when given, are one wheel and one sdist of the
@@ -87,6 +88,34 @@ def canonical_name(name):
     return re.sub(r"[-_.]+", "-", name).lower()
 
 
+def runtime_closure(packages, package):
+    """Locked packages the published ``package`` can install: its dependencies and extras, transitively.
+
+    Dependency groups (development and validation tools) are not published and
+    are left out. The alias distributions depend only on the package itself.
+    """
+    root = packages.get(package, {})
+    pending = [entry for entry in root.get("dependencies", [])]
+    for extra in root.get("optional-dependencies", {}).values():
+        pending.extend(extra)
+    seen = set()
+    while pending:
+        entry = pending.pop()
+        name = canonical_name(entry.get("name", ""))
+        item = packages.get(name)
+        if item is None:
+            continue
+        extras = entry.get("extra", [])
+        key = (name, tuple(sorted(extras)))
+        if key in seen:
+            continue
+        seen.add(key)
+        pending.extend(item.get("dependencies", []))
+        for extra in extras:
+            pending.extend(item.get("optional-dependencies", {}).get(extra, []))
+    return {name for name, _ in seen}
+
+
 def dependency_sources(root, package):
     """Runtime dependencies that would not resolve from a package index, as ``(name, reason)`` pairs.
 
@@ -116,13 +145,12 @@ def dependency_sources(root, package):
                 findings.append((canonical_name(name), f"[tool.uv.sources] {'/'.join(kinds)} source"))
     lock = root / "uv.lock"
     if lock.is_file():
-        for item in tomllib.loads(lock.read_text(encoding="utf-8")).get("package", []):
-            if canonical_name(item.get("name", "")) == canonical_name(package):
-                continue
-            source = item.get("source", {})
+        packages = {canonical_name(item.get("name", "")): item
+                    for item in tomllib.loads(lock.read_text(encoding="utf-8")).get("package", [])}
+        for name in sorted(runtime_closure(packages, canonical_name(package))):
+            source = packages[name].get("source", {})
             if "registry" not in source:
-                findings.append((canonical_name(item.get("name", "")),
-                                 f"uv.lock {'/'.join(sorted(source)) or 'unknown'} source"))
+                findings.append((name, f"uv.lock {'/'.join(sorted(source)) or 'unknown'} source"))
     return findings
 
 

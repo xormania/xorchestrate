@@ -40,6 +40,19 @@ def test_built_in_stores_pass_the_xcontracts_state_store_kit(adapter, check, tmp
         check(lambda: SQLiteStore({"path": str(tmp_path / "state.db")}))
 
 
+@pytest.mark.parametrize("adapter", ["memory", "sqlite"])
+def test_built_in_stores_round_trip_lone_surrogates_in_data(adapter, tmp_path):
+    """Beyond the port contract: the built-in stores keep any Python string, even an unpaired surrogate."""
+    store = MemoryStore() if adapter == "memory" else SQLiteStore({"path": str(tmp_path / "state.db")})
+    try:
+        with store.transaction() as tx:
+            tx.put("job", "one", {"text": "\ud800"})
+        with store.transaction() as tx:
+            assert tx.get("job", "one").data == {"text": "\ud800"}
+    finally:
+        store.close()
+
+
 class SQLiteStoreTests(unittest.TestCase):
     """SQLite persistence beyond the port contract: restarts, processes, files and options."""
 

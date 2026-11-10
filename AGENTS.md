@@ -107,7 +107,11 @@ Report what was actually checked, including material limitations. Preserve
 unrelated work.
 
 Prepare repository changes on a branch for review. xor controls merging and
-releases. Use xormania attribution for commits; do not add AI co-author trailers.
+releases. Attribute all work to xormania only: commits are authored by
+`xor <127287135+xormania@users.noreply.github.com>`. Do not add your own
+attribution anywhere: no `Co-Authored-By` trailers, no session links or session
+lines (such as `Claude-Session:`), and no "Generated with ..." lines or footers
+in commits, PR descriptions, PR or review comments, code or documentation.
 Follow [the PR quality standard](docs/pr-quality.md) for coverage, behavioral
 proof, pre-draft adversarial review and candidate evidence. The bounded review and
 practical delivery guidance above still applies.

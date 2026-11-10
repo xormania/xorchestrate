@@ -259,3 +259,12 @@ def test_home_documents_must_be_private_regular_files(project):
     settings.rename(moved)
     settings.symlink_to(moved)
     assert json.loads(project.run("describe").stderr)["error"]["code"] == "invalid_configuration"
+
+
+def test_operator_factories_get_a_private_copy_of_nested_options():
+    """A factory that changes its options cannot change the user's stored selection."""
+    from xorchestrate.instance.services import construct
+    selection = {"adapter": f"{SUPPORT}:MutatingHosting", "options": {"visibility": {"https://example.test/a": "private"}}}
+    construct("repository_hosting", selection, "settings.json")
+    assert selection == {"adapter": f"{SUPPORT}:MutatingHosting",
+                         "options": {"visibility": {"https://example.test/a": "private"}}}

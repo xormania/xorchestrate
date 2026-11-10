@@ -21,8 +21,13 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   [xcontracts](https://github.com/xormania/xcontracts) package (`xcontracts>=0.1,<0.2`),
   with a conformance kit that third-party adapters can run. `xorchestrate.ports`
   and `xorchestrate.model` re-export the same objects, so existing imports keep
-  working. The built-in stores and operator adapters run the kit. See
+  working. The built-in stores and operator adapters run the kit. Telemetry
+  collectors are not yet a supported third-party kind. See
   [writing an adapter](docs/adapters.md).
+- Operator adapter factories (companion, version control, repository hosting)
+  receive a deep copy of their options, so an adapter cannot change the
+  stored selection. Companion record names with a trailing newline are now
+  refused like any other invalid name.
 - The release identity gate refuses a release while a runtime dependency comes
   from a git, path or URL source (until xcontracts 0.1.0 is on PyPI,
   development uses a pinned git source).

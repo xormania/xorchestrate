@@ -257,20 +257,58 @@ LOCK = '''version = 1
 name = "xorchestrate"
 version = "1.2.3"
 source = {{ editable = "." }}
+dependencies = [
+    {{ name = "jsonschema" }},
+    {{ name = "xcontracts" }},
+]
+
+[package.dev-dependencies]
+validation = [
+    {{ name = "devtool" }},
+]
+
+[[package]]
+name = "jsonschema"
+version = "4.25.0"
+source = {{ registry = "https://pypi.org/simple" }}
+dependencies = [
+    {{ name = "helper", extra = ["fast"] }},
+]
+
+[[package]]
+name = "helper"
+version = "1.0"
+source = {{ registry = "https://pypi.org/simple" }}
+
+[package.optional-dependencies]
+fast = [
+    {{ name = "accelerator" }},
+]
+
+[[package]]
+name = "accelerator"
+version = "1.0"
+source = {{ {accelerator} }}
 
 [[package]]
 name = "xcontracts"
 version = "0.1.0"
 source = {{ {source} }}
+
+[[package]]
+name = "devtool"
+version = "0.1.0"
+source = {{ git = "https://example.test/devtool?rev=abc#abc" }}
 '''
+REGISTRY = 'registry = "https://pypi.org/simple"'
 
 
-def with_dependency(root, *, requirement="xcontracts>=0.1,<0.2", sources="", lock=None):
+def with_dependency(root, *, requirement="xcontracts>=0.1,<0.2", sources="", lock=None, accelerator=REGISTRY):
     text = (root / "pyproject.toml").read_text().replace(
         "[project.scripts]", f'dependencies = ["jsonschema>=4.22,<5", "{requirement}"]\n\n[project.scripts]')
     (root / "pyproject.toml").write_text(text + sources)
     if lock is not None:
-        (root / "uv.lock").write_text(LOCK.format(source=lock))
+        (root / "uv.lock").write_text(LOCK.format(source=lock, accelerator=accelerator))
     return root
 
 
@@ -296,8 +334,15 @@ def test_a_runtime_dependency_from_git_a_path_or_a_url_blocks_the_release(tmp_pa
                         "published version range and relock before releasing" for reason in reasons]
 
 
+def test_a_transitive_runtime_dependency_from_git_blocks_the_release(tmp_path):
+    root = with_dependency(project(tmp_path), lock=REGISTRY, accelerator='git = "https://example.test/acc?rev=1#1"')
+    report, _ = release_identity.check(root, tag="v1.2.3")
+    assert report["dependency_sources"] == [{"name": "accelerator", "reason": "uv.lock git source"}]
+
+
 def test_published_ranges_index_sources_and_unrelated_sources_pass(tmp_path):
-    root = with_dependency(project(tmp_path), lock='registry = "https://pypi.org/simple"',
+    """A git-sourced validation tool (``devtool``) is not published and does not block the release."""
+    root = with_dependency(project(tmp_path), lock=REGISTRY,
                            sources='\n[tool.uv.sources]\nxcontracts = { index = "pypi" }\n'
                                    'devtool = { git = "https://example.test/devtool" }\n')
     report, problems = release_identity.check(root, tag="v1.2.3")

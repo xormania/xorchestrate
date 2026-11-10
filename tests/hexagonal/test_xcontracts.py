@@ -7,6 +7,7 @@ kit in ``test_operator_ports.py``.
 
 import ast
 import importlib
+import json
 import sys
 from pathlib import Path
 
@@ -17,10 +18,14 @@ from xcontracts.testing import factory
 
 import xorchestrate.model
 import xorchestrate.ports
+from scripts.architecture.core import _allowed_external
 from xorchestrate.composition import BUILTINS, NESTED, OPERATOR
 
-# Host-internal kinds: the lifecycle engine's interface and the local collector's storage are not public ports.
-INTERNAL_KINDS = {"state_engine"} | NESTED
+ROOT = Path(__file__).resolve().parents[2]
+
+# Host-internal kinds: the lifecycle engine's interface and the local collector's storage are not public ports;
+# telemetry's port is published but provisional (it passes host internals), so it is not a selectable public kind.
+INTERNAL_KINDS = {"state_engine", "telemetry"} | NESTED
 LOCAL_PORTS = {"PeerIdentity", "ClientConnection", "ClientTransport"}
 
 
@@ -82,3 +87,19 @@ def test_installed_xcontracts_imports_only_the_standard_library():
             foreign += [(path.name, name) for name in names
                         if name.split(".")[0] not in {"xcontracts", *sys.stdlib_module_names}]
     assert foreign == []
+
+
+KIT_ROLES = {"test_support", "test_collection"}
+
+
+def test_only_test_support_and_collected_tests_may_import_the_kit():
+    """Allowing the package prefix would let product code import the kit and its fakes."""
+    roles = json.loads((ROOT / "contracts/hexagonal.json").read_text())["roles"]
+    for name, role in roles.items():
+        patterns = role["allowed_external"]
+        if any(pattern.startswith("xcontracts") for pattern in patterns):
+            assert _allowed_external("xcontracts.ports", patterns, ()), name
+            assert _allowed_external("xcontracts.model", patterns, ()), name
+        kit = [_allowed_external(module, patterns, ())
+               for module in ("xcontracts.testing", "xcontracts.testing.fakes", "xcontracts.factories")]
+        assert all(kit) if name in KIT_ROLES else not any(kit), name
