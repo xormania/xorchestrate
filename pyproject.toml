@@ -7,7 +7,7 @@ name = "xorchestrate"
 version = "0.2.0"
 description = "Configurable agent orchestration through ports and adapters"
 requires-python = ">=3.12"
-dependencies = ["jsonschema>=4.22,<5"]
+dependencies = ["jsonschema>=4.22,<5", "xcontracts>=0.1,<0.2"]
 
 [project.optional-dependencies]
 test = ["pytest>=8,<10"]
@@ -18,6 +18,13 @@ validation = ["ruff==0.16.8", "build>=1.2,<2", "setuptools>=68", "wheel>=0.45,<1
 [project.scripts]
 xo = "xorchestrate.cli:main"
 xorchestrate = "xorchestrate.cli:main"
+
+[tool.uv.sources]
+# Development only: xcontracts 0.1.0 is not on PyPI yet, so uv takes it from this
+# pinned commit. Remove this entry (and run `python -m scripts.ci.dependencies
+# update`) once xcontracts 0.1.0 is published; the release identity gate refuses
+# a release while any runtime dependency comes from a git, path or URL source.
+xcontracts = { git = "https://github.com/xormania/xcontracts", rev = "f5bd8860087531ef5941e5c6ce57e2da2da73a41" }
 
 [tool.setuptools.packages.find]
 include = ["xorchestrate*"]

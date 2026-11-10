@@ -5,8 +5,8 @@ import socket
 import stat
 
 import pytest
+from xcontracts.testing import operator as contract
 
-from tests.hexagonal.contracts import operator_ports as contract
 from tests.hexagonal.support.operator_ports import FakeHosting, FakeVersionControl, MemoryCompanion, github_api
 from tests.hexagonal.support.projects import ProjectFixture, git
 from xorchestrate.adapters.companion_git import GitDirectoryCompanion

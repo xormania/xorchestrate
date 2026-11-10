@@ -173,6 +173,8 @@ See [native sessions](docs/native-sessions.md), [external attachment and recover
 and [owner requirements and acceptance](docs/work-acceptance.md).
 
 See [the architecture and contracts](docs/hexagonal-architecture.md),
+[writing an adapter](docs/adapters.md) against the
+[xcontracts](https://github.com/xormania/xcontracts) ports,
 [configuration examples](examples/), and [validation](.github/CI.md) for the
 supported behavior and limits. The deterministic tests use real subprocess
 boundaries with fixture servers; they do not establish authenticated vendor or

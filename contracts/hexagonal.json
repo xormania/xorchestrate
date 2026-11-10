@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "id": "xorchestrate.hexagonal",
-  "version": "7",
-  "description": "Current application-owned ports, infrastructure-independent core and replaceable adapters. Composition is the trusted factory boundary. Source dependencies are distinct from runtime calls through ports. Active live-test infrastructure follows the same dependency direction: generic test-kit ports/core, concrete execution adapters, independent evidence predicates and explicit runner composition. Shared test contracts remain independent of their subjects; support adapters own fixtures, and collected tests cannot import other collected tests.",
+  "version": "8",
+  "description": "Current application-owned ports, infrastructure-independent core and replaceable adapters. Composition is the trusted factory boundary. Source dependencies are distinct from runtime calls through ports. Active live-test infrastructure follows the same dependency direction: generic test-kit ports/core, concrete execution adapters, independent evidence predicates and explicit runner composition. Shared test contracts remain independent of their subjects; support adapters own fixtures, and collected tests cannot import other collected tests. The public ports, their values and errors and the adapter factory convention come from the external, stdlib-only xcontracts package (Apache-2.0), which the foundation re-exports, so every role that depends on the foundation allows it; xcontracts never imports xorchestrate, which its own tests and tests/hexagonal/test_xcontracts.py check.",
   "source_roots": [
     "xorchestrate",
     "scripts/testkit",
@@ -30,14 +30,16 @@
         "dataclasses",
         "hashlib",
         "json",
-        "typing"
+        "typing",
+        "xcontracts"
       ],
       "allow_dynamic": false,
       "forbidden_calls": [
         "open",
         "input",
         "print"
-      ]
+      ],
+      "description": "Model and ports: application helpers plus re-exports of the xcontracts ports, values and errors; the client transport ports stay here."
     },
     "core": {
       "modules": [
@@ -77,7 +79,8 @@
         "typing",
         "base64",
         "re",
-        "contextvars"
+        "contextvars",
+        "xcontracts"
       ],
       "allow_dynamic": false,
       "forbidden_calls": [
@@ -103,7 +106,8 @@
         "dataclasses",
         "hashlib",
         "json",
-        "typing"
+        "typing",
+        "xcontracts"
       ],
       "allow_dynamic": false,
       "forbidden_calls": [
@@ -129,7 +133,8 @@
         "dataclasses",
         "hashlib",
         "json",
-        "typing"
+        "typing",
+        "xcontracts"
       ],
       "allow_dynamic": false,
       "forbidden_calls": [
@@ -157,7 +162,8 @@
         "json",
         "re",
         "dataclasses",
-        "typing"
+        "typing",
+        "xcontracts"
       ],
       "allow_dynamic": false,
       "forbidden_calls": [
@@ -184,7 +190,8 @@
       "allowed_external": [
         "stdlib:*",
         "jsonschema",
-        "referencing"
+        "referencing",
+        "xcontracts"
       ],
       "allow_dynamic": true
     },
@@ -205,7 +212,8 @@
       "allowed_external": [
         "stdlib:*",
         "jsonschema",
-        "referencing"
+        "referencing",
+        "xcontracts"
       ],
       "allow_dynamic": true
     },
@@ -228,7 +236,8 @@
       "allowed_external": [
         "stdlib:*",
         "jsonschema",
-        "referencing"
+        "referencing",
+        "xcontracts"
       ],
       "allow_dynamic": true,
       "description": "Operator layer: project discovery, the per-user home, approvals, rendering and the release handoff. It reaches the companion, version control and repository hosting only through the Companion, VersionControl and RepositoryHosting ports (xorchestrate.ports), whose adapters live under xorchestrate.adapters and are selected by name from the user's home. It hands composition an explicit ProjectContext; composition and the core never import it."
@@ -257,7 +266,8 @@
       "allowed_external": [
         "stdlib:*",
         "jsonschema",
-        "referencing"
+        "referencing",
+        "xcontracts"
       ],
       "allow_dynamic": true
     },
@@ -376,7 +386,8 @@
       "allowed_external": [
         "stdlib:*",
         "jsonschema",
-        "referencing"
+        "referencing",
+        "xcontracts"
       ],
       "allow_dynamic": true
     },
@@ -556,7 +567,8 @@
         "verification_fixture"
       ],
       "allowed_external": [
-        "stdlib:*"
+        "stdlib:*",
+        "xcontracts"
       ],
       "allow_dynamic": false
     },
@@ -604,7 +616,8 @@
       "allowed_external": [
         "stdlib:*",
         "jsonschema",
-        "referencing"
+        "referencing",
+        "xcontracts"
       ],
       "allow_dynamic": true
     },
@@ -701,7 +714,8 @@
       "allowed_external": [
         "stdlib:*",
         "jsonschema",
-        "referencing"
+        "referencing",
+        "xcontracts"
       ],
       "allow_dynamic": true
     },
@@ -751,7 +765,8 @@
         "stdlib:*",
         "jsonschema",
         "referencing",
-        "pytest"
+        "pytest",
+        "xcontracts"
       ],
       "allow_dynamic": true
     },
@@ -787,7 +802,8 @@
         "stdlib:*",
         "jsonschema",
         "referencing",
-        "pytest"
+        "pytest",
+        "xcontracts"
       ],
       "allow_dynamic": true
     },
@@ -871,7 +887,8 @@
       "allowed_external": [
         "stdlib:*",
         "jsonschema",
-        "referencing"
+        "referencing",
+        "xcontracts"
       ],
       "allow_dynamic": true
     },
@@ -899,7 +916,8 @@
       "allowed_external": [
         "stdlib:*",
         "jsonschema",
-        "referencing"
+        "referencing",
+        "xcontracts"
       ],
       "allow_dynamic": true
     },
@@ -977,7 +995,8 @@
       ],
       "allowed_external": [
         "stdlib:*",
-        "controlled_gates"
+        "controlled_gates",
+        "xcontracts"
       ],
       "allow_dynamic": false,
       "description": "Standalone protocol peer scripts use their adjacent controlled_gates module when launched directly; all fixture sources are examined in this role."
@@ -1028,7 +1047,8 @@
         "pytest",
         "jsonschema",
         "referencing",
-        "controlled_gates"
+        "controlled_gates",
+        "xcontracts"
       ],
       "allow_dynamic": true
     },
@@ -1133,7 +1153,8 @@
         "pytest",
         "jsonschema",
         "referencing",
-        "controlled_gates"
+        "controlled_gates",
+        "xcontracts"
       ],
       "allow_dynamic": true,
       "description": "Test modules compose contracts and fixture adapters. They are deliberately excluded from their own allowed roles, so no collected test may depend on another collected module."
@@ -1188,7 +1209,8 @@
         "pytest",
         "jsonschema",
         "referencing",
-        "controlled_gates"
+        "controlled_gates",
+        "xcontracts"
       ],
       "allow_dynamic": true
     },

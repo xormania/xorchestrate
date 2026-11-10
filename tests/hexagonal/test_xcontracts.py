@@ -1,0 +1,84 @@
+"""Xorchestrate's public ports come from xcontracts, its built-in adapters satisfy them, and xcontracts stays independent.
+
+The behavioral kit runs against the built-in adapters where their guarantees
+are tested: the StateStore kit in ``test_storage.py`` and the operator port
+kit in ``test_operator_ports.py``.
+"""
+
+import ast
+import importlib
+import sys
+from pathlib import Path
+
+import pytest
+import xcontracts
+from xcontracts import factories, model, ports
+from xcontracts.testing import factory
+
+import xorchestrate.model
+import xorchestrate.ports
+from xorchestrate.composition import BUILTINS, NESTED, OPERATOR
+
+# Host-internal kinds: the lifecycle engine's interface and the local collector's storage are not public ports.
+INTERNAL_KINDS = {"state_engine"} | NESTED
+LOCAL_PORTS = {"PeerIdentity", "ClientConnection", "ClientTransport"}
+
+
+def test_the_foundation_re_exports_the_xcontracts_ports_and_values_unchanged():
+    public = {name for name in vars(ports) if not name.startswith("_") and name[0].isupper()} - {"Protocol", "Callable",
+                                                                                                 "AbstractContextManager"}
+    public -= {"JSON", "Assessment", "Capability", "Record", "Verdict"}
+    assert public <= set(xorchestrate.ports.__all__)
+    for name in public:
+        assert getattr(xorchestrate.ports, name) is getattr(ports, name), name
+    assert set(xorchestrate.ports.__all__) - public == LOCAL_PORTS
+    for name in ("JSON", "Record", "Capability", "Assessment", "Verdict", "OrchestrationError", "Conflict"):
+        assert getattr(xorchestrate.model, name) is getattr(model, name), name
+
+
+def test_every_selectable_kind_is_a_public_xcontracts_kind_unless_it_is_host_internal():
+    assert set(BUILTINS) - INTERNAL_KINDS == set(factories.KINDS)
+    assert {name for name, kind in factories.KINDS.items() if kind.scope == "operator"} == OPERATOR
+
+
+# Built-ins that construct from empty options without launching anything.
+CONSTRUCTIBLE = {"store": "memory", "guardrail": "rules", "routing": "configurable", "acceptance": "required-checks",
+                 "session_selection": "latest", "delivery_scheduler": "manual", "retry_policy": "definite-failure",
+                 "receipt_policy": "complete-exchange", "version_control": "git", "repository_hosting": "github"}
+
+
+@pytest.mark.parametrize(("kind", "alias"), sorted(CONSTRUCTIBLE.items()))
+def test_built_in_adapters_construct_through_the_convention_and_have_their_port_members(kind, alias):
+    adapter = factory.construct(kind, {"adapter": BUILTINS[kind][alias], "options": {}})
+    assert isinstance(adapter, factories.KINDS[kind].port)
+    getattr(adapter, "close", lambda: None)()
+
+
+def test_the_built_in_companion_receives_version_control_as_the_convention_states(tmp_path):
+    version_control = factory.construct("version_control", {"adapter": BUILTINS["version_control"]["git"]})
+    companion = factory.construct("companion", {"adapter": BUILTINS["companion"]["git-directory"],
+                                                "options": {"path": str(tmp_path / "companion")}},
+                                  version_control=version_control)
+    assert isinstance(companion, ports.Companion)
+
+
+@pytest.mark.parametrize(("kind", "alias"), sorted((kind, alias) for kind in ("providers", "sessions", "evaluators")
+                                                   for alias in BUILTINS[kind]))
+def test_process_backed_built_ins_declare_their_port_methods(kind, alias):
+    """These launch processes or need providers, so their classes are checked structurally."""
+    module, name = factories.split_reference(BUILTINS[kind][alias])
+    adapter_class = getattr(importlib.import_module(module), name)
+    port = factories.KINDS[kind].port
+    assert factory.missing_members(adapter_class, port) == []
+
+
+def test_installed_xcontracts_imports_only_the_standard_library():
+    root = Path(xcontracts.__file__).resolve().parent
+    foreign = []
+    for path in sorted(root.rglob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            names = ([alias.name for alias in node.names] if isinstance(node, ast.Import)
+                     else [node.module] if isinstance(node, ast.ImportFrom) and node.level == 0 else [])
+            foreign += [(path.name, name) for name in names
+                        if name.split(".")[0] not in {"xcontracts", *sys.stdlib_module_names}]
+    assert foreign == []

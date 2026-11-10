@@ -16,6 +16,17 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Added
 
+- The public ports, the values and errors they exchange and the adapter factory
+  convention now come from the new Apache-2.0
+  [xcontracts](https://github.com/xormania/xcontracts) package (`xcontracts>=0.1,<0.2`),
+  with a conformance kit that third-party adapters can run. `xorchestrate.ports`
+  and `xorchestrate.model` re-export the same objects, so existing imports keep
+  working. The built-in stores and operator adapters run the kit. See
+  [writing an adapter](docs/adapters.md).
+- The release identity gate refuses a release while a runtime dependency comes
+  from a git, path or URL source (until xcontracts 0.1.0 is on PyPI,
+  development uses a pinned git source).
+
 - Exact-request Jev diagnostic reuse and shared-state question batches reduce repeated calls; CI reports fresh versus historical usage separately.
 
 - A paired architecture-effectiveness pilot measures Jev against unchanged deterministic checks, retaining misses, false alarms, abstentions, usage and scope limits separately from fixture verification.
@@ -152,6 +163,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 - **Journal diagnostics:** existing operation diagnostics remain stored. Public
   projection hides unversioned diagnostic content; this is not a historical-data
   purge and needs no data-version migration.
+- **Adapter options and custom adapters:** None changed. Third-party adapters
+  that import from `xorchestrate.ports` or `xorchestrate.model` keep working;
+  new adapters should depend on `xcontracts>=0.1,<0.2` instead. `xcontracts`
+  is a new runtime dependency.
 - **Configuration format:** the optional top-level `version` key is introduced
   at format version `1`. A configuration without it is read as version `1` and
   `describe` reports a `configuration_version_missing` warning; add

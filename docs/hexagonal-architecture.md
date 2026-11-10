@@ -58,6 +58,17 @@ modules that it assembles:
 Shared canonical JSON digests, public record views and action descriptors are
 foundation helpers in `model.py`.
 
+The public ports, the values and errors they exchange and the adapter factory
+convention are defined in [xcontracts](https://github.com/xormania/xcontracts),
+a separate stdlib-only Apache-2.0 package, so adapters can be written and
+checked without depending on Xorchestrate. `ports.py` and `model.py` re-export
+them unchanged; the application and adapters keep importing from there. The
+driving-side client transport ports (`ClientTransport`, `ClientConnection`,
+`PeerIdentity`) stay in `ports.py`: entrypoints choose them, not
+configuration, and they evolve with the project server. The architecture
+profile allows `xcontracts` as an external dependency of the foundation and
+core; xcontracts never imports Xorchestrate. See [writing an adapter](adapters.md).
+
 Public inspection is shared by work, acceptance, delivery and native-history
 reads. `InspectionProjector` owns typed record projection, nested historical
 results and freshness revalidation through the store and explicit context,
@@ -80,8 +91,8 @@ delivery or infrastructure. Measurement replay and result reconciliation retain
 their existing operation evidence and never launch another effect implicitly.
 
 The core is usable with supplied ports without importing SQLite, subprocesses,
-MCP machinery, or the historical runtime. Memory and SQLite stores exercise the
-same contract. External capabilities can be added through discovery, without
+MCP machinery, or the historical runtime. Memory and SQLite stores pass the
+same xcontracts `StateStore` conformance kit. External capabilities can be added through discovery, without
 editing a central list of project-specific commands.
 
 CLI and MCP are input adapters for the same application operations. MCP providers
@@ -120,7 +131,7 @@ provider, session driver, or evaluator is required for basic work tracking.
 `build()` without a project still works for composition-level callers, with
 no telemetry unless `telemetry_defaults` is supplied.
 
-The operator layer has its own driven ports in `xorchestrate/ports.py`:
+The operator layer has its own driven ports (defined in xcontracts and re-exported by `xorchestrate/ports.py`):
 `Companion` (project-scoped, extensible records in the user's companion),
 `VersionControl` (worktree, history and remote queries) and
 `RepositoryHosting` (whether a hosted repository is private). Their adapters
@@ -152,7 +163,9 @@ The top-level sections are:
 
 An adapter selection may use a supplied alias or a trusted installed
 `module:factory` implementation. Factories receive options, with dependency-aware
-built-in adapters assembled by composition. Disabled named entries (`enabled:
+built-in adapters assembled by composition. The exact convention, including
+the companion's `version_control` argument and which options are resolved,
+is part of xcontracts (`xcontracts.factories`); see [writing an adapter](adapters.md). Disabled named entries (`enabled:
 false`) are not activated. Configuration is read for the assembled application;
 unrelated historical source edits do not invalidate ongoing work or retained
 results. Restart with the intended configuration to activate a change.
