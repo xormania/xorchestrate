@@ -384,10 +384,15 @@ def markdown(result, run_url):
         counts = shard["outcomes"]
         rows.append(f"| {shard['shard']} | {counts.get('passed', 0)} | {counts.get('skipped', 0)} | {shard['command_seconds']} |")
     if result.get("evidence_references"):
-        rows.extend(["", "| Evidence lane | Original run / attempt | Job | Artifact |", "|---|---|---|---|"])
+        rows.extend(["", "| Evidence lane | Original run / attempt | Job | Artifact | GitHub observation |",
+                     "|---|---|---|---|---|"])
         for reference in result["evidence_references"]:
+            observation = (str(reference.get("observation_job_id", reference["job_id"])) + " / "
+                           + str(reference.get("observation_attempt", reference["run_attempt"])))
+            if reference.get("carried_forward"):
+                observation += " (carried forward)"
             rows.append(f"| {text(reference['lane'])} | {reference['run_id']} / {reference['run_attempt']} | "
-                        f"{reference['job_id']} | {reference['artifact_id']} |")
+                        f"{reference['job_id']} | {reference['artifact_id']} | {observation} |")
     if result["families"]:
         rows.extend(["", "| Family | Passed | Skipped |", "|---|---:|---:|"])
         for name, counts in result["families"].items():
