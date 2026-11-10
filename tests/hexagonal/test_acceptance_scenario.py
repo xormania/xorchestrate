@@ -10,6 +10,7 @@ import pytest
 from scripts.acceptance.scenario import (
     AcceptanceFailure,
     Scenario,
+    application_project,
     atomic_json,
     fixture_config,
     main,
@@ -20,8 +21,7 @@ from scripts.acceptance.scenario import (
 
 
 def test_fixture_scenario_crosses_processes_and_preserves_effect_counts(tmp_path):
-    config = tmp_path / "application.json"
-    atomic_json(config, fixture_config(tmp_path))
+    config = application_project(tmp_path, fixture_config(tmp_path))
     scenario = Scenario(tmp_path, 30, "fixture")
     try:
         run_fixture(scenario, config)
@@ -60,8 +60,7 @@ def test_native_configuration_preserves_relative_paths_and_original_source(tmp_p
 def test_native_scenario_requires_persisted_callback_using_protocol_peer(tmp_path):
     # This independently validates the native-profile criterion with a local
     # protocol peer. It is not a native vendor/model acceptance receipt.
-    config = tmp_path / "application.json"
-    atomic_json(config, fixture_config(tmp_path))
+    config = application_project(tmp_path, fixture_config(tmp_path))
     scenario = Scenario(tmp_path, 30, "native")
     try:
         run_native(scenario, config, "callback")
@@ -78,10 +77,9 @@ def test_native_driver_without_application_tools_is_explicit_failure(tmp_path):
 
 
 def test_native_session_completion_text_without_callback_does_not_pass(tmp_path):
-    config = tmp_path / "application.json"
     options = fixture_config(tmp_path)
     options["sessions"]["callback"]["options"]["command"].append("--text-only")
-    atomic_json(config, options)
+    config = application_project(tmp_path, options)
     scenario = Scenario(tmp_path, 1, "native")
     try:
         with pytest.raises(AcceptanceFailure, match="response_deadline|native_callback_missing"):

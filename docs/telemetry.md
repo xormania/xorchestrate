@@ -17,18 +17,24 @@ corpus adapter refuses an unfixed library; the application then continues with a
 explicit unavailable telemetry state. CI uses uv 0.13.7 and Python 3.12.16, and
 `doctor` reports the selected interpreter's SQLite as `telemetry_sqlite`.
 
-The [telemetry configuration example](../examples/telemetry.json) selects local
-collection explicitly. Paths are resolved against the configuration directory;
-its corpus directory is outside this checkout. Change the project, dataset and
-collector identities for your deployment. Separate hosts use separate collector
-lineages; do not share a live WAL database over a network filesystem.
+Telemetry is always on for a [project](projects.md#telemetry): without a
+`telemetry` section the local collector writes to
+`~/.xorchestrate/projects/<project>/telemetry` with the project name as
+`project_id`, the instance id as `collector_id` and `dataset_id` `default`;
+`{"enabled": false}` turns it off. The
+[telemetry example project](../examples/telemetry/.xorchestrate/config.json)
+changes only the dataset and artifact threshold of those defaults with a
+`telemetry` section that has no `adapter`. An explicit section with an
+`adapter` is used as written; its relative paths resolve against the instance
+directory. Separate hosts use separate collector lineages (each machine has its
+own instance id); do not share a live WAL database over a network filesystem.
 
-With this profile:
+Inside a set-up project:
 
 ```sh
-python3 -m xorchestrate --config examples/telemetry.json call create_work --json '{"goal":"Retain an inspectable work episode"}'
-python3 -m xorchestrate --config examples/telemetry.json call telemetry_status --json '{}'
-python3 -m xorchestrate --config examples/telemetry.json call telemetry_events --json '{"limit":20}'
+xorchestrate call create_work --json '{"goal":"Retain an inspectable work episode"}'
+xorchestrate call telemetry_status --json '{}'
+xorchestrate call telemetry_events --json '{"limit":20}'
 ```
 
 Use the persistent `run` or MCP `serve` interface for native sessions. The same
@@ -221,9 +227,9 @@ operations. Destinations are new children of the configured export root; existin
 bundles are never overwritten:
 
 ```sh
-python3 -m xorchestrate --config examples/telemetry.json call telemetry_snapshot --json '{"destination":"episode-1"}'
-python3 -m xorchestrate --config examples/telemetry.json call telemetry_verify --json '{"destination":"episode-1"}'
-python3 -m xorchestrate --config examples/telemetry.json call telemetry_restore --json '{"bundle":"episode-1","destination":"episode-1-restored"}'
+xorchestrate call telemetry_snapshot --json '{"destination":"episode-1"}'
+xorchestrate call telemetry_verify --json '{"destination":"episode-1"}'
+xorchestrate call telemetry_restore --json '{"bundle":"episode-1","destination":"episode-1-restored"}'
 ```
 
 Snapshot creation uses SQLite's completed backup result to derive the cutoff,

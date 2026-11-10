@@ -19,7 +19,11 @@ from scripts.testkit.adapters.configuration import isolated_config
 from scripts.testkit.adapters.evidence import write_json as atomic_json
 from scripts.testkit.core import CheckRecorder, ResourceScope
 from scripts.testkit.stories import select_stories, validate_limits
-from xorchestrate.composition import load_config
+from xorchestrate.composition import RELEASE, load_config
+from xorchestrate.instance import operations
+from xorchestrate.instance.home import write_document
+from xorchestrate.instance.instance import prepare
+from xorchestrate.instance.services import services
 
 from .peers import SCHEMA
 
@@ -68,14 +72,17 @@ class Budget:
 class Client:
     """Small independent MCP client; outputs are inspected, never logged."""
 
-    def __init__(self, config, deadline, actor="owner", budget=None):
+    def __init__(self, project, deadline, actor="owner", budget=None):
         self.deadline = deadline
         self.budget = budget
         self.identifier = 0
         self.buffer = b""
+        # The application runs only inside a set-up project (D15); the
+        # provisioned project's private home selects it.
         self.process = subprocess.Popen(
-            [sys.executable, "-m", "xorchestrate", "--config", str(config), "--actor", actor, "serve"],
-            cwd=ROOT, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            [sys.executable, "-m", "xorchestrate", "--project", str(project.repository), "--actor", actor, "serve"],
+            cwd=ROOT, env={**os.environ, **project.environment},
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
         )
         try:
             initialized = self.call("initialize", {"protocolVersion": "2025-06-18", "capabilities": {},
@@ -191,6 +198,34 @@ class Scenario:
         self.clients.clear()
         self._client_tokens.clear()
         require(not errors, "runtime_cleanup_failed")
+
+
+def application_project(directory, config):
+    """Record the isolated configuration and provision a disposable project that runs it.
+
+    The project, its private home and its companion live in ``directory``;
+    clients select the home through the returned project's environment.
+    """
+    atomic_json(directory / "application.json", config)
+    repository = (directory / "project").resolve()
+    environment = {"XORCHESTRATE_HOME": str((directory / "home").resolve())}
+    services(environment).version_control.initialize(str(repository))
+    write_document(repository / ".xorchestrate" / "project.json",
+                   {"schema": 1, "name": "acceptance", "release": RELEASE, "requires": []}, 0o644)
+    write_document(repository / ".xorchestrate" / "config.json", config, 0o644)
+    operations.companion_init(directory / "companion", environment)
+    operations.init(repository, environ=environment)
+    operations.approve(repository, environment)
+    prepare(repository, environ=environment)
+    return AcceptanceProject(repository, environment)
+
+
+class AcceptanceProject:
+    """The disposable project a scenario's clients run in, and the environment selecting its home."""
+
+    def __init__(self, repository, environment):
+        self.repository = repository
+        self.environment = environment
 
 
 def fixture_config(directory):
@@ -542,14 +577,13 @@ def main(argv=None):
                 config = fixture_config(directory)
                 if args.story == "work-acceptance":
                     config = work_acceptance_config(directory, config)
-            path = directory / "application.json"
-            atomic_json(path, config)
+            project = application_project(directory, config)
         if args.story:
-            run_story(scenario, path, args.story, args.driver)
+            run_story(scenario, project, args.story, args.driver)
         elif args.profile == "fixture":
-            run_fixture(scenario, path)
+            run_fixture(scenario, project)
         else:
-            run_native(scenario, path, args.driver)
+            run_native(scenario, project, args.driver)
         with scenario.check("graceful_application_shutdown"):
             scenario.cleanup()
         receipt["status"] = "passed"

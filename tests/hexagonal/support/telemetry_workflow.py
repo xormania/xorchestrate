@@ -3,7 +3,6 @@
 import base64
 import hashlib
 import json
-import os
 import sqlite3
 import subprocess
 import sys
@@ -15,6 +14,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from tests.hexagonal.support.producer_capture import HttpFixture, response_body
+from tests.hexagonal.support.projects import ProjectFixture
 from xorchestrate.adapters.policies import RuleGuardrail
 from xorchestrate.adapters.telemetry_collector.artifacts import FileArtifactStore
 from xorchestrate.composition import build
@@ -48,8 +48,11 @@ class Episode:
                                        "cli", "--definitions", str(definitions), "--marker", str(self.marker)],
                            "capabilities": catalog, "timeout": 10, "telemetry_drain_timeout": 1.0}}}}
         self.path.write_text(json.dumps(self.config))
-        self.environment = {**os.environ, "PYTHONPATH": os.pathsep.join([str(ROOT), os.environ.get("PYTHONPATH", "")])}
         self.arguments = None
+        # The CLI runs only inside a set-up project (D15). Its configuration names
+        # the same absolute store and corpus, so direct and CLI calls share state.
+        self.project = ProjectFixture(root / "project", self.config, name="workflow")
+        self.environment = self.project.environment
         if direct:
             self.runtime = build(self.config, root)
 
@@ -58,7 +61,7 @@ class Episode:
             self.runtime.close()
 
     def command(self, *arguments, actor="owner"):
-        return [sys.executable, "-m", "xorchestrate", "--config", str(self.path), "--actor", actor, *arguments]
+        return self.project.command("--actor", actor, *arguments)
 
     def cli(self, *arguments, input=None, actor="owner"):
         return subprocess.run(self.command(*arguments, actor=actor), input=input, capture_output=True,

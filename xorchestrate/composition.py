@@ -16,6 +16,7 @@ from . import __version__
 from .application import Application
 from .model import OrchestrationError, canonical_digest, unique_keys
 from .ports import ApplicationToolSessionDriver, SessionDriver
+from .worktrees import bound_worktree, session_worktree
 
 BUILTINS = {
     "telemetry": {"local": "xorchestrate.adapters.telemetry:LocalTelemetry"},
@@ -41,11 +42,18 @@ BUILTINS = {
     "guardrail": {"rules": "xorchestrate.adapters.policies:RuleGuardrail"},
     "routing": {"configurable": "xorchestrate.adapters.policies:ConfigurableRouting"},
     "evaluators": {"tool": "xorchestrate.adapters.evaluation:ToolEvaluator", "typesafe": "xorchestrate.adapters.evaluation:TypeSafeEvaluator"},
+    # Operator ports, selected from the user's home by the operator layer, never by project configuration.
+    "companion": {"git-directory": "xorchestrate.adapters.companion_git:GitDirectoryCompanion"},
+    "version_control": {"git": "xorchestrate.adapters.git_cli:GitCLI"},
+    "repository_hosting": {"github": "xorchestrate.adapters.github:GitHubHosting"},
 }
 
 
 # Adapter kinds that are selected inside another adapter's options, not as sections.
 NESTED = frozenset({"telemetry_corpus", "telemetry_artifacts"})
+# Adapter kinds the operator layer selects from the user's home (settings.json,
+# instance.json); a project configuration cannot select them.
+OPERATOR = frozenset({"companion", "version_control", "repository_hosting"})
 
 
 @dataclass(frozen=True)
@@ -78,6 +86,32 @@ class TelemetryDefaults:
         return {"adapter": "local", "options": {
             "runtime_root": str(root), "project_id": self.project_id,
             "dataset_id": self.dataset_id, "collector_id": self.collector_id}}
+
+
+REPO_PLACEHOLDER = "${repo}"
+"""Left unresolved by rendering; each call resolves it to its own worktree root."""
+
+
+@dataclass(frozen=True)
+class ProjectContext:
+    """The set-up project a runtime is built for, supplied by the entrypoint.
+
+    Composition looks nothing up itself: the operator layer finds the project,
+    checks its approval and renders its configuration, then passes this
+    context. It supplies the telemetry defaults (collection is always on for a
+    project unless the configuration says ``enabled: false``), the data
+    directory that relative paths resolve against, and the default worktree of
+    calls that do not bring their own.
+    """
+
+    name: str
+    instance_id: str
+    data_dir: str | Path
+    worktree: dict | None = None
+    dataset_id: str = "default"
+
+    def telemetry_defaults(self):
+        return TelemetryDefaults(Path(self.data_dir) / "telemetry", self.name, self.instance_id, self.dataset_id)
 
 
 def factory_for(kind, adapter):
@@ -153,7 +187,7 @@ SUPPORTED_CONFIG_VERSIONS = frozenset({1})
 
 RELEASE = f"v{__version__}"
 # Nested storage kinds are selected inside telemetry options, never as sections.
-_SECTIONS = (frozenset(BUILTINS) - NESTED) | {"assessment", "session_fallbacks", "version"}
+_SECTIONS = (frozenset(BUILTINS) - NESTED - OPERATOR) | {"assessment", "session_fallbacks", "version"}
 _ADAPTER_FIELDS = frozenset({"adapter", "options", "enabled"})
 # Singleton adapters in construction order, with their defaults.
 _SINGLETONS = {
@@ -236,6 +270,9 @@ def config_version(config, supported=SUPPORTED_CONFIG_VERSIONS):
 def _resolve_path(base_dir, value, kind, adapter, strict=True):
     if not isinstance(value, str):
         raise OrchestrationError(f"{kind} adapter {adapter} paths must be strings.", "configuration_error")
+    if value.startswith(REPO_PLACEHOLDER):
+        # Resolved per call to the caller's worktree root (see adapters/process.py).
+        return value
     try:
         return str((base_dir / value).resolve()) if strict else str(base_dir / value)
     except (TypeError, ValueError, OSError, RuntimeError) as exc:
@@ -358,8 +395,20 @@ def validate_config(config=None, base_dir=None, *, telemetry_defaults=None):
     )
 
 
-def build(config=None, base_dir=None, *, telemetry_defaults=None):
-    """Assemble a runtime; ``telemetry_defaults`` enables collection without a telemetry section."""
+def build(config=None, base_dir=None, *, project=None, telemetry_defaults=None):
+    """Assemble a runtime.
+
+    ``project`` is the explicit ``ProjectContext`` of a set-up project: it
+    supplies the telemetry defaults, the base directory (its data directory)
+    when none is given, and the default worktree. ``telemetry_defaults``
+    enables collection without a telemetry section for callers without a
+    project; it takes precedence over the project's defaults when both are given.
+    """
+    if project is not None and not isinstance(project, ProjectContext):
+        raise OrchestrationError("Project must be a ProjectContext value.", "configuration_error")
+    if project is not None:
+        telemetry_defaults = telemetry_defaults or project.telemetry_defaults()
+        base_dir = base_dir or project.data_dir
     resolved = validate_config(config, base_dir, telemetry_defaults=telemetry_defaults)
     config = resolved.config
     resources = []
@@ -427,6 +476,7 @@ def build(config=None, base_dir=None, *, telemetry_defaults=None):
             evaluator_configurations=resolved.evaluator_configurations,
             state_engine=state_engine,
             telemetry=telemetry,
+            worktree=project.worktree if project is not None else None,
         )
         def capture(event):
             if isinstance(event, dict):
@@ -482,6 +532,12 @@ def _wire_application_tools(name: str, driver: SessionDriver, application: Appli
                 raise OrchestrationError("This application tool requires a stable invocation key.")
             else:
                 arguments["idempotency_key"] = "session:" + json.dumps([name, idempotency_key], separators=(",", ":"))
+        # Native tool calls come from a session's own process: they carry the
+        # worktree that created the session, whichever thread delivers them.
+        with bound_worktree(_session_worktree(application, context.get("session_id"))):
+            return dispatch(action, arguments, context, replay_only)
+
+    def dispatch(action, arguments, context, replay_only):
         # The driver supplies the owned session's principal separately from tool arguments.
         observed = all(context.get(field) for field in ("session_id", "native_id", "incarnation", "call_id"))
         if observed:
@@ -500,6 +556,17 @@ def _wire_application_tools(name: str, driver: SessionDriver, application: Appli
     if callable(replay):
         replay(lambda action, arguments, context, key=None:
                handle(action, arguments, context, key, replay_only=True))
+
+
+def _session_worktree(application, session_id):
+    if not isinstance(session_id, str) or not session_id:
+        return None
+    try:
+        with application.store.transaction() as tx:
+            session = tx.get("session", session_id)
+    except Exception:
+        return None
+    return session_worktree(session.data) if session is not None else None
 
 
 def describe(application):

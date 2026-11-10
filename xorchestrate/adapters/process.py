@@ -13,6 +13,7 @@ import subprocess
 from typing import Any
 
 from ..model import OrchestrationError, unique_keys
+from ..worktrees import workspace_root
 
 
 def positive_number(options: dict, name: str, default: float) -> float:
@@ -31,6 +32,24 @@ def positive_integer(options: dict, name: str, default: int) -> int:
     if type(value) is not int or value <= 0:
         raise OrchestrationError(f"{name} must be a positive integer.", "invalid_configuration")
     return value
+
+
+REPO_PLACEHOLDER = "${repo}"
+
+
+def resolve_repo(value: str) -> str:
+    """Replace ``${repo}`` with the root of the worktree the current call came from.
+
+    Rendering leaves ``${repo}`` unresolved because one project server serves
+    every worktree of a project: a session started over a worktree's
+    connection runs in that worktree, and keeps running there when it is
+    later driven, resumed or reconnected from another worktree. Without a bound worktree (construction-
+    time validation, or a runtime built without a project) the value is
+    returned unchanged, so a launch with an unresolved ``${repo}`` fails as an
+    unavailable command rather than running somewhere else.
+    """
+    root = workspace_root() if REPO_PLACEHOLDER in value else None
+    return value if root is None else value.replace(REPO_PLACEHOLDER, root)
 
 
 def command_options(options: dict, key: str = "command") -> dict:
@@ -54,9 +73,12 @@ def command_options(options: dict, key: str = "command") -> dict:
         raise OrchestrationError("pass_env must list environment variable names.", "invalid_configuration")
     # The explicit default prevents unrelated host credentials reaching a tool.
     env = dict(os.environ) if inherit else {}
+    # The release handoff marker belongs to xorchestrate itself, never to launched tools.
+    env.pop("XORCHESTRATE_HANDOFF", None)
     env.update({name: os.environ[name] for name in pass_env if name in os.environ})
-    env.update(environment)
-    return {"args": list(command), "cwd": cwd, "env": env, "shell": False, "start_new_session": os.name == "posix"}
+    env.update({name: resolve_repo(value) for name, value in environment.items()})
+    return {"args": [resolve_repo(arg) for arg in command], "cwd": None if cwd is None else resolve_repo(cwd),
+            "env": env, "shell": False, "start_new_session": os.name == "posix"}
 
 
 def encode_json(value: Any, *, sort_keys: bool = False) -> bytes:

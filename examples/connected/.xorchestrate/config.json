@@ -1,21 +1,15 @@
 {
   "version": 1,
-  "store": {
-    "adapter": "sqlite",
-    "options": {
-      "path": ".xorchestrate/connected.sqlite3"
-    }
-  },
   "providers": {
     "project": {
       "enabled": false,
       "adapter": "mcp",
       "options": {
         "command": [
-          "/absolute/path/to/project-tools",
+          "${launchers}/project-tools",
           "serve"
         ],
-        "cwd": "/absolute/path/to/project",
+        "cwd": "${repo}",
         "pass_env": [
           "PATH",
           "PROJECT_TOOL_TOKEN"
@@ -28,7 +22,7 @@
       "adapter": "cli",
       "options": {
         "command": [
-          "/absolute/path/to/assessment-bridge"
+          "${launchers}/assessment-bridge"
         ],
         "pass_env": [
           "PATH",
@@ -75,7 +69,7 @@
           "--listen",
           "stdio://"
         ],
-        "cwd": "/absolute/path/to/project",
+        "cwd": "${repo}",
         "pass_env": [
           "PATH",
           "HOME",

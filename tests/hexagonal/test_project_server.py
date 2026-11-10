@@ -387,13 +387,13 @@ def test_simultaneous_connects_start_exactly_one_server(cli):
     for process, channel in clients:
         assert cli.finish(process, channel)[0] == 0
     assert cli.json("down")["stopped"] is True
-    assert cli.json("status", expect=3) == {"running": False, "socket": None}
+    assert cli.json("status", expect=3) == {"running": False, "socket": None, "overrides": []}
 
 
 def test_sessions_started_through_the_server_survive_client_disconnect(cli):
     cli.options["sessions"] = {"fixture": {"adapter": "jsonrpc", "options": {
         "command": [sys.executable, str(SESSION_FIXTURE), "jsonrpc"], "timeout": 10}}}
-    cli.config.write_text(json.dumps(cli.options), encoding="utf-8")
+    cli.save()
     first, channel = cli.spawn("connect", "--actor", "worker")
     open_session(channel)
     started = channel.request(rpc(2, "tools/call", {"name": "start_session", "arguments": {
@@ -709,7 +709,7 @@ def test_a_session_start_reconciled_later_blocks_down_without_detach(directory):
     _down_is_refused_for(app, directory, session["id"])
 
 
-# -- one server per configuration, whatever the client's environment ----------
+# -- one server per project, whatever the client's environment ----------------
 
 def test_clients_with_different_environments_reach_one_server(cli, directory):
     base = {**cli.environment}
@@ -728,9 +728,9 @@ def test_clients_with_different_environments_reach_one_server(cli, directory):
 
 def test_server_locations_are_private_absolute_and_bounded(directory):
     environ = {"XORCHESTRATE_HOME": str(directory / "home")}
-    files = ServerFiles.locate(server_identity(directory / "team.json"), environ).ensure()
-    assert files == ServerFiles.locate(server_identity(directory / "." / "team.json"), environ)
-    assert files.key != ServerFiles.locate(server_identity(directory / "other.json"), environ).key
+    files = ServerFiles.locate(server_identity("instance-a"), environ).ensure()
+    assert files == ServerFiles.locate(server_identity("instance-a"), environ)
+    assert files.key != ServerFiles.locate(server_identity("instance-b"), environ).key
     assert stat.S_IMODE(files.directory.stat().st_mode) == 0o700
     assert default_socket_path(files, environ).parent == files.directory
     long_home = ServerFiles.locate(files.identity, {"XORCHESTRATE_HOME": str(directory / ("h" * 120))})
@@ -792,7 +792,7 @@ def test_private_explicit_and_default_socket_directories_are_accepted(cli, direc
     assert started["started"] is True and started["socket"] == str(private / "s.sock")
     assert cli.json("status", "--socket", str(private / "s.sock"))["pid"] == started["pid"]
     assert cli.json("down", "--socket", str(private / "s.sock"))["stopped"] is True
-    files = ServerFiles.locate(server_identity(directory / "team.json"), {"XORCHESTRATE_HOME": str(directory / "home")})
+    files = ServerFiles.locate(server_identity("instance-a"), {"XORCHESTRATE_HOME": str(directory / "home")})
     files.ensure()
     for environ in ({}, {"XORCHESTRATE_RUNTIME_DIR": str(directory / "run")},
                     {"XORCHESTRATE_HOME": str(directory / ("h" * 120))}):
@@ -850,7 +850,7 @@ def test_a_crashed_server_is_replaced_on_the_next_start(cli):
 
 
 def test_startup_failure_is_reported_with_the_server_log(cli):
-    cli.config.write_text(json.dumps({"not_a_section": {}}), encoding="utf-8")
+    cli.save({"not_a_section": {}})
     failed = cli.run("up", "--start-timeout", "20")
     assert failed.returncode == 2, failed
     error = json.loads(failed.stderr)["error"]

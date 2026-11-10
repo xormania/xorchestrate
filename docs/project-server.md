@@ -13,30 +13,31 @@ A harness launches `xorchestrate connect` as its MCP command. `connect` starts
 the server if none is running and relays MCP frames between its stdio and the
 server. Closing a harness closes its connection, not the sessions it started.
 
-Projects (discovery, worktree identity, approvals and release handoff) are not
-part of this version. A server belongs to one configuration: the resolved
-`--config` path, or the working directory when no configuration is given (see
-[one server per configuration](#one-server-per-configuration)).
+Every command here needs a set-up [project](projects.md): it is found from
+the working directory, or named with `--project PATH`. A project has one
+server, shared by all its worktrees (see
+[one server per project](#one-server-per-project)).
 
 ## Commands
 
 | Command | Effect |
 | --- | --- |
 | `serve` | Unchanged: one MCP session over this process's stdin/stdout until EOF, with the `--actor` of this process. Same as `serve --transport stdio`. |
-| `serve --transport unix [--socket PATH] [--max-connections N]` | Run the configuration's shared server in the foreground. Prints one `{"serving": {...}}` line when it is listening. Refused if a server for the configuration is already running. |
-| `connect [--socket PATH] [--actor NAME] [--start-timeout S]` | The harness's MCP entry. Relays stdio to the configuration's server, starting a detached `serve --transport unix` with the same global options when none is running. |
+| `serve --transport unix [--socket PATH] [--max-connections N]` | Run the project's shared server in the foreground. Prints one `{"serving": {...}}` line when it is listening. Refused if a server for the project is already running. |
+| `connect [--socket PATH] [--actor NAME] [--start-timeout S]` | The harness's MCP entry. Relays stdio to the project's server, starting a detached `serve --transport unix` with the same global options when none is running. |
 | `up [--socket PATH] [--start-timeout S]` | Start the server if it is not running; print its status and whether this call started it. |
 | `down [--socket PATH] [--detach] [--timeout S]` | Drain and stop the server (see [stopping](#stopping)). |
-| `status [--socket PATH]` | Print the server's pid, socket, configuration, connected actors, in-flight calls, whether it is draining, and its live sessions. Exit status 3 and `{"running": false}` when none is running. |
+| `status [--socket PATH]` | Print the server's pid, socket, rendered configuration, project, instance, running configuration hash and starting worktree, connected actors and worktrees, in-flight calls, whether it is draining, its live sessions, and the settings your overlay overrides (`overrides`). Exit status 3 and `{"running": false, "socket": null, "overrides": [...]}` when none is running. |
 
 `describe`, `call` and `run` remain for direct use and do not use the server.
 A one-shot `call` builds its own runtime, so it can read the server's durable
 records (with SQLite) but not use live session handles held by the server.
 
-Example harness entry:
+Example harness entry (`init` writes the first form into Claude Code's tracked `.mcp.json`):
 
 ```json
-{"command": "xorchestrate", "args": ["--config", "/absolute/path/team.json", "connect", "--actor", "reviewer"]}
+{"command": "xorchestrate", "args": ["connect"]}
+{"command": "xorchestrate", "args": ["connect", "--actor", "reviewer"]}
 ```
 
 ## Sessions and actors
@@ -74,7 +75,9 @@ boundary, not network authentication.
 
 The first frame on a connection is a hello naming its purpose (`mcp` or
 `control`), its actor and optional attributes; MCP frames follow unchanged.
-The server answers `welcome`, or `refused` with a reason:
+`connect` sends its worktree identity as the `worktree` attribute (root, name,
+branch, configuration hash and the tracked file digests). The server answers
+`welcome`, or `refused` with a reason (and, for some reasons, `details`):
 
 | Reason | When |
 | --- | --- |
@@ -82,6 +85,8 @@ The server answers `welcome`, or `refused` with a reason:
 | `draining` | The server is stopping (see below). `connect` waits for it to exit and then starts a new one, within `--start-timeout`. |
 | `handshake_timeout` | No complete hello arrived within 5 seconds in total. Clients report this, and their own unanswered hello, as `handshake_timeout`, never as `connection_refused`. |
 | `invalid_handshake` | The first frame was not a valid hello. |
+| `worktree_required` | An MCP client sent no worktree identity. |
+| `configuration_mismatch` | The client's worktree tracks a configuration other than the one the server runs; `details.files` names the differing files. `connect` exits at once with this error. |
 
 Each hello is read on its own thread with a total deadline, so an idle or
 slow peer never delays other clients, `status`/`down`, signal handling or
@@ -95,11 +100,12 @@ The owner-only listener and peer-credential check are shared with the
 [session bridge](external-session-bridge.md) host; the bridge keeps its own RPC
 protocol.
 
-## One server per configuration
+## One server per project
 
-A configuration has at most one server, whatever the environment of each
-client. The server's files live under `<home>/servers/`, named by the first
-16 hex digits of the SHA-256 of the configuration identity:
+A project has at most one server, whatever the environment of each client and
+whichever of the project's worktrees it runs in. The server's files live under
+`<home>/servers/`, named by the first 16 hex digits of the SHA-256 of the
+project identity (`project:<instance id>`):
 
 | File | Purpose |
 | --- | --- |
@@ -125,7 +131,7 @@ Linux, 103 elsewhere); else `$XDG_RUNTIME_DIR/xorchestrate`; else
 different runtime-directory variables or temporary directories still reach
 the same server.
 
-A client passing `--socket` connects only there. If the configuration's
+A client passing `--socket` connects only there. If the project's
 server runs at another socket, that client does not start a second one; it
 fails after `--start-timeout` and names the running socket.
 
@@ -169,9 +175,14 @@ listens on it; a live server is never replaced even if its lock file is gone.
 If the started server exits during startup, the client reports
 `server_unavailable` with its exit code and the log path.
 
-The detached server is started with this interpreter, the client's global
-options (`--config` resolved to an absolute path, frame and worker limits),
-`--socket` if the client gave one, and the client's working directory. The
+The detached server is started with this interpreter (with `-P`, so the
+working directory is not on `sys.path`), the client's global options
+(`--project` set to the client's worktree root, frame and worker limits),
+`--socket` if the client gave one, and the project's instance directory as its
+working directory, so nothing in the repository can run in place of the
+package. It checks the approval of that worktree's configuration,
+renders it to `config.rendered.json` and builds from it; an unapproved
+configuration makes it exit with `approval_required` in its log. The
 transport is a machine-level choice made by the command, not by configuration.
 
 ## Stopping
@@ -218,7 +229,7 @@ connection over the shared `MCPDispatcher`, and `xorchestrate/server.py`
 accepts connections, answers control requests and drains. A connection's
 `PeerIdentity` carries the verified uid and pid, the asserted actor and
 purpose, and further asserted `attributes`, where later connection context
-(such as worktree identity) can travel to the MCP session without changing the
+(the `worktree` identity `connect` sends) travel to the MCP session without changing the
 port.
 
 ## Known limitations

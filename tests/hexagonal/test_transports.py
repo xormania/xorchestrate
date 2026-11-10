@@ -8,6 +8,7 @@ import time
 import unittest
 from pathlib import Path
 
+from tests.hexagonal.support.projects import ProjectFixture
 from xorchestrate.mcp import MCPServer
 from xorchestrate.model import Capability
 
@@ -68,26 +69,24 @@ class TransportTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.directory = Path(temporary.name)
-        self.config = self.directory / "config.json"
-        self.options = {"store": {"adapter": "sqlite", "options": {"path": "state.sqlite3"}}}
-        self.save_config()
-        self.environment = {**os.environ, "PYTHONPATH": os.pathsep.join([str(ROOT), str(self.directory), os.environ.get("PYTHONPATH", "")])}
+        self.options = {"version": 1, "store": {"adapter": "sqlite", "options": {"path": "state.sqlite3"}}}
+        # Every command runs inside a set-up fixture project (D15).
+        self.project = ProjectFixture(self.directory / "project", self.options)
+        self.environment = {**self.project.environment, "PYTHONPATH": os.pathsep.join(
+            [str(ROOT), str(self.directory), os.environ.get("PYTHONPATH", "")])}
 
     def save_config(self):
-        self.config.write_text(json.dumps(self.options), encoding="utf-8")
+        self.project.write_config(self.options)
 
-    def command(self, *arguments, actor="owner", configured=True, max_frame=None):
-        command = [sys.executable, "-m", "xorchestrate"]
-        if configured:
-            command += ["--config", str(self.config)]
-        command += ["--actor", actor]
+    def command(self, *arguments, actor="owner", max_frame=None):
+        command = [sys.executable, "-m", "xorchestrate", "--actor", actor]
         if max_frame is not None:
             command += ["--max-frame-bytes", str(max_frame)]
         return command + list(arguments)
 
-    def cli(self, *arguments, input=None, actor="owner", configured=True):
-        return subprocess.run(self.command(*arguments, actor=actor, configured=configured),
-                              input=input, capture_output=True, cwd=self.directory, env=self.environment, timeout=15)
+    def cli(self, *arguments, input=None, actor="owner"):
+        return subprocess.run(self.command(*arguments, actor=actor), input=input, capture_output=True,
+                              cwd=self.project.repo, env=self.environment, timeout=15)
 
     def call(self, action, arguments, actor="owner"):
         result = self.cli("call", action, input=json.dumps(arguments).encode(), actor=actor)
@@ -96,7 +95,7 @@ class TransportTests(unittest.TestCase):
         return json.loads(result.stdout)
 
     def interactive(self, command, actor="owner", max_frame=None):
-        return InteractiveProcess(self, self.command(command, actor=actor, max_frame=max_frame), self.directory, self.environment)
+        return InteractiveProcess(self, self.command(command, actor=actor, max_frame=max_frame), self.project.repo, self.environment)
 
     @staticmethod
     def rpc(identifier, method, params=None):
@@ -108,14 +107,14 @@ class TransportTests(unittest.TestCase):
         process.write({"jsonrpc": "2.0", "method": "notifications/initialized"})
 
     def test_describe_and_default_cli_setup_need_no_evaluator(self):
-        result = self.cli("describe", configured=False)
+        result = self.cli("describe")
         self.assertEqual(result.returncode, 0, result.stderr.decode())
         self.assertEqual(result.stderr, b"")
         operations = {item["name"]: item for item in json.loads(result.stdout)["operations"]}
         self.assertIn("create_work", operations)
         self.assertIn("invoke", operations)
         self.assertIn("goal", operations["create_work"]["input_schema"]["required"])
-        result = self.cli("call", "create_work", "--json", '{"goal":"A complex feature"}', configured=False)
+        result = self.cli("call", "create_work", "--json", '{"goal":"A complex feature"}')
         self.assertEqual(result.returncode, 0, result.stderr.decode())
         self.assertEqual(json.loads(result.stdout)["work"]["goal"], "A complex feature")
 

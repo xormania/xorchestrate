@@ -104,11 +104,30 @@ worker pools.
 
 ## Composition and configuration
 
-Use `--config PATH` to select a JSON configuration explicitly. Built-in SQLite
-paths and provider/session working directories resolve against that file's
-directory. Custom adapter options follow that adapter's contract. Without a file, the local defaults use
-SQLite at `.xorchestrate/state.sqlite3`, configurable routing, and an allow policy;
-no provider, session driver, or evaluator is required for basic work tracking.
+The CLI runs a set-up [project](projects.md): the operator layer
+(`xorchestrate/instance/`) finds it from the working directory or
+`--project PATH`, checks the approval of its tracked configuration, merges the
+project's and the user's layers and renders them to `config.rendered.json`.
+It then calls `build(config, project=ProjectContext(...))` with the explicit
+project context: name, instance id, data directory and default worktree.
+Composition never imports the operator layer and looks nothing up itself.
+Built-in SQLite paths and provider/session working directories resolve
+against the base directory (a project's instance directory); paths starting
+with `${repo}` resolve per call to the caller's worktree. Custom adapter
+options follow that adapter's contract. The rendered defaults use SQLite at
+`${data}/state.sqlite3`, configurable routing, and an allow policy; no
+provider, session driver, or evaluator is required for basic work tracking.
+`build()` without a project still works for composition-level callers, with
+no telemetry unless `telemetry_defaults` is supplied.
+
+The operator layer has its own driven ports in `xorchestrate/ports.py`:
+`Companion` (project-scoped, extensible records in the user's companion),
+`VersionControl` (worktree, history and remote queries) and
+`RepositoryHosting` (whether a hosted repository is private). Their adapters
+(`git-directory`, `git`, `github`) are registered in composition's `BUILTINS`
+like every other adapter, but as operator kinds: they are selected from the
+user's home (`settings.json`, a project's `instance.json`), never by a project
+configuration section. See [projects](projects.md#companions-version-control-and-hosting).
 
 The top-level sections are:
 
@@ -117,7 +136,7 @@ The top-level sections are:
 | `version` | Configuration format version, a positive integer; see below |
 | `store` | One state-store adapter and its `options` |
 | `state_engine` | Lifecycle state engine; built-in `declared` (default) accepts `definitions` and `guards` options |
-| `telemetry` | Observation collector; built-in `local` with selected `corpus` (`sqlite`) and `artifacts` (`filesystem`) storage; absent by default unless `build()` receives `TelemetryDefaults` |
+| `telemetry` | Observation collector; built-in `local` with selected `corpus` (`sqlite`) and `artifacts` (`filesystem`) storage; always on for a project (the `ProjectContext` supplies `TelemetryDefaults`) unless `enabled: false` |
 | `providers` | Named capability providers, each with `adapter` and `options` |
 | `sessions` | Named session drivers, each with `adapter` and `options` |
 | `guardrail` | An enforcement adapter and its options |
@@ -201,7 +220,8 @@ configured argument arrays and JSON data, not shell interpolation.
 
 The default actor is `owner`. A local CLI invocation or stdio MCP server binds its
 chosen actor when started; the project server binds the actor each connection
-asserts. This is a local trust boundary, not remote login or
+asserts. The caller's worktree identity is bound the same way and reaches the
+guardrail context as `worktree` (see [projects](projects.md#room-for-per-worktree-access)). This is a local trust boundary, not remote login or
 multi-tenant authentication. A future network adapter must establish its caller's
 identity before calling the same application boundary.
 

@@ -95,18 +95,20 @@ These are the same for every path.
 2. If the command is not found, uv's tool directory is not on your `PATH`: run
    `uv tool update-shell` and open a new shell.
 
-3. Use it from a project directory, as described in the
-   [README](../README.md#run-locally) and the
-   [configuration examples](../examples/README.md):
+3. Set it up once per user, then once per project (see [projects](projects.md)):
 
    ```sh
+   xorchestrate setup ~/companion     # create (or link) your private companion; runs doctor
+   cd /path/to/project                # a git repository
+   xorchestrate init                  # registers this machine's instance, writes .mcp.json for a new project
+   xorchestrate approve               # approve the tracked .xorchestrate/ configuration
    xorchestrate describe
-   xorchestrate --config /absolute/path/team.json serve
    ```
 
-`xorchestrate setup` (once per user) and `xorchestrate init` (once per project)
-are not available yet. They arrive with the project-configuration work and will
-then replace step 3.
+   Agent harnesses then run `xorchestrate connect` (the entry `init` writes
+   into Claude Code's `.mcp.json`); the project server starts by itself. The
+   launcher hands each project command to the release the project pins in
+   `.xorchestrate/project.json`, building that toolchain with uv when needed.
 
 ## Upgrade and uninstall
 

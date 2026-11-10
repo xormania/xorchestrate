@@ -18,6 +18,7 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 
+from tests.hexagonal.support.projects import ProjectFixture
 from xorchestrate.adapters.local_socket import same_user
 from xorchestrate.adapters.unix import UnixClient, UnixClientTransport
 from xorchestrate.mcp import MCPDispatcher, serve
@@ -219,42 +220,46 @@ def _communicate(process):
 
 
 class CliEnvironment:
-    """Run the real CLI with a private xorchestrate home and configuration.
+    """Run the real CLI inside a fixture project with a private xorchestrate home.
 
     Only ``XORCHESTRATE_HOME`` isolates the test; runtime-directory variables
-    are removed so they cannot mask how servers are discovered.
+    are removed so they cannot mask how servers are discovered. Commands run
+    in the project's repository, so they find the project from the working
+    directory as a harness's ``connect`` does.
     """
 
     def __init__(self, directory, options=None):
         self.directory = Path(directory)
-        self.config = self.directory / "config.json"
-        self.home = self.directory / "home"
-        self.options = options if options is not None else {"store": {"adapter": "sqlite", "options": {"path": "state.sqlite3"}}}
-        self.config.write_text(json.dumps(self.options), encoding="utf-8")
-        inherited = {key: value for key, value in os.environ.items()
-                     if key not in ("XORCHESTRATE_RUNTIME_DIR", "XDG_RUNTIME_DIR")}
-        self.environment = {**inherited, "XORCHESTRATE_HOME": str(self.home),
-                            "PYTHONPATH": os.pathsep.join([str(ROOT), os.environ.get("PYTHONPATH", "")])}
+        self.options = options if options is not None else {"version": 1, "store": {"adapter": "sqlite"}}
+        self.project = ProjectFixture(self.directory, self.options, name="server")
+        self.home = self.project.home
+        self.repo = self.project.repo
+        self.environment = self.project.environment
         self.processes = []
 
+    def save(self, options=None):
+        """Write ``options`` (default: the current ``options``) as the tracked configuration and approve it."""
+        self.options = self.options if options is None else options
+        self.project.write_config(self.options)
+
     def command(self, *arguments, frame_limit=None):
-        command = [sys.executable, "-m", "xorchestrate", "--config", str(self.config)]
+        command = [sys.executable, "-m", "xorchestrate"]
         if frame_limit is not None:
             command += ["--max-frame-bytes", str(frame_limit)]
         return command + list(arguments)
 
-    def run(self, *arguments, timeout=60, environment=None):
-        return subprocess.run(self.command(*arguments), capture_output=True, cwd=self.directory,
+    def run(self, *arguments, timeout=60, environment=None, cwd=None):
+        return subprocess.run(self.command(*arguments), capture_output=True, cwd=cwd or self.repo,
                               env=environment or self.environment, timeout=timeout)
 
-    def json(self, *arguments, expect=0, environment=None):
-        result = self.run(*arguments, environment=environment)
+    def json(self, *arguments, expect=0, environment=None, cwd=None):
+        result = self.run(*arguments, environment=environment, cwd=cwd)
         assert result.returncode == expect, (result.returncode, result.stdout, result.stderr)
         return json.loads(result.stdout if expect in (0, 3) else result.stderr)
 
-    def spawn(self, *arguments, frame_limit=None):
+    def spawn(self, *arguments, frame_limit=None, cwd=None):
         process = subprocess.Popen(self.command(*arguments, frame_limit=frame_limit), stdin=subprocess.PIPE,
-                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=self.directory,
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=cwd or self.repo,
                                    env=self.environment, bufsize=0)
         channel = PipeChannel(process.stdin, process.stdout.fileno())
         self.processes.append((process, channel))
