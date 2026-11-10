@@ -61,7 +61,11 @@ The identity gate fails the run unless:
 > merge the xcontracts pull request with a merge commit, repin
 > `[tool.uv.sources]` to the xcontracts `master` commit that contains the
 > pinned work, and run `python3 -m scripts.ci.dependencies update`, so the
-> lock never names a commit only reachable from a deleted branch.
+> lock never names a commit only reachable from a deleted branch. When the
+> source is removed, the checkout instructions (README, `docs/live-testkit.md`,
+> `docs/live-acceptance.md`, `docs/telemetry.md`,
+> `docs/behavioral-verification.md`) can return to plain `python3 -m pip
+> install`.
 
 Run the gate locally before tagging:
 

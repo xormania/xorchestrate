@@ -8,7 +8,11 @@ kit in ``test_operator_ports.py``.
 import ast
 import importlib
 import json
+import os
+import shutil
+import subprocess
 import sys
+import venv
 from pathlib import Path
 
 import pytest
@@ -103,3 +107,32 @@ def test_only_test_support_and_collected_tests_may_import_the_kit():
         kit = [_allowed_external(module, patterns, ())
                for module in ("xcontracts.testing", "xcontracts.testing.fakes", "xcontracts.factories")]
         assert all(kit) if name in KIT_ROLES else not any(kit), name
+
+
+BOOTSTRAP = "uv pip install --python python3 -e ."
+UNREACHABLE = ("failed to fetch", "could not connect", "dns error", "network is unreachable", "connection refused",
+               "failed to resolve")
+
+
+def test_the_documented_checkout_bootstrap_installs_xcontracts_in_a_clean_environment(tmp_path):
+    """README's bootstrap must resolve xcontracts while it comes from a git source (plain pip cannot)."""
+    readme = (ROOT / "README.md").read_text()
+    assert BOOTSTRAP in readme.split("## Run locally", 1)[1].split("```", 2)[1], "README bootstrap changed"
+    uv = shutil.which("uv")
+    if uv is None:
+        pytest.skip("uv is not installed")
+    environment = tmp_path / "consumer"
+    venv.EnvBuilder(with_pip=False).create(environment)
+    python = environment / "bin" / "python"
+    command = [uv, *BOOTSTRAP.split()[1:]]
+    command[command.index("python3")] = str(python)
+    command[-1] = str(ROOT)
+    clean = {key: value for key, value in os.environ.items() if not key.startswith(("VIRTUAL_ENV", "UV_PROJECT"))}
+    completed = subprocess.run(command, cwd=tmp_path, env=clean, capture_output=True, text=True, timeout=600)
+    if completed.returncode != 0 and any(marker in completed.stderr.lower() for marker in UNREACHABLE):
+        pytest.skip("the xcontracts git source is unreachable (offline)")
+    assert completed.returncode == 0, completed.stderr[-2000:]
+    probe = subprocess.run([str(python), "-I", "-c", "import xcontracts, xorchestrate.ports as p; "
+                            "print(xcontracts.__version__, p.StateStore is xcontracts.StateStore)"],
+                           cwd=tmp_path, capture_output=True, text=True, timeout=60, check=True)
+    assert probe.stdout.split() == ["0.1.0", "True"]

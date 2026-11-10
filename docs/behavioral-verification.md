@@ -51,11 +51,15 @@ payloads) and work selection may be omitted; when present they must agree.
 ## Reproducible deterministic checks
 
 Run from a candidate checkout with Python 3.12 for baseline validation. Establish
-the external cache before Python starts, then install the declared dependencies:
+the external cache before Python starts, then install the declared dependencies.
+Until xcontracts is published on PyPI, install with uv: it reads the pinned
+xcontracts git source in `pyproject.toml`, which plain pip ignores (pip stops with
+`No matching distribution found for xcontracts`). Once xcontracts is on PyPI,
+`python3 -m pip install ...` works again.
 
 ```sh
 export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XXXXXX")"
-python -m pip install -e '.[test]' -r .github/requirements-ci.txt
+uv pip install --python python -e '.[test]' -r .github/requirements-ci.txt
 python -m scripts.testkit run --suite checks
 ```
 

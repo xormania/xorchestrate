@@ -31,6 +31,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 - The release identity gate refuses a release while a runtime dependency comes
   from a git, path or URL source (until xcontracts 0.1.0 is on PyPI,
   development uses a pinned git source).
+- Checkout installs use `uv pip install --python python3 -e .` until
+  xcontracts is on PyPI, because plain pip cannot read the pinned git source;
+  a test runs that bootstrap in a clean environment.
 
 - Exact-request Jev diagnostic reuse and shared-state question batches reduce repeated calls; CI reports fresh versus historical usage separately.
 
