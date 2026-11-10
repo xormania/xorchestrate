@@ -210,6 +210,14 @@ class StdioServer:
         os.close(self.channel.read_fd)
 
 
+def _communicate(process):
+    # The channel may already have closed stdin; some Python 3.12 releases
+    # raise ValueError when communicate() flushes a closed stdin.
+    if process.stdin is not None and process.stdin.closed:
+        process.stdin = None
+    return process.communicate(timeout=DEADLINE)
+
+
 class CliEnvironment:
     """Run the real CLI with a private xorchestrate home and configuration.
 
@@ -255,7 +263,7 @@ class CliEnvironment:
     def finish(self, process, channel):
         """Close the client's input and return its exit code, remaining stdout and stderr."""
         channel.close_input()
-        stdout, stderr = process.communicate(timeout=DEADLINE)
+        stdout, stderr = _communicate(process)
         return process.returncode, channel.pending + stdout, stderr
 
     def server_log(self):
@@ -267,6 +275,6 @@ class CliEnvironment:
             channel.close()
             if process.poll() is None:
                 process.kill()
-            process.communicate(timeout=DEADLINE)
+            _communicate(process)
         if self.run("status").returncode == 0:
             self.run("down", "--detach")

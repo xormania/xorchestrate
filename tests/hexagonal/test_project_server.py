@@ -375,6 +375,23 @@ def test_down_whose_client_gave_up_still_stops_and_status_never_stops(directory)
         subject.stop()
 
 
+def test_a_decided_stop_is_carried_out_even_if_the_down_exchange_fails(directory):
+    subject = InProcessServer(HeldApplication(), directory / "s.sock")
+    try:
+        decide = subject.server._drain
+
+        def decide_then_fail(detach):
+            decide(detach)
+            raise RuntimeError("failure after the stop was decided")
+
+        subject.server._drain = decide_then_fail
+        subject.client("operator", purpose="control").send({"command": "down"})
+        subject.thread.join(5)
+        assert not subject.thread.is_alive(), "a decided stop was lost when its control exchange failed"
+    finally:
+        subject.stop()
+
+
 def test_control_down_requires_a_boolean_detach(directory):
     subject = InProcessServer(HeldApplication(), directory / "s.sock")
     try:
@@ -435,6 +452,28 @@ def test_unanswered_handshake_is_a_timeout_not_a_refusal(directory):
         assert caught.value.code == "handshake_timeout"
     finally:
         silent.close()
+
+
+def test_a_server_side_hello_timeout_is_reported_as_a_timeout(directory):
+    listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    listener.bind(str(directory / "slow.sock"))
+    listener.listen(1)
+
+    def give_up():
+        peer, _ = listener.accept()
+        peer.makefile("rb").readline()
+        peer.sendall(b'{"xorchestrate":"refused","error":{"code":"handshake_timeout","message":"late"}}\n')
+        peer.close()
+
+    responder = threading.Thread(target=give_up, daemon=True)
+    responder.start()
+    try:
+        with pytest.raises(OrchestrationError) as caught:
+            UnixClient(directory / "slow.sock", timeout=5)
+        assert (caught.value.code, caught.value.details["reason"]) == ("handshake_timeout", "handshake_timeout")
+    finally:
+        responder.join(5)
+        listener.close()
 
 
 # -- failed writes close the connection ----------------------------------------
@@ -515,6 +554,31 @@ def test_requests_on_a_stopped_dispatcher_release_their_admission():
     replies = {reply["id"]: reply for reply in map(json.loads, output.getvalue().splitlines())}
     assert replies[2]["error"]["code"] == -32003 and replies[3]["error"]["code"] == -32003, replies
     assert dispatcher.in_flight == 0
+
+
+def test_live_sessions_snapshots_sessions_that_workers_add_concurrently():
+    from contextlib import contextmanager
+    app = application()
+    app._owned_session_ids.update({"absent-1", "absent-2"})
+    store = app.store
+
+    class AddingTransaction:
+        def __init__(self, tx):
+            self.tx = tx
+
+        def get(self, kind, key):
+            # A request worker starts another session while live_sessions reads.
+            app._owned_session_ids.add(f"added-{len(app._owned_session_ids)}")
+            return self.tx.get(kind, key)
+
+    class AddingStore:
+        @contextmanager
+        def transaction(self):
+            with store.transaction() as tx:
+                yield AddingTransaction(tx)
+
+    app.store = AddingStore()
+    assert app.live_sessions() == []
 
 
 # -- one server per configuration, whatever the client's environment ----------

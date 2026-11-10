@@ -206,35 +206,43 @@ class ProjectServer:
 
     def _control(self, connection):
         while (frame := connection.read_frame()) is not None:
-            stop_after = False
+            drained, reply = False, None
             try:
-                request = json.loads(frame)
-                command = request.get("command") if isinstance(request, dict) else None
-                if command == "status":
-                    reply = self.status()
-                elif command == "down":
-                    detach = request.get("detach", False)
-                    if type(detach) is not bool:
-                        reply = {"error": {"code": "invalid_arguments", "message": "detach must be a boolean."}}
+                try:
+                    request = json.loads(frame)
+                    command = request.get("command") if isinstance(request, dict) else None
+                    if command == "status":
+                        reply = self.status()
+                    elif command == "down":
+                        detach = request.get("detach", False)
+                        if type(detach) is not bool:
+                            reply = {"error": {"code": "invalid_arguments", "message": "detach must be a boolean."}}
+                        else:
+                            drained = True
+                            reply = self._drain(detach)
                     else:
-                        reply = self._drain(detach)
-                        stop_after = reply.get("stopping") is True
-                else:
-                    reply = {"error": {"code": "unsupported_operation", "message": "Unknown control command."}}
-            except OrchestrationError as exc:
-                reply = {"error": failure(exc)}
-            except (ValueError, RecursionError):
-                reply = {"error": {"code": "invalid_json", "message": "Expected one JSON control request."}}
-            try:
-                connection.write_frame(json.dumps(reply, allow_nan=False).encode())
-            except Exception:
-                if not stop_after:
-                    raise
-            if stop_after:
-                # The decision stands whether or not the reply reached the client
-                # (it may have timed out and left); the accept loop now stops.
-                self._stopping.set()
+                        reply = {"error": {"code": "unsupported_operation", "message": "Unknown control command."}}
+                except OrchestrationError as exc:
+                    reply = {"error": failure(exc)}
+                except (ValueError, RecursionError):
+                    reply = {"error": {"code": "invalid_json", "message": "Expected one JSON control request."}}
+                try:
+                    connection.write_frame(json.dumps(reply, allow_nan=False).encode())
+                except Exception:
+                    if not self._stops_after(drained, reply):
+                        raise
+            finally:
+                if self._stops_after(drained, reply):
+                    # The decision stands however this exchange ended: reply
+                    # delivered, client gone, or an unexpected error after the
+                    # decision. The accept loop now stops.
+                    self._stopping.set()
+            if self._stops_after(drained, reply):
                 return
+
+    def _stops_after(self, drained, reply):
+        """Whether this ``down`` exchange decided the stop (``reply`` is ``None`` if it raised)."""
+        return drained and self._stop_decided and (reply is None or reply.get("stopping") is True)
 
 
 # -- locations ---------------------------------------------------------------

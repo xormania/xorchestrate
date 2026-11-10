@@ -262,8 +262,8 @@ class UnixClient:
     """Client side of the hello exchange, used by ``connect`` and the control commands.
 
     Raises ``OSError`` when nothing listens at the path, and ``OrchestrationError``
-    coded ``connection_refused`` (with the server's ``reason``) or
-    ``handshake_timeout`` when a listener does not welcome this client.
+    coded ``handshake_timeout`` when either side's hello deadline passed, or
+    ``connection_refused`` (with the server's ``reason``) for any other refusal.
     """
 
     def __init__(self, path, *, actor="owner", purpose="mcp", attributes=None, timeout=5.0, max_frame_bytes=1_048_576):
@@ -290,6 +290,8 @@ class UnixClient:
             if not isinstance(reply, dict) or reply.get("xorchestrate") != "welcome":
                 error = reply.get("error", {}) if isinstance(reply, dict) else {}
                 reason = error.get("code", "closed") if isinstance(error, dict) else "closed"
+                if reason == "handshake_timeout":
+                    raise OrchestrationError(_REFUSALS[reason], "handshake_timeout", {"reason": reason})
                 raise OrchestrationError(_REFUSALS.get(reason, "The server refused the connection."),
                                          "connection_refused", {"reason": reason})
             self.welcome = reply

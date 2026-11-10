@@ -75,7 +75,7 @@ The server answers `welcome`, or `refused` with a reason:
 | --- | --- |
 | `server_full` | `--max-connections` MCP clients are connected (default 64). `connect` exits with an error; it never starts a second server. |
 | `draining` | The server is stopping (see below). `connect` waits for it to exit and then starts a new one, within `--start-timeout`. |
-| `handshake_timeout` | No complete hello arrived within 5 seconds in total. |
+| `handshake_timeout` | No complete hello arrived within 5 seconds in total. Clients report this, and their own unanswered hello, as `handshake_timeout`, never as `connection_refused`. |
 | `invalid_handshake` | The first frame was not a valid hello. |
 
 Each hello is read on its own thread with a total deadline, so an idle or
@@ -165,7 +165,8 @@ transport is a machine-level choice made by the command, not by configuration.
    remaining calls, closes every connection, closes the runtime, removes its
    discovery record and exits.
 
-The decision to stop does not depend on the reply reaching the client:
+The decision to stop does not depend on the reply reaching the client, or on
+anything else that happens on that control connection after the decision:
 `down --timeout` bounds only how long the command waits. If it gives up, the
 server still finishes the drain and exits on its own; `status` reports
 `draining: true` meanwhile and never stops the server.
