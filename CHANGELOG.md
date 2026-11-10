@@ -114,6 +114,15 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 - Installed-package acceptance also installs the launcher with `uv tool install`
   from a flat index, the wheel, a git tag and a source directory, and runs it
   through `uvx`, checking the reported `install_source` for each.
+- The package installs a short command, `xo`, beside `xorchestrate`; both run
+  the same launcher. Documentation uses `xo`. Entries the launcher writes for
+  other programs (the `.mcp.json` entry from `init`) keep `xorchestrate`.
+- `xork`, a short install name (`uv tool install xork`): a package without
+  code that depends only on `xorchestrate` of exactly its own version and
+  provides the same commands. Every release builds, checks and publishes it with
+  `xorchestrate`; the identity gate refuses a `xork` version or pin that differs
+  from the package version. When `xork` is installed, `--version` reports its
+  install source and upgrade command (for example `uv tool upgrade xork`).
 
 ### Upgrade notes
 
@@ -190,6 +199,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   Where the platform has no `SO_PEERCRED`, neither side can check the peer's
   user and both proceed; keep an explicit `--socket` in a directory only you
   can traverse there (see [project server](docs/project-server.md#known-limitations)).
+- **Commands:** the new `xo` command needs nothing; `xorchestrate` keeps
+  working and existing harness entries stay valid. `uv tool install` refuses to
+  replace an `xo` it did not install in its executable directory; remove or
+  rename that file, or keep using `xorchestrate`.
 - **Lifecycle definitions:** None.
 - **Adapter options:** the local telemetry adapter's `profile` option is
   removed; a configuration that still sets it leaves telemetry unavailable with

@@ -71,6 +71,15 @@ def test_uv_on_path_installs_the_selected_source(sandbox, arguments, env, expect
     assert not [call for call in calls if call[0] in {"curl", "sudo"}]
 
 
+@pytest.mark.parametrize(("short", "named"), [(True, "xo"), (False, "xorchestrate")])
+def test_the_next_steps_name_the_short_command_when_the_release_provides_it(sandbox, short, named):
+    sandbox.provide_uv(short=short)
+    result = sandbox.run()
+    assert result.returncode == 0, result.stderr
+    assert f"  {named} --version   show the release" in result.stdout
+    assert (sandbox.tool_bin / "xo").exists() is short
+
+
 @pytest.mark.parametrize(("arguments", "message"), [
     (("--version", "1.0.0", "--git", "v1.0.0"), "use either --version or --git, not both"),
     (("--git",), "--git needs a tag, branch or commit"),

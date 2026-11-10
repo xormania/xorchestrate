@@ -50,14 +50,18 @@ and controller-request limits alongside the existing deadlines.
 
 ## Install
 
-Install the `xorchestrate` launcher with uv, pipx, the install script or `uvx`;
-see [install](docs/install.md) for every supported path and the next steps.
-For example, from a release tag:
+Install the launcher with uv, pipx, the install script or `uvx`; see
+[install](docs/install.md) for every supported path and the next steps. It
+provides the command `xo` and its long form `xorchestrate`, which are the same
+program. For example, from a release tag:
 
 ```bash
 uv tool install git+https://github.com/xormania/xorchestrate@vX.Y.Z
-xorchestrate --version
+xo --version
 ```
+
+Once a release is on PyPI, `uv tool install xork` is the short form of
+`uv tool install xorchestrate`.
 
 Maintainers publish releases as described in [releases](docs/releases.md).
 

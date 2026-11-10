@@ -1,0 +1,29 @@
+# The `xork` alias: installing it installs exactly the same release of
+# xorchestrate. It ships no code. It declares the same console commands because
+# `uv tool install xork` and `pipx install xork` expose only the commands of the
+# package they name; through them, `xork` provides `xo` and `xorchestrate`.
+#
+# Keep `version` and the `xorchestrate==` pin equal to the version in the
+# repository's pyproject.toml; the release identity gate refuses anything else.
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xork"
+version = "0.2.0"
+description = "Short install name for xorchestrate: installs the same release and its xo command"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = ["xorchestrate==0.2.0"]
+
+[project.urls]
+Source = "https://github.com/xormania/xorchestrate"
+
+[project.scripts]
+xo = "xorchestrate.cli:main"
+xorchestrate = "xorchestrate.cli:main"
+
+[tool.setuptools]
+packages = []

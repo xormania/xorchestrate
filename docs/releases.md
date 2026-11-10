@@ -3,22 +3,31 @@
 A release is an annotated tag `vMAJOR.MINOR.PATCH` on `master`; a pre-release is
 `vMAJOR.MINOR.PATCH-rc.N`. Pushing the tag runs
 [`.github/workflows/release.yml`](../.github/workflows/release.yml), which checks
-the release, publishes the wheel and source distribution to PyPI and attaches them
-to the GitHub release. xor decides when to release.
+the release, publishes the wheels and source distributions of `xorchestrate` and
+its alias `xork` to PyPI and attaches them to the GitHub release. xor decides
+when to release.
+
+`xork` ([`packaging/xork`](../packaging/xork)) is a short install name with no
+code: its only dependency is `xorchestrate==X.Y.Z` of exactly its own version,
+and it declares the same `xo` and `xorchestrate` commands, because `uv tool
+install` and `pipx install` expose only the commands of the package they name.
+Its version and pin are set by hand with each release; the identity gate refuses
+a release where they differ from the package version.
 
 > **TODO (license): the first publish waits on the license.** xorchestrate will be
 > licensed under the Business Source License 1.1, and its parameters (licensor,
 > Additional Use Grant, Change Date, Change License) are not set yet. Add the
-> `LICENSE` file and the `pyproject.toml` license metadata (`BUSL-1.1`) before
-> pushing the first release tag, so the first published package carries them.
+> `LICENSE` file and the `pyproject.toml` license metadata (`BUSL-1.1`), in the
+> repository and in `packaging/xork`, before pushing the first release tag, so
+> the first published packages carry them.
 > A TestPyPI dry run may happen before that.
 
 ## What the workflow does
 
 | Job | Runs on | Does |
 | --- | --- | --- |
-| Build distributions and check release identity | tag push, manual run | builds the wheel and sdist with the locked validation tools (`python -m build --no-isolation`), then runs `scripts/ci/release_identity.py` |
-| Installed package acceptance of the built distributions | after build | runs [installed package acceptance](package-acceptance.md) on exactly the built files, including the launcher install paths |
+| Build distributions and check release identity | tag push, manual run | builds the wheel and sdist of the repository and of `packaging/xork` with the locked validation tools (`python -m build --no-isolation`), then runs `scripts/ci/release_identity.py` |
+| Installed package acceptance of the built distributions | after build | runs [installed package acceptance](package-acceptance.md) on exactly the built files, including the launcher install paths and `xork` |
 | Publish | after both | uploads the built files with trusted publishing: to PyPI (environment `pypi`) for a tag push, to TestPyPI (environment `testpypi`) for a manual run |
 | Attach distributions to the GitHub release | tag push, after publish | creates the release for the tag with the changelog entry as notes (marked pre-release for `-rc.N`), or uploads the files to the release if it already exists |
 
@@ -27,11 +36,14 @@ The identity gate fails the run unless:
 - the tag matches `vMAJOR.MINOR.PATCH` or `vMAJOR.MINOR.PATCH-rc.N`;
 - `__version__` in `xorchestrate/__init__.py` and `version` in `pyproject.toml`
   both equal the tag without the `v`;
+- `packaging/xork/pyproject.toml` declares that same version and exactly one
+  dependency, `xorchestrate==` that version;
 - `CHANGELOG.md` has an entry headed `## X.Y.Z` (also accepted: `## [X.Y.Z]`,
   `## vX.Y.Z`, optionally followed by a date) with a non-empty `### Upgrade notes`
   section;
-- the build produced exactly one wheel and one sdist carrying that version (in
-  PEP 440 form, so `1.3.0-rc.2` becomes `1.3.0rc2` in file names);
+- the build produced exactly one wheel and one sdist of `xorchestrate` and of
+  `xork`, and nothing else, all carrying that version (in PEP 440 form, so
+  `1.3.0-rc.2` becomes `1.3.0rc2` in file names);
 - for a tag push, the tag is annotated and its commit is on `master`.
 
 Run the gate locally before tagging:
@@ -48,27 +60,26 @@ is stored anywhere. Only the GitHub release job can write repository contents.
 1. **PyPI account.** Create an account on <https://pypi.org> and enable two-factor
    authentication. Do the same on <https://test.pypi.org> for dry runs; the two are
    separate services with separate accounts.
-2. **Trusted publishers.** The project `xorchestrate` does not exist on PyPI yet,
-   so register a *pending* publisher: on PyPI, *Your account → Publishing → Add a
-   new pending publisher → GitHub*, with:
+2. **Trusted publishers.** Both projects, `xorchestrate` and `xork`, already
+   exist on PyPI and TestPyPI: each name is reserved by a `0.0.1` placeholder
+   upload, so nobody else can register it. Add a normal (not pending) trusted
+   publisher to each project: on PyPI, *Your projects → (project) → Manage →
+   Publishing → Add a new publisher → GitHub*, with:
 
    | Field | Value |
    | --- | --- |
-   | PyPI project name | `xorchestrate` |
    | Owner | `xormania` |
    | Repository name | `xorchestrate` |
    | Workflow name | `release.yml` |
    | Environment name | `pypi` |
 
-   Repeat on TestPyPI with environment name `testpypi`. The project is created
-   on the first upload from this workflow.
-
-   **A pending publisher does not reserve the name.** Until the first upload,
-   anyone can register a project called `xorchestrate` on PyPI; if that happens,
-   the pending publisher is invalidated and the name is lost to this project.
-   The name was unclaimed when checked (2026-11-10), but nothing holds it. The
-   only way to hold it is to upload a release, so the gap between this setup and
-   the first publish should be short.
+   Do this for `xorchestrate` and for `xork`, then repeat both on TestPyPI with
+   environment name `testpypi`. One publish step uploads both projects' files
+   in name order (`xorchestrate` first), so a missing `xork` publisher fails
+   the run after `xorchestrate` was uploaded; that version then cannot be
+   completed and needs a new patch release. Add all four publishers before tagging.
+   The placeholders stay in each project's history; a real release has a higher
+   version, so installs never pick them unless someone asks for `==0.0.1`.
 3. **GitHub environments.** In the repository's *Settings → Environments*, create
    `pypi` and `testpypi`. For `pypi` both of these are required:
    - *Required reviewers*: one or more maintainers who approve every upload;
@@ -105,8 +116,10 @@ been made.
    needs, or "None": configuration format (and any rewrite), data version (and
    the migration), lifecycle definitions, adapter options, operator source schema
    and the telemetry collector.
-2. **Version.** Set `__version__` in `xorchestrate/__init__.py` and `version` in
-   `pyproject.toml` to `X.Y.Z` in one commit titled with the version. Run
+2. **Version.** Set `__version__` in `xorchestrate/__init__.py`, `version` in
+   `pyproject.toml`, and both `version` and the `xorchestrate==` pin in
+   `packaging/xork/pyproject.toml` to `X.Y.Z` in one commit titled with the
+   version. Run
    `python3 -m scripts.ci.dependencies update` so `uv.lock` records it, and commit
    the lock with it.
 3. **Release pull request.** Open it. CI runs the normal suites.
@@ -129,12 +142,13 @@ been made.
 
 6. **Publish.** The tag push runs the workflow. A reviewer checks that the run's
    commit is the merged release commit on `master`, then approves the `pypi`
-   deployment. When it finishes, the release is on PyPI and the GitHub
-   release for the tag has the wheel and sdist attached, with the changelog entry
-   as notes if the workflow created it. Check:
+   deployment. When it finishes, both projects' releases are on PyPI and the
+   GitHub release for the tag has the wheels and sdists attached, with the
+   changelog entry as notes if the workflow created it. Check:
 
    ```sh
-   uvx --from xorchestrate==X.Y.Z xorchestrate --version
+   uvx --from xorchestrate==X.Y.Z xo --version
+   uvx --from xork==X.Y.Z xo --version
    ```
 
 7. **Roll out.** In the companion, open a pull request changing `default_release`

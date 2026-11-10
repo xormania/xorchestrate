@@ -8,6 +8,10 @@ from markers its environments carry: ``uv tool install`` writes ``uv-receipt.tom
 pipx writes ``pipx_metadata.json``, and ``uvx`` runs from an environment inside
 uv's cache. Those records also say whether an index install was pinned to a
 version, a pin that ``uv tool upgrade`` and ``pipx upgrade`` keep.
+
+The ``xork`` alias distribution installs ``xorchestrate`` as its only
+dependency. When it is installed alongside, it is what the user asked for, so
+the source and the upgrade command describe it instead.
 """
 
 import json
@@ -21,6 +25,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 DISTRIBUTION = "xorchestrate"
+ALIASES = ("xork",)
 SOURCES = ("index", "git", "local", "archive", "unknown")
 INSTALLERS = ("uv-tool", "pipx", "uvx", "environment")
 # The cache directory tag uv, like other tools, writes at its cache root.
@@ -38,6 +43,7 @@ class Installation:
     editable: bool = False
     python: str | None = None
     pinned: bool = False
+    name: str = DISTRIBUTION
 
     @property
     def reported_source(self):
@@ -118,17 +124,27 @@ def pinned_requirement(prefix, installer, name=DISTRIBUTION):
     return False
 
 
-def installation(distribution=None, prefix=None, python=None, name=DISTRIBUTION):
+def installation(distribution=None, prefix=None, python=None, name=DISTRIBUTION, aliases=ALIASES):
+    """How the environment at ``prefix`` got ``name``, or the first of ``aliases`` installed with it."""
     prefix = sys.prefix if prefix is None else prefix
     installer = detect_installer(prefix)
     python = sys.executable if python is None else python
+    lookup = distribution or metadata.distribution
     try:
-        found = (distribution or metadata.distribution)(name)
+        found = lookup(name)
     except metadata.PackageNotFoundError:
-        return Installation("unknown", installer, python=python)
-    source, url, commit, editable = classify_source(_record(found))
+        return Installation("unknown", installer, python=python, name=name)
+    # The commit is the running code's; the source is how the user installed it.
+    commit = classify_source(_record(found))[2]
+    for alias in aliases:
+        try:
+            found, name = lookup(alias), alias
+            break
+        except metadata.PackageNotFoundError:
+            continue
+    source, url, _, editable = classify_source(_record(found))
     pinned = source == "index" and pinned_requirement(prefix, installer, name)
-    return Installation(source, installer, url, commit, editable, python, pinned)
+    return Installation(source, installer, url, commit, editable, python, pinned, name)
 
 
 def _requirement(info, name):
@@ -144,14 +160,17 @@ def _requirement(info, name):
     return "<newer wheel or sdist>"
 
 
-def upgrade_command(info, name=DISTRIBUTION):
+def upgrade_command(info, name=None, command=DISTRIBUTION):
     """The command that upgrades this launcher the way it was installed; ``None`` when unknown.
 
-    A pinned index install is reinstalled without its pin, because ``uv tool
-    upgrade`` and ``pipx upgrade`` keep a recorded ``==X.Y.Z``.
+    ``name`` is the distribution to upgrade (by default the one the installation
+    found); ``command`` is the executable ``uvx`` runs, present in either
+    distribution. A pinned index install is reinstalled without its pin, because
+    ``uv tool upgrade`` and ``pipx upgrade`` keep a recorded ``==X.Y.Z``.
     """
     if info.source == "unknown":
         return None
+    name = info.name if name is None else name
     requirement = _requirement(info, name)
     editable = ["--editable"] if info.editable else []
     if info.installer == "uv-tool" and info.source == "index":
@@ -163,8 +182,8 @@ def upgrade_command(info, name=DISTRIBUTION):
     elif info.installer == "pipx":
         argv = ["pipx", "install", "--force", *editable, requirement]
     elif info.installer == "uvx":
-        argv = (["uvx", "--from", name + "@latest", name] if info.source == "index"
-                else ["uvx", "--refresh", "--from", requirement, name])
+        argv = (["uvx", "--from", name + "@latest", command] if info.source == "index"
+                else ["uvx", "--refresh", "--from", requirement, command])
     else:
         argv = ["uv", "pip", "install", "--python", info.python or "python", "--upgrade", *editable, requirement]
     return shlex.join(argv)

@@ -31,10 +31,11 @@ def _logger(name, log):
            f"printf '\\n' >> {shlex.quote(str(log))}\n"
 
 
-def fake_uv(log, tool_bin, fail_install=False):
+def fake_uv(log, tool_bin, fail_install=False, short=True):
     """A uv that records calls, reports ``tool_bin`` and installs a stub launcher.
 
-    The launcher is named after ``XORCHESTRATE_PACKAGE``, as uv names it after the package.
+    The launcher is named after ``XORCHESTRATE_PACKAGE``, as uv names it after the package;
+    with ``short`` the release also provides the ``xo`` command.
     """
     launcher = (f"#!{SHELL}\nprintf '%s\\n' '{{\"version\": \"0.0.0\", \"install_source\": \"index\"}}'\n")
     return _logger("uv", log) + f"""
@@ -47,7 +48,8 @@ case "$1 $2" in
         mkdir -p {shlex.quote(str(tool_bin))}
         if [ -x "$launcher" ]; then echo "already installed"; exit 0; fi
         printf '%s' {shlex.quote(launcher)} > "$launcher"
-        chmod 700 "$launcher" ;;
+        chmod 700 "$launcher"
+        {f"cp \"$launcher\" {shlex.quote(str(tool_bin))}/xo" if short else ""} ;;
     *) exit 64 ;;
 esac
 """
@@ -70,8 +72,8 @@ class InstallSandbox:
             os.symlink(shutil.which(tool, path=SYSTEM_PATH), self.bin / tool)
         _program(self.bin / "sudo", _logger("sudo", self.log) + "exit 1\n")
 
-    def provide_uv(self, *, fail_install=False):
-        _program(self.bin / "uv", fake_uv(self.log, self.tool_bin, fail_install))
+    def provide_uv(self, *, fail_install=False, short=True):
+        _program(self.bin / "uv", fake_uv(self.log, self.tool_bin, fail_install, short))
 
     def provide_curl(self, *, installs_uv=True, download_fails=False):
         installer = self.root / "uv-installer.sh"

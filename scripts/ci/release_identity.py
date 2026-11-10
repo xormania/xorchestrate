@@ -3,8 +3,11 @@
 A release is an annotated tag ``vMAJOR.MINOR.PATCH`` (optionally ``-rc.N``) whose
 commit sets ``__version__`` and the ``pyproject.toml`` version to the same string
 without the ``v``. ``CHANGELOG.md`` has a ``## X.Y.Z`` entry with a non-empty
-``### Upgrade notes`` section. Built distributions, when given, carry the version.
-Without ``--tag`` (a manual dry run) the expected tag is ``v`` + ``__version__``.
+``### Upgrade notes`` section. Each alias project (by default ``packaging/xork``)
+declares the same version and depends only on exactly that release of the
+package. Built distributions, when given, are one wheel and one sdist of the
+package and of each alias, all carrying the version. Without ``--tag`` (a manual
+dry run) the expected tag is ``v`` + ``__version__``.
 """
 
 from __future__ import annotations
@@ -19,6 +22,7 @@ from pathlib import Path
 
 TAG = re.compile(r"v(?P<version>(?P<release>\d+\.\d+\.\d+)(?:-rc\.(?P<rc>\d+))?)")
 ENTRY = re.compile(r"##\s+\[?v?(?P<version>[^\]\s]+)\]?(?:\s.*)?")
+ALIASES = ("packaging/xork",)
 
 
 def normalized(version):
@@ -37,9 +41,35 @@ def package_version(root, package="xorchestrate"):
     return None
 
 
+def _project(root):
+    return tomllib.loads((Path(root) / "pyproject.toml").read_text(encoding="utf-8")).get("project", {})
+
+
 def project_metadata(root):
-    project = tomllib.loads((Path(root) / "pyproject.toml").read_text(encoding="utf-8")).get("project", {})
+    project = _project(root)
     return project.get("name"), project.get("version")
+
+
+def check_alias(root, directory, package, version, errors):
+    """An alias project declares ``version`` and depends only on ``package==version``."""
+    location = Path(root) / directory
+    if not (location / "pyproject.toml").is_file():
+        errors.append(f"Alias project {directory} has no pyproject.toml")
+        return {"directory": str(directory), "name": None, "version": None, "dependencies": None}
+    project = _project(location)
+    name, declared, dependencies = project.get("name"), project.get("version"), project.get("dependencies")
+    report = {"directory": str(directory), "name": name, "version": declared, "dependencies": dependencies}
+    if not isinstance(name, str) or not name or name == package:
+        errors.append(f"Alias project {directory} name {name!r} is not a distinct distribution name")
+    if version is not None and declared != version:
+        errors.append(f"Alias {name} version {declared!r} does not match {package} version {version!r}")
+    pin = f"{package}=={version}"
+    pins = [re.sub(r"\s+", "", item) for item in dependencies] if isinstance(dependencies, list) else None
+    if version is not None and pins != [pin]:
+        errors.append(f"Alias {name} dependencies {dependencies!r} are not exactly [{pin!r}]")
+    if project.get("optional-dependencies") or "dependencies" in project.get("dynamic", []):
+        errors.append(f"Alias {name} must not declare optional or dynamic dependencies")
+    return report
 
 
 def changelog_entry(text, version):
@@ -76,7 +106,8 @@ def _git(root, *args):
     return subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True, check=False, timeout=60)
 
 
-def check(root, *, tag=None, package="xorchestrate", distributions=None, annotated=False, ancestor_of=None):
+def check(root, *, tag=None, package="xorchestrate", distributions=None, annotated=False, ancestor_of=None,
+          aliases=ALIASES):
     """Return ``(report, errors)``; an empty error list means the identity agrees."""
     root = Path(root)
     errors = []
@@ -96,6 +127,8 @@ def check(root, *, tag=None, package="xorchestrate", distributions=None, annotat
         errors.append(f"pyproject.toml version {declared!r} does not match tag {expected_tag!r}")
     if name != package:
         errors.append(f"pyproject.toml name {name!r} is not {package!r}")
+    report["aliases"] = [check_alias(root, directory, package, match["version"] if match else version, errors)
+                         for directory in aliases]
     changelog = root / "CHANGELOG.md"
     entry = changelog_entry(changelog.read_text(encoding="utf-8"), match["version"]) if match and changelog.is_file() else None
     report["changelog"] = {"entry": entry is not None, "upgrade_notes": bool(entry and upgrade_notes(entry))}
@@ -105,7 +138,8 @@ def check(root, *, tag=None, package="xorchestrate", distributions=None, annotat
         errors.append(f"CHANGELOG.md entry {match['version']} has no non-empty '### Upgrade notes' section")
     report["notes"] = entry
     if distributions is not None:
-        report["distributions"] = _check_distributions(Path(distributions), package, match, errors)
+        names = [package, *(alias["name"] for alias in report["aliases"] if isinstance(alias["name"], str))]
+        report["distributions"] = _check_distributions(Path(distributions), names, match, errors)
     if annotated and match:
         kind = _git(root, "cat-file", "-t", f"refs/tags/{expected_tag}").stdout.strip()
         report["annotated"] = kind == "tag"
@@ -119,16 +153,19 @@ def check(root, *, tag=None, package="xorchestrate", distributions=None, annotat
     return report, errors
 
 
-def _check_distributions(directory, package, match, errors):
+def _check_distributions(directory, names, match, errors):
+    """Exactly one wheel and one sdist of each distribution in ``names``, carrying the tag's version."""
     files = sorted(path.name for path in directory.iterdir() if path.is_file()) if directory.is_dir() else []
     wheels = [name for name in files if name.endswith(".whl")]
     sdists = [name for name in files if name.endswith(".tar.gz")]
-    if len(wheels) != 1 or len(sdists) != 1 or len(files) != 2:
-        errors.append(f"Expected exactly one wheel and one sdist in {directory}, found {files}")
+    if len(wheels) != len(names) or len(sdists) != len(names) or len(files) != 2 * len(names):
+        errors.append(f"Expected exactly one wheel and one sdist of each of {names} in {directory}, found {files}")
     elif match:
-        stem = package.replace("-", "_") + "-" + normalized(match["version"])
-        if not wheels[0].startswith(stem + "-") or sdists[0] != stem + ".tar.gz":
-            errors.append(f"Distributions {files} do not carry {stem}")
+        for name in names:
+            stem = name.replace("-", "_") + "-" + normalized(match["version"])
+            if (sum(wheel.startswith(stem + "-") for wheel in wheels) != 1
+                    or sum(sdist == stem + ".tar.gz" for sdist in sdists) != 1):
+                errors.append(f"Distributions {files} do not carry {stem}")
     return files
 
 
@@ -137,14 +174,17 @@ def main(argv=None):
     parser.add_argument("--root", type=Path, default=Path("."))
     parser.add_argument("--tag", help="Release tag; omitted for a dry run, which expects v + __version__")
     parser.add_argument("--package", default="xorchestrate")
-    parser.add_argument("--dist", type=Path, help="Directory holding the built wheel and sdist")
+    parser.add_argument("--dist", type=Path, help="Directory holding the built wheels and sdists")
+    parser.add_argument("--alias", action="append", metavar="DIR",
+                        help=f"Alias project directory, relative to --root (repeatable; default: {', '.join(ALIASES)})")
     parser.add_argument("--annotated", action="store_true", help="Require the tag to be an annotated git tag")
     parser.add_argument("--ancestor-of", metavar="REF", help="Require the tagged commit to be contained in REF")
     parser.add_argument("--notes-output", type=Path, help="Write the changelog entry here")
     parser.add_argument("--github-output", type=Path, help="Append tag/version/prerelease outputs here")
     args = parser.parse_args(argv)
     report, errors = check(args.root, tag=args.tag, package=args.package, distributions=args.dist,
-                           annotated=args.annotated, ancestor_of=args.ancestor_of)
+                           annotated=args.annotated, ancestor_of=args.ancestor_of,
+                           aliases=ALIASES if args.alias is None else tuple(args.alias))
     report["status"], report["errors"] = ("failed" if errors else "passed"), errors
     print(json.dumps(report, indent=2))
     if errors:

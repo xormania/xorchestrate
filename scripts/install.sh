@@ -139,11 +139,17 @@ main() {
         *) on_path=no ;;
     esac
 
+    # The package also installs the short command `xo`; name it when the release has it.
+    command_name=$package
+    if [ -x "$bin_dir/xo" ]; then
+        command_name=xo
+    fi
+
     say "next steps:"
     if [ "$on_path" = no ]; then
         say "  $bin_dir is not on your PATH; run '$uv tool update-shell' and open a new shell"
     fi
-    say "  $package --version   show the release, how it was installed and its upgrade_command"
+    say "  $command_name --version   show the release, how it was installed and its upgrade_command"
     say "  then follow the next steps in $repository/blob/master/docs/install.md"
 }
 
