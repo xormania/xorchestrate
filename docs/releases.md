@@ -74,6 +74,11 @@ is stored anywhere. Only the GitHub release job can write repository contents.
    - *Required reviewers*: one or more maintainers who approve every upload;
    - *Deployment branches and tags*: only tags matching `v*.*.*`.
 
+   For `testpypi`, *Required reviewers* is required too. A manual run uses the
+   `release.yml` of whichever branch it is dispatched from, so without a
+   reviewer anyone who can push a branch and run workflows could publish a
+   modified build to the TestPyPI project used for dry runs.
+
    Nothing else is needed: no secrets.
 4. **Tag ruleset.** In *Settings → Rules → Rulesets*, add a tag ruleset targeting
    `v*` that restricts creation, update and deletion to maintainers (bypass list:
@@ -86,8 +91,8 @@ the checks, and that run can request the `pypi` OIDC token. The identity gate
 (tag, versions, changelog, annotated tag on `master`) runs inside that same
 workflow, so it guards against mistakes, not against someone who controls the
 tagged commit. What stops that is outside the repository: the tag ruleset limits
-who can push release tags, and the required reviewers on `pypi` mean a person
-approves each upload after seeing which commit it comes from.
+who can push release tags, and the required reviewers on `pypi` and `testpypi`
+mean a person approves each upload after seeing which commit it comes from.
 
 These are settings outside the repository; this document does not claim they have
 been made.
