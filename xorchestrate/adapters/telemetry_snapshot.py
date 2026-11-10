@@ -26,6 +26,8 @@ from .telemetry_collector.domain import ArtifactRef, TelemetryError, canonical
 from .telemetry_collector.sqlite import SQLiteRepository
 
 FORMAT = "xorchestrate-telemetry-bundle-v1"
+ARCHIVE_FIELD = "archive"
+"""Manifest field holding archive provenance (companion commit, configuration digests, release)."""
 
 
 class SnapshotError(ValueError):
@@ -290,6 +292,8 @@ def verify_bundle(path, *, authorize=None):
             raise SnapshotError("bundle is incomplete or unsupported")
         identity = dict(manifest)
         bundle_id = identity.pop("bundle_id", None)
+        # Provenance added when a bundle is archived into the companion is not part of its identity.
+        identity.pop(ARCHIVE_FIELD, None)
         if hashlib.sha256(_canonical(identity)).hexdigest() != bundle_id:
             raise SnapshotError("bundle manifest identity differs")
         if manifest["database"]["path"] != "telemetry.sqlite3":

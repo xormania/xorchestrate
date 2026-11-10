@@ -11,7 +11,15 @@ from ..model import OrchestrationError
 from . import companion as records
 from .doctor import doctor
 from .home import Home, read_document, write_document
-from .instance import load_instance, locate_project, prepare, register, relocate, resolve_instance
+from .instance import (
+    load_instance,
+    locate_project,
+    prepare,
+    register,
+    relocate,
+    resolve_instance,
+    upgrade_refusal,
+)
 from .project import default_name, locate_worktree, read_tracked, write_starter
 from .render import launched_commands, merged, repository_references
 from .services import Services, companion_path_selection
@@ -144,7 +152,13 @@ def init(path=None, *, name=None, approve=False, relocate_instance=False, enviro
     if not approved and approve and not first:
         records.approve(companion, tracked.name, tracked.config_hash, tracked.digests, tracked.identity())
         approved = True
-    if approved:
+    pending = upgrade_refusal(instance, tracked)
+    if approved and pending is not None:
+        # A newly pinned release takes effect through `upgrade`, which renders with it.
+        report["approval"] = {"state": "approved", "config_hash": tracked.config_hash}
+        report["upgrade"] = {"state": "required", **pending.details}
+        report["next"] = "Run `xorchestrate upgrade` to move this instance to the pinned release."
+    elif approved:
         prepared = prepare(worktree.root, environ=environ)
         report["approval"] = {"state": "approved", "config_hash": tracked.config_hash}
         report["rendered"] = str(prepared.rendered.path)

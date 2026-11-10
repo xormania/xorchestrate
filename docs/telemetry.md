@@ -90,6 +90,7 @@ false` becomes `"artifacts": {"adapter": "filesystem", "enabled": false}`.
 | `known_secrets` | `[]` | List of nonempty strings redacted from payloads and context; excluded from the configuration identity. |
 | `sources` | `application`, `native`, `capability`, `evaluator`, `process` | List of source names reported as configured. When set explicitly, observations from other sources are not recorded (`source_disabled`). |
 | `operational` | none | Optional operational-signal export; see below. |
+| `snapshots` | `{"triggers": ["before_upgrade"], "archive": false}` | When the operator snapshots the corpus; see [snapshots at chosen moments](#snapshots-at-chosen-moments). Unknown triggers are refused. Excluded from the configuration identity. |
 
 The `operational` object accepts only these fields:
 
@@ -141,6 +142,72 @@ marked incomplete.
 
 The `export_root` is contained in `runtime_root` but is not checked for overlap
 with the database or artifact paths.
+
+## Snapshots at chosen moments
+
+Inside a project, the operator layer snapshots the corpus at moments the
+`snapshots` option selects, not on a timer:
+
+```json
+"telemetry": {"options": {"snapshots": {"triggers": ["before_upgrade", "before_sync"], "archive": true}}}
+```
+
+| Trigger | When |
+| --- | --- |
+| `before_upgrade` (default) | after [`xorchestrate upgrade`](upgrade.md) stops the server and before the release procedure starts |
+| `before_sync` | before a render that changes the rendered configuration (an approved change, an overlay or companion policy change) |
+| `before_approve` | before a newly approved tracked configuration is first rendered |
+| `manual` | always available: `xorchestrate telemetry snapshot [--destination NAME] [--archive]` |
+
+The running configuration's option decides, and its corpus is snapshotted, so
+a change that selects a trigger applies from the render after it. A render that
+is both a sync and a newly approved configuration takes one bundle naming both
+triggers. Bundles are written to the export root as `<trigger>-<UTC time>`;
+the last 20 triggered snapshots are listed in `instance.json` `snapshots`.
+A `before_sync` or `before_approve` snapshot is taken only while the new
+configuration also selects that trigger, so a change that deselects a failing
+trigger takes effect. A selected snapshot that fails refuses the render (or the
+upgrade) with `snapshot_failed`, naming the triggers, the bundle path and the
+cause, and leaves the previous rendered configuration in place. The global
+option `--skip-snapshots` (for example `xorchestrate --skip-snapshots describe`
+or `xorchestrate --skip-snapshots upgrade`) proceeds without the snapshot and
+records it as skipped in `instance.json` `snapshots` (or the upgrade report);
+`up` and `connect` pass it on to the server they start.
+`"triggers": []` selects none. A
+configuration with telemetry disabled takes none. An unknown trigger name,
+including `manual`, is refused when rendering (`configuration_error`) and by the
+collector (`cause` `{"code": "invalid_option", "detail": "snapshots"}`).
+
+### Archiving a bundle in the companion
+
+`xorchestrate telemetry archive BUNDLE` copies a complete, verified bundle (a
+name or path inside the export root) into the [companion](projects.md), through
+the `Companion` port as `telemetry` records: the git-directory adapter writes
+`<companion>/telemetry/<project>/<instance>/<bundle_id>/`. `archive: true`
+archives every triggered and manual snapshot. The archived `manifest.json`
+gains an `archive` object:
+
+| Field | Value |
+| --- | --- |
+| `companion_commit` | the companion's git `HEAD` when archived (`null` without one); uncommitted overlay changes are not in it |
+| `config_sha256` | the approval hash of the tracked configuration last rendered |
+| `overlay_sha256` | SHA-256 of the project's overlay record as of the last render (recorded in `instance.json`), `null` when absent |
+| `release` | the release the instance runs |
+| `project`, `instance_id`, `archived_at` | where and when it was archived |
+
+The `archive` object is not part of the bundle identity, so the archived copy
+keeps its `bundle_id` and still verifies and restores (copy it to a private
+directory first: the corpus adapter requires private files). Every member is
+read back through the port and the reassembled bundle is verified before its
+manifest is written; a bundle without a manifest is incomplete. Archiving an
+already archived bundle only reports it. Nothing is committed: review and
+commit the files yourself. Companions created by `companion init` track
+`telemetry/**/*.sqlite3` with Git LFS through `.gitattributes`; run
+`git lfs install` in the companion once (it is not needed to write archives).
+
+Bundles contain the redacted corpus: only `known_secrets` values and explicit
+credential fields are protected. A secrets scan of the companion before
+publishing archived bundles is not provided; keep the companion private.
 
 ## Operations
 

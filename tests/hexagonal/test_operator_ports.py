@@ -31,6 +31,34 @@ def test_companion_adapters_keep_project_scoped_extensible_records(subject, tmp_
     contract.companion_records(companion)
 
 
+def test_subdirectories_of_flat_companion_kinds_are_not_records(tmp_path):
+    """A launcher library or a parked policy in a subdirectory is neither copied nor merged."""
+    project = ProjectFixture(tmp_path / "project")
+    (project.companion / "launchers" / "lib").mkdir(parents=True)
+    (project.companion / "launchers" / "lib" / "helper.sh").write_text("#!/bin/sh\n")
+    (project.companion / "launchers" / "tool").write_text("#!/bin/sh\n")
+    (project.companion / "policies" / "disabled").mkdir(parents=True)
+    (project.companion / "policies" / "disabled" / "old.json").write_text(json.dumps({"guardrail": {
+        "adapter": "rules", "options": {"default": "deny"}}}))
+    prepared = project.prepared()
+    assert sorted(path.name for path in (project.data_dir / "launchers").iterdir()) == ["tool"]
+    assert "guardrail" not in prepared.config
+
+
+def test_git_directory_records_refuse_a_symbolically_linked_kind(tmp_path):
+    companion = GitDirectoryCompanion({"path": str(tmp_path / "c")}, version_control=GitCLI())
+    companion.initialize()
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    (tmp_path / "c" / "telemetry").symlink_to(elsewhere)
+    with pytest.raises(OrchestrationError) as refused:
+        companion.records("app").write("telemetry", "i/b/manifest.json", b"{}")
+    assert refused.value.code == "invalid_arguments"
+    with pytest.raises(OrchestrationError):
+        companion.records("app").read("telemetry", "i/b/manifest.json")
+    assert list(elsewhere.iterdir()) == [], "nothing was written through the link"
+
+
 def test_git_directory_companion_files_follow_the_documented_layout(tmp_path):
     companion = GitDirectoryCompanion({"path": str(tmp_path / "c")}, version_control=GitCLI())
     companion.initialize()
@@ -51,7 +79,7 @@ def test_version_control_adapters_identify_worktrees_and_history(subject, tmp_pa
         vcs = GitCLI()
     else:
         vcs = FakeVersionControl({"repositories": {"repo": {"worktrees": [str(repository), str(linked)],
-                                                            "roots": ["abc"]}}})
+                                                            "roots": ["abc"], "head": "abc"}}})
     contract.version_control(vcs, repository, linked, elsewhere)
 
 

@@ -132,6 +132,12 @@
         "tests/hexagonal/test_operator_ports.py": "adapter"
       }
     },
+    "upgrade": {
+      "guarantee": "An instance moves to a newly pinned release only through an explicit upgrade of an approved pin: the server is stopped (refused while sessions are live unless detached), the corpus is snapshotted and the state backed up before the target release checks and migrates the data, the new release is recorded only after it reads the configuration, data and telemetry, and a failed or interrupted upgrade leaves the old release recorded and resumes on the next run.",
+      "modules": {
+        "tests/hexagonal/test_upgrade.py": "composition"
+      }
+    },
     "verification": {
       "guarantee": "Independent checker observations, verdicts and fault attribution establish the selected candidate behavior without using product verdicts as the oracle.",
       "modules": {
@@ -203,7 +209,8 @@
         "tests/hexagonal/test_telemetry_collector_artifacts.py": "adapter",
         "tests/hexagonal/test_telemetry_collector_storage.py": "adapter",
         "tests/hexagonal/test_telemetry_collector_selection.py": "composition",
-        "tests/hexagonal/test_telemetry_collector_compatibility.py": "adapter"
+        "tests/hexagonal/test_telemetry_collector_compatibility.py": "adapter",
+        "tests/hexagonal/test_telemetry_snapshots.py": "composition"
       }
     }
   }
