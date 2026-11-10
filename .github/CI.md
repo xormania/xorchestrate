@@ -37,14 +37,14 @@ collection targets only active tests and validates `contracts/testing.json`.
 ## CI jobs
 
 The [installed package acceptance](../docs/package-acceptance.md) job builds and
-installs the actual wheel and source distribution into independent runtime-only
-consumers. It records CLI, persistent-state, stdio MCP and absolute gateway launch
+installs the actual wheels and source distributions of `xorchestrate` and its
+alias `xork` into independent runtime-only consumers. It records CLI, persistent-state, stdio MCP and absolute gateway launch
 checks outside the source checkout, using locked dependency constraints.
 
 The job also installs the launcher through each offline [install path](../docs/install.md)
-(`uv tool install` from a flat index, the wheel, a local git tag and a source
-directory, and `uv tool run --from <wheel>`) and checks the `install_source` each
-reports.
+(`uv tool install` from a flat index as `xorchestrate` and as `xork`, the wheel,
+a local git tag and a source directory, and `uv tool run --from <wheel>`) and
+checks the `install_source` each reports, through both `xo` and `xorchestrate`.
 
 CI runs on GitHub-hosted Ubuntu. Pinned actions have read-only repository
 permissions. Pull requests, pushes to master and manual runs invoke:

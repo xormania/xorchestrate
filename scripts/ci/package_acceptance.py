@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import configparser
 import json
 import shlex
 import shutil
@@ -22,6 +23,8 @@ from scripts.testkit.adapters.evidence import (
 
 ROOT = Path(__file__).resolve().parents[2]
 PACKAGE = "xorchestrate"
+ALIAS, ALIAS_PROJECT = "xork", "packaging/xork"
+COMMANDS = ("xorchestrate", "xo")
 
 # Runs under the consumer's isolated interpreter, from outside the checkout.
 # Expected behavior is stated at the CLI/MCP boundary, not read from source.
@@ -44,7 +47,11 @@ assert pathlib.Path(telemetry_corpus.__file__).resolve().is_relative_to(prefix),
 installed = {item.metadata["Name"].lower().replace("_", "-"): item.version
              for item in importlib.metadata.distributions()}
 assert not {"pytest", "ruff", "build"}.intersection(installed), installed
+# The xork alias installs exactly its own version of xorchestrate.
+assert "xork" not in installed or installed["xork"] == installed["xorchestrate"], installed
 console = prefix / "bin" / "xorchestrate"
+short = prefix / "bin" / "xo"
+assert short.is_file(), "the xo command is missing"
 # A private home: the consumer never reads or writes the account's ~/.xorchestrate.
 work = pathlib.Path.cwd()
 environment = {**os.environ, "XORCHESTRATE_HOME": str(work / "home")}
@@ -61,6 +68,9 @@ def invoke(arguments, requests=None):
         raise
     return [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
 
+# `xo` is the same launcher as `xorchestrate`.
+assert invoke([str(short), "--version"]) == invoke([str(console), "--version"])
+
 # No project, no run: the installed launcher refuses and names `xorchestrate init`.
 refused = subprocess.run([str(console), "describe"], capture_output=True, text=True, timeout=30, env=environment)
 assert refused.returncode == 2 and "xorchestrate init" in json.loads(refused.stderr)["error"]["message"], refused
@@ -72,6 +82,7 @@ invoke([str(console), "approve", str(work / "app")])
 os.chdir(work / "app")
 description, = invoke([str(console), "describe"])
 assert {"create_work", "list_work"} <= {item["name"] for item in description["operations"]}
+assert invoke([str(short), "describe"]) == [description]
 initial, = invoke([str(console), "call", "list_work", "--json", "{}"])
 assert initial["work"] == [], "Consumer inherited another artifact's application state"
 created, = invoke([str(console), "call", "create_work", "--json", '{"goal":"Installed artifact witness"}'])
@@ -104,20 +115,41 @@ try:
 finally:
     gateway.close()
 print(json.dumps({"status": "passed", "package_path": str(package), "executable": str(console), "cwd": str(pathlib.Path.cwd()),
-                  "installed": installed, "checks": ["no_project_refusal", "project_setup", "console_describe", "persisted_cli", "mcp_read",
+                  "installed": installed, "checks": ["short_command", "no_project_refusal", "project_setup", "console_describe", "persisted_cli", "mcp_read",
                              "absolute_gateway"]}))
 '''
 
 
-def install_paths(*, wheel, version, workspace, uv):
+def distribution_name(artifact):
+    """The normalized distribution name in a wheel or sdist filename."""
+    name = Path(artifact).name
+    stem = name.split("-")[0] if name.endswith(".whl") else name.removesuffix(".tar.gz").rsplit("-", 1)[0]
+    return stem.lower().replace("_", "-").replace(".", "-")
+
+
+def console_scripts(wheel):
+    """The ``console_scripts`` entry points a wheel declares, as ``{name: object reference}``."""
+    with zipfile.ZipFile(wheel) as archive:
+        names = [item for item in archive.namelist() if item.endswith(".dist-info/entry_points.txt")]
+        if len(names) != 1:
+            return {}
+        parser = configparser.ConfigParser(delimiters=("=",), interpolation=None)
+        parser.optionxform = str
+        parser.read_string(archive.read(names[0]).decode("utf-8"))
+    return dict(parser["console_scripts"]) if parser.has_section("console_scripts") else {}
+
+
+def install_paths(*, wheel, version, workspace, uv, alias_wheel=None):
     """Supported launcher install paths that run offline from the candidate.
 
-    Each entry is ``(name, install argv, environment, expected install_source,
-    expected upgrade_command, installs the candidate wheel)``. The expected values
-    are stated here, independently of the launcher's own mapping. The index path
-    installs the candidate wheel by a pinned name from a private flat index, so the
-    launcher must offer the unpinned reinstall; the public index is exercised only
-    after a release is published.
+    Each entry is ``(name, install argv, environment, tool, expected install_source,
+    expected upgrade_command, installs the candidate wheel)``; ``tool`` names the
+    tool environment. The expected values are stated here, independently of the
+    launcher's own mapping. The index paths install by a pinned name from a private
+    flat index holding only candidate wheels, so the launcher must offer the
+    unpinned reinstall; the public index is exercised only after a release is
+    published. With the alias wheel, ``uv tool install xork`` resolves xorchestrate
+    from that index too.
     """
     index = workspace / "index"
     index.mkdir(mode=0o700)
@@ -125,17 +157,21 @@ def install_paths(*, wheel, version, workspace, uv):
     distribution_version = wheel.name.split("-")[1]
     repository, local = workspace / "git-source", workspace / "local-source"
     paths = [
-        ("index", ["--find-links", index, f"{PACKAGE}=={distribution_version}"], "index",
+        ("index", ["--find-links", index, f"{PACKAGE}=={distribution_version}"], PACKAGE, "index",
          ["uv", "tool", "install", f"{PACKAGE}@latest"], True),
-        ("archive", [wheel], "archive", ["uv", "tool", "install", "--force", "<newer wheel or sdist>"], True),
-        ("git", [f"git+{repository.as_uri()}@v{version}"], "git",
+        ("archive", [wheel], PACKAGE, "archive", ["uv", "tool", "install", "--force", "<newer wheel or sdist>"], True),
+        ("git", [f"git+{repository.as_uri()}@v{version}"], PACKAGE, "git",
          ["uv", "tool", "install", "--force", f"git+{repository.as_uri()}@<tag>"], False),
-        ("local", [local], "local", ["uv", "tool", "install", "--force", str(local)], False),
+        ("local", [local], PACKAGE, "local", ["uv", "tool", "install", "--force", str(local)], False),
     ]
-    for name, target, source, upgrade, from_wheel in paths:
+    if alias_wheel is not None:
+        shutil.copy2(alias_wheel, index / alias_wheel.name)
+        paths.append(("alias-index", ["--find-links", index, f"{ALIAS}=={distribution_version}"], ALIAS, "index",
+                      ["uv", "tool", "install", f"{ALIAS}@latest"], True))
+    for name, target, tool, source, upgrade, from_wheel in paths:
         environment = {"UV_TOOL_DIR": str(workspace / f"tools-{name}"),
                        "UV_TOOL_BIN_DIR": str(workspace / f"bin-{name}")}
-        yield name, [uv, "tool", "install", *target], environment, source, shlex.join(upgrade), from_wheel
+        yield name, [uv, "tool", "install", *target], environment, tool, source, shlex.join(upgrade), from_wheel
 
 
 def wheel_mismatches(wheel, prefix):
@@ -185,33 +221,69 @@ def run(*, root=ROOT, output, artifacts=(), uv="uv", timeout=180, paths=True):
         else:
             stage = "distribution build"
             destination = directory / "distributions"
-            command([sys.executable, "-m", "build", "--no-isolation", "--outdir", destination, source])
+            for project in (source, source / ALIAS_PROJECT):
+                command([sys.executable, "-m", "build", "--no-isolation", "--outdir", destination, project])
             selected = sorted(destination.glob("*.whl")) + sorted(destination.glob("*.tar.gz"))
-            if (len(selected) != 2 or sum(path.suffix == ".whl" for path in selected) != 1
-                    or sum(path.name.endswith(".tar.gz") for path in selected) != 1):
-                raise ValueError("Build must produce one wheel and one source distribution")
+            for name in (PACKAGE, ALIAS):
+                built = [path for path in selected if distribution_name(path) == name]
+                if (len(built) != 2 or sum(path.suffix == ".whl" for path in built) != 1
+                        or sum(path.name.endswith(".tar.gz") for path in built) != 1):
+                    raise ValueError(f"Build must produce one wheel and one source distribution of {name}")
+            if len(selected) != 4:
+                raise ValueError(f"Build produced unexpected files: {[path.name for path in selected]}")
+        stage = "artifact selection"
         if not selected:
             raise ValueError("Select at least one installable artifact")
-        for number, artifact in enumerate(selected):
-            if artifact.suffix != ".whl" and not artifact.name.endswith(".tar.gz"):
-                raise ValueError("Select a wheel or source distribution")
+        if any(path.suffix != ".whl" and not path.name.endswith(".tar.gz") for path in selected):
+            raise ValueError("Select a wheel or source distribution")
+        if any(distribution_name(path) not in {PACKAGE, ALIAS} for path in selected):
+            raise ValueError(f"Select distributions of {PACKAGE} or {ALIAS}")
+        wheels = [path for path in selected if path.suffix == ".whl" and distribution_name(path) == PACKAGE]
+        alias_wheels = [path for path in selected if path.suffix == ".whl" and distribution_name(path) == ALIAS]
+        aliased = [path for path in selected if distribution_name(path) == ALIAS]
+        if aliased and len(wheels) != 1:
+            raise ValueError(f"{ALIAS} artifacts need exactly one candidate {PACKAGE} wheel to install with")
+        # Installers expose only the requested package's commands: the alias must declare the same ones.
+        # Under uv the package's own scripts can mask a broken alias entry point, so compare the metadata.
+        stage = "alias entry points"
+        for alias_wheel in alias_wheels:
+            if console_scripts(alias_wheel) != console_scripts(wheels[0]):
+                raise ValueError(f"{alias_wheel.name} console scripts {console_scripts(alias_wheel)} are not "
+                                 f"{wheels[0].name}'s {console_scripts(wheels[0])}")
+        # The alias resolves xorchestrate from a private flat index holding only the candidate wheel.
+        candidates = directory / "candidate-index"
+        if aliased:
+            candidates.mkdir(mode=0o700)
+            shutil.copy2(wheels[0], candidates / wheels[0].name)
+        # The package's own artifacts first, then the alias's.
+        ordered = sorted(selected, key=lambda path: distribution_name(path) == ALIAS)
+        for number, artifact in enumerate(ordered):
             kind = "wheel" if artifact.suffix == ".whl" else "sdist"
-            entry = {"kind": kind, "filename": artifact.name, "sha256": digest(artifact.read_bytes()),
-                     "bytes": artifact.stat().st_size, "status": "failed"}
+            alias = distribution_name(artifact) == ALIAS
+            label = f"{ALIAS} {kind}" if alias else kind
+            entry = {"kind": kind, "distribution": distribution_name(artifact), "filename": artifact.name,
+                     "sha256": digest(artifact.read_bytes()), "bytes": artifact.stat().st_size, "status": "failed"}
             report["artifacts"].append(entry)
             consumer = directory / f"consumer-{number}"
-            stage = kind + " consumer environment"
+            stage = label + " consumer environment"
             command([sys.executable, "-m", "venv", "--without-pip", consumer])
             python = consumer / "bin/python"
-            stage = kind + " artifact install"
+            stage = label + " artifact install"
+            links = ["--find-links", candidates] if alias else []
             command([uv, "pip", "install", "--python", python, "--constraints", runtime,
-                     "--build-constraints", builder, artifact])
-            stage = kind + " public consumer assertions"
+                     "--build-constraints", builder, *links, artifact])
+            if alias:
+                stage = label + " candidate files"
+                mismatched = wheel_mismatches(wheels[0], consumer)
+                if mismatched:
+                    raise ValueError(f"{ALIAS} did not install the candidate {PACKAGE} wheel: {mismatched[:5]}")
+            stage = label + " public consumer assertions"
             working = directory / f"work-{number}"
             working.mkdir(mode=0o700)
             observations = json.loads(command([python, "-I", "-c", CONSUMER], cwd=working))
+            if alias and observations["installed"].get(ALIAS) is None:
+                raise ValueError(f"{ALIAS} consumer does not have {ALIAS} installed")
             entry.update(status="passed", consumer=observations)
-        wheels = [path for path in selected if path.suffix == ".whl"]
         if paths and len(wheels) == 1:
             report["install_paths"] = []
             workspace = directory / "install-paths"
@@ -230,16 +302,21 @@ def run(*, root=ROOT, output, artifacts=(), uv="uv", timeout=180, paths=True):
             commit = command(["git", "-C", repository, "rev-parse", "HEAD"]).strip()
             shared = {"UV_CACHE_DIR": str(workspace / "uv-cache"), "UV_PYTHON_DOWNLOADS": "never"}
             pinned = ["--python", sys.executable, "--constraints", runtime, "--build-constraints", builder]
-            for number, (name, install, environment, expected, upgrade, from_wheel) in enumerate(
-                    install_paths(wheel=wheels[0], version=version, workspace=workspace, uv=uv)):
+            for number, (name, install, environment, tool, expected, upgrade, from_wheel) in enumerate(
+                    install_paths(wheel=wheels[0], version=version, workspace=workspace, uv=uv,
+                                  alias_wheel=alias_wheels[0] if len(alias_wheels) == 1 else None)):
                 entry = {"path": name, "installer": "uv-tool", "status": "failed"}
                 report["install_paths"].append(entry)
                 environment = {**shared, **environment}
                 stage = f"{name} tool install"
                 command([*install, *pinned], env=environment)
-                launcher = Path(environment["UV_TOOL_BIN_DIR"]) / PACKAGE
                 stage = f"{name} launcher identity"
-                identity_report = json.loads(command([launcher, "--version"], env=environment))
+                # Each command the tool exposes reports the same identity.
+                reports = [json.loads(command([Path(environment["UV_TOOL_BIN_DIR"]) / executable, "--version"],
+                                              env=environment)) for executable in COMMANDS]
+                identity_report = reports[0]
+                if any(item != identity_report for item in reports):
+                    raise ValueError(f"{name} install commands {COMMANDS} report different identities: {reports}")
                 expected_commit = commit if name == "git" else None
                 if (identity_report.get("install_source") != expected
                         or identity_report.get("commit") != expected_commit
@@ -247,13 +324,13 @@ def run(*, root=ROOT, output, artifacts=(), uv="uv", timeout=180, paths=True):
                     raise ValueError(f"{name} install reported {identity_report}")
                 if from_wheel:
                     stage = f"{name} candidate files"
-                    mismatched = wheel_mismatches(wheels[0], Path(environment["UV_TOOL_DIR"]) / PACKAGE)
+                    mismatched = wheel_mismatches(wheels[0], Path(environment["UV_TOOL_DIR"]) / tool)
                     if mismatched:
                         raise ValueError(f"{name} install does not hold the candidate wheel: {mismatched[:5]}")
                 stage = f"{name} public consumer assertions"
                 working = directory / f"path-work-{number}"
                 working.mkdir(mode=0o700)
-                python = Path(environment["UV_TOOL_DIR"]) / PACKAGE / "bin/python"
+                python = Path(environment["UV_TOOL_DIR"]) / tool / "bin/python"
                 observations = json.loads(command([python, "-I", "-c", CONSUMER], cwd=working))
                 entry.update(status="passed", version=identity_report, consumer=observations)
             entry = {"path": "uvx", "installer": "uvx", "status": "failed"}
@@ -261,6 +338,9 @@ def run(*, root=ROOT, output, artifacts=(), uv="uv", timeout=180, paths=True):
             stage = "uvx launcher identity"
             ephemeral = [uv, "tool", "run", *pinned, "--from", wheels[0], PACKAGE]
             identity_report = json.loads(command([*ephemeral, "--version"], env=shared))
+            short = json.loads(command([*ephemeral[:-1], "xo", "--version"], env=shared))
+            if short != identity_report:
+                raise ValueError(f"uvx xo reported {short}, xorchestrate reported {identity_report}")
             if (identity_report.get("install_source") != "uvx" or identity_report.get("commit") is not None
                     or identity_report.get("upgrade_command") != shlex.join(
                         ["uvx", "--refresh", "--from", "<newer wheel or sdist>", PACKAGE])):

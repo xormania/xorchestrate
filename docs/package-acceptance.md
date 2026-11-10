@@ -1,8 +1,14 @@
 # Installed package acceptance
 
 `python -m scripts.ci.package_acceptance --output /outside/checkout/package-runs`
-builds a wheel and source distribution from a captured candidate, then installs
-each into its own fresh environment outside the checkout. Run it using the locked
+builds a wheel and source distribution of `xorchestrate` and of its alias `xork`
+(`packaging/xork`) from a captured candidate, then installs each into its own
+fresh environment outside the checkout. A `xork` artifact is installed with a
+private flat index holding only the candidate `xorchestrate` wheel, and the
+consumer environment must then hold exactly that wheel's files, so `xork`
+installs the candidate and not a published release. Each `xork` wheel must
+declare exactly the candidate `xorchestrate` wheel's console scripts; under uv the
+package's own scripts would otherwise hide a broken alias entry point. Run it using the locked
 validation environment described in [CI](../.github/CI.md). The builder needs the
 `validation` group; the consumers install only the package's base runtime.
 
@@ -11,7 +17,8 @@ constraints are exported from `uv.lock`; the source distribution's isolated buil
 also uses constraints exported from the validation group. Package support ranges
 remain those declared in `pyproject.toml`.
 
-Each consumer checks the installed console command, creates persisted work in
+Each consumer checks that the installed `xo` and `xorchestrate` commands report
+the same `--version` and `describe`, creates persisted work in
 one process and reads it from another, then reads the same work through a real
 stdio MCP connection. It also starts the installed native gateway by absolute
 script filename and verifies its local transport. This gateway fixture does not
@@ -36,17 +43,20 @@ builder's Python:
 | archive | the wheel file | `archive` |
 | git | `git+file://…@v<version>`: an annotated tag in a fresh local repository of the snapshot | `git`, with that commit |
 | local | a copy of the snapshot directory | `local` |
+| alias-index | `xork==<version>` from the same flat index, which also holds the candidate `xork` wheel (only when a `xork` wheel is selected) | `index` |
 | uvx | `uv tool run --from <wheel>` (what `uvx` runs) | `uvx` |
 
-For each `uv tool install`, the installed launcher's `--version` must report the
+For each `uv tool install`, the installed `xo` and `xorchestrate` must report
+the same identity, and its `--version` must report the
 expected source, commit and exact upgrade command (stated in the acceptance
 script, not taken from the launcher), and the same consumer assertions run with
 the tool environment's interpreter. The index and archive paths also compare
 every package file in the tool environment with the candidate wheel, so a
 same-version wheel from the public index cannot stand in for it. The index path
 installs a pinned `==<version>`, so it must report `uv tool install
-xorchestrate@latest`. The `uvx` run checks
-`--version` and `describe`. Dependencies still come from the configured package
+xorchestrate@latest`; the alias-index path likewise `uv tool install xork@latest`,
+and its tool environment must hold the candidate `xorchestrate` wheel. The `uvx`
+run checks that `xo --version` matches, then `--version` and `describe`. Dependencies still come from the configured package
 index under the exported constraints. The public PyPI path and `pipx` are not
 exercised. `--no-install-paths` skips this part.
 

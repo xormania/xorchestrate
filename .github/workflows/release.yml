@@ -15,6 +15,7 @@
   },
   "env": {
     "PACKAGE_NAME": "xorchestrate",
+    "ALIAS_PROJECT": "packaging/xork",
     "RELEASE_BRANCH": "master",
     "PYPI_UPLOAD_URL": "https://upload.pypi.org/legacy/",
     "PYPI_PROJECT_URL": "https://pypi.org/project/",
@@ -61,8 +62,8 @@
           "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --managed-python --python 3.12.16 --no-default-groups --group validation --no-install-project"
         },
         {
-          "name": "Build wheel and source distribution",
-          "run": "\"$UV_PROJECT_ENVIRONMENT/bin/python\" -m build --no-isolation --outdir \"$RUNNER_TEMP/dist\" ."
+          "name": "Build wheels and source distributions",
+          "run": "for project in . \"$ALIAS_PROJECT\"; do\n  \"$UV_PROJECT_ENVIRONMENT/bin/python\" -m build --no-isolation --outdir \"$RUNNER_TEMP/dist\" \"$project\"\ndone"
         },
         {
           "name": "Check release identity",
@@ -72,7 +73,7 @@
             "EVENT_NAME": "${{ github.event_name }}",
             "TAG": "${{ github.ref_name }}"
           },
-          "run": "set -- --root . --package \"$PACKAGE_NAME\" --dist \"$RUNNER_TEMP/dist\" --notes-output \"$RUNNER_TEMP/release-notes.md\" --github-output \"$GITHUB_OUTPUT\"\nif [ \"$EVENT_NAME\" = push ]; then\n  set -- \"$@\" --tag \"$TAG\" --annotated --ancestor-of \"refs/remotes/origin/$RELEASE_BRANCH\"\nfi\n\"$UV_PROJECT_ENVIRONMENT/bin/python\" -I -B scripts/ci/release_identity.py \"$@\" | tee \"$RUNNER_TEMP/release-identity.json\""
+          "run": "set -- --root . --package \"$PACKAGE_NAME\" --alias \"$ALIAS_PROJECT\" --dist \"$RUNNER_TEMP/dist\" --notes-output \"$RUNNER_TEMP/release-notes.md\" --github-output \"$GITHUB_OUTPUT\"\nif [ \"$EVENT_NAME\" = push ]; then\n  set -- \"$@\" --tag \"$TAG\" --annotated --ancestor-of \"refs/remotes/origin/$RELEASE_BRANCH\"\nfi\n\"$UV_PROJECT_ENVIRONMENT/bin/python\" -I -B scripts/ci/release_identity.py \"$@\" | tee \"$RUNNER_TEMP/release-identity.json\""
         },
         {
           "name": "Select package index",
@@ -144,7 +145,7 @@
           }
         },
         {
-          "name": "Verify the built wheel and source distribution in clean consumers",
+          "name": "Verify the built wheels and source distributions in clean consumers",
           "run": "set --\nfor artifact in \"$RUNNER_TEMP\"/dist/*.whl \"$RUNNER_TEMP\"/dist/*.tar.gz; do\n  set -- \"$@\" --artifact \"$artifact\"\ndone\n\"$UV_PROJECT_ENVIRONMENT/bin/python\" -m scripts.ci.package_acceptance --output \"$RUNNER_TEMP/package-acceptance\" \"$@\""
         },
         {

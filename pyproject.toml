@@ -16,6 +16,7 @@ test = ["pytest>=8,<10"]
 validation = ["ruff==0.16.8", "build>=1.2,<2", "setuptools>=68", "wheel>=0.45,<1"]
 
 [project.scripts]
+xo = "xorchestrate.cli:main"
 xorchestrate = "xorchestrate.cli:main"
 
 [tool.setuptools.packages.find]

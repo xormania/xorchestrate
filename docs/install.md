@@ -1,8 +1,30 @@
 # Install xorchestrate
 
-Every install path below puts the same thing on your machine: the `xorchestrate`
+Every install path below puts the same thing on your machine: the xorchestrate
 launcher, installed for your user, without root. Pick one path; the next steps
 are the same whichever you use.
+
+The launcher has two command names: `xo`, the short one used in these docs, and
+`xorchestrate`. They run the same program with the same options; use whichever
+you prefer. Files the launcher writes for other programs, such as the `.mcp.json`
+entry from `init`, use `xorchestrate`, the name no other program is likely to
+have (`xo` is also, for example, the name of a JavaScript linter). If another
+`xo` comes first on your `PATH`, use `xorchestrate`.
+
+**Another program's `xo` in uv's executable directory.** Check before installing
+or upgrading with uv:
+
+```sh
+ls -l "$(uv tool dir --bin)/xo"
+```
+
+If it exists and is not a link into uv's `xorchestrate` or `xork` tool
+environment, it belongs to another program, and uv handles it badly: a fresh
+`uv tool install` fails ("Executable already exists: xo"), a pinned reinstall
+such as `uv tool install xorchestrate@latest` fails *and removes the installed
+launcher*, and `uv tool upgrade` replaces the other program's `xo` without
+asking. Move that program's `xo` elsewhere first. The install script checks this
+and stops before running uv.
 
 xorchestrate needs Python 3.12 or newer, which uv provides when your system has
 none. uv is the only hard requirement; the install script installs it if missing.
@@ -11,10 +33,10 @@ none. uv is the only hard requirement; the install script installs it if missing
 
 | Path | Command | Status |
 | --- | --- | --- |
-| Package index | `uv tool install xorchestrate` or `pipx install xorchestrate` | works once the first release is published to PyPI (see below) |
+| Package index | `uv tool install xork` or `uv tool install xorchestrate` (the same launcher; install one of the two), or the same with `pipx install` | works once the first release is published to PyPI (see below) |
 | Git | `uv tool install git+https://github.com/xormania/xorchestrate@vX.Y.Z` | works today |
 | Install script | `curl -LsSf https://raw.githubusercontent.com/xormania/xorchestrate/master/scripts/install.sh \| sh` | installs uv if missing, then the launcher from the package index (or git) |
-| No install | `uvx --from <source> xorchestrate <command>` | runs the launcher from uv's cache each time |
+| No install | `uvx --from <source> xo <command>` | runs the launcher from uv's cache each time |
 
 Replace `vX.Y.Z` with a release tag, for example the newest one listed on the
 repository's releases page.
@@ -22,13 +44,30 @@ repository's releases page.
 ### Package index
 
 ```sh
-uv tool install xorchestrate          # or: pipx install xorchestrate
-uv tool install xorchestrate==X.Y.Z   # a specific release
+uv tool install xork                  # or: pipx install xork
+uv tool install xork==X.Y.Z           # a specific release
+uv tool install xorchestrate          # the same, by the package's full name
 ```
 
+`xork` is a short install name: a package without code whose only dependency is
+the `xorchestrate` release of exactly the same version, and which provides the
+same `xo` and `xorchestrate` commands. Every release publishes both, with the
+same version. Upgrade and uninstall by the name you installed.
+
+**Install only one of the two names.** Both distributions own the same two
+commands. Installing one with `uv tool install` while the other is installed
+fails, and uninstalling one removes the commands the other relies on wherever
+both are in one environment (pip or `uv pip`, `uv tool install --force`, pipx).
+To switch names, uninstall the one you have first (`uv tool uninstall xork`,
+then `uv tool install xorchestrate`, or the reverse). If you removed `xork` from
+a pip or `uv pip` environment that still holds `xorchestrate`, reinstall it
+(`uv pip install --reinstall xorchestrate`) to restore its commands. The install
+script refuses to install one name while uv has the other installed.
+
 **Not available yet.** Releases are published to PyPI automatically when a
-release tag is pushed, but no release has been published so far. Until then,
-`uv tool install xorchestrate` fails with "not found"; use the git path.
+release tag is pushed, but no release has been published so far; both names are
+reserved by `0.0.1` placeholders that contain nothing usable. Until the first
+release, use the git path.
 
 ### Git
 
@@ -37,7 +76,7 @@ uv tool install git+https://github.com/xormania/xorchestrate@vX.Y.Z
 pipx install git+https://github.com/xormania/xorchestrate@vX.Y.Z
 ```
 
-The tag is pinned in the install. `xorchestrate --version` reports the commit it
+The tag is pinned in the install. `xo --version` reports the commit it
 resolved.
 
 ### Install script
@@ -58,7 +97,16 @@ It:
    temporary file and runs it, installing uv for your user;
 2. runs `uv tool install xorchestrate` (or `xorchestrate==X.Y.Z`, or
    `git+…@REF` with `--git REF`);
-3. prints the installed `--version` and the next steps.
+3. prints the installed `--version` and the next steps, naming `xo` when the
+   installed release provides it.
+
+Before installing, it stops if uv already has the other name (`xork` for
+`xorchestrate`, or the reverse) installed, or if another program's `xo` is in
+uv's executable directory, naming the file and the options.
+`XORCHESTRATE_PACKAGE=xork` installs the alias instead (not with `--git`, which
+always installs `xorchestrate`). It names `xo` in the next steps only when that
+`xo` belongs to this install, and warns when another `xo` comes first on your
+`PATH`.
 
 It needs uv 0.4.23 or newer and stops with that message for an older uv. The whole
 script runs from a function called on its last line, so a partly downloaded copy
@@ -71,8 +119,8 @@ uv installer.
 ### No install (`uvx`)
 
 ```sh
-uvx --from git+https://github.com/xormania/xorchestrate@vX.Y.Z xorchestrate --version
-uvx --from xorchestrate==X.Y.Z xorchestrate --version   # once published to PyPI
+uvx --from git+https://github.com/xormania/xorchestrate@vX.Y.Z xo --version
+uvx --from xorchestrate==X.Y.Z xo --version   # once published to PyPI
 ```
 
 uv builds a cached environment on first use and reuses it afterwards. Nothing is
@@ -85,7 +133,7 @@ These are the same for every path.
 1. Check the installation:
 
    ```sh
-   xorchestrate --version
+   xo --version
    ```
 
    It prints JSON with the release `version`, the `commit` for a git install,
@@ -98,24 +146,28 @@ These are the same for every path.
 3. Set it up once per user, then once per project (see [projects](projects.md)):
 
    ```sh
-   xorchestrate setup ~/companion     # create (or link) your private companion; runs doctor
-   cd /path/to/project                # a git repository
-   xorchestrate init                  # registers this machine's instance, writes .mcp.json for a new project
-   xorchestrate approve               # approve the tracked .xorchestrate/ configuration
-   xorchestrate describe
+   xo setup ~/companion     # create (or link) your private companion; runs doctor
+   cd /path/to/project      # a git repository
+   xo init                  # registers this machine's instance, writes .mcp.json for a new project
+   xo approve               # approve the tracked .xorchestrate/ configuration
+   xo describe
    ```
 
    Agent harnesses then run `xorchestrate connect` (the entry `init` writes
-   into Claude Code's `.mcp.json`); the project server starts by itself. The
+   into Claude Code's `.mcp.json`, by the long name); the project server starts
+   by itself. The
    launcher hands each project command to the release the project pins in
    `.xorchestrate/project.json`, building that toolchain with uv when needed.
 
 ## Upgrade and uninstall
 
-Run the `upgrade_command` from `xorchestrate --version`. For example:
+Run the `upgrade_command` from `xo --version`. For example:
 
 | Installed with | Upgrade | Uninstall |
 | --- | --- | --- |
+| `uv tool install xork` | `uv tool upgrade xork` | `uv tool uninstall xork` |
+| `uv tool install xork==X.Y.Z` | `uv tool install xork@latest` | `uv tool uninstall xork` |
+| `pipx install xork` | `pipx upgrade xork` | `pipx uninstall xork` |
 | `uv tool install xorchestrate` | `uv tool upgrade xorchestrate` | `uv tool uninstall xorchestrate` |
 | `uv tool install xorchestrate==X.Y.Z` (also the install script's `--version`) | `uv tool install xorchestrate@latest` | `uv tool uninstall xorchestrate` |
 | `pipx install xorchestrate` | `pipx upgrade xorchestrate` | `pipx uninstall xorchestrate` |
@@ -132,8 +184,11 @@ without the pin instead. If the launcher cannot find its own distribution,
 
 The [installed package acceptance](package-acceptance.md) job builds the wheel and
 source distribution, then installs each into a clean environment and checks the
-public commands. It also installs the launcher through `uv tool install` from a
-private flat index (the package-index path, offline), from the wheel file, from a
-local git repository at a release tag, and from a source directory, and runs it
-through `uvx --from <wheel>`. Each must report the matching `install_source`.
-The public PyPI path and `pipx` are not exercised in CI.
+public commands, through both `xo` and `xorchestrate`. It does the same for the
+`xork` wheel and sdist, which must install the candidate xorchestrate. It also
+installs the launcher through `uv tool install` from a private flat index (the
+package-index path, offline, as `xorchestrate` and as `xork`), from the wheel
+file, from a local git repository at a release tag, and from a source directory,
+and runs it through `uvx --from <wheel>`. Each must report the matching
+`install_source`, with `xo` reporting the same as `xorchestrate`. The public PyPI
+path and `pipx` are not exercised in CI.
