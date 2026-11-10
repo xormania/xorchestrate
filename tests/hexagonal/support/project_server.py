@@ -158,9 +158,10 @@ class InProcessServer:
         for channel in self.channels:
             channel.close()
         if not self.server.stopped:
-            self.server.down(detach=True)
+            # Bounded: a regression that never drains fails here instead of hanging.
+            threading.Thread(target=self.server.down, kwargs={"detach": True}, daemon=True).start()
         self.thread.join(DEADLINE)
-        assert not self.thread.is_alive()
+        assert not self.thread.is_alive(), "server did not stop within the deadline"
         self.dispatcher.close()
 
 
