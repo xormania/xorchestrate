@@ -11,6 +11,8 @@ __pycache__/
 
 # Local runtime state and editable-install metadata
 .xorchestrate/
+# Example projects track their configuration like any project.
+!examples/*/.xorchestrate/
 *.egg-info/
 # Committed compatibility fixtures written by the standalone collector.
 !tests/fixtures/telemetry/corpus/events.sqlite3

@@ -122,6 +122,9 @@ Every call over the connection carries it, and processes launched for that call
 resolve `${repo}` in their command, `cwd` and `env` values to that worktree's
 root. CLI commands bind their own worktree the same way. A launch outside any
 worktree leaves `${repo}` unresolved and fails as an unavailable command.
+Providers that keep a process between calls (the `mcp` provider) keep one per
+resolved launch, so calls from different worktrees never share a process
+started for another worktree.
 
 A session keeps the worktree it was started from (its `workspace`): later
 `send_session`, `poll_session`, `stop_session` and `detach_session` calls, a

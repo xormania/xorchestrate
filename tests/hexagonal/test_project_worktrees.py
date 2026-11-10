@@ -2,6 +2,7 @@
 
 import json
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -180,3 +181,33 @@ def test_sessions_keep_their_creating_worktree_for_resume_and_native_tools(tmp_p
                                              "idempotency_key": "resume"}, worktree=b)["session"]
         assert resumed["workspace"] == a and resumed["created_worktree"] == b
         assert resumed["backend"]["native_id"] == source["backend"]["native_id"]
+
+
+def test_persistent_mcp_providers_run_one_process_per_worktree(tmp_path):
+    fixture = Path(__file__).resolve().parent / "fixtures" / "capability_server.py"
+    definitions = tmp_path / "tools.json"
+    definitions.write_text(json.dumps([{"name": "where", "description": "Report the process directory",
+                                        "input_schema": {"type": "object", "additionalProperties": True}}]))
+    first, second = tmp_path / "first", tmp_path / "second"
+    first.mkdir()
+    second.mkdir()
+    config = {"version": 1, "store": {"adapter": "memory"}, "providers": {"tools": {"adapter": "mcp", "options": {
+        "command": [sys.executable, str(fixture), "mcp", "--definitions", str(definitions)], "cwd": "${repo}",
+        "timeout": 10}}}}
+    replies = {}
+    with build(config, tmp_path) as runtime:
+        app = runtime.application
+        for name, root in (("first", first), ("second", second), ("again", first)):
+            worktree = {"root": str(root), "name": root.name}
+            app.call("capabilities", {"provider": "tools"}, worktree=worktree)
+            replies[name] = app.call("invoke", {"capability": "tools/where", "arguments": {},
+                                                "idempotency_key": f"where-{name}"}, worktree=worktree)
+    reported = {name: reply_payload(reply) for name, reply in replies.items()}
+    assert reported["first"]["cwd"] == str(first) and reported["second"]["cwd"] == str(second)
+    assert reported["first"]["pid"] != reported["second"]["pid"], "worktrees never share a provider process"
+    assert reported["again"]["pid"] == reported["first"]["pid"], "each worktree keeps its own persistent connection"
+
+
+def reply_payload(reply):
+    """The fixture's report: the JSON text block of the retained MCP tool result."""
+    return json.loads(reply["invocation"]["result"]["content"][0]["text"])

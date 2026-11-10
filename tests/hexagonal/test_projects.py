@@ -318,7 +318,16 @@ def test_doctor_reports_missing_harnesses_unset_environment_and_approval(project
     assert approval["status"] == "error" and approval["files"] == ["config.json"]
 
 
-@pytest.mark.parametrize("example", sorted(path.name for path in (ROOT / "examples").iterdir() if path.is_dir()))
+EXAMPLES = ("connected", "minimal", "telemetry")
+
+
+def test_the_example_projects_are_all_present():
+    # Guards the parametrized test below against passing on an empty selection.
+    found = sorted(path.parent.parent.name for path in (ROOT / "examples").glob("*/.xorchestrate/project.json"))
+    assert found == sorted(EXAMPLES)
+
+
+@pytest.mark.parametrize("example", EXAMPLES)
 def test_every_example_project_validates_and_renders(example, tmp_path):
     tracked = ROOT / "examples" / example / ".xorchestrate"
     config = json.loads((tracked / "config.json").read_text())
