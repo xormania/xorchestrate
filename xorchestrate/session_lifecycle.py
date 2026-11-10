@@ -149,13 +149,16 @@ class SessionLifecycleMixin:
         Closing the runtime records these as disconnected; a long-running input
         adapter uses this to decide whether stopping would end live work.
         """
+        # Workers add to the set concurrently; copy it in one step (set.copy is
+        # atomic for the builtin set) instead of iterating the live set.
+        owned = self._owned_session_ids.copy()
         with self.store.transaction() as tx:
-            return sorted(key for key in self._owned_session_ids
+            return sorted(key for key in owned
                           if (record := tx.get("session", key)) and record.data["status"] not in _CLOSED | {"failed"})
 
     def runtime_closed(self):
         with self.store.transaction() as tx:
-            for session_id in self._owned_session_ids:
+            for session_id in self._owned_session_ids.copy():
                 session = tx.get("session", session_id)
                 if session and session.data["status"] in {"active", "unknown"}:
                     self._transition(tx, session, "disconnect", {**session.data, "status": "disconnected", "connection_state": "closed"}, "runtime")

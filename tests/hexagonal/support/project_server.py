@@ -107,6 +107,19 @@ class SocketChannel:
         self.client.close()
 
 
+class LargeReplies:
+    """An application double whose every call returns a reply larger than socket buffers."""
+
+    def call(self, name, arguments, actor):
+        return {"blob": "x" * 400_000}
+
+    def describe(self):
+        return []
+
+    def live_sessions(self):
+        return []
+
+
 class HeldApplication:
     """An application double whose ``held`` call blocks until released."""
 
@@ -134,17 +147,20 @@ class InProcessServer:
     """A production ``ProjectServer`` on an owner-only socket, served from a thread."""
 
     def __init__(self, application, socket_path, *, check=same_user, max_frame_bytes=1_048_576,
-                 request_workers=8, max_pending_requests=64, control_workers=2):
+                 request_workers=8, max_pending_requests=64, control_workers=2, max_connections=64,
+                 handshake_timeout=5.0, write_timeout=30.0):
         self.socket_path = Path(socket_path)
         self.dispatcher = MCPDispatcher(application, request_workers, max_pending_requests, control_workers)
-        self.transport = UnixClientTransport(socket_path, max_frame_bytes=max_frame_bytes, check=check)
-        self.server = ProjectServer(application, self.transport, self.dispatcher, poll_interval=0.05)
+        self.transport = UnixClientTransport(socket_path, max_frame_bytes=max_frame_bytes, check=check,
+                                             handshake_timeout=handshake_timeout, write_timeout=write_timeout)
+        self.server = ProjectServer(application, self.transport, self.dispatcher, poll_interval=0.05,
+                                    max_connections=max_connections)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
         self.channels = []
 
-    def client(self, actor="owner", purpose="mcp"):
-        channel = SocketChannel(UnixClient(self.socket_path, actor=actor, purpose=purpose))
+    def client(self, actor="owner", purpose="mcp", max_frame_bytes=1_048_576):
+        channel = SocketChannel(UnixClient(self.socket_path, actor=actor, purpose=purpose, max_frame_bytes=max_frame_bytes))
         self.channels.append(channel)
         return channel
 
@@ -195,16 +211,21 @@ class StdioServer:
 
 
 class CliEnvironment:
-    """Run the real CLI with a private runtime directory and configuration."""
+    """Run the real CLI with a private xorchestrate home and configuration.
+
+    Only ``XORCHESTRATE_HOME`` isolates the test; runtime-directory variables
+    are removed so they cannot mask how servers are discovered.
+    """
 
     def __init__(self, directory, options=None):
         self.directory = Path(directory)
         self.config = self.directory / "config.json"
-        self.runtime = self.directory / "run"
-        self.runtime.mkdir(mode=0o700)
+        self.home = self.directory / "home"
         self.options = options if options is not None else {"store": {"adapter": "sqlite", "options": {"path": "state.sqlite3"}}}
         self.config.write_text(json.dumps(self.options), encoding="utf-8")
-        self.environment = {**os.environ, "XORCHESTRATE_RUNTIME_DIR": str(self.runtime),
+        inherited = {key: value for key, value in os.environ.items()
+                     if key not in ("XORCHESTRATE_RUNTIME_DIR", "XDG_RUNTIME_DIR")}
+        self.environment = {**inherited, "XORCHESTRATE_HOME": str(self.home),
                             "PYTHONPATH": os.pathsep.join([str(ROOT), os.environ.get("PYTHONPATH", "")])}
         self.processes = []
 
@@ -214,12 +235,12 @@ class CliEnvironment:
             command += ["--max-frame-bytes", str(frame_limit)]
         return command + list(arguments)
 
-    def run(self, *arguments, timeout=60):
+    def run(self, *arguments, timeout=60, environment=None):
         return subprocess.run(self.command(*arguments), capture_output=True, cwd=self.directory,
-                              env=self.environment, timeout=timeout)
+                              env=environment or self.environment, timeout=timeout)
 
-    def json(self, *arguments, expect=0):
-        result = self.run(*arguments)
+    def json(self, *arguments, expect=0, environment=None):
+        result = self.run(*arguments, environment=environment)
         assert result.returncode == expect, (result.returncode, result.stdout, result.stderr)
         return json.loads(result.stdout if expect in (0, 3) else result.stderr)
 
@@ -238,7 +259,7 @@ class CliEnvironment:
         return process.returncode, channel.pending + stdout, stderr
 
     def server_log(self):
-        logs = list(self.runtime.glob("*.log"))
+        logs = list((self.home / "servers").glob("*.log"))
         return "".join(path.read_text(encoding="utf-8") for path in logs)
 
     def cleanup(self):

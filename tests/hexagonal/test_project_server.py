@@ -23,13 +23,22 @@ from tests.hexagonal.support.project_server import (
     CliEnvironment,
     HeldApplication,
     InProcessServer,
+    LargeReplies,
     StdioServer,
     short_directory,
 )
-from xorchestrate.adapters.local_socket import OwnerSocketListener, PeerCredentials, same_user
+from xorchestrate.adapters.local_socket import (
+    InstanceLock,
+    OwnerSocketListener,
+    PeerCredentials,
+    lock_is_held,
+    same_user,
+)
+from xorchestrate.adapters.stdio import StdioConnection
 from xorchestrate.adapters.unix import UnixClient
+from xorchestrate.mcp import MCPDispatcher
 from xorchestrate.model import OrchestrationError
-from xorchestrate.server import default_socket_path
+from xorchestrate.server import SERVER_LOCK_WAIT, ServerFiles, default_socket_path, server_identity, xorchestrate_home
 
 
 @pytest.fixture
@@ -190,9 +199,19 @@ def test_listener_never_replaces_a_foreign_path_and_removes_only_its_own_socket(
     with pytest.raises(OrchestrationError):
         OwnerSocketListener(unrelated, replace_stale=True)
     assert unrelated.read_text() == "operator data"
+    live = OwnerSocketListener(directory / "live.sock")
+    try:
+        # Even with its lock file gone, a socket something listens on is never replaced.
+        with pytest.raises(OrchestrationError) as running:
+            OwnerSocketListener(directory / "live.sock", replace_stale=True)
+        assert running.value.code == "server_running"
+        assert (directory / "live.sock").exists()
+    finally:
+        live.close()
     stale = OwnerSocketListener(directory / "stale.sock")
     stale.socket.close()  # a crashed server leaves its socket file behind
     fresh = OwnerSocketListener(directory / "stale.sock", replace_stale=True)
+    assert stat.S_IMODE((directory / "stale.sock").stat().st_mode) == 0o600
     fresh.close()
     assert not (directory / "stale.sock").exists()
 
@@ -228,11 +247,15 @@ def test_down_drains_in_flight_requests_and_stops_accepting(directory):
         down.join(0.3)
         assert down.is_alive(), "down waits for the in-flight call"
         refused = bob.request(rpc(3, "tools/call", {"name": "late"}))
-        assert refused["error"]["code"] == -32003
-        late = UnixClient(directory / "s.sock", actor="late")
-        late.socket.settimeout(5)
-        assert late.reader.readline() == b"", "a draining server admits no new MCP client"
-        late.close()
+        assert refused["error"]["code"] == -32003, "new effect calls are refused while draining"
+        observed = bob.request(rpc(4, "tools/call", {"name": "poll_session"}))
+        assert observed["result"]["structuredContent"] == {"name": "poll_session", "actor": "bob"}, \
+            "observation/control tools stay available while draining"
+        with pytest.raises(OrchestrationError) as late:
+            UnixClient(directory / "s.sock", actor="late")
+        assert (late.value.code, late.value.details["reason"]) == ("connection_refused", "draining")
+        status = subject.client("operator", purpose="control").request({"command": "status"})
+        assert status["draining"] is True, "control connections are still served while draining"
         app.release.set()
         assert alice.read()["result"]["structuredContent"]["name"] == "held"
         down.join(5)
@@ -282,7 +305,7 @@ def test_simultaneous_connects_start_exactly_one_server(cli):
     for process, channel in clients:
         assert cli.finish(process, channel)[0] == 0
     assert cli.json("down")["stopped"] is True
-    assert cli.json("status", expect=3) == {"running": False, "socket": status["socket"]}
+    assert cli.json("status", expect=3) == {"running": False, "socket": None}
 
 
 def test_sessions_started_through_the_server_survive_client_disconnect(cli):
@@ -323,26 +346,271 @@ def test_up_starts_once_and_status_reports_absence(cli):
     assert (first["started"], second["started"]) == (True, False)
     assert first["pid"] == second["pid"]
     assert cli.json("down")["stopped"] is True
-    assert cli.json("down") == {"running": False, "socket": first["socket"]}
+    assert cli.json("down") == {"running": False, "socket": None}
 
 
-# -- socket location -----------------------------------------------------------
+# -- stopping is decided independently of the reply ----------------------------
 
-def test_default_socket_path_is_deterministic_private_and_bounded(directory):
-    config = directory / "team.json"
-    environ = {"XORCHESTRATE_RUNTIME_DIR": str(directory / "run")}
-    path = default_socket_path(config, environ=environ)
-    assert path == default_socket_path(directory / "." / "team.json", environ=environ)
-    assert path != default_socket_path(directory / "other.json", environ=environ)
-    assert path.parent == directory / "run" and stat.S_IMODE(path.parent.stat().st_mode) == 0o700
-    assert len(os.fsencode(str(path))) <= 107
-    long_runtime = {"XDG_RUNTIME_DIR": str(directory / ("x" * 120))}
-    fallback = default_socket_path(config, environ=long_runtime)
-    assert fallback.name == path.name and "x" * 120 not in str(fallback)
-    with pytest.raises(OrchestrationError):
-        default_socket_path(config, environ={"XORCHESTRATE_RUNTIME_DIR": str(directory / ("y" * 120))})
+def test_down_whose_client_gave_up_still_stops_and_status_never_stops(directory):
+    app = HeldApplication()
+    subject = InProcessServer(app, directory / "s.sock")
+    try:
+        alice = subject.client("alice")
+        open_session(alice)
+        alice.send(rpc(2, "tools/call", {"name": "held"}))
+        assert app.entered.wait(5)
+        impatient = subject.client("operator", purpose="control")
+        impatient.send({"command": "down"})
+        with pytest.raises(TimeoutError):
+            impatient.read(timeout=0.3)
+        impatient.close()  # the down client times out and leaves
+        status = subject.client("operator", purpose="control").request({"command": "status"})
+        assert status["draining"] is True and not subject.server.stopped, "a status request never stops the server"
+        app.release.set()
+        assert alice.read()["result"]["structuredContent"]["name"] == "held"
+        subject.thread.join(5)
+        assert not subject.thread.is_alive(), "the drain finished and the server stopped without another request"
+    finally:
+        app.release.set()
+        subject.stop()
+
+
+def test_control_down_requires_a_boolean_detach(directory):
+    subject = InProcessServer(HeldApplication(), directory / "s.sock")
+    try:
+        control = subject.client("operator", purpose="control")
+        reply = control.request({"command": "down", "detach": "yes"})
+        assert reply["error"]["code"] == "invalid_arguments"
+        assert control.request({"command": "status"})["running"] is True and not subject.server.stopped
+    finally:
+        subject.stop()
+
+
+# -- handshakes never hold up other clients ------------------------------------
+
+def test_idle_and_dripping_peers_do_not_delay_other_clients(directory):
+    import time
+    subject = InProcessServer(HeldApplication(), directory / "s.sock", handshake_timeout=1.0)
+    stop = threading.Event()
+    peers = []
+    try:
+        for _ in range(2):
+            peers.append(socket.socket(socket.AF_UNIX, socket.SOCK_STREAM))
+            peers[-1].connect(str(directory / "s.sock"))
+        idle, drip = peers
+
+        def dripper():
+            while not stop.is_set():
+                try:
+                    drip.sendall(b" ")
+                except OSError:
+                    return
+                time.sleep(0.2)
+
+        threading.Thread(target=dripper, daemon=True).start()
+        started = time.monotonic()
+        open_session(subject.client("alice"))
+        control = subject.client("operator", purpose="control").request({"command": "status"})
+        assert control["running"] and time.monotonic() - started < 0.5, "other clients were held up by a handshake"
+        for peer in (idle, drip):
+            peer.settimeout(5)
+            started = time.monotonic()
+            reply = peer.makefile("rb").readline()
+            assert b'"handshake_timeout"' in reply, reply
+            assert time.monotonic() - started < 2.5, "the hello deadline is total, not per receive"
+    finally:
+        stop.set()
+        for peer in peers:
+            peer.close()
+        subject.stop()
+
+
+def test_unanswered_handshake_is_a_timeout_not_a_refusal(directory):
+    silent = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    silent.bind(str(directory / "silent.sock"))
+    silent.listen(1)
+    try:
+        with pytest.raises(OrchestrationError) as caught:
+            UnixClient(directory / "silent.sock", timeout=0.3)
+        assert caught.value.code == "handshake_timeout"
+    finally:
+        silent.close()
+
+
+# -- failed writes close the connection ----------------------------------------
+
+def test_write_timeout_closes_the_connection_instead_of_corrupting_frames(directory):
+    import time
+    subject = InProcessServer(LargeReplies(), directory / "s.sock", write_timeout=0.3)
+    try:
+        stalled = subject.client("alice", max_frame_bytes=4_000_000)
+        open_session(stalled)
+        for identifier in range(2, 6):
+            stalled.send(rpc(identifier, "tools/call", {"name": "big"}))
+        time.sleep(1.5)  # stop reading for longer than the write timeout
+        stalled.client.socket.settimeout(5)
+        data = b""
+        while chunk := stalled.client.reader.read1(1 << 20):
+            data += chunk
+        complete, _, truncated = data.rpartition(b"\n")
+        lines = [line for line in complete.split(b"\n") if line]
+        assert all(json.loads(line)["result"] for line in lines), "a complete line held a corrupted frame"
+        assert len(lines) < 4, "the stalled client should have lost the connection"
+        assert b"\n" not in truncated
+        # The connection ended; the server keeps serving others.
+        assert subject.client("bob").request(initialize())["result"]["serverInfo"]["name"] == "xorchestrate"
+    finally:
+        subject.stop()
+
+
+# -- capacity and refusals -----------------------------------------------------
+
+def test_full_server_refuses_in_the_handshake_and_keeps_control_available(directory):
+    subject = InProcessServer(HeldApplication(), directory / "s.sock", max_connections=1)
+    try:
+        open_session(subject.client("alice"))
+        subject.wait_connections(1)
+        with pytest.raises(OrchestrationError) as full:
+            UnixClient(directory / "s.sock", actor="bob")
+        assert (full.value.code, full.value.details["reason"]) == ("connection_refused", "server_full")
+        assert "connection limit" in str(full.value)
+        status = subject.client("operator", purpose="control").request({"command": "status"})
+        assert (status["connections"], status["max_connections"]) == (1, 1)
+    finally:
+        subject.stop()
+
+
+def test_connect_reports_a_full_server_and_starts_no_other(cli):
+    server, output = cli.spawn("serve", "--transport", "unix", "--max-connections", "1")
+    first = None
+    try:
+        assert "serving" in output.read()
+        first = cli.spawn("connect", "--actor", "first")
+        open_session(first[1])
+        refused = cli.run("connect", "--actor", "second", "--start-timeout", "5")
+        assert refused.returncode == 2, refused
+        error = json.loads(refused.stderr)["error"]
+        assert error["code"] == "connection_refused" and error["details"]["reason"] == "server_full"
+        assert cli.server_log() == "", "no second server was started"
+    finally:
+        if first is not None:
+            cli.finish(*first)
+        cli.run("down", "--detach")
+        server.communicate(timeout=10)
+
+
+# -- drain mechanics -----------------------------------------------------------
+
+def test_requests_on_a_stopped_dispatcher_release_their_admission():
+    import io
+    dispatcher = MCPDispatcher(HeldApplication(), request_workers=1, max_pending_requests=1)
+    dispatcher.close()  # pools shut down: submit raises
+    frames = [initialize(), rpc(2, "tools/call", {"name": "late"}), rpc(3, "tools/call", {"name": "later"})]
+    output = io.StringIO()
+    source = io.BytesIO(b"".join(json.dumps(frame).encode() + b"\n" for frame in frames))
+    dispatcher.serve_connection(StdioConnection(source, output))
+    replies = {reply["id"]: reply for reply in map(json.loads, output.getvalue().splitlines())}
+    assert replies[2]["error"]["code"] == -32003 and replies[3]["error"]["code"] == -32003, replies
+    assert dispatcher.in_flight == 0
+
+
+# -- one server per configuration, whatever the client's environment ----------
+
+def test_clients_with_different_environments_reach_one_server(cli, directory):
+    base = {**cli.environment}
+    first = {**base, "XORCHESTRATE_RUNTIME_DIR": str(directory / "run-a"), "TMPDIR": str(directory)}
+    second = {**base, "XDG_RUNTIME_DIR": str(directory / ("x" * 120)), "TMPDIR": "/tmp"}
+    (directory / "run-a").mkdir(mode=0o700)
+    a = cli.json("up", environment=first)
+    b = cli.json("up", environment=second)
+    c = cli.json("up")
+    assert (a["started"], b["started"], c["started"]) == (True, False, False)
+    assert a["pid"] == b["pid"] == c["pid"] and a["socket"] == b["socket"] == c["socket"]
+    relative = cli.run("up", environment={**base, "XORCHESTRATE_RUNTIME_DIR": "relative/run"})
+    assert relative.returncode == 0, "clients do not compute the socket, so their runtime setting is irrelevant"
+    assert cli.json("down")["stopped"] is True
+
+
+def test_server_locations_are_private_absolute_and_bounded(directory):
+    environ = {"XORCHESTRATE_HOME": str(directory / "home")}
+    files = ServerFiles.locate(server_identity(directory / "team.json"), environ).ensure()
+    assert files == ServerFiles.locate(server_identity(directory / "." / "team.json"), environ)
+    assert files.key != ServerFiles.locate(server_identity(directory / "other.json"), environ).key
+    assert stat.S_IMODE(files.directory.stat().st_mode) == 0o700
+    assert default_socket_path(files, environ).parent == files.directory
+    long_home = ServerFiles.locate(files.identity, {"XORCHESTRATE_HOME": str(directory / ("h" * 120))})
+    fallback = default_socket_path(long_home, {})
+    assert fallback.name == f"{files.key}.sock" and len(os.fsencode(str(fallback))) <= 107
+    for variable in ("XORCHESTRATE_HOME", "XORCHESTRATE_RUNTIME_DIR"):
+        with pytest.raises(OrchestrationError):
+            default_socket_path(files, {variable: "relative/dir"}) if variable != "XORCHESTRATE_HOME" \
+                else xorchestrate_home({variable: "relative/dir"})
     shared = directory / "shared"
     shared.mkdir(mode=0o755)
     shared.chmod(0o755)
     with pytest.raises(OrchestrationError):
-        default_socket_path(config, environ={"XORCHESTRATE_RUNTIME_DIR": str(shared)})
+        default_socket_path(files, {"XORCHESTRATE_RUNTIME_DIR": str(shared)})
+    foreign_mode = files.directory / "loose.lock"
+    foreign_mode.write_text("")
+    foreign_mode.chmod(0o644)
+    with pytest.raises(OrchestrationError):
+        InstanceLock(foreign_mode).acquire()
+
+
+def test_lock_probes_never_make_a_starting_server_give_up(directory):
+    lock_path = directory / "server.lock"
+    created = InstanceLock(lock_path)
+    assert created.acquire()
+    created.release()
+    stop = threading.Event()
+
+    def probe():
+        # Clients poll (wait_stopped, ensure_server) every few milliseconds.
+        while not stop.is_set():
+            lock_is_held(lock_path)
+            stop.wait(0.002)
+
+    probes = [threading.Thread(target=probe, daemon=True) for _ in range(4)]
+    for thread in probes:
+        thread.start()
+    try:
+        for _ in range(20):
+            lock = InstanceLock(lock_path)
+            assert lock.acquire(wait=SERVER_LOCK_WAIT), "a probe made the server's lock acquisition fail"
+            assert lock_is_held(lock_path)
+            lock.release()
+    finally:
+        stop.set()
+        for thread in probes:
+            thread.join(5)
+
+
+# -- crash recovery and startup failure through the CLI ------------------------
+
+def test_a_crashed_server_is_replaced_on_the_next_start(cli):
+    import signal
+    import time
+    first = cli.json("up")
+    os.kill(first["pid"], signal.SIGKILL)
+    deadline = time.monotonic() + 10
+    while cli.run("status").returncode != 3:
+        assert time.monotonic() < deadline, "the killed server still answered"
+        time.sleep(0.05)
+    assert os.path.exists(first["socket"]), "the crash left its socket file behind"
+    second = cli.json("up")
+    assert second["started"] is True and second["pid"] != first["pid"] and second["socket"] == first["socket"]
+    process, channel = cli.spawn("connect", "--actor", "after-crash")
+    open_session(channel)
+    assert created_by(create(channel, 2, "after the crash")) == "after-crash"
+    assert cli.finish(process, channel)[0] == 0
+    assert cli.json("down")["stopped"] is True
+
+
+def test_startup_failure_is_reported_with_the_server_log(cli):
+    cli.config.write_text(json.dumps({"not_a_section": {}}), encoding="utf-8")
+    failed = cli.run("up", "--start-timeout", "20")
+    assert failed.returncode == 2, failed
+    error = json.loads(failed.stderr)["error"]
+    assert error["code"] == "server_unavailable" and error["details"]["exit_code"] == 2
+    assert "configuration_error" in cli.server_log()
+    assert cli.run("status").returncode == 3

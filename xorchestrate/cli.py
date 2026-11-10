@@ -17,13 +17,16 @@ from .composition import build, describe, load_config, read_json
 from .mcp import MCPDispatcher, failure, frames, serve
 from .model import OrchestrationError
 from .server import (
+    SERVER_LOCK_WAIT,
     ProjectServer,
-    companion_paths,
+    ServerFiles,
     default_socket_path,
+    discover,
     ensure_server,
     open_client,
     relay,
     server_command,
+    server_identity,
     wait_stopped,
 )
 
@@ -50,7 +53,7 @@ def _parser():
     inputs = call.add_mutually_exclusive_group()
     inputs.add_argument("--json", dest="json_input")
     inputs.add_argument("--input", help="JSON argument file")
-    socket_help = "Server socket; default derived from the resolved --config under a per-user runtime directory"
+    socket_help = "Server socket; by default the server chooses it and clients find it through its discovery record"
     serve_command = commands.add_parser("serve", help="Serve MCP over stdin/stdout until EOF, or as a shared server")
     serve_command.add_argument("--transport", choices=("stdio", "unix"), default="stdio",
                                help="stdio: one client on this process's streams; unix: the shared server")
@@ -73,12 +76,16 @@ def _parser():
     return parser
 
 
-def _socket_path(args):
-    if args.socket:
-        path = check_socket_path(args.socket)
-        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-        return path
-    return default_socket_path(args.config)
+def _files(args):
+    return ServerFiles.locate(server_identity(args.config))
+
+
+def _explicit_socket(args):
+    if not args.socket:
+        return None
+    path = check_socket_path(args.socket)
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    return path
 
 
 def _forwarded(args):
@@ -91,37 +98,55 @@ def _forwarded(args):
     return forwarded
 
 
-def _serve_unix(args, path):
-    lock = InstanceLock(companion_paths(path)["instance_lock"])
-    if not lock.acquire():
-        raise OrchestrationError("A server is already running for this socket.", "server_running", {"socket": str(path)})
+def _serve_unix(args):
+    files = _files(args).ensure()
+    lock = InstanceLock(files.lock)
+    # Retry briefly: a client's lock probe may hold the lock for an instant.
+    if not lock.acquire(wait=SERVER_LOCK_WAIT):
+        record = files.read_record()
+        raise OrchestrationError("A server is already running for this configuration.", "server_running",
+                                 {"socket": record and record.get("socket")})
     try:
+        path = _explicit_socket(args) or default_socket_path(files)
         config, base_dir = load_config(args.config)
         with build(config, base_dir) as runtime:
             dispatcher = MCPDispatcher(runtime.application, args.request_workers, args.max_pending_requests,
                                        args.control_workers)
+            transport = None
             try:
-                # The instance lock is held, so any socket left at the path is stale.
+                # The instance lock is held, so a socket left at the path with
+                # nothing listening on it is stale.
                 transport = UnixClientTransport(path, max_frame_bytes=args.max_frame_bytes, replace_stale=True)
+                configured = str(Path(args.config).resolve()) if args.config else None
                 server = ProjectServer(runtime.application, transport, dispatcher, max_connections=args.max_connections,
-                                       details={"socket": str(path), "config": str(Path(args.config).resolve()) if args.config else None})
+                                       details={"socket": str(path), "config": configured})
                 if threading.current_thread() is threading.main_thread():
                     signal.signal(signal.SIGTERM, lambda *_: server.terminate())
+                files.write_record(path, configured)
                 _write({"serving": {"socket": str(path), "pid": os.getpid()}}, sys.stdout)
                 server.serve_forever()
             finally:
+                files.remove_record()
+                if transport is not None:
+                    transport.close()
                 dispatcher.close()
     finally:
         lock.release()
 
 
 def _server_command(args):
-    path = _socket_path(args)
-    if args.command == "connect":
-        actor = args.connection_actor or args.actor
-        client, _ = ensure_server(path, server_command(_forwarded(args), path), actor=actor,
-                                  timeout=args.start_timeout, cwd=os.getcwd())
+    files = _files(args)
+    explicit = _explicit_socket(args)
+    if args.command in {"connect", "up"}:
+        purpose = "mcp" if args.command == "connect" else "control"
+        actor = (args.connection_actor or args.actor) if args.command == "connect" else args.actor
+        client, started = ensure_server(files, server_command(_forwarded(args), explicit), explicit_socket=explicit,
+                                        actor=actor, purpose=purpose, timeout=args.start_timeout, cwd=os.getcwd())
         try:
+            if args.command == "up":
+                reply = client.request({"command": "status"}, args.start_timeout)
+                _write({**reply, "started": started}, sys.stdout)
+                return 0
             finished = relay(client, sys.stdin.fileno(), sys.stdout.buffer)
         finally:
             client.close()
@@ -129,19 +154,13 @@ def _server_command(args):
             _write({"error": {"code": "server_closed", "message": "The server closed the connection."}}, sys.stderr)
             return 1
         return 0
-    if args.command == "up":
-        client, started = ensure_server(path, server_command(_forwarded(args), path), actor=args.actor,
-                                        purpose="control", timeout=args.start_timeout, cwd=os.getcwd())
-        try:
-            reply = client.request({"command": "status"}, args.start_timeout)
-        finally:
-            client.close()
-        _write({**reply, "started": started}, sys.stdout)
-        return 0
+    target = discover(files, explicit)
     try:
-        client = open_client(path, actor=args.actor, purpose="control")
-    except (OSError, OrchestrationError):
-        _write({"running": False, "socket": str(path)}, sys.stdout)
+        if target is None:
+            raise FileNotFoundError("no server record")
+        client = open_client(target, actor=args.actor, purpose="control")
+    except OSError:
+        _write({"running": False, "socket": None if target is None else str(target)}, sys.stdout)
         return 3 if args.command == "status" else 0
     try:
         if args.command == "status":
@@ -158,7 +177,7 @@ def _server_command(args):
         _write({"error": reply["error"]}, sys.stderr)
         return 2
     if args.command == "down":
-        stopped = wait_stopped(path, args.timeout)
+        stopped = wait_stopped(files, args.timeout)
         reply = {**reply, "stopped": stopped}
     _write(reply, sys.stdout)
     return 0 if reply.get("stopped", True) else 2
@@ -177,7 +196,7 @@ def main(argv=None):
         if args.command in SERVER_COMMANDS:
             return _server_command(args)
         if args.command == "serve" and args.transport == "unix":
-            _serve_unix(args, _socket_path(args))
+            _serve_unix(args)
             return 0
         config, base_dir = load_config(args.config)
         with build(config, base_dir) as runtime:

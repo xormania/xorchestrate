@@ -138,6 +138,7 @@ class MCPDispatcher:
         self._state = threading.Condition()
         self._in_flight = 0
         self._draining = False
+        self._stopped = False
 
     @property
     def in_flight(self):
@@ -150,13 +151,24 @@ class MCPDispatcher:
             return self._draining
 
     def begin_drain(self):
-        """Refuse new tool calls on every connection; calls already admitted continue."""
+        """Refuse new effect calls on every connection.
+
+        Calls already admitted continue, and the reserved observation/control
+        tools (``CONTROL_TOOLS``) stay available so clients can watch, stop or
+        detach their sessions while the server drains.
+        """
         with self._state:
             self._draining = True
 
     def end_drain(self):
         with self._state:
             self._draining = False
+
+    def stop_admission(self):
+        """Refuse every new tool call, including observation and control."""
+        with self._state:
+            self._draining = True
+            self._stopped = True
 
     def wait_idle(self, timeout=None):
         """Wait until no admitted tool call is executing. Return whether that happened."""
@@ -230,7 +242,7 @@ class MCPDispatcher:
                     duplicate = key in pending
                     if not duplicate:
                         with self._state:
-                            draining = self._draining
+                            draining = self._stopped or (self._draining and not control)
                             if not draining:
                                 admitted = self._limits[control].acquire(blocking=False)
                                 if admitted:
@@ -244,7 +256,15 @@ class MCPDispatcher:
                 elif not admitted:
                     write(server._error(identifier, -32001, "Concurrent request capacity exceeded; this request was not started."))
                 else:
-                    self._pools[control].submit(execute, request, key, control)
+                    try:
+                        self._pools[control].submit(execute, request, key, control)
+                    except RuntimeError:  # pool already shut down
+                        # Not started: give back its admission, count and identifier.
+                        with local:
+                            pending.discard(key)
+                            local.notify_all()
+                        self._finish(control)
+                        write(server._error(identifier, -32003, "Server is shutting down; this request was not started."))
         finally:
             with local:
                 local.wait_for(lambda: not pending)

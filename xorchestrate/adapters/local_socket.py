@@ -14,6 +14,7 @@ import socket
 import stat
 import struct
 import sys
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -56,31 +57,57 @@ def check_socket_path(path) -> Path:
     return path
 
 
+
+
+# The umask is process-wide; serialize the binds that narrow it.
+_UMASK_LOCK = threading.Lock()
+
+
+def is_listening(path) -> bool:
+    """Whether a process currently accepts connections on the socket at ``path``."""
+    probe = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        probe.settimeout(1.0)
+        probe.connect(str(path))
+        return True
+    except OSError:
+        return False
+    finally:
+        probe.close()
+
+
 class OwnerSocketListener:
     """Bind an owner-only stream socket and accept only peers the check allows.
 
     ``accept`` returns ``(connection, credentials)`` like ``socket.accept`` so
     callers can keep their own accept loops. A refused peer is closed and the
-    listener keeps waiting. An existing path is never replaced unless
-    ``replace_stale`` is set by a caller that holds the instance lock, and then
-    only when the path is a socket owned by this user.
+    listener keeps waiting. The socket is created under a ``0177`` umask, so it
+    is never more permissive than ``0600``. An existing path is never replaced
+    unless ``replace_stale`` is set by a caller that holds the instance lock,
+    and then only when it is this user's socket and nothing is listening on it.
     """
 
     def __init__(self, path, backlog=16, *, check=same_user, replace_stale=False):
         self.path = check_socket_path(path)
         self.check = check
         self.closed = False
+        self._identity = None
         if replace_stale:
             self._remove_stale()
         self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
-            self.socket.bind(str(self.path))
-            os.chmod(self.path, 0o600)
+            with _UMASK_LOCK:
+                previous = os.umask(0o177)
+                try:
+                    self.socket.bind(str(self.path))
+                finally:
+                    os.umask(previous)
             self._identity = self._stat_identity()
+            os.chmod(self.path, 0o600)
             self.socket.listen(backlog)
         except Exception:
             self.socket.close()
-            if getattr(self, "_identity", None) is not None:
+            if self._identity is not None:
                 self.path.unlink(missing_ok=True)
             raise
 
@@ -95,6 +122,9 @@ class OwnerSocketListener:
             return
         if not stat.S_ISSOCK(metadata.st_mode) or metadata.st_uid != os.getuid():
             raise OrchestrationError("The socket path exists and is not this user's socket.", "invalid_configuration",
+                                     {"path": str(self.path)})
+        if is_listening(self.path):
+            raise OrchestrationError("Another server is listening on this socket.", "server_running",
                                      {"path": str(self.path)})
         self.path.unlink()
 
@@ -140,6 +170,17 @@ class OwnerSocketListener:
             pass
 
 
+def open_private_file(path, flags):
+    """Open a regular file that must be owned by this user and private (no group/other bits)."""
+    fd = os.open(path, flags | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+    metadata = os.fstat(fd)
+    if not stat.S_ISREG(metadata.st_mode) or metadata.st_uid != os.getuid() or metadata.st_mode & 0o077:
+        os.close(fd)
+        raise OrchestrationError("A server file must be a private regular file owned by this user.",
+                                 "invalid_configuration", {"path": str(path)})
+    return fd
+
+
 class InstanceLock:
     """An exclusive advisory lock file; the kernel releases it if the holder dies."""
 
@@ -147,13 +188,14 @@ class InstanceLock:
         self.path = Path(path)
         self._fd = None
 
-    def acquire(self, wait=0.0, interval=0.05):
-        """Take the lock, waiting up to ``wait`` seconds. Return whether it is held."""
-        fd = os.open(self.path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+    def acquire(self, wait=0.0, interval=0.02, *, shared=False):
+        """Take the lock, retrying for up to ``wait`` seconds. Return whether it is held."""
+        fd = open_private_file(self.path, os.O_RDWR | os.O_CREAT)
         deadline = time.monotonic() + max(0.0, wait)
+        mode = fcntl.LOCK_SH if shared else fcntl.LOCK_EX
         while True:
             try:
-                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                fcntl.flock(fd, mode | fcntl.LOCK_NB)
             except BlockingIOError:
                 if time.monotonic() >= deadline:
                     os.close(fd)
@@ -179,10 +221,15 @@ class InstanceLock:
 
 
 def lock_is_held(path) -> bool:
-    """Whether another holder currently owns the lock file at ``path``."""
+    """Whether a holder currently owns the exclusive lock at ``path``.
+
+    The probe takes a shared lock, so concurrent probes never conflict with
+    each other; a server acquiring the exclusive lock retries briefly to ride
+    over a probe that holds it for an instant.
+    """
     probe = InstanceLock(path)
     try:
-        if probe.acquire():
+        if probe.acquire(shared=True):
             probe.release()
             return False
     except FileNotFoundError:

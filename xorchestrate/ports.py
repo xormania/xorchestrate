@@ -220,7 +220,13 @@ class ClientConnection(Protocol):
 
 
 class ClientTransport(Protocol):
-    """Driving-side source of client connections, chosen by the entrypoint."""
+    """Driving-side source of client connections, chosen by the entrypoint.
+
+    A transport with a handshake may also offer ``set_admission(admission)``:
+    ``admission.admit(peer)`` returns ``None`` to accept or ``(code, message)``
+    to refuse the client in the handshake reply, and ``admission.cancel(peer)``
+    undoes an admission whose connection was never delivered.
+    """
 
     def accept(self, timeout: float | None = None) -> ClientConnection | None:
         """Wait for the next verified connection; ``None`` on timeout or once closed."""
