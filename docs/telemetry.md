@@ -38,12 +38,36 @@ application operations are available through both input adapters.
 
 The top-level `telemetry` section takes `adapter` (built-in `local`), `options`
 and an optional boolean `enabled`. `enabled: false` constructs no collector. When
-the section is absent, no collector is constructed unless the caller of
-`composition.build()` supplies `TelemetryDefaults` (runtime root, project id,
-collector id and a dataset id that defaults to `default`); the local collector is
-then constructed with those values. The command-line entry points do not supply
-defaults yet. If construction fails, the application continues with an explicit
-unavailable telemetry state. Unknown option names are rejected.
+the section is absent, or explicitly `null`, no collector is constructed unless
+the caller of `composition.build()` supplies `TelemetryDefaults` (an absolute
+runtime root, project id, collector id and a dataset id that defaults to
+`default`, validated like the explicit options); the local collector is then
+constructed with those values. The command-line entry points do not supply
+defaults yet. Unknown option names are rejected.
+
+If construction fails, the application continues with an explicit unavailable
+telemetry state. `telemetry_status` then reports `reason:
+configuration_unavailable` and a bounded `cause`, for example `{"code":
+"unknown_option", "detail": "profile"}`, `{"code": "unknown_adapter", "detail":
+"corpus: <name>"}`, `{"code": "adapter_unavailable", ...}`, `{"code":
+"invalid_option", "detail": "<validation message>"}` or `{"code":
+"sqlite_version", "detail": null}`. The detail names options or adapters, never
+option values.
+
+### Migrating from the `profile` option
+
+The separate collector's TOML `profile` option has been removed; a configuration
+that still uses it reports `cause.code` `unknown_option` with detail `profile`.
+Move the profile's settings into inline options: `runtime_root`, `project_id`,
+`dataset_id`, `collector_id`, `producer_id` and `capture_lock_timeout_ms`, plus
+`database` and `artifact_root` (or the `corpus`/`artifacts` selections).
+Profiles defaulted the database to `live.sqlite3`, whereas inline options default
+to `events.sqlite3`: set `database` explicitly (for example `"database":
+"live.sqlite3"`) to keep using an existing corpus. Keep the same dataset and
+collector identities, or the corpus refuses the collector as a different lineage.
+A profile's `runtime_root` was relative to the profile file; the inline option is
+relative to the configuration file's directory. A profile's `[artifacts] enabled =
+false` becomes `"artifacts": {"adapter": "filesystem", "enabled": false}`.
 
 | Option | Default | Validation and meaning |
 | --- | --- | --- |
@@ -85,7 +109,7 @@ alias or a trusted installed `module:factory`; the factory receives its options
 and a `CollectorScope` (runtime root, dataset and collector identities) and
 implements the `TelemetryCorpusStorage` or `TelemetryArtifacts` port in
 [`ports.py`](../xorchestrate/adapters/telemetry_collector/ports.py). An unknown
-name or option is refused.
+name or option is refused, also for a selection with `"enabled": false`.
 
 ```json
 "telemetry": {"adapter": "local", "options": {
@@ -104,7 +128,13 @@ name or option is refused.
 The database and artifact paths cannot overlap or traverse symbolic links.
 Snapshot bundles are SQLite/file closures, so `telemetry_snapshot`,
 `telemetry_verify` and `telemetry_restore` require the `sqlite` corpus; another
-corpus adapter answers them with `telemetry_unsupported`.
+corpus adapter answers them with `telemetry_unsupported`. With artifacts
+disabled, a snapshot succeeds only while the corpus refers to no captured
+artifacts; otherwise it fails with `telemetry_integrity` and the bundle stays
+marked incomplete.
+
+The `export_root` is contained in `runtime_root` but is not checked for overlap
+with the database or artifact paths.
 
 ## Operations
 

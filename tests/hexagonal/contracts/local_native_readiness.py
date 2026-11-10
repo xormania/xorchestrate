@@ -16,16 +16,20 @@ def explicit_disabled_capture_contract(subject):
     assert after == before, "SETUP_MUST_PRESERVE_EXPLICIT_DISABLED_CAPTURE_AND_OPERATOR_SETTINGS"
 
 
-def selected_capture_sqlite_contract(subject, enabled):
-    report, unchanged = subject.doctor_with_incompatible_sqlite(enabled)
+def selected_capture_sqlite_contract(subject, capture):
+    report, unchanged = subject.doctor_with_incompatible_sqlite(capture)
     sqlite = [item for item in report["readiness"] if item["name"] == "telemetry_sqlite"]
-    if enabled:
+    if capture == "sqlite":
         assert sqlite and sqlite[0].get("required") is True and sqlite[0]["passed"] is False, \
-            "SELECTED_LOCAL_CAPTURE_MUST_REPORT_INCOMPATIBLE_SQLITE_AS_REQUIRED"
+            "SELECTED_SQLITE_CORPUS_MUST_REPORT_INCOMPATIBLE_SQLITE_AS_REQUIRED"
+        assert report["status"] == "setup_error"
+    elif capture == "malformed":
+        assert any(item["name"] == "telemetry_configuration" and item.get("required") and not item["passed"]
+                   for item in report["readiness"]), "MALFORMED_CAPTURE_SELECTION_MUST_BE_AN_EXPLICIT_FAILURE"
         assert report["status"] == "setup_error"
     else:
         assert not any(item.get("required", True) for item in sqlite), \
-            "EXPLICIT_DISABLED_CAPTURE_MUST_NOT_REQUIRE_THE_CORPUS_SQLITE_RUNTIME"
+            "DISABLED_OR_NON_SQLITE_CAPTURE_MUST_NOT_REQUIRE_THE_CORPUS_SQLITE_RUNTIME"
         assert report["status"] == "passed"
     assert report["authentication"] == "not probed", "READINESS_MUST_NOT_CLAIM_NATIVE_AUTHENTICATED_EXECUTION"
     assert unchanged, "DOCTOR_MUST_NOT_CHANGE_OPERATOR_CONFIGURATION_OR_ALLOCATE_A_RUN"

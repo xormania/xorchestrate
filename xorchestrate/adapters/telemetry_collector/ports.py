@@ -46,12 +46,16 @@ class TelemetryCorpus(Protocol):
 class TelemetryCorpusStorage(Protocol):
     """A selected corpus adapter; every connection is owned by one caller.
 
-    ``locations`` lists the filesystem paths the adapter owns, so the collector
-    can refuse overlapping storage. ``inspect(location)`` opens a read-only
-    connection, optionally to a preserved copy in this adapter's format.
+    ``locations`` lists the filesystem paths the adapter owns (empty when it
+    owns none), so the collector can refuse overlapping storage; an adapter
+    that omits it is refused. ``database_path`` is the SQLite database that
+    snapshot bundles copy, or None when the adapter cannot be bundled.
+    ``inspect(location)`` opens a read-only connection, optionally to a
+    preserved copy in this adapter's format.
     """
 
     locations: tuple[Path, ...]
+    database_path: Path | None
 
     def initialize(self) -> None: ...
     def open(self) -> TelemetryCorpus: ...
@@ -59,7 +63,12 @@ class TelemetryCorpusStorage(Protocol):
 
 
 class TelemetryArtifacts(Protocol):
-    """Content-addressed artifact storage installed before observations refer to it."""
+    """Content-addressed artifact storage installed before observations refer to it.
+
+    ``locations`` lists the filesystem paths the adapter owns (empty when none).
+    """
+
+    locations: tuple[Path, ...]
 
     def put(self, data: bytes, media_type="application/octet-stream") -> ArtifactRef: ...
     def read(self, ref: ArtifactRef) -> bytes: ...

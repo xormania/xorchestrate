@@ -35,9 +35,9 @@ def test_setup_preserves_explicit_disabled_capture_and_operator_configuration(re
     explicit_disabled_capture_contract(readiness)
 
 
-@pytest.mark.parametrize("enabled", [True, False])
-def test_doctor_requires_corpus_sqlite_only_for_selected_enabled_capture(readiness, enabled):
-    selected_capture_sqlite_contract(readiness, enabled)
+@pytest.mark.parametrize("capture", ["sqlite", "disabled", "other-corpus", "malformed"])
+def test_doctor_requires_corpus_sqlite_only_for_a_selected_sqlite_corpus(readiness, capture):
+    selected_capture_sqlite_contract(readiness, capture)
 
 
 @pytest.mark.parametrize("language", ["rust", "python", "php"])

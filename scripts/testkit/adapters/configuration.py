@@ -18,16 +18,41 @@ def local_capture(directory, *, project=None):
             "collector_id": "collector-" + identity, "producer_id": "xorchestrate-managed-proof"}}
 
 
-def _default_storage(options):
-    """Relative database and artifact paths when the default SQLite/file adapters are selected."""
-    corpus = options.get("corpus", {"adapter": "sqlite", "options": {
-        key: options[key] for key in ("database",) if key in options}})
-    artifacts = options.get("artifacts", {"adapter": "filesystem", "options": {
-        "root": options[key] for key in ("artifact_root",) if key in options}})
-    if corpus.get("adapter") != "sqlite" or artifacts.get("adapter") != "filesystem" or artifacts.get("enabled") is False:
+def _storage_selection(options, name, default, shorthand):
+    if name not in options:
+        return default, {target: options[key] for key, target in shorthand.items() if key in options}, True
+    value = options[name]
+    if (not isinstance(value, dict) or not isinstance(value.get("adapter"), str) or not value["adapter"]
+            or not isinstance(value.get("options", {}), dict) or type(value.get("enabled", True)) is not bool):
+        raise ValueError(f"Malformed telemetry {name} selection")
+    return value["adapter"], value.get("options", {}), value.get("enabled", True)
+
+
+def capture_storage(capture):
+    """Describe selected local capture storage, mirroring the product's selection rules.
+
+    Returns None for disabled or non-local capture. Otherwise ``corpus`` and
+    ``artifacts`` name the selected adapters (``artifacts`` is None when disabled),
+    and ``database``/``artifact_root`` give the relative paths of the default
+    ``sqlite``/``filesystem`` adapters, or None for another adapter. Malformed
+    selections raise ValueError rather than being guessed.
+    """
+    if not isinstance(capture, dict):
+        raise ValueError("Telemetry configuration must be an object")
+    if capture.get("enabled", True) is False or capture.get("adapter") != "local":
         return None
-    return (corpus.get("options", {}).get("database", "events.sqlite3"),
-            artifacts.get("options", {}).get("root", "artifacts"))
+    options = capture.get("options", {})
+    if not isinstance(options, dict):
+        raise ValueError("Telemetry options must be an object")
+    corpus, corpus_options, _ = _storage_selection(options, "corpus", "sqlite", {"database": "database"})
+    artifacts, artifact_options, enabled = _storage_selection(
+        options, "artifacts", "filesystem", {"artifact_root": "root"})
+    database = corpus_options.get("database", "events.sqlite3") if corpus == "sqlite" else None
+    artifact_root = artifact_options.get("root", "artifacts") if enabled and artifacts == "filesystem" else None
+    if any(value is not None and (not isinstance(value, str) or not value) for value in (database, artifact_root)):
+        raise ValueError("Telemetry storage paths must be nonempty text")
+    return {"corpus": corpus, "artifacts": artifacts if enabled else None,
+            "database": database, "artifact_root": artifact_root}
 
 
 def isolated_config(config, base, directory, *, capture=False, project=None):
@@ -75,6 +100,8 @@ def isolated_config(config, base, directory, *, capture=False, project=None):
     elif (capture and isinstance(selected, dict) and selected.get("enabled", True)
           and selected.get("adapter") == "local"):
         options = selected.setdefault("options", {})
+        if not isinstance(options, dict) or not isinstance(options.get("runtime_root", ""), str):
+            raise ValueError("Telemetry options must be an object with a text runtime_root")
         if "runtime_root" not in options:
             fresh = local_capture(directory, project=base)["options"]
             selected["options"] = {**fresh, **options, **{key: fresh[key]
@@ -92,17 +119,21 @@ def isolated_config(config, base, directory, *, capture=False, project=None):
         elif selected.get("adapter") == "local":
             options = selected["options"]
             storage = Path(options["runtime_root"])
-            locations = _default_storage(options)
+            selection = capture_storage(selected)
             managed = Path(os.environ.get("XORCHESTRATE_PROOF_DIRECTORY", directory)).resolve()
             owned = storage == directory / "telemetry" or (
                 "XORCHESTRATE_PROOF_DIRECTORY" in os.environ and storage.is_relative_to(managed))
-            if locations is None:
-                # Collection preserves SQLite/file corpora; another selected
-                # storage adapter remains an explicit, uncollected gap.
+            if selection["database"] is None or (selection["artifacts"] is not None
+                                                  and selection["artifact_root"] is None):
+                # Collection preserves SQLite/file corpora (with or without
+                # artifacts); another selected storage adapter remains an
+                # explicit, uncollected gap.
                 descriptor["reason"] = "selected_capture_storage_not_collected"
             else:
+                artifacts = selection["artifact_root"]
                 descriptor.update(status="configured" if owned else "external", runtime_root=str(storage),
-                    database=str(storage / locations[0]), artifacts=str(storage / locations[1]),
+                    database=str(storage / selection["database"]),
+                    artifacts=None if artifacts is None else str(storage / artifacts),
                     **{key: options.get(key) for key in ("project_id", "dataset_id", "collector_id")})
                 if owned:
                     descriptor.pop("reason", None)

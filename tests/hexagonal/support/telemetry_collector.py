@@ -10,6 +10,7 @@ import json
 import os
 import shutil
 import threading
+from copy import deepcopy
 from dataclasses import asdict
 from pathlib import Path
 
@@ -27,6 +28,7 @@ FIXTURE_IDENTITY = {"project_id": "fixture-project", "dataset_id": "fixture-data
                     "collector_id": "fixture-collector"}
 FIXTURE_BUNDLE_ID = "fc12e9bbb5f099641bd64e724b2dd3d81118d50b14ea0b2544568edc71dad901"
 MODULE = "tests.hexagonal.support.telemetry_collector"
+_COLLECTION_FIELDS = {"sequence", "digest", "captured_at"}
 
 
 def private_copy(name, destination):
@@ -65,6 +67,7 @@ class MemoryCorpus:
         self.rows, self.cursors, self.lock = [], {}, threading.Lock()
         self.initialized = False
         self.locations = ()
+        self.database_path = None
         MemoryCorpus.instances.append(self)
 
     def initialize(self):
@@ -99,6 +102,7 @@ class _MemoryConnection:
                         return CaptureResult("rejected", reason="conflict")
                     return CaptureResult("duplicate", Receipt(event.event_id, row["sequence"], digest, row["captured_at"]))
             sequence = len(self.corpus.rows) + 1
+            # Rows keep the stored observation separate from collection metadata.
             self.corpus.rows.append({**json.loads(json.dumps(asdict(event))), "sequence": sequence,
                                      "digest": digest, "captured_at": captured_at})
             if cursor is not None:
@@ -121,13 +125,16 @@ class _MemoryConnection:
                      if row["event_id"] == event_id and row["context"]["project_id"] == project_id), None)
 
     def find_by_source(self, *, project_id, event_type, path, value):
+        """Return stored observations only, as the SQLite corpus does."""
         found = []
-        for row in self.query(project_id=project_id, event_type=event_type, limit=len(self.corpus.rows) or 1):
+        for row in self.corpus.rows:
+            if row["context"]["project_id"] != project_id or row["event_type"] != event_type:
+                continue
             item = json.loads(row["source_json"])
             for part in path:
                 item = item.get(part) if isinstance(item, dict) else None
             if item == value:
-                found.append(row)
+                found.append({key: deepcopy(item) for key, item in row.items() if key not in _COLLECTION_FIELDS})
         return found
 
     def status(self):
@@ -147,6 +154,7 @@ class MemoryArtifacts:
 
     def __init__(self, options):
         self.options, self.objects = options, {}
+        self.locations = ()
         MemoryArtifacts.instances.append(self)
 
     def put(self, data, media_type="application/octet-stream"):

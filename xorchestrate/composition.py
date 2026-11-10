@@ -62,16 +62,25 @@ class TelemetryDefaults:
     dataset_id: str = "default"
 
     def specification(self):
-        values = (self.project_id, self.collector_id, self.dataset_id)
-        if not isinstance(self.runtime_root, (str, Path)) or not all(isinstance(value, str) and value for value in values):
-            raise OrchestrationError("Telemetry defaults require a runtime root and nonempty identities.",
-                                     "configuration_error")
+        """Return the local telemetry section, refusing defaults an explicit section would refuse."""
+        from .adapters.telemetry_collector.config import text
+        from .adapters.telemetry_collector.domain import TelemetryError
+
+        root = self.runtime_root
+        if not isinstance(root, (str, Path)) or not str(root) or not Path(root).is_absolute():
+            raise OrchestrationError("Telemetry defaults require an absolute runtime root.", "configuration_error")
+        try:
+            for name in ("project_id", "collector_id", "dataset_id"):
+                text(getattr(self, name), name)
+        except TelemetryError as error:
+            raise OrchestrationError(str(error), "configuration_error") from error
         return {"adapter": "local", "options": {
-            "runtime_root": str(Path(self.runtime_root).expanduser()), "project_id": self.project_id,
+            "runtime_root": str(root), "project_id": self.project_id,
             "dataset_id": self.dataset_id, "collector_id": self.collector_id}}
 
 
-def _factory(kind, adapter):
+def factory_for(kind, adapter):
+    """Resolve a built-in alias or a trusted installed ``module:factory`` for one adapter kind."""
     target = BUILTINS[kind].get(adapter, adapter)
     if not isinstance(target, str) or ":" not in target:
         raise OrchestrationError(f"Unknown {kind} adapter: {adapter}", "configuration_error")
@@ -168,7 +177,7 @@ def build(config=None, base_dir=None, *, telemetry_defaults=None):
         options = dict(options)
         adapter = specification["adapter"]
         try:
-            factory = _factory(kind, adapter)
+            factory = factory_for(kind, adapter)
             if kind in {"providers", "sessions"} and adapter in BUILTINS[kind]:
                 options["cwd"] = str((base_dir / options.get("cwd", ".")).resolve())
             if kind == "store" and adapter == "sqlite":
@@ -177,7 +186,7 @@ def build(config=None, base_dir=None, *, telemetry_defaults=None):
             if kind == "telemetry" and adapter == "local":
                 if isinstance(options.get("runtime_root"), str):
                     options["runtime_root"] = str(base_dir / options["runtime_root"])
-                resource = factory(options, resolve=lambda component, name: _factory("telemetry_" + component, name))
+                resource = factory(options, resolve=lambda component, name: factory_for("telemetry_" + component, name))
             elif kind == "evaluators" and adapter == "tool":
                 resource = factory(options, providers)
             else:
@@ -212,17 +221,20 @@ def build(config=None, base_dir=None, *, telemetry_defaults=None):
 
     try:
         telemetry = None
+        # An absent section and an explicit ``"telemetry": null`` are the same:
+        # no section. Only ``{"enabled": false}`` disables collection outright.
         specification = config.get("telemetry")
         if specification is None and telemetry_defaults is not None:
             specification = telemetry_defaults.specification()
         if specification is not None and not (isinstance(specification, dict) and specification.get("enabled") is False):
             try:
                 telemetry = construct("telemetry", specification)
-            except Exception:
+            except Exception as error:
                 # Telemetry failure must not prevent unrelated work. Keep a safe
-                # explicit state; source exceptions may contain credentials.
-                from .adapters.telemetry import UnavailableTelemetry
-                telemetry = UnavailableTelemetry()
+                # explicit state with a bounded cause; source exception text may
+                # contain credentials and is not retained.
+                from .adapters.telemetry import UnavailableTelemetry, construction_cause
+                telemetry = UnavailableTelemetry(cause=construction_cause(error))
                 resources.append(telemetry)
         state_engine = construct("state_engine", config.get("state_engine", {"adapter": "declared"}))
         store = construct("store", config.get("store", {"adapter": "sqlite"}))

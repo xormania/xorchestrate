@@ -34,8 +34,44 @@ _CORPUS_SHORTHAND = {"database": "database", "capture_lock_timeout_ms": "capture
 _ARTIFACTS_SHORTHAND = {"artifact_root": "root"}
 
 
-def _configuration(message):
-    return OrchestrationError(message, "telemetry_configuration")
+_DETAIL_LIMIT = 200
+
+
+def _bounded(value):
+    return None if value is None else str(value)[:_DETAIL_LIMIT]
+
+
+def _configuration(message, cause="invalid_option", detail=None):
+    """A configuration refusal with a bounded cause that status can report.
+
+    ``detail`` holds option or adapter names or a fixed validation message,
+    never option values, so it cannot carry configured secrets.
+    """
+    return OrchestrationError(message, "telemetry_configuration",
+                              {"cause": cause, "detail": _bounded(message if detail is None else detail)})
+
+
+def construction_cause(error):
+    """Reduce a telemetry construction failure to a bounded, non-sensitive cause.
+
+    Configuration refusals keep their cause and detail; collector errors keep
+    their code (for example ``sqlite_version``); anything else reports only
+    the exception type.
+    """
+    current = error
+    while current is not None:
+        if isinstance(current, OrchestrationError) and current.code == "telemetry_configuration":
+            return {"code": current.details.get("cause", "invalid_option"),
+                    "detail": _bounded(current.details.get("detail"))}
+        if isinstance(current, TelemetryError):
+            return {"code": current.code, "detail": None}
+        current = current.__cause__
+    root = error
+    while root.__cause__ is not None:
+        root = root.__cause__
+    if root is error and isinstance(error, OrchestrationError):
+        return {"code": error.code, "detail": _bounded(str(error))}
+    return {"code": "construction_failed", "detail": type(root).__name__}
 
 
 def _text(value, name):
@@ -62,8 +98,9 @@ class UnavailableTelemetry:
 
     project_id = None
 
-    def __init__(self, reason="configuration_unavailable"):
+    def __init__(self, reason="configuration_unavailable", cause=None):
         self.reason = reason
+        self.cause = cause
 
     def new_id(self):
         return uuid4().hex
@@ -72,8 +109,11 @@ class UnavailableTelemetry:
         return {"status": "unavailable", "receipt": None, "reason": self.reason}
 
     def status(self):
-        return {"status": "unavailable", "reason": self.reason, "coverage": "unknown", "sources": {},
-                "publication": "unknown"}
+        result = {"status": "unavailable", "reason": self.reason, "coverage": "unknown", "sources": {},
+                  "publication": "unknown"}
+        if self.cause is not None:
+            result["cause"] = dict(self.cause)
+        return result
 
     def scan(self, *, after=0, limit=100, **filters):
         return {"events": [], "next_after": after, "scanned": 0, "exhausted": True}
@@ -106,8 +146,11 @@ class LocalTelemetry:
     """
 
     def __init__(self, options, *, resolve):
-        if not isinstance(options, dict) or options.keys() - _OPTIONS:
-            raise _configuration("Unknown telemetry adapter option.")
+        if not isinstance(options, dict):
+            raise _configuration("Telemetry options must be an object.")
+        if options.keys() - _OPTIONS:
+            raise _configuration("Unknown telemetry adapter option.", "unknown_option",
+                                 ", ".join(sorted(str(key) for key in options.keys() - _OPTIONS)))
         try:
             self._configure(options, resolve)
         except TelemetryError as error:
@@ -115,30 +158,52 @@ class LocalTelemetry:
                 raise
             raise _configuration(str(error)) from error
 
+    @staticmethod
+    def _adapter(resolve, component, name, options, scope):
+        """Construct one selected storage adapter, refusing unknown or unloadable names."""
+        try:
+            factory = resolve(component, name)
+        except OrchestrationError as error:
+            raise _configuration(f"Unknown telemetry {component} adapter.", "unknown_adapter",
+                                 f"{component}: {name}") from error
+        except (ImportError, AttributeError, ValueError) as error:
+            raise _configuration(f"Telemetry {component} adapter cannot be loaded.", "adapter_unavailable",
+                                 f"{component}: {name}") from error
+        return factory(options, scope)
+
     def _configure(self, options, resolve):
         secrets = options.get("known_secrets", [])
         if not isinstance(secrets, list) or any(not isinstance(value, str) or not value for value in secrets):
             raise _configuration("Telemetry known_secrets must be explicit nonempty strings.")
         self._secrets = tuple(secrets)
         self.root = config.runtime_root(options.get("runtime_root"))
-        self.project_id = _text(options.get("project_id"), "project_id")
-        self.dataset_id = _text(options.get("dataset_id"), "dataset_id")
-        self.collector_id = _text(options.get("collector_id"), "collector_id")
-        self.producer_id = _text(options.get("producer_id", "xorchestrate"), "producer_id")
+        self.project_id = config.text(options.get("project_id"), "project_id")
+        self.dataset_id = config.text(options.get("dataset_id"), "dataset_id")
+        self.collector_id = config.text(options.get("collector_id"), "collector_id")
+        self.producer_id = config.text(options.get("producer_id", "xorchestrate"), "producer_id")
         material = {key: value for key, value in options.items() if key != "known_secrets"}
         self.configuration_identity = hashlib.sha256(canonical(material).encode()).hexdigest()
         scope = CollectorScope(self.root, self.dataset_id, self.collector_id)
         adapter, corpus_options, enabled = _storage(options, "corpus", _CORPUS_SHORTHAND, "sqlite")
         if not enabled:
             raise _configuration("Telemetry requires a corpus; disable telemetry itself instead.")
-        self.corpus = resolve("corpus", adapter)(corpus_options, scope)
+        self.corpus = self._adapter(resolve, "corpus", adapter, corpus_options, scope)
         adapter, artifact_options, enabled = _storage(options, "artifacts", _ARTIFACTS_SHORTHAND, "filesystem")
-        self.artifacts = resolve("artifacts", adapter)(artifact_options, scope) if enabled else None
-        owned = [*getattr(self.corpus, "locations", ()), *getattr(self.artifacts, "locations", ())]
+        # A disabled selection is still validated, so a typo cannot hide behind it.
+        artifacts = self._adapter(resolve, "artifacts", adapter, artifact_options, scope)
+        self.artifacts = artifacts if enabled else None
+        owned = [*self._locations(self.corpus, "corpus"),
+                 *(self._locations(self.artifacts, "artifacts") if enabled else ())]
         if any(config.overlapping(first, second) for index, first in enumerate(owned) for second in owned[index + 1:]):
             raise _configuration("Telemetry database and artifacts cannot overlap.")
-        # Snapshot bundles are SQLite/file closures; other corpus adapters do not offer them.
-        self.path = getattr(self.corpus, "database_path", None)
+        # Snapshot bundles are SQLite/file closures; a corpus without a database path does not offer them.
+        if not hasattr(self.corpus, "database_path"):
+            raise _configuration("Telemetry corpus adapter does not declare database_path.", "invalid_adapter",
+                                 "corpus: database_path")
+        self.path = self.corpus.database_path
+        if self.path is not None and not isinstance(self.path, Path):
+            raise _configuration("Telemetry corpus database_path must be a path or null.", "invalid_adapter",
+                                 "corpus: database_path")
         self.artifact_root = getattr(self.artifacts, "root", None)
         self.export_root = config.contained(self.root, options.get("export_root", "exports"), "export_root")
         self.snapshot_timeout = options.get("snapshot_timeout", 5.0)
@@ -167,6 +232,14 @@ class LocalTelemetry:
                 # it cannot disable the independently configured local corpus.
                 self._operational = self._operational_dispatch = None
                 self._operational_issue = "configuration_unavailable"
+
+    @staticmethod
+    def _locations(adapter, component):
+        locations = getattr(adapter, "locations", None)
+        if not isinstance(locations, tuple) or not all(isinstance(item, Path) for item in locations):
+            raise _configuration(f"Telemetry {component} adapter must declare its locations.", "invalid_adapter",
+                                 f"{component}: locations")
+        return locations
 
     def new_id(self):
         return uuid4().hex

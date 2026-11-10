@@ -49,11 +49,15 @@ class LocalNativeReadiness:
         self.setup_native()
         return before, self.native.read_bytes()
 
-    def doctor_with_incompatible_sqlite(self, enabled):
+    def doctor_with_incompatible_sqlite(self, capture):
+        local = {"runtime_root": str(self.root / "corpus")}
+        telemetry = {"sqlite": {"adapter": "local", "options": local},
+            "disabled": {"enabled": False},
+            "other-corpus": {"adapter": "local", "options": {**local, "corpus": {"adapter": "operator.capture:Corpus"}}},
+            "malformed": {"adapter": "local", "options": {**local, "corpus": "sqlite"}}}[capture]
         self.native.write_text(json.dumps({"sessions": {"codex": {"adapter": "codex",
             "options": {"command": ["operator-codex"], "cwd": str(self.root / "project")}}},
-            "telemetry": ({"adapter": "local", "options": {"runtime_root": str(self.root / "corpus")}}
-                if enabled else {"enabled": False})}))
+            "telemetry": telemetry}))
         before = self.profile.read_bytes(), self.native.read_bytes()
         with patch.object(profiles, "_interpreter_details", return_value=self.probe(False)), \
                 patch.object(profiles.shutil, "which", side_effect=lambda name: "/available/" + name):

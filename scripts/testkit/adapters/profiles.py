@@ -19,7 +19,7 @@ from pathlib import Path
 from ..model import MODES, SUITES
 from ..sharding import suite_shard
 from ..stories import select_stories, validate_limits
-from .configuration import local_capture
+from .configuration import capture_storage, local_capture
 from .evidence import write_json
 
 FIELDS = frozenset({"schema_version", "suite", "mode", "drivers", "families", "shard", "config", "brief",
@@ -232,16 +232,22 @@ def doctor(profile_path, *, root, overrides=None):
             required_dependencies.add("ruff")
         if profile["suite"] in {"all", "checks", "tests"}:
             required_dependencies.add("pytest")
-        local_capture_selected = False
+        sqlite_corpus_selected = False
         if profile["mode"] == "native" and profile.get("config"):
             configuration = json.loads(Path(profile["config"]).read_text(encoding="utf-8"))
             capture = configuration.get("telemetry")
-            local_capture_selected = capture is None or capture.get("enabled", True) and capture.get("adapter") == "local"
+            try:
+                # Setup gives an unconfigured native run local capture with the default corpus.
+                storage = capture_storage({"adapter": "local"} if capture is None else capture)
+                sqlite_corpus_selected = storage is not None and storage["corpus"] == "sqlite"
+            except ValueError as error:
+                observations.append({"name": "telemetry_configuration", "passed": False, "required": True,
+                                     "reason": str(error)})
         for name in sorted(set(details["dependencies"]) | required_dependencies):
             available = details["dependencies"].get(name, False)
             observations.append({"name": name, "passed": available, "required": name in required_dependencies,
                                  "observation_interpreter": interpreter})
-        if local_capture_selected:
+        if sqlite_corpus_selected:
             collector = details.get("collector", {})
             observations.append({"name": "telemetry_sqlite", "passed": collector.get("status") == "ready", "required": True,
                 "version": collector.get("sqlite_version"), "reason": collector.get("reason"),

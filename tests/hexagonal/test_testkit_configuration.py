@@ -9,9 +9,11 @@ import pytest
 from scripts.acceptance.scenario import native_config
 from scripts.testkit.adapters.configuration import isolated_config
 from scripts.testkit.adapters.evidence import allocate_run, write_json
+from scripts.testkit.adapters.native_evidence import collect_native_evidence
 from scripts.verification.multi_harness import prepare_config
 from tests.hexagonal.support.native import peer_options
 from xorchestrate.adapters.process import command_options
+from xorchestrate.composition import build
 
 
 def test_both_native_runners_share_relocation_without_mutating_operator_configuration(tmp_path):
@@ -101,3 +103,73 @@ def test_protocol_fixture_children_keep_external_bytecode_policy(tmp_path, monke
     assert "UNRELATED_OPERATOR_SECRET" not in environment
     assert set(environment) == ({"PYTHONPYCACHEPREFIX", "CLAUDE_STATE_DIR"} if protocol == "claude"
                                 else {"PYTHONPYCACHEPREFIX"})
+
+
+def _local(**options):
+    return {"telemetry": {"adapter": "local", "options": {"project_id": "chosen-project", **options}}}
+
+
+def _descriptor(directory):
+    return json.loads((directory / "telemetry-runtime.json").read_text())
+
+
+@pytest.mark.parametrize(("options", "database", "artifacts"), [
+    ({}, "events.sqlite3", "artifacts"),
+    ({"database": "data/live.sqlite3", "artifact_root": "objects"}, "data/live.sqlite3", "objects"),
+    ({"corpus": {"adapter": "sqlite", "options": {"database": "data/live.sqlite3"}},
+      "artifacts": {"adapter": "filesystem", "options": {"root": "objects"}}}, "data/live.sqlite3", "objects"),
+    ({"artifacts": {"adapter": "filesystem", "enabled": False}}, "events.sqlite3", None),
+])
+def test_run_owned_sqlite_capture_descriptor_follows_nested_selection(tmp_path, options, database, artifacts):
+    run = tmp_path / "run"
+    run.mkdir()
+    isolated_config(_local(**options), tmp_path, run, capture=True)
+    descriptor = _descriptor(run)
+    assert descriptor["status"] == "configured" and "reason" not in descriptor
+    assert descriptor["database"] == str(run / "telemetry" / database)
+    assert descriptor["artifacts"] == (None if artifacts is None else str(run / "telemetry" / artifacts))
+
+
+@pytest.mark.parametrize("options", [
+    {"corpus": {"adapter": "operator.capture:Corpus"}},
+    {"artifacts": {"adapter": "operator.capture:Objects"}},
+])
+def test_other_storage_adapters_are_an_explicit_uncollected_gap(tmp_path, options):
+    run = tmp_path / "run"
+    run.mkdir()
+    isolated_config(_local(**options), tmp_path, run, capture=True)
+    descriptor = _descriptor(run)
+    assert descriptor["status"] == "external"
+    assert descriptor["reason"] == "selected_capture_storage_not_collected"
+    assert "database" not in descriptor
+
+
+@pytest.mark.parametrize("telemetry", [
+    {"adapter": "local", "options": {"corpus": "sqlite"}},
+    {"adapter": "local", "options": {"corpus": {"adapter": 3}}},
+    {"adapter": "local", "options": {"artifacts": {"adapter": "filesystem", "enabled": "no"}}},
+    {"adapter": "local", "options": {"corpus": {"adapter": "sqlite", "options": ["database"]}}},
+    {"adapter": "local", "options": {"corpus": {"adapter": "sqlite", "options": {"database": 7}}}},
+    {"adapter": "local", "options": ["runtime_root"]},
+    {"adapter": "local", "options": {"runtime_root": 7}},
+])
+def test_malformed_capture_selection_is_refused_cleanly(tmp_path, telemetry):
+    run = tmp_path / "run"
+    run.mkdir()
+    with pytest.raises(ValueError):
+        isolated_config({"telemetry": telemetry}, tmp_path, run, capture=True)
+    assert not (run / "telemetry-runtime.json").exists()
+
+
+def test_run_owned_corpus_without_artifacts_is_collected(tmp_path):
+    run = tmp_path / "run"
+    run.mkdir()
+    write_json(run / "plan.json", {"mode": "native"})
+    derived = isolated_config(_local(artifacts={"adapter": "filesystem", "enabled": False}), tmp_path, run,
+                              capture=True)
+    derived["store"] = {"adapter": "memory"}
+    with build(derived, tmp_path) as runtime:
+        runtime.application.call("create_work", {"goal": "collected without artifacts"})
+    index = collect_native_evidence(run, tmp_path / "collected")
+    entry, = index["entries"]
+    assert entry["status"] == "verified" and entry["event_count"] == 2, entry

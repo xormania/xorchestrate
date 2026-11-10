@@ -196,6 +196,8 @@ def create_snapshot(database_path, artifact_store, destination, *, authorize=Non
                     backup_timeout=5.0, clock=None):
     """Create a verified bundle, refusing any unauthorized closure member.
 
+    ``artifact_store`` may be None when artifact storage is disabled; a corpus
+    that refers to captured artifacts then cannot be snapshotted.
     ``backup`` is an optional replaceable SQLite backup operation receiving the
     source and destination connections. Raising leaves an incomplete manifest.
     Destinations are new directories; existing bundles are never overwritten.
@@ -238,6 +240,10 @@ def create_snapshot(database_path, artifact_store, destination, *, authorize=Non
             _closed_database(database)
             source_info, refs, unavailable = _inspect(database, authorize)
             staged_store = FileArtifactStore(staged / "artifacts")
+            if refs and artifact_store is None:
+                # Artifact storage is disabled but the corpus refers to captured
+                # objects: the closure cannot be completed.
+                raise SnapshotError("snapshot closure needs artifacts but no artifact storage is selected")
             for ref in refs.values():
                 installed = staged_store.put(artifact_store.read(ref), ref.media_type)
                 if installed.digest.removeprefix("sha256:") != ref.digest.removeprefix("sha256:"):
