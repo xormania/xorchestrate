@@ -8,6 +8,7 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -404,3 +405,64 @@ def test_read_only_open_needs_a_writable_directory_for_sqlite_sidecars(tmp_path)
     finally:
         os.chmod(directory, 0o700)
         shutil.rmtree(directory)
+
+
+class _InterleavingConnection:
+    """Delegates to a real connection; runs ``hook`` once after the first schema query."""
+
+    def __init__(self, connection, hook):
+        self._connection, self._hook = connection, hook
+
+    def execute(self, sql, *args):
+        result = self._connection.execute(sql, *args)
+        if self._hook is not None and "sqlite_master" in sql:
+            hook, self._hook = self._hook, None
+            result = result.fetchall()
+            hook()
+        return result
+
+    def __getattr__(self, name):
+        return getattr(self._connection, name)
+
+
+def test_concurrent_initializer_between_metadata_reads_is_not_unrecognized(tmp_path, monkeypatch):
+    """Another process may initialize a fresh file between the schema and version reads."""
+    path = tmp_path / "state.db"
+    connect = sqlite3.connect
+    other = {}
+
+    def initialize_elsewhere():
+        try:
+            other["store"] = SQLiteStore({"path": str(path)})
+        except Exception as error:  # surfaced by the assertions below
+            other["error"] = error
+
+    def interleave():
+        # The second initializer runs between the first open's two metadata
+        # reads. When those reads share one snapshot it waits for the snapshot
+        # to end, so wait only briefly here and let it finish afterwards.
+        worker = threading.Thread(target=initialize_elsewhere)
+        worker.start()
+        worker.join(timeout=1)
+        other["worker"] = worker
+
+    calls = []
+
+    def first_connection_interleaves(*args, **kwargs):
+        connection = connect(*args, **kwargs)
+        calls.append(args)
+        return _InterleavingConnection(connection, interleave) if len(calls) == 1 else connection
+
+    monkeypatch.setattr(sqlite3, "connect", first_connection_interleaves)
+    store = open_store(path)
+    try:
+        other["worker"].join(timeout=30)
+        assert "error" not in other, other.get("error")
+        assert store.data_version == DATA_VERSION
+        with store.transaction() as tx:
+            tx.put("work", "w1", {})
+    finally:
+        store.close()
+        if "store" in other:
+            other["store"].close()
+    assert raw_state(path)["user_version"] == DATA_VERSION

@@ -383,7 +383,7 @@ class SQLiteStore:
             raise _storage_error(exc) from exc
         try:
             if read_only:
-                self._state = self._read_state()
+                self._state = self._read_snapshot()
             else:
                 self._open(migrate)
         except sqlite3.Error as exc:
@@ -395,7 +395,7 @@ class SQLiteStore:
 
     def _open(self, migrate: bool) -> None:
         # Refuse a file this release cannot use before changing anything in it.
-        refusal = self._refusal(self._read_state())
+        refusal = self._refusal(self._read_snapshot())
         if refusal is not None:
             raise refusal
         self._connection.execute("PRAGMA journal_mode = WAL")
@@ -429,6 +429,20 @@ class SQLiteStore:
                 "data_migration_required",
                 {"stored": stored, "current": self._migrations.current, "release": RELEASE},
             )
+
+    def _read_snapshot(self) -> dict:
+        """Read the version metadata from one consistent snapshot, writing nothing.
+
+        In autocommit mode each statement would see its own snapshot, so a
+        concurrent initializer could make the schema look absent while the
+        version looks set. A deferred read transaction (a shared lock, never
+        the write lock) keeps both reads consistent and is always rolled back.
+        """
+        self._connection.execute("BEGIN")
+        try:
+            return self._read_state()
+        finally:
+            self._connection.rollback()
 
     def _read_state(self) -> dict:
         tables = {row[0] for row in self._connection.execute(
@@ -532,7 +546,7 @@ class SQLiteStore:
                     "data_migration_failed",
                     {"from": source, "to": None if source is None else source + 1, "release": RELEASE},
                 ) from exc
-        self._state = self._read_state()
+        self._state = self._read_snapshot()
 
     @property
     def data_version(self) -> int | None:
