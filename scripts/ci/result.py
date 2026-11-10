@@ -19,6 +19,8 @@ ARTIFACTS = {
 }
 JEV_OUTCOMES = {"concern", "no_concern", "insufficient_evidence"}
 JEV_STATUSES = {"complete", "unavailable", "error", "inconclusive", "not_configured"}
+# The public diagnostic selector permits 100 candidates and three named checks.
+JEV_MAX_ASSESSMENTS = 100 * 3
 
 
 def _sha(value, length=64):
@@ -45,18 +47,35 @@ def _diagnostic_scope(value):
 
 
 def _diagnostic_assessments(values):
-    if not isinstance(values, list) or len(values) > 32:
+    if not isinstance(values, list) or len(values) > JEV_MAX_ASSESSMENTS:
         raise ValueError("Invalid diagnostic assessment list")
-    result, check_ids = [], set()
+    result, identities, task_ids = [], set(), set()
     for value in values:
         if not isinstance(value, dict):
             raise ValueError("Invalid diagnostic assessment")
         check_id, outcome, confidence = (value.get(key) for key in ("check_id", "outcome", "confidence"))
-        if (not isinstance(check_id, str) or not 0 < len(check_id) <= 128 or check_id in check_ids
+        if (not isinstance(check_id, str) or not 0 < len(check_id) <= 128
                 or not isinstance(outcome, str) or outcome not in JEV_OUTCOMES
                 or (confidence is not None and (type(confidence) not in (int, float)
                     or not math.isfinite(confidence) or not 0 <= confidence <= 1))):
             raise ValueError("Invalid diagnostic assessment")
+        located = {}
+        for name in ("candidate_id", "task_id"):
+            if name in value:
+                identifier = value[name]
+                if not isinstance(identifier, str) or not 0 < len(identifier) <= 256:
+                    raise ValueError("Invalid diagnostic task identity")
+                located[name] = identifier
+        identity = (("candidate", located["candidate_id"], check_id) if "candidate_id" in located else
+                    ("task", located["task_id"]) if "task_id" in located else ("legacy", check_id))
+        if identity in identities or ("task_id" in located and located["task_id"] in task_ids):
+            raise ValueError("Duplicate diagnostic task")
+        if located or any(name in value for name in ("path", "start_line", "end_line")):
+            path, start, end = (value.get(name) for name in ("path", "start_line", "end_line"))
+            if (not isinstance(path, str) or not 0 < len(path) <= 1024
+                    or type(start) is not int or type(end) is not int or not 1 <= start <= end):
+                raise ValueError("Invalid diagnostic source span")
+            located.update(path=path, start_line=start, end_line=end)
         details = value.get("details", {})
         if not isinstance(details, dict):
             raise ValueError("Invalid diagnostic details")
@@ -73,8 +92,10 @@ def _diagnostic_assessments(values):
             if not isinstance(usage, dict) or any(type(usage.get(key)) is not int or usage[key] < 0 for key in ("input_tokens", "output_tokens")):
                 raise ValueError("Invalid diagnostic usage")
             kept["usage"] = {key: usage[key] for key in ("input_tokens", "output_tokens")}
-        result.append({"check_id": check_id, "outcome": outcome, "confidence": confidence, "details": kept})
-        check_ids.add(check_id)
+        result.append({"check_id": check_id, "outcome": outcome, "confidence": confidence, "details": kept, **located})
+        identities.add(identity)
+        if "task_id" in located:
+            task_ids.add(located["task_id"])
     return result
 
 
@@ -317,11 +338,15 @@ def markdown(result, run_url):
     if diagnostic.get("current"):
         if diagnostic.get("model"):
             rows.append("Model: " + text(diagnostic["model"]) + ".")
-        rows.extend(["", "| Check | Outcome | Confidence | Distribution |", "|---|---|---:|---|"])
+        rows.extend(["", "| Candidate | Check | Outcome | Confidence | Distribution |", "|---|---|---|---:|---|"])
         for assessment in diagnostic.get("assessments", []):
             distribution = "; ".join(f"{name}: {value:g}" for name, value in sorted(assessment["details"].get("probabilities", {}).items())) or "not supplied"
             confidence = assessment["confidence"] if assessment["confidence"] is not None else "not supplied"
-            rows.append(f"| {text(assessment['check_id'])} | {text(assessment['outcome'])} | {confidence} | {distribution} |")
+            location = (f"{assessment['path']}:{assessment['start_line']}-{assessment['end_line']}"
+                        if "path" in assessment else "scope-wide")
+            if "candidate_id" in assessment:
+                location += " (" + assessment["candidate_id"] + ")"
+            rows.append(f"| {text(location)} | {text(assessment['check_id'])} | {text(assessment['outcome'])} | {confidence} | {distribution} |")
         scope = diagnostic.get("source_scope")
         if scope:
             rows.extend(["", f"Source scope: {len(scope['selected'])} selected; {len(scope['omitted'])} omitted; "

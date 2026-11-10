@@ -443,3 +443,83 @@ def test_architecture_producer_retains_actual_working_tree_identity(tmp_path, di
     receipt = _identity(tmp_path)
     assert receipt.get("git_status") == (" M source.py\n" if dirty else "")
     assert receipt["git_commit"] == expected_commit
+
+
+@pytest.mark.parametrize("explicit_task_ids", (True, False))
+def test_grounded_candidate_reports_keep_distinct_claims_and_source_locations(tmp_path, explicit_task_ids):
+    needs, workflow, catalog = _complete_receipts(tmp_path)
+    document = _jev_report()
+    first = document["diagnostics"]["assessments"][0]
+    first.update(candidate_id="first-source-unit", path="src/core.py", start_line=10, end_line=15,
+                 claim="The first unit supports a semantic contract concern.", contract={"role": "core"})
+    second = deepcopy(first)
+    second.update(candidate_id="second-source-unit", start_line=20, end_line=25,
+                  claim="The second unit supports a semantic contract concern.", outcome="no_concern")
+    if explicit_task_ids:
+        for item in (first, second):
+            item["task_id"] = item["candidate_id"] + ":" + item["check_id"]
+    document["diagnostics"]["assessments"] = [first, second]
+    path = tmp_path / "architecture-evidence/diagnostics.json"
+    _write(path, document)
+    result = _evaluate_complete(tmp_path, needs, workflow, catalog)
+    assert result.get("jev", {}).get("status") == "complete"
+    assert len(result["jev"]["assessments"]) == 2
+    rendered = subject.markdown(result, "https://example.invalid/run/1")
+    assert "src/core.py:10-15" in rendered and "src/core.py:20-25" in rendered
+    assert "first-source-unit" in rendered and "second-source-unit" in rendered
+    assert result["status"] == "passed" and result["errors"] == []
+    document["diagnostics"]["assessments"].append(deepcopy(first))
+    _write(path, document)
+    duplicate = _evaluate_complete(tmp_path, needs, workflow, catalog)
+    assert duplicate["jev"]["status"] == "invalid" and duplicate["jev"]["current"] is False
+    assert duplicate["status"] == "passed" and duplicate["errors"] == []
+    _write(path, _jev_report())
+    legacy = _evaluate_complete(tmp_path, needs, workflow, catalog)
+    assert legacy["jev"]["status"] == "complete"
+
+
+def test_ci_diagnostic_context_uses_the_actual_change_base():
+    workflow = json.loads((Path(__file__).parents[2] / ".github/workflows/ci.yml").read_text())
+    diagnostic = workflow["jobs"]["architecture"]
+    checkout = next(step for step in diagnostic["steps"] if step.get("uses", "").startswith("actions/checkout@"))
+    assert checkout.get("with", {}).get("fetch-depth") == 0
+    command = next(step for step in diagnostic["steps"] if step.get("name") == "Jev architecture diagnostics")
+    assert command.get("env", {}).get("JEV_BASE_REF") == "${{ github.event.pull_request.base.sha || github.event.before }}"
+    assert '--base-ref "$jev_base_ref"' in command["run"]
+    assert "git rev-parse" in command["run"] and "HEAD^" in command["run"]
+
+
+@pytest.mark.parametrize("candidate_count", (11, 100))
+def test_supported_grounded_task_populations_survive_advisory_reporting(tmp_path, candidate_count):
+    from scripts.architecture.context import build_context
+    from scripts.architecture.diagnostics import evaluation_tasks
+    from scripts.architecture.python import check
+
+    root = tmp_path / "measured"
+    package = root / "pkg"
+    package.mkdir(parents=True)
+    source = "\n".join(f"def work_{index}(port):\n    return port.read({index})\n" for index in range(candidate_count))
+    (package / "work.py").write_text(source)
+    profile = {"schema_version": 1, "id": "task-capacity-control", "version": 1, "source_roots": ["pkg"],
+               "roles": {"core": {"modules": ["pkg.*"], "allowed_roles": ["core"],
+                                  "allowed_external": [], "allow_dynamic": False}}}
+    report = check(root, profile)
+    assert report["status"] == "pass"
+    context = build_context(report, root, max_candidates=candidate_count, max_files=1)
+    tasks = evaluation_tasks(context)
+    assert len(tasks) == candidate_count * 3
+    document = _jev_report()
+    document["subject"] = deepcopy(report["subject"])
+    diagnostic = document["diagnostics"]
+    diagnostic.update(subject=deepcopy(report["subject"]), source_scope=context["source_scope"],
+                      context_sha256=hashlib.sha256(json.dumps(context, sort_keys=True).encode()).hexdigest(),
+                      assessments=[{**task, "outcome": "no_concern", "confidence": 0.9, "details": {}}
+                                   for task in tasks])
+    needs, workflow, catalog = _complete_receipts(tmp_path)
+    _write(tmp_path / "architecture-evidence/diagnostics.json", document)
+    result = _evaluate_complete(tmp_path, needs, workflow, catalog)
+    assert result.get("jev", {}).get("status") == "complete", "SUPPORTED_TASK_CAPACITY_VISIBLE"
+    assert len(result["jev"]["assessments"]) == candidate_count * 3
+    rendered = subject.markdown(result, "https://example.invalid/run/1")
+    assert all(candidate["candidate_id"] in rendered for candidate in context["candidates"])
+    assert result["status"] == "passed" and result["errors"] == []

@@ -5,13 +5,5 @@
   "timeout": 15,
   "max_source_bytes": 24000,
   "max_files": 8,
-  "source_paths": [
-    "xorchestrate/ports.py",
-    "xorchestrate/application.py",
-    "xorchestrate/effects.py",
-    "xorchestrate/session_lifecycle.py",
-    "xorchestrate/assessment.py",
-    "xorchestrate/composition.py",
-    "xorchestrate/state.py"
-  ]
+  "max_candidates": 3
 }

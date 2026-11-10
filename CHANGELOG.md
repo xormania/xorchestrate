@@ -9,6 +9,8 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Added
 
+- Jev diagnostics select complete changed Python units with related contracts, callers and test sources; each advisory claim retains its candidate, source span and role contract.
+
 - The CI result summary shows current Jev advisory outcomes, distributions,
   confidence, bounded source scope and artifact identities. Missing, foreign or
   invalid advice and optional artifact transfer failures remain separate from
