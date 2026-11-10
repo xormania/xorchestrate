@@ -322,6 +322,21 @@ verified outcome, and a reason; it records that reconciliation without repeating
 the external operation. A result retained before a local application failure can
 be reconciled from the retained data.
 
+Journal failures use a shared public diagnostic envelope. Typed
+`OrchestrationError` messages, codes and JSON-valid details are public; arbitrary
+exception messages, class names, codes and detail attributes are replaced by a
+fixed `external_error` diagnostic. Invalid diagnostic metadata cannot prevent a
+known completion from being recorded as `completed_unapplied`. Only typed,
+JSON-valid completion metadata supplies an exception-carried external result;
+normal successful provider results keep their existing contract.
+
+New journal diagnostic fields are versioned. Inspection, replay and reconciliation
+project unversioned historical diagnostics conservatively, reporting
+`legacy_error_retained` when a diagnostic was replaced. This projection does not
+purge historical storage or rewrite provider results. Existing databases need no
+migration; removing historical sensitive bytes requires a separate explicit
+storage-retention action.
+
 Successful session-start reconciliation uses only the adapter result already
 retained as `external_result`. A caller cannot supply or replace its backend
 identifiers. An unknown start without that receipt cannot be reconciled into an

@@ -16,8 +16,18 @@ silently retried. The host owns what an effect targets through four hooks:
 from copy import deepcopy
 from typing import Any, Callable
 
-from .model import JSON, Conflict, OrchestrationError, Record, canonical_digest, public_error_message, record_view
-from .outcomes import before_effect, effect_outcome
+from .model import (
+    JSON,
+    Conflict,
+    OrchestrationError,
+    Record,
+    canonical_digest,
+    project_operation_errors,
+    public_error,
+    public_error_message,
+    record_view,
+)
+from .outcomes import before_effect, completed_effect_result, effect_outcome
 
 
 class EffectJournalMixin:
@@ -42,9 +52,7 @@ class EffectJournalMixin:
         except Exception as error:
             known_outcome = effect_outcome(error)
             if known_outcome == "completed":
-                details = getattr(error, "details", {})
-                retained = ({"external_result": deepcopy(details["external_result"])} if "external_result" in details
-                    else {"external_result": deepcopy(details["result"])} if "result" in details else {})
+                retained = completed_effect_result(error)
                 recording_error = self._retain_completed_effect(key, actor, error, retained)
                 raise OrchestrationError("The adapter completed, but its result needs reconciliation.", "result_unapplied", {
                     "operation_id": key, "outcome": "completed", **retained,
@@ -57,7 +65,7 @@ class EffectJournalMixin:
             except Exception as storage_error:
                 recording_error = public_error_message(storage_error)
             raise OrchestrationError(public_error_message(error), "operation_unknown" if unknown else "operation_failed", {
-                "operation_id": key, "outcome": status, "cause": getattr(error, "code", type(error).__name__),
+                "operation_id": key, "outcome": status, "cause": public_error(error)["code"],
                 "recording_error": recording_error,
             }) from error
         try:
@@ -84,7 +92,8 @@ class EffectJournalMixin:
         try:
             with self.store.transaction() as tx:
                 current = self._require(tx, "operation", key)
-                changes = {"effect_outcome": "completed", "application_error": public_error_message(error)}
+                changes = {"effect_outcome": "completed", "application_error": public_error_message(error),
+                           "application_error_schema_version": 1}
                 if current.data["status"] in {"pending", "unknown"}:
                     changes.update({"status": "completed_unapplied", **retained})
                     if "external_result" in retained:
@@ -105,11 +114,13 @@ class EffectJournalMixin:
         status = operation.data["status"]
         if status == "completed":
             return deepcopy(operation.data["result"])
+        visible = project_operation_errors(operation.data)
         raise OrchestrationError(
             f"This key has an existing {status} operation; it will not execute again.",
             "operation_failed" if status == "failed" else "operation_unresolved",
             {"operation_id": operation.key, "outcome": "completed" if status == "completed_unapplied" else status,
-             "status": status, "error": operation.data.get("error"),
+             "status": status, "error": visible.get("error"),
+             **({"legacy_error_retained": True} if visible.get("legacy_error_retained") else {}),
              **({"external_result": deepcopy(operation.data["external_result"])}
                 if status == "completed_unapplied" and "external_result" in operation.data else {})},
         )
@@ -119,9 +130,10 @@ class EffectJournalMixin:
             operation = self._require(tx, "operation", key)
             if operation.data["status"] != "pending":
                 return
-            details = {"message": public_error_message(error), "code": getattr(error, "code", type(error).__name__), "details": deepcopy(getattr(error, "details", {}))}
+            details = public_error(error)
             self._transition(tx, operation, "uncertain" if status == "unknown" else "fail",
-                {**operation.data, "status": status, "error": details, "finished_at": self.clock()}, operation.data["actor"])
+                {**operation.data, "status": status, "error": details, "error_schema_version": 1,
+                 "finished_at": self.clock()}, operation.data["actor"])
             self._release_effect(tx, operation, status)
             self._event(tx, f"operation.{status}", operation.data["actor"], operation_id=key)
 
@@ -148,6 +160,7 @@ class EffectJournalMixin:
             else:
                 self._release_effect(tx, operation, "failed")
                 data["error"] = {"message": args["reason"], "code": "reconciled_failure"}
+                data["error_schema_version"] = 1
             record = self._transition(tx, operation, "resolve_" + args["outcome"], data, actor)
             self._event(tx, "operation.resolved", actor, operation_id=operation.key, outcome=args["outcome"])
-            return {"operation": record_view(record)}
+            return {"operation": project_operation_errors(record_view(record))}

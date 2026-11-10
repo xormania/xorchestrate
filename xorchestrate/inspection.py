@@ -7,7 +7,7 @@ records remain unchanged; projected reads revalidate authority and snapshots.
 from copy import deepcopy
 from typing import Callable
 
-from .model import JSON, Conflict, OrchestrationError, canonical_digest
+from .model import JSON, Conflict, OrchestrationError, canonical_digest, project_operation_errors
 from .ports import StateStore, Transaction
 
 DELIVERY_RECORDS = {"message": "message", "deliveries": "delivery", "attempts": "delivery_attempt",
@@ -116,7 +116,7 @@ class InspectionProjector:
                     if error.code not in {"denied", "review_required", "not_found"}:
                         raise
                     continue
-                visible = deepcopy(record)
+                visible = project_operation_errors(record) if kind == "operation" else deepcopy(record)
                 payload = visible if kind == "native_call" else visible.get("observation", {}) if kind == "native_observation" else {}
                 if kind == "operation":
                     payload = visible

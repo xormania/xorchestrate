@@ -7,6 +7,13 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ## Unreleased
 
+### Fixed
+
+- Effect-journal responses and new retained failures omit arbitrary exception
+  attributes and class names. Legacy diagnostics are projected conservatively
+  without deleting stored history; malformed completion metadata preserves the
+  known completion and its reconciliation requirement.
+
 ### Added
 
 - Exact-request Jev diagnostic reuse and shared-state question batches reduce repeated calls; CI reports fresh versus historical usage separately.
@@ -142,6 +149,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Upgrade notes
 
+- **Journal diagnostics:** existing operation diagnostics remain stored. Public
+  projection hides unversioned diagnostic content; this is not a historical-data
+  purge and needs no data-version migration.
 - **Configuration format:** the optional top-level `version` key is introduced
   at format version `1`. A configuration without it is read as version `1` and
   `describe` reports a `configuration_version_missing` warning; add

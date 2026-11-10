@@ -194,7 +194,7 @@ def test_native_call_ledger_replays_only_public_failure_text(protocol):
         replayed = _visible_failure(protocol, invoke)
         assert "s3cret" not in json.dumps(replayed), "NATIVE_REPLAY_PRIVATE_ERROR_TEXT"
         assert replayed == {"code": "callback_failed", "details": {"outcome": "unknown"},
-                            "message": "External operation did not return a verified result (_SdkFailure)."}
+                            "message": "External operation did not return a verified result."}
     finally:
         adapter.close()
 

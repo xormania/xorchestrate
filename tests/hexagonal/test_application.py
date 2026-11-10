@@ -4,6 +4,15 @@ from copy import deepcopy
 
 import pytest
 
+from tests.hexagonal.contracts.effect_errors import (
+    ERROR_VARIANTS,
+    assert_completed_metadata,
+    assert_error_retention,
+    assert_legacy_projection,
+    assert_provider_payload_opaque,
+    assert_typed_completion,
+    assert_typed_failure,
+)
 from tests.hexagonal.support.application import (
     Evaluator,
     Provider,
@@ -15,6 +24,7 @@ from tests.hexagonal.support.application import (
     invoke,
     resume_setup,
 )
+from tests.hexagonal.support.effect_errors import EffectErrors
 from xorchestrate.adapters.policies import RuleGuardrail
 from xorchestrate.model import Assessment, Capability, Conflict, OrchestrationError, Verdict
 
@@ -788,3 +798,51 @@ def test_assessment_configuration_is_detached_from_callers():
     configuration["confidence_threshold"] = 0.9
     configuration["uncertain_outcomes"].append("proceed")
     assert app.call("assess", {"question": "Proceed?"})["assessment"]["unresolved"] is False
+
+
+@pytest.mark.parametrize("boundary", ("application", "mcp"))
+@pytest.mark.parametrize("variant", ERROR_VARIANTS)
+def test_effect_error_attributes_stay_private_and_durable(store, boundary, variant):
+    assert_error_retention(EffectErrors(store, boundary), variant)
+
+
+@pytest.mark.parametrize("variant", ERROR_VARIANTS)
+def test_effect_error_bad_metadata_preserves_known_completion(store, variant):
+    assert_completed_metadata(EffectErrors(store), variant)
+
+
+@pytest.mark.parametrize("field", ("result", "external_result"))
+def test_effect_error_valid_typed_completion_retains_general_provider_result(store, field):
+    assert_typed_completion(EffectErrors(store), field)
+
+
+def test_effect_error_typed_failure_preserves_useful_public_diagnostics(store):
+    assert_typed_failure(EffectErrors(store))
+
+
+@pytest.mark.parametrize("boundary", ("application", "mcp"))
+def test_effect_error_legacy_projection_covers_replay_history_and_reconciliation(store, boundary):
+    assert_legacy_projection(EffectErrors(store, boundary))
+
+
+def test_effect_error_projection_preserves_successful_provider_payloads(store):
+    assert_provider_payload_opaque(EffectErrors(store))
+
+
+def test_effect_error_sqlite_reopen_retains_safe_recoverable_diagnostic(tmp_path):
+    from contextlib import closing
+
+    from tests.hexagonal.contracts.effect_errors import assert_private_absent
+    from tests.hexagonal.support.application import make_store
+
+    path = tmp_path / "safe-errors.sqlite3"
+    with closing(make_store("sqlite", path)) as store:
+        operation_id = assert_error_retention(EffectErrors(store), "non_json")
+    with closing(make_store("sqlite", path)) as store:
+        reopened = EffectErrors(store)
+        operation = reopened.call("get_operation", {"operation_id": operation_id})["operation"]
+        assert operation["status"] == "unknown"
+        assert_private_absent(operation)
+        assert_private_absent(reopened.raw(operation_id))
+        assert reopened.invoke()["error"]["code"] == "operation_unresolved"
+        assert reopened.effect_calls == 0
