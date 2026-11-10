@@ -3,6 +3,8 @@
 The cache-bypass fault deliberately removes only replay validation after a valid
 call. Its target is the currentness/authorization assertion, not an adapter crash.
 """
+import json
+
 import pytest
 
 from tests.hexagonal.support.native import native_runtime, retry
@@ -137,3 +139,37 @@ def test_native_cache_cannot_recreate_missing_idempotent_operation(protocol, tmp
         with app.store.transaction() as tx:
             assert len(tx.list("session")) == 2
             assert tx.get("operation", row.key) is None
+
+
+@pytest.mark.parametrize("protocol", ["codex", "claude", "grok"])
+def test_native_application_refusal_reaches_model_as_structured_tool_error(protocol, tmp_path):
+    with native_runtime(protocol, tmp_path) as (app, adapter, work, basis, actor, send, rejected):
+        app.call("update_actor", {"actor_id": "owner", "expected_version": actor["version"], "changes": {"roles": ["revoked"]}})
+        with pytest.raises(OrchestrationError) as denied:
+            app.call("get_acceptance", {"work_id": work["id"]})
+        expected = {"error": {"code": "denied", "message": str(denied.value), "details": denied.value.details}}
+        assert send("refused", fresh=True) == expected, "NATIVE_APPLICATION_FAILURE_OPAQUE"
+        if protocol != "codex":
+            rows = [json.loads(line) for line in (tmp_path / "wire.jsonl").read_text().splitlines()]
+            wire = next(row["result"] for row in rows if row["label"] == "refused")
+            wire = wire["result"] if protocol == "grok" else wire
+            assert wire["isError"] is True and wire["structuredContent"] == expected
+
+
+class _SdkFailure(RuntimeError):
+    code = "sdk_internal_code"
+    details = {"authorization": "Bearer s3cret-gateway-token"}
+
+
+@pytest.mark.parametrize("protocol", ["claude", "grok"])
+def test_native_gateway_never_relays_private_failure_text(protocol, tmp_path):
+    with native_runtime(protocol, tmp_path) as (app, adapter, work, basis, actor, send, rejected):
+        def private(*args, **kwargs):
+            raise _SdkFailure("provider rejected token=s3cret-gateway-token")
+        app.invoke_native = private
+        first = send("private")
+        assert first["error"]["code"] == -32603, "a private failure stays an opaque protocol fault"
+        replayed = send("replayed")
+        assert replayed == {"error": {"code": "callback_failed", "details": {"outcome": "unknown"},
+            "message": "External operation did not return a verified result (_SdkFailure)."}}
+        assert "s3cret" not in (tmp_path / "wire.jsonl").read_text(), "NATIVE_GATEWAY_PRIVATE_ERROR_TEXT"

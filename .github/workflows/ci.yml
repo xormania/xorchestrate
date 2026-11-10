@@ -69,20 +69,27 @@
         {
           "name": "Configure external Python cache",
           "id": "cache",
-          "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/xorchestrate-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\""
+          "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/xorchestrate-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\"\nprintf 'UV_PROJECT_ENVIRONMENT=%s\\n' \"$RUNNER_TEMP/xor-validation-python\" >> \"$GITHUB_ENV\""
         },
         {
           "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
           "with": {
-            "python-version": "3.12",
-            "cache": "pip",
-            "cache-dependency-path": ".github/requirements-ci.txt"
+            "python-version": "3.12.16"
           },
           "id": "python"
         },
         {
+          "name": "Install pinned validation runtime manager",
+          "uses": "astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9",
+          "with": {
+            "version": "0.13.7",
+            "enable-cache": true,
+            "cache-dependency-glob": "uv.lock"
+          }
+        },
+        {
           "name": "Install pinned linter",
-          "run": "python3 -m pip install --disable-pip-version-check -r .github/requirements-ci.txt",
+          "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --only-group validation --no-install-project --managed-python --python 3.12.16\nuv sync --locked --no-default-groups --group validation --no-install-project --managed-python --python 3.12.16 --no-build-isolation-package agent-telemetry\nuv pip install --python \"$UV_PROJECT_ENVIRONMENT/bin/python\" --no-deps --no-build-isolation -e .\necho \"$UV_PROJECT_ENVIRONMENT/bin\" >> \"$GITHUB_PATH\"",
           "id": "dependencies"
         },
         {
@@ -140,33 +147,27 @@
         {
           "name": "Configure external Python cache",
           "id": "cache",
-          "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/xorchestrate-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\""
+          "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/xorchestrate-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\"\nprintf 'UV_PROJECT_ENVIRONMENT=%s\\n' \"$RUNNER_TEMP/xor-validation-python\" >> \"$GITHUB_ENV\""
         },
         {
           "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
           "with": {
-            "python-version": "3.12",
-            "cache": "pip",
-            "cache-dependency-path": "pyproject.toml\n.github/requirements-ci.txt"
+            "python-version": "3.12.16"
           },
           "id": "python"
         },
         {
-          "name": "Install pinned Python runtime manager",
+          "name": "Install pinned validation runtime manager",
           "uses": "astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9",
           "with": {
             "version": "0.13.7",
-            "enable-cache": false
+            "enable-cache": true,
+            "cache-dependency-glob": "uv.lock"
           }
         },
         {
-          "name": "Prepare Python with fixed SQLite WAL support",
-          "id": "telemetry-python",
-          "run": "uv python install 3.12.16\nuv venv --seed --python 3.12.16 \"$RUNNER_TEMP/xor-telemetry-python\"\necho \"$RUNNER_TEMP/xor-telemetry-python/bin\" >> \"$GITHUB_PATH\""
-        },
-        {
           "name": "Install application dependencies",
-          "run": "python3 -m pip install --disable-pip-version-check -e '.[test,telemetry]' -r .github/requirements-ci.txt",
+          "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --only-group validation --no-install-project --managed-python --python 3.12.16\nuv sync --locked --no-default-groups --group validation --no-install-project --managed-python --python 3.12.16 --no-build-isolation-package agent-telemetry --extra test --extra telemetry\nuv pip install --python \"$UV_PROJECT_ENVIRONMENT/bin/python\" --no-deps --no-build-isolation -e .\necho \"$UV_PROJECT_ENVIRONMENT/bin\" >> \"$GITHUB_PATH\"",
           "id": "dependencies"
         },
         {
@@ -229,20 +230,27 @@
         {
           "name": "Configure external Python cache",
           "id": "cache",
-          "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/xorchestrate-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\""
+          "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/xorchestrate-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\"\nprintf 'UV_PROJECT_ENVIRONMENT=%s\\n' \"$RUNNER_TEMP/xor-validation-python\" >> \"$GITHUB_ENV\""
         },
         {
           "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
           "with": {
-            "python-version": "3.12",
-            "cache": "pip",
-            "cache-dependency-path": "pyproject.toml"
+            "python-version": "3.12.16"
           },
           "id": "python"
         },
         {
+          "name": "Install pinned validation runtime manager",
+          "uses": "astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9",
+          "with": {
+            "version": "0.13.7",
+            "enable-cache": true,
+            "cache-dependency-glob": "uv.lock"
+          }
+        },
+        {
           "name": "Install verification dependencies",
-          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]' -r .github/requirements-ci.txt",
+          "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --only-group validation --no-install-project --managed-python --python 3.12.16\nuv sync --locked --no-default-groups --group validation --no-install-project --managed-python --python 3.12.16 --no-build-isolation-package agent-telemetry --extra test\nuv pip install --python \"$UV_PROJECT_ENVIRONMENT/bin/python\" --no-deps --no-build-isolation -e .\necho \"$UV_PROJECT_ENVIRONMENT/bin\" >> \"$GITHUB_PATH\"",
           "id": "dependencies"
         },
         {
@@ -301,20 +309,27 @@
         {
           "name": "Configure external Python cache",
           "id": "cache",
-          "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/xorchestrate-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\""
+          "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/xorchestrate-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\"\nprintf 'UV_PROJECT_ENVIRONMENT=%s\\n' \"$RUNNER_TEMP/xor-validation-python\" >> \"$GITHUB_ENV\""
         },
         {
           "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
           "with": {
-            "python-version": "3.12",
-            "cache": "pip",
-            "cache-dependency-path": "pyproject.toml"
+            "python-version": "3.12.16"
           },
           "id": "python"
         },
         {
+          "name": "Install pinned validation runtime manager",
+          "uses": "astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9",
+          "with": {
+            "version": "0.13.7",
+            "enable-cache": true,
+            "cache-dependency-glob": "uv.lock"
+          }
+        },
+        {
           "name": "Install application and tmux",
-          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]'\nif ! command -v tmux >/dev/null 2>&1; then\n  sudo apt-get update\n  sudo apt-get install -y tmux\nfi\ntmux -V",
+          "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --only-group validation --no-install-project --managed-python --python 3.12.16\nuv sync --locked --no-default-groups --group validation --no-install-project --managed-python --python 3.12.16 --no-build-isolation-package agent-telemetry --extra test\nuv pip install --python \"$UV_PROJECT_ENVIRONMENT/bin/python\" --no-deps --no-build-isolation -e .\necho \"$UV_PROJECT_ENVIRONMENT/bin\" >> \"$GITHUB_PATH\"\nif ! command -v tmux >/dev/null 2>&1; then\n  sudo apt-get update\n  sudo apt-get install -y tmux\nfi\ntmux -V",
           "id": "dependencies"
         },
         {
@@ -337,7 +352,7 @@
           "if": "always()",
           "with": {
             "name": "tmux-acceptance-evidence",
-            "path": "${{ runner.temp }}/acceptance-evidence/**/report.json\n${{ runner.temp }}/acceptance-evidence/**/scenario.json\n${{ runner.temp }}/acceptance-evidence/**/commands/**/*.json\n${{ runner.temp }}/acceptance-evidence/**/commands/**/*.log\n${{ runner.temp }}/acceptance-evidence/setup.json",
+            "path": "${{ runner.temp }}/acceptance-evidence/**/report.json\n${{ runner.temp }}/acceptance-evidence/**/scenario.json\n${{ runner.temp }}/acceptance-evidence/**/commands/**/*.json\n${{ runner.temp }}/acceptance-evidence/**/commands/**/*.log\n${{ runner.temp }}/acceptance-evidence/setup.json\n${{ runner.temp }}/acceptance-evidence/**/candidate.json",
             "if-no-files-found": "error",
             "retention-days": 7
           }
@@ -381,20 +396,27 @@
         {
           "name": "Configure external Python cache",
           "id": "cache",
-          "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/xorchestrate-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\""
+          "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/xorchestrate-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\"\nprintf 'UV_PROJECT_ENVIRONMENT=%s\\n' \"$RUNNER_TEMP/xor-validation-python\" >> \"$GITHUB_ENV\""
         },
         {
           "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
           "with": {
-            "python-version": "3.12",
-            "cache": "pip",
-            "cache-dependency-path": "pyproject.toml"
+            "python-version": "3.12.16"
           },
           "id": "python"
         },
         {
+          "name": "Install pinned validation runtime manager",
+          "uses": "astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9",
+          "with": {
+            "version": "0.13.7",
+            "enable-cache": true,
+            "cache-dependency-glob": "uv.lock"
+          }
+        },
+        {
           "name": "Install test and diagnostic dependencies",
-          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]'",
+          "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --only-group validation --no-install-project --managed-python --python 3.12.16\nuv sync --locked --no-default-groups --group validation --no-install-project --managed-python --python 3.12.16 --no-build-isolation-package agent-telemetry --extra test\nuv pip install --python \"$UV_PROJECT_ENVIRONMENT/bin/python\" --no-deps --no-build-isolation -e .\necho \"$UV_PROJECT_ENVIRONMENT/bin\" >> \"$GITHUB_PATH\"",
           "id": "dependencies"
         },
         {
@@ -418,6 +440,114 @@
           "with": {
             "name": "architecture-evidence",
             "path": "${{ runner.temp }}/architecture/",
+            "if-no-files-found": "error",
+            "retention-days": 30
+          }
+        }
+      ]
+    },
+    "package": {
+      "name": "Installed package acceptance",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 10,
+      "needs": [
+        "paths"
+      ],
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' }}",
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          },
+          "id": "checkout"
+        },
+        {
+          "name": "Configure external Python cache",
+          "id": "cache",
+          "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/package-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\"\nprintf 'UV_PROJECT_ENVIRONMENT=%s\\n' \"$RUNNER_TEMP/package-builder\" >> \"$GITHUB_ENV\""
+        },
+        {
+          "uses": "astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9",
+          "with": {
+            "version": "0.13.7",
+            "enable-cache": false
+          },
+          "id": "uv"
+        },
+        {
+          "name": "Install locked distribution build tools",
+          "id": "dependencies",
+          "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --managed-python --python 3.12.16 --no-default-groups --group validation --no-install-project"
+        },
+        {
+          "name": "Verify wheel and source distribution consumers",
+          "id": "acceptance",
+          "run": "\"$UV_PROJECT_ENVIRONMENT/bin/python\" -m scripts.ci.package_acceptance --output \"$RUNNER_TEMP/package-acceptance\""
+        },
+        {
+          "name": "Record unavailable package acceptance",
+          "if": "!cancelled() && (steps.checkout.outcome != 'success' || steps.cache.outcome != 'success' || steps.uv.outcome != 'success' || steps.dependencies.outcome != 'success')",
+          "run": "mkdir -p \"$RUNNER_TEMP/package-acceptance\"\ncat > \"$RUNNER_TEMP/package-acceptance/report.json\" <<'JSON'\n{\"schema_version\":1,\"status\":\"failed\",\"artifacts\":[],\"error\":{\"stage\":\"setup\",\"message\":\"Package acceptance prerequisites did not succeed\"}}\nJSON"
+        },
+        {
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+          "if": "always()",
+          "with": {
+            "name": "package-acceptance-evidence",
+            "path": "${{ runner.temp }}/package-acceptance/**/report.json\n${{ runner.temp }}/package-acceptance/**/commands/**\n${{ runner.temp }}/package-acceptance/**/distributions/*\n${{ runner.temp }}/package-acceptance/**/*constraints.txt",
+            "if-no-files-found": "error",
+            "retention-days": 14
+          }
+        }
+      ]
+    },
+    "ci-result": {
+      "name": "CI result",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 5,
+      "needs": [
+        "paths",
+        "changes",
+        "application-tests",
+        "application",
+        "verification",
+        "tmux-acceptance",
+        "architecture-status",
+        "package"
+      ],
+      "if": "${{ always() }}",
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "uses": "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
+          "with": {
+            "path": "${{ runner.temp }}/ci-result-inputs"
+          }
+        },
+        {
+          "name": "Qualify CI result and summarize retained evidence",
+          "if": "always()",
+          "env": {
+            "JOB_OUTCOMES": "${{ toJSON(needs) }}",
+            "EVENT_NAME": "${{ github.event_name }}",
+            "SOURCE_SHA": "${{ github.event.pull_request.head.sha || github.sha }}",
+            "TESTED_SHA": "${{ github.sha }}",
+            "RUN_URL": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          },
+          "run": "mkdir -p \"$RUNNER_TEMP/ci-result\"\nprintf '%s\\n' \"$JOB_OUTCOMES\" > \"$RUNNER_TEMP/ci-result/needs.json\"\npython3 -I -B scripts/ci/result.py --needs \"$RUNNER_TEMP/ci-result/needs.json\" --workflow .github/workflows/ci.yml --catalog contracts/testing.json --artifacts \"$RUNNER_TEMP/ci-result-inputs\" --event \"$EVENT_NAME\" --source-sha \"$SOURCE_SHA\" --tested-sha \"$TESTED_SHA\" --run-url \"$RUN_URL\" --summary \"$GITHUB_STEP_SUMMARY\" --output \"$RUNNER_TEMP/ci-result/result.json\""
+        },
+        {
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+          "if": "always()",
+          "with": {
+            "name": "ci-result-evidence",
+            "path": "${{ runner.temp }}/ci-result/",
             "if-no-files-found": "error",
             "retention-days": 30
           }

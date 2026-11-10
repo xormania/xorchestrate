@@ -114,9 +114,12 @@ rule enforces it. Verify the active setting when making an enforcement claim.
    Findings do not automatically create new requirements or merge prerequisites.
 5. Open the PR as a draft and get applicable CI green. Evaluate subsequent Codex
    review findings on the same basis, verify repairs and accurately retain any
-   material remaining limitation. Update affected user documentation and concise
-   release notes for user-visible changes; when no changelog is maintained, keep
-   the user-facing change in the PR description.
+   material remaining limitation. Update affected user documentation, and add
+   concise release notes for user-visible changes to the `Unreleased` entry of
+   [`CHANGELOG.md`](../CHANGELOG.md). Record configuration format, data version,
+   lifecycle definition, adapter option, operator source schema and telemetry
+   collector changes under its **Upgrade notes**, stating "None" for each
+   unaffected category when the release is cut.
 6. Hand the draft and its evidence to xor for review. xor controls readiness,
    merging and releases. Follow the repository's current merge settings.
 

@@ -9,11 +9,14 @@ import os
 import signal
 import sys
 import threading
+from importlib import metadata
 from pathlib import Path
 
+from . import __version__
 from .adapters.local_socket import InstanceLock, check_socket_path
+from .adapters.storage_migrations import DATA_VERSION
 from .adapters.unix import UnixClientTransport
-from .composition import build, describe, load_config, read_json
+from .composition import SUPPORTED_CONFIG_VERSIONS, build, describe, load_config, read_json
 from .mcp import MCPDispatcher, failure, frames, serve
 from .model import OrchestrationError
 from .server import (
@@ -38,8 +41,40 @@ def _write(value, stream):
     stream.flush()
 
 
+def installed_commit(distribution=metadata.distribution):
+    """The commit a VCS install resolved, from its PEP 610 ``direct_url.json``."""
+    try:
+        text = distribution("xorchestrate").read_text("direct_url.json")
+        data = json.loads(text) if text else None
+    except (metadata.PackageNotFoundError, OSError, UnicodeError, ValueError):
+        return None
+    vcs = data.get("vcs_info") if isinstance(data, dict) else None
+    commit = vcs.get("commit_id") if isinstance(vcs, dict) else None
+    return commit if isinstance(commit, str) and commit else None
+
+
+def version_info(distribution=metadata.distribution):
+    """Release identity and the format versions this release reads."""
+    return {
+        "version": __version__,
+        "commit": installed_commit(distribution),
+        "config_versions": sorted(SUPPORTED_CONFIG_VERSIONS),
+        "data_version": DATA_VERSION,
+    }
+
+
+class _Version(argparse.Action):
+    def __init__(self, option_strings, dest, **kwargs):
+        super().__init__(option_strings, dest, nargs=0, default=argparse.SUPPRESS, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        _write(version_info(), sys.stdout)
+        parser.exit()
+
+
 def _parser():
     parser = argparse.ArgumentParser(description="Configurable agent orchestration")
+    parser.add_argument("--version", action=_Version, help="Print release identity and supported versions as JSON")
     parser.add_argument("--config", help="Explicit trusted JSON configuration file")
     parser.add_argument("--actor", default="owner", help="Principal for this local process")
     parser.add_argument("--max-frame-bytes", type=int, default=1_048_576)
@@ -202,7 +237,7 @@ def main(argv=None):
         with build(config, base_dir) as runtime:
             app = runtime.application
             if args.command == "describe":
-                _write({"operations": describe(app)}, sys.stdout)
+                _write({"operations": describe(app), "warnings": list(runtime.warnings)}, sys.stdout)
             elif args.command == "serve":
                 serve(app, sys.stdin.buffer, sys.stdout, args.actor, args.max_frame_bytes,
                       args.request_workers, args.max_pending_requests, args.control_workers)

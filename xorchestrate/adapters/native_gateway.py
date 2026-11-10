@@ -38,6 +38,22 @@ def _encode(value):
     return json.dumps(value, allow_nan=False, separators=(",", ":")).encode() + b"\n"
 
 
+_GATEWAY_FAILURE = {"code": "gateway_error", "message": "Native gateway request failed"}
+
+
+class GatewayFailure(RuntimeError):
+    """A gateway response error; ``application`` marks a public application failure."""
+
+    def __init__(self, error, application=False):
+        self.code, self.message = error["code"], error["message"]
+        self.details = error.get("details", {})
+        self.application = application
+        super().__init__(f"{self.code}: {self.message}")
+
+    def envelope(self):
+        return {"error": {"code": self.code, "message": self.message, "details": self.details}}
+
+
 class _Server(socketserver.ThreadingMixIn, socketserver.TCPServer):
     daemon_threads = True
     block_on_close = False
@@ -67,6 +83,10 @@ class LocalGateway:
     """Bounded, authenticated request server used by native MCP/hook children."""
 
     def __init__(self, handler, options=None):
+        # The server half runs inside the application package; the executable
+        # half below never constructs a LocalGateway.
+        from ..model import OrchestrationError
+
         options = options or {}
         self.maximum = options.get("max_frame_bytes", 4 * 1024 * 1024)
         self.timeout = options.get("gateway_timeout", 300)
@@ -95,11 +115,16 @@ class LocalGateway:
                         raise ValueError("Gateway authentication failed")
                     result = handler(packet.get("action"), packet.get("payload", {}))
                     response = {"result": result}
-                except Exception as error:
-                    # Do not relay arbitrary exception strings (which can contain credentials).
-                    response = {"error": {"code": getattr(error, "code", "gateway_error"),
-                                           "message": "Native gateway request failed"}}
-                raw = _encode(response)
+                except OrchestrationError as error:
+                    # Expected adapter errors are public, as in every other input adapter.
+                    response = {"failure": {"code": error.code, "message": str(error), "details": error.details}}
+                except Exception:
+                    # Do not relay arbitrary exception text or attributes (which can contain credentials).
+                    response = {"error": _GATEWAY_FAILURE}
+                try:
+                    raw = _encode(response)
+                except (TypeError, ValueError):
+                    raw = _encode({"error": _GATEWAY_FAILURE})
                 if len(raw) > gateway.maximum:
                     raw = _encode({"error": {"code": "frame_limit", "message": "Gateway result exceeds bound"}})
                 try:
@@ -146,8 +171,13 @@ def request(descriptor, action, payload=None):
     if len(raw) > maximum or not raw.endswith(b"\n"):
         raise ValueError("Invalid gateway response")
     result = _decode(raw)
-    if "error" in result:
-        raise RuntimeError(result["error"]["code"])
+    for key, application in (("failure", True), ("error", False)):
+        if key in result:
+            error = result[key]
+            if (not isinstance(error, dict) or not isinstance(error.get("code"), str)
+                    or not isinstance(error.get("message"), str) or not isinstance(error.get("details", {}), dict)):
+                raise ValueError("Invalid gateway response")
+            raise GatewayFailure(error, application)
     return result["result"]
 
 
@@ -198,9 +228,20 @@ def run_mcp(descriptor, channel=False):
                           "serverInfo": {"name": "xorchestrate", "version": "0.2.0"}}
             elif method == "ping":
                 result = {}
-            elif method in {"tools/list", "tools/call"}:
-                value = request(descriptor, method, {**packet.get("params", {}), "mcp_request_id": ident, "mcp_connection_id": connection_id})
-                result = value if method == "tools/list" else {"content": [{"type": "text", "text": json.dumps(value, allow_nan=False)}], "structuredContent": value}
+            elif method == "tools/list":
+                result = request(descriptor, method, {**packet.get("params", {}), "mcp_request_id": ident, "mcp_connection_id": connection_id})
+            elif method == "tools/call":
+                try:
+                    value = request(descriptor, method, {**packet.get("params", {}), "mcp_request_id": ident, "mcp_connection_id": connection_id})
+                    failed = False
+                except GatewayFailure as failure:
+                    if not failure.application:
+                        raise
+                    # An application refusal is a tool result the model can act on, not a protocol fault.
+                    value, failed = failure.envelope(), True
+                result = {"content": [{"type": "text", "text": json.dumps(value, allow_nan=False)}], "structuredContent": value}
+                if failed:
+                    result["isError"] = True
             else:
                 write({"id": ident, "error": {"code": -32601, "message": "Unsupported method"}})
                 return

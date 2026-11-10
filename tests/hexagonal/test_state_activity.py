@@ -164,6 +164,56 @@ def test_native_call_ledger_refusals_share_codes_across_drivers(protocol):
         adapter.close()
 
 
+class _SdkFailure(RuntimeError):
+    """An arbitrary third-party error whose text and attributes are not public."""
+
+    code = "sdk_internal_code"
+    details = {"authorization": "Bearer s3cret-ledger-token"}
+
+
+def _visible_failure(protocol, invoke):
+    """The failure a driver hands to its native wire on a replayed call."""
+    if protocol == "codex":
+        response = invoke()
+        assert response["success"] is False
+        return json.loads(response["contentItems"][0]["text"])["error"]
+    with pytest.raises(OrchestrationError) as refused:
+        invoke()
+    return {"code": refused.value.code, "message": str(refused.value), "details": refused.value.details}
+
+
+@pytest.mark.parametrize("protocol", ["codex", "grok", "claude"])
+def test_native_call_ledger_replays_only_public_failure_text(protocol):
+    def failing(*args):
+        raise _SdkFailure("upstream rejected token=s3cret-ledger-token")
+
+    adapter, live, invoke = _callback_fixture(protocol, failing)
+    try:
+        with pytest.raises(_SdkFailure):
+            invoke()
+        replayed = _visible_failure(protocol, invoke)
+        assert "s3cret" not in json.dumps(replayed), "NATIVE_REPLAY_PRIVATE_ERROR_TEXT"
+        assert replayed == {"code": "callback_failed", "details": {"outcome": "unknown"},
+                            "message": "External operation did not return a verified result (_SdkFailure)."}
+    finally:
+        adapter.close()
+
+
+@pytest.mark.parametrize("protocol", ["codex", "grok", "claude"])
+def test_native_call_ledger_replays_expected_failure_verbatim(protocol):
+    def refusing(*args):
+        raise OrchestrationError("Read the record before retrying.", "conflict", {"retry_safe": False})
+
+    adapter, live, invoke = _callback_fixture(protocol, refusing)
+    try:
+        _visible_failure(protocol, invoke)
+        replayed = _visible_failure(protocol, invoke)
+        assert replayed == {"code": "conflict", "message": "Read the record before retrying.",
+                                     "details": {"retry_safe": False, "outcome": "unknown"}}
+    finally:
+        adapter.close()
+
+
 def test_untranslated_native_request_is_refused_before_any_effect():
     adapter = ACPSessionDriver({"command": [sys.executable, "unused"]})
     live = LiveSession({}, native_id="native")

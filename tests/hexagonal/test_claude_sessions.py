@@ -1,3 +1,6 @@
+import json
+import queue
+import subprocess
 import threading
 import time
 from pathlib import Path
@@ -5,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from tests.hexagonal.support.native import native_drivers, peer_options, wait_for
-from xorchestrate.adapters.native_gateway import request
+from xorchestrate.adapters.native_gateway import LocalGateway, request
 from xorchestrate.model import Capability, Conflict, OrchestrationError
 
 
@@ -240,3 +243,70 @@ def test_claude_application_callback_through_active_composition_and_sqlite(tmp_p
         observations = app.call("native_observations", {"session_id": session["id"]})["observations"]
         assert any(row["observation"].get("action") == "record_result" and row["origin"] == "adapter" for row in observations)
         assert all(row["observation"]["native_id"] == session["backend"]["native_id"] for row in observations)
+
+
+class _SdkFailure(RuntimeError):
+    code = "sdk_internal_code"
+    details = {"authorization": "Bearer s3cret-gateway-token"}
+
+
+def _failing_gateway(action, payload):
+    if payload.get("name") == "stale":
+        raise Conflict("The record changed; read its current version before retrying.")
+    raise _SdkFailure("provider rejected token=s3cret-gateway-token")
+
+
+def test_gateway_relays_application_failures_and_hides_private_ones():
+    gateway = LocalGateway(_failing_gateway)
+    try:
+        with pytest.raises(RuntimeError) as stale:
+            request(gateway.descriptor_path, "tools/call", {"name": "stale"})
+        assert getattr(stale.value, "application", False), "NATIVE_APPLICATION_FAILURE_OPAQUE"
+        assert (stale.value.code, stale.value.message, stale.value.details) == (
+            "conflict", "The record changed; read its current version before retrying.", {})
+        with pytest.raises(RuntimeError) as private:
+            request(gateway.descriptor_path, "tools/call", {"name": "private"})
+        assert not getattr(private.value, "application", False)
+        assert "s3cret" not in str(private.value) and "sdk_internal" not in str(private.value)
+    finally:
+        gateway.close()
+
+
+def test_gateway_mcp_shim_returns_application_failure_as_tool_error():
+    gateway = LocalGateway(_failing_gateway)
+    spec = gateway.mcp_spec()
+    lines = [{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18"}},
+             {"jsonrpc": "2.0", "id": 2, "method": "tools/call", "params": {"name": "stale", "arguments": {}}},
+             {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "private", "arguments": {}}}]
+    shim = subprocess.Popen([spec["command"], *spec["args"]], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+    answers = queue.Queue()
+    reader = threading.Thread(target=lambda: [answers.put(line) for line in shim.stdout], daemon=True)
+    reader.start()
+    responses, output = {}, []
+    try:
+        # Keep stdin open until every answer arrives; EOF cancels queued tool calls.
+        shim.stdin.write("".join(json.dumps(line) + "\n" for line in lines))
+        shim.stdin.flush()
+        deadline = time.monotonic() + 20
+        while len(responses) < len(lines) and time.monotonic() < deadline:
+            try:
+                line = answers.get(timeout=.1)
+            except queue.Empty:
+                continue
+            output.append(line)
+            item = json.loads(line)
+            responses[item["id"]] = item
+    finally:
+        shim.stdin.close()
+        shim.wait(timeout=5)
+        reader.join(timeout=5)
+        gateway.close()
+    stdout = "".join(output)
+    expected = {"error": {"code": "conflict", "message": "The record changed; read its current version before retrying.",
+                          "details": {}}}
+    assert set(responses) == {1, 2, 3}
+    assert responses[2].get("result", {}).get("isError") is True, "NATIVE_APPLICATION_FAILURE_OPAQUE"
+    assert responses[2]["result"]["structuredContent"] == expected
+    assert json.loads(responses[2]["result"]["content"][0]["text"]) == expected
+    assert responses[3]["error"] == {"code": -32603, "message": "Native gateway request failed"}
+    assert "s3cret" not in stdout and "sdk_internal" not in stdout
