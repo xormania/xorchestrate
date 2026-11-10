@@ -142,3 +142,24 @@ def test_candidate_that_cannot_fit_is_inconclusive_without_provider_call(tmp_pat
     assert result["status"] == "inconclusive", "MISSING_CANDIDATE_INCONCLUSIVE"
     assert result["assessments"] == []
     assert RecordingEvaluator.calls == []
+
+
+def test_whole_new_module_prioritizes_behavior_over_module_metadata(tmp_path):
+    source = (
+        '\"\"\"New module with useful behavior below its metadata.\"\"\"\n'
+        "from __future__ import annotations\n"
+        "from pathlib import Path\n\n"
+        "def compute(value: int) -> int:\n"
+        "    return value + 1\n\n"
+        "def persist(path: Path, value: int) -> None:\n"
+        "    path.write_text(str(compute(value)))\n"
+    )
+    path = "pkg/new_module.py"
+    file = tmp_path / path
+    file.parent.mkdir(parents=True)
+    file.write_text(source)
+    context = build_context(source_report({path: source}), tmp_path, max_candidates=2,
+                            changed_ranges=[{"path": path, "start_line": 1, "end_line": source.count("\n")}])
+    assert [item["symbol"] for item in context["candidates"]] == ["compute", "persist"], "NEW_MODULE_BEHAVIOR_SELECTED_BEFORE_METADATA"
+    assert [item["kind"] for item in context["sources"] if item["relation"] == "candidate"] == ["FunctionDef", "FunctionDef"]
+    assert all(item["path"] == path for item in context["candidates"])

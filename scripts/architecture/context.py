@@ -182,6 +182,13 @@ def build_context(report: dict, root: Path, *, max_source_bytes=24000, max_files
                     unit["path"], unit["start_line"])
 
         candidate_units = sorted(all_units, key=rank)
+    if targeted:
+        # Added files include docstrings/imports in the same diff as behavior.
+        # Spend candidate slots on complete behavior and declarations first;
+        # imports still enter the related-context packet independently.
+        substantive = {"FunctionDef": 0, "AsyncFunctionDef": 0, "ClassDef": 1,
+                       "Assign": 2, "AnnAssign": 2}
+        candidate_units.sort(key=lambda unit: substantive.get(unit["kind"], 3))
     candidate_units = list({unit["unit_id"]: unit for unit in candidate_units}.values())
     selected, candidates, used, paths, oversize = [], [], set(), set(), []
     remaining = max_source_bytes

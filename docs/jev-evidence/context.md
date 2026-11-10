@@ -87,3 +87,33 @@ Source packets expose omitted and oversized units and never authorize execution,
 clear deterministic failures, or count a model concern as a confirmed defect.
 
 CI now fetches the comparison base and supplies the PR base SHA (or push-before SHA) through an environment value to `--base-ref`. Independent workflow assertions cover this wiring.
+
+## Live candidate ordering follow-up
+
+Live inspection of the draft exposed a targeted selection defect: a newly added
+module changes all of its lines, so its opening docstring and imports could spend
+the candidate limit before behavioral definitions were reached. A separate test
+author supplied a measured new module with a docstring, two imports and two
+functions. With the entire file marked changed and `max_candidates=2`, the
+independent expectation is that both functions occupy the candidate slots in
+source order; imports may still enter as related evidence.
+
+The same test was copied into a detached worktree at `f46c8fe` with its actual
+original `context.py` (SHA-256
+`bb752fa38121ab65ddaba242e61979689826b14c2730c45a0e779aa93beeabdf`).
+It failed at `NEW_MODULE_BEHAVIOR_SELECTED_BEFORE_METADATA`, reporting
+`['<module:1>', '<module:2>']` instead of `['compute', 'persist']`. No setup or
+collection error supplied this red result. The production repair prioritizes
+substantive definitions/declarations over metadata for targeted candidates.
+
+```bash
+python -m pytest -p no:cacheprovider tests/hexagonal/test_architecture_context.py::test_whole_new_module_prioritizes_behavior_over_module_metadata -q
+python -m pytest -p no:cacheprovider tests/hexagonal/test_architecture_context.py -q
+```
+
+The repaired context module passed all **14 tests** on Python 3.12.16 with an
+external bytecode cache; Ruff passed for the new test. Local evidence in
+`evidence-context-new-file/` retains the original source, one failing assertion,
+the healthy run and an initial pass obtained after the parallel production fix
+was already present. This is a focused regression for an observed live issue;
+the earlier 13 detection witnesses were not rerun.
