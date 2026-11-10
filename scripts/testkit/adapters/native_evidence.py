@@ -89,8 +89,7 @@ def collect_native_evidence(directory, output):
                 if identity in seen:
                     continue
                 seen.add(identity)
-                from agent_telemetry.artifacts import FileArtifactStore
-
+                from xorchestrate.adapters.telemetry_collector.artifacts import FileArtifactStore
                 from xorchestrate.adapters.telemetry_snapshot import create_snapshot, invalidate_bundle, restore_bundle
 
                 name = hashlib.sha256(str(source.relative_to(directory)).encode()).hexdigest()[:24]

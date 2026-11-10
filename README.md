@@ -17,7 +17,7 @@ the checkout:
 
 ```bash
 export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XXXXXX")"
-python3 -m pip install -e '.[test,telemetry]' -r .github/requirements-ci.txt
+python3 -m pip install -e '.[test]' -r .github/requirements-ci.txt
 python3 -m scripts.testkit run --suite static
 python3 -m scripts.testkit run --suite checks
 ```

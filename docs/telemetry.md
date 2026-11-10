@@ -1,21 +1,21 @@
 # Active telemetry
 
-Telemetry extends the active `xorchestrate/` application. The collector is the
-shared `agent_telemetry` package from CCE, pinned by the `telemetry` installation
-extra.
+Telemetry extends the active `xorchestrate/` application. The collector ships
+with it in [`xorchestrate/adapters/telemetry_collector/`](../xorchestrate/adapters/telemetry_collector/);
+there is no separate installation extra.
 
 ## Install and enable
 
-Install the optional collector alongside the application:
-
 ```sh
-python3 -m pip install -e '.[test,telemetry]' -r .github/requirements-ci.txt
+python3 -m pip install -e '.[test]' -r .github/requirements-ci.txt
 ```
 
-Use a Python build whose linked SQLite includes the WAL-reset fix (3.51.3 or a
-fixed backport). Check the library linked to Python, rather than a separate
-sqlite3 executable. CI uses the same fixed-runtime approach as CCE:
-uv 0.13.7 and Python 3.12.16. Static validation remains independent of this extra.
+Use a Python build whose linked SQLite includes the WAL-reset fix (3.51.3, or a
+fixed backport: 3.50.7 or later in 3.50, 3.44.6 or later in 3.44). Check the
+library linked to Python, rather than a separate sqlite3 executable. The SQLite
+corpus adapter refuses an unfixed library; the application then continues with an
+explicit unavailable telemetry state. CI uses uv 0.13.7 and Python 3.12.16, and
+`doctor` reports the selected interpreter's SQLite as `telemetry_sqlite`.
 
 The [telemetry configuration example](../examples/telemetry.json) selects local
 collection explicitly. Paths are resolved against the configuration directory;
@@ -37,20 +37,23 @@ application operations are available through both input adapters.
 ## Configuration options
 
 The top-level `telemetry` section takes `adapter` (built-in `local`), `options`
-and an optional boolean `enabled`. When the section is absent or `enabled` is
-`false`, no collector is constructed. If construction fails, the application
-continues with an explicit unavailable telemetry state. Unknown option names are
-rejected.
+and an optional boolean `enabled`. `enabled: false` constructs no collector. When
+the section is absent, no collector is constructed unless the caller of
+`composition.build()` supplies `TelemetryDefaults` (runtime root, project id,
+collector id and a dataset id that defaults to `default`); the local collector is
+then constructed with those values. The command-line entry points do not supply
+defaults yet. If construction fails, the application continues with an explicit
+unavailable telemetry state. Unknown option names are rejected.
 
 | Option | Default | Validation and meaning |
 | --- | --- | --- |
-| `runtime_root` | required unless `profile` | Corpus root, resolved against the configuration directory; no symbolic-link components. |
-| `project_id`, `dataset_id`, `collector_id` | required unless `profile` | Nonempty text identities for the collector lineage. |
+| `runtime_root` | required | Corpus root, resolved against the configuration directory; no symbolic-link components. |
+| `project_id`, `dataset_id`, `collector_id` | required | Nonempty text identities for the collector lineage. |
 | `producer_id` | `xorchestrate` | Nonempty text. |
-| `database` | `events.sqlite3` | Relative path inside `runtime_root`; no `..` or symbolic links. |
-| `artifact_root` | `artifacts` | Relative path inside `runtime_root`; cannot overlap `database`. |
-| `capture_lock_timeout_ms` | `250` | Integer from 0 to 60000. |
-| `profile` | none | Shared `agent_telemetry` profile path, resolved against the configuration directory. It supplies the root, paths, identities and lock wait, so it cannot be combined with the preceding options. |
+| `corpus` | `{"adapter": "sqlite"}` | Corpus storage selection; see below. |
+| `artifacts` | `{"adapter": "filesystem"}` | Artifact storage selection; see below. `"enabled": false` keeps large payloads inline. |
+| `database`, `capture_lock_timeout_ms` | `events.sqlite3`, `250` | Shorthand for the `sqlite` corpus options; cannot be combined with `corpus`. |
+| `artifact_root` | `artifacts` | Shorthand for the `filesystem` artifact `root`; cannot be combined with `artifacts`. |
 | `export_root` | `exports` | Relative path inside the runtime root; snapshot and restore destinations are new children of it. |
 | `snapshot_timeout` | `5.0` | Seconds; greater than 0 and at most 3600. |
 | `artifact_threshold_bytes` | `65536` | Positive integer; larger payloads are stored as content-addressed artifacts. |
@@ -73,6 +76,35 @@ The `operational` object accepts only these fields:
 
 An invalid `operational` object marks operational export unavailable in
 `telemetry_status`; it does not disable the local corpus.
+
+### Storage adapters
+
+Corpus and artifact storage are selected like other adapters, with `adapter`, an
+optional `options` object and an optional boolean `enabled`. A name is a built-in
+alias or a trusted installed `module:factory`; the factory receives its options
+and a `CollectorScope` (runtime root, dataset and collector identities) and
+implements the `TelemetryCorpusStorage` or `TelemetryArtifacts` port in
+[`ports.py`](../xorchestrate/adapters/telemetry_collector/ports.py). An unknown
+name or option is refused.
+
+```json
+"telemetry": {"adapter": "local", "options": {
+  "runtime_root": "../telemetry-runtime", "project_id": "example", "dataset_id": "default",
+  "collector_id": "workstation-1",
+  "corpus": {"adapter": "sqlite", "options": {"database": "events.sqlite3", "capture_lock_timeout_ms": 250}},
+  "artifacts": {"adapter": "filesystem", "options": {"root": "artifacts"}}
+}}
+```
+
+| Adapter | Options | Behavior |
+| --- | --- | --- |
+| `sqlite` corpus | `database` (relative path inside `runtime_root`, default `events.sqlite3`), `capture_lock_timeout_ms` (0 to 60000, default `250`) | The `agent-telemetry-v1` format (`user_version` 1; tables `metadata`, `events`, `links`, `artifacts`, `cursors`; immutable events). WAL journaling with `synchronous=FULL` is fixed, because the corpus's durability depends on it. Corpora written by the earlier standalone collector open unchanged. |
+| `filesystem` artifacts | `root` (relative path inside `runtime_root`, default `artifacts`) | Content-addressed `sha256/<prefix>/<digest>` files, installed and synced before an observation refers to them. |
+
+The database and artifact paths cannot overlap or traverse symbolic links.
+Snapshot bundles are SQLite/file closures, so `telemetry_snapshot`,
+`telemetry_verify` and `telemetry_restore` require the `sqlite` corpus; another
+corpus adapter answers them with `telemetry_unsupported`.
 
 ## Operations
 
@@ -144,7 +176,8 @@ evidence; useful telemetry does not depend on manufacturing such a result.
 
 ## References
 
-- [Shared CCE collector and limits](https://github.com/xormania/cce/blob/84229bb7497547d2db91d02a4633ccb3867f740b/tools/telemetry/README.md)
+- [Collector storage ports](../xorchestrate/adapters/telemetry_collector/ports.py)
+- [Compatibility fixtures written by the earlier standalone collector](../tests/fixtures/telemetry/README.md)
 - [SQLite WAL and fixed runtimes](https://www.sqlite.org/wal.html)
 - [SQLite online backup](https://www.sqlite.org/backup.html)
 - [Existing application architecture](hexagonal-architecture.md)
@@ -169,6 +202,11 @@ database and checks the retained artifact bytes. Current authorization covers th
 actual bundle closure for all three operations, including artifact-backed typed
 results. Failure leaves an incomplete receipt and does not advertise a successful
 preservation result.
+
+The manifest's `software` block records the Xorchestrate version, the SQLite
+version and `agent_telemetry_format: "agent-telemetry-v1"`. Bundles written while
+the collector was a separate package also name that package's version; they still
+verify and restore.
 
 Public bundle responses are compact receipts with counts and an exact saved
 manifest reference (path, SHA-256 and byte length). The complete manifest remains

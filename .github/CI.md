@@ -8,7 +8,7 @@ application/test dependencies and the single pinned linter requirements file:
 
 ```bash
 export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XXXXXX")"
-python3 -m pip install -e '.[test,telemetry]' -r .github/requirements-ci.txt
+python3 -m pip install -e '.[test]' -r .github/requirements-ci.txt
 python3 -m scripts.testkit run --suite static
 python3 -m scripts.testkit run --suite tests
 python3 -m scripts.testkit run --suite tests --shard 1/4   # one of four shards
@@ -144,7 +144,7 @@ implementation as a product acceptance obligation.
 Security-lint calibration belongs to the catalog's architecture family and uses
 the shared Ruff definition with independent expected findings; it runs in the
 tests shard that owns its module, where the pinned Ruff dependency is installed.
-The verification job installs `.[test]` and does not need the telemetry extra. Architecture and tmux
+The verification job installs `.[test]`. Architecture and tmux
 regression tests run through the tests shards; dedicated jobs do not rerun
 the same selected pytest modules.
 
@@ -175,9 +175,9 @@ CI neither requests reviews nor merges branches. xor controls those decisions.
 
 ## Telemetry runtime
 
-Application CI installs the optional pinned CCE collector through `.[test,telemetry]`.
-It selects uv 0.13.7 / Python 3.12.16 for the collector's fixed SQLite WAL requirement.
-Static checks remain independent of this extra. The existing application test-kit
+Application CI installs `.[test]`; the telemetry collector ships with the application.
+It selects uv 0.13.7 / Python 3.12.16 for the SQLite corpus adapter's WAL-fix requirement.
+Static checks need no SQLite runtime. The existing application test-kit
 collects the declared telemetry families alongside the current behavior suites.
-Optional collector/exporter failure does not replace the application's required
+Collector or exporter failure does not replace the application's required
 effect, receipt or acceptance recording. See [the active guide](../docs/telemetry.md).

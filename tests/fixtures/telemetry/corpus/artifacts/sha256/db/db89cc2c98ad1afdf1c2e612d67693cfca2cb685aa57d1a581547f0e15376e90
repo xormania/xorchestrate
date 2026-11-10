@@ -1,0 +1,1 @@
+{"action":"create_work","arguments":{"goal":"compatibility fixture: small payload"},"result":{"work":{"context":{},"created_at":"2026-11-10T00:23:40.237172+00:00","created_by":"owner","goal":"compatibility fixture: small payload","id":"b5903fca4aa44e6db4933bec97aec010","inputs":{},"metadata":{},"status":"open","title":"compatibility fixture: small payload","version":1}}}

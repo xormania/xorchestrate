@@ -55,7 +55,7 @@ the external cache before Python starts, then install the declared dependencies:
 
 ```sh
 export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XXXXXX")"
-python -m pip install -e '.[test,telemetry]' -r .github/requirements-ci.txt
+python -m pip install -e '.[test]' -r .github/requirements-ci.txt
 python -m scripts.testkit run --suite checks
 ```
 

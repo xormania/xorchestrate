@@ -18,6 +18,18 @@ def local_capture(directory, *, project=None):
             "collector_id": "collector-" + identity, "producer_id": "xorchestrate-managed-proof"}}
 
 
+def _default_storage(options):
+    """Relative database and artifact paths when the default SQLite/file adapters are selected."""
+    corpus = options.get("corpus", {"adapter": "sqlite", "options": {
+        key: options[key] for key in ("database",) if key in options}})
+    artifacts = options.get("artifacts", {"adapter": "filesystem", "options": {
+        "root": options[key] for key in ("artifact_root",) if key in options}})
+    if corpus.get("adapter") != "sqlite" or artifacts.get("adapter") != "filesystem" or artifacts.get("enabled") is False:
+        return None
+    return (corpus.get("options", {}).get("database", "events.sqlite3"),
+            artifacts.get("options", {}).get("root", "artifacts"))
+
+
 def isolated_config(config, base, directory, *, capture=False, project=None):
     """Preserve composition's cwd semantics when relocating a private run config.
 
@@ -63,11 +75,7 @@ def isolated_config(config, base, directory, *, capture=False, project=None):
     elif (capture and isinstance(selected, dict) and selected.get("enabled", True)
           and selected.get("adapter") == "local"):
         options = selected.setdefault("options", {})
-        if "profile" in options:
-            # The shared package owns profile semantics. Preserve that policy
-            # and its storage choice; only retain the original path resolution.
-            options["profile"] = str((base / options["profile"]).expanduser().resolve())
-        elif "runtime_root" not in options:
+        if "runtime_root" not in options:
             fresh = local_capture(directory, project=base)["options"]
             selected["options"] = {**fresh, **options, **{key: fresh[key]
                                    for key in ("runtime_root", "dataset_id", "collector_id")}}
@@ -81,19 +89,24 @@ def isolated_config(config, base, directory, *, capture=False, project=None):
                       "content_policy": "protected-local", "source_completion": "unknown"}
         if selected.get("enabled", True) is False:
             descriptor.update(status="disabled", reason="capture_explicitly_disabled")
-        elif selected.get("adapter") == "local" and "profile" not in selected.get("options", {}):
+        elif selected.get("adapter") == "local":
             options = selected["options"]
             storage = Path(options["runtime_root"])
+            locations = _default_storage(options)
             managed = Path(os.environ.get("XORCHESTRATE_PROOF_DIRECTORY", directory)).resolve()
             owned = storage == directory / "telemetry" or (
                 "XORCHESTRATE_PROOF_DIRECTORY" in os.environ and storage.is_relative_to(managed))
-            descriptor.update(status="configured" if owned else "external", runtime_root=str(storage),
-                database=str(storage / options.get("database", "events.sqlite3")),
-                artifacts=str(storage / options.get("artifact_root", "artifacts")),
-                **{key: options.get(key) for key in ("project_id", "dataset_id", "collector_id")})
-            if owned:
-                descriptor.pop("reason", None)
+            if locations is None:
+                # Collection preserves SQLite/file corpora; another selected
+                # storage adapter remains an explicit, uncollected gap.
+                descriptor["reason"] = "selected_capture_storage_not_collected"
             else:
-                descriptor["reason"] = "external_capture_root_not_run_owned"
+                descriptor.update(status="configured" if owned else "external", runtime_root=str(storage),
+                    database=str(storage / locations[0]), artifacts=str(storage / locations[1]),
+                    **{key: options.get(key) for key in ("project_id", "dataset_id", "collector_id")})
+                if owned:
+                    descriptor.pop("reason", None)
+                else:
+                    descriptor["reason"] = "external_capture_root_not_run_owned"
         write_json(directory / "telemetry-runtime.json", descriptor)
     return result

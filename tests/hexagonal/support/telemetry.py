@@ -224,7 +224,9 @@ class Fixture:
     def configuration_states(self):
         results = []
         for name, configuration in (("disabled", {"telemetry": {"enabled": False}}),
-                ("invalid", {"telemetry": {"adapter": "local", "options": {"profile": "missing.toml"}}}),
+                ("invalid", {"telemetry": {"adapter": "local", "options": {
+                    "runtime_root": "corpus", "project_id": "project-tests", "dataset_id": "dataset-tests",
+                    "collector_id": "collector-tests", "corpus": {"adapter": "unregistered-corpus"}}}}),
                 ("empty", {})):
             subject = Fixture(self.root / name, **configuration)
             try:

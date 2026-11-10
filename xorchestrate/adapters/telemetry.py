@@ -1,7 +1,8 @@
-"""Bridge Xorchestrate observations to the shared agent-telemetry collector.
+"""Bridge Xorchestrate observations to the in-tree telemetry collector.
 
-Each call owns its donor repository connection. Native callbacks and concurrent
-MCP workers never share a thread-bound SQLite connection.
+Corpus and artifact storage are selected adapters. Each call owns its corpus
+connection; native callbacks and concurrent MCP workers never share a
+thread-bound connection.
 """
 
 from __future__ import annotations
@@ -19,10 +20,18 @@ from uuid import uuid4
 from ..model import OrchestrationError
 from ..telemetry import canonical, protect
 from .telemetry_capture import TelemetryDispatch
+from .telemetry_collector import config
+from .telemetry_collector.application import Collector
+from .telemetry_collector.artifacts import FileArtifactStore
+from .telemetry_collector.domain import ArtifactRef, CaptureContext, Event, TelemetryError
+from .telemetry_collector.ports import CollectorScope
 
-_OPTIONS = {"profile", "project_id", "dataset_id", "collector_id", "producer_id", "runtime_root",
+_OPTIONS = {"project_id", "dataset_id", "collector_id", "producer_id", "runtime_root", "corpus", "artifacts",
             "database", "artifact_root", "export_root", "capture_lock_timeout_ms", "known_secrets",
             "artifact_threshold_bytes", "sources", "operational", "snapshot_timeout"}
+# Shorthand options for the default storage adapters, kept for existing configurations.
+_CORPUS_SHORTHAND = {"database": "database", "capture_lock_timeout_ms": "capture_lock_timeout_ms"}
+_ARTIFACTS_SHORTHAND = {"artifact_root": "root"}
 
 
 def _configuration(message):
@@ -35,21 +44,21 @@ def _text(value, name):
     return value
 
 
-def _contained(root, value, name):
-    relative = Path(_text(value, name))
-    if relative.is_absolute() or ".." in relative.parts:
-        raise _configuration(f"Telemetry {name} must be relative to runtime_root.")
-    path = root / relative
-    for component in (path, *path.parents):
-        if component.is_symlink():
-            raise _configuration("Telemetry paths cannot traverse symbolic links.")
-    if path.resolve() == root or not path.resolve().is_relative_to(root):
-        raise _configuration("Telemetry path must be inside runtime_root.")
-    return path
+def _storage(options, name, shorthand, default):
+    """Return one nested storage selection, accepting the default adapter's shorthand."""
+    present = {key: options[key] for key in shorthand if key in options}
+    if name in options:
+        if present:
+            raise _configuration(f"Telemetry {name} selection and its shorthand options cannot be combined.")
+        return config.selection(options[name], name)
+    return default, {target: present[key] for key, target in shorthand.items() if key in present}, True
 
 
 class UnavailableTelemetry:
-    """A safe, visible failed optional construction without keeping source errors."""
+    """A safe, visible failed construction without keeping source errors.
+
+    For example, a configuration error or a Python whose SQLite lacks the WAL fix.
+    """
 
     project_id = None
 
@@ -89,53 +98,49 @@ class UnavailableTelemetry:
 
 
 class LocalTelemetry:
-    """A configurable adapter; the shared package owns collection and durability."""
+    """A configurable adapter; the collector owns validation, protection and durability.
 
-    def __init__(self, options):
+    ``resolve(component, adapter)`` is supplied by composition and returns the
+    factory selected for ``corpus`` or ``artifacts``; this adapter never names a
+    concrete store.
+    """
+
+    def __init__(self, options, *, resolve):
         if not isinstance(options, dict) or options.keys() - _OPTIONS:
             raise _configuration("Unknown telemetry adapter option.")
-        from agent_telemetry.application import Collector
-        from agent_telemetry.artifacts import FileArtifactStore
-        from agent_telemetry.domain import ArtifactRef, CaptureContext, Event
-        from agent_telemetry.sqlite import SQLiteRepository
+        try:
+            self._configure(options, resolve)
+        except TelemetryError as error:
+            if error.code != "invalid_config":
+                raise
+            raise _configuration(str(error)) from error
 
-        self._collector_type, self._repository_type = Collector, SQLiteRepository
-        self._context_type, self._event_type, self._artifact_type = CaptureContext, Event, ArtifactRef
+    def _configure(self, options, resolve):
         secrets = options.get("known_secrets", [])
         if not isinstance(secrets, list) or any(not isinstance(value, str) or not value for value in secrets):
             raise _configuration("Telemetry known_secrets must be explicit nonempty strings.")
         self._secrets = tuple(secrets)
-        if "profile" in options:
-            if options.keys() - {"profile", "known_secrets", "artifact_threshold_bytes", "sources", "export_root", "operational", "snapshot_timeout"}:
-                raise _configuration("Telemetry profile and inline storage settings cannot be combined.")
-            from agent_telemetry.config import load_config
-            profile = load_config(options["profile"])
-            self.root, self.path, self.artifact_root = profile.runtime_root, profile.database, profile.artifact_root
-            self.project_id, self.dataset_id = profile.project_id, profile.dataset_id
-            self.collector_id, self.producer_id = profile.collector_id, profile.producer_id
-            self.timeout_ms, self.configuration_identity = profile.timeout_ms, profile.digest
-            artifacts_enabled = profile.artifacts_enabled
-        else:
-            self.root = Path(_text(options.get("runtime_root"), "runtime_root")).absolute()
-            for component in (self.root, *self.root.parents):
-                if component.is_symlink():
-                    raise _configuration("Telemetry runtime_root cannot traverse symbolic links.")
-            self.root = self.root.resolve()
-            self.path = _contained(self.root, options.get("database", "events.sqlite3"), "database")
-            self.artifact_root = _contained(self.root, options.get("artifact_root", "artifacts"), "artifact_root")
-            self.project_id = _text(options.get("project_id"), "project_id")
-            self.dataset_id = _text(options.get("dataset_id"), "dataset_id")
-            self.collector_id = _text(options.get("collector_id"), "collector_id")
-            self.producer_id = _text(options.get("producer_id", "xorchestrate"), "producer_id")
-            self.timeout_ms = options.get("capture_lock_timeout_ms", 250)
-            if type(self.timeout_ms) is not int or not 0 <= self.timeout_ms <= 60000:
-                raise _configuration("Telemetry lock wait must be between 0 and 60000 milliseconds.")
-            material = {key: value for key, value in options.items() if key != "known_secrets"}
-            self.configuration_identity = hashlib.sha256(canonical(material).encode()).hexdigest()
-            artifacts_enabled = True
-        if self.path == self.artifact_root or self.path.is_relative_to(self.artifact_root) or self.artifact_root.is_relative_to(self.path):
+        self.root = config.runtime_root(options.get("runtime_root"))
+        self.project_id = _text(options.get("project_id"), "project_id")
+        self.dataset_id = _text(options.get("dataset_id"), "dataset_id")
+        self.collector_id = _text(options.get("collector_id"), "collector_id")
+        self.producer_id = _text(options.get("producer_id", "xorchestrate"), "producer_id")
+        material = {key: value for key, value in options.items() if key != "known_secrets"}
+        self.configuration_identity = hashlib.sha256(canonical(material).encode()).hexdigest()
+        scope = CollectorScope(self.root, self.dataset_id, self.collector_id)
+        adapter, corpus_options, enabled = _storage(options, "corpus", _CORPUS_SHORTHAND, "sqlite")
+        if not enabled:
+            raise _configuration("Telemetry requires a corpus; disable telemetry itself instead.")
+        self.corpus = resolve("corpus", adapter)(corpus_options, scope)
+        adapter, artifact_options, enabled = _storage(options, "artifacts", _ARTIFACTS_SHORTHAND, "filesystem")
+        self.artifacts = resolve("artifacts", adapter)(artifact_options, scope) if enabled else None
+        owned = [*getattr(self.corpus, "locations", ()), *getattr(self.artifacts, "locations", ())]
+        if any(config.overlapping(first, second) for index, first in enumerate(owned) for second in owned[index + 1:]):
             raise _configuration("Telemetry database and artifacts cannot overlap.")
-        self.export_root = _contained(self.root, options.get("export_root", "exports"), "export_root")
+        # Snapshot bundles are SQLite/file closures; other corpus adapters do not offer them.
+        self.path = getattr(self.corpus, "database_path", None)
+        self.artifact_root = getattr(self.artifacts, "root", None)
+        self.export_root = config.contained(self.root, options.get("export_root", "exports"), "export_root")
         self.snapshot_timeout = options.get("snapshot_timeout", 5.0)
         if (isinstance(self.snapshot_timeout, bool) or not isinstance(self.snapshot_timeout, (int, float))
                 or not 0 < self.snapshot_timeout <= 3600):
@@ -153,10 +158,7 @@ class LocalTelemetry:
         self._closed = False
         self._operational = self._operational_dispatch = None
         self._operational_issue = None
-        self.artifacts = FileArtifactStore(self.artifact_root) if artifacts_enabled else None
-        repository = SQLiteRepository.initialize(self.path, dataset_id=self.dataset_id,
-                                                collector_id=self.collector_id, timeout_ms=self.timeout_ms)
-        repository.close()
+        self.corpus.initialize()
         if options.get("operational") is not None:
             try:
                 self._configure_operational(options["operational"])
@@ -260,9 +262,9 @@ class LocalTelemetry:
                 artifacts = (ref,)
                 payload_storage = asdict(ref)
                 text = canonical({"_telemetry_payload": payload_storage})
-            observation = self._event_type(
+            observation = Event(
                 event_id or self.new_id(), event_type, text,
-                self._context_type(self.project_id, self.dataset_id, self.collector_id, self.producer_id,
+                CaptureContext(self.project_id, self.dataset_id, self.collector_id, self.producer_id,
                                    session_id=flat.get("session_id"), session_generation=flat.get("incarnation"),
                                    harness=flat.get("harness", flat.get("driver")), task_id=flat.get("work_id"),
                                    config_digest=self.configuration_identity, attribution="explicit"),
@@ -271,8 +273,8 @@ class LocalTelemetry:
                                        "transformed": protected != payload or scope != context}}),
                 artifacts=artifacts, links=tuple(links), redaction_policy="xorchestrate-credentials-v1",
             )
-            repository = self._repository_type(self.path, timeout_ms=self.timeout_ms)
-            result = self._collector_type(repository, self.artifacts, health=self._health).record(observation, cursor=cursor)
+            repository = self.corpus.open()
+            result = Collector(repository, self.artifacts, health=self._health).record(observation, cursor=cursor)
             response = asdict(result)
             if result.status in {"recorded", "duplicate"}:
                 with self._lock:
@@ -308,7 +310,7 @@ class LocalTelemetry:
                 store = artifact_store if artifact_store is not None else self.artifacts
                 if store is None:
                     raise OrchestrationError("Telemetry artifact is unavailable.", "artifact_integrity")
-                payload = json.loads(store.read(self._artifact_type(**storage)))
+                payload = json.loads(store.read(ArtifactRef(**storage)))
             else:
                 payload = {"read_action": "telemetry_payload", "event_id": row["event_id"], **storage}
                 row["payload_storage"] = storage
@@ -334,7 +336,7 @@ class LocalTelemetry:
         """
         if type(after) is not int or after < 0 or type(limit) is not int or not 1 <= limit <= 1000:
             raise OrchestrationError("Invalid telemetry query bounds.", "invalid_query")
-        repository = self._repository_type.inspect(self.path)
+        repository = self.corpus.inspect()
         try:
             rows = repository.query(project_id=self.project_id, event_type=event_type, after=after, limit=limit)
             result = []
@@ -350,13 +352,10 @@ class LocalTelemetry:
             repository.close()
 
     def get_event(self, event_id, *, hydrate=True):
-        repository = self._repository_type.inspect(self.path)
+        repository = self.corpus.inspect()
         try:
-            found = repository.db.execute("SELECT sequence FROM events WHERE event_id=? AND project_id=?",
-                                          (event_id, self.project_id)).fetchone()
-            if found is None:
-                return None
-            return self._view(repository.query(project_id=self.project_id, after=found[0] - 1, limit=1)[0], hydrate=hydrate)
+            found = repository.get(event_id, project_id=self.project_id)
+            return None if found is None else self._view(found, hydrate=hydrate)
         finally:
             repository.close()
 
@@ -370,14 +369,12 @@ class LocalTelemetry:
         attempt = context.get("attempt_id")
         if not attempt or row.get("event_type") != "application.requested":
             return None
-        repository = self._repository_type.inspect(database_path if database_path is not None else self.path)
+        repository = self.corpus.inspect(database_path)
         try:
-            candidates = repository.db.execute(
-                "SELECT observation FROM events WHERE project_id=? AND event_type=? "
-                "AND json_extract(json_extract(observation,'$.source_json'),'$.xorchestrate.attempt_id')=? "
-                "ORDER BY sequence", (self.project_id, "application.completed", attempt))
+            candidates = repository.find_by_source(project_id=self.project_id, event_type="application.completed",
+                                                   path=("xorchestrate", "attempt_id"), value=attempt)
             for candidate in candidates:
-                source = json.loads(json.loads(candidate[0])["source_json"]).get("xorchestrate", {})
+                source = json.loads(candidate["source_json"]).get("xorchestrate", {})
                 if source.get("actor") != context.get("actor"):
                     continue
                 resolved = {key: source[key] for key in ("work_id", "session_id", "operation_id") if source.get(key)}
@@ -388,7 +385,7 @@ class LocalTelemetry:
             repository.close()
 
     def status(self):
-        repository = self._repository_type.inspect(self.path)
+        repository = self.corpus.inspect()
         try:
             result = repository.status()
         finally:
@@ -418,7 +415,7 @@ class LocalTelemetry:
             ref = next((item for item in row.get("artifacts", []) if item["digest"] == digest), None)
             if ref is None or self.artifacts is None:
                 raise OrchestrationError("The event does not reference this artifact.", "not_found")
-            data = self.artifacts.read(self._artifact_type(**ref))
+            data = self.artifacts.read(ArtifactRef(**ref))
             media_type = ref["media_type"]
         # Range length is an upper bound. Keep text plus binary representation
         # inside the default MCP response frame; continuation retains all bytes.
@@ -437,9 +434,16 @@ class LocalTelemetry:
                 "media_type": media_type}
 
     def snapshot_source(self):
+        self._bundles()
         return {"database_path": self.path, "artifact_store": self.artifacts, "artifact_root": self.artifact_root}
 
+    def _bundles(self):
+        if self.path is None:
+            raise OrchestrationError("The selected telemetry corpus adapter does not support snapshot bundles.",
+                                     "telemetry_unsupported")
+
     def destination(self, value):
+        self._bundles()
         path = Path(_text(value, "destination"))
         candidate = path if path.is_absolute() else self.export_root / path
         for component in (candidate, *candidate.parents):
@@ -498,7 +502,6 @@ class LocalTelemetry:
             raise OrchestrationError("Telemetry bundle restore could not be completed and verified.", "telemetry_integrity") from error
 
     def bundle_source(self, destination):
-        from agent_telemetry.artifacts import FileArtifactStore
         path = self.destination(destination)
         return {"database_path": path / "telemetry.sqlite3", "artifact_store": FileArtifactStore(path / "artifacts")}
 

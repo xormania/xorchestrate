@@ -7,16 +7,15 @@ from pathlib import Path
 from unittest.mock import patch
 from zipfile import ZipFile, is_zipfile
 
-from agent_telemetry.application import Collector
-from agent_telemetry.artifacts import FileArtifactStore
-from agent_telemetry.domain import CaptureContext, Event
-from agent_telemetry.sqlite import SQLiteRepository
-
 from scripts.testkit.adapters.evidence import write_json
 from tests.hexagonal.support.local_native_collection import NativeCollection
 from tests.hexagonal.support.telemetry import Fixture
 from tests.hexagonal.support.telemetry_preservation import read_database
 from xorchestrate.adapters import telemetry_snapshot
+from xorchestrate.adapters.telemetry_collector.application import Collector
+from xorchestrate.adapters.telemetry_collector.artifacts import FileArtifactStore
+from xorchestrate.adapters.telemetry_collector.domain import CaptureContext, Event
+from xorchestrate.adapters.telemetry_collector.sqlite import SQLiteRepository
 
 
 def hashes(root):

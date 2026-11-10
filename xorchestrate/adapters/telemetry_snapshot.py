@@ -1,8 +1,10 @@
-"""Portable preservation of the shared CCE telemetry corpus.
+"""Portable preservation of the local telemetry corpus.
 
 This is a SQLite/file adapter, not another collector. Live input is read with the
-CCE repository and SQLite backup API; only the completed backup determines the
-cutoff and object closure. A manifest marked incomplete is never restorable.
+collector's SQLite corpus adapter and the SQLite backup API; only the completed
+backup determines the cutoff and object closure. A manifest marked incomplete is
+never restorable. Bundles written by the earlier standalone collector, whose
+manifest also names that package's version, verify and restore unchanged.
 """
 
 import hashlib
@@ -18,6 +20,10 @@ from pathlib import Path
 from typing import Protocol
 
 from xorchestrate import __version__
+
+from .telemetry_collector.artifacts import FileArtifactStore
+from .telemetry_collector.domain import ArtifactRef, TelemetryError, canonical
+from .telemetry_collector.sqlite import SQLiteRepository
 
 FORMAT = "xorchestrate-telemetry-bundle-v1"
 
@@ -110,9 +116,6 @@ def _closed_database(path):
 
 def _inspect(path, authorize=None):
     """Derive closure exclusively from an already completed database snapshot."""
-    from agent_telemetry.domain import ArtifactRef, canonical
-    from agent_telemetry.sqlite import SQLiteRepository
-
     repository = SQLiteRepository.inspect(path)
     try:
         db = repository.db
@@ -134,7 +137,7 @@ def _inspect(path, authorize=None):
             if authorize is not None and not authorize(observation):
                 raise PermissionError("snapshot closure is not authorized")
             # The original serialized envelope, not a normalized projection, is
-            # the immutable digest input used by CCE.
+            # the immutable digest input used by the collector.
             if hashlib.sha256(canonical(observation).encode()).hexdigest() != row["digest"]:
                 raise SnapshotError("snapshot observation digest differs")
             if (observation["event_id"] != row["event_id"] or
@@ -197,11 +200,6 @@ def create_snapshot(database_path, artifact_store, destination, *, authorize=Non
     source and destination connections. Raising leaves an incomplete manifest.
     Destinations are new directories; existing bundles are never overwritten.
     """
-    from agent_telemetry import __version__ as collector_version
-    from agent_telemetry.artifacts import FileArtifactStore
-    from agent_telemetry.domain import TelemetryError
-    from agent_telemetry.sqlite import SQLiteRepository
-
     if (isinstance(backup_timeout, bool) or not isinstance(backup_timeout, (int, float))
             or not 0 < backup_timeout <= 3600):
         raise ValueError("invalid snapshot backup deadline")
@@ -259,7 +257,6 @@ def create_snapshot(database_path, artifact_store, destination, *, authorize=Non
                         "unavailable_artifacts": unavailable,
                         "artifact_algorithm": "sha256",
                         "software": {"xorchestrate": __version__, "agent_telemetry_format": "agent-telemetry-v1",
-                                     "agent_telemetry": collector_version,
                                      "sqlite": sqlite3.sqlite_version}}
             manifest["bundle_id"] = hashlib.sha256(_canonical(manifest)).hexdigest()
             _manifest(destination, manifest)
@@ -280,9 +277,6 @@ def verify_bundle(path, *, authorize=None):
     Authorization is repeated after object verification so a policy change
     during that work cannot expose a stale manifest's private metadata.
     """
-    from agent_telemetry.artifacts import FileArtifactStore
-    from agent_telemetry.domain import TelemetryError
-
     path = _safe_path(path)
     try:
         manifest = json.loads(_read(path / "manifest.json"))
@@ -320,9 +314,6 @@ def verify_bundle(path, *, authorize=None):
 
 def restore_bundle(bundle, destination, *, authorize=None):
     """Restore a verified closed bundle into a new, independently read location."""
-    from agent_telemetry.artifacts import FileArtifactStore
-    from agent_telemetry.domain import ArtifactRef, TelemetryError
-
     bundle = _safe_path(bundle)
     manifest = verify_bundle(bundle, authorize=authorize)
     destination = _safe_path(destination)

@@ -152,7 +152,7 @@
       }
     },
     "telemetry": {
-      "guarantee": "Telemetry capture, queries, preservation and optional export retain scoped evidence, gaps and original action outcomes.",
+      "guarantee": "Telemetry capture, queries, preservation and optional export retain scoped evidence, gaps and original action outcomes; the in-tree collector keeps immutable, integrity-checked corpus and artifact storage behind selected adapters and reads existing corpora and bundles.",
       "modules": {
         "tests/hexagonal/test_telemetry.py": "composition",
         "tests/hexagonal/test_telemetry_bundle_receipts.py": "composition",
@@ -161,7 +161,12 @@
         "tests/hexagonal/test_telemetry_views.py": "contract",
         "tests/hexagonal/test_telemetry_workflow.py": "composition",
         "tests/hexagonal/test_telemetry_callback_review.py": "composition",
-        "tests/hexagonal/test_telemetry_review.py": "composition"
+        "tests/hexagonal/test_telemetry_review.py": "composition",
+        "tests/hexagonal/test_telemetry_collector_domain.py": "contract",
+        "tests/hexagonal/test_telemetry_collector_artifacts.py": "adapter",
+        "tests/hexagonal/test_telemetry_collector_storage.py": "adapter",
+        "tests/hexagonal/test_telemetry_collector_selection.py": "composition",
+        "tests/hexagonal/test_telemetry_collector_compatibility.py": "adapter"
       }
     }
   }

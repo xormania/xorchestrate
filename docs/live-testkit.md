@@ -22,7 +22,7 @@ Linux/WSL2, PTYs, Unix sockets and a matching `/proc` process namespace.
 
 ```bash
 export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XXXXXX")"
-python3 -m pip install -e '.[test,telemetry]' -r .github/requirements-ci.txt
+python3 -m pip install -e '.[test]' -r .github/requirements-ci.txt
 python3 -m scripts.testkit doctor
 python3 -m scripts.testkit run
 ```

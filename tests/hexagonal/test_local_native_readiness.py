@@ -14,7 +14,7 @@ from tests.hexagonal.contracts.local_native_readiness import (
     repeat_capture_contract,
     repeat_snapshot_integrity_contract,
     saved_verify_interpreter_contract,
-    selected_capture_dependency_contract,
+    selected_capture_sqlite_contract,
     selected_config_install_contract,
     selected_sqlite_contract,
 )
@@ -36,8 +36,8 @@ def test_setup_preserves_explicit_disabled_capture_and_operator_configuration(re
 
 
 @pytest.mark.parametrize("enabled", [True, False])
-def test_doctor_requires_collector_only_for_selected_enabled_capture(readiness, enabled):
-    selected_capture_dependency_contract(readiness, enabled)
+def test_doctor_requires_corpus_sqlite_only_for_selected_enabled_capture(readiness, enabled):
+    selected_capture_sqlite_contract(readiness, enabled)
 
 
 @pytest.mark.parametrize("language", ["rust", "python", "php"])
@@ -49,7 +49,7 @@ def test_missing_selected_project_prerequisite_is_explicit_without_launch(readin
     project_language_contract(readiness, "rust", missing="cargo")
 
 
-@pytest.mark.parametrize("configured", ["absent", "local-default", "inline", "disabled", "custom", "profile"])
+@pytest.mark.parametrize("configured", ["absent", "local-default", "inline", "disabled", "custom"])
 def test_managed_native_capture_is_per_run_and_preserves_explicit_policy(readiness, configured):
     isolated_capture_contract(readiness, configured)
 
@@ -58,8 +58,8 @@ def test_explicit_project_requirements_replace_language_defaults(readiness):
     project_override_contract(readiness)
 
 
-@pytest.mark.parametrize("mode", ["missing", "incompatible", "compatible"])
-def test_selected_interpreter_reports_collector_and_sqlite_compatibility(readiness, mode):
+@pytest.mark.parametrize("mode", ["incompatible", "compatible"])
+def test_selected_interpreter_reports_sqlite_compatibility(readiness, mode):
     selected_sqlite_contract(readiness, mode)
 
 
@@ -77,7 +77,7 @@ def test_public_setup_accepts_selected_native_project_without_changing_existing_
 
 
 @pytest.mark.parametrize("enabled", [True, False])
-def test_setup_installs_capture_dependency_for_selected_config_not_hardcoded_native_file(readiness, enabled):
+def test_setup_installs_one_dependency_set_without_rewriting_selected_config(readiness, enabled):
     selected_config_install_contract(readiness, enabled)
 
 
@@ -94,7 +94,7 @@ def test_public_verify_rejects_omitted_saved_index_entries_with_archive_intact(t
         subject.close()
 
 
-@pytest.mark.parametrize("policy", ["absent", "local-default", "shared-root", "profile", "custom", "disabled"])
+@pytest.mark.parametrize("policy", ["absent", "local-default", "shared-root", "custom", "disabled"])
 def test_native_repeat_uses_fresh_capture_and_preserves_operator_policy_through_saved_inputs(readiness, policy):
     repeat_capture_contract(readiness, policy, prepare=prepare_run, repeat=repeat_settings)
 

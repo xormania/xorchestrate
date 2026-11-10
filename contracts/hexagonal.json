@@ -182,8 +182,7 @@
       "allowed_external": [
         "stdlib:*",
         "jsonschema",
-        "referencing",
-        "agent_telemetry"
+        "referencing"
       ],
       "allow_dynamic": true
     },
@@ -204,8 +203,7 @@
       "allowed_external": [
         "stdlib:*",
         "jsonschema",
-        "referencing",
-        "agent_telemetry"
+        "referencing"
       ],
       "allow_dynamic": true
     },
@@ -230,8 +228,7 @@
       "allowed_external": [
         "stdlib:*",
         "jsonschema",
-        "referencing",
-        "agent_telemetry"
+        "referencing"
       ],
       "allow_dynamic": true
     },
@@ -349,8 +346,7 @@
       "allowed_external": [
         "stdlib:*",
         "jsonschema",
-        "referencing",
-        "agent_telemetry"
+        "referencing"
       ],
       "allow_dynamic": true
     },
@@ -577,8 +573,7 @@
       "allowed_external": [
         "stdlib:*",
         "jsonschema",
-        "referencing",
-        "agent_telemetry"
+        "referencing"
       ],
       "allow_dynamic": true
     },
@@ -674,8 +669,7 @@
       "allowed_external": [
         "stdlib:*",
         "jsonschema",
-        "referencing",
-        "agent_telemetry"
+        "referencing"
       ],
       "allow_dynamic": true
     },
@@ -724,8 +718,7 @@
         "stdlib:*",
         "jsonschema",
         "referencing",
-        "pytest",
-        "agent_telemetry"
+        "pytest"
       ],
       "allow_dynamic": true
     },
@@ -760,8 +753,7 @@
         "stdlib:*",
         "jsonschema",
         "referencing",
-        "pytest",
-        "agent_telemetry"
+        "pytest"
       ],
       "allow_dynamic": true
     },
@@ -989,8 +981,7 @@
         "pytest",
         "jsonschema",
         "referencing",
-        "controlled_gates",
-        "agent_telemetry"
+        "controlled_gates"
       ],
       "allow_dynamic": true
     },
@@ -1040,8 +1031,7 @@
         "pytest",
         "jsonschema",
         "referencing",
-        "controlled_gates",
-        "agent_telemetry"
+        "controlled_gates"
       ],
       "allow_dynamic": true
     },
@@ -1093,8 +1083,7 @@
         "pytest",
         "jsonschema",
         "referencing",
-        "controlled_gates",
-        "agent_telemetry"
+        "controlled_gates"
       ],
       "allow_dynamic": true,
       "description": "Test modules compose contracts and fixture adapters. They are deliberately excluded from their own allowed roles, so no collected test may depend on another collected module."
@@ -1148,8 +1137,7 @@
         "pytest",
         "jsonschema",
         "referencing",
-        "controlled_gates",
-        "agent_telemetry"
+        "controlled_gates"
       ],
       "allow_dynamic": true
     },

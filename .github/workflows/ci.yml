@@ -166,7 +166,7 @@
         },
         {
           "name": "Install application dependencies",
-          "run": "python3 -m pip install --disable-pip-version-check -e '.[test,telemetry]' -r .github/requirements-ci.txt",
+          "run": "python3 -m pip install --disable-pip-version-check -e '.[test]' -r .github/requirements-ci.txt",
           "id": "dependencies"
         },
         {

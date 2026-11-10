@@ -16,16 +16,16 @@ def explicit_disabled_capture_contract(subject):
     assert after == before, "SETUP_MUST_PRESERVE_EXPLICIT_DISABLED_CAPTURE_AND_OPERATOR_SETTINGS"
 
 
-def selected_capture_dependency_contract(subject, enabled):
-    report, unchanged = subject.doctor_with_missing_collector(enabled)
-    collector = [item for item in report["readiness"] if item["name"] == "agent_telemetry"]
+def selected_capture_sqlite_contract(subject, enabled):
+    report, unchanged = subject.doctor_with_incompatible_sqlite(enabled)
+    sqlite = [item for item in report["readiness"] if item["name"] == "telemetry_sqlite"]
     if enabled:
-        assert collector and collector[0].get("required") is True and collector[0]["passed"] is False, \
-            "SELECTED_LOCAL_CAPTURE_MUST_REPORT_MISSING_COLLECTOR_AS_REQUIRED"
+        assert sqlite and sqlite[0].get("required") is True and sqlite[0]["passed"] is False, \
+            "SELECTED_LOCAL_CAPTURE_MUST_REPORT_INCOMPATIBLE_SQLITE_AS_REQUIRED"
         assert report["status"] == "setup_error"
     else:
-        assert not any(item.get("required", True) for item in collector), \
-            "EXPLICIT_DISABLED_CAPTURE_MUST_NOT_REQUIRE_OPTIONAL_COLLECTOR"
+        assert not any(item.get("required", True) for item in sqlite), \
+            "EXPLICIT_DISABLED_CAPTURE_MUST_NOT_REQUIRE_THE_CORPUS_SQLITE_RUNTIME"
         assert report["status"] == "passed"
     assert report["authentication"] == "not probed", "READINESS_MUST_NOT_CLAIM_NATIVE_AUTHENTICATED_EXECUTION"
     assert unchanged, "DOCTOR_MUST_NOT_CHANGE_OPERATOR_CONFIGURATION_OR_ALLOCATE_A_RUN"
@@ -52,7 +52,7 @@ def project_language_contract(subject, language, missing=None):
 
 def isolated_capture_contract(subject, configured):
     original, left, right, expected, unchanged, descriptors = subject.derive_capture(configured)
-    if configured in {"inline", "disabled", "custom", "profile"}:
+    if configured in {"inline", "disabled", "custom"}:
         assert left["telemetry"] == right["telemetry"] == original["telemetry"], \
             "MANAGED_CAPTURE_MUST_PRESERVE_EXPLICIT_OPERATOR_POLICY"
     else:
@@ -66,7 +66,7 @@ def isolated_capture_contract(subject, configured):
             assert options[0][identity] != options[1][identity], "FRESH_NATIVE_RUN_MUST_HAVE_FRESH_CAPTURE_IDENTITIES"
     assert unchanged, "DERIVING_NATIVE_CAPTURE_MUST_NOT_MUTATE_OPERATOR_INPUT"
     expected_status = "disabled" if configured == "disabled" else (
-        "external" if configured in {"inline", "custom", "profile"} else "configured")
+        "external" if configured in {"inline", "custom"} else "configured")
     assert all(item and item["status"] == expected_status for item in descriptors), \
         "DERIVED_CAPTURE_MUST_WRITE_AN_EXPLICIT_RUNTIME_SOURCE_DESCRIPTOR"
     assert all(item.get("source_completion") == "unknown" for item in descriptors)
@@ -87,17 +87,11 @@ def project_override_contract(subject):
 
 def selected_sqlite_contract(subject, mode):
     report, interpreter = subject.selected_interpreter_readiness(mode)
-    if mode == "missing":
-        assert report["status"] == "setup_error", "LOCAL_CAPTURE_MUST_REPORT_MISSING_SELECTED_COLLECTOR"
-        assert any(item["name"] == "agent_telemetry" and item.get("required") and not item["passed"]
-                   for item in report["readiness"])
-    else:
-        expected = "passed" if mode == "compatible" else "setup_error"
-        assert report["status"] == expected, "LOCAL_CAPTURE_MUST_REJECT_INCOMPATIBLE_SELECTED_SQLITE_RUNTIME"
-        assert any(item["name"] == "agent_telemetry" and item["passed"] for item in report["readiness"])
-        sqlite = [item for item in report["readiness"] if "sqlite" in item["name"].lower()]
-        assert sqlite and all(item["passed"] == (mode == "compatible") for item in sqlite), \
-            "SQLITE_COMPATIBILITY_MUST_BE_AN_EXPLICIT_SELECTED_INTERPRETER_OBSERVATION"
+    expected = "passed" if mode == "compatible" else "setup_error"
+    assert report["status"] == expected, "LOCAL_CAPTURE_MUST_REJECT_INCOMPATIBLE_SELECTED_SQLITE_RUNTIME"
+    sqlite = [item for item in report["readiness"] if "sqlite" in item["name"].lower()]
+    assert sqlite and all(item["passed"] == (mode == "compatible") for item in sqlite), \
+        "SQLITE_COMPATIBILITY_MUST_BE_AN_EXPLICIT_SELECTED_INTERPRETER_OBSERVATION"
     assert report["authentication"] == "not probed"
     assert any(item.get("observation_interpreter") == interpreter for item in report["readiness"]), \
         "READINESS_MUST_USE_THE_CONFIGURED_INTERPRETER"
@@ -115,9 +109,9 @@ def public_setup_contract(subject):
 
 
 def selected_config_install_contract(subject, enabled):
-    result, unchanged = subject.setup_selected_config(enabled)
-    assert result["python"]["dependencies"]["agent_telemetry"] is enabled, \
-        "SETUP_DEPENDENCIES_MUST_FOLLOW_SELECTED_CONFIGURATION_CAPTURE_POLICY"
+    result, installed, unchanged = subject.setup_selected_config(enabled)
+    assert result["status"] == "passed"
+    assert installed == [["test"]], "SETUP_MUST_INSTALL_ONE_DEPENDENCY_SET_WHATEVER_THE_CAPTURE_POLICY"
     assert unchanged, "DEPENDENCY_SETUP_MUST_NOT_REWRITE_EITHER_OPERATOR_CONFIGURATION"
 
 
