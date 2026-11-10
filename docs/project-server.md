@@ -63,8 +63,13 @@ remain live; another connection with the owning actor can keep using them.
 The socket is created with mode `0600` (under a restrictive umask, so it is
 never briefly more permissive), and every peer's uid is checked with
 `SO_PEERCRED` where the platform offers it; connections from another uid are
-closed without a reply. On platforms without peer credentials, the file mode
-and the private directories are the boundary. The server is a local trust
+closed without a reply. Clients make the same check in the other direction:
+after connecting and before sending their hello, `connect`, `up`, `down` and
+`status` read the listener's `SO_PEERCRED` and refuse with `peer_untrusted`,
+sending nothing, unless it runs as their own uid. This matters when an
+explicit `--socket` lies in a directory another user can write to. On
+platforms without peer credentials, the file mode and the private directories
+are the boundary in both directions. The server is a local trust
 boundary, not network authentication.
 
 The first frame on a connection is a hello naming its purpose (`mcp` or
@@ -197,6 +202,10 @@ port.
   number of concurrent unfinished hellos (32) are fixed defaults, not CLI
   options.
 - `--detach` does not call drivers' detach operation; it closes the runtime.
-- Without `SO_PEERCRED`, peer uids are not observed.
+- Without `SO_PEERCRED`, peer uids are not observed by the server or by
+  clients, so an explicit `--socket` in a directory another user can write to
+  is not protected there.
+- An explicit `--socket` is not checked for a private parent directory; the
+  client-side uid check is what refuses another user's listener.
 - A server that never drains (a held call that never returns) keeps running
   until it is killed.

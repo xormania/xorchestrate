@@ -17,7 +17,7 @@ from tests.hexagonal.contracts.project_server import (
     rpc,
     run_conversation,
 )
-from tests.hexagonal.support.application import application
+from tests.hexagonal.support.application import SessionCompletionFailure, Sessions, application, make_store
 from tests.hexagonal.support.project_server import (
     SESSION_FIXTURE,
     CliEnvironment,
@@ -216,6 +216,59 @@ def test_listener_never_replaces_a_foreign_path_and_removes_only_its_own_socket(
     assert not (directory / "stale.sock").exists()
 
 
+def test_a_listener_with_a_saturated_backlog_is_never_replaced(directory):
+    path = directory / "busy.sock"
+    busy = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    busy.bind(str(path))
+    busy.listen(1)  # alive, but never accepts
+    queued = []
+    try:
+        while True:  # fill the backlog until a further connect would block
+            peer = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            peer.setblocking(False)
+            queued.append(peer)
+            try:
+                peer.connect(str(path))
+            except BlockingIOError:
+                break
+            assert len(queued) < 64, "the backlog never filled"
+        identity = path.lstat().st_ino
+        with pytest.raises(OrchestrationError) as running:
+            OwnerSocketListener(path, replace_stale=True)
+        assert running.value.code == "server_running"
+        assert path.lstat().st_ino == identity, "a live socket was unlinked"
+    finally:
+        for peer in queued:
+            peer.close()
+        busy.close()
+
+
+def test_client_refuses_a_listener_run_by_another_user_and_sends_nothing(directory):
+    impostor = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    impostor.bind(str(directory / "shared.sock"))
+    impostor.listen(1)
+    impostor.settimeout(5)
+
+    def foreign(credentials):
+        # As if another OS user had pre-bound the path.
+        return same_user(PeerCredentials(credentials.pid, credentials.uid + 1, credentials.gid))
+
+    try:
+        with pytest.raises(OrchestrationError) as untrusted:
+            UnixClient(directory / "shared.sock", actor="alice", check=foreign)
+        assert untrusted.value.code == "peer_untrusted"
+        captured, _ = impostor.accept()
+        captured.settimeout(5)
+        assert captured.recv(65536) == b"", "the client sent its hello to an untrusted listener"
+        captured.close()
+        # The default check accepts this user's own listener (no hello answer: a timeout, not a refusal).
+        with pytest.raises(OrchestrationError) as own:
+            UnixClient(directory / "shared.sock", timeout=0.3)
+        assert own.value.code == "handshake_timeout"
+    finally:
+        impostor.close()
+
+
 def test_handshake_is_required_before_any_frame(directory):
     subject = InProcessServer(HeldApplication(), directory / "s.sock")
     try:
@@ -263,6 +316,34 @@ def test_down_drains_in_flight_requests_and_stops_accepting(directory):
         subject.thread.join(5)
         assert not subject.thread.is_alive()
         assert ("late", "bob") not in app.calls
+    finally:
+        app.release.set()
+        subject.stop()
+
+
+def test_null_identifier_tool_calls_obey_drain_admission_and_count_in_flight(directory):
+    app = HeldApplication()
+    subject = InProcessServer(app, directory / "s.sock")
+    try:
+        alice, bob = subject.client("alice"), subject.client("bob")
+        open_session(alice)
+        open_session(bob)
+        alice.send({"jsonrpc": "2.0", "id": None, "method": "tools/call", "params": {"name": "held"}})
+        assert app.entered.wait(5)
+        assert subject.dispatcher.in_flight == 1 and not subject.dispatcher.wait_idle(0.2), \
+            "a null-identifier call ran outside the drain's in-flight accounting"
+        app.release.set()
+        assert alice.read()["result"]["structuredContent"] == {"name": "held", "actor": "alice"}
+        assert subject.dispatcher.wait_idle(5)
+        subject.dispatcher.begin_drain()
+        refused = bob.request({"jsonrpc": "2.0", "id": None, "method": "tools/call", "params": {"name": "late"}})
+        assert (refused["id"], refused["error"]["code"]) == (None, -32003)
+        observed = bob.request({"jsonrpc": "2.0", "id": None, "method": "tools/call", "params": {"name": "poll_session"}})
+        assert observed["result"]["structuredContent"]["name"] == "poll_session"
+        subject.dispatcher.stop_admission()
+        stopped = bob.request({"jsonrpc": "2.0", "id": None, "method": "tools/call", "params": {"name": "poll_session"}})
+        assert stopped["error"]["code"] == -32003
+        assert [name for name, _ in app.calls] == ["held", "poll_session"], "an effect ran during the drain"
     finally:
         app.release.set()
         subject.stop()
@@ -579,6 +660,52 @@ def test_live_sessions_snapshots_sessions_that_workers_add_concurrently():
 
     app.store = AddingStore()
     assert app.live_sessions() == []
+
+
+def _unapplied_start():
+    """A session start whose driver succeeded but whose receipt failed to apply."""
+    store = SessionCompletionFailure(make_store())
+    app = application(store, driver=Sessions())
+    work = app.call("create_work", {"goal": "Feature work"})["work"]
+    store.armed = True
+    with pytest.raises(OrchestrationError) as unapplied:
+        app.call("start_session", {"driver": "agent", "specification": {}, "work_id": work["id"],
+                                   "idempotency_key": "start-1"})
+    assert unapplied.value.code == "result_unapplied"
+    operation = app.call("get_operation", {"operation_id": unapplied.value.details["operation_id"]})["operation"]
+    return app, store, operation
+
+
+def _down_is_refused_for(app, directory, session_id):
+    subject = InProcessServer(app, directory / "s.sock")
+    try:
+        control = subject.client("operator", purpose="control")
+        refusal = control.request({"command": "down"})
+        assert refusal["error"]["code"] == "sessions_live", "down would close a session this runtime's driver holds"
+        assert refusal["error"]["details"]["sessions"] == [session_id]
+        assert not subject.server.stopped
+    finally:
+        subject.stop()
+
+
+def test_an_unapplied_session_start_blocks_down_without_detach(directory):
+    app, store, operation = _unapplied_start()
+    session_id = operation["session_id"]
+    assert app.live_sessions() == [session_id]
+    sequence = iter(range(1000))
+    other_runtime = application(store, driver=Sessions(), identifiers=lambda: f"other-{next(sequence)}")
+    assert other_runtime.live_sessions() == [], "a session reserved by another runtime is not this runtime's"
+    _down_is_refused_for(app, directory, session_id)
+
+
+def test_a_session_start_reconciled_later_blocks_down_without_detach(directory):
+    app, _store, operation = _unapplied_start()
+    resolved = app.call("resolve_operation", {"operation_id": operation["id"], "expected_version": operation["version"],
+                                              "outcome": "completed", "reason": "Apply adapter receipt"})["operation"]
+    session = resolved["result"]["session"]
+    assert session["status"] == "active"
+    assert app.live_sessions() == [session["id"]]
+    _down_is_refused_for(app, directory, session["id"])
 
 
 # -- one server per configuration, whatever the client's environment ----------

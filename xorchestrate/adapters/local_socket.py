@@ -64,14 +64,21 @@ _UMASK_LOCK = threading.Lock()
 
 
 def is_listening(path) -> bool:
-    """Whether a process currently accepts connections on the socket at ``path``."""
+    """Whether the socket at ``path`` may have a live listener.
+
+    Only a refused connection (or a vanished path) proves nothing listens.
+    A full backlog, a timeout or any other error is indeterminate and counts
+    as listening, so a live server is never replaced.
+    """
     probe = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:
         probe.settimeout(1.0)
         probe.connect(str(path))
         return True
-    except OSError:
+    except (ConnectionRefusedError, FileNotFoundError):
         return False
+    except OSError:
+        return True
     finally:
         probe.close()
 

@@ -25,7 +25,7 @@ import time
 
 from ..model import OrchestrationError
 from ..ports import PeerIdentity
-from .local_socket import OwnerSocketListener, check_socket_path, same_user
+from .local_socket import OwnerSocketListener, check_socket_path, peer_credentials, same_user
 from .process import decode_json
 from .stdio import read_line_frame
 
@@ -261,18 +261,30 @@ class UnixClientTransport:
 class UnixClient:
     """Client side of the hello exchange, used by ``connect`` and the control commands.
 
+    Before sending the hello, the listener's peer credentials pass ``check``
+    (``SO_PEERCRED`` same-user by default; platforms without it skip the check).
     Raises ``OSError`` when nothing listens at the path, and ``OrchestrationError``
-    coded ``handshake_timeout`` when either side's hello deadline passed, or
+    coded ``peer_untrusted`` when the listener belongs to another user,
+    ``handshake_timeout`` when either side's hello deadline passed, or
     ``connection_refused`` (with the server's ``reason``) for any other refusal.
     """
 
-    def __init__(self, path, *, actor="owner", purpose="mcp", attributes=None, timeout=5.0, max_frame_bytes=1_048_576):
+    def __init__(self, path, *, actor="owner", purpose="mcp", attributes=None, timeout=5.0, max_frame_bytes=1_048_576,
+                 check=same_user):
         self.path = check_socket_path(path)
         self.max_frame_bytes = max_frame_bytes
         self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
             self.socket.settimeout(timeout)
             self.socket.connect(str(self.path))
+            # Mirror the server's check before sending anything: a listener run
+            # by another user (e.g. one that pre-bound an explicit --socket in a
+            # shared directory) never sees the hello or any relayed traffic.
+            credentials = peer_credentials(self.socket)
+            if not check(credentials):
+                raise OrchestrationError("The socket's listener is not run by this user; nothing was sent.",
+                                         "peer_untrusted", {"path": str(self.path),
+                                                            "uid": None if credentials is None else credentials.uid})
             hello = {"xorchestrate": "hello", "version": HANDSHAKE_VERSION, "purpose": purpose, "actor": actor,
                      "attributes": attributes or {}}
             self.reader = self.socket.makefile("rb")

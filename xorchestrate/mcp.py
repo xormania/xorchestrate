@@ -185,6 +185,20 @@ class MCPDispatcher:
             self._in_flight -= 1
             self._state.notify_all()
 
+    def _run_inline(self, server, request, control):
+        with self._state:
+            refused = self._stopped or (self._draining and not control)
+            if not refused:
+                self._in_flight += 1
+        if refused:
+            return server._error(None, -32003, "Server is shutting down; this request was not started.")
+        try:
+            return server.handle(request)
+        finally:
+            with self._state:
+                self._in_flight -= 1
+                self._state.notify_all()
+
     def serve_connection(self, connection):
         """Run one MCP session until its client finishes, then wait for its admitted calls.
 
@@ -231,11 +245,17 @@ class MCPDispatcher:
                     write(server.handle(request))
                     continue
                 identifier = request.get("id")
-                if type(identifier) not in (int, str) or request.get("jsonrpc") != "2.0":
-                    write(server.handle(request))
-                    continue
                 params = request.get("params", {})
                 control = isinstance(params, dict) and isinstance(params.get("name"), str) and params["name"] in CONTROL_TOOLS
+                if identifier is None and request.get("jsonrpc") == "2.0":
+                    # A null identifier cannot be tracked as pending, so the call
+                    # runs inline as before, but it still obeys drain/stop
+                    # admission and is counted in flight.
+                    write(self._run_inline(server, request, control))
+                    continue
+                if type(identifier) not in (int, str) or request.get("jsonrpc") != "2.0":
+                    write(server.handle(request))  # invalid: answered without executing
+                    continue
                 key = (type(identifier), identifier)
                 admitted = draining = False
                 with local:
