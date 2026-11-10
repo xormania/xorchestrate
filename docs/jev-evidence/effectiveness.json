@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "scope": "Independent test-author evidence; no paid provider execution.",
+  "calibration": {
+    "source_commit": "574381e",
+    "test_commit": "5afc30852c720547a871ea820166fd096728e23d",
+    "method": "Existing RecordingRunner command receipts and junit_cases parser; fresh external bytecode cache for each healthy/fault run; mutations applied only to a detached disposable worktree.",
+    "mutations": [
+      {
+        "failed_cases": [
+          "tests.hexagonal.test_architecture_effectiveness::test_summary_rejects_populations_that_cannot_support_the_claim[duplicate_id]",
+          "tests.hexagonal.test_architecture_effectiveness::test_summary_rejects_populations_that_cannot_support_the_claim[empty_population]",
+          "tests.hexagonal.test_architecture_effectiveness::test_summary_rejects_populations_that_cannot_support_the_claim[invalid_outcome]",
+          "tests.hexagonal.test_architecture_effectiveness::test_summary_rejects_populations_that_cannot_support_the_claim[confirmed_healthy]",
+          "tests.hexagonal.test_architecture_effectiveness::test_summary_rejects_populations_that_cannot_support_the_claim[confirmed_clear]",
+          "tests.hexagonal.test_architecture_effectiveness::test_summary_rejects_populations_that_cannot_support_the_claim[missing_group]",
+          "tests.hexagonal.test_architecture_effectiveness::test_summary_rejects_populations_that_cannot_support_the_claim[unknown_eligibility]"
+        ],
+        "failure_summaries": {
+          "tests.hexagonal.test_architecture_effectiveness::test_summary_rejects_populations_that_cannot_support_the_claim[confirmed_clear]": "Failed: DID NOT RAISE ValueError",
+          "tests.hexagonal.test_architecture_effectiveness::test_summary_rejects_populations_that_cannot_support_the_claim[confirmed_healthy]": "Failed: DID NOT RAISE ValueError",
+          "tests.hexagonal.test_architecture_effectiveness::test_summary_rejects_populations_that_cannot_support_the_claim[duplicate_id]": "Failed: DID NOT RAISE ValueError",
+          "tests.hexagonal.test_architecture_effectiveness::test_summary_rejects_populations_that_cannot_support_the_claim[empty_population]": "Failed: DID NOT RAISE ValueError",
+          "tests.hexagonal.test_architecture_effectiveness::test_summary_rejects_populations_that_cannot_support_the_claim[invalid_outcome]": "Failed: DID NOT RAISE ValueError",
+          "tests.hexagonal.test_architecture_effectiveness::test_summary_rejects_populations_that_cannot_support_the_claim[missing_group]": "Failed: DID NOT RAISE ValueError",
+          "tests.hexagonal.test_architecture_effectiveness::test_summary_rejects_populations_that_cannot_support_the_claim[unknown_eligibility]": "Failed: DID NOT RAISE ValueError"
+        },
+        "fault_exit": 1,
+        "healthy_cases": 7,
+        "healthy_exit": 0,
+        "healthy_source_sha256": "14a9316aedb91109ccf754ee964a54acf31f7be9364cb5069c891661e802b6db",
+        "mutant_source_sha256": "cca60617fbeea4ec89321f83f85b312106e25d702764d3b43f7d678e0dbbd85e",
+        "mutation": "population_validation_removed",
+        "mutation_applied": true,
+        "selector": "test_summary_rejects_populations",
+        "transformation": "Within summarize, replace raise ValueError(message) with return dict(cases=len(rows), ignored=message)."
+      },
+      {
+        "failed_cases": [
+          "tests.hexagonal.test_architecture_effectiveness::test_corpus_requires_paired_controls_and_bounded_independent_witnesses[duplicate_case]",
+          "tests.hexagonal.test_architecture_effectiveness::test_corpus_requires_paired_controls_and_bounded_independent_witnesses[unpaired_group]",
+          "tests.hexagonal.test_architecture_effectiveness::test_corpus_requires_paired_controls_and_bounded_independent_witnesses[escaping_source]",
+          "tests.hexagonal.test_architecture_effectiveness::test_corpus_requires_paired_controls_and_bounded_independent_witnesses[empty_fault_witness]"
+        ],
+        "failure_summaries": {
+          "tests.hexagonal.test_architecture_effectiveness::test_corpus_requires_paired_controls_and_bounded_independent_witnesses[duplicate_case]": "Failed: DID NOT RAISE ValueError",
+          "tests.hexagonal.test_architecture_effectiveness::test_corpus_requires_paired_controls_and_bounded_independent_witnesses[empty_fault_witness]": "Failed: DID NOT RAISE ValueError",
+          "tests.hexagonal.test_architecture_effectiveness::test_corpus_requires_paired_controls_and_bounded_independent_witnesses[escaping_source]": "Failed: DID NOT RAISE ValueError",
+          "tests.hexagonal.test_architecture_effectiveness::test_corpus_requires_paired_controls_and_bounded_independent_witnesses[unpaired_group]": "Failed: DID NOT RAISE ValueError"
+        },
+        "fault_exit": 1,
+        "healthy_cases": 4,
+        "healthy_exit": 0,
+        "healthy_source_sha256": "14a9316aedb91109ccf754ee964a54acf31f7be9364cb5069c891661e802b6db",
+        "mutant_source_sha256": "4bdc8838baa99d595c54fb25b71479e6181cfc9c1498e62e748b3d72e301039a",
+        "mutation": "corpus_validation_removed",
+        "mutation_applied": true,
+        "selector": "test_corpus_requires",
+        "transformation": "Within _validate, replace raise ValueError(message) with return str(message)."
+      },
+      {
+        "failed_cases": [
+          "tests.hexagonal.test_architecture_effectiveness::test_summary_counts_observed_actions_without_converting_unknowns_to_clears"
+        ],
+        "failure_summaries": {
+          "tests.hexagonal.test_architecture_effectiveness::test_summary_counts_observed_actions_without_converting_unknowns_to_clears": "AssertionError: assert {'confirmed_f...ears': 1, ...} == {'confirmed_f...ears': 1, ...}\n  \n  Omitting 8 identical items, use -vv to show\n  Differing items:\n  {'false_alarms': 0} != {'false_alarms': 1}\n  Use -v to get more diff"
+        },
+        "fault_exit": 1,
+        "healthy_cases": 1,
+        "healthy_exit": 0,
+        "healthy_source_sha256": "14a9316aedb91109ccf754ee964a54acf31f7be9364cb5069c891661e802b6db",
+        "mutant_source_sha256": "5efc32929ca21502b88343d5211716aaa6f3390738dca12487c5fc733e02e8d1",
+        "mutation": "false_alarms_erased",
+        "mutation_applied": true,
+        "selector": "test_summary_counts",
+        "transformation": "Replace counts[\"false_alarms\"] += 1 with += 0."
+      },
+      {
+        "failed_cases": [
+          "tests.hexagonal.test_architecture_effectiveness::test_keyless_pilot_preserves_strong_baseline_false_alarm_and_abstention"
+        ],
+        "failure_summaries": {
+          "tests.hexagonal.test_architecture_effectiveness::test_keyless_pilot_preserves_strong_baseline_false_alarm_and_abstention": "assert False is True"
+        },
+        "fault_exit": 1,
+        "healthy_cases": 1,
+        "healthy_exit": 0,
+        "healthy_source_sha256": "14a9316aedb91109ccf754ee964a54acf31f7be9364cb5069c891661e802b6db",
+        "mutant_source_sha256": "7ab110aebb382eac97c370907721f4a6c4a48479e870d0f1858dc42010542fdf",
+        "mutation": "baseline_detection_erased",
+        "mutation_applied": true,
+        "selector": "test_keyless_pilot",
+        "transformation": "Replace baseline confirmed result with False."
+      },
+      {
+        "failed_cases": [
+          "tests.hexagonal.test_architecture_effectiveness::test_live_comparison_requires_actual_grounded_source_evidence[generic_concern]",
+          "tests.hexagonal.test_architecture_effectiveness::test_live_comparison_requires_actual_grounded_source_evidence[forged_candidate]"
+        ],
+        "failure_summaries": {
+          "tests.hexagonal.test_architecture_effectiveness::test_live_comparison_requires_actual_grounded_source_evidence[forged_candidate]": "assert 2 == 0",
+          "tests.hexagonal.test_architecture_effectiveness::test_live_comparison_requires_actual_grounded_source_evidence[generic_concern]": "assert 3 == 0"
+        },
+        "fault_exit": 1,
+        "healthy_cases": 2,
+        "healthy_exit": 0,
+        "healthy_source_sha256": "14a9316aedb91109ccf754ee964a54acf31f7be9364cb5069c891661e802b6db",
+        "mutant_source_sha256": "d840f883464d3a731342fac8e15613f092fe4614504c444014994fc9c8143abd",
+        "mutation": "grounding_bypassed",
+        "mutation_applied": true,
+        "selector": "test_live_comparison_requires and (generic_concern or forged_candidate)",
+        "transformation": "Replace diagnostic confirmed=bool(confirmed) with bool(oracle[\"fault\"] and concerns)."
+      },
+      {
+        "failed_cases": [
+          "tests.hexagonal.test_architecture_effectiveness::test_live_comparison_requires_actual_grounded_source_evidence[missing_packet]"
+        ],
+        "failure_summaries": {
+          "tests.hexagonal.test_architecture_effectiveness::test_live_comparison_requires_actual_grounded_source_evidence[missing_packet]": "assert 6 == 0"
+        },
+        "fault_exit": 1,
+        "healthy_cases": 1,
+        "healthy_exit": 0,
+        "healthy_source_sha256": "14a9316aedb91109ccf754ee964a54acf31f7be9364cb5069c891661e802b6db",
+        "mutant_source_sha256": "761a7843db076bacd651323400506a8d3a80b1164137c406c20d0fbfd1e50022",
+        "mutation": "partial_packet_accepted",
+        "mutation_applied": true,
+        "selector": "test_live_comparison_requires and missing_packet",
+        "transformation": "Replace the complete source-line coverage eligibility expression with True."
+      },
+      {
+        "failed_cases": [
+          "tests.hexagonal.test_architecture_effectiveness::test_live_comparison_requires_actual_grounded_source_evidence[provider_unavailable]"
+        ],
+        "failure_summaries": {
+          "tests.hexagonal.test_architecture_effectiveness::test_live_comparison_requires_actual_grounded_source_evidence[provider_unavailable]": "assert 0 == 6"
+        },
+        "fault_exit": 1,
+        "healthy_cases": 1,
+        "healthy_exit": 0,
+        "healthy_source_sha256": "14a9316aedb91109ccf754ee964a54acf31f7be9364cb5069c891661e802b6db",
+        "mutant_source_sha256": "69f9073077255542e84d0b92556f6721201aa300617f372d82a299fb462414dd",
+        "mutation": "unavailable_erased",
+        "mutation_applied": true,
+        "selector": "test_live_comparison_requires and provider_unavailable",
+        "transformation": "Replace counts[\"unavailable\"] += 1 with += 0."
+      },
+      {
+        "failed_cases": [
+          "tests.hexagonal.test_architecture_effectiveness::test_operator_command_retains_exact_fixture_measurement_without_live_claim"
+        ],
+        "failure_summaries": {
+          "tests.hexagonal.test_architecture_effectiveness::test_operator_command_retains_exact_fixture_measurement_without_live_claim": "AssertionError: assert 'live_provider' == 'scripted_fixture_only'\n  \n  - scripted_fixture_only\n  + live_provider"
+        },
+        "fault_exit": 1,
+        "healthy_cases": 1,
+        "healthy_exit": 0,
+        "healthy_source_sha256": "14a9316aedb91109ccf754ee964a54acf31f7be9364cb5069c891661e802b6db",
+        "mutant_source_sha256": "71f70743eeb5fdf538b88a81e1008496f513b35423e3a7dcaa009b241451a49b",
+        "mutation": "fixture_mislabeled_live",
+        "mutation_applied": true,
+        "selector": "test_operator_command",
+        "transformation": "Replace the fixture/live measurement_basis conditional with live_provider."
+      },
+      {
+        "failed_cases": [
+          "tests.hexagonal.test_architecture_effectiveness::test_expired_overall_budget_does_not_launch_provider_or_claim_clear"
+        ],
+        "failure_summaries": {
+          "tests.hexagonal.test_architecture_effectiveness::test_expired_overall_budget_does_not_launch_provider_or_claim_clear": "AssertionError: assert [{'source_pat...meout': -1.0}] == []\n  \n  Left contains 6 more items, first extra item: {'source_paths': ['app/core.py'], 'changed_ranges': [{'path': 'app/core.py', 'start_line': 1, 'end_line': 2}], 'checks': ['semantic_boundaries'], 'timeout': -1.0}\n  Use -v to get more diff"
+        },
+        "fault_exit": 1,
+        "healthy_cases": 1,
+        "healthy_exit": 0,
+        "healthy_source_sha256": "14a9316aedb91109ccf754ee964a54acf31f7be9364cb5069c891661e802b6db",
+        "mutant_source_sha256": "41179df3cfcc1fce0e56def17fab48ad6323ec57c5368275a83d523a6a3686a9",
+        "mutation": "deadline_ignored",
+        "mutation_applied": true,
+        "selector": "test_expired_overall_budget",
+        "transformation": "Replace elif remaining <= 0 with elif False."
+      },
+      {
+        "failed_cases": [
+          "tests.hexagonal.test_architecture_effectiveness::test_controlled_provider_identity_and_usage_stay_observed_not_imputed"
+        ],
+        "failure_summaries": {
+          "tests.hexagonal.test_architecture_effectiveness::test_controlled_provider_identity_and_usage_stay_observed_not_imputed": "assert False\n +  where False = all(<generator object test_controlled_provider_identity_and_usage_stay_observed_not_imputed.<locals>.<genexpr> at 0x7fb8b71a5e00>)"
+        },
+        "fault_exit": 1,
+        "healthy_cases": 1,
+        "healthy_exit": 0,
+        "healthy_source_sha256": "14a9316aedb91109ccf754ee964a54acf31f7be9364cb5069c891661e802b6db",
+        "mutant_source_sha256": "772d5e73692a5e1cf8f16bcdae49957f890d74ad6b5e5ac6adf36bfa15837ff8",
+        "mutation": "provider_usage_discarded",
+        "mutation_applied": true,
+        "selector": "test_controlled_provider_identity",
+        "transformation": "Replace observed usage projection with None."
+      }
+    ],
+    "distinct_failed_cases": 20,
+    "all_healthy_controls_passed": true,
+    "all_fault_exits": 1,
+    "import_or_setup_errors_counted": 0
+  },
+  "review_regression": {
+    "before_commit": "574381e",
+    "fix_commit": "2aa3416",
+    "added_cases": 8,
+    "before_failed": 8,
+    "failure_kind": "Failed: DID NOT RAISE <class ValueError>",
+    "cases": [
+      "oracle_checks_string",
+      "oracle_checks_unknown",
+      "oracle_checks_duplicate",
+      "case_checks_string",
+      "case_checks_empty",
+      "case_checks_unknown",
+      "case_checks_duplicate",
+      "deterministic_rules_string"
+    ],
+    "finding": "String check/rule IDs allowed substring matching and false confirmation. Typed distinct lists of named checks and explicit rule IDs are now validated."
+  },
+  "final_green": {
+    "passed": 29,
+    "failed": 0,
+    "errors": 0,
+    "test_file": "tests/hexagonal/test_architecture_effectiveness.py",
+    "test_sha256": "b504758b6789e6ee426f5051c0f02b9340ab1f66dac2f46e28c1447360554eb3",
+    "implementation_sha256": "7f9033e11c9da0636523929fd690629aa4372668ffc18e25e62d5c6487f63167",
+    "python": "3.12.16",
+    "command": "python -m pytest -p no:cacheprovider tests/hexagonal/test_architecture_effectiveness.py -q"
+  },
+  "limits": [
+    "Scripted fixture outcomes verify accounting and evidence rules, not Jev semantic performance.",
+    "Synthetic groups do not establish operational incident prevalence or production benefits.",
+    "Reviewer minutes and monetary cost remain unknown."
+  ],
+  "superseded_attempts": "The first calibration reused a timestamp-based bytecode cache for an equal-size mutation and was invalidated. The next verifier expected an AssertionError prefix while pytest rewrote a JUnit assertion as assert False is True; that verifier result was invalidated. The final round uses separate caches and inspects failure-tag messages and test identities. Original command receipts remain separate from the final counted results.",
+  "optional_ci_witness": {
+    "source_before": "574381e",
+    "test": "test_optional_live_pilot_is_bounded_and_retains_provider_availability",
+    "red": "AssertionError: CI must expose one optional live effectiveness measurement; assert 0 == 1",
+    "green": "One live measurement step, continue-on-error true, max-seconds120, existing credential/endpoint/model environment, retained effectiveness.json. The full module passes29cases.",
+    "scope": "Provider credential absence is retained as unavailable by the existing evaluator; the workflow does not substitute fixture predictions."
+  }
+}
