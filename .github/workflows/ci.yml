@@ -352,7 +352,7 @@
           "if": "always()",
           "with": {
             "name": "tmux-acceptance-evidence",
-            "path": "${{ runner.temp }}/acceptance-evidence/**/report.json\n${{ runner.temp }}/acceptance-evidence/**/scenario.json\n${{ runner.temp }}/acceptance-evidence/**/commands/**/*.json\n${{ runner.temp }}/acceptance-evidence/**/commands/**/*.log\n${{ runner.temp }}/acceptance-evidence/setup.json",
+            "path": "${{ runner.temp }}/acceptance-evidence/**/report.json\n${{ runner.temp }}/acceptance-evidence/**/scenario.json\n${{ runner.temp }}/acceptance-evidence/**/commands/**/*.json\n${{ runner.temp }}/acceptance-evidence/**/commands/**/*.log\n${{ runner.temp }}/acceptance-evidence/setup.json\n${{ runner.temp }}/acceptance-evidence/**/candidate.json",
             "if-no-files-found": "error",
             "retention-days": 7
           }
@@ -498,6 +498,58 @@
             "path": "${{ runner.temp }}/package-acceptance/**/report.json\n${{ runner.temp }}/package-acceptance/**/commands/**\n${{ runner.temp }}/package-acceptance/**/distributions/*\n${{ runner.temp }}/package-acceptance/**/*constraints.txt",
             "if-no-files-found": "error",
             "retention-days": 14
+          }
+        }
+      ]
+    },
+    "ci-result": {
+      "name": "CI result",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 5,
+      "needs": [
+        "paths",
+        "changes",
+        "application-tests",
+        "application",
+        "verification",
+        "tmux-acceptance",
+        "architecture-status",
+        "package"
+      ],
+      "if": "${{ always() }}",
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "persist-credentials": false
+          }
+        },
+        {
+          "uses": "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
+          "with": {
+            "path": "${{ runner.temp }}/ci-result-inputs"
+          }
+        },
+        {
+          "name": "Qualify CI result and summarize retained evidence",
+          "if": "always()",
+          "env": {
+            "JOB_OUTCOMES": "${{ toJSON(needs) }}",
+            "EVENT_NAME": "${{ github.event_name }}",
+            "SOURCE_SHA": "${{ github.event.pull_request.head.sha || github.sha }}",
+            "TESTED_SHA": "${{ github.sha }}",
+            "RUN_URL": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          },
+          "run": "mkdir -p \"$RUNNER_TEMP/ci-result\"\nprintf '%s\\n' \"$JOB_OUTCOMES\" > \"$RUNNER_TEMP/ci-result/needs.json\"\npython3 -I -B scripts/ci/result.py --needs \"$RUNNER_TEMP/ci-result/needs.json\" --workflow .github/workflows/ci.yml --catalog contracts/testing.json --artifacts \"$RUNNER_TEMP/ci-result-inputs\" --event \"$EVENT_NAME\" --source-sha \"$SOURCE_SHA\" --tested-sha \"$TESTED_SHA\" --run-url \"$RUN_URL\" --summary \"$GITHUB_STEP_SUMMARY\" --output \"$RUNNER_TEMP/ci-result/result.json\""
+        },
+        {
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+          "if": "always()",
+          "with": {
+            "name": "ci-result-evidence",
+            "path": "${{ runner.temp }}/ci-result/",
+            "if-no-files-found": "error",
+            "retention-days": 30
           }
         }
       ]
