@@ -36,6 +36,11 @@ collection targets only active tests and validates `contracts/testing.json`.
 
 ## CI jobs
 
+The [installed package acceptance](../docs/package-acceptance.md) job builds and
+installs the actual wheel and source distribution into independent runtime-only
+consumers. It records CLI, persistent-state, stdio MCP and absolute gateway launch
+checks outside the source checkout, using locked dependency constraints.
+
 CI runs on GitHub-hosted Ubuntu. Pinned actions have read-only repository
 permissions. Pull requests, pushes to master and manual runs invoke:
 
