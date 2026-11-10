@@ -189,7 +189,9 @@ def test_ci_defines_the_shard_count_once_and_keeps_the_application_aggregate_nam
     run = next(step["run"] for step in shards["steps"] if "--suite tests" in step.get("run", ""))
     assert '--shard "${{ matrix.shard }}/${{ matrix.shards }}"' in run
     upload = next(step for step in shards["steps"] if step.get("uses", "").startswith("actions/upload-artifact"))
-    assert upload["with"]["name"].endswith("shard-${{ matrix.shard }}-of-${{ matrix.shards }}")
+    logical, separator, attempt = upload["with"]["name"].rpartition("--attempt-")
+    assert logical.endswith("shard-${{ matrix.shard }}-of-${{ matrix.shards }}")
+    assert separator and attempt == "${{ github.run_attempt }}", "retry artifacts identify their actual attempt"
     assert upload["if"] == "always()"
     assert not any("--suite tests" in step.get("run", "") for name, job in workflow["jobs"].items()
                    if name != "application-tests" for step in job.get("steps", []))
