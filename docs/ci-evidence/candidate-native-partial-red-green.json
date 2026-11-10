@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "scope": "Independent native partial-rerun producer classification, original artifact selection and preservation of newer material failures. Faults executed only in a disposable copy.",
+  "platform_observation": {
+    "run_id": 42901325608,
+    "attempt": 2,
+    "url": "https://github.com/xormania/xorchestrate/actions/runs/42901325608/attempts/2",
+    "observed_shape": "Untouched completed jobs receive new API IDs and run_attempt values while retaining original execution timestamps, runner identity and full step records; copied record creation is later than preserved completion. Original artifact/manifest attempts remain unchanged."
+  },
+  "regression_before": {
+    "source_revision": "39b38f2dd468135b032ff963dc9546227618d184",
+    "source_sha256": "e9858adb1b978be7463601f2b0e44bf44e9d08806322a3d3c3d42229f5101946",
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "tests/hexagonal/test_candidate_evidence.py",
+      "-q",
+      "-p",
+      "no:cacheprovider",
+      "-k",
+      "native_partial_rerun or copied_job_classification or repeated_native_copies or later_copy"
+    ],
+    "exit_status": 1,
+    "failed": 3,
+    "passed_controls": 11,
+    "intended_failures": [
+      {
+        "test": "test_native_partial_rerun_keeps_actual_producers_and_identifies_copied_observations",
+        "failure": "Missing or duplicate authoritative artifact: framework-tests-python-3.12-shard-1-of-2"
+      },
+      {
+        "test": "test_repeated_native_copies_resolve_to_original_execution_without_rewriting_it",
+        "failure": "Missing or duplicate authoritative artifact: static-checks-python-3.12"
+      },
+      {
+        "test": "test_native_partial_rerun_downloads_original_artifacts_for_copied_jobs",
+        "failure": "Fetched artifact IDs {901}; expected {901, 902, 903}."
+      }
+    ],
+    "later_control_expansion": "Three additional negative controls for foreign run, foreign head, and absent execution details were added after the initial red run; the three failing regression functions and their inputs were unchanged."
+  },
+  "repaired_snapshot": {
+    "source_sha256": "401a1209b744c0f6d0b3074550dd66236e4bf04e85d3fb1670fd80bf51c4b98c",
+    "test_sha256": "a6aa43d3452eb154fcd4ceac0f89c97811ef3c58df73e5e6b7bfd812b4f96d96",
+    "support_sha256": "cbd9d1384933f3df3c3bdf1566173fecfe38679c962e8a77ebdc88b90be01b7f"
+  },
+  "green": {
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "tests/hexagonal/test_candidate_evidence.py",
+      "-q",
+      "-p",
+      "no:cacheprovider",
+      "-k",
+      "native_partial_rerun or copied_job_classification or repeated_native_copies or later_copy"
+    ],
+    "exit_status": 0,
+    "result": "17 passed, 76 deselected",
+    "coverage": [
+      "Actual static rerun uses attempt 2 and its new producer.",
+      "Untouched lanes retain original attempt/job/artifact and identify new observation IDs separately.",
+      "Repeated native copies point directly to original execution.",
+      "Changed steps/times/runner/run/head, missing or ambiguous prior records, and unknown execution details cannot prove inheritance.",
+      "Later copied records cannot hide intervening failed or changed material executions.",
+      "Downloader selects original artifacts for copied jobs."
+    ]
+  },
+  "checking_faults": [
+    {
+      "id": "copy_temporal_guard",
+      "replace": "if signature is None or times is None or times[2] >= times[0]:",
+      "with": "if signature is None or times is None:",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "tests/hexagonal/test_candidate_evidence.py::test_copied_job_classification_requires_positive_matching_execution_history[not_after_completion]",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_status": 1,
+      "intended_detection": true,
+      "assertion": "DID NOT RAISE ValueError"
+    },
+    {
+      "id": "exact_execution_signature",
+      "replace": "prior[\"run_attempt\"] < newest and _execution_signature(prior) == signature",
+      "with": "prior[\"run_attempt\"] < newest and True",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "tests/hexagonal/test_candidate_evidence.py::test_copied_job_classification_requires_positive_matching_execution_history[changed_step]",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_status": 1,
+      "intended_detection": true,
+      "assertion": "DID NOT RAISE ValueError"
+    },
+    {
+      "id": "intervening_material_execution",
+      "replace": "for prior in intermediate:",
+      "with": "for prior in ():",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "tests/hexagonal/test_candidate_evidence.py::test_a_later_copy_cannot_hide_an_intervening_material_execution[failed]",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_status": 1,
+      "intended_detection": true,
+      "assertion": "DID NOT RAISE ValueError"
+    },
+    {
+      "id": "unique_original_producer",
+      "replace": "if len(originals) != 1:",
+      "with": "if not originals:",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "tests/hexagonal/test_candidate_evidence.py::test_copied_job_classification_requires_positive_matching_execution_history[ambiguous_prior]",
+        "-q",
+        "-p",
+        "no:cacheprovider"
+      ],
+      "exit_status": 1,
+      "intended_detection": true,
+      "assertion": "DID NOT RAISE ValueError"
+    }
+  ],
+  "healthy_after_faults": {
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "tests/hexagonal/test_candidate_evidence.py",
+      "-q",
+      "-p",
+      "no:cacheprovider",
+      "-k",
+      "native_partial_rerun or copied_job_classification or repeated_native_copies or later_copy"
+    ],
+    "exit_status": 0,
+    "output": ".................                                                        [100%]\n17 passed, 76 deselected in 2.17s"
+  },
+  "runtime": {
+    "python": "3.12.14",
+    "execution": "Local independent fixture and deliberate-fault evidence; hosted corrected full and partial-rerun acceptance remains separate."
+  },
+  "result": "All four deliberate guard faults caused intended assertion failures; healthy restored control passed."
+}

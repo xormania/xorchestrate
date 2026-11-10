@@ -22,6 +22,7 @@ from tests.hexagonal.support.ci_candidate import (
     github_observation,
     lane_lineage,
     lane_runtime,
+    native_partial_lineage,
     strict_documentation_receipts,
     write_json,
 )
@@ -441,3 +442,114 @@ def test_metadata_collector_hashes_workflow_bytes_at_the_reported_immutable_revi
     collected = subject.collect_metadata(context, "inert-canary")
     assert collected.get("workflow_bytes_sha256") == expected_digest
     assert any(request.path.endswith("/contents/.github/workflows/ci.yml") for request in requests)
+
+
+def test_native_partial_rerun_keeps_actual_producers_and_identifies_copied_observations(captured):
+    context, manifests, metadata, expected = native_partial_lineage(captured)
+    references = subject.qualify_lineage(context, manifests, metadata, expected)
+    by_lane = {reference["lane"]: reference for reference in references}
+    static = by_lane["static-checks-python-3.12"]
+    assert (static["job_id"], static["run_attempt"]) == (1101, 2)
+    assert static["carried_forward"] is False
+    for index in (2, 3):
+        lane = list(expected)[index - 1]
+        reference = by_lane[lane]
+        assert (reference["job_id"], reference["run_attempt"]) == (100 + index, 1)
+        assert (reference["observation_job_id"], reference["observation_attempt"]) == (1100 + index, 2)
+        assert reference["carried_forward"] is True
+        assert reference["artifact_name"].endswith("--attempt-1")
+    assert len(metadata["jobs"]) == 6, "Qualification must preserve every native record"
+
+
+@pytest.mark.parametrize("fault", (
+    "failed", "changed_step", "changed_start", "missing_prior", "ambiguous_prior",
+    "invalid_created", "not_after_completion", "different_runner", "unknown_steps",
+    "different_run", "different_head", "no_execution_details",
+))
+def test_copied_job_classification_requires_positive_matching_execution_history(captured, fault):
+    context, manifests, metadata, expected = native_partial_lineage(captured)
+    original = metadata["jobs"][1]
+    wrapper = metadata["jobs"][4]
+    assert original["name"] == wrapper["name"]
+    if fault == "failed":
+        wrapper["conclusion"] = "failure"
+    elif fault == "changed_step":
+        wrapper["steps"][0]["conclusion"] = "failure"
+    elif fault == "changed_start":
+        wrapper["started_at"] = "2026-11-10T00:01:01Z"
+    elif fault == "missing_prior":
+        metadata["jobs"].remove(original)
+    elif fault == "ambiguous_prior":
+        metadata["jobs"].append({**deepcopy(original), "id": 999})
+    elif fault == "invalid_created":
+        wrapper["created_at"] = "unknown"
+    elif fault == "not_after_completion":
+        wrapper["created_at"] = "2026-11-10T00:01:59Z"
+    elif fault == "different_runner":
+        wrapper["runner_id"] += 1
+    elif fault == "different_run":
+        wrapper["run_id"] += 1
+    elif fault == "different_head":
+        wrapper["head_sha"] = "f" * 40
+    elif fault == "no_execution_details":
+        for record in (original, wrapper):
+            for key in ("steps", "runner_id", "runner_name", "run_id", "head_sha"):
+                del record[key]
+    else:
+        del wrapper["steps"]
+    with pytest.raises(ValueError):
+        subject.qualify_lineage(context, manifests, metadata, expected)
+
+
+def test_repeated_native_copies_resolve_to_original_execution_without_rewriting_it(captured):
+    context, manifests, metadata, expected = native_partial_lineage(captured)
+    latest = [deepcopy(job) for job in metadata["jobs"] if job["run_attempt"] == 2]
+    for job in latest:
+        job.update(id=job["id"] + 1000, run_attempt=3, created_at="2026-11-10T00:20:00Z")
+    metadata["jobs"].extend(latest)
+    metadata["run"]["run_attempt"] = 3
+    references = subject.qualify_lineage(context, manifests, metadata, expected)
+    assert {reference["run_attempt"] for reference in references} == {1, 2}
+    assert {reference["observation_attempt"] for reference in references} == {3}
+    assert {reference["job_id"] for reference in references} == {102, 103, 1101}
+    assert all(reference["carried_forward"] is True for reference in references)
+
+
+@pytest.mark.parametrize("intervening", ("failed", "changed_success"))
+def test_a_later_copy_cannot_hide_an_intervening_material_execution(captured, intervening):
+    context, manifests, metadata, expected = native_partial_lineage(captured)
+    wrapper = metadata["jobs"][4]
+    later_copy = deepcopy(wrapper)
+    later_copy.update(id=2102, run_attempt=3, created_at="2026-11-10T00:20:00Z")
+    wrapper.update(created_at="2026-11-10T00:10:00Z", started_at="2026-11-10T00:11:00Z",
+                   completed_at="2026-11-10T00:12:00Z", runner_id=999, runner_name="runner-999")
+    wrapper["steps"][0].update(started_at="2026-11-10T00:11:10Z", completed_at="2026-11-10T00:11:50Z")
+    if intervening == "failed":
+        wrapper["conclusion"] = "failure"
+    else:
+        wrapper["steps"][0]["name"] = "Different material execution"
+    metadata["jobs"].append(later_copy)
+    metadata["run"]["run_attempt"] = 3
+    with pytest.raises(ValueError):
+        subject.qualify_lineage(context, manifests, metadata, expected)
+
+
+def test_native_partial_rerun_downloads_original_artifacts_for_copied_jobs(captured, tmp_path, monkeypatch):
+    context, _, metadata, expected = native_partial_lineage(captured)
+    requested = []
+
+    def fetch(url, token, limit):
+        assert token == "inert-canary"
+        assert limit == subject.MAX_ARCHIVE
+        requested.append(int(url.split("/artifacts/")[1].split("/")[0]))
+        return b"archive bytes"
+
+    def extract(payload, directory, *, digest):
+        assert payload == b"archive bytes"
+        assert digest.startswith("sha256:")
+        assert directory.parent == tmp_path
+
+    monkeypatch.setattr(subject, "api_bytes", fetch)
+    monkeypatch.setattr(subject, "extract_artifact", extract)
+    subject.download_evidence(context, metadata, "inert-canary", tmp_path, expected)
+    assert set(requested) == {901, 902, 903}, "Every original producer must remain downloadable"

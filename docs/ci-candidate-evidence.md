@@ -51,6 +51,22 @@ combined with a successful rerun of a failed shard. A newer failed, cancelled,
 incomplete, missing, or contradictory lane cannot borrow an older green artifact.
 The original attempt history remains in the final result.
 
+GitHub can copy completed jobs into a later partial attempt with new job IDs and
+`run_attempt` values, while retaining their original execution timestamps, runner,
+and full step records. Such a wrapper is recognized only when its execution
+completed before the wrapper record was created and exactly one prior actual
+successful execution has the same run/head, runner, start/end, and complete step
+identity. Intervening failed, changed, ambiguous, or unknown observations prevent
+an older success from being selected. Missing artifacts never establish copying.
+Repeated proven wrappers reference the original execution directly.
+
+Both downloading and qualification use this same resolution. Evidence keeps the
+actual `job_id`/`run_attempt` separately from `observation_job_id`,
+`observation_attempt`, and `carried_forward`; the summary displays both. Unknown
+classification retains the newest attempt and requires its own evidence. This
+does not treat every new API job ID as a new physical execution or rewrite old
+receipts to appear freshly executed.
+
 The context capture itself may come from an earlier attempt when a partial rerun
 does not rerun path classification. Each lane keeps its own producer attempt;
 the aggregate never assigns the current attempt to all historical receipts.

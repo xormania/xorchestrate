@@ -149,6 +149,51 @@ def lane_lineage(captured):
     return context, manifests, metadata, expected
 
 
+def native_partial_lineage(captured):
+    """Model GitHub's copied completed job records during a static-only rerun.
+
+    Actual producer records and uploaded artifacts are independent inputs. New
+    wrapper IDs/attempt numbers do not rewrite original execution timestamps.
+    """
+    context, _, metadata, expected = lane_lineage(captured)
+    manifests, artifacts, original = {}, [], []
+    for index, (lane, name) in enumerate(expected.items(), 1):
+        runner = 200 + index
+        original.append({
+            "id": 100 + index, "run_id": context["producer"]["run_id"], "name": name,
+            "run_attempt": 1, "head_sha": context["source_sha"],
+            "status": "completed", "conclusion": "success",
+            "created_at": "2026-11-10T00:00:00Z", "started_at": "2026-11-10T00:01:00Z",
+            "completed_at": "2026-11-10T00:02:00Z", "runner_id": runner,
+            "runner_name": "runner-" + str(runner), "runner_group_id": 0,
+            "steps": [{"number": 1, "name": "Execute " + lane, "status": "completed",
+                       "conclusion": "success", "started_at": "2026-11-10T00:01:10Z",
+                       "completed_at": "2026-11-10T00:01:50Z"}],
+        })
+        attempt = 2 if index == 1 else 1
+        artifact_name = f"{lane}--attempt-{attempt}"
+        manifests[artifact_name] = {
+            "schema_version": 1, "context": deepcopy(context), "lane": lane,
+            "run_attempt": attempt, "runtime": lane_runtime(),
+        }
+        artifacts.append({"id": 900 + index, "name": artifact_name,
+                          "digest": "sha256:" + str(index) * 64, "expired": False,
+                          "workflow_run": {"id": context["producer"]["run_id"], "head_sha": context["source_sha"]}})
+    rerun = deepcopy(original[0])
+    rerun.update(id=1101, run_attempt=2, created_at="2026-11-10T00:10:00Z",
+                 started_at="2026-11-10T00:11:00Z", completed_at="2026-11-10T00:12:00Z",
+                 runner_id=301, runner_name="runner-301")
+    rerun["steps"][0].update(started_at="2026-11-10T00:11:10Z", completed_at="2026-11-10T00:11:50Z")
+    wrappers = []
+    for record in original[1:]:
+        wrapper = deepcopy(record)
+        wrapper.update(id=record["id"] + 1000, run_attempt=2,
+                       created_at="2026-11-10T00:10:00Z", runner_group_id=None)
+        wrappers.append(wrapper)
+    metadata.update(jobs=[*original, rerun, *wrappers], artifacts=artifacts)
+    return context, manifests, metadata, expected
+
+
 
 def strict_documentation_receipts(root, context):
     context, manifests, metadata, expected = lane_lineage(context)

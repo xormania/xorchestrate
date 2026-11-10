@@ -19,6 +19,7 @@ import shutil
 import stat
 import subprocess
 import zipfile
+from datetime import datetime
 from pathlib import Path, PurePosixPath
 from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
@@ -182,6 +183,75 @@ def _same_run_context(first, second):
     return left == right
 
 
+def _job_times(job):
+    try:
+        values = [datetime.fromisoformat(job[key].replace("Z", "+00:00"))
+                  for key in ("created_at", "started_at", "completed_at")]
+        if not all(value.tzinfo is not None for value in values) or values[1] > values[2]:
+            return None
+        return values
+    except (KeyError, TypeError, ValueError, AttributeError):
+        return None
+
+
+def _execution_signature(job):
+    """Identity copied by GitHub for inherited jobs; administrative IDs may change."""
+    steps = job.get("steps")
+    if (job.get("status") != "completed" or job.get("conclusion") != "success"
+            or not _positive(job.get("run_id")) or not _sha(job.get("head_sha"))
+            or not _positive(job.get("runner_id")) or not isinstance(job.get("runner_name"), str)
+            or not job["runner_name"] or not _job_times(job)
+            or not isinstance(steps, list) or not steps or not all(isinstance(step, dict) for step in steps)):
+        return None
+    return tuple(job.get(key) for key in ("name", "run_id", "head_sha", "runner_id", "runner_name",
+                                         "started_at", "completed_at")) + (json.dumps(steps, sort_keys=True),)
+
+
+def lane_producer(jobs, name):
+    """Separate an actual execution from a positively identified native copy.
+
+    Partial reruns create new job IDs/attempts for inherited successful jobs. The
+    copy preserves the old execution's runner, timestamps and complete step data,
+    while its new record is created after that execution finished. Only a unique
+    prior execution with that exact identity can supply the original producer.
+    Unknown or contradictory records retain their current attempt and therefore
+    require their own evidence; an absent artifact never proves inheritance.
+    """
+    rows = [job for job in jobs if job.get("name") == name]
+    if not rows or any(not _positive(job.get("run_attempt")) for job in rows):
+        raise ValueError("Missing authoritative lane execution: " + name)
+    newest = max(job["run_attempt"] for job in rows)
+    latest = [job for job in rows if job["run_attempt"] == newest]
+    if len(latest) != 1:
+        raise ValueError("Ambiguous newest lane execution: " + name)
+    observation = latest[0]
+    signature, times = _execution_signature(observation), _job_times(observation)
+    if signature is None or times is None or times[2] >= times[0]:
+        return observation, observation
+    originals = []
+    for prior in rows:
+        prior_times = _job_times(prior)
+        if (prior["run_attempt"] < newest and _execution_signature(prior) == signature
+                and prior_times is not None and prior_times[0] <= prior_times[1]):
+            originals.append(prior)
+    if len(originals) != 1:
+        return observation, observation
+    original = originals[0]
+    # An intervening failure, new execution or unknown observation cannot be
+    # concealed by a later copy of an older success. Repeated proven copies point
+    # directly to the original execution, not to a recursive chain of summaries.
+    intermediate = [job for job in rows if original["run_attempt"] < job["run_attempt"] < newest]
+    attempts = [job["run_attempt"] for job in intermediate]
+    if len(attempts) != len(set(attempts)):
+        return observation, observation
+    for prior in intermediate:
+        prior_times = _job_times(prior)
+        if (_execution_signature(prior) != signature or prior_times is None
+                or prior_times[2] >= prior_times[0]):
+            return observation, observation
+    return original, observation
+
+
 def qualify_lineage(context, producers, metadata, expected):
     """Choose the newest actual execution of each lane, including partial reruns."""
     validate_context(context)
@@ -223,13 +293,12 @@ def qualify_lineage(context, producers, metadata, expected):
             raise ValueError("GitHub PR number/target association disagrees with the candidate")
     references = []
     for lane, name in expected.items():
-        jobs = [job for job in metadata["jobs"] if job.get("name") == name]
-        if not jobs or any(not _positive(job.get("run_attempt")) for job in jobs):
-            raise ValueError("Missing authoritative lane execution: " + lane)
-        newest = max(job["run_attempt"] for job in jobs)
-        selected = [job for job in jobs if job["run_attempt"] == newest]
-        if (len(selected) != 1 or newest > run["run_attempt"] or not _positive(selected[0].get("id"))
-                or selected[0].get("status") != "completed" or selected[0].get("conclusion") != "success"):
+        selected, observation = lane_producer(metadata["jobs"], name)
+        newest = selected["run_attempt"]
+        if (observation["run_attempt"] > run["run_attempt"] or not _positive(selected.get("id"))
+                or not _positive(observation.get("id"))
+                or any(job.get("run_id", run["id"]) != run["id"] for job in (selected, observation))
+                or observation.get("status") != "completed" or observation.get("conclusion") != "success"):
             raise ValueError("Newest authoritative lane execution did not succeed: " + lane)
         artifact_name = f"{lane}--attempt-{newest}"
         artifacts = [item for item in metadata["artifacts"] if item.get("name") == artifact_name]
@@ -250,7 +319,10 @@ def qualify_lineage(context, producers, metadata, expected):
                 or not _same_run_context(context, manifest.get("context"))):
             raise ValueError("Lane manifest contradicts its authoritative producer: " + lane)
         references.append({"lane": lane, "decision": "executed", "run_id": run["id"], "run_attempt": newest,
-                           "job_id": selected[0]["id"], "artifact_id": artifact["id"], "artifact_name": artifact_name,
+                           "job_id": selected["id"], "observation_job_id": observation["id"],
+                           "observation_attempt": observation["run_attempt"],
+                           "carried_forward": selected["id"] != observation["id"],
+                           "artifact_id": artifact["id"], "artifact_name": artifact_name,
                            "artifact_digest": digest, "runtime": manifest["runtime"],
                            "original_context": manifest["context"]})
     return references
@@ -370,10 +442,8 @@ def download_evidence(context, metadata, token, directory, expected):
     prefix = "https://api.github.com/repos/" + context["repository"]["full_name"] + "/actions/artifacts/"
     names = {f"candidate-context--attempt-{context['producer']['run_attempt']}"}
     for lane, name in expected.items():
-        attempts = [job["run_attempt"] for job in metadata["jobs"]
-                    if job.get("name") == name and _positive(job.get("run_attempt"))]
-        if attempts:
-            names.add(f"{lane}--attempt-{max(attempts)}")
+        producer, _ = lane_producer(metadata["jobs"], name)
+        names.add(f"{lane}--attempt-{producer['run_attempt']}")
     # Optional advice is retained separately and cannot qualify required lanes.
     advice = [item for item in metadata["artifacts"] if item.get("name", "").startswith("architecture-evidence--attempt-")]
     if advice:
