@@ -872,7 +872,8 @@
       "modules": [
         "scripts.ci",
         "scripts.ci.classify_changes",
-        "scripts.ci.dependencies"
+        "scripts.ci.dependencies",
+        "scripts.ci.result"
       ],
       "allowed_roles": [
         "ci_tooling"
