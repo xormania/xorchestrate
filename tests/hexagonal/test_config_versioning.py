@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 import xorchestrate
+from tests.hexagonal.support.projects import ProjectFixture
 from xorchestrate import bridge, cli, composition
 from xorchestrate.composition import SUPPORTED_CONFIG_VERSIONS, build, config_version, load_config, validate_config
 from xorchestrate.model import OrchestrationError
@@ -169,12 +170,12 @@ def run_cli(*argv):
     return status, output.getvalue()
 
 
-def test_describe_reports_configuration_warnings(tmp_path):
-    for config, expected in (({"store": {"adapter": "memory"}}, ["configuration_version_missing"]),
-                             ({"version": 1, "store": {"adapter": "memory"}}, [])):
-        path = tmp_path / "config.json"
-        path.write_text(json.dumps(config), encoding="utf-8")
-        status, output = run_cli("--config", str(path), "describe")
+def test_describe_reports_configuration_warnings(tmp_path, monkeypatch):
+    for index, (config, expected) in enumerate((({"store": {"adapter": "memory"}}, ["configuration_version_missing"]),
+                                                ({"version": 1, "store": {"adapter": "memory"}}, []))):
+        project = ProjectFixture(tmp_path / str(index), config)
+        monkeypatch.setenv("XORCHESTRATE_HOME", str(project.home))
+        status, output = run_cli("--project", str(project.repo), "describe")
         reply = json.loads(output)
         assert status == 0 and reply["operations"]
         assert [warning["code"] for warning in reply["warnings"]] == expected

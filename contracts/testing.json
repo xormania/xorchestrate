@@ -114,6 +114,14 @@
         "tests/hexagonal/test_project_server.py": "composition"
       }
     },
+    "projects": {
+      "guarantee": "Nothing runs without a set-up project. A project is identified on a machine by its git common directory, so every worktree shares one instance and one server and a separate clone is refused; only an approved tracked configuration renders or runs; the user's overlay wins over the project, guardrails included; worktree identity reaches records, events, telemetry and guardrails; and the release a project pins runs its commands.",
+      "modules": {
+        "tests/hexagonal/test_projects.py": "composition",
+        "tests/hexagonal/test_project_worktrees.py": "composition",
+        "tests/hexagonal/test_release_handoff.py": "composition"
+      }
+    },
     "verification": {
       "guarantee": "Independent checker observations, verdicts and fault attribution establish the selected candidate behavior without using product verdicts as the oracle.",
       "modules": {

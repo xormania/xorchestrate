@@ -6,9 +6,10 @@ control connections ask for ``status`` or ``down``. Closing a connection ends
 only that client's session: the application, its drivers and their live
 sessions belong to the server.
 
-One configuration has at most one server, whatever each client's environment:
-the instance lock and a discovery record naming the socket live under the
-per-user xorchestrate home, keyed by the configuration's identity. The client
+One project has at most one server, whatever each client's environment and
+whichever of its worktrees the client runs in: the instance lock and a
+discovery record naming the socket live under the per-user xorchestrate home,
+keyed by the project instance's identity. The client
 side lives here too: discovering the socket, starting the server when none is
 running (once, under a start lock), relaying a harness's stdio, and sending
 control requests.
@@ -18,7 +19,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import pwd
 import socket
 import subprocess
 import sys
@@ -37,12 +37,15 @@ from .adapters.local_socket import (
     open_private_file,
 )
 from .adapters.unix import UnixClient
+from .instance.home import HOME_VARIABLE as HOME_VARIABLE  # re-exported for callers of the server module
+from .instance.home import absolute_setting, private_directory, xorchestrate_home
 from .mcp import failure
 from .model import OrchestrationError
 
-HOME_VARIABLE = "XORCHESTRATE_HOME"
 RUNTIME_DIR_VARIABLE = "XORCHESTRATE_RUNTIME_DIR"
 SERVER_LOCK_WAIT = 2.0
+# Refusals that waiting cannot change: a client gives up at once instead of retrying.
+FINAL_REFUSALS = frozenset({"server_full", "configuration_mismatch", "worktree_required"})
 
 
 class ProjectServer:
@@ -53,7 +56,7 @@ class ProjectServer:
     """
 
     def __init__(self, application, transport, dispatcher, *, max_connections=64, max_control_connections=8,
-                 poll_interval=0.2, details=None):
+                 poll_interval=0.2, details=None, peer_policy=None):
         for name, value in (("max_connections", max_connections), ("max_control_connections", max_control_connections)):
             if type(value) is not int or value < 1:
                 raise OrchestrationError(f"{name} must be a positive integer.", "invalid_configuration")
@@ -63,6 +66,9 @@ class ProjectServer:
         self.limits = {"mcp": max_connections, "control": max_control_connections}
         self.poll_interval = poll_interval
         self.details = dict(details or {})
+        # ``peer_policy(peer)`` may refuse an MCP client with ``(code, message[, details])``,
+        # for example a worktree whose tracked configuration is not the running one.
+        self.peer_policy = peer_policy
         self.started_at = datetime.now(timezone.utc).isoformat()
         self._lock = threading.Lock()
         self._drain_lock = threading.Lock()
@@ -124,9 +130,12 @@ class ProjectServer:
     def status(self):
         with self._lock:
             clients = [connection.peer for connection in self._connections if connection.peer.purpose == "mcp"]
+        worktrees = {(peer.attributes.get("worktree") or {}).get("root") for peer in clients
+                     if isinstance(peer.attributes, dict) and isinstance(peer.attributes.get("worktree"), dict)}
         return {"running": True, "pid": os.getpid(), "started_at": self.started_at, **self.details,
                 "connections": len(clients), "max_connections": self.limits["mcp"],
                 "actors": sorted({peer.actor for peer in clients}),
+                "worktrees": sorted(root for root in worktrees if isinstance(root, str)),
                 "in_flight": self.dispatcher.in_flight, "draining": self.dispatcher.draining or self._stop_decided,
                 "live_sessions": self.live_sessions()}
 
@@ -159,6 +168,8 @@ class ProjectServer:
     def admit(self, peer):
         """Reserve a slot for a verified peer, or return ``(code, message)`` to refuse it."""
         purpose = peer.purpose if peer.purpose in self.limits else "mcp"
+        if purpose == "mcp" and self.peer_policy is not None and (refusal := self.peer_policy(peer)) is not None:
+            return refusal
         with self._lock:
             if purpose == "mcp" and (self._stop_decided or self.dispatcher.draining):
                 return "draining", "The server is shutting down and admits no new MCP clients."
@@ -247,46 +258,20 @@ class ProjectServer:
 
 # -- locations ---------------------------------------------------------------
 
-def _absolute_setting(environ, name):
-    value = environ.get(name)
-    if not value:
-        return None
-    path = Path(value).expanduser()
-    if not path.is_absolute():
-        raise OrchestrationError(f"{name} must be an absolute path.", "invalid_configuration", {name: value})
-    return path
+_absolute_setting = absolute_setting
+_private_directory = private_directory
 
 
-def _private_directory(path):
-    path.mkdir(mode=0o700, parents=True, exist_ok=True)
-    metadata = path.lstat()
-    if not path.is_dir() or path.is_symlink() or metadata.st_uid != os.getuid() or metadata.st_mode & 0o077:
-        raise OrchestrationError("Server directories must be private directories owned by this user.",
-                                 "invalid_configuration", {"path": str(path)})
-    return path
-
-
-def xorchestrate_home(environ=None):
-    """``$XORCHESTRATE_HOME`` if set (absolute), else ``.xorchestrate`` in the account's home.
-
-    The account home comes from the user database, not ``$HOME``, so clients
-    with different shells or sudo settings agree.
-    """
-    environ = os.environ if environ is None else environ
-    configured = _absolute_setting(environ, HOME_VARIABLE)
-    return configured if configured is not None else Path(pwd.getpwuid(os.getuid()).pw_dir) / ".xorchestrate"
-
-
-def server_identity(config_path=None, cwd=None):
-    """The resolved configuration path, or the working directory when there is none."""
-    if config_path:
-        return "config:" + str(Path(config_path).expanduser().resolve())
-    return "cwd:" + str(Path(cwd or Path.cwd()).resolve())
+def server_identity(instance_id):
+    """A project's server is keyed by its instance, never by a path or a worktree."""
+    if not isinstance(instance_id, str) or not instance_id:
+        raise OrchestrationError("A project server needs a project instance.", "project_required")
+    return "project:" + instance_id
 
 
 @dataclass(frozen=True)
 class ServerFiles:
-    """Per-configuration files under ``<home>/servers``: lock, start lock, log and discovery record."""
+    """Per-project files under ``<home>/servers``: lock, start lock, log and discovery record."""
 
     identity: str
     key: str
@@ -356,7 +341,7 @@ def default_socket_path(files, environ=None):
     ``$XORCHESTRATE_RUNTIME_DIR`` (absolute) if set; else the server directory
     itself when the path fits ``sun_path``; else ``$XDG_RUNTIME_DIR/xorchestrate``;
     else ``<tmp>/xorchestrate-<uid>``. Clients never compute this: they read
-    the discovery record, so the choice cannot split one configuration.
+    the discovery record, so the choice cannot split one project.
     """
     environ = os.environ if environ is None else environ
     name = f"{files.key}.sock"
@@ -397,7 +382,7 @@ def _try_connect(files, explicit, **options):
     try:
         return open_client(target, **options)
     except OrchestrationError as exc:
-        if exc.details.get("reason") == "server_full":
+        if exc.details.get("reason") in FINAL_REFUSALS:
             raise
         if exc.code == "connection_refused" or exc.code == "handshake_timeout":
             raise ConnectionError(str(exc)) from exc  # retryable: e.g. draining

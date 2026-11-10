@@ -80,6 +80,32 @@ class TelemetryDefaults:
             "dataset_id": self.dataset_id, "collector_id": self.collector_id}}
 
 
+REPO_PLACEHOLDER = "${repo}"
+"""Left unresolved by rendering; each call resolves it to its own worktree root."""
+
+
+@dataclass(frozen=True)
+class ProjectContext:
+    """The set-up project a runtime is built for, supplied by the entrypoint.
+
+    Composition looks nothing up itself: the operator layer finds the project,
+    checks its approval and renders its configuration, then passes this
+    context. It supplies the telemetry defaults (collection is always on for a
+    project unless the configuration says ``enabled: false``), the data
+    directory that relative paths resolve against, and the default worktree of
+    calls that do not bring their own.
+    """
+
+    name: str
+    instance_id: str
+    data_dir: str | Path
+    worktree: dict | None = None
+    dataset_id: str = "default"
+
+    def telemetry_defaults(self):
+        return TelemetryDefaults(Path(self.data_dir) / "telemetry", self.name, self.instance_id, self.dataset_id)
+
+
 def factory_for(kind, adapter):
     """Resolve a built-in alias or a trusted installed ``module:factory`` for one adapter kind."""
     target = BUILTINS[kind].get(adapter, adapter)
@@ -236,6 +262,9 @@ def config_version(config, supported=SUPPORTED_CONFIG_VERSIONS):
 def _resolve_path(base_dir, value, kind, adapter, strict=True):
     if not isinstance(value, str):
         raise OrchestrationError(f"{kind} adapter {adapter} paths must be strings.", "configuration_error")
+    if value.startswith(REPO_PLACEHOLDER):
+        # Resolved per call to the caller's worktree root (see adapters/process.py).
+        return value
     try:
         return str((base_dir / value).resolve()) if strict else str(base_dir / value)
     except (TypeError, ValueError, OSError, RuntimeError) as exc:
@@ -358,8 +387,20 @@ def validate_config(config=None, base_dir=None, *, telemetry_defaults=None):
     )
 
 
-def build(config=None, base_dir=None, *, telemetry_defaults=None):
-    """Assemble a runtime; ``telemetry_defaults`` enables collection without a telemetry section."""
+def build(config=None, base_dir=None, *, project=None, telemetry_defaults=None):
+    """Assemble a runtime.
+
+    ``project`` is the explicit ``ProjectContext`` of a set-up project: it
+    supplies the telemetry defaults, the base directory (its data directory)
+    when none is given, and the default worktree. ``telemetry_defaults``
+    enables collection without a telemetry section for callers without a
+    project; it takes precedence over the project's defaults when both are given.
+    """
+    if project is not None and not isinstance(project, ProjectContext):
+        raise OrchestrationError("Project must be a ProjectContext value.", "configuration_error")
+    if project is not None:
+        telemetry_defaults = telemetry_defaults or project.telemetry_defaults()
+        base_dir = base_dir or project.data_dir
     resolved = validate_config(config, base_dir, telemetry_defaults=telemetry_defaults)
     config = resolved.config
     resources = []
@@ -427,6 +468,7 @@ def build(config=None, base_dir=None, *, telemetry_defaults=None):
             evaluator_configurations=resolved.evaluator_configurations,
             state_engine=state_engine,
             telemetry=telemetry,
+            worktree=project.worktree if project is not None else None,
         )
         def capture(event):
             if isinstance(event, dict):

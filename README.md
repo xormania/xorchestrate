@@ -54,25 +54,33 @@ Use Python 3.12 or newer. From the checkout:
 
 ```bash
 python3 -m pip install -e .
-python3 -m xorchestrate describe
-python3 -m xorchestrate call create_work --json '{"goal":"Investigate a feature and retain the evidence"}'
-python3 -m xorchestrate call list_work --json '{}'
+xorchestrate setup ~/companion        # once per user: your private overlays and approvals
+cd /path/to/your/project              # a git repository
+xorchestrate init                     # creates a starter .xorchestrate/ and registers this machine's instance
+xorchestrate approve                  # approve the tracked configuration init summarized
+xorchestrate describe
+xorchestrate call create_work --json '{"goal":"Investigate a feature and retain the evidence"}'
+xorchestrate call list_work --json '{}'
 ```
 
-Without a config file, state is retained in `.xorchestrate/state.sqlite3`; there
-are no external providers, agent processes, or evaluators. `describe` lists the
-application operations. `call` accepts JSON through `--json`, `--input FILE`, or
-standard input. These same operations are exposed through the stdio MCP server:
+Xorchestrate runs only inside a set-up [project](docs/projects.md): its
+configuration is tracked in the repository's `.xorchestrate/`, your own
+overrides and approvals live in your companion repository, and its state lives
+under `~/.xorchestrate/projects/<project>/`, never in the repository. The
+starter configuration has no external providers, agent processes, or
+evaluators. `describe` lists the application operations. `call` accepts JSON
+through `--json`, `--input FILE`, or standard input. These same operations are
+exposed through the stdio MCP server:
 
 ```bash
-python3 -m xorchestrate --config /absolute/path/team.json serve
+xorchestrate serve
 ```
 
 For a persistent CLI connection, `run` accepts one JSON request per line and
 returns a `result` or `error` envelope:
 
 ```bash
-python3 -m xorchestrate --config /absolute/path/team.json run
+xorchestrate run
 ```
 
 For example, send `{"action":"list_work","arguments":{}}`. Keep `run` or the MCP
@@ -83,12 +91,13 @@ Several agent harnesses can share one long-running server instead. A harness
 launches `connect` as its MCP command; it starts the server when none is running
 and relays MCP over stdio. Sessions belong to the server and survive a harness
 disconnect. `up`, `status` and `down` manage the server; see
-[project server](docs/project-server.md):
+[project server](docs/project-server.md). `init` writes Claude Code's tracked
+`.mcp.json` entry, `{"command": "xorchestrate", "args": ["connect"]}`:
 
 ```bash
-python3 -m xorchestrate --config /absolute/path/team.json connect --actor reviewer
-python3 -m xorchestrate --config /absolute/path/team.json status
-python3 -m xorchestrate --config /absolute/path/team.json down
+xorchestrate connect --actor reviewer
+xorchestrate status
+xorchestrate down
 ```
 
 The CLI actor defaults to `owner`; `--actor` selects the identity bound to that

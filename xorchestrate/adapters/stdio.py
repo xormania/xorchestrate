@@ -35,11 +35,11 @@ def read_line_frame(stream, maximum):
 class StdioConnection:
     """A ``ClientConnection`` over a binary input and a text or binary output stream."""
 
-    def __init__(self, stdin, stdout, actor="owner", max_frame_bytes=1_048_576):
+    def __init__(self, stdin, stdout, actor="owner", max_frame_bytes=1_048_576, attributes=None):
         self.stdin = stdin
         self.stdout = stdout
         self.max_frame_bytes = max_frame_bytes
-        self.peer = PeerIdentity(uid=os.getuid(), pid=None, actor=actor)
+        self.peer = PeerIdentity(uid=os.getuid(), pid=None, actor=actor, attributes=dict(attributes or {}))
         self._binary = isinstance(stdout, (io.RawIOBase, io.BufferedIOBase))
         self._write_lock = threading.Lock()
         self._closed = False
@@ -65,8 +65,8 @@ class StdioConnection:
 class StdioTransport:
     """A ``ClientTransport`` that yields exactly one ``StdioConnection``."""
 
-    def __init__(self, stdin, stdout, actor="owner", max_frame_bytes=1_048_576):
-        self._connection = StdioConnection(stdin, stdout, actor, max_frame_bytes)
+    def __init__(self, stdin, stdout, actor="owner", max_frame_bytes=1_048_576, attributes=None):
+        self._connection = StdioConnection(stdin, stdout, actor, max_frame_bytes, attributes)
 
     def accept(self, timeout=None):
         connection, self._connection = self._connection, None

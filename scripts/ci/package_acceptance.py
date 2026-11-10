@@ -24,6 +24,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CONSUMER = r'''
 import importlib.metadata
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -40,11 +41,14 @@ installed = {item.metadata["Name"].lower().replace("_", "-"): item.version
              for item in importlib.metadata.distributions()}
 assert not {"pytest", "ruff", "build"}.intersection(installed), installed
 console = prefix / "bin" / "xorchestrate"
+# A private home: the consumer never reads or writes the account's ~/.xorchestrate.
+work = pathlib.Path.cwd()
+environment = {**os.environ, "XORCHESTRATE_HOME": str(work / "home")}
 
 def invoke(arguments, requests=None):
     try:
         result = subprocess.run(arguments, input=requests, capture_output=True, text=True,
-                                timeout=30, check=True)
+                                timeout=30, check=True, env=environment)
     except subprocess.CalledProcessError as error:
         for stream, value in ((sys.stdout, error.stdout or ""), (sys.stderr, error.stderr or "")):
             if len(value) > 16384:
@@ -53,6 +57,15 @@ def invoke(arguments, requests=None):
         raise
     return [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
 
+# No project, no run: the installed launcher refuses and names `xorchestrate init`.
+refused = subprocess.run([str(console), "describe"], capture_output=True, text=True, timeout=30, env=environment)
+assert refused.returncode == 2 and "xorchestrate init" in json.loads(refused.stderr)["error"]["message"], refused
+invoke([str(console), "setup", str(work / "companion")])
+subprocess.run(["git", "init", "-q", str(work / "app")], check=True, timeout=30)
+initialized, = invoke([str(console), "init", str(work / "app")])
+assert initialized["approval"]["state"] == "required", initialized
+invoke([str(console), "approve", str(work / "app")])
+os.chdir(work / "app")
 description, = invoke([str(console), "describe"])
 assert {"create_work", "list_work"} <= {item["name"] for item in description["operations"]}
 initial, = invoke([str(console), "call", "list_work", "--json", "{}"])
@@ -87,7 +100,8 @@ try:
 finally:
     gateway.close()
 print(json.dumps({"status": "passed", "package_path": str(package), "executable": str(console), "cwd": str(pathlib.Path.cwd()),
-                  "installed": installed, "checks": ["console_describe", "persisted_cli", "mcp_read", "absolute_gateway"]}))
+                  "installed": installed, "checks": ["no_project_refusal", "project_setup", "console_describe", "persisted_cli", "mcp_read",
+                             "absolute_gateway"]}))
 '''
 
 

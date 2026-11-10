@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "xorchestrate.hexagonal",
-  "version": "5",
+  "version": "6",
   "description": "Current application-owned ports, infrastructure-independent core and replaceable adapters. Composition is the trusted factory boundary. Source dependencies are distinct from runtime calls through ports. Active live-test infrastructure follows the same dependency direction: generic test-kit ports/core, concrete execution adapters, independent evidence predicates and explicit runner composition. Shared test contracts remain independent of their subjects; support adapters own fixtures, and collected tests cannot import other collected tests.",
   "source_roots": [
     "xorchestrate",
@@ -51,7 +51,8 @@
         "xorchestrate.outcomes",
         "xorchestrate.schema",
         "xorchestrate.session_lifecycle",
-        "xorchestrate.state"
+        "xorchestrate.state",
+        "xorchestrate.worktrees"
       ],
       "allowed_roles": [
         "foundation",
@@ -75,7 +76,8 @@
         "types",
         "typing",
         "base64",
-        "re"
+        "re",
+        "contextvars"
       ],
       "allow_dynamic": false,
       "forbidden_calls": [
@@ -207,6 +209,30 @@
       ],
       "allow_dynamic": true
     },
+    "operator": {
+      "modules": [
+        "xorchestrate.instance",
+        "xorchestrate.instance.*"
+      ],
+      "allowed_roles": [
+        "foundation",
+        "core",
+        "work_acceptance",
+        "inspection",
+        "adapters",
+        "composition",
+        "operator",
+        "telemetry",
+        "telemetry_views"
+      ],
+      "allowed_external": [
+        "stdlib:*",
+        "jsonschema",
+        "referencing"
+      ],
+      "allow_dynamic": true,
+      "description": "Operator layer: project discovery, the per-user home, companion overlays and approvals, rendering and the release handoff. It hands composition an explicit ProjectContext; composition and the core never import it."
+    },
     "entrypoints": {
       "modules": [
         "xorchestrate.__main__",
@@ -222,6 +248,7 @@
         "inspection",
         "adapters",
         "composition",
+        "operator",
         "entrypoints",
         "telemetry",
         "telemetry_views"
@@ -341,6 +368,7 @@
         "inspection",
         "adapters",
         "composition",
+        "operator",
         "telemetry",
         "telemetry_views"
       ],
@@ -558,6 +586,7 @@
         "inspection",
         "adapters",
         "composition",
+        "operator",
         "entrypoints",
         "testkit_foundation",
         "testkit_core",
@@ -656,6 +685,7 @@
         "inspection",
         "adapters",
         "composition",
+        "operator",
         "entrypoints",
         "testkit_foundation",
         "testkit_core",
@@ -702,6 +732,7 @@
         "inspection",
         "adapters",
         "composition",
+        "operator",
         "testkit_foundation",
         "testkit_core",
         "testkit_adapters",
@@ -736,6 +767,7 @@
         "inspection",
         "adapters",
         "composition",
+        "operator",
         "testkit_foundation",
         "testkit_core",
         "testkit_adapters",
@@ -950,6 +982,7 @@
         "inspection",
         "adapters",
         "composition",
+        "operator",
         "entrypoints",
         "testkit_foundation",
         "testkit_core",
@@ -999,6 +1032,7 @@
         "inspection",
         "adapters",
         "composition",
+        "operator",
         "entrypoints",
         "testkit_foundation",
         "testkit_core",
@@ -1049,6 +1083,7 @@
         "inspection",
         "adapters",
         "composition",
+        "operator",
         "entrypoints",
         "testkit_foundation",
         "testkit_core",
@@ -1104,6 +1139,7 @@
         "inspection",
         "adapters",
         "composition",
+        "operator",
         "entrypoints",
         "testkit_foundation",
         "testkit_core",

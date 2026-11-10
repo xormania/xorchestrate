@@ -13,6 +13,7 @@ from . import __version__
 from .adapters.stdio import StdioTransport, read_line_frame
 from .composition import read_json
 from .model import OrchestrationError
+from .worktrees import worktree_identity
 
 PROTOCOL_VERSION = "2025-06-18"
 CONTROL_TOOLS = frozenset({"poll_session", "stop_session", "detach_session", "get_operation", "list_sessions", "events"})
@@ -25,15 +26,17 @@ def failure(error):
 class MCPServer:
     """Protocol state of one MCP session; the actor is fixed by its connection.
 
-    ``peer`` is the connection's ``PeerIdentity``. Its further asserted
-    attributes stay with the session so later call-context fields can be bound
-    without changing how sessions are created.
+    ``peer`` is the connection's ``PeerIdentity``. Its ``worktree`` attribute
+    (root, name, branch, configuration hash) is bound to every call of the
+    session, like the actor; other asserted attributes stay with the session.
     """
 
     def __init__(self, application, actor="owner", peer=None):
         self.application = application
         self.actor = actor
         self.peer = peer
+        attributes = getattr(peer, "attributes", None)
+        self.worktree = worktree_identity(attributes.get("worktree")) if isinstance(attributes, dict) else None
         self.initialized = False
 
     def handle(self, request):
@@ -89,7 +92,9 @@ class MCPServer:
             return self._error(identifier, -32603, "Internal error; inspect retained operation state before retrying effects.")
 
     def _call_tool(self, name, arguments):
-        return self.application.call(name, arguments, actor=self.actor)
+        if self.worktree is None:
+            return self.application.call(name, arguments, actor=self.actor)
+        return self.application.call(name, arguments, actor=self.actor, worktree=self.worktree)
 
     @staticmethod
     def _error(identifier, code, message):
@@ -292,15 +297,18 @@ class MCPDispatcher:
 
 
 def serve(application, stdin, stdout, actor="owner", max_frame_bytes=1_048_576,
-          request_workers=8, max_pending_requests=64, control_workers=2):
+          request_workers=8, max_pending_requests=64, control_workers=2, worktree=None):
     """Serve one MCP session over the given streams until end of input.
 
     Independent requests run concurrently with bounded admission; the CLI's
-    uncorrelated ``run`` interface remains deliberately ordered.
+    uncorrelated ``run`` interface remains deliberately ordered. ``worktree``
+    is the launching process's worktree identity, bound like the actor.
     """
     dispatcher = MCPDispatcher(application, request_workers, max_pending_requests, control_workers)
+    attributes = {"worktree": worktree} if worktree is not None else None
     try:
-        failures = dispatcher.serve_connection(StdioTransport(stdin, stdout, actor, max_frame_bytes).accept())
+        failures = dispatcher.serve_connection(
+            StdioTransport(stdin, stdout, actor, max_frame_bytes, attributes).accept())
     finally:
         dispatcher.close()
     if failures:

@@ -45,6 +45,7 @@ from .schema import validate
 from .session_lifecycle import SessionLifecycleMixin
 from .state import StateEngine
 from .telemetry import TelemetryViews, dispatch_pressure, record_observation
+from .worktrees import bound_worktree, current_worktree, worktree_identity
 
 
 class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
@@ -59,8 +60,12 @@ class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
         acceptance: AcceptancePolicy | None = None, session_fallbacks: dict[str, str] | None = None,
         provider_configurations: JSON | None = None, evaluator_configurations: JSON | None = None,
         state_engine: StateEngine | None = None, telemetry: TelemetrySink | None = None,
+        worktree: JSON | None = None,
     ):
         self.store = store
+        # The worktree of calls that do not bring their own (the process's own
+        # worktree for a CLI run; the server's starting worktree otherwise).
+        self.worktree = worktree_identity(worktree)
         self.state_engine = StateEngine(default_definitions()) if state_engine is None else state_engine
         self.acceptance = acceptance
         self.session_selection = session_selection
@@ -112,7 +117,21 @@ class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
         return [Capability(name, spec.description, deepcopy(spec.input_schema), deepcopy(spec.annotations)) for name, spec in ACTIONS.items()]
 
     def call(self, action: str, arguments: JSON, actor: str = "owner", *, native_context=None, replay_only=False,
-             telemetry_run_id=None) -> JSON:
+             telemetry_run_id=None, worktree=None) -> JSON:
+        """Run one action for ``actor``.
+
+        ``worktree`` is the identity of the git worktree the call came from
+        (root, name, branch, configuration hash), bound by the input adapter
+        like the actor. It reaches the guardrail context, records, events and
+        telemetry. A nested call keeps its caller's worktree; a call without
+        one uses the application's default.
+        """
+        origin = worktree_identity(worktree) or current_worktree() or self.worktree
+        with bound_worktree(origin):
+            return self._call_with_worktree(action, arguments, actor, native_context=native_context,
+                                            replay_only=replay_only, telemetry_run_id=telemetry_run_id)
+
+    def _call_with_worktree(self, action, arguments, actor, *, native_context, replay_only, telemetry_run_id):
         if telemetry_run_id is not None and (not isinstance(telemetry_run_id, str) or not telemetry_run_id):
             raise OrchestrationError("Telemetry run identity must be nonempty text.", "invalid_arguments")
         if self.telemetry is None or (isinstance(action, str) and action.startswith("telemetry_")):
@@ -133,6 +152,8 @@ class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
             pass
         if isinstance(arguments, dict):
             scope.update({key: arguments[key] for key in ("work_id", "session_id", "operation_id") if arguments.get(key)})
+        if (worktree := current_worktree()) is not None:
+            scope["worktree"] = worktree
         if isinstance(native_context, dict):
             scope.update({key: native_context[key] for key in ("session_id", "native_id", "incarnation", "native_call_id")
                           if native_context.get(key)})
@@ -312,6 +333,8 @@ class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
             "session_actor": arguments.get("actor_id", actor) if "driver" in arguments else (session.data.get("actor_id") if session else None),
             "operation": record_view(operation) if operation else None,
             "native_call": record_view(native_call) if native_call else None,
+            # Where the call came from; guardrails may use it for per-worktree rules.
+            "worktree": current_worktree(),
         }
         if operation and operation.data.get("capability"):
             context.update({"capability": deepcopy(operation.data["capability"]),
@@ -365,11 +388,16 @@ class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
         return record
 
     def _event(self, tx: Transaction, name: str, actor: str, **data: Any) -> None:
-        tx.emit({"type": name, "actor": actor, "at": self.clock(), **deepcopy(data)})
+        event = {"type": name, "actor": actor, "at": self.clock(), **deepcopy(data)}
+        if (worktree := current_worktree()) is not None:
+            event.setdefault("worktree", worktree)
+        tx.emit(event)
 
     def _create(self, tx: Transaction, kind: str, actor: str, data: JSON, key: str | None = None) -> Record:
         key = key or self.identifiers()
         payload = {**deepcopy(data), "created_by": actor, "created_at": self.clock()}
+        if (worktree := current_worktree()) is not None:
+            payload["created_worktree"] = worktree
         record = (self.state_engine.apply(tx, kind, key, "create", payload, context={"actor": actor, "at": payload["created_at"]})
             if kind in DURABLE_LIFECYCLES else tx.put(kind, key, payload))
         self._event(tx, f"{kind}.created", actor, record_id=record.key, work_id=data.get("work_id"))
