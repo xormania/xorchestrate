@@ -108,6 +108,12 @@
         "tests/hexagonal/test_producer_capture.py": "adapter"
       }
     },
+    "project-server": {
+      "guarantee": "One long-running server shares an application across client connections: the same MCP session over every client transport, per-connection actors, server-wide admission, owner-only peers, a single auto-started instance, sessions that outlive their client and a draining stop.",
+      "modules": {
+        "tests/hexagonal/test_project_server.py": "composition"
+      }
+    },
     "verification": {
       "guarantee": "Independent checker observations, verdicts and fault attribution establish the selected candidate behavior without using product verdicts as the oracle.",
       "modules": {

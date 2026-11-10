@@ -106,6 +106,7 @@ class SessionLifecycleMixin:
                 **trusted_context, "session_id": operation.data["session_id"]}}
             return invoke(deepcopy(source["session"]["backend"]), specification) if source else invoke(specification)
         result = self._effect(action, args, actor, context, perform)
+        # Also covers an idempotent replay of a start this runtime did not reserve.
         self._owned_session_ids.add(result["session"]["id"])
         return result
 
@@ -143,9 +144,25 @@ class SessionLifecycleMixin:
     def _detach_session(self, args, actor, context):
         return self._session_effect("detach_session", args, actor, context)
 
+    def live_sessions(self) -> list[str]:
+        """Sessions this runtime's drivers own and that are not yet closed or failed.
+
+        Ownership starts when this runtime reserves a session start, so a start
+        whose receipt is unapplied or awaiting reconciliation is included.
+
+        Closing the runtime records these as disconnected; a long-running input
+        adapter uses this to decide whether stopping would end live work.
+        """
+        # Workers add to the set concurrently; copy it in one step (set.copy is
+        # atomic for the builtin set) instead of iterating the live set.
+        owned = self._owned_session_ids.copy()
+        with self.store.transaction() as tx:
+            return sorted(key for key in owned
+                          if (record := tx.get("session", key)) and record.data["status"] not in _CLOSED | {"failed"})
+
     def runtime_closed(self):
         with self.store.transaction() as tx:
-            for session_id in self._owned_session_ids:
+            for session_id in self._owned_session_ids.copy():
                 session = tx.get("session", session_id)
                 if session and session.data["status"] in {"active", "unknown"}:
                     self._transition(tx, session, "disconnect", {**session.data, "status": "disconnected", "connection_state": "closed"}, "runtime")
@@ -189,6 +206,11 @@ class SessionLifecycleMixin:
                 "start_operation_id": key, "unresolved_effects": data.get("unresolved_effects", []), **provenance,
             })
             data["session_id"] = session.key
+            # This runtime is about to dispatch the start, so its driver may
+            # hold the session from here on, even if the receipt is never
+            # applied (result_unapplied) or is applied later by reconciliation.
+            # A reservation that rolls back leaves no record and is ignored.
+            self._owned_session_ids.add(session.key)
             return
         session = self._require(tx, "session", args["session_id"])
         independent = action in _INDEPENDENT

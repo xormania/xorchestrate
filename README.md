@@ -79,10 +79,23 @@ For example, send `{"action":"list_work","arguments":{}}`. Keep `run` or the MCP
 connection open while using native sessions. A one-shot `call` closes the adapters
 it owns when it exits; a stored session record does not keep its process alive.
 
+Several agent harnesses can share one long-running server instead. A harness
+launches `connect` as its MCP command; it starts the server when none is running
+and relays MCP over stdio. Sessions belong to the server and survive a harness
+disconnect. `up`, `status` and `down` manage the server; see
+[project server](docs/project-server.md):
+
+```bash
+python3 -m xorchestrate --config /absolute/path/team.json connect --actor reviewer
+python3 -m xorchestrate --config /absolute/path/team.json status
+python3 -m xorchestrate --config /absolute/path/team.json down
+```
+
 The CLI actor defaults to `owner`; `--actor` selects the identity bound to that
-local invocation or MCP server process. The local process owner is trusted to
-choose configuration and identity. The stdio server is not a network
-authentication service.
+local invocation or MCP server process, and `connect --actor` the identity bound
+to one connection of the shared server. The local process owner is trusted to
+choose configuration and identity. Neither the stdio server nor the owner-only
+Unix socket is a network authentication service.
 
 ## Connect capabilities and agents
 

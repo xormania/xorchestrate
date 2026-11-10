@@ -1,15 +1,39 @@
-"""Command line input adapter; JSON is the common boundary with MCP."""
+"""Command line input adapter; JSON is the common boundary with MCP.
+
+People use these commands directly. Agent harnesses use ``connect``, which
+relays MCP between the harness's stdio and the long-running server.
+"""
 import argparse
 import json
+import os
+import signal
 import sys
+import threading
 from importlib import metadata
 from pathlib import Path
 
 from . import __version__
+from .adapters.local_socket import InstanceLock, check_socket_directory, check_socket_path
 from .adapters.storage_migrations import DATA_VERSION
+from .adapters.unix import UnixClientTransport
 from .composition import SUPPORTED_CONFIG_VERSIONS, build, describe, load_config, read_json
-from .mcp import failure, frames, serve
+from .mcp import MCPDispatcher, failure, frames, serve
 from .model import OrchestrationError
+from .server import (
+    SERVER_LOCK_WAIT,
+    ProjectServer,
+    ServerFiles,
+    default_socket_path,
+    discover,
+    ensure_server,
+    open_client,
+    relay,
+    server_command,
+    server_identity,
+    wait_stopped,
+)
+
+SERVER_COMMANDS = {"connect", "up", "down", "status"}
 
 
 def _write(value, stream):
@@ -48,7 +72,7 @@ class _Version(argparse.Action):
         parser.exit()
 
 
-def main(argv=None):
+def _parser():
     parser = argparse.ArgumentParser(description="Configurable agent orchestration")
     parser.add_argument("--version", action=_Version, help="Print release identity and supported versions as JSON")
     parser.add_argument("--config", help="Explicit trusted JSON configuration file")
@@ -64,12 +88,152 @@ def main(argv=None):
     inputs = call.add_mutually_exclusive_group()
     inputs.add_argument("--json", dest="json_input")
     inputs.add_argument("--input", help="JSON argument file")
-    commands.add_parser("serve", help="Serve MCP over stdin/stdout until EOF")
+    socket_help = "Server socket; by default the server chooses it and clients find it through its discovery record"
+    serve_command = commands.add_parser("serve", help="Serve MCP over stdin/stdout until EOF, or as a shared server")
+    serve_command.add_argument("--transport", choices=("stdio", "unix"), default="stdio",
+                               help="stdio: one client on this process's streams; unix: the shared server")
+    serve_command.add_argument("--socket", help=socket_help)
+    serve_command.add_argument("--max-connections", type=int, default=64, help="Concurrent clients of a unix server")
     commands.add_parser("run", help="Process JSON lines {action, arguments} until EOF; retain live sessions")
+    connect = commands.add_parser("connect", help="Agent harness MCP entry: relay stdio to the server, starting it if needed")
+    connect.add_argument("--socket", help=socket_help)
+    connect.add_argument("--actor", dest="connection_actor", help="Actor for this connection (default: --actor)")
+    connect.add_argument("--start-timeout", type=float, default=30.0, help="Seconds to wait for a server to accept")
+    up = commands.add_parser("up", help="Start the server if it is not running and report its status")
+    up.add_argument("--socket", help=socket_help)
+    up.add_argument("--start-timeout", type=float, default=30.0, help="Seconds to wait for a server to accept")
+    down = commands.add_parser("down", help="Drain in-flight requests and stop the server")
+    down.add_argument("--socket", help=socket_help)
+    down.add_argument("--detach", action="store_true", help="Stop even while sessions are live")
+    down.add_argument("--timeout", type=float, default=60.0, help="Seconds to wait for the drain and exit")
+    status = commands.add_parser("status", help="Report whether the server is running and what it holds")
+    status.add_argument("--socket", help=socket_help)
+    return parser
+
+
+def _files(args):
+    return ServerFiles.locate(server_identity(args.config))
+
+
+def _explicit_socket(args):
+    if not args.socket:
+        return None
+    path = check_socket_path(args.socket)
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    # Clients and the server alike refuse a directory another user could tamper with.
+    return check_socket_directory(path)
+
+
+def _forwarded(args):
+    """Global options the detached server inherits from the client that starts it."""
+    forwarded = []
+    if args.config:
+        forwarded += ["--config", str(Path(args.config).expanduser().resolve())]
+    for option in ("max_frame_bytes", "request_workers", "control_workers", "max_pending_requests"):
+        forwarded += ["--" + option.replace("_", "-"), str(getattr(args, option))]
+    return forwarded
+
+
+def _serve_unix(args):
+    files = _files(args).ensure()
+    lock = InstanceLock(files.lock)
+    # Retry briefly: a client's lock probe may hold the lock for an instant.
+    if not lock.acquire(wait=SERVER_LOCK_WAIT):
+        record = files.read_record()
+        raise OrchestrationError("A server is already running for this configuration.", "server_running",
+                                 {"socket": record and record.get("socket")})
+    try:
+        path = _explicit_socket(args) or default_socket_path(files)
+        config, base_dir = load_config(args.config)
+        with build(config, base_dir) as runtime:
+            dispatcher = MCPDispatcher(runtime.application, args.request_workers, args.max_pending_requests,
+                                       args.control_workers)
+            transport = None
+            try:
+                # The instance lock is held, so a socket left at the path with
+                # nothing listening on it is stale.
+                transport = UnixClientTransport(path, max_frame_bytes=args.max_frame_bytes, replace_stale=True)
+                configured = str(Path(args.config).resolve()) if args.config else None
+                server = ProjectServer(runtime.application, transport, dispatcher, max_connections=args.max_connections,
+                                       details={"socket": str(path), "config": configured})
+                if threading.current_thread() is threading.main_thread():
+                    signal.signal(signal.SIGTERM, lambda *_: server.terminate())
+                files.write_record(path, configured)
+                _write({"serving": {"socket": str(path), "pid": os.getpid()}}, sys.stdout)
+                server.serve_forever()
+            finally:
+                files.remove_record()
+                if transport is not None:
+                    transport.close()
+                dispatcher.close()
+    finally:
+        lock.release()
+
+
+def _server_command(args):
+    files = _files(args)
+    explicit = _explicit_socket(args)
+    if args.command in {"connect", "up"}:
+        purpose = "mcp" if args.command == "connect" else "control"
+        actor = (args.connection_actor or args.actor) if args.command == "connect" else args.actor
+        client, started = ensure_server(files, server_command(_forwarded(args), explicit), explicit_socket=explicit,
+                                        actor=actor, purpose=purpose, timeout=args.start_timeout, cwd=os.getcwd())
+        try:
+            if args.command == "up":
+                reply = client.request({"command": "status"}, args.start_timeout)
+                _write({**reply, "started": started}, sys.stdout)
+                return 0
+            finished = relay(client, sys.stdin.fileno(), sys.stdout.buffer)
+        finally:
+            client.close()
+        if not finished:
+            _write({"error": {"code": "server_closed", "message": "The server closed the connection."}}, sys.stderr)
+            return 1
+        return 0
+    target = discover(files, explicit)
+    try:
+        if target is None:
+            raise FileNotFoundError("no server record")
+        client = open_client(target, actor=args.actor, purpose="control")
+    except OSError:
+        _write({"running": False, "socket": None if target is None else str(target)}, sys.stdout)
+        return 3 if args.command == "status" else 0
+    try:
+        if args.command == "status":
+            reply = client.request({"command": "status"}, 30)
+        else:
+            reply = client.request({"command": "down", "detach": args.detach}, args.timeout)
+    except TimeoutError:
+        _write({"error": {"code": "drain_timeout", "message":
+            "The server is still draining in-flight requests; it stops when they finish."}}, sys.stderr)
+        return 2
+    finally:
+        client.close()
+    if "error" in reply:
+        _write({"error": reply["error"]}, sys.stderr)
+        return 2
+    if args.command == "down":
+        stopped = wait_stopped(files, args.timeout)
+        reply = {**reply, "stopped": stopped}
+    _write(reply, sys.stdout)
+    return 0 if reply.get("stopped", True) else 2
+
+
+def main(argv=None):
+    parser = _parser()
     args = parser.parse_args(argv)
     if min(args.max_frame_bytes, args.request_workers, args.control_workers, args.max_pending_requests) < 1 or not args.actor:
         parser.error("Frame/concurrency bounds must be positive and actor must be nonempty.")
+    if args.command == "serve" and args.max_connections < 1:
+        parser.error("--max-connections must be positive.")
+    if args.command == "connect" and args.connection_actor == "":
+        parser.error("--actor must be nonempty.")
     try:
+        if args.command in SERVER_COMMANDS:
+            return _server_command(args)
+        if args.command == "serve" and args.transport == "unix":
+            _serve_unix(args)
+            return 0
         config, base_dir = load_config(args.config)
         with build(config, base_dir) as runtime:
             app = runtime.application
