@@ -86,6 +86,12 @@ entries are written.
   else `<tmp>/xorchestrate-<uid>`. Clients find it through the discovery record,
   not their own environment. Socket paths over the limit are refused, and
   server directories and files must be private and owned by the user.
+  An explicit `--socket` is refused with
+  `socket_path_unsafe` unless its directory is owned by the user and not
+  group/other-writable, and every enclosing directory is owned by the user or
+  root and not group/other-writable unless sticky. A socket directly in
+  `/tmp` is therefore refused; use a private subdirectory. Clients also refuse
+  a listener run by another user (`peer_untrusted`) before sending anything.
 - **Lifecycle definitions:** None.
 - **Adapter options:** the local telemetry adapter's `profile` option is
   removed; a configuration that still sets it leaves telemetry unavailable with

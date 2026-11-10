@@ -31,6 +31,7 @@ from xorchestrate.adapters.local_socket import (
     InstanceLock,
     OwnerSocketListener,
     PeerCredentials,
+    check_socket_directory,
     lock_is_held,
     same_user,
 )
@@ -749,6 +750,54 @@ def test_server_locations_are_private_absolute_and_bounded(directory):
     foreign_mode.chmod(0o644)
     with pytest.raises(OrchestrationError):
         InstanceLock(foreign_mode).acquire()
+
+
+def test_unsafe_explicit_socket_directories_are_refused_by_every_command(cli, directory):
+    shared = directory / "shared"
+    shared.mkdir()
+    shared.chmod(0o777)
+    sticky = directory / "sticky"
+    sticky.mkdir()
+    sticky.chmod(0o1777)  # like /tmp: another user could still pre-create the name
+    for unsafe in (shared, sticky):
+        for command in (["serve", "--transport", "unix"], ["connect"], ["up"], ["status"], ["down"]):
+            result = cli.run(*command, "--socket", str(unsafe / "s.sock"), timeout=30)
+            assert result.returncode == 2, (command, result)
+            error = json.loads(result.stderr)["error"]
+            assert error["code"] == "socket_path_unsafe", (command, error)
+            assert error["details"] == {"directory": str(unsafe), "reason": "it is writable by group or others"}
+        assert not (unsafe / "s.sock").exists()
+    assert cli.server_log() == "", "no server was started for an unsafe socket"
+
+
+def test_socket_directory_owned_by_another_user_is_refused(directory):
+    with pytest.raises(OrchestrationError) as foreign:
+        check_socket_directory(directory / "s.sock", uid=os.getuid() + 1)
+    assert foreign.value.code == "socket_path_unsafe"
+    assert foreign.value.details == {"directory": str(directory), "reason": "it is not owned by this user"}
+    parent = directory / "open"
+    parent.mkdir()
+    parent.chmod(0o777)
+    (parent / "mine").mkdir(mode=0o700)
+    with pytest.raises(OrchestrationError) as renameable:
+        check_socket_directory(parent / "mine" / "s.sock")
+    assert renameable.value.details["directory"] == str(parent), "an enclosing directory others can rename into"
+
+
+def test_private_explicit_and_default_socket_directories_are_accepted(cli, directory):
+    private = directory / "private"
+    private.mkdir(mode=0o700)
+    assert check_socket_directory(private / "s.sock") == private / "s.sock"
+    started = cli.json("up", "--socket", str(private / "s.sock"))
+    assert started["started"] is True and started["socket"] == str(private / "s.sock")
+    assert cli.json("status", "--socket", str(private / "s.sock"))["pid"] == started["pid"]
+    assert cli.json("down", "--socket", str(private / "s.sock"))["stopped"] is True
+    files = ServerFiles.locate(server_identity(directory / "team.json"), {"XORCHESTRATE_HOME": str(directory / "home")})
+    files.ensure()
+    for environ in ({}, {"XORCHESTRATE_RUNTIME_DIR": str(directory / "run")},
+                    {"XORCHESTRATE_HOME": str(directory / ("h" * 120))}):
+        located = files if "XORCHESTRATE_HOME" not in environ else ServerFiles.locate(files.identity, environ)
+        check_socket_directory(default_socket_path(located, environ))
 
 
 def test_lock_probes_never_make_a_starting_server_give_up(directory):

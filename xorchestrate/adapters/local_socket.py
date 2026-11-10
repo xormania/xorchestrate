@@ -59,6 +59,46 @@ def check_socket_path(path) -> Path:
 
 
 
+def _unsafe(directory, reason):
+    return OrchestrationError(f"Unsafe socket directory {directory}: {reason}.", "socket_path_unsafe",
+                              {"directory": str(directory), "reason": reason})
+
+
+def check_socket_directory(path, *, uid=None) -> Path:
+    """Refuse a socket path whose directory another user could tamper with.
+
+    The socket's directory must be a directory owned by this user that no
+    group or other user can write to (a sticky bit is not enough: another
+    user could still pre-create the socket name). Every ancestor, along the
+    path as given and after resolving symlinks, must be owned by this user or
+    root and must not be group/other-writable unless it is sticky, so the
+    directory cannot be renamed and replaced underneath. Returns ``path``.
+    """
+    uid = os.getuid() if uid is None else uid
+    path = Path(path)
+    directory = path.parent
+    try:
+        metadata = os.stat(directory)
+    except FileNotFoundError:
+        raise _unsafe(directory, "it does not exist") from None
+    if not stat.S_ISDIR(metadata.st_mode):
+        raise _unsafe(directory, "it is not a directory")
+    if metadata.st_uid != uid:
+        raise _unsafe(directory, "it is not owned by this user")
+    if metadata.st_mode & 0o022:
+        raise _unsafe(directory, "it is writable by group or others")
+    for ancestor in dict.fromkeys([*directory.parents, *directory.resolve().parents]):
+        try:
+            metadata = os.stat(ancestor)
+        except FileNotFoundError:
+            raise _unsafe(ancestor, "it does not exist") from None
+        if metadata.st_uid not in (uid, 0):
+            raise _unsafe(ancestor, "an enclosing directory is owned by another user")
+        if metadata.st_mode & 0o022 and not metadata.st_mode & stat.S_ISVTX:
+            raise _unsafe(ancestor, "an enclosing directory is writable by others without the sticky bit")
+    return path
+
+
 # The umask is process-wide; serialize the binds that narrow it.
 _UMASK_LOCK = threading.Lock()
 

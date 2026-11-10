@@ -129,6 +129,31 @@ A client passing `--socket` connects only there. If the configuration's
 server runs at another socket, that client does not start a second one; it
 fails after `--start-timeout` and names the running socket.
 
+### Explicit socket paths
+
+Every command that takes `--socket` (`serve --transport unix`, `connect`,
+`up`, `down`, `status`) refuses an unsafe path with `socket_path_unsafe`,
+naming the directory and the reason, before it binds, connects or starts
+anything. The rule:
+
+- The socket's directory (created with mode `0700` if missing) must be a
+  directory owned by this user that neither group nor others can write to.
+  A sticky bit does not make it safe: in a directory like `/tmp`, another user
+  can still create the socket name first and receive the hello and relayed
+  traffic, or block the server.
+- Every enclosing directory, both along the path as given and after resolving
+  symlinks, must be owned by this user or root and must not be writable by
+  group or others unless it is sticky. Otherwise another user could rename the
+  socket's directory away and put their own in its place; a sticky enclosing
+  directory such as `/tmp` prevents that for directories this user owns.
+
+So `/tmp/xorchestrate-mine/server.sock` is accepted when `xorchestrate-mine`
+is this user's `0700` directory, and `/tmp/server.sock` is refused. The
+default locations (`<home>/servers`, `$XORCHESTRATE_RUNTIME_DIR`,
+`$XDG_RUNTIME_DIR/xorchestrate`, `<tmp>/xorchestrate-<uid>`) are private
+directories and pass the same rule. Clients additionally check the listener's
+uid before sending anything (see [access](#access-and-connections)).
+
 ## Starting
 
 `connect` and `up` first try the recorded socket. If no server answers, they
@@ -205,7 +230,7 @@ port.
 - Without `SO_PEERCRED`, peer uids are not observed by the server or by
   clients, so an explicit `--socket` in a directory another user can write to
   is not protected there.
-- An explicit `--socket` is not checked for a private parent directory; the
-  client-side uid check is what refuses another user's listener.
+- The explicit-socket rule trusts root-owned enclosing directories; a home
+  directory below a directory owned by another non-root user is refused.
 - A server that never drains (a held call that never returns) keeps running
   until it is killed.

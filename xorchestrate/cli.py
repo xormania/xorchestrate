@@ -13,7 +13,7 @@ from importlib import metadata
 from pathlib import Path
 
 from . import __version__
-from .adapters.local_socket import InstanceLock, check_socket_path
+from .adapters.local_socket import InstanceLock, check_socket_directory, check_socket_path
 from .adapters.storage_migrations import DATA_VERSION
 from .adapters.unix import UnixClientTransport
 from .composition import SUPPORTED_CONFIG_VERSIONS, build, describe, load_config, read_json
@@ -120,7 +120,8 @@ def _explicit_socket(args):
         return None
     path = check_socket_path(args.socket)
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    return path
+    # Clients and the server alike refuse a directory another user could tamper with.
+    return check_socket_directory(path)
 
 
 def _forwarded(args):
