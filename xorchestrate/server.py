@@ -20,14 +20,15 @@ import hashlib
 import json
 import os
 import socket
-import subprocess
 import sys
 import tempfile
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Protocol
 
 from .adapters.local_socket import (
     MAX_SOCKET_PATH_BYTES,
@@ -325,6 +326,49 @@ class ServerFiles:
             target.write(json.dumps(record).encode())
         os.replace(temporary, self.record)
 
+    @property
+    def terminal_record(self):
+        """Where the server's terminal host is placed and the terminal's receipt, so later commands can adopt it.
+
+        Like the discovery record, it is written once by the launching client;
+        later clients read it instead of recomputing the placement from their
+        own environment.
+        """
+        return self.directory / f"{self.key}.terminal.json"
+
+    def terminal_placement(self, environ=None):
+        """Where this project's terminal host keeps its state and endpoint (same location rule as the server socket)."""
+        return {"name": self.key, "location": str(self.directory / f"{self.key}.terminals"),
+                "socket": str(default_socket_path(self, environ, name=f"{self.key}.terminals.sock"))}
+
+    def read_terminal_record(self):
+        try:
+            fd = open_private_file(self.terminal_record, os.O_RDONLY)
+        except FileNotFoundError:
+            return None
+        with os.fdopen(fd, "rb") as source:
+            data = source.read(65536)
+        try:
+            record = json.loads(data)
+        except ValueError:
+            record = None
+        valid = isinstance(record, dict) and isinstance(record.get("placement"), dict) and isinstance(
+            record.get("receipt"), dict)
+        if not valid:
+            self.remove_terminal_record()  # A corrupt record is treated as missing.
+            return None
+        return record
+
+    def write_terminal_record(self, placement, receipt):
+        temporary = self.directory / f".{self.key}.{os.getpid()}.terminal.json"
+        fd = open_private_file(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC)
+        with os.fdopen(fd, "wb") as target:
+            target.write(json.dumps({"placement": placement, "receipt": receipt}).encode())
+        os.replace(temporary, self.terminal_record)
+
+    def remove_terminal_record(self):
+        self.terminal_record.unlink(missing_ok=True)
+
     def remove_record(self):
         record = self.read_record()
         if record is not None and record.get("pid") == os.getpid():
@@ -335,7 +379,7 @@ def _fits(path):
     return len(os.fsencode(str(path))) <= MAX_SOCKET_PATH_BYTES
 
 
-def default_socket_path(files, environ=None):
+def default_socket_path(files, environ=None, *, name=None):
     """Where a server listens when no ``--socket`` is given.
 
     ``$XORCHESTRATE_RUNTIME_DIR`` (absolute) if set; else the server directory
@@ -344,7 +388,7 @@ def default_socket_path(files, environ=None):
     the discovery record, so the choice cannot split one project.
     """
     environ = os.environ if environ is None else environ
-    name = f"{files.key}.sock"
+    name = name or f"{files.key}.sock"
     configured = _absolute_setting(environ, RUNTIME_DIR_VARIABLE)
     if configured is not None:
         if not _fits(configured / name):
@@ -389,13 +433,27 @@ def _try_connect(files, explicit, **options):
         raise
 
 
-def ensure_server(files, start_command, *, explicit_socket=None, actor="owner", purpose="mcp", attributes=None,
-                  timeout=30.0, cwd=None, interval=0.05):
-    """Connect to the configuration's server, starting exactly one detached server if none runs.
+class ServerLaunch(Protocol):
+    """One launched server process, as its launcher observes it."""
+
+    def exited(self) -> dict | None:
+        """``None`` while the server may still be starting or running; once it is known to have
+        exited, diagnostics ``{"exit_code": int | None, "exit_signal": int | None}``."""
+        ...
+
+
+ServerLauncher = Callable[[list, Path, "str | None"], ServerLaunch]
+"""``launch(command, log, cwd)`` starts the server command with its output appended to ``log``."""
+
+
+def ensure_server(files, start_command, *, launch, explicit_socket=None, actor="owner", purpose="mcp",
+                  attributes=None, timeout=30.0, cwd=None, interval=0.05):
+    """Connect to the configuration's server, starting exactly one server through ``launch`` if none runs.
 
     Concurrent callers serialize on the start lock; only a caller that finds
     no server holding the instance lock launches one. A full server is a
-    refusal, never a reason to start another. Returns ``(client, started)``.
+    refusal, never a reason to start another. ``launch`` (a ``ServerLauncher``)
+    is called at most once. Returns ``(client, started)``.
     """
     options = {"actor": actor, "purpose": purpose, "attributes": attributes}
     deadline = time.monotonic() + timeout
@@ -414,11 +472,12 @@ def ensure_server(files, start_command, *, explicit_socket=None, actor="owner", 
                 return _try_connect(files, explicit_socket, **options), process is not None
             except OSError:
                 pass
-            if process is not None and process.poll() is not None:
+            exited = process.exited() if process is not None else None
+            if exited is not None:
                 raise OrchestrationError("The server exited during startup; see its log.", "server_unavailable",
-                                         {"exit_code": process.returncode, "log": str(files.log)})
+                                         {**exited, "log": str(files.log)})
             if process is None and not lock_is_held(files.lock):
-                process = _spawn(start_command, files.log, cwd)
+                process = launch(list(start_command), files.log, cwd)
             if time.monotonic() >= deadline:
                 record = files.read_record()
                 raise OrchestrationError("Timed out waiting for the server to accept connections.", "server_unavailable",
@@ -426,16 +485,6 @@ def ensure_server(files, start_command, *, explicit_socket=None, actor="owner", 
             time.sleep(interval)
     finally:
         start_lock.release()
-
-
-def _spawn(command, log_path, cwd):
-    descriptor = open_private_file(log_path, os.O_WRONLY | os.O_CREAT | os.O_APPEND)
-    try:
-        # A new session detaches the server from the harness's terminal and signals.
-        return subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=descriptor, stderr=descriptor,
-                                cwd=cwd, start_new_session=True, close_fds=True)
-    finally:
-        os.close(descriptor)
 
 
 def wait_stopped(files, timeout, interval=0.05):

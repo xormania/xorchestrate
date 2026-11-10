@@ -369,3 +369,169 @@ class RepositoryHosting(Protocol):
     """Questions about where a repository is hosted. Never fails: unanswerable questions are ``unknown``."""
 
     def visibility(self, remote_url: str) -> HostingVisibility: ...
+
+
+
+# -- terminal host ---------------------------------------------------------------
+# Where Xorchestrate keeps long-running local work (the project server, hosted
+# sessions) so that it can be listed, driven, attached to and recovered. The
+# adapter is selected by name from the user's home; nothing here names a
+# particular multiplexer or terminal mechanism.
+
+
+@dataclass(frozen=True)
+class TerminalCommand:
+    """What one hosted terminal runs. Comes only from trusted configuration.
+
+    ``environment`` is the exact environment the command runs with: the caller
+    builds it. The adapter adds only what its mechanism requires (for example a
+    terminal type) and removes its own nesting markers. ``rows``/``columns``
+    size the terminal; ``None`` takes the adapter's configured default.
+    """
+
+    argv: tuple[str, ...]
+    cwd: str
+    environment: tuple[tuple[str, str], ...] = ()
+    rows: int | None = None
+    columns: int | None = None
+
+
+@dataclass(frozen=True)
+class HostedTerminal:
+    """One terminal a host owns, as observed now.
+
+    ``running`` is false only when the adapter knows the command exited; then
+    ``exit_status`` (an exit code) or ``exit_signal`` (the terminating signal
+    number) says how, and both are ``None`` when the adapter cannot know.
+    ``receipt`` is opaque detached JSON the adapter produces; saving it lets a
+    restarted controller ``adopt`` the terminal. It carries the adapter's own
+    identity evidence, never a caller-supplied process identifier, and the port
+    never exposes process identifiers.
+    """
+
+    name: str
+    running: bool
+    exit_status: int | None
+    exit_signal: int | None
+    receipt: JSON
+
+
+@dataclass(frozen=True)
+class TerminalClosure:
+    """The final observation of a closed terminal and whether its cleanup was verified.
+
+    ``cleanup_verified`` is true only when the adapter confirmed that the terminal's
+    work is gone; otherwise something may still be running and the caller
+    should report it.
+    """
+
+    terminal: HostedTerminal
+    cleanup_verified: bool
+
+
+@dataclass(frozen=True)
+class AttachInstruction:
+    """How an operator joins a terminal interactively: a command and a human sentence."""
+
+    argv: tuple[str, ...]
+    text: str
+
+
+class TerminalHost(Protocol):
+    """A named group of terminals (one host per project) that this user owns.
+
+    Ownership: a controller controls only the terminals it opened or adopted.
+    ``terminals()`` lists exactly those; anything else found at the host's
+    location is not controllable until ``adopt(receipt)`` has verified it.
+    Every control call (input, interrupt, output, attach, close) checks the
+    terminal's identity first and refuses a terminal that is no longer the one
+    it opened or adopted.
+
+    Terminal names are letters, digits, ``.``, ``_`` and ``-`` (else
+    ``invalid_arguments``). Other failures are ``OrchestrationError`` coded
+    ``terminal_host_unavailable``, ``terminal_operation_unsupported`` (the
+    host lacks the capability, see ``interactive``),
+    ``terminal_exists``, ``terminal_unknown``, ``terminal_not_recoverable`` or
+    ``terminal_identity_mismatch``.
+    """
+
+    name: str
+    survives_controller: bool
+    """Whether terminals outlive the process that opened them (and so can be adopted)."""
+    interactive: bool
+    """Whether terminals accept ``send_input`` and have an ``attach_instruction``."""
+
+    def readiness(self) -> str | None:
+        """Why this host cannot run terminals on this machine now, or ``None``. Never raises."""
+        ...
+
+    def open_terminal(self, name: str, command: TerminalCommand, log: str | None = None) -> HostedTerminal:
+        """Start ``command`` in a new terminal named ``name``.
+
+        A name is refused (``terminal_exists``) only while a terminal of that
+        name is running at this host. An exited terminal of that name, held by
+        this controller or not, is replaced: its output is already in its log or
+        has been read. A running terminal this controller does not hold is
+        still refused; for an interactive host the error details carry an
+        ``attach`` command so the operator can look at it.
+
+        ``log`` is an absolute path in a private directory of this user:
+        everything the terminal prints is also appended there (created 0600),
+        so the output outlives the terminal and its mechanism.
+        """
+        ...
+
+    def terminals(self) -> list[HostedTerminal]:
+        """The terminals this controller opened or adopted, sorted by name, exited ones included until closed."""
+        ...
+
+    def send_input(self, name: str, text: str) -> None:
+        """Type ``text`` literally into a running terminal (include ``\\n`` to submit); needs ``interactive``."""
+        ...
+
+    def interrupt(self, name: str) -> None:
+        """Ask the terminal's work to stop (an interrupt, as the operator's keyboard would); the terminal stays open."""
+        ...
+
+    def recent_output(self, name: str, lines: int | None = None) -> str:
+        """The last ``lines`` lines of output (adapter-configured cap when ``None``).
+
+        Works for an exited terminal until it is closed.
+        """
+        ...
+
+    def attach_instruction(self, name: str | None = None) -> AttachInstruction:
+        """How the operator attaches to ``name``, or to the whole host for ``None``.
+
+        Validates first: the host's private location is still owned by this
+        user and the terminal is still the one opened or adopted; refuses
+        otherwise. ``terminal_operation_unsupported`` when not ``interactive``.
+        """
+        ...
+
+    def close_terminal(self, name: str, grace: float | None = None) -> TerminalClosure:
+        """Stop and forget one terminal, allowing ``grace`` seconds (adapter default when ``None``) before forcing.
+
+        Idempotent for a known name until forgotten.
+        """
+        ...
+
+    def adopt(self, receipt: JSON) -> HostedTerminal:
+        """Take back a terminal this host opened before the controller restarted.
+
+        The adapter verifies the receipt against its own private record of what
+        it launched and against what is actually running: a receipt of another
+        host, of something the host did not launch, or of a reused identity is
+        ``terminal_identity_mismatch``; a vanished one ``terminal_not_recoverable``.
+        This protects against stale, corrupt or foreign records; other
+        processes of the same user are trusted, as elsewhere in the product.
+        """
+        ...
+
+    def shutdown(self) -> None:
+        """Stop every terminal of this host and remove its private state."""
+        ...
+
+    def close(self) -> None:
+        """Release this controller's resources. Terminals survive iff ``survives_controller``."""
+        ...

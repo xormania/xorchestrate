@@ -123,6 +123,12 @@
         "tests/hexagonal/test_project_server.py": "composition"
       }
     },
+    "terminal-host": {
+      "guarantee": "Every terminal host adapter and the memory fake keep one behaviour: named terminals with exact environments, known exit status or signal, bounded output and logs that outlive the terminal, identity-fenced control, adoption only by verified receipt and survival of a killed controller where the host claims it.",
+      "modules": {
+        "tests/hexagonal/test_terminal_host.py": "contract"
+      }
+    },
     "projects": {
       "guarantee": "Nothing runs without a set-up project. A project is identified on a machine by its git common directory, so every worktree shares one instance and one server and a separate clone is refused; only an approved tracked configuration renders or runs; the user's overlay wins over the project, guardrails included; worktree identity reaches records, events, telemetry and guardrails; and the release a project pins runs its commands.",
       "modules": {

@@ -9,7 +9,12 @@ home, never in a project's tracked ``.xorchestrate/``:
   ``repository_hosting`` (default ``github``) and the machine-default
   ``companion``;
 - a project's ``instance.json``: an optional ``companion`` for that project,
-  which takes precedence over the machine default.
+  which takes precedence over the machine default;
+- ``settings.json``: ``terminal_host`` (default ``composition.DEFAULT_TERMINAL_HOST``),
+  where local work such as the project server runs. It may name a
+  ``fallback`` selection used when the selected host is not ready on this
+  machine; the fallback and its reason are reported, and without one an
+  unready host is a refusal.
 
 A ``companion`` setting that is a plain path (written by earlier versions) is
 read as the ``git-directory`` adapter at that path and rewritten in the new
@@ -17,9 +22,10 @@ shape.
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
-from ..composition import factory_for
+from ..composition import DEFAULT_TERMINAL_HOST, factory_for
 from ..model import OrchestrationError
 from .home import Home
 
@@ -46,6 +52,33 @@ def construct(kind, specification, where, **dependencies):
         raise
     except Exception as exc:
         raise OrchestrationError(f"Cannot construct {kind} adapter {adapter}.", "configuration_error") from exc
+
+
+@dataclass(frozen=True)
+class ActiveTerminalHost:
+    """The terminal host in use, which selection it came from and why."""
+
+    host: object
+    adapter: str
+    selected: str
+    fallback_reason: str | None = None
+
+    def report(self):
+        return {"adapter": self.adapter, "selected": self.selected, "fallback_reason": self.fallback_reason,
+                "survives_controller": self.host.survives_controller, "interactive": self.host.interactive}
+
+
+def terminal_host_selection(specification, where="settings.json"):
+    """Check a ``terminal_host`` setting: ``{"adapter", "options"?, "fallback"?}``; return ``(primary, fallback)``."""
+    if not isinstance(specification, dict) or "fallback" in specification and specification["fallback"] is None:
+        raise OrchestrationError(f"{where} terminal_host must be an adapter selection.", "invalid_configuration",
+                                 {"kind": "terminal_host"})
+    primary = {key: value for key, value in specification.items() if key != "fallback"}
+    selection("terminal_host", primary, where)
+    fallback = specification.get("fallback")
+    if fallback is not None:
+        selection("terminal_host", fallback, f"{where} terminal_host fallback")
+    return primary, fallback
 
 
 def companion_path_selection(path, adapter=DEFAULT_COMPANION_ADAPTER):
@@ -76,6 +109,40 @@ class Services:
             self._cache["repository_hosting"] = construct("repository_hosting", self._setting("repository_hosting"),
                                                           "settings.json")
         return self._cache["repository_hosting"]
+
+    def terminal_host_setting(self):
+        return terminal_host_selection(self.home.settings().get("terminal_host", DEFAULT_TERMINAL_HOST))
+
+    def terminal_host(self, placement):
+        """The selected terminal host at ``placement`` (``name``, ``location``, ``socket``), or its ready fallback.
+
+        Refuses with ``terminal_host_unavailable`` when the selected host is
+        not ready and no ready fallback is configured.
+        """
+        primary, fallback = self.terminal_host_setting()
+
+        def build(specification, where):
+            adapter, options = selection("terminal_host", specification, where)
+            return adapter, construct("terminal_host", {"adapter": adapter, "options": {**options, **placement}}, where)
+
+        adapter, host = build(primary, "settings.json")
+        reason = host.readiness()
+        if reason is None:
+            return ActiveTerminalHost(host, adapter, adapter)
+        host.close()
+        if fallback is None:
+            raise OrchestrationError(f"The {adapter} terminal host is not ready: {reason}. Install it or configure "
+                                     "a terminal_host fallback in settings.json.", "terminal_host_unavailable",
+                                     {"adapter": adapter, "reason": reason})
+        fallback_adapter, fallback_host = build(fallback, "settings.json terminal_host fallback")
+        fallback_problem = fallback_host.readiness()
+        if fallback_problem is not None:
+            fallback_host.close()
+            raise OrchestrationError(f"No terminal host is ready: {adapter}: {reason}; {fallback_adapter}: "
+                                     f"{fallback_problem}.", "terminal_host_unavailable",
+                                     {"adapter": adapter, "reason": reason, "fallback": fallback_adapter,
+                                      "fallback_reason": fallback_problem})
+        return ActiveTerminalHost(fallback_host, fallback_adapter, adapter, reason)
 
     def companion_for(self, specification, where="companion"):
         return construct("companion", specification, where, version_control=self.version_control)

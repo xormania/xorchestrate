@@ -283,6 +283,7 @@ too). Selections live only in the user's home, never in a project's tracked
 | `Companion` | `settings.json` `companion` (machine default), or a project's `instance.json` `companion`, which takes precedence | `git-directory`, options `{"path": "/abs"}` |
 | `VersionControl` | `settings.json` `version_control` | `git` (the git command line), options `executable`, `timeout` |
 | `RepositoryHosting` | `settings.json` `repository_hosting` | `github` (the REST API), options `api_url`, `host`, `token_variables`, `token_command`, `timeout` |
+| `TerminalHost` | `settings.json` `terminal_host`, with an optional `fallback` selection | `tmux` (default, falling back to `detached-process`) and `detached-process`; see [terminal host](terminal-host.md) |
 
 `companion init|use PATH` writes the machine default; with `--project` it
 writes that project's `instance.json`, so one project can keep its records in

@@ -123,11 +123,16 @@ no telemetry unless `telemetry_defaults` is supplied.
 The operator layer has its own driven ports in `xorchestrate/ports.py`:
 `Companion` (project-scoped, extensible records in the user's companion),
 `VersionControl` (worktree, history and remote queries) and
-`RepositoryHosting` (whether a hosted repository is private). Their adapters
-(`git-directory`, `git`, `github`) are registered in composition's `BUILTINS`
+`RepositoryHosting` (whether a hosted repository is private) and
+`TerminalHost` (where long-lived local work runs, see
+[terminal host](terminal-host.md)). Their adapters (`git-directory`, `git`,
+`github`, `tmux`, `detached-process`) are registered in composition's `BUILTINS`
 like every other adapter, but as operator kinds: they are selected from the
 user's home (`settings.json`, a project's `instance.json`), never by a project
 configuration section. See [projects](projects.md#companions-version-control-and-hosting).
+The multiplexer adapter has its own architectural role, `terminal_multiplexer`.
+Only composition may import it, and its name is a forbidden literal in the
+roles that never reach composition, so nothing else can hardwire it.
 
 The top-level sections are:
 

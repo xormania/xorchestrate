@@ -18,10 +18,14 @@ import time
 from contextlib import contextmanager
 from pathlib import Path
 
+from tests.hexagonal.support.host_processes import track
 from tests.hexagonal.support.projects import ProjectFixture
 from xorchestrate.adapters.local_socket import same_user
 from xorchestrate.adapters.unix import UnixClient, UnixClientTransport
+from xorchestrate.instance.home import Home
+from xorchestrate.instance.services import Services
 from xorchestrate.mcp import MCPDispatcher, serve
+from xorchestrate.model import OrchestrationError
 from xorchestrate.server import ProjectServer
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -36,7 +40,7 @@ def encode(frame):
 @contextmanager
 def short_directory():
     """A private directory whose paths fit ``sun_path`` (pytest's tmp_path may not)."""
-    directory = Path(tempfile.mkdtemp(prefix="xo-"))
+    directory = Path(track(tempfile.mkdtemp(prefix="xo-")))
     try:
         yield directory
     finally:
@@ -228,11 +232,14 @@ class CliEnvironment:
     directory as a harness's ``connect`` does.
     """
 
-    def __init__(self, directory, options=None):
+    def __init__(self, directory, options=None, terminal_host=None):
         self.directory = Path(directory)
         self.options = options if options is not None else {"version": 1, "store": {"adapter": "sqlite"}}
         self.project = ProjectFixture(self.directory, self.options, name="server")
         self.home = self.project.home
+        self.terminal_host = terminal_host
+        if terminal_host is not None:
+            Home(Path(self.home)).update_settings(terminal_host=terminal_host)
         self.repo = self.project.repo
         self.environment = self.project.environment
         self.processes = []
@@ -283,3 +290,17 @@ class CliEnvironment:
             _communicate(process)
         if self.run("status").returncode == 0:
             self.run("down", "--detach")
+        self.shutdown_terminal_hosts()
+
+    def shutdown_terminal_hosts(self):
+        """``down`` closes the server's terminal but a surviving host stays up; stop every host this home placed."""
+        home = Home(Path(self.home))
+        servers = home.root / "servers"
+        found = sorted(servers.glob("*.terminals*")) if servers.is_dir() else []
+        for key in sorted({path.name.split(".terminals", 1)[0] for path in found}):
+            placement = {"name": key, "location": str(servers / f"{key}.terminals"),
+                         "socket": str(servers / f"{key}.terminals.sock")}
+            try:
+                Services(home).terminal_host(placement).host.shutdown()
+            except OrchestrationError:
+                pass  # the host cannot be selected any more, so nothing of it can be running

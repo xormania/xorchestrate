@@ -135,8 +135,31 @@ def project_checks(path=None, environ=None):
     return checks, rendered
 
 
+def terminal_host_check(environ=None):
+    """Which terminal host local work runs in, why, and whether its terminals survive and are interactive.
+
+    Probes readiness at a placement in the home's server directory; nothing is started.
+    """
+    try:
+        home = Home.locate(environ)
+        servers = home.root / "servers"
+        placement = {"name": "doctor", "location": str(servers / "doctor.terminals"),
+                     "socket": str(servers / "doctor.terminals.sock")}
+        active = Services(home).terminal_host(placement)
+    except OrchestrationError as error:
+        return _check("terminal_host", "error", str(error), code=error.code, **error.details)
+    report = active.report()
+    active.host.close()
+    traits = (f"terminals {'survive' if report['survives_controller'] else 'do not survive'} the controller and "
+              f"{'are' if report['interactive'] else 'are not'} interactive")
+    if report["fallback_reason"] is not None:
+        return _check("terminal_host", "warning", f"{report['selected']} is not ready ({report['fallback_reason']}); "
+                      f"using the fallback {report['adapter']}: {traits}", **report)
+    return _check("terminal_host", "ok", f"{report['adapter']}: {traits}", **report)
+
+
 def doctor(path=None, environ=None, *, project=True):
-    checks = machine_checks()
+    checks = machine_checks() + [terminal_host_check(environ)]
     if project:
         checks += project_checks(path, environ)[0]
     return {"ok": all(item["status"] != "error" for item in checks), "checks": checks}
