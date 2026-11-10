@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from tests.hexagonal.support.application import Provider
-from tests.hexagonal.support.native import application_message, peer_options, wait_for
+from tests.hexagonal.support.native import application_message, complete_json_lines, peer_options, wait_for
 from tests.hexagonal.support.producer_capture import Recorder
 from tests.hexagonal.support.telemetry import Fixture
 from xorchestrate.adapters.jsonrpc import JsonLineProcess
@@ -62,7 +62,7 @@ class CallbackFixture:
                 replay_fixture={"label": label, "call_id": label}),
             "idempotency_key": "send-" + label})
         def reply():
-            rows = [json.loads(line) for line in self.wire.read_text().splitlines()] if self.wire.exists() else []
+            rows = complete_json_lines(self.wire)
             return next((row for row in rows if row["label"] == label), None)
         retained = wait_for(reply, timeout=5, message="actual native callback reply did not arrive")
         actual_packet = {"id": retained["rpc_id"], "result": retained["result"]}
