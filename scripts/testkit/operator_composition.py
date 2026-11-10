@@ -15,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from .adapters.configuration import isolated_config
+from .adapters.diagnostics import failure_lines
 from .adapters.evidence import candidate_identity, digest, now, write_json
 from .adapters.managed_process import ManagedWorker, observed_alive
 from .adapters.managed_store import ManagedStore, owner_alive
@@ -26,6 +27,7 @@ from .operator import FINISHED, decide, project
 
 RUN_FIELDS = ("suite", "mode", "config", "brief", "drivers", "families", "shard", "timeout", "check_timeout",
               "stories", "max_sessions", "max_turns", "max_tool_calls")
+PROBE_STORY = "native-handshake"
 
 
 def validate_limits(settings):
@@ -150,6 +152,10 @@ def status(directory):
     progress = store.directory / "checks" / "progress.json"
     if progress.exists():
         result["progress"] = read_json(progress)
+    # Computed for this reader only: the saved state and its export keep codes.
+    reasons = failure_lines(store.directory / "checks")
+    if reasons:
+        result["failures"] = reasons
     return result
 
 
@@ -322,7 +328,9 @@ def supervise(directory):
                         summary = (f"Run: {directory.name}\nPhase: {final_state['phase']}\nProof: {final_state['proof']}\n"
                                    f"Outcome: {final_state['outcome']}\nCleanup verified: {cleanup['verified']}\n"
                                    f"Collection: {collection.get('status')}\nReport: {path}\n")
-                        (directory / "summary.txt").write_text(summary)
+                        # This summary stays in the private run directory; the export writes its own.
+                        summary += "".join(f"Failure: {line}\n" for line in failure_lines(directory / "checks"))
+                        (directory / "summary.txt").write_text(summary, encoding="utf-8")
                         (directory / "summary.txt").chmod(0o600)
                         finalized = True
                 if finalized and signals:
@@ -346,6 +354,29 @@ def supervise(directory):
         for number, handler in handlers.items():
             signal.signal(number, handler)
     return 0
+
+
+def probe_selection(settings):
+    """A probe launches configured native harnesses; anything else is a selection error."""
+    if settings.get("mode") != "native" or not settings.get("drivers"):
+        raise ValueError("--probe launches configured native harnesses; select --mode native and a driver")
+
+
+def probe(settings, runner):
+    """Opt-in doctor step: take each selected native harness through its session handshake.
+
+    The handshake story launches the configured harness, starts its session and
+    stops it, using the same executor, evidence and cleanup as any run. The
+    story admits no turn. A launched harness is still a real process using the
+    operator's account, which is why this is never implied by plain ``doctor``.
+    """
+    probe_selection(settings)
+    selected = {**settings, "suite": "stories", "stories": [PROBE_STORY], "families": [], "shard": None}
+    report = foreground(selected, runner)
+    return {"status": "passed" if report.get("status") == "passed" else "failed", "story": PROBE_STORY,
+            "directory": report.get("directory"),
+            "checks": [{"name": row.get("name"), "status": row.get("status")} for row in report.get("checks", [])],
+            "failures": failure_lines(report["directory"]) if report.get("directory") else []}
 
 
 def repeat_settings(directory, overrides):

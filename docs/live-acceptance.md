@@ -142,7 +142,23 @@ not a successful skip. The top-level `report.json` is the run result;
 `scenario.json` records the scenario's named checks. A scenario receipt alone
 does not establish that teardown succeeded.
 
-Raw pane output, the derived configuration, and SQLite state remain inside the
+When a scenario check fails, `scenario.json` keeps only its assertion code so
+the receipt stays shareable. The reason is retained beside it in the private
+`diagnostics.json`: the failed check, the application request involved, the
+application's error and, for a failed effect, the outcome the application
+preserved for it (read through `get_operation`), which is where a provider's
+own explanation appears. The pane shows the same reason as a `FAILED` line, and
+the command's final JSON names the file's location without quoting it. For
+example, a harness that rejects session start is recorded in the receipt as
+`application_tool_failed` and in the diagnostics as:
+
+```text
+configured_native_application_callback: application_tool_failed: start_session -> provider_error:
+Subprocess returned a JSON-RPC error. {"outcome":"unknown","remote_error":{"code":-32602,
+"data":"missing field `cwd`","message":"Invalid params"}}
+```
+
+Raw pane output, the diagnostics, the derived configuration, and SQLite state remain inside the
 private run directory. Native output and configuration can contain sensitive
 information. Share the summary receipts when reporting results; do not upload
 the entire native evidence directory. CI uploads only the two JSON receipts from

@@ -53,7 +53,11 @@ python3 -m scripts.testkit run --mode native --config /path/native.json --driver
 ```
 
 `doctor` validates selected local inputs without launching or authenticating a
-harness. Only a successful live run establishes authenticated callback behavior.
+harness, including whether the evidence root can hold the scenario's private
+application home. `doctor --probe` is the opt-in exception: it launches each
+selected harness through session start and stop without submitting a turn (see
+[managed proofs](managed-proofs.md#set-up-once)). Only a successful live run
+establishes authenticated callback behavior.
 Native launch/authentication/timeout failures remain failures; there is no fixture
 fallback. Direct native live commands inherit the operator's terminal; outer command
 records mark `terminal: inherit` and do not claim captured terminal output.
