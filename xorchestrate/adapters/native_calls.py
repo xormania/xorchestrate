@@ -11,7 +11,7 @@ from __future__ import annotations
 import hashlib
 from copy import deepcopy
 
-from ..model import OrchestrationError, public_error_message
+from ..model import OrchestrationError, public_error
 from ..outcomes import effect_outcome
 from .process import encode_json
 
@@ -77,11 +77,12 @@ class NativeCallLedger:
             row["state"] = self._transition(key, "fail" if outcome in {"not_started", "failed"} else "uncertain")
         except Exception as recording_error:
             # The refusal fact is retained even when its transition is refused.
-            row["recording_error"] = getattr(recording_error, "code", type(recording_error).__name__)
+            row["recording_error"] = public_error(recording_error)["code"]
         row["effect_outcome"] = outcome
         # A replay re-raises this row as a public OrchestrationError, so only an
         # expected adapter error contributes its code, message and details.
-        public = isinstance(error, OrchestrationError)
-        row["error"] = {"code": error.code if public else "callback_failed", "message": public_error_message(error),
-                        "details": {**(deepcopy(error.details) if public else {}), "outcome": outcome}}
+        diagnostic = public_error(error)
+        if not isinstance(error, OrchestrationError):
+            diagnostic["code"] = "callback_failed"
+        row["error"] = {**diagnostic, "details": {**diagnostic["details"], "outcome": outcome}}
         return deepcopy(row["error"])

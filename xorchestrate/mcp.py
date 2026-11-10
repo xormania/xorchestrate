@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from . import __version__
 from .adapters.stdio import StdioTransport, read_line_frame
 from .composition import read_json
-from .model import OrchestrationError
+from .model import OrchestrationError, public_error
 from .worktrees import worktree_identity
 
 PROTOCOL_VERSION = "2025-06-18"
@@ -20,7 +20,7 @@ CONTROL_TOOLS = frozenset({"poll_session", "stop_session", "detach_session", "ge
 
 
 def failure(error):
-    return {"code": error.code, "message": str(error), "details": error.details}
+    return public_error(error)
 
 
 class MCPServer:

@@ -171,5 +171,5 @@ def test_native_gateway_never_relays_private_failure_text(protocol, tmp_path):
         assert first["error"]["code"] == -32603, "a private failure stays an opaque protocol fault"
         replayed = send("replayed")
         assert replayed == {"error": {"code": "callback_failed", "details": {"outcome": "unknown"},
-            "message": "External operation did not return a verified result (_SdkFailure)."}}
+            "message": "External operation did not return a verified result."}}
         assert "s3cret" not in (tmp_path / "wire.jsonl").read_text(), "NATIVE_GATEWAY_PRIVATE_ERROR_TEXT"

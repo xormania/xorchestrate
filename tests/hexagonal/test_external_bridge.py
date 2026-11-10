@@ -211,7 +211,7 @@ def test_bridge_host_retains_only_public_native_failure_text(bridges):
     assert "s3cret" not in json.dumps(effects), "BRIDGE_PRIVATE_ERROR_EVIDENCE"
     failed = [effect for effect in effects.values() if effect.get("effect_outcome") == "unknown"]
     assert [(effect["error"], effect["error_message"], effect["error_details"]) for effect in failed] == [(
-        "PrivateNativeFailure", "External operation did not return a verified result (PrivateNativeFailure).", {})]
+        "external_error", "External operation did not return a verified result.", {})]
 
 
 def test_native_callbacks_and_observations_use_attached_context_and_progress_without_poll(bridges):

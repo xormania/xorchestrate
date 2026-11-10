@@ -6,7 +6,7 @@
   ],
   "families": {
     "orchestration": {
-      "guarantee": "Work, actors and configured policies preserve owner intent, validation and application composition through injected ports.",
+      "guarantee": "Work, actors and configured policies preserve owner intent, validation and application composition through injected ports; effect failures retain safe public diagnostics and known outcomes without repeating effects.",
       "modules": {
         "tests/hexagonal/test_application.py": "contract",
         "tests/hexagonal/test_policies.py": "contract",

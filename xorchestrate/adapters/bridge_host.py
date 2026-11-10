@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import cast
 
 from ..activity import activity_engine
-from ..model import OrchestrationError, canonical_digest, public_error_message
+from ..model import OrchestrationError, canonical_digest, public_error
 from ..outcomes import before_effect, effect_outcome
 from ..ports import ApplicationToolSessionDriver, SessionDriver
 from .bridge_transport import FifoListener, Peer, bridge_error, copy_json, positive_option
@@ -315,10 +315,10 @@ class SessionBridgeHost:
                 knowledge = effect_outcome(exc)
                 event = "fail" if knowledge in {"not_started", "failed"} else "uncertain"
                 # This evidence is persisted, returned by inspect and replayed as a
-                # public error, so arbitrary exceptions contribute only their type.
-                public = isinstance(exc, OrchestrationError)
-                evidence = {"error": exc.code if public else type(exc).__name__, "effect_outcome": knowledge,
-                    "error_message": public_error_message(exc), "error_details": deepcopy(exc.details) if public else {}}
+                # public error, so arbitrary exception attributes stay private.
+                diagnostic = public_error(exc)
+                evidence = {"error": diagnostic["code"], "effect_outcome": knowledge,
+                    "error_message": diagnostic["message"], "error_details": diagnostic["details"]}
                 if knowledge == "completed" and "result" in evidence["error_details"]:
                     evidence["result"] = deepcopy(evidence["error_details"]["result"])
                 # Observed effect knowledge is evidence, not a forced lifecycle
@@ -330,7 +330,7 @@ class SessionBridgeHost:
                     self._save_state()
                 except Exception as settlement:
                     raise OrchestrationError("Native outcome could not be settled by the host.", "effect_unapplied", {
-                        "outcome": knowledge, "cause": getattr(settlement, "code", type(settlement).__name__),
+                        "outcome": knowledge, "cause": public_error(settlement)["code"],
                         "native_error": evidence["error"],
                     }) from settlement
             raise

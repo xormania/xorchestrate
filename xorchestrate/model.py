@@ -56,10 +56,51 @@ def record_view(record: Record) -> JSON:
     return {**deepcopy(record.data), "id": record.key, "version": record.version}
 
 
+def public_error(error: Exception) -> JSON:
+    """One JSON-safe diagnostic envelope for public and retained failures.
+
+    Only the application's typed exception declares its diagnostic public.
+    Arbitrary exception attributes, including a dynamically named class, never
+    become public data. A malformed typed detail payload is omitted without
+    changing independently known effect outcome.
+    """
+    fallback = {"code": "external_error",
+                "message": "External operation did not return a verified result.", "details": {}}
+    if not isinstance(error, OrchestrationError):
+        return fallback
+    try:
+        message, code, supplied_details = str(error), error.code, error.details
+    except Exception:
+        return fallback
+    if not isinstance(code, str) or not code:
+        return fallback
+    details = {}
+    if isinstance(supplied_details, dict):
+        try:
+            details = json.loads(json.dumps(supplied_details, allow_nan=False))
+        except (TypeError, ValueError, OverflowError, RecursionError):
+            pass
+    return {"code": code, "message": message, "details": details}
+
+
 def public_error_message(error: Exception) -> str:
-    # Expected adapter errors have deliberately public messages. Arbitrary errors
-    # may embed credentials, process input or SDK internals.
-    return str(error) if isinstance(error, OrchestrationError) else f"External operation did not return a verified result ({type(error).__name__})."
+    return public_error(error)["message"]
+
+
+def project_operation_errors(value: JSON) -> JSON:
+    """Project legacy diagnostics conservatively; do not purge stored history.
+
+    Diagnostic-version markers are written by the journal, separately for each
+    field. Provider results are opaque and are deliberately not traversed.
+    """
+    visible = deepcopy(value)
+    if "error" in visible and visible.get("error_schema_version") != 1:
+        visible["error"] = public_error(Exception())
+        visible["legacy_error_retained"] = True
+    if "application_error" in visible and visible.get("application_error_schema_version") != 1:
+        visible["application_error"] = public_error_message(Exception())
+        visible["legacy_error_retained"] = True
+    return visible
 
 
 @dataclass(frozen=True)
