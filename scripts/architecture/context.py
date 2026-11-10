@@ -104,7 +104,11 @@ def _imports(tree, module, is_package):
                 bindings[alias.asname or alias.name.split(".")[0]] = (alias.name, None)
         elif isinstance(node, ast.ImportFrom):
             target = "." * node.level + (node.module or "")
-            target = importlib.util.resolve_name(target, package) if node.level else target
+            if node.level:
+                try:
+                    target = importlib.util.resolve_name(target, package)
+                except ImportError:
+                    raise ValueError("Architecture relative import cannot be resolved in its measured package.") from None
             for alias in node.names:
                 bindings[alias.asname or alias.name] = (target, alias.name)
     return bindings

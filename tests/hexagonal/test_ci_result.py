@@ -487,3 +487,39 @@ def test_ci_diagnostic_context_uses_the_actual_change_base():
     assert command.get("env", {}).get("JEV_BASE_REF") == "${{ github.event.pull_request.base.sha || github.event.before }}"
     assert '--base-ref "$jev_base_ref"' in command["run"]
     assert "git rev-parse" in command["run"] and "HEAD^" in command["run"]
+
+
+@pytest.mark.parametrize("candidate_count", (11, 100))
+def test_supported_grounded_task_populations_survive_advisory_reporting(tmp_path, candidate_count):
+    from scripts.architecture.context import build_context
+    from scripts.architecture.diagnostics import evaluation_tasks
+    from scripts.architecture.python import check
+
+    root = tmp_path / "measured"
+    package = root / "pkg"
+    package.mkdir(parents=True)
+    source = "\n".join(f"def work_{index}(port):\n    return port.read({index})\n" for index in range(candidate_count))
+    (package / "work.py").write_text(source)
+    profile = {"schema_version": 1, "id": "task-capacity-control", "version": 1, "source_roots": ["pkg"],
+               "roles": {"core": {"modules": ["pkg.*"], "allowed_roles": ["core"],
+                                  "allowed_external": [], "allow_dynamic": False}}}
+    report = check(root, profile)
+    assert report["status"] == "pass"
+    context = build_context(report, root, max_candidates=candidate_count, max_files=1)
+    tasks = evaluation_tasks(context)
+    assert len(tasks) == candidate_count * 3
+    document = _jev_report()
+    document["subject"] = deepcopy(report["subject"])
+    diagnostic = document["diagnostics"]
+    diagnostic.update(subject=deepcopy(report["subject"]), source_scope=context["source_scope"],
+                      context_sha256=hashlib.sha256(json.dumps(context, sort_keys=True).encode()).hexdigest(),
+                      assessments=[{**task, "outcome": "no_concern", "confidence": 0.9, "details": {}}
+                                   for task in tasks])
+    needs, workflow, catalog = _complete_receipts(tmp_path)
+    _write(tmp_path / "architecture-evidence/diagnostics.json", document)
+    result = _evaluate_complete(tmp_path, needs, workflow, catalog)
+    assert result.get("jev", {}).get("status") == "complete", "SUPPORTED_TASK_CAPACITY_VISIBLE"
+    assert len(result["jev"]["assessments"]) == candidate_count * 3
+    rendered = subject.markdown(result, "https://example.invalid/run/1")
+    assert all(candidate["candidate_id"] in rendered for candidate in context["candidates"])
+    assert result["status"] == "passed" and result["errors"] == []
