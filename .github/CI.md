@@ -4,11 +4,16 @@ Local and CI execution use the [testing framework](../docs/testing-framework.md)
 Python 3.12 is the required validation baseline; the telemetry tests also need a
 Python whose SQLite has the WAL fix (CI uses uv-installed Python 3.12.16). Establish a fresh bytecode cache
 outside the checkout before starting Python, then install the declared
-application/test dependencies and the single pinned linter requirements file:
+application/test dependencies from the native uv lock (install uv 0.13.7 first):
 
 ```bash
 export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XXXXXX")"
-python3 -m pip install -e '.[test,telemetry]' -r .github/requirements-ci.txt
+export UV_PROJECT_ENVIRONMENT="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-env.XXXXXX")"
+python3 -m scripts.ci.dependencies check
+uv sync --locked --only-group validation --no-install-project --managed-python --python 3.12.16
+uv sync --locked --no-default-groups --group validation --extra test --extra telemetry --no-install-project --managed-python --python 3.12.16 --no-build-isolation-package agent-telemetry
+uv pip install --python "$UV_PROJECT_ENVIRONMENT/bin/python" --no-deps --no-build-isolation -e .
+export PATH="$UV_PROJECT_ENVIRONMENT/bin:$PATH"
 python3 -m scripts.testkit run --suite static
 python3 -m scripts.testkit run --suite tests
 python3 -m scripts.testkit run --suite tests --shard 1/4   # one of four shards
@@ -45,17 +50,22 @@ permissions. Pull requests, pushes to master and manual runs invoke:
 | Jev architecture diagnostics | Independent diagnostics-only invocation with retained advisory output |
 | Hexagonal architecture | Retains the existing required status name and reports the shared static job's outcome; it does not rerun validation |
 
-Each Python job configures `PYTHONPYCACHEPREFIX` in the runner's temporary directory before
-invoking Python. Each pinned `actions/setup-python` step enables its `cache: pip`
-download/wheel cache (`~/.cache/pip`), keyed on the files that declare that job's
-installs: static on `.github/requirements-ci.txt`, tests shards on `pyproject.toml`
-and `.github/requirements-ci.txt`, verification, tmux and Jev on `pyproject.toml`. Each tests shard
-job's uv-created 3.12.16 venv pip uses the same cache directory. The cache only
-avoids downloads/wheel builds; pip still resolves the declared pins and ranges on
-every run. A cache entry is written once per key and refreshed only when those
-files change, so packages newly released within a declared range are downloaded
-on each run until then. uv's own cache stays disabled because uv only provisions
-the interpreter.
+Each Python job configures `PYTHONPYCACHEPREFIX` and `UV_PROJECT_ENVIRONMENT` in
+runner temporary storage before validation. uv-managed Python 3.12.16 and uv 0.13.7 are
+selected explicitly. Native `uv lock --check` and the generated validation export
+check reject dependency-input drift, then `uv sync --locked` installs the chosen
+profile. Validation tools are bootstrapped from the lock before the telemetry
+source build, which uses the installed backend without build isolation. Editable application installation uses `--no-deps --no-build-isolation`
+with the already locked backend. Public package dependency ranges remain unchanged.
+
+The setup-uv download/wheel cache is keyed by `uv.lock`; a cache hit does not
+replace frozen installation or test execution. Ordinary jobs omit telemetry;
+application shards explicitly select that optional extra. The validation dependency
+group supplies Ruff and build tooling. `.github/requirements-ci.txt` is a generated
+pip-compatible export of that group, not a second manually edited pin source.
+See [validation dependencies](../docs/validation-dependencies.md) for intentional
+updates, runtime/build exports and separately labeled fresh-resolution checks.
+
 Static checks run once in their own job. The Jev diagnostic
 calculation remains independent and does not add a second deterministic gate.
 The `tests` suite is the longest validation, so it runs as parallel shards
@@ -175,8 +185,8 @@ CI neither requests reviews nor merges branches. xor controls those decisions.
 
 ## Telemetry runtime
 
-Application CI installs the optional pinned CCE collector through `.[test,telemetry]`.
-It selects uv 0.13.7 / Python 3.12.16 for the collector's fixed SQLite WAL requirement.
+Application CI selects the optional pinned CCE collector through the lock's `test` and
+`telemetry` extras. It uses uv 0.13.7 / Python 3.12.16 for the collector's fixed SQLite WAL requirement.
 Static checks remain independent of this extra. The existing application test-kit
 collects the declared telemetry families alongside the current behavior suites.
 Optional collector/exporter failure does not replace the application's required
