@@ -3,7 +3,11 @@
 A release is an annotated tag ``vMAJOR.MINOR.PATCH`` (optionally ``-rc.N``) whose
 commit sets ``__version__`` and the ``pyproject.toml`` version to the same string
 without the ``v``. ``CHANGELOG.md`` has a ``## X.Y.Z`` entry with a non-empty
-``### Upgrade notes`` section. Each alias project (by default ``packaging/xork``)
+``### Upgrade notes`` section. Every runtime dependency resolves from a package
+index: no direct reference, no ``[tool.uv.sources]`` git, path, URL or workspace
+source, and only registry packages in the runtime closure of ``uv.lock``
+(dependency groups are not published; a development git source
+such as xcontracts' must switch to its published range first). Each alias project (by default ``packaging/xork``)
 declares the same version, depends only on exactly that release of the
 package and declares the package's console scripts. Built distributions, when given, are one wheel and one sdist of the
 package and of each alias, all carrying the version. Without ``--tag`` (a manual
@@ -76,6 +80,80 @@ def check_alias(root, directory, package, version, errors):
     return report
 
 
+REQUIREMENT_NAME = re.compile(r"\s*([A-Za-z0-9][A-Za-z0-9._-]*)")
+NON_INDEX_SOURCES = ("git", "path", "url", "workspace", "editable", "directory")
+
+
+def canonical_name(name):
+    return re.sub(r"[-_.]+", "-", name).lower()
+
+
+def runtime_closure(packages, package):
+    """Locked packages the published ``package`` can install: its dependencies and extras, transitively.
+
+    Dependency groups (development and validation tools) are not published and
+    are left out. The alias distributions depend only on the package itself.
+    """
+    root = packages.get(package, {})
+    pending = [entry for entry in root.get("dependencies", [])]
+    for extra in root.get("optional-dependencies", {}).values():
+        pending.extend(extra)
+    seen = set()
+    while pending:
+        entry = pending.pop()
+        name = canonical_name(entry.get("name", ""))
+        item = packages.get(name)
+        if item is None:
+            continue
+        extras = entry.get("extra", [])
+        key = (name, tuple(sorted(extras)))
+        if key in seen:
+            continue
+        seen.add(key)
+        pending.extend(item.get("dependencies", []))
+        for extra in extras:
+            pending.extend(item.get("optional-dependencies", {}).get(extra, []))
+    return {name for name, _ in seen}
+
+
+def dependency_sources(root, package):
+    """Runtime dependencies that would not resolve from a package index, as ``(name, reason)`` pairs.
+
+    A published wheel carries only the requirement ranges, so a release built
+    while uv takes a dependency from git or a local path would publish metadata
+    that was never resolved or tested against the index.
+    """
+    root = Path(root)
+    metadata = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    project = metadata.get("project", {})
+    requirements = list(project.get("dependencies", []))
+    for extra in project.get("optional-dependencies", {}).values():
+        requirements.extend(extra)
+    findings, names = [], set()
+    for requirement in requirements:
+        match = REQUIREMENT_NAME.match(requirement)
+        name = canonical_name(match[1]) if match else requirement
+        names.add(name)
+        if re.search(r"(^|[^<>=!~])@", requirement.split(";", 1)[0]):
+            findings.append((name, "direct reference in project dependencies"))
+    for name, source in metadata.get("tool", {}).get("uv", {}).get("sources", {}).items():
+        if canonical_name(name) not in names:
+            continue
+        for entry in source if isinstance(source, list) else [source]:
+            kinds = sorted(set(entry) & set(NON_INDEX_SOURCES)) if isinstance(entry, dict) else ["unknown"]
+            if kinds:
+                findings.append((canonical_name(name), f"[tool.uv.sources] {'/'.join(kinds)} source"))
+    lock = root / "uv.lock"
+    if lock.is_file():
+        packages = {canonical_name(item.get("name", "")): item
+                    for item in tomllib.loads(lock.read_text(encoding="utf-8")).get("package", [])}
+        for name in sorted(runtime_closure(packages, canonical_name(package))):
+            source = packages[name].get("source", {})
+            if "registry" not in source:
+                findings.append((name, f"uv.lock {'/'.join(sorted(source)) or 'unknown'} source"))
+    return findings
+
+
 def changelog_entry(text, version):
     """The body of the ``## version`` entry, or ``None`` when there is none."""
     lines, body = text.splitlines(), None
@@ -131,6 +209,11 @@ def check(root, *, tag=None, package="xorchestrate", distributions=None, annotat
         errors.append(f"pyproject.toml version {declared!r} does not match tag {expected_tag!r}")
     if name != package:
         errors.append(f"pyproject.toml name {name!r} is not {package!r}")
+    report["dependency_sources"] = [{"name": name, "reason": reason}
+                                    for name, reason in dependency_sources(root, package)]
+    for item in report["dependency_sources"]:
+        errors.append(f"Dependency {item['name']} does not come from a package index ({item['reason']}); "
+                      "switch it to its published version range and relock before releasing")
     report["aliases"] = [check_alias(root, directory, package, match["version"] if match else version, errors)
                          for directory in aliases]
     changelog = root / "CHANGELOG.md"

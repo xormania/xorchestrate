@@ -36,7 +36,9 @@ import pathlib
 import subprocess
 import sys
 
+import xcontracts
 import xorchestrate
+import xorchestrate.ports
 from xorchestrate.adapters.native_gateway import LocalGateway
 from xorchestrate.adapters.telemetry_collector import sqlite as telemetry_corpus  # the collector ships in the package
 
@@ -47,6 +49,10 @@ assert pathlib.Path(telemetry_corpus.__file__).resolve().is_relative_to(prefix),
 installed = {item.metadata["Name"].lower().replace("_", "-"): item.version
              for item in importlib.metadata.distributions()}
 assert not {"pytest", "ruff", "build"}.intersection(installed), installed
+# The public ports come from the installed xcontracts distribution, re-exported unchanged.
+assert installed.get("xcontracts", "").startswith("0.1."), installed
+assert pathlib.Path(xcontracts.__file__).resolve().is_relative_to(prefix), "xcontracts is not installed in the consumer"
+assert xorchestrate.ports.StateStore is xcontracts.StateStore
 # The xork alias installs exactly its own version of xorchestrate.
 assert "xork" not in installed or installed["xork"] == installed["xorchestrate"], installed
 console = prefix / "bin" / "xorchestrate"
@@ -128,7 +134,7 @@ try:
 finally:
     gateway.close()
 print(json.dumps({"status": "passed", "package_path": str(package), "executable": str(console), "cwd": str(pathlib.Path.cwd()),
-                  "installed": installed, "checks": ["short_command", "no_project_refusal", "project_setup", "console_describe", "persisted_cli", "mcp_read",
+                  "installed": installed, "checks": ["xcontracts_ports", "short_command", "no_project_refusal", "project_setup", "console_describe", "persisted_cli", "mcp_read",
                              "upgrade_plan", "telemetry_archive", "migrate_config", "absolute_gateway"]}))
 '''
 

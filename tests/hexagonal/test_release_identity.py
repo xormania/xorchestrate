@@ -249,3 +249,110 @@ def test_xork_and_the_package_install_the_same_commands():
     assert package == {"xo": "xorchestrate.cli:main", "xorchestrate": "xorchestrate.cli:main"}
     assert alias_project["project"]["scripts"] == package
     assert alias_project["tool"]["setuptools"]["packages"] == [], "xork must ship no code"
+
+
+LOCK = '''version = 1
+
+[[package]]
+name = "xorchestrate"
+version = "1.2.3"
+source = {{ editable = "." }}
+dependencies = [
+    {{ name = "jsonschema" }},
+    {{ name = "xcontracts" }},
+]
+
+[package.dev-dependencies]
+validation = [
+    {{ name = "devtool" }},
+]
+
+[[package]]
+name = "jsonschema"
+version = "4.25.0"
+source = {{ registry = "https://pypi.org/simple" }}
+dependencies = [
+    {{ name = "helper", extra = ["fast"] }},
+]
+
+[[package]]
+name = "helper"
+version = "1.0"
+source = {{ registry = "https://pypi.org/simple" }}
+
+[package.optional-dependencies]
+fast = [
+    {{ name = "accelerator" }},
+]
+
+[[package]]
+name = "accelerator"
+version = "1.0"
+source = {{ {accelerator} }}
+
+[[package]]
+name = "xcontracts"
+version = "0.1.0"
+source = {{ {source} }}
+
+[[package]]
+name = "devtool"
+version = "0.1.0"
+source = {{ git = "https://example.test/devtool?rev=abc#abc" }}
+'''
+REGISTRY = 'registry = "https://pypi.org/simple"'
+
+
+def with_dependency(root, *, requirement="xcontracts>=0.1,<0.2", sources="", lock=None, accelerator=REGISTRY):
+    text = (root / "pyproject.toml").read_text().replace(
+        "[project.scripts]", f'dependencies = ["jsonschema>=4.22,<5", "{requirement}"]\n\n[project.scripts]')
+    (root / "pyproject.toml").write_text(text + sources)
+    if lock is not None:
+        (root / "uv.lock").write_text(LOCK.format(source=lock, accelerator=accelerator))
+    return root
+
+
+GIT = 'xcontracts = { git = "https://github.com/xormania/xcontracts", rev = "0123abc" }'
+
+
+@pytest.mark.parametrize(("keywords", "reasons"), [
+    ({"sources": f"\n[tool.uv.sources]\n{GIT}\n"}, ["[tool.uv.sources] git source"]),
+    ({"sources": '\n[tool.uv.sources]\nxcontracts = { path = "../xcontracts", editable = true }\n'},
+     ["[tool.uv.sources] editable/path source"]),
+    ({"sources": '\n[tool.uv.sources]\nXContracts = [{ url = "https://example.test/x.whl" }]\n'},
+     ["[tool.uv.sources] url source"]),
+    ({"requirement": "xcontracts @ git+https://github.com/xormania/xcontracts@0123abc"},
+     ["direct reference in project dependencies"]),
+    ({"lock": 'git = "https://github.com/xormania/xcontracts?rev=0123abc#0123abc"'}, ["uv.lock git source"]),
+])
+def test_a_runtime_dependency_from_git_a_path_or_a_url_blocks_the_release(tmp_path, keywords, reasons):
+    root = with_dependency(project(tmp_path), **keywords)
+    report, problems = release_identity.check(root, tag="v1.2.3")
+    assert [item["reason"] for item in report["dependency_sources"]] == reasons
+    assert [item["name"] for item in report["dependency_sources"]] == ["xcontracts"] * len(reasons)
+    assert problems == [f"Dependency xcontracts does not come from a package index ({reason}); switch it to its "
+                        "published version range and relock before releasing" for reason in reasons]
+
+
+def test_a_transitive_runtime_dependency_from_git_blocks_the_release(tmp_path):
+    root = with_dependency(project(tmp_path), lock=REGISTRY, accelerator='git = "https://example.test/acc?rev=1#1"')
+    report, _ = release_identity.check(root, tag="v1.2.3")
+    assert report["dependency_sources"] == [{"name": "accelerator", "reason": "uv.lock git source"}]
+
+
+def test_published_ranges_index_sources_and_unrelated_sources_pass(tmp_path):
+    """A git-sourced validation tool (``devtool``) is not published and does not block the release."""
+    root = with_dependency(project(tmp_path), lock=REGISTRY,
+                           sources='\n[tool.uv.sources]\nxcontracts = { index = "pypi" }\n'
+                                   'devtool = { git = "https://example.test/devtool" }\n')
+    report, problems = release_identity.check(root, tag="v1.2.3")
+    assert problems == [] and report["dependency_sources"] == []
+
+
+def test_the_repository_still_takes_xcontracts_from_its_development_git_source():
+    """Witness for the pending switch: the gate refuses the checked-in sources until xcontracts is published."""
+    findings = release_identity.dependency_sources(ROOT, "xorchestrate")
+    assert {name for name, _ in findings} <= {"xcontracts"}
+    metadata = tomllib.loads((ROOT / "pyproject.toml").read_text())
+    assert "xcontracts>=0.1,<0.2" in metadata["project"]["dependencies"]
+    assert bool(findings) == ("xcontracts" in metadata.get("tool", {}).get("uv", {}).get("sources", {}))

@@ -21,3 +21,6 @@ class PullRequestProvider(PullRequestOperations):
         super().__init__(host, workspace,
             store, lambda: datetime.now(timezone.utc).isoformat(), state_engine=state_engine,
             read_repositories=[*read_repositories, *(item["repository"] for item in workspace.workspaces.values())])
+
+    def close(self):
+        """Nothing to release: each operation opens and closes its own connections and processes."""

@@ -1,144 +1,20 @@
 """Fakes for the operator ports and a local stand-in for the GitHub REST API.
 
-The fakes are selected like real adapters (``module:factory`` with options), so
-tests exercise the same selection path as configured adapters.
+The fakes are xcontracts' reference fakes, which pass its conformance kit. They
+are re-exported here so configurations select them as
+``tests.hexagonal.support.operator_ports:<Name>``, through the same selection
+path as configured adapters.
 """
 from __future__ import annotations
 
 import json
-import re
 import threading
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from xorchestrate.model import OrchestrationError
-from xorchestrate.ports import HostingVisibility, WorktreeLocation
+from xcontracts.testing.fakes import FakeHosting, FakeVersionControl, MemoryCompanion
 
-NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
-
-
-def _name(value, what):
-    if not isinstance(value, str) or not NAME.match(value):
-        raise OrchestrationError(f"Invalid companion record {what}.", "invalid_arguments", {what: value})
-    return value
-
-
-def _key(value):
-    if not isinstance(value, str) or not all(NAME.match(part) for part in value.split("/")):
-        raise OrchestrationError("Invalid companion record key.", "invalid_arguments", {"key": value})
-    return value
-
-
-class _MemoryRecords:
-    def __init__(self, store, project):
-        self.store = store
-        self.project = None if project is None else _name(project, "project")
-
-    def keys(self, kind, *, recursive=False):
-        _name(kind, "kind")
-        return sorted(key for (project, stored_kind, key) in self.store
-                      if project == self.project and stored_kind == kind and (recursive or "/" not in key))
-
-    def read(self, kind, key):
-        return self.store.get((self.project, _name(kind, "kind"), _key(key)))
-
-    def write(self, kind, key, data, *, create_only=False):
-        address = (self.project, _name(kind, "kind"), _key(key))
-        # A record cannot also be the prefix of another key (a directory in a file-backed adapter).
-        if any(stored[:2] == address[:2] and (stored[2].startswith(key + "/") or key.startswith(stored[2] + "/"))
-               for stored in self.store):
-            raise OrchestrationError("A companion record cannot be the prefix of another.", "invalid_arguments",
-                                     {"key": key})
-        if create_only and address in self.store:
-            return False
-        self.store[address] = bytes(data)
-        return True
-
-
-class MemoryCompanion:
-    """A ``Companion`` held in memory; ``unsafe`` makes its location check fail."""
-
-    def __init__(self, options=None, *, version_control=None):
-        options = options or {}
-        self.location = options.get("name", "memory")
-        self.unsafe = options.get("unsafe")
-        self.remote_url = options.get("remote")
-        self.revision_id = options.get("revision")
-        self.store = {}
-        self.initialized = False
-
-    def validate_location(self):
-        return self.unsafe
-
-    def exists(self):
-        return self.initialized
-
-    def initialize(self):
-        if self.initialized:
-            return []
-        self.initialized = True
-        return [self.location]
-
-    def records(self, project):
-        return _MemoryRecords(self.store, project)
-
-    def remote(self):
-        return self.remote_url
-
-    def revision(self):
-        return self.revision_id
-
-
-class FakeVersionControl:
-    """A ``VersionControl`` over declared repositories: ``{"repositories": {name: {"worktrees": [...], "roots": [...]}}}``."""
-
-    def __init__(self, options=None):
-        self.repositories = (options or {}).get("repositories", {})
-
-    def worktree(self, path):
-        for name, repository in self.repositories.items():
-            for index, root in enumerate(repository["worktrees"]):
-                if path == root or path.startswith(root.rstrip("/") + "/"):
-                    common = f"/fake/{name}/.git"
-                    return WorktreeLocation(root, common if index == 0 else f"{common}/worktrees/{index}", common,
-                                            repository.get("branch"))
-        return None
-
-    def root_commits(self, path):
-        location = self.worktree(path)
-        if location is None:
-            return frozenset()
-        name = location.common_dir.split("/")[2]
-        return frozenset(self.repositories[name].get("roots", []))
-
-    def remote_url(self, path, name="origin"):
-        location = self.worktree(path)
-        if location is None:
-            return None
-        return self.repositories[location.common_dir.split("/")[2]].get("remotes", {}).get(name)
-
-    def revision(self, path):
-        location = self.worktree(path)
-        if location is None:
-            return None
-        return self.repositories[location.common_dir.split("/")[2]].get("head")
-
-    def initialize(self, path):
-        self.repositories[path] = {"worktrees": [path], "roots": []}
-
-
-class FakeHosting:
-    """A ``RepositoryHosting`` answering from ``{"visibility": {remote_url: "private"|"public"}}``; others are unknown."""
-
-    def __init__(self, options=None):
-        self.answers = (options or {}).get("visibility", {})
-
-    def visibility(self, remote_url):
-        answer = self.answers.get(remote_url)
-        if answer is None:
-            return HostingVisibility("unknown", None, "the fake has no answer")
-        return HostingVisibility(answer, remote_url.rsplit(":", 1)[-1].removesuffix(".git"))
-
+__all__ = ["FakeHosting", "FakeVersionControl", "MemoryCompanion", "MutatingHosting", "github_api"]
 
 @contextmanager
 def github_api(repositories, token="test-token", redirects=None, requests=None):
@@ -186,3 +62,11 @@ def github_api(repositories, token="test-token", redirects=None, requests=None):
         server.shutdown()
         server.server_close()
         thread.join(5)
+
+
+class MutatingHosting(FakeHosting):
+    """A hosting factory that changes the nested options it is given, as a careless adapter might."""
+
+    def __init__(self, options=None):
+        super().__init__(options)
+        (options or {}).setdefault("visibility", {})["https://example.test/mutated"] = "public"

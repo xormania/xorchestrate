@@ -17,6 +17,7 @@ shape.
 """
 from __future__ import annotations
 
+from copy import deepcopy
 from pathlib import Path
 
 from ..composition import factory_for
@@ -34,13 +35,14 @@ def selection(kind, specification, where):
             or not isinstance(specification.get("options", {}), dict)):
         raise OrchestrationError(f"{where} {kind} must be {{\"adapter\": NAME, \"options\": {{...}}}}.",
                                  "invalid_configuration", {"kind": kind})
-    return specification["adapter"], dict(specification.get("options", {}))
+    return specification["adapter"], deepcopy(specification.get("options", {}))
 
 
 def construct(kind, specification, where, **dependencies):
     adapter, options = selection(kind, specification, where)
-    factory = factory_for(kind, adapter)
     try:
+        # An unimportable reference is a configuration error like a failing factory.
+        factory = factory_for(kind, adapter)
         return factory(options, **dependencies)
     except OrchestrationError:
         raise

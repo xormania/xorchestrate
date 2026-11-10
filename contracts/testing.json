@@ -15,7 +15,7 @@
       }
     },
     "storage": {
-      "guarantee": "Replaceable stores provide equivalent record, transaction, concurrency and persistence behavior.",
+      "guarantee": "Replaceable stores pass the xcontracts StateStore conformance kit and the SQLite store keeps its persistence behavior.",
       "modules": {
         "tests/hexagonal/test_storage.py": "adapter"
       }
@@ -216,6 +216,12 @@
         "tests/hexagonal/test_telemetry_collector_selection.py": "composition",
         "tests/hexagonal/test_telemetry_collector_compatibility.py": "adapter",
         "tests/hexagonal/test_telemetry_snapshots.py": "composition"
+      }
+    },
+    "contracts": {
+      "guarantee": "The public ports, their values and errors and the adapter factory convention come from xcontracts unchanged; built-in adapters are selectable through that convention and satisfy its ports and conformance kit, and xcontracts depends on nothing but the standard library.",
+      "modules": {
+        "tests/hexagonal/test_xcontracts.py": "contract"
       }
     }
   }
