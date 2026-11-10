@@ -17,7 +17,12 @@ the checkout:
 
 ```bash
 export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XXXXXX")"
-python3 -m pip install -e '.[test,telemetry]' -r .github/requirements-ci.txt
+export UV_PROJECT_ENVIRONMENT="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-env.XXXXXX")"
+python3 -m scripts.ci.dependencies check
+uv sync --locked --only-group validation --no-install-project --managed-python --python 3.12.16
+uv sync --locked --no-default-groups --group validation --extra test --extra telemetry --no-install-project --managed-python --python 3.12.16 --no-build-isolation-package agent-telemetry
+uv pip install --python "$UV_PROJECT_ENVIRONMENT/bin/python" --no-deps --no-build-isolation -e .
+export PATH="$UV_PROJECT_ENVIRONMENT/bin:$PATH"
 python3 -m scripts.testkit run --suite static
 python3 -m scripts.testkit run --suite checks
 ```

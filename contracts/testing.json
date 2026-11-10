@@ -148,7 +148,8 @@
         "tests/hexagonal/test_managed_operator.py": "contract",
         "tests/hexagonal/test_local_native_readiness.py": "composition",
         "tests/hexagonal/test_local_native_cleanup.py": "composition",
-        "tests/hexagonal/test_ci_changes.py": "contract"
+        "tests/hexagonal/test_ci_changes.py": "contract",
+        "tests/hexagonal/test_ci_dependencies.py": "adapter"
       }
     },
     "telemetry": {

@@ -13,6 +13,9 @@ dependencies = ["jsonschema>=4.22,<5"]
 test = ["pytest>=8,<10"]
 telemetry = ["agent-telemetry @ git+https://github.com/xormania/cce.git@84229bb7497547d2db91d02a4633ccb3867f740b#subdirectory=tools/telemetry"]
 
+[dependency-groups]
+validation = ["ruff==0.16.8", "build>=1.2,<2", "setuptools>=68", "wheel>=0.45,<1"]
+
 [project.scripts]
 xorchestrate = "xorchestrate.cli:main"
 
