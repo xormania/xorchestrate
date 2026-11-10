@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 import xorchestrate
-from xorchestrate import bridge, cli, composition
+from xorchestrate import bridge, cli, composition, installation
 from xorchestrate.composition import SUPPORTED_CONFIG_VERSIONS, build, config_version, load_config, validate_config
 from xorchestrate.model import OrchestrationError
 
@@ -207,7 +207,10 @@ def test_version_flag_prints_release_identity_from_the_installed_entrypoint():
     status, output = run_cli("--version")
     assert status == 0
     reply = json.loads(output)
+    installed = installation.installation()
     assert reply == {"version": xorchestrate.__version__, "commit": cli.installed_commit(),
+                     "install_source": installed.reported_source,
+                     "upgrade_command": installation.upgrade_command(installed),
                      "config_versions": [1], "data_version": 1}
     process = subprocess.run([sys.executable, "-m", "xorchestrate", "--version"], capture_output=True,
                              text=True, timeout=60, check=True)

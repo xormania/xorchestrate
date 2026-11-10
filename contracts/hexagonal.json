@@ -212,6 +212,7 @@
         "xorchestrate.__main__",
         "xorchestrate.bridge",
         "xorchestrate.cli",
+        "xorchestrate.installation",
         "xorchestrate.mcp"
       ],
       "allowed_roles": [
@@ -865,6 +866,7 @@
         "scripts.ci",
         "scripts.ci.classify_changes",
         "scripts.ci.dependencies",
+        "scripts.ci.release_identity",
         "scripts.ci.result"
       ],
       "allowed_roles": [

@@ -5,7 +5,7 @@ import sys
 from importlib import metadata
 from pathlib import Path
 
-from . import __version__
+from . import __version__, installation
 from .adapters.storage_migrations import DATA_VERSION
 from .composition import SUPPORTED_CONFIG_VERSIONS, build, describe, load_config, read_json
 from .mcp import failure, frames, serve
@@ -19,21 +19,17 @@ def _write(value, stream):
 
 def installed_commit(distribution=metadata.distribution):
     """The commit a VCS install resolved, from its PEP 610 ``direct_url.json``."""
-    try:
-        text = distribution("xorchestrate").read_text("direct_url.json")
-        data = json.loads(text) if text else None
-    except (metadata.PackageNotFoundError, OSError, UnicodeError, ValueError):
-        return None
-    vcs = data.get("vcs_info") if isinstance(data, dict) else None
-    commit = vcs.get("commit_id") if isinstance(vcs, dict) else None
-    return commit if isinstance(commit, str) and commit else None
+    return installation.classify_source(installation.direct_url(distribution))[2]
 
 
-def version_info(distribution=metadata.distribution):
-    """Release identity and the format versions this release reads."""
+def version_info(distribution=metadata.distribution, prefix=None):
+    """Release identity, install source and the format versions this release reads."""
+    installed = installation.installation(distribution, prefix)
     return {
         "version": __version__,
-        "commit": installed_commit(distribution),
+        "commit": installed.commit,
+        "install_source": installed.reported_source,
+        "upgrade_command": installation.upgrade_command(installed),
         "config_versions": sorted(SUPPORTED_CONFIG_VERSIONS),
         "data_version": DATA_VERSION,
     }
