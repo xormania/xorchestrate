@@ -4,11 +4,16 @@ Local and CI execution use the [testing framework](../docs/testing-framework.md)
 Python 3.12 is the required validation baseline; the telemetry tests also need a
 Python whose SQLite has the WAL fix (CI uses uv-installed Python 3.12.16). Establish a fresh bytecode cache
 outside the checkout before starting Python, then install the declared
-application/test dependencies and the single pinned linter requirements file:
+application/test dependencies from the native uv lock (install uv 0.13.7 first):
 
 ```bash
 export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XXXXXX")"
-python3 -m pip install -e '.[test]' -r .github/requirements-ci.txt
+export UV_PROJECT_ENVIRONMENT="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-env.XXXXXX")"
+python3 -m scripts.ci.dependencies check
+uv sync --locked --only-group validation --no-install-project --managed-python --python 3.12.16
+uv sync --locked --no-default-groups --group validation --extra test --no-install-project --managed-python --python 3.12.16
+uv pip install --python "$UV_PROJECT_ENVIRONMENT/bin/python" --no-deps --no-build-isolation -e .
+export PATH="$UV_PROJECT_ENVIRONMENT/bin:$PATH"
 python3 -m scripts.testkit run --suite static
 python3 -m scripts.testkit run --suite tests
 python3 -m scripts.testkit run --suite tests --shard 1/4   # one of four shards
@@ -31,6 +36,11 @@ collection targets only active tests and validates `contracts/testing.json`.
 
 ## CI jobs
 
+The [installed package acceptance](../docs/package-acceptance.md) job builds and
+installs the actual wheel and source distribution into independent runtime-only
+consumers. It records CLI, persistent-state, stdio MCP and absolute gateway launch
+checks outside the source checkout, using locked dependency constraints.
+
 CI runs on GitHub-hosted Ubuntu. Pinned actions have read-only repository
 permissions. Pull requests, pushes to master and manual runs invoke:
 
@@ -45,17 +55,22 @@ permissions. Pull requests, pushes to master and manual runs invoke:
 | Jev architecture diagnostics | Independent diagnostics-only invocation with retained advisory output |
 | Hexagonal architecture | Retains the existing required status name and reports the shared static job's outcome; it does not rerun validation |
 
-Each Python job configures `PYTHONPYCACHEPREFIX` in the runner's temporary directory before
-invoking Python. Each pinned `actions/setup-python` step enables its `cache: pip`
-download/wheel cache (`~/.cache/pip`), keyed on the files that declare that job's
-installs: static on `.github/requirements-ci.txt`, tests shards on `pyproject.toml`
-and `.github/requirements-ci.txt`, verification, tmux and Jev on `pyproject.toml`. Each tests shard
-job's uv-created 3.12.16 venv pip uses the same cache directory. The cache only
-avoids downloads/wheel builds; pip still resolves the declared pins and ranges on
-every run. A cache entry is written once per key and refreshed only when those
-files change, so packages newly released within a declared range are downloaded
-on each run until then. uv's own cache stays disabled because uv only provisions
-the interpreter.
+Each Python job configures `PYTHONPYCACHEPREFIX` and `UV_PROJECT_ENVIRONMENT` in
+runner temporary storage before validation. uv-managed Python 3.12.16 and uv 0.13.7 are
+selected explicitly. Native `uv lock --check` and the generated validation export
+check reject dependency-input drift, then `uv sync --locked` installs the chosen
+profile. Validation tools are bootstrapped from the lock before the telemetry
+source build, which uses the installed backend without build isolation. Editable application installation uses `--no-deps --no-build-isolation`
+with the already locked backend. Public package dependency ranges remain unchanged.
+
+The setup-uv download/wheel cache is keyed by `uv.lock`; a cache hit does not
+replace frozen installation or test execution. Ordinary jobs omit telemetry;
+application shards explicitly select that optional extra. The validation dependency
+group supplies Ruff and build tooling. `.github/requirements-ci.txt` is a generated
+pip-compatible export of that group, not a second manually edited pin source.
+See [validation dependencies](../docs/validation-dependencies.md) for intentional
+updates, runtime/build exports and separately labeled fresh-resolution checks.
+
 Static checks run once in their own job. The Jev diagnostic
 calculation remains independent and does not add a second deterministic gate.
 The `tests` suite is the longest validation, so it runs as parallel shards
@@ -175,9 +190,49 @@ CI neither requests reviews nor merges branches. xor controls those decisions.
 
 ## Telemetry runtime
 
-Application CI installs `.[test]`; the telemetry collector ships with the application.
-It selects uv 0.13.7 / Python 3.12.16 for the SQLite corpus adapter's WAL-fix requirement.
-Static checks need no SQLite runtime. The existing application test-kit
+Application CI selects the lock's `test` extra; the telemetry collector ships with the
+application. It uses uv 0.13.7 / Python 3.12.16 for the SQLite corpus adapter's WAL-fix
+requirement. Static checks need no SQLite runtime. The existing application test-kit
 collects the declared telemetry families alongside the current behavior suites.
 Collector or exporter failure does not replace the application's required
 effect, receipt or acceptance recording. See [the active guide](../docs/telemetry.md).
+
+## Aggregate result and reviewer summary
+
+`CI result` is an always-running final job. It requires successful path
+classification, static checks, every application shard and its aggregate,
+calibration/multi-harness verification, tmux acceptance, and installed-package
+acceptance when that job is present. Jev remains advisory. Only a successful
+`pull_request` classifier explicitly reporting `code=false` permits heavy jobs
+to be skipped; an absent decision, failed classifier, missing job or cancellation
+cannot establish a pass. Static checks remain required on documentation PRs.
+
+The aggregate downloads this run's retained artifacts. It checks that the expected
+suite reports passed and identify a clean checkout of the actual tested commit.
+A missing or nonempty candidate Git status cannot stand in for that clean identity. Application inventories
+must contain exactly the workflow's shard set, use the current catalog identity,
+have disjoint selected modules/cases, and cover every catalog module. It checks
+the inventory hashes already qualified by the test-kit. Missing or foreign
+required evidence fails the aggregate, even when GitHub job outcomes say success.
+It does not independently enumerate dynamic tests or assess assertion quality.
+
+The job summary lists source head and tested merge commit separately, job outcomes,
+recorded family/shard pass and skip counts, command durations and the run's artifact
+links. Command durations are not workflow wall time. Full reports remain separate
+artifacts, including `ci-result-evidence/result.json`. The summary states evidence
+qualification; GitHub's final `CI result` job status also includes failures of the
+checkout, artifact download and final upload steps. The same stdlib aggregation
+entrypoint is available locally as `python3 -m scripts.ci.result --help`.
+
+### Required-check rollout
+
+The active ruleset's existing `Hexagonal architecture` check remains the enforced
+status until this workflow is merged. After merge and a successful `master` run,
+replace its required status entry with **`CI result`**, using GitHub Actions as its
+source integration (15368). Preserve the ruleset's other settings: PRs, resolved
+review threads, merge commits, deletion/force-push protection, and current owner
+review policy. Then read back the actual ruleset and verify a failing required-job
+control cannot produce a successful `CI result`. Do not activate the new required
+name before the workflow exists on `master`: other active PRs would otherwise
+wait for a status their branches cannot yet emit. Repository settings are an
+explicit rollout operation; this document does not claim they were changed.

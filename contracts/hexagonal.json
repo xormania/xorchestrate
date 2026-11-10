@@ -863,7 +863,9 @@
     "ci_tooling": {
       "modules": [
         "scripts.ci",
-        "scripts.ci.classify_changes"
+        "scripts.ci.classify_changes",
+        "scripts.ci.dependencies",
+        "scripts.ci.result"
       ],
       "allowed_roles": [
         "ci_tooling"
@@ -1076,7 +1078,8 @@
         "test_support",
         "test_calibration",
         "telemetry",
-        "telemetry_views"
+        "telemetry_views",
+        "package_acceptance"
       ],
       "allowed_external": [
         "stdlib:*",
@@ -1162,6 +1165,21 @@
         "print"
       ],
       "description": "Pure versioned projections consume authorized observations without storage, capture or authority decisions."
+    },
+    "package_acceptance": {
+      "modules": [
+        "scripts.ci.package_acceptance"
+      ],
+      "allowed_roles": [
+        "package_acceptance",
+        "ci_tooling",
+        "testkit_foundation",
+        "testkit_adapters"
+      ],
+      "allowed_external": [
+        "stdlib:*"
+      ],
+      "allow_dynamic": false
     }
   }
 }

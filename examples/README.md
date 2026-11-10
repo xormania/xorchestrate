@@ -3,6 +3,16 @@
 These files illustrate composition choices. They do not prescribe a project stack,
 agent hierarchy, model, workflow, or production policy.
 
+Each example declares `"version": 1`, the configuration format version. A
+configuration without `version` is still read as version 1, with a
+`configuration_version_missing` warning in `describe`; a later release will
+require it. A release refuses a newer format with
+`configuration_version_unsupported` and an older unsupported one with
+`configuration_migration_required`, and never rewrites the file.
+`python3 -m xorchestrate --version` lists the format versions the installed
+release reads. See
+[format version and structural validation](../docs/hexagonal-architecture.md#format-version-and-structural-validation).
+
 ## Minimal local use
 
 After `python3 -m pip install -e .`, run these commands from the repository root:

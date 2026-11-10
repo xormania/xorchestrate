@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import cast
 
 from ..activity import activity_engine
-from ..model import OrchestrationError, canonical_digest
+from ..model import OrchestrationError, canonical_digest, public_error_message
 from ..outcomes import before_effect, effect_outcome
 from ..ports import ApplicationToolSessionDriver, SessionDriver
 from .bridge_transport import FifoListener, Peer, bridge_error, copy_json, positive_option
@@ -323,8 +323,11 @@ class SessionBridgeHost:
             with self._settlement(peer, params):
                 knowledge = effect_outcome(exc)
                 event = "fail" if knowledge in {"not_started", "failed"} else "uncertain"
-                evidence = {"error": getattr(exc, "code", type(exc).__name__), "effect_outcome": knowledge,
-                    "error_message": str(exc), "error_details": deepcopy(getattr(exc, "details", {}))}
+                # This evidence is persisted, returned by inspect and replayed as a
+                # public error, so arbitrary exceptions contribute only their type.
+                public = isinstance(exc, OrchestrationError)
+                evidence = {"error": exc.code if public else type(exc).__name__, "effect_outcome": knowledge,
+                    "error_message": public_error_message(exc), "error_details": deepcopy(exc.details) if public else {}}
                 if knowledge == "completed" and "result" in evidence["error_details"]:
                     evidence["result"] = deepcopy(evidence["error_details"]["result"])
                 # Observed effect knowledge is evidence, not a forced lifecycle
