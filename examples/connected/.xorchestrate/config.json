@@ -61,22 +61,27 @@
   "sessions": {
     "worker": {
       "enabled": false,
-      "adapter": "codex",
+      "adapter": "hosted",
       "options": {
-        "command": [
-          "codex",
-          "app-server",
-          "--listen",
-          "stdio://"
-        ],
-        "cwd": "${repo}",
-        "pass_env": [
-          "PATH",
-          "HOME",
-          "CODEX_HOME"
-        ],
-        "application_tools": true,
-        "timeout": 120
+        "session": {
+          "adapter": "codex",
+          "options": {
+            "command": [
+              "codex",
+              "app-server",
+              "--listen",
+              "stdio://"
+            ],
+            "cwd": "${repo}",
+            "pass_env": [
+              "PATH",
+              "HOME",
+              "CODEX_HOME"
+            ],
+            "timeout": 120
+          }
+        },
+        "application_tools": true
       }
     }
   },

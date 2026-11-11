@@ -12,6 +12,7 @@ set-up project: it is found from the working directory, or named with
 upgrade or migrate one and run with the installed release.
 """
 import argparse
+import contextlib
 import json
 import os
 import signal
@@ -26,7 +27,7 @@ from . import __version__, installation
 from .adapters.local_socket import InstanceLock, check_socket_directory, check_socket_path, lock_is_held
 from .adapters.storage_migrations import DATA_VERSION
 from .adapters.unix import UnixClientTransport
-from .composition import RELEASE, SUPPORTED_CONFIG_VERSIONS, build, describe, read_json
+from .composition import RELEASE, SUPPORTED_CONFIG_VERSIONS, TerminalHosting, build, describe, read_json
 from .instance import operations, snapshots
 from .instance.doctor import doctor
 from .instance.handoff import HANDOFF_VARIABLE, handoff
@@ -223,6 +224,27 @@ def worktree_policy(tracked):
     return policy
 
 
+def _server_terminal_hosting(files):
+    """The server is the authority on its project's terminal host placement.
+
+    It uses the placement recorded when it was launched through a host; a
+    server started directly derives the same placement and records it. Returns
+    the ``TerminalHosting`` for hosted sessions, or ``None`` (with the reason
+    written to stderr) when no terminal host is ready, so the server still
+    serves and only hosted sessions are refused.
+    """
+    record = files.read_terminal_record()
+    placement = record["placement"] if record is not None else files.terminal_placement()
+    if record is None:
+        files.write_terminal_record(placement, None)
+    try:
+        active = Services(Home.locate()).terminal_host(placement)
+    except OrchestrationError as error:
+        _write({"terminal_host": {"error": {"code": error.code, "message": str(error)}}}, sys.stderr)
+        return None
+    return TerminalHosting(active.host, str(Path(placement["socket"]).parent))
+
+
 def _serve_unix(args, prepared):
     files = ServerFiles.locate(server_identity(prepared.instance.instance_id)).ensure()
     lock = InstanceLock(files.lock)
@@ -233,7 +255,11 @@ def _serve_unix(args, prepared):
                                  {"socket": record and record.get("socket")})
     try:
         path = _explicit_socket(args) or default_socket_path(files)
-        with build(prepared.config, project=prepared.context) as runtime:
+        hosting = _server_terminal_hosting(files)
+        with contextlib.ExitStack() as owned:
+            if hosting is not None:
+                owned.callback(hosting.host.close)  # Releases only; hosted terminals keep running.
+            runtime = owned.enter_context(build(prepared.config, project=prepared.context, terminal_hosting=hosting))
             dispatcher = MCPDispatcher(runtime.application, args.request_workers, args.max_pending_requests,
                                        args.control_workers)
             transport = None
@@ -302,6 +328,8 @@ class ServerTerminals:
         if record is None:
             return None
         host = self._open_host(record["placement"])
+        if record.get("receipt") is None:  # Placed by a server started directly: no terminal to adopt.
+            return None
         held = next((item for item in host.terminals() if item.name == SERVER_TERMINAL), None)
         if held is not None:  # Opened by this controller.
             return held

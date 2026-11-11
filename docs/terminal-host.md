@@ -2,7 +2,7 @@
 
 Xorchestrate runs long-lived local work in a **terminal host**: a named group of
 terminals it can list, drive, attach to and recover. Today the project server
-runs there; hosted sessions follow.
+runs there, and so do [hosted sessions](#hosted-sessions).
 
 The host is a port, `TerminalHost` in `xorchestrate/ports.py`. The application
 sees hosted terminals, receipts and capabilities, not a particular
@@ -180,6 +180,59 @@ refusal `terminal_host_unavailable`.
   `tmux` it reaches the server through the private environment file, never a
   command line.
 
+## Hosted sessions
+
+A session that should survive the server is configured as `hosted`, wrapping
+the native session's own selection:
+
+```json
+{"sessions": {"worker": {"adapter": "hosted", "options": {
+  "session": {"adapter": "codex", "options": {"command": ["codex", "app-server", "--listen", "stdio://"],
+                                               "cwd": "${repo}"}},
+  "application_tools": true}}}}
+```
+
+Each hosted session is a bridge host (`python -m xorchestrate.bridge`) that
+Xorchestrate opens in the project's terminal host and attaches to with the
+existing bridge driver. There is no new session protocol, and owned drivers
+are unchanged.
+
+- **Where it runs.** The server binds its terminal host to hosted drivers. The
+  terminal is named after the configured entry plus a short key. Each session
+  has a private directory (`options.directory`, default `hosted` under the
+  project's data directory). It holds the generated host configuration, the
+  host's state file and the terminal's log. The bridge endpoint sits beside the
+  host's socket.
+- **Start.** The driver opens the terminal and retries attaching while it runs,
+  up to `attach_timeout` (default 30 seconds). A failed or timed-out start
+  returns a safe summary and the location of the session's private log; what
+  the terminal printed stays in that log. The command line carries only paths
+  and names: the native specification is passed in a private file. A `hosted_terminal`
+  observation records whether the session survives the server, and gives the
+  attach command when the host is interactive.
+- **Capacity.** `max_sessions` (default: the wrapped selection's
+  `max_sessions`, else 64) bounds this entry's running hosted terminals,
+  counting starts in flight and the detached terminals a previous server left
+  running. A new terminal past the limit is refused with `session_capacity`
+  before anything is created. Reconnecting to a running terminal is not a new
+  session; reopening a vanished one is.
+- **`stop_session`** asks the bridge host to stop, then always closes the
+  terminal, adopting it from the session's receipt. If the bridge host fails or
+  does not answer, or this server holds no connection to it, the terminal is
+  still closed, and the result says the bridge host did not acknowledge
+  (`bridge.acknowledged: false`). If closing fails, the stop fails and can be
+  called again. If cleanup cannot be verified, it says so. The private
+  directory and state file remain, so a later resume reopens the terminal with
+  the same state. Pruning old directories is later work.
+- **`detach_session`** and the server stopping only detach: the terminal keeps
+  running.
+- **`reconnect_session`/resume** adopts the terminal from the session's
+  receipt and reconnects through the bridge. If the terminal is gone (after a
+  reboot or a `stop`), it reopens it with the same state, so the bridge resumes
+  the native conversation. Resuming needs a native driver that supports it.
+- **Approval.** The approval summary and `doctor` list the wrapped session's
+  command like any other launched command.
+
 ## What "recoverable" means
 
 - **The server, its terminal or an SSH connection dies.** With `tmux`, the
@@ -191,6 +244,45 @@ refusal `terminal_host_unavailable`.
   so the conversation is recovered.
 - **`detached-process`** keeps processes running past the controller, but
   there is no terminal to attach to.
+
+## Recovering after a container or machine failure
+
+A container failure or a reboot loses every process at once: the server, the
+terminal host (a multiplexer server, detached processes), each hosted session's
+bridge host, and the harnesses they run. Treat it as total loss of processes.
+
+**What survives** is the Xorchestrate home, which must be on persistent storage:
+
+- the project's store (sessions, work, the effect journal);
+- each hosted session's private directory (`hosted` under the project's data
+  directory), with its bridge state file, its generated host configuration and
+  its terminal log;
+- the server's records under `<home>/servers` (discovery, terminal placement
+  and receipt) and its log.
+
+**What does not survive:** processes, terminals and their unsaved output,
+sockets, and anything a harness held only in memory. Files in the runtime or
+socket location may or may not survive. Stale sockets, lock files and records
+whose process no longer exists are normal starting states.
+
+**To recover:**
+
+1. Run `xorchestrate up` (or connect). A stale socket the host owns is removed
+   once nothing answers on it. A record whose process is gone is set aside, and
+   the server starts in a fresh terminal.
+2. Run `xorchestrate status`. Under `sessions_needing_reconnect` it lists the
+   sessions that were live and that the new server does not hold, each with the
+   call to make.
+3. Make that call. For a hosted session it is `reconnect_session` with
+   `resume_session_id`. The hosted adapter checks that the old terminal is
+   gone, removes its own stale endpoint, reopens the terminal with the same
+   state so the bridge resumes the native conversation, and reconnects.
+   Nothing is reconnected automatically.
+
+**What stays uncertain:** effects that were in flight at the failure. Their
+outcome is unknown; they are not replayed or re-sent, and they stay in the
+effect journal for reconciliation (`resolve_operation`). A native driver
+without resume cannot continue its conversation: start a fresh session.
 
 ## Known limitations
 

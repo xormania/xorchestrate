@@ -96,7 +96,7 @@ does not supply `project-tools` or `assessment-bridge`.
 | --- | --- |
 | Provider `project` | A stdio MCP server advertising the project tools you choose |
 | Provider `judgment` | A CLI bridge reading one JSON request on stdin and writing one JSON result on stdout |
-| Session `worker` | A Codex app-server process with application dynamic tools enabled |
+| Session `worker` | A Codex app-server process with application dynamic tools enabled, run as a [hosted session](../docs/terminal-host.md#hosted-sessions) so it survives the server |
 | Evaluators `triage`, `deliberate` | Tool adapters selecting two models through the configured judgment capability |
 
 Enable only what you use by setting its `enabled` to `true`. To use assessment,

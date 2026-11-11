@@ -129,7 +129,8 @@
     "terminal-host": {
       "guarantee": "Every terminal host adapter and the memory fake keep one behaviour: named terminals with exact environments, known exit status or signal, bounded output and logs that outlive the terminal, identity-fenced control, adoption only by verified receipt and survival of a killed controller where the host claims it.",
       "modules": {
-        "tests/hexagonal/test_terminal_host.py": "contract"
+        "tests/hexagonal/test_terminal_host.py": "contract",
+        "tests/hexagonal/test_hosted_sessions.py": "contract"
       }
     },
     "projects": {
