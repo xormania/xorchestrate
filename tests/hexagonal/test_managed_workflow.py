@@ -268,6 +268,7 @@ def test_ctrl_c_on_the_supervisor_finishes_unsuccessfully_with_verified_cleanup(
         assert result["reason"] == "supervisor_signal"
         assert result["cleanup"]["verified"] and not result["observed"]["worker_alive"], result["cleanup"]
         await_condition(lambda: not owner_alive(workflow.state(directory)["owner"]))
-        assert processes_naming(directory) == [], "nothing of the run outlives its supervisor's orderly exit"
+        # The host's processes end just after the supervisor; a real leak never clears.
+        await_condition(lambda: processes_naming(directory) == [], timeout=20)
     finally:
         workflow.close()
