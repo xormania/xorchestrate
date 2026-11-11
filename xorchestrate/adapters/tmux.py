@@ -38,7 +38,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ..model import OrchestrationError
-from ..ports import AttachInstruction, HostedTerminal, TerminalClosure
+from ..ports import AttachInstruction, HostedTerminal, InventoryItem, TerminalClosure
 from . import terminal_support as support
 from .local_socket import open_private_file
 from .process import positive_integer, positive_number
@@ -165,16 +165,24 @@ class TmuxTerminalHost:
         sequence += [";", "set-option", "@terminal_host", self.name, ";", "set-option", "@terminal_name", name,
                      ";", "set-option", "-g", "exit-empty", "on"]
         for attempt in range(2):
-            self._ensure_server()
-            server = self._server
+            server = self._ensure_server()
             try:
-                self._release_name(name)
-                result = self._control(*sequence)
+                if server is None:
+                    # No server yet: start it and open this first terminal in one client invocation, so a server
+                    # never exists without a terminal (exit-empty stays on) and a failed open leaves none behind.
+                    result = self._control("start-server", ";", *self._server_options(), ";", *sequence, start=True)
+                    self._server = server = self._query_server()
+                    if server is None:
+                        raise OrchestrationError("The terminal host did not start.", "terminal_host_unavailable")
+                    os.chmod(self.socket, 0o600)
+                else:
+                    self._release_name(name)
+                    result = self._control(*sequence)
                 break
             except OrchestrationError as error:
                 if error.code == "terminal_exists":
                     raise
-                if attempt == 0 and not support.alive(server) and not self._terminals:
+                if attempt == 0 and server is not None and not support.alive(server) and not self._terminals:
                     # The server found at the socket was ending with its last terminal; start a new one.
                     self._await_exit(server)
                     continue
@@ -314,6 +322,57 @@ class TmuxTerminalHost:
             raise OrchestrationError("The terminal does not match its receipt.", "terminal_identity_mismatch")
         return terminal
 
+    def inventory(self):
+        panes = [pane for pane in self._panes_quietly() if pane.host == self.name]
+        return sorted((InventoryItem(pane.name, not self._exited(pane), self._holds(pane)) for pane in panes),
+                      key=lambda item: item.name)
+
+    def sweep(self):
+        swept = []
+        for pane in self._panes_quietly():
+            if pane.host != self.name or self._holds(pane) or not self._exited(pane):
+                continue
+            server = self._server or self._query_server()
+            if server is None:
+                break
+            self._server = server
+            # Fenced by the server identity checked in this call; ending the last session is expected here.
+            self._control("kill-session", "-t", pane.session, check=False, server=server, after=False)
+            swept.append(pane.name)
+        if swept and not self._panes_quietly():
+            self._end_empty_server()
+        return sorted(swept)
+
+    def _panes_quietly(self):
+        """This host's panes as found now, from a server that may not be running (then none)."""
+        if not self.socket.exists():
+            return []
+        server = self._server if self._server is not None and support.alive(self._server) else self._query_server()
+        if server is None:
+            return []
+        self._server = server
+        try:
+            return self._panes()
+        except OrchestrationError:
+            return []  # The server ended while it was asked.
+
+    def _holds(self, pane):
+        held = self._terminals.get(pane.name)
+        return held is not None and (held.pane, held.session) == (pane.pane, pane.session)
+
+    @staticmethod
+    def _exited(pane):
+        """Known to have exited: the pane is dead and its status is in, or the process it started is gone."""
+        if not pane.dead:
+            return False
+        if pane.status is not None or pane.signal is not None:
+            return True
+        pid, _, rest = pane.process.partition(":")
+        started, _, boot = rest.partition(":")
+        if not (pid.isdigit() and started.lstrip("-").isdigit()):
+            return False
+        return not support.alive(support.Identity(int(pid), int(started), boot))
+
     def shutdown(self):
         for name in list(self._terminals):
             self.close_terminal(name)
@@ -355,12 +414,23 @@ class TmuxTerminalHost:
 
     # -- server -------------------------------------------------------------------
 
+    def _server_options(self):
+        return ["set-option", "-wg", "remain-on-exit", "on", ";", "set-option", "-wg", "remain-on-exit-format", "",
+                ";", "set-option", "-g", "history-limit", str(self.output_lines), ";",
+                "set-option", "-g", "default-terminal", self.terminal_type]
+
     def _ensure_server(self):
+        """The live server of this host, or ``None`` when there is none yet (the first open starts it).
+
+        An owned host's server is this controller's child (``-D``, which keeps
+        it alive while empty); it ends with an orderly close, or with the
+        controller through the parent-death signal.
+        """
         problem = self.readiness()
         if problem is not None:
             raise OrchestrationError(f"The terminal host is unavailable: {problem}.", "terminal_host_unavailable")
         if self._server is not None and support.alive(self._server):
-            return
+            return self._server
         # The server ends with its last terminal; a later open starts a new one.
         self._server = None
         support.private_directory(self.socket.parent)
@@ -369,13 +439,12 @@ class TmuxTerminalHost:
             server = self._query_server()
             if server is not None:
                 self._server = server
-                return
+                return server
             if self.socket.is_socket():
                 self.socket.unlink()  # A stale socket of a dead server.
-        options = ["set-option", "-g", "exit-empty", "off", ";", "set-option", "-wg", "remain-on-exit", "on", ";",
-                   "set-option", "-wg", "remain-on-exit-format", "", ";",
-                   "set-option", "-g", "history-limit", str(self.output_lines), ";",
-                   "set-option", "-g", "default-terminal", self.terminal_type]
+        if not self.owned:
+            return None
+        options = self._server_options()
         if self.owned:
             self._child = subprocess.Popen([self.binary, "-D", "-S", str(self.socket), "-f", os.devnull],
                                            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
@@ -386,16 +455,12 @@ class TmuxTerminalHost:
                 if self._child.poll() is not None or time.monotonic() >= deadline:
                     raise OrchestrationError("The terminal host did not start.", "terminal_host_unavailable")
                 time.sleep(0.02)
-            server = support.identity(self._child.pid)
-            self._server = server
+            self._server = support.identity(self._child.pid)
+            if self._server is None:
+                raise OrchestrationError("The terminal host did not start.", "terminal_host_unavailable")
             self._control(*options)
-        else:
-            self._control("start-server", ";", *options, start=True)
-            server = self._query_server()
-            self._server = server
-        if self._server is None:
-            raise OrchestrationError("The terminal host did not start.", "terminal_host_unavailable")
         os.chmod(self.socket, 0o600)
+        return self._server
 
     def _attach_prefix(self):
         """The multiplexer command, run with its nesting markers cleared so attaching works from inside a session."""

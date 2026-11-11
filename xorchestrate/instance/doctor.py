@@ -83,8 +83,48 @@ def companion_checks(services, companion):
     return checks
 
 
-def project_checks(path=None, environ=None):
-    """Approval, overrides, harness binaries and ``pass_env`` of the project at ``path``."""
+def project_terminal_check(services, placement, tracked=()):
+    """What the project's terminal host holds, from ``inventory()`` at ``placement``; nothing is started or stopped."""
+    try:
+        active = services.terminal_host(placement)
+    except OrchestrationError as error:
+        return _check("project_terminals", "warning", f"The project's terminal host cannot be inspected: {error}",
+                      code=error.code)
+    try:
+        items = active.host.inventory()
+    except OrchestrationError as error:
+        return _check("project_terminals", "warning", f"The project's terminal host cannot be inspected: {error}",
+                      code=error.code)
+    finally:
+        active.host.close()
+    running = sorted(item.name for item in items if item.running)
+    exited = sorted(item.name for item in items if not item.running)
+    untracked = sorted(item.name for item in items if item.name not in set(tracked))
+    details = {"adapter": active.adapter, "running": running, "exited": exited, "untracked": untracked}
+    if not items:
+        return _check("project_terminals", "ok", f"the project's {active.adapter} terminal host holds no terminals",
+                      **details)
+    advice = []
+    if exited:
+        advice.append(f"{len(exited)} exited ({', '.join(exited)}): `xorchestrate down` or `status` sweeps them "
+                      "while no server runs")
+    if running:
+        advice.append(f"{len(running)} running ({', '.join(running)}): `xorchestrate down` stops a running server; "
+                      "other running terminals stay until they are stopped where they run")
+    if untracked:
+        advice.append(f"untracked by any record: {', '.join(untracked)}")
+    return _check("project_terminals", "warning" if exited or untracked else "ok",
+                  f"the project's {active.adapter} terminal host holds " + "; ".join(advice), **details)
+
+
+def project_checks(path=None, environ=None, terminal_placement=None):
+    """Approval, overrides, harness binaries and ``pass_env`` of the project at ``path``.
+
+    ``terminal_placement(instance_id)`` gives ``{"placement", "tracked"}``: where
+    the project's terminal host is (the recorded placement, else the one the
+    launcher would compute) and the terminal names a record tracks. Its
+    terminals are reported from ``inventory()``; any other is untracked.
+    """
     checks = []
     try:
         services = Services(Home.locate(environ))
@@ -95,6 +135,12 @@ def project_checks(path=None, environ=None):
         return [_check("project", "error", str(error), code=error.code)], None
     checks.append(_check("project", "ok", f"{tracked.name} instance {instance.instance_id}",
                          worktree=tracked.identity()))
+    if terminal_placement is not None:
+        try:
+            located = terminal_placement(instance.instance_id)
+            checks.append(project_terminal_check(services, located["placement"], located.get("tracked", ())))
+        except OrchestrationError as error:
+            checks.append(_check("project_terminals", "warning", str(error), code=error.code))
     checks += companion_checks(services, companion)
     refusal = approval_refusal(companion, tracked)
     if refusal is not None:
@@ -158,8 +204,8 @@ def terminal_host_check(environ=None):
     return _check("terminal_host", "ok", f"{report['adapter']}: {traits}", **report)
 
 
-def doctor(path=None, environ=None, *, project=True):
+def doctor(path=None, environ=None, *, project=True, terminal_placement=None):
     checks = machine_checks() + [terminal_host_check(environ)]
     if project:
-        checks += project_checks(path, environ)[0]
+        checks += project_checks(path, environ, terminal_placement)[0]
     return {"ok": all(item["status"] != "error" for item in checks), "checks": checks}

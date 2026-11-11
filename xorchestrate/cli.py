@@ -283,14 +283,14 @@ class ServerTerminals:
     def __init__(self, files, environ=None):
         self.files, self.environ = files, environ
         self.active = None
-        self.placement = None
+        self._placement = None
 
     def _open_host(self, placement):
-        if self.active is not None and self.placement != placement:
+        if self.active is not None and self._placement != placement:
             self.close()  # Another placement is another host: never act on one through the other.
         if self.active is None:
             self.active = Services(Home.locate(self.environ)).terminal_host(placement)
-            self.placement = dict(placement)
+            self._placement = dict(placement)
         return self.active.host
 
     def adopt(self):
@@ -316,6 +316,7 @@ class ServerTerminals:
             # No server holds the instance lock, so whatever is left in the terminal is finished or stuck.
             self.active.host.close_terminal(SERVER_TERMINAL)
             self.files.remove_terminal_record()
+        self.sweep()  # Exited terminals no server holds (the instance lock is free under the start lock).
         placement = self.files.ensure().terminal_placement(self.environ)
         host = self._open_host(placement)  # Reopens the host when the placement changed since the last launch.
         terminal = host.open_terminal(SERVER_TERMINAL, TerminalCommand(tuple(command), cwd or os.getcwd(),
@@ -324,12 +325,22 @@ class ServerTerminals:
         return _ServerLaunch(host)
 
     def finish(self):
-        """After the server stopped: close its terminal and forget the record. Return whether one was closed."""
+        """After the server stopped: close its terminal, sweep exited ones and forget the record. Return whether closed."""
         closed = self.adopt() is not None
         if closed:
             self.active.host.close_terminal(SERVER_TERMINAL)
+        self.sweep()
         self.files.remove_terminal_record()
         return closed
+
+    def placement(self):
+        """The recorded placement, else the one the launcher would compute: where this project's host is."""
+        record = self.files.read_terminal_record()
+        return record["placement"] if record is not None else self.files.ensure().terminal_placement(self.environ)
+
+    def sweep(self):
+        """Remove exited terminals at the project's host that no controller here holds (call with no server running)."""
+        return self._open_host(self.placement()).sweep()
 
     def report(self):
         terminal = self.adopt()
@@ -342,7 +353,7 @@ class ServerTerminals:
         if self.active is not None:
             self.active.host.close()
             self.active = None
-            self.placement = None
+            self._placement = None
 
 
 class _ServerLaunch:
@@ -356,11 +367,19 @@ class _ServerLaunch:
         return {"exit_code": terminal.exit_status, "exit_signal": terminal.exit_signal}
 
 
-def _server_terminal_report(files):
-    """``status``: the active terminal host and the server's terminal; a host problem is reported, not raised."""
+def _server_terminal_report(files, *, sweep=False):
+    """``status``: the active terminal host and the server's terminal; a host problem is reported, not raised.
+
+    With ``sweep`` (no server answered), exited terminals are swept first, under the start lock and only while no
+    server holds the instance lock, so nothing a live server holds is touched.
+    """
     terminals = ServerTerminals(files)
     try:
-        return terminals.report()
+        report = terminals.report()  # Adopts the server's own terminal, so the sweep leaves it for up or down.
+        swept = _sweep_under_start_lock(files, terminals) if sweep else None
+        if swept:
+            report["swept"] = swept
+        return report
     except OrchestrationError as error:
         return {**(terminals.active.report() if terminals.active else {}),
                 "error": {"code": error.code, "message": str(error)}}
@@ -395,6 +414,28 @@ def _finish_under_start_lock(files, terminals):
         if lock_is_held(files.lock):
             return None  # A live server's terminal is its work, even if its socket is gone.
         return terminals.finish()
+    finally:
+        starting.release()
+
+
+def _project_terminal_placement(instance_id):
+    """Where a project's terminal host is: its recorded placement, else the one the launcher would compute."""
+    files = ServerFiles.locate(server_identity(instance_id))
+    record = files.read_terminal_record()
+    if record is None:
+        return {"placement": files.ensure().terminal_placement(), "tracked": []}
+    return {"placement": record["placement"], "tracked": [SERVER_TERMINAL] if record.get("receipt") else []}
+
+
+def _sweep_under_start_lock(files, terminals):
+    """Sweep the project's host while no server runs or starts; ``None`` when that cannot be ensured now."""
+    starting = InstanceLock(files.ensure().start_lock)
+    if not starting.acquire(wait=SERVER_LOCK_WAIT):
+        return None
+    try:
+        if lock_is_held(files.lock):
+            return None
+        return terminals.sweep()
     finally:
         starting.release()
 
@@ -460,7 +501,7 @@ def _server_command(args, tracked):
         reply = {"running": False, "socket": None if target is None else str(target)}
         if args.command == "status":
             reply["overrides"] = _overrides(tracked)
-            reply["terminal_host"] = _server_terminal_report(files)
+            reply["terminal_host"] = _server_terminal_report(files, sweep=True)
         elif lock_is_held(files.lock):
             # A live server that cannot be reached: never stop it without its drain.
             _write({"error": {"code": "server_unreachable", "message":
@@ -573,7 +614,7 @@ def _operator_command(args):
     elif args.command == "approve":
         report = operations.approve(args.path or args.project)
     else:
-        report = doctor(args.project)
+        report = doctor(args.project, terminal_placement=_project_terminal_placement)
         _write(report, sys.stdout)
         return 0 if report["ok"] else 1
     _write(report, sys.stdout)

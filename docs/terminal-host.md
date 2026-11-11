@@ -22,6 +22,8 @@ home, like the other operator adapters.
 | `attach_instruction(name=None)` | A command for the operator to attach to one terminal or the whole host. It checks that the location is still private and that the terminal still matches before answering. Interactive hosts only. |
 | `attach_instruction_for(receipt)` | For a process that is not the terminal's controller: how to attach to the terminal a receipt names. The receipt is verified as `adopt` verifies it, but no control is taken, so the terminal stays with its controller. Works for owned hosts too. Interactive hosts only. |
 | `close_terminal(name, grace=None)` | Stop the terminal's work and forget it. The terminal's own command is asked to stop first and gets the whole `grace` to stop its own children. Whatever remains after that is terminated, given a short wait, then forced. Returns the final observation and `cleanup_verified`, which is true only when everything is gone. |
+| `inventory()` | Everything at the host's location: name, running or exited, and whether this controller holds it. Read only, with no process identifiers. |
+| `sweep()` | Remove every exited terminal at the host that this controller does not hold, and return their names. Running terminals are never touched; the host ends when nothing is left. |
 | `adopt(receipt)` | Take back a terminal after the controller restarted, verified against what is actually running. |
 | `shutdown()` | Stop every terminal of the host and remove its private state. |
 | `close()` | Release this controller. Terminals survive if `survives_controller` is true. |
@@ -58,7 +60,36 @@ trusted, as elsewhere in the product.
 cannot know. For example, a terminal adopted by another process may not have
 its wait status.
 
-## Adapters
+## Lifecycle
+
+The same rules hold for both adapters and both modes, except where noted.
+
+- **Start.** A host has no process and no endpoint until its first terminal
+  opens. Under `tmux`, a surviving host's server starts in the same client
+  call that opens its first terminal, so a server never exists without a
+  terminal, and an open that fails leaves no server. An owned host's server
+  (`-D`, which tmux keeps alive while empty) starts as the controller's child
+  just before the first terminal opens.
+- **End.** A host ends when its last terminal is closed or swept. Under `tmux`
+  the server exits and its socket is removed. Under `detached-process` the
+  host's records, its own logs and its empty location are removed. `shutdown`
+  ends a host at once, stopping every terminal at it.
+- **Who may end what.** A controller closes only the terminals it opened or
+  adopted. `close` releases a controller: a surviving host's terminals keep
+  running, and an owned controller ends only what it started or controls.
+  `shutdown` stops every terminal at the host. `sweep` removes only exited
+  terminals that this controller does not hold, and never a running one.
+- **Controller exits or is killed.** Surviving host: nothing changes, and its
+  terminals keep running for a later controller to adopt. Owned host: an
+  orderly close stops everything and verifies it. If the controller is killed
+  outright, the host and each terminal's command are stopped (see `owned`
+  under Adapters).
+- **Finished terminals.** An exited terminal keeps its status, and its output
+  stays readable, until it is closed, swept or replaced by a new terminal of
+  the same name.
+- **Inventory.** `inventory()` lists everything at the host's location (name,
+  running or exited, held by this controller or not) without taking control.
+
 
 | Adapter | `survives_controller` | `interactive` | Mechanism |
 | --- | --- | --- | --- |
@@ -140,6 +171,10 @@ refusal `terminal_host_unavailable`.
 - A server terminal left from a crash is closed before a new one opens.
 - A server that exits during startup leaves its output in the log and no
   terminal behind.
+- `up`, `down` and `status` (when no server answers) sweep the project's host of
+  exited terminals. They do this under the start lock, and only while no server
+  holds the instance lock. `doctor` reports what the host holds (running,
+  exited, and untracked by any record) and how to end it.
 - With `detached-process`, the server runs exactly as before.
 - The server runs with the launching client's environment, as before. With
   `tmux` it reaches the server through the private environment file, never a
@@ -158,6 +193,14 @@ refusal `terminal_host_unavailable`.
   there is no terminal to attach to.
 
 ## Known limitations
+
+- `sweep` cannot see what another live controller holds, so it would also
+  remove an exited terminal that such a controller still holds. The CLI sweeps
+  only while no server holds the project's instance lock, under the start lock
+  (`up` before launching, `down` after the stop, `status` when no server
+  answers), and running terminals are never swept.
+- An owned host's controller that is killed outright can leave behind a process
+  that detached or ignores hangup (see `owned`).
 
 - `doctor` probes readiness at a placement under the home's server directory,
   not at each project's placement.
