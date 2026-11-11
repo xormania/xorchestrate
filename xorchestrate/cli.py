@@ -283,10 +283,14 @@ class ServerTerminals:
     def __init__(self, files, environ=None):
         self.files, self.environ = files, environ
         self.active = None
+        self.placement = None
 
     def _open_host(self, placement):
+        if self.active is not None and self.placement != placement:
+            self.close()  # Another placement is another host: never act on one through the other.
         if self.active is None:
             self.active = Services(Home.locate(self.environ)).terminal_host(placement)
+            self.placement = dict(placement)
         return self.active.host
 
     def adopt(self):
@@ -307,14 +311,13 @@ class ServerTerminals:
             raise
 
     def __call__(self, command, log, cwd):
+        """Launch the server (``ensure_server`` calls this holding the start lock, with the instance lock free)."""
         if self.adopt() is not None:
             # No server holds the instance lock, so whatever is left in the terminal is finished or stuck.
             self.active.host.close_terminal(SERVER_TERMINAL)
             self.files.remove_terminal_record()
         placement = self.files.ensure().terminal_placement(self.environ)
-        if self.active is not None and self.active.host.name != placement["name"]:
-            self.close()
-        host = self._open_host(placement)
+        host = self._open_host(placement)  # Reopens the host when the placement changed since the last launch.
         terminal = host.open_terminal(SERVER_TERMINAL, TerminalCommand(tuple(command), cwd or os.getcwd(),
                                                               tuple(os.environ.items())), log=str(log))
         self.files.write_terminal_record(placement, terminal.receipt)
@@ -339,6 +342,7 @@ class ServerTerminals:
         if self.active is not None:
             self.active.host.close()
             self.active = None
+            self.placement = None
 
 
 class _ServerLaunch:
@@ -377,17 +381,33 @@ def _server_attach(files):
         terminals.close()
 
 
-def _finish_server_terminal(files, reply):
-    """``down``: close the stopped server's terminal; mention it only when one was closed or could not be.
+def _finish_under_start_lock(files, terminals):
+    """Close the stopped server's terminal: ``True`` closed, ``False`` none, ``None`` not now (a server is up or starting).
 
-    Never while a server still holds the instance lock: its terminal is live work, even if its socket is gone.
+    Holds the start lock across the instance-lock check and the cleanup, as
+    ``ensure_server`` holds it across its own check and launch, so a
+    replacement server can never start in between and lose its terminal.
     """
-    if lock_is_held(files.lock):
-        return reply
+    starting = InstanceLock(files.ensure().start_lock)
+    if not starting.acquire(wait=SERVER_LOCK_WAIT):
+        return None
+    try:
+        if lock_is_held(files.lock):
+            return None  # A live server's terminal is its work, even if its socket is gone.
+        return terminals.finish()
+    finally:
+        starting.release()
+
+
+def _finish_server_terminal(files, reply):
+    """``down``: close the stopped server's terminal; mention it only when one was closed, kept or could not be."""
     terminals = ServerTerminals(files)
     try:
-        if terminals.finish():
+        closed = _finish_under_start_lock(files, terminals)
+        if closed:
             reply["terminal"] = {"closed": True}
+        elif closed is None:
+            reply["terminal"] = {"closed": False, "reason": "a server is running or starting"}
     except OrchestrationError as error:
         reply["terminal"] = {"error": {"code": error.code, "message": str(error)}}
     finally:
@@ -414,7 +434,8 @@ def _server_command(args, tracked):
                                             cwd=str(instance.data_dir))
         except OrchestrationError as error:
             if error.code == "server_unavailable" and "exit_code" in error.details:
-                terminals.finish()  # The server's output is in its log; leave no exited terminal behind.
+                # The server's output is in its log; leave no exited terminal behind (unless a client restarted it).
+                _finish_under_start_lock(files, terminals)
             raise
         finally:
             terminals.close()
