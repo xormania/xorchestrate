@@ -978,3 +978,85 @@ def test_down_never_closes_a_terminal_whose_server_still_holds_its_lock(cli):
         import signal
         with contextlib.suppress(ProcessLookupError):
             os.kill(started["pid"], signal.SIGTERM)
+
+
+# -- the server's terminal under concurrent clients and changed placements -------------------
+
+def _terminal_environment(directory, adapter):
+    from xorchestrate.instance.home import Home
+
+    home = directory / "home"
+    home.mkdir(mode=0o700, exist_ok=True)
+    Home(home).update_settings(terminal_host={"adapter": adapter})
+    return {**os.environ, "XORCHESTRATE_HOME": str(home)}
+
+
+@pytest.mark.parametrize("adapter", ["tmux", "detached-process"])
+def test_down_never_closes_a_terminal_while_a_client_is_starting_the_server(directory, adapter, monkeypatch):
+    """A starting client holds the start lock between its instance-lock check and its launch; cleanup waits for it."""
+    if adapter == "tmux" and shutil.which("tmux") is None:
+        pytest.skip("the multiplexer is not installed")
+    from xorchestrate import cli
+    from xorchestrate.adapters.local_socket import InstanceLock
+
+    environ = _terminal_environment(directory, adapter)
+    monkeypatch.setenv("XORCHESTRATE_HOME", environ["XORCHESTRATE_HOME"])
+    files = ServerFiles.locate("race-" + adapter, environ).ensure()
+    terminals = cli.ServerTerminals(files, environ)
+    try:
+        # The replacement server a concurrent up/connect has just launched (it does not hold the instance lock yet).
+        terminals([sys.executable, "-c", "import time; time.sleep(30)"], files.log, str(directory))
+    finally:
+        terminals.close()
+    starting = InstanceLock(files.start_lock)
+    assert starting.acquire(wait=1)
+    try:
+        reply = cli._finish_server_terminal(files, {})
+    finally:
+        starting.release()
+    observer = cli.ServerTerminals(files, environ)
+    try:
+        replacement = observer.adopt()
+        assert replacement is not None and replacement.running, (reply, replacement)
+        assert "terminal" not in reply or reply["terminal"].get("closed") is not True, reply
+    finally:
+        observer.finish()
+        observer.close()
+
+
+def test_a_crashed_server_restarted_with_another_runtime_directory_is_recorded_where_it_runs(directory):
+    """The new terminal opens at the newly computed placement, so later status and down can adopt it."""
+    if shutil.which("tmux") is None:
+        pytest.skip("the multiplexer is not installed")
+    from xorchestrate import cli
+    from xorchestrate.composition import factory_for
+
+    environ = _terminal_environment(directory, "tmux")
+    files = ServerFiles.locate("moved", environ).ensure()
+    first = cli.ServerTerminals(files, environ)
+    try:
+        first([sys.executable, "-c", "raise SystemExit(3)"], files.log, str(directory))
+    finally:
+        first.close()
+    old = files.read_terminal_record()["placement"]
+    moved = directory / "run-b"
+    moved.mkdir(mode=0o700)
+    environ_b = {**environ, "XORCHESTRATE_RUNTIME_DIR": str(moved)}
+    second = cli.ServerTerminals(files, environ_b)
+    try:
+        second([sys.executable, "-c", "import time; time.sleep(30)"], files.log, str(directory))
+    finally:
+        second.close()
+    try:
+        record = files.read_terminal_record()
+        assert record["placement"]["socket"] == record["receipt"]["socket"], record
+        assert record["placement"]["socket"].startswith(str(moved)), record
+        later = cli.ServerTerminals(files, environ_b)
+        try:
+            assert later.adopt() is not None, "status and down can adopt the restarted server's terminal"
+        finally:
+            later.close()
+    finally:
+        for placement in (old, files.read_terminal_record() and files.read_terminal_record()["placement"]):
+            if placement:
+                factory_for("terminal_host", "tmux")(dict(placement)).shutdown()
