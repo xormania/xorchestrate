@@ -269,6 +269,9 @@ whose process no longer exists are normal starting states.
    what was `detected` and `selected`) and `sessions_needing_reconnect`.
    `xorchestrate recover` (or the `recover` action) recovers the rest; it is
    idempotent.
+   With no server running, `xorchestrate doctor`'s `recovery` check reports
+   whether the last server stopped cleanly and which sessions are persisted as
+   live, read from the store without changing anything.
 
 Recovering a session reconnects it through its driver. For a hosted session,
 the adapter checks that the old terminal is gone, removes its own stale
@@ -289,6 +292,22 @@ in flight is marked unknown for reconciliation.
 - **Authority.** A recovered session keeps its original actor and work binding
   and gains nothing; the reconnect runs as that actor. Who may call `recover`
   is decided by the guardrail, like any action.
+- **Reconciliation.** Sessions that cannot reconnect are certainly gone after a
+  hard restart. The server reconciles them at start, whatever the policy: they
+  become `disconnected`, or `unknown` for a start that was in flight. The
+  policy chooses only which sessions to reconnect.
+- **A second failure during recovery.** Each runtime uses its own recovery key,
+  and only refuses a concurrent reconnect it is running itself. A recovery left
+  half-done by a dead server therefore never blocks the next one: its
+  half-started replacement is marked unknown, and the session is recovered
+  again.
+- **Terminals that survived.** When only the server died (the terminal host and
+  each bridge host still run), recovery adopts the running terminal and
+  reconnects to the same bridge host and native conversation, with no native
+  resume. A turn that was in flight finishes in the bridge host, and its
+  observations are available by polling. The application's operation for it
+  stays unresolved on the replacement, and further sends are refused until it
+  is reconciled (`resolve_operation`).
 - **Policy.** `recovery_policy` is a project configuration section, like
   `retry_policy`: `{"adapter": "reconnect"}` (the default) or
   `{"adapter": "manual"}`. It answers one question: which interrupted sessions

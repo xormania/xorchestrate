@@ -471,6 +471,13 @@ def _finish_under_start_lock(files, terminals):
         starting.release()
 
 
+def _server_state(instance_id):
+    """Whether a project's server runs, and whether the last one left its discovery record (did not stop cleanly)."""
+    files = ServerFiles.locate(server_identity(instance_id))
+    running = lock_is_held(files.lock)
+    return {"running": running, "unclean_stop": not running and files.read_record() is not None}
+
+
 def _project_terminal_placement(instance_id):
     """Where a project's terminal host is: its recorded placement, else the one the launcher would compute."""
     files = ServerFiles.locate(server_identity(instance_id))
@@ -680,7 +687,7 @@ def _operator_command(args):
     elif args.command == "approve":
         report = operations.approve(args.path or args.project)
     else:
-        report = doctor(args.project, terminal_placement=_project_terminal_placement)
+        report = doctor(args.project, terminal_placement=_project_terminal_placement, server_state=_server_state)
         _write(report, sys.stdout)
         return 0 if report["ok"] else 1
     _write(report, sys.stdout)

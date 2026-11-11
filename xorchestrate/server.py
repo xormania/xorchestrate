@@ -162,12 +162,16 @@ class ProjectServer:
             return None
         policy = getattr(self.application, "recovery_policy", None)
         selected = list(policy.select(list(interrupted))) if policy is not None and interrupted else []
+        # Sessions that cannot reconnect are certainly gone after a hard restart: their state is reconciled
+        # (disconnected, or unknown for a start in flight) whatever the policy; the policy chooses reconnects.
+        reconcile = [session.session_id for session in interrupted if not session.can_reconnect]
         self._recovery_detected = {"unclean_stop": unclean_stop,
                                    "interrupted": [session.session_id for session in interrupted],
-                                   "selected": selected}
-        if not selected:
+                                   "selected": selected, "reconciled": reconcile}
+        work = list(dict.fromkeys([*selected, *reconcile]))
+        if not work:
             return None
-        thread = threading.Thread(target=self._run_recovery, args=(selected,), daemon=True, name="recovery")
+        thread = threading.Thread(target=self._run_recovery, args=(work,), daemon=True, name="recovery")
         thread.start()
         return thread
 

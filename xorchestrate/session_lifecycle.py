@@ -224,6 +224,13 @@ class SessionLifecycleMixin:
                                    and callable(getattr(self.sessions.get(r.data.get("driver")), "reconnect", None)))
                 for r in sorted(records, key=lambda r: r.key)]
 
+    def _runtime_incarnation(self):
+        """This runtime's identity, fixed for its lifetime."""
+        incarnation = getattr(self, "_incarnation", None)
+        if incarnation is None:
+            incarnation = self._incarnation = self.identifiers()
+        return incarnation
+
     def recovery_status(self) -> JSON:
         """Whether a recovery is running and the last report that changed anything (``None`` before any)."""
         with self.store.transaction() as tx:
@@ -293,8 +300,11 @@ class SessionLifecycleMixin:
             return
         if found.can_reconnect:
             backend = session.data.get("backend") or {}
+            # One key per session, backend incarnation and runtime: concurrent recoveries in this runtime share it
+            # (exactly one reconnect), and an attempt a dead runtime left pending never blocks the next one.
+            key = f"recover:{found.session_id}:{backend.get('incarnation', '')}:{self._runtime_incarnation()}"
             arguments = {"driver": found.driver, "resume_session_id": found.session_id, "specification": {},
-                         "idempotency_key": f"recover:{found.session_id}:{backend.get('incarnation', '')}"}
+                         "idempotency_key": key}
             if found.work_id:
                 arguments["work_id"] = found.work_id
             # As the session's own actor: the replacement keeps that actor and its work binding, and gains nothing.
@@ -350,10 +360,12 @@ class SessionLifecycleMixin:
                 current = self._require(tx, "session", source["session"]["id"])
                 if current.data["status"] == "superseded":
                     raise self._superseded(current)
+                owned = self._owned_session_ids.copy()
                 if any(r.data.get("resume_source", {}).get("session_id") == current.key
-                       and r.data["status"] == "starting" for r in tx.list("session")):
-                    # Exactly one resume or reconnect per source at a time (an automatic recovery and an explicit
-                    # call can race); the reservation is serialized by this transaction.
+                       and r.data["status"] == "starting" and r.key in owned for r in tx.list("session")):
+                    # Exactly one resume or reconnect per source at a time in this runtime (an automatic recovery
+                    # and an explicit call can race); the reservation is serialized by this transaction. A start
+                    # left by a dead runtime is not ours, so it never blocks the next attempt.
                     raise Conflict("The source session is already being resumed or reconnected.")
                 if source["session"].get("pending_operation") and action != "reconnect_session":
                     raise Conflict("The resume source has a pending or unresolved operation; reconcile it before another effect.")
