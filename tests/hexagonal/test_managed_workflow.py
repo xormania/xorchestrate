@@ -245,3 +245,29 @@ def test_an_endpoint_named_in_the_plan_is_removed_only_when_it_is_the_runs_own(t
     finally:
         link.unlink(missing_ok=True)
         wrong_name.rmdir()
+
+
+def test_ctrl_c_on_the_supervisor_finishes_unsuccessfully_with_verified_cleanup(tmp_path):
+    """Ctrl-C (SIGINT) to a managed run's supervisor stops it like stop and the deadline: same receipt, clean exit."""
+    import signal
+
+    from scripts.testkit.adapters.ownership import Identity, processes_naming, send_signal
+
+    candidate = isolated_candidate(tmp_path / "candidate")
+    workflow = PublicWorkflow(candidate, tmp_path / "operator")
+    try:
+        directory, _ = workflow.start(suite="acceptance", mode="protocol-fixture", timeout=30)
+        workflow.freeze(directory)
+        owner = workflow.state(directory)["owner"]
+        send_signal(Identity(owner["pid"], owner["started"]), signal.SIGINT)
+        await_condition(lambda: workflow.state(directory).get("reason") == "supervisor_signal")
+        workflow.resume()
+        waited, result = workflow.command("wait", directory, timeout=45)
+        assert waited.returncode != 0
+        assert result["phase"] in TERMINAL_PHASES and result["outcome"] == "failed"
+        assert result["reason"] == "supervisor_signal"
+        assert result["cleanup"]["verified"] and not result["observed"]["worker_alive"], result["cleanup"]
+        await_condition(lambda: not owner_alive(workflow.state(directory)["owner"]))
+        assert processes_naming(directory) == [], "nothing of the run outlives its supervisor's orderly exit"
+    finally:
+        workflow.close()
