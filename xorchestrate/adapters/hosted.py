@@ -27,6 +27,8 @@ from __future__ import annotations
 import json
 import os
 import re
+import socket
+import stat
 import sys
 import threading
 import time
@@ -44,6 +46,30 @@ from .process import positive_number, resolve_repo
 NATIVE = "native"
 MAX_SOCKET_PATH_BYTES = 107
 OUTPUT_LINES = 40
+
+
+def _remove_stale_endpoint(endpoint):
+    """Remove ``endpoint`` only if it is a socket of this user that nothing listens on (its host is gone)."""
+    try:
+        metadata = os.lstat(endpoint)
+    except FileNotFoundError:
+        return
+    if not stat.S_ISSOCK(metadata.st_mode) or metadata.st_uid != os.getuid():
+        raise OrchestrationError("The hosted session's endpoint path is occupied by something else.",
+                                 "terminal_host_unavailable", {"outcome": "not_started"})
+    probe = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    probe.settimeout(1)
+    try:
+        probe.connect(str(endpoint))
+    except (ConnectionRefusedError, FileNotFoundError):
+        Path(endpoint).unlink(missing_ok=True)
+        return
+    except OSError:
+        pass
+    finally:
+        probe.close()
+    raise OrchestrationError("Something still listens on the hosted session's endpoint.", "terminal_host_unavailable",
+                             {"outcome": "not_started"})
 
 
 def _terminal_name(entry, key):
@@ -312,7 +338,9 @@ class HostedSessionDriver:
             host.close_terminal(terminal.name)
             terminal = None
         if terminal is None:
-            # Gone (a reboot, or stopped): a fresh terminal resumes the conversation from the saved state.
+            # Gone (a reboot, a container restart, or stopped): a fresh terminal resumes the conversation from the
+            # saved state. The bridge host never replaces an existing endpoint, so remove our own stale one first.
+            _remove_stale_endpoint(endpoint)
             terminal, directory, endpoint = self._open_terminal(key, native_specification)
         bridge, receipt = self._attach_while_running(
             terminal, directory, endpoint, lambda bridge: getattr(bridge, method)(inner_source, {"context": context}))
