@@ -34,7 +34,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   Xorchestrate opens in the project's terminal host. It survives the server,
   can be attached to, and is reconnected (or resumed in a fresh terminal from
   its saved state) through the existing bridge. The `connected` example's
-  `worker` is now hosted. See [hosted sessions](docs/terminal-host.md#hosted-sessions).
+  `worker` is now hosted. `stop` closes the terminal even when the bridge host
+  does not answer, and `max_sessions` bounds running hosted terminals,
+  detached ones included. See [hosted sessions](docs/terminal-host.md#hosted-sessions).
 - PR edit/readiness observations preserve useful running validation and reuse
   authenticated exact-candidate behavior evidence, retaining original lane
   identities and flat references across repeated metadata activity.
