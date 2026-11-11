@@ -1,0 +1,826 @@
+{
+  "schema_version": 1,
+  "suites": [
+    {
+      "name": "baseline-and-faults",
+      "source_summary_sha256": "feaca6d58261322715a8b2de156c54b16caa31ef5cd10024356ab1036e5eb5cb",
+      "candidate": {
+        "commit": "8d1e411bba22276f33789c4e370ceb8ea46a52f1",
+        "content_sha256": "88fbfeb51b42aabdf8ae36cb2fe944c372e445ce4ba4912a54007c4a76faee59"
+      },
+      "passed": true,
+      "witnesses": [
+        {
+          "name": "before-after",
+          "kind": "actual_baseline",
+          "target": "tests.hexagonal.test_architecture_packets::test_modified_function_has_coherent_before_after_source_and_git_identity",
+          "classification": "detected",
+          "expected_diagnostic": "BEFORE_CHANGE_EVIDENCE_RETAINED",
+          "mutation_applied": true,
+          "mutation_sha256": "18fe0feb2823171d787c75314f8e88ff336f8d97420ad7eb744d4cc022fb3d77",
+          "candidate_sha256": "88fbfeb51b42aabdf8ae36cb2fe944c372e445ce4ba4912a54007c4a76faee59",
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "mutation": {
+            "path": "scripts/architecture/context.py",
+            "before_sha256": "e0ed9e89413fdc17127a1fafe4718b0e78266351a1c16205169c361e0845cc8e",
+            "after_sha256": "89091a39b783eec5432cfdcc3d68cb15f672627319f2cd0e16466650e21677cc",
+            "patch_sha256": "43e02a2a28268bc39437e72ad2b2cb9b3e0dbb3d661ffdf27fc8f91e5947f606",
+            "method": "restore_repository_file",
+            "defective_revision": "530b0ab"
+          },
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_architecture_packets.py::test_modified_function_has_coherent_before_after_source_and_git_identity",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-v3-packets/before-after/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-11T14:46:37.079767+00:00",
+              "finished_at": "2026-11-11T14:46:38.047817+00:00",
+              "stdout_sha256": "99a24796443a1d07f66a424f8116a06a2079063af758e7d3c87801c191ad2ecd",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "ce8afd798d66dbbf818df2ae564965c44b6bd01362cbd81424bf156faf26986e"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_architecture_packets.py::test_modified_function_has_coherent_before_after_source_and_git_identity",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-v3-packets/before-after/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-11T14:46:38.050910+00:00",
+              "finished_at": "2026-11-11T14:46:38.983360+00:00",
+              "stdout_sha256": "14297b65d82c71f467f74d8b2ec0d3eacb79db1f7f8d862117797331bed1c7af",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "9b84db712b4eb58a87e44d5aee4599baa63fbca5eec0a48cdd12757227de3a10"
+            }
+          }
+        },
+        {
+          "name": "deleted-method",
+          "kind": "actual_baseline",
+          "target": "tests.hexagonal.test_architecture_packets::test_deleted_declared_behavior_remains_visible_from_the_base_snapshot[False]",
+          "classification": "detected",
+          "expected_diagnostic": "DELETED_BEHAVIOR_IS_A_DIAGNOSTIC_CANDIDATE",
+          "mutation_applied": true,
+          "mutation_sha256": "18fe0feb2823171d787c75314f8e88ff336f8d97420ad7eb744d4cc022fb3d77",
+          "candidate_sha256": "88fbfeb51b42aabdf8ae36cb2fe944c372e445ce4ba4912a54007c4a76faee59",
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "mutation": {
+            "path": "scripts/architecture/context.py",
+            "before_sha256": "e0ed9e89413fdc17127a1fafe4718b0e78266351a1c16205169c361e0845cc8e",
+            "after_sha256": "89091a39b783eec5432cfdcc3d68cb15f672627319f2cd0e16466650e21677cc",
+            "patch_sha256": "43e02a2a28268bc39437e72ad2b2cb9b3e0dbb3d661ffdf27fc8f91e5947f606",
+            "method": "restore_repository_file",
+            "defective_revision": "530b0ab"
+          },
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_architecture_packets.py::test_deleted_declared_behavior_remains_visible_from_the_base_snapshot[False]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-v3-packets/deleted-method/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-11T14:46:39.226032+00:00",
+              "finished_at": "2026-11-11T14:46:40.126884+00:00",
+              "stdout_sha256": "59907462a8d5fd93406cdf4c7d1eb2f7b7a96664ae85c4ec202693d419cd019e",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "463c68e8d5b9a06a6df7de3bb4b87cfc0dd2b986dcc9596f72e4e8fdc8b37d73"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_architecture_packets.py::test_deleted_declared_behavior_remains_visible_from_the_base_snapshot[False]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-v3-packets/deleted-method/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-11T14:46:40.128574+00:00",
+              "finished_at": "2026-11-11T14:46:41.065932+00:00",
+              "stdout_sha256": "5fbff27a6a642e7743dc447949599754c5d122a3778ad00c252b213fbb2c7b8e",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "73bbeb94e156f90b363687150201f6fba4a2ae8c8713b762676a4fb7a10f66f9"
+            }
+          }
+        },
+        {
+          "name": "deleted-file",
+          "kind": "actual_baseline",
+          "target": "tests.hexagonal.test_architecture_packets::test_deleted_declared_behavior_remains_visible_from_the_base_snapshot[True]",
+          "classification": "detected",
+          "expected_diagnostic": "DELETED_BEHAVIOR_IS_A_DIAGNOSTIC_CANDIDATE",
+          "mutation_applied": true,
+          "mutation_sha256": "18fe0feb2823171d787c75314f8e88ff336f8d97420ad7eb744d4cc022fb3d77",
+          "candidate_sha256": "88fbfeb51b42aabdf8ae36cb2fe944c372e445ce4ba4912a54007c4a76faee59",
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "mutation": {
+            "path": "scripts/architecture/context.py",
+            "before_sha256": "e0ed9e89413fdc17127a1fafe4718b0e78266351a1c16205169c361e0845cc8e",
+            "after_sha256": "89091a39b783eec5432cfdcc3d68cb15f672627319f2cd0e16466650e21677cc",
+            "patch_sha256": "43e02a2a28268bc39437e72ad2b2cb9b3e0dbb3d661ffdf27fc8f91e5947f606",
+            "method": "restore_repository_file",
+            "defective_revision": "530b0ab"
+          },
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_architecture_packets.py::test_deleted_declared_behavior_remains_visible_from_the_base_snapshot[True]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-v3-packets/deleted-file/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-11T14:46:41.365570+00:00",
+              "finished_at": "2026-11-11T14:46:42.303219+00:00",
+              "stdout_sha256": "59907462a8d5fd93406cdf4c7d1eb2f7b7a96664ae85c4ec202693d419cd019e",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "5df646a11986a408f51356617bd7e2be2b755445afe422a5271fc43db0874976"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_architecture_packets.py::test_deleted_declared_behavior_remains_visible_from_the_base_snapshot[True]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-v3-packets/deleted-file/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-11T14:46:42.307055+00:00",
+              "finished_at": "2026-11-11T14:46:43.262327+00:00",
+              "stdout_sha256": "81056fea9078710171b95b8f65f1d682966d1614e70bc56d6f7876eec492bed8",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "cfbcd7891ff707bb1a2fff833e6d0559307feb761bc375b0f71b83fc2e9d095a"
+            }
+          }
+        },
+        {
+          "name": "pair-atomic-budget",
+          "kind": "actual_baseline",
+          "target": "tests.hexagonal.test_architecture_packets::test_pair_budget_omits_a_whole_change_instead_of_a_one_sided_packet",
+          "classification": "detected",
+          "expected_diagnostic": "CHANGE_PAIR_BUDGET_IS_ATOMIC",
+          "mutation_applied": true,
+          "mutation_sha256": "18fe0feb2823171d787c75314f8e88ff336f8d97420ad7eb744d4cc022fb3d77",
+          "candidate_sha256": "88fbfeb51b42aabdf8ae36cb2fe944c372e445ce4ba4912a54007c4a76faee59",
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "mutation": {
+            "path": "scripts/architecture/context.py",
+            "before_sha256": "e0ed9e89413fdc17127a1fafe4718b0e78266351a1c16205169c361e0845cc8e",
+            "after_sha256": "89091a39b783eec5432cfdcc3d68cb15f672627319f2cd0e16466650e21677cc",
+            "patch_sha256": "43e02a2a28268bc39437e72ad2b2cb9b3e0dbb3d661ffdf27fc8f91e5947f606",
+            "method": "restore_repository_file",
+            "defective_revision": "530b0ab"
+          },
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_architecture_packets.py::test_pair_budget_omits_a_whole_change_instead_of_a_one_sided_packet",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-v3-packets/pair-atomic-budget/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-11T14:46:43.477073+00:00",
+              "finished_at": "2026-11-11T14:46:44.270444+00:00",
+              "stdout_sha256": "4e8b6c5a89da44bf05d17100903172be04033067c113a6831bdfafbd42b7da52",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "cdcb48494a23a25facd3734b9db91268a18b04d503fca416f8833c8cb10c8612"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_architecture_packets.py::test_pair_budget_omits_a_whole_change_instead_of_a_one_sided_packet",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-v3-packets/pair-atomic-budget/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-11T14:46:44.271919+00:00",
+              "finished_at": "2026-11-11T14:46:45.196551+00:00",
+              "stdout_sha256": "bca15cf2013e9faaa2d9a6d21b8baf8a06db2ff172c157fb232c0ba524c20bf9",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "d8c37b4163c84cb6a0d3733595e1511fbd9da66622455897fa8d7419a40cb4a5"
+            }
+          }
+        },
+        {
+          "name": "contract-fixture-binding",
+          "kind": "actual_baseline",
+          "target": "tests.hexagonal.test_architecture_packets::test_parameterized_contract_chain_keeps_wrapper_fixture_and_actual_subject",
+          "classification": "detected",
+          "expected_diagnostic": "CONTRACT_BINDING_CHAIN_RETAINED",
+          "mutation_applied": true,
+          "mutation_sha256": "18fe0feb2823171d787c75314f8e88ff336f8d97420ad7eb744d4cc022fb3d77",
+          "candidate_sha256": "88fbfeb51b42aabdf8ae36cb2fe944c372e445ce4ba4912a54007c4a76faee59",
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "mutation": {
+            "path": "scripts/architecture/context.py",
+            "before_sha256": "e0ed9e89413fdc17127a1fafe4718b0e78266351a1c16205169c361e0845cc8e",
+            "after_sha256": "89091a39b783eec5432cfdcc3d68cb15f672627319f2cd0e16466650e21677cc",
+            "patch_sha256": "43e02a2a28268bc39437e72ad2b2cb9b3e0dbb3d661ffdf27fc8f91e5947f606",
+            "method": "restore_repository_file",
+            "defective_revision": "530b0ab"
+          },
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_architecture_packets.py::test_parameterized_contract_chain_keeps_wrapper_fixture_and_actual_subject",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-v3-packets/contract-fixture-binding/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-11T14:46:45.475310+00:00",
+              "finished_at": "2026-11-11T14:46:46.189266+00:00",
+              "stdout_sha256": "5b19689a97d618d5cdfce632de67285a8efa3c57100a80350a5bb7ca9e05ae34",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "15d759ed14f3dfded0692e6e046d3f1827c62c92a682250213162c61833188c7"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_architecture_packets.py::test_parameterized_contract_chain_keeps_wrapper_fixture_and_actual_subject",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-v3-packets/contract-fixture-binding/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-11T14:46:46.190833+00:00",
+              "finished_at": "2026-11-11T14:46:47.007715+00:00",
+              "stdout_sha256": "1c4847ed3d766672d0d51929ca5e60b72630b20b38a12ba7a2955e0e09b48771",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "b925c8628d6d9984c34cedb79f419cfd89258ccda560b27e85b12d8dbc621793"
+            }
+          }
+        },
+        {
+          "name": "outside-deletion-ledger",
+          "kind": "actual_baseline",
+          "target": "tests.hexagonal.test_architecture_packets::test_deleted_file_outside_declared_source_roots_is_not_promoted_to_candidate",
+          "classification": "detected",
+          "expected_diagnostic": "UNDECLARED_DELETION_VISIBLE",
+          "mutation_applied": true,
+          "mutation_sha256": "18fe0feb2823171d787c75314f8e88ff336f8d97420ad7eb744d4cc022fb3d77",
+          "candidate_sha256": "88fbfeb51b42aabdf8ae36cb2fe944c372e445ce4ba4912a54007c4a76faee59",
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "mutation": {
+            "path": "scripts/architecture/context.py",
+            "before_sha256": "e0ed9e89413fdc17127a1fafe4718b0e78266351a1c16205169c361e0845cc8e",
+            "after_sha256": "89091a39b783eec5432cfdcc3d68cb15f672627319f2cd0e16466650e21677cc",
+            "patch_sha256": "43e02a2a28268bc39437e72ad2b2cb9b3e0dbb3d661ffdf27fc8f91e5947f606",
+            "method": "restore_repository_file",
+            "defective_revision": "530b0ab"
+          },
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_architecture_packets.py::test_deleted_file_outside_declared_source_roots_is_not_promoted_to_candidate",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-v3-packets/outside-deletion-ledger/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-11T14:46:47.271813+00:00",
+              "finished_at": "2026-11-11T14:46:48.044254+00:00",
+              "stdout_sha256": "99a24796443a1d07f66a424f8116a06a2079063af758e7d3c87801c191ad2ecd",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "1ccfee9b1028bbe9916cedb46b6dcdab56cb3882c8409124a93700d29c23a784"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_architecture_packets.py::test_deleted_file_outside_declared_source_roots_is_not_promoted_to_candidate",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-v3-packets/outside-deletion-ledger/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-11T14:46:48.045839+00:00",
+              "finished_at": "2026-11-11T14:46:48.917545+00:00",
+              "stdout_sha256": "4a688599a0c28b3313aecaaa1b3d43d7e457b2285ea421f202a2f860e8c04575",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "bdd17cd6e15e35c27f69b920729e873c78714a6a574a51011a24b41ca562abb2"
+            }
+          }
+        },
+        {
+          "name": "role-fairness",
+          "kind": "deliberate_fault",
+          "target": "tests.hexagonal.test_architecture_packets::test_role_priority_rounds_preserve_changed_application_and_adapter_candidates[priorities0]",
+          "classification": "detected",
+          "expected_diagnostic": "DECLARED_ROLE_ROUNDS_PREVENT_CROWDING",
+          "mutation_applied": true,
+          "mutation_sha256": "55e9037e210da8e0e46a25ba945d4ed8e3fa4f94e5b17b96d4648c202ce62abf",
+          "candidate_sha256": "88fbfeb51b42aabdf8ae36cb2fe944c372e445ce4ba4912a54007c4a76faee59",
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "mutation": {
+            "path": "scripts/architecture/context.py",
+            "before_sha256": "5b3791aba222376737852f9c7deb0b5eb09a356e44d377c29dcc5f74ae5fd7d9",
+            "after_sha256": "89deb963042db1d0ad2cc9abc6a20a6a23d37e2db037291276f4ede412daf175",
+            "patch_sha256": "25196157513cf6382e4361e86c899f9728ebca688aa9a157a69daf4f8fa07c45",
+            "method": "literal_replacement",
+            "old": "candidate_units = _role_order(candidate_units, role_priorities)",
+            "new": "candidate_units = candidate_units"
+          },
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_architecture_packets.py::test_role_priority_rounds_preserve_changed_application_and_adapter_candidates[priorities0]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-v3-packets/role-fairness/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-11T14:46:49.205287+00:00",
+              "finished_at": "2026-11-11T14:46:49.982382+00:00",
+              "stdout_sha256": "3605abb09038ce24e90d81df8f7c0d87bb6f647a5e016bf461d8a8fcb408f6e9",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "9e3a71d1220ea6d4f41d4b7597fa2f3a2ef8b1372b71c6570ac99d0ee82dae71"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_architecture_packets.py::test_role_priority_rounds_preserve_changed_application_and_adapter_candidates[priorities0]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-v3-packets/role-fairness/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-11T14:46:49.983632+00:00",
+              "finished_at": "2026-11-11T14:46:50.807799+00:00",
+              "stdout_sha256": "aeee558f69380cb318affac3ed03cf9a6f12f7a4b27e7e31ba18855781e89ef7",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "4463123200aa6b30b09bbbaf292f9b1e8e90ed7e5da4bec5970c73d435e9d875"
+            }
+          }
+        },
+        {
+          "name": "role-validation",
+          "kind": "deliberate_fault",
+          "target": "tests.hexagonal.test_architecture_packets::test_role_priorities_must_name_distinct_declared_roles[priorities0]",
+          "classification": "detected",
+          "expected_diagnostic": "ROLE_PRIORITY_CONFIGURATION_VALIDATED",
+          "mutation_applied": true,
+          "mutation_sha256": "9e5467343e8ecb18d744c60f0f5168107dce018bf81b3e139aee81b3a73f7127",
+          "candidate_sha256": "88fbfeb51b42aabdf8ae36cb2fe944c372e445ce4ba4912a54007c4a76faee59",
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "mutation": {
+            "path": "scripts/architecture/context.py",
+            "before_sha256": "cb69a9323809a661af979cdd1af83fa42fd4155a4b3bf0f730cc3e4172d865d6",
+            "after_sha256": "194a0d18cf9a08c17557bfab16cd5ae133288672dd6ecc4756ec78647eda0de0",
+            "patch_sha256": "94008c2c2ce4231dfba00dc5640a0756606c809e919b8c068b749fabd92a19c6",
+            "method": "literal_replacement",
+            "old": "if (not isinstance(role_priorities, (list, tuple))\n            or any(not isinstance(role, str) or role not in roles for role in role_priorities)\n            or len(set(role_priorities)) != len(role_priorities)):",
+            "new": "if False:"
+          },
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_architecture_packets.py::test_role_priorities_must_name_distinct_declared_roles[priorities0]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-v3-packets/role-validation/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-11T14:46:51.106405+00:00",
+              "finished_at": "2026-11-11T14:46:51.877293+00:00",
+              "stdout_sha256": "3605abb09038ce24e90d81df8f7c0d87bb6f647a5e016bf461d8a8fcb408f6e9",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "0f9bec631202976f7290b657c1c8d2e42eb5bf6fda318c5dacb578b13b571a3b"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_architecture_packets.py::test_role_priorities_must_name_distinct_declared_roles[priorities0]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-v3-packets/role-validation/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-11T14:46:51.878398+00:00",
+              "finished_at": "2026-11-11T14:46:52.648311+00:00",
+              "stdout_sha256": "1f48d20fbfb907d412ae4076f797090c9aa0589638d96c4301de4869b5566066",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "585c69055af4775479148cd377a491a2e579407bf0e1f6bb3425d0e89e7dd3c7"
+            }
+          }
+        },
+        {
+          "name": "base-provenance",
+          "kind": "deliberate_fault",
+          "target": "tests.hexagonal.test_architecture_packets::test_modified_function_has_coherent_before_after_source_and_git_identity",
+          "classification": "detected",
+          "expected_diagnostic": "BEFORE_SOURCE_PROVENANCE_BOUND",
+          "mutation_applied": true,
+          "mutation_sha256": "2c32d58cc69c14a571af99036dff1aac49c2457064d532edc0b6fb51203bedfc",
+          "candidate_sha256": "88fbfeb51b42aabdf8ae36cb2fe944c372e445ce4ba4912a54007c4a76faee59",
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "mutation": {
+            "path": "scripts/architecture/context.py",
+            "before_sha256": "8a77511f71552bc8ad4c1b5e0c10d279adeac55aa8c10332a63eea2c192a4851",
+            "after_sha256": "8652cfc2328c4623c3f083640150c8af97553f8ec4fcb9dc8d445f7c5fc0984e",
+            "patch_sha256": "deaa6dc381e495b741de93780ea685c32ae5683f22ee04120c44b290297bd850",
+            "method": "literal_replacement",
+            "old": "side=\"before\", git_commit=commit, contract_basis=\"current_profile\", _bindings=imports)",
+            "new": "side=\"before\", git_commit=\"wrong-base\", contract_basis=\"current_profile\", _bindings=imports)"
+          },
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_architecture_packets.py::test_modified_function_has_coherent_before_after_source_and_git_identity",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-v3-packets/base-provenance/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-11T14:46:52.902799+00:00",
+              "finished_at": "2026-11-11T14:46:53.716238+00:00",
+              "stdout_sha256": "99a24796443a1d07f66a424f8116a06a2079063af758e7d3c87801c191ad2ecd",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "9ec2a1dd37f97c71aed8065a6665d80e807207e56b11bc869d3506de365e66eb"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_architecture_packets.py::test_modified_function_has_coherent_before_after_source_and_git_identity",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-v3-packets/base-provenance/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-11T14:46:53.717661+00:00",
+              "finished_at": "2026-11-11T14:46:54.586534+00:00",
+              "stdout_sha256": "66e62c17f4fe277f0a94290711a8f9771bf5364c74bee6d864b0eb487330a83c",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "15916ea6fba5b83620304622a95c6db6b93ba3a09719dbc3a037c2ad06777d32"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "review-repairs",
+      "source_summary_sha256": "cfcfce005a782e78f994a2e63f90a75835038a079aa98a7413999ad6eb0d52e2",
+      "candidate": {
+        "commit": "8d1e411bba22276f33789c4e370ceb8ea46a52f1",
+        "content_sha256": "4cbef7248910f645124da5f50b79baef8e0b0a33e0feec5d6607dc41e5db7f5f"
+      },
+      "passed": true,
+      "witnesses": [
+        {
+          "name": "review-pure-statement-deletion",
+          "kind": "actual_review_subject",
+          "target": "tests.hexagonal.test_architecture_packets::test_deleting_only_an_authority_guard_keeps_the_surviving_behavior_visible",
+          "classification": "detected",
+          "expected_diagnostic": "PURE_STATEMENT_DELETION_VISIBLE",
+          "mutation_applied": true,
+          "mutation_sha256": "4c980ee0238fdced9324bda4e344492cfcb99ac4328641ccc24b8d272450c313",
+          "candidate_sha256": "4cbef7248910f645124da5f50b79baef8e0b0a33e0feec5d6607dc41e5db7f5f",
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "mutation": {
+            "path": "scripts/architecture/context.py",
+            "before_sha256": "8a5766094fae97c83e9b17e396e5f68815eb90b4d8ce2761ddcb852b43348772",
+            "after_sha256": "e0ed9e89413fdc17127a1fafe4718b0e78266351a1c16205169c361e0845cc8e",
+            "patch_sha256": "9161ff85aca8c1ab9b4e86632d226141e562223767ed82af4eb83d80b841f997",
+            "method": "restore_repository_file",
+            "defective_revision": "8d1e411"
+          },
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_architecture_packets.py::test_deleting_only_an_authority_guard_keeps_the_surviving_behavior_visible",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-v3-packets/review-pure-statement-deletion/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-11T14:51:16.714119+00:00",
+              "finished_at": "2026-11-11T14:51:17.609411+00:00",
+              "stdout_sha256": "59907462a8d5fd93406cdf4c7d1eb2f7b7a96664ae85c4ec202693d419cd019e",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "df2e7cbcb2a9e26039b6a4ece13ee9f76d0e3c9103589c2a12435e78f663366b"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_architecture_packets.py::test_deleting_only_an_authority_guard_keeps_the_surviving_behavior_visible",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-v3-packets/review-pure-statement-deletion/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-11T14:51:17.610991+00:00",
+              "finished_at": "2026-11-11T14:51:18.405020+00:00",
+              "stdout_sha256": "16c93955705e98ee7bd173095c607f1f1d793fd74f59511cd419b83ed05d75e8",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "6c41de40ca782062ddd2580bac2d4f3d690607791085db2e98645f1d6ca75cb6"
+            }
+          }
+        },
+        {
+          "name": "review-dotted-import",
+          "kind": "actual_review_subject",
+          "target": "tests.hexagonal.test_architecture_packets::test_known_subject_binding_survives_each_supported_python_import_form[dotted]",
+          "classification": "detected",
+          "expected_diagnostic": "DECLARED_IMPORT_SUBJECT_BOUND",
+          "mutation_applied": true,
+          "mutation_sha256": "4c980ee0238fdced9324bda4e344492cfcb99ac4328641ccc24b8d272450c313",
+          "candidate_sha256": "4cbef7248910f645124da5f50b79baef8e0b0a33e0feec5d6607dc41e5db7f5f",
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "mutation": {
+            "path": "scripts/architecture/context.py",
+            "before_sha256": "8a5766094fae97c83e9b17e396e5f68815eb90b4d8ce2761ddcb852b43348772",
+            "after_sha256": "e0ed9e89413fdc17127a1fafe4718b0e78266351a1c16205169c361e0845cc8e",
+            "patch_sha256": "9161ff85aca8c1ab9b4e86632d226141e562223767ed82af4eb83d80b841f997",
+            "method": "restore_repository_file",
+            "defective_revision": "8d1e411"
+          },
+          "commands": {
+            "control": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_architecture_packets.py::test_known_subject_binding_survives_each_supported_python_import_form[dotted]",
+                "tests/hexagonal/test_architecture_packets.py::test_known_subject_binding_survives_each_supported_python_import_form[alias]",
+                "tests/hexagonal/test_architecture_packets.py::test_known_subject_binding_survives_each_supported_python_import_form[from]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-v3-packets/review-dotted-import/control.xml"
+              ],
+              "exit_status": 0,
+              "status": "passed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-11T14:51:18.596764+00:00",
+              "finished_at": "2026-11-11T14:51:19.440410+00:00",
+              "stdout_sha256": "28f94f35a697eb110a559cd36372f2edb63dbb960fb282482e1dcc485cb9a73e",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "81a7c5e4b13926b1e93dba340eba7b12d74517939ba3716ea803d32baa0a211c"
+            },
+            "mutant": {
+              "command": [
+                "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+                "-m",
+                "pytest",
+                "-p",
+                "_xorchestrate_calibration_observer",
+                "-q",
+                "--tb=short",
+                "-p",
+                "no:cacheprovider",
+                "tests/hexagonal/test_architecture_packets.py::test_known_subject_binding_survives_each_supported_python_import_form[dotted]",
+                "tests/hexagonal/test_architecture_packets.py::test_known_subject_binding_survives_each_supported_python_import_form[alias]",
+                "tests/hexagonal/test_architecture_packets.py::test_known_subject_binding_survives_each_supported_python_import_form[from]",
+                "--junitxml=/workspace/scratch/150dce018256/evidence-v3-packets/review-dotted-import/mutant.xml"
+              ],
+              "exit_status": 1,
+              "status": "failed",
+              "launched": true,
+              "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+              "started_at": "2026-11-11T14:51:19.442050+00:00",
+              "finished_at": "2026-11-11T14:51:20.255779+00:00",
+              "stdout_sha256": "57cd8c485082c0c967a659004387900e788501fb6531e5f6e743c71c2d597ef8",
+              "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+              "junit_sha256": "e9c5baf78f11a166729cf07653ac4f98c87ce7b365f2475c31241b536ff93f90"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "totals": {
+    "witnesses": 11,
+    "detected": 11,
+    "passing_controls": 11
+  },
+  "local_verification": {
+    "command": [
+      "/workspace/scratch/150dce018256/jev-v3-packets-venv/bin/python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "tests/hexagonal/test_architecture_packets.py",
+      "-q"
+    ],
+    "python": "3.12.16",
+    "exit_status": 0,
+    "passed": 14,
+    "observed_summary": "14 passed in 0.26s",
+    "scope": "Independent packet cases only; current working source included the focused review repairs."
+  },
+  "pr74_replay": {
+    "subject": "530b0ab",
+    "base": "4d3db3cc4ef3a83dfdafdb289fd8a08393892bdc",
+    "status": "unavailable",
+    "provider_execution": false,
+    "reason": "Strictly offline replay could not obtain the required base hunk evidence from local Git objects. No selection or live-provider claim is made.",
+    "offline_environment": {
+      "GIT_NO_LAZY_FETCH": "1",
+      "GIT_ALLOW_PROTOCOL": ""
+    },
+    "stderr_sha256": "b44ab2135565ab99f4327b42166fc254c700380683ba5ab86c7f4c010fd383e3"
+  }
+}

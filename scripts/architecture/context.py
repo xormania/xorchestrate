@@ -7,41 +7,21 @@ from __future__ import annotations
 
 import ast
 import hashlib
-import re
-import subprocess
 import tokenize
+from collections import Counter, defaultdict
 from copy import deepcopy
+from fnmatch import fnmatchcase
 from io import BytesIO
 from pathlib import Path
+
+from .context_changes import base_blob, comparison
+from .context_relations import neighborhood, references
 
 
 def changed_lines(root: Path, base_ref: str) -> list[dict]:
     """Return changed new-side line ranges against a commit, including worktree edits."""
-    if not isinstance(base_ref, str) or not base_ref or base_ref.startswith("-"):
-        raise ValueError("base_ref must be a Git reference.")
-    command = ["git", "--literal-pathspecs", "diff", "--no-ext-diff", "--no-textconv", "--no-renames"]
-
-    def diff(arguments):
-        result = subprocess.run([*command, *arguments], cwd=root, capture_output=True,
-                                text=True, timeout=10, check=False)
-        if result.returncode:
-            raise ValueError("The diagnostic base reference is unavailable.")
-        return result.stdout
-
-    # Patch headers quote unusual names and append a tab to names with spaces.
-    # NUL-delimited names preserve the actual paths. Per-path patches then need
-    # only hunk coordinates; their display headers are never interpreted.
-    paths = diff(["--name-only", "-z", "--diff-filter=ACMRTUXB", base_ref, "--"]).split("\0")
-    ranges = []
-    for path in filter(None, paths):
-        for line in diff(["--unified=0", base_ref, "--", path]).splitlines():
-            match = re.match(r"@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@", line)
-            if match:
-                start, count = int(match[1]), int(match[2] or 1)
-                # Deletions identify the surviving boundary, not deleted source.
-                ranges.append({"path": path, "start_line": max(1, start),
-                               "end_line": max(1, start + count - 1)})
-    return ranges
+    _, changes = comparison(root, base_ref)
+    return [span for change in changes for span in change["after"]]
 
 
 def _start(node):
@@ -80,16 +60,70 @@ def _overlaps(unit, span):
     return unit["start_line"] <= span["end_line"] and span["start_line"] <= unit["end_line"]
 
 
-def _call_names(unit):
-    names = set()
-    for node in ast.walk(unit["_node"]):
-        if isinstance(node, ast.Call):
-            target = node.func
-            if isinstance(target, ast.Name):
-                names.add(target.id)
-            elif isinstance(target, ast.Attribute):
-                names.add(target.attr)
-    return names
+def _matching(units, span):
+    matches = [unit for unit in units if unit["path"] == span["path"] and _overlaps(unit, span)]
+    containers = [unit for unit in matches if unit["start_line"] <= span["start_line"]
+                  and unit["end_line"] >= span["end_line"]]
+    matches = containers or matches
+    return [unit for unit in matches if not any(
+        other is not unit and other["start_line"] >= unit["start_line"]
+        and other["end_line"] <= unit["end_line"] for other in matches)]
+
+
+def _base_units(report, root, commit, changes, by_path):
+    """Admit immutable old blobs only within the currently declared source scope.
+
+    Old code is judged against the supplied current contract, not a reconstructed
+    historical policy. This distinction is retained in each old source record.
+    """
+    units, excluded, missing = [], [], []
+    profile = report.get("profile", {})
+    for change in changes:
+        path = change["path"]
+        if not path.endswith(".py"):
+            continue
+        item = by_path.get(path)
+        if item is None:
+            parts = Path(path).with_suffix("").parts
+            module = ".".join(parts[:-1] if parts[-1] == "__init__" else parts)
+            roles = [name for name, role in profile.get("roles", {}).items()
+                     if any(fnmatchcase(module, selector) for selector in role.get("modules", []))]
+            if (not any(path.startswith(source + "/") for source in profile.get("source_roots", []))
+                    or len(roles) != 1):
+                excluded.append({"path": path, "reason": "base_outside_declared_scope", "side": "before"})
+                continue
+            item = {"path": path, "module": module, "role": roles[0]}
+        try:
+            raw = base_blob(root, commit, path)
+            if raw is None:
+                continue
+            encoding, _ = tokenize.detect_encoding(BytesIO(raw).readline)
+            text = raw.decode(encoding)
+            tree = ast.parse(text, filename=path)
+            historical = _units({**item, "sha256": hashlib.sha256(raw).hexdigest()}, text, tree)
+            module = item.get("module") or path.removesuffix(".py").replace("/", ".")
+            imports = _imports(tree, module, Path(path).name == "__init__.py")
+            for unit in historical:
+                unit.update(unit_id=hashlib.sha256(("before:" + commit + ":" + unit["unit_id"]).encode()).hexdigest()[:24],
+                            side="before", git_commit=commit, contract_basis="current_profile", _bindings=imports)
+            units.extend(historical)
+        except (ValueError, UnicodeError, SyntaxError) as error:
+            missing.append({"path": path, "reason": "base_source_unavailable", "error_type": type(error).__name__})
+    return units, excluded, missing
+
+
+def _role_order(units, priorities):
+    if not priorities:
+        return units
+    groups = defaultdict(list)
+    for unit in units:
+        groups[unit.get("role")].append(unit)
+    order = [role for role in priorities if role in groups]
+    order.extend(role for role in groups if role not in order)
+    result = []
+    for index in range(max(map(len, groups.values()), default=0)):
+        result.extend(groups[role][index] for role in order if index < len(groups[role]))
+    return result
 
 
 def _imports(tree, module, is_package):
@@ -101,7 +135,8 @@ def _imports(tree, module, is_package):
     for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             for alias in node.names:
-                bindings[alias.asname or alias.name.split(".")[0]] = (alias.name, None)
+                local = alias.asname or alias.name.split(".")[0]
+                bindings[local] = (alias.name if alias.asname else local, None)
         elif isinstance(node, ast.ImportFrom):
             target = "." * node.level + (node.module or "")
             if node.level:
@@ -115,7 +150,8 @@ def _imports(tree, module, is_package):
 
 
 def build_context(report: dict, root: Path, *, max_source_bytes=24000, max_files=8,
-                  source_paths=(), changed_ranges=(), base_ref=None, max_candidates=1) -> dict:
+                  source_paths=(), changed_ranges=(), base_ref=None, max_candidates=1,
+                  role_priorities=()) -> dict:
     """Build a source-bound packet; budgets omit whole units instead of slicing them."""
     for name, value, maximum in (("max_source_bytes", max_source_bytes, 1000000),
                                  ("max_files", max_files, 1000), ("max_candidates", max_candidates, 100)):
@@ -123,6 +159,11 @@ def build_context(report: dict, root: Path, *, max_source_bytes=24000, max_files
             raise ValueError(f"{name} must be a positive integer no greater than {maximum}.")
     if not isinstance(source_paths, (list, tuple)) or any(not isinstance(path, str) or not path for path in source_paths):
         raise ValueError("source_paths must select measured paths.")
+    roles = report.get("profile", {}).get("roles", {})
+    if (not isinstance(role_priorities, (list, tuple))
+            or any(not isinstance(role, str) or role not in roles for role in role_priorities)
+            or len(set(role_priorities)) != len(role_priorities)):
+        raise ValueError("role_priorities must select distinct declared roles.")
     if not isinstance(changed_ranges, (list, tuple)) or any(
         not isinstance(span, dict) or set(span) != {"path", "start_line", "end_line"}
         or not isinstance(span["path"], str) or not span["path"]
@@ -149,30 +190,33 @@ def build_context(report: dict, root: Path, *, max_source_bytes=24000, max_files
         encoding, _ = tokenize.detect_encoding(BytesIO(raw).readline)
         text = raw.decode(encoding)
         tree = ast.parse(text, filename=path)
-        all_units.extend(_units(item, text, tree))
+        all_units.extend({**unit, "side": "after"} for unit in _units(item, text, tree))
         module = item.get("module") or path.removesuffix(".py").replace("/", ".")
         bindings[path] = _imports(tree, module, Path(path).name == "__init__.py")
 
-    ranges = [*changed_ranges, *(changed_lines(root, base_ref) if base_ref is not None else [])]
-    excluded, candidate_units = [], []
+    commit, changes = comparison(root, base_ref) if base_ref is not None else (None, [])
+    ranges = [*changed_ranges, *(span for change in changes for span in change["after"])]
+    old_units, excluded, missing_inputs = _base_units(report, root, commit, changes, by_path)
+    candidate_units = []
     targeted = base_ref is not None or bool(changed_ranges)
     if targeted:
         for span in ranges:
             if span["path"] not in by_path:
                 excluded.append({**span, "reason": "outside_measured_inventory"})
                 continue
-            matches = [unit for unit in all_units if unit["path"] == span["path"] and _overlaps(unit, span)]
-            # Prefer a method only when it contains the whole changed span;
-            # a simultaneous class-header change must retain the complete class.
-            containers = [unit for unit in matches if unit["start_line"] <= span["start_line"]
-                          and unit["end_line"] >= span["end_line"]]
-            matches = containers or matches
-            leaves = [unit for unit in matches if not any(
-                other is not unit and other["start_line"] >= unit["start_line"]
-                and other["end_line"] <= unit["end_line"] for other in matches)]
+            leaves = _matching(all_units, span)
             candidate_units.extend(leaves)
             if not leaves:
                 excluded.append({**span, "reason": "no_source_unit"})
+        current_symbols = {(unit["path"], unit["symbol"], unit["kind"]): unit for unit in all_units}
+        for change in changes:
+            for span in change["before"]:
+                # A pure statement deletion has no nonempty new-side span.
+                # Select its surviving behavior unit, or the deleted old unit,
+                # so removed guards remain reviewable as complete pairs.
+                for unit in _matching(old_units, span):
+                    candidate_units.append(current_symbols.get(
+                        (unit["path"], unit["symbol"], unit["kind"]), unit))
     else:
         finding_paths = [finding.get("path") for finding in report.get("findings", [])]
         priorities = list(dict.fromkeys([*source_paths, *finding_paths]))
@@ -194,12 +238,16 @@ def build_context(report: dict, root: Path, *, max_source_bytes=24000, max_files
                        "Assign": 2, "AnnAssign": 2}
         candidate_units.sort(key=lambda unit: substantive.get(unit["kind"], 3))
     candidate_units = list({unit["unit_id"]: unit for unit in candidate_units}.values())
-    selected, candidates, used, paths, oversize = [], [], set(), set(), []
+    candidate_units = _role_order(candidate_units, role_priorities)
+    selected, before_selected, candidates, used, paths, oversize = [], [], [], {}, set(), []
     remaining = max_source_bytes
 
-    def include(unit, relation):
+    def include(unit, relation, candidate_id):
         nonlocal remaining
         if unit["unit_id"] in used:
+            record = used[unit["unit_id"]]
+            if candidate_id not in record["support_for"]:
+                record["support_for"].append(candidate_id)
             return True
         size = len(unit["source"].encode("utf-8"))
         reason = "file_limit" if unit["path"] not in paths and len(paths) >= max_files else (
@@ -207,16 +255,20 @@ def build_context(report: dict, root: Path, *, max_source_bytes=24000, max_files
         if reason:
             excluded.append({"path": unit["path"], "unit_id": unit["unit_id"],
                              "start_line": unit["start_line"], "end_line": unit["end_line"],
-                             "reason": reason, "relation": relation})
+                             "reason": reason, "relation": relation, "candidate_id": candidate_id})
+            missing_inputs.append({"candidate_id": candidate_id, "path": unit["path"],
+                                   "symbol": unit["symbol"], "reason": reason, "relation": relation})
             if size > max_source_bytes:
                 oversize.append(unit["unit_id"])
             return False
-        used.add(unit["unit_id"])
         paths.add(unit["path"])
         remaining -= size
-        selected.append(_public(unit, relation))
+        record = {**_public(unit, relation), "support_for": [candidate_id]}
+        used[unit["unit_id"]] = record
+        (before_selected if unit.get("side") == "before" else selected).append(record)
         return True
 
+    old_by_symbol = {(unit["path"], unit["symbol"], unit["kind"]): unit for unit in old_units}
     for unit in candidate_units:
         if len(candidates) >= max_candidates:
             if targeted:
@@ -224,54 +276,71 @@ def build_context(report: dict, root: Path, *, max_source_bytes=24000, max_files
                                  "start_line": unit["start_line"], "end_line": unit["end_line"],
                                  "reason": "candidate_limit"})
             continue
-        if include(unit, "candidate"):
+        before = unit if unit.get("side") == "before" else old_by_symbol.get((unit["path"], unit["symbol"], unit["kind"]))
+        pair = [unit] if before is None or before is unit else [unit, before]
+        size = sum(len(item["source"].encode("utf-8")) for item in pair if item["unit_id"] not in used)
+        reason = "file_limit" if unit["path"] not in paths and len(paths) >= max_files else (
+            "source_budget" if size > remaining else None)
+        if reason:
+            excluded.append({"path": unit["path"], "unit_id": unit["unit_id"], "reason": reason,
+                             "relation": "candidate_pair", "candidate_id": unit["unit_id"]})
+            missing_inputs.append({"candidate_id": unit["unit_id"], "path": unit["path"],
+                                   "reason": "candidate_pair_omitted"})
+            if size > max_source_bytes:
+                oversize.append(unit["unit_id"])
+            continue
+        if include(unit, "candidate", unit["unit_id"]):
+            if before is not None and before is not unit:
+                include(before, "candidate_before", unit["unit_id"])
             role = unit.get("role")
             declaration = report.get("profile", {}).get("roles", {}).get(role, {})
             candidates.append({key: unit[key] for key in (
-                "unit_id", "path", "module", "role", "symbol", "start_line", "end_line", "sha256")})
+                "unit_id", "path", "module", "role", "symbol", "start_line", "end_line", "sha256", "side")})
             candidates[-1].update(candidate_id=unit["unit_id"], contract={
                 "profile_id": report.get("profile", {}).get("id"), "role": role,
                 "declaration": deepcopy(declaration)})
+            unavailable = any(item.get("path") == unit["path"] and item["reason"] == "base_source_unavailable"
+                              for item in missing_inputs)
+            kind = ("deleted" if unit.get("side") == "before" else "modified" if before else
+                    "uncompared" if unavailable or not commit else "added")
+            candidates[-1]["change"] = {"kind": kind, "base_commit": commit,
+                                         "before_unit_id": before["unit_id"] if before else None,
+                                         "after_unit_id": unit["unit_id"] if unit.get("side") != "before" else None}
+            for missing in list(missing_inputs):
+                if missing.get("path") == unit["path"] and "candidate_id" not in missing:
+                    missing_inputs.append({**missing, "candidate_id": unit["unit_id"]})
 
-    # Changed candidates get the source budget first. Then supply actual imports,
-    # imported contracts, callers and test callers; unrelated file prefixes cannot
-    # crowd a changed function out. These relationships are static, not coverage.
+    # All candidate pairs get first use of the budget. Static references then
+    # connect declarations, callers/registrations and fixture bindings. Their
+    # presence never establishes that a test executed or covered a behavior.
+    graph_units = [*all_units, *(unit for unit in old_units if any(
+        candidate["candidate_id"] == unit["unit_id"] for candidate in candidates))]
+    edges, absent = references(graph_units, bindings)
     related = []
     for candidate in candidates:
-        path, module, symbol = candidate["path"], candidate["module"], candidate["symbol"].split(".")[-1]
-        own = next(unit for unit in all_units if unit["unit_id"] == candidate["unit_id"])
-        referenced = {node.id for node in ast.walk(own["_node"]) if isinstance(node, ast.Name)}
-        imported = bindings[path]
-        targets = {value for name, value in imported.items() if name in referenced}
-        edges = {edge["target"] for edge in report.get("relationships", []) if edge.get("source") == module}
-        for unit in all_units:
-            if unit["path"] == path and unit["kind"] in {"Import", "ImportFrom"}:
-                related.append((0, unit, "imports"))
-            elif any(unit["module"] == target and (name is None or unit["symbol"] == name)
-                     for target, name in targets):
-                related.append((1, unit, "imported_contract"))
-            elif unit["module"] in edges and unit["kind"] == "ClassDef":
-                related.append((2, unit, "imported_definition"))
-            local = unit["path"] == path
-            aliases = {alias for alias, (target, name) in bindings[unit["path"]].items()
-                       if target == module and name == symbol}
-            imported_module = any(target == module and name is None or target + "." + str(name) == module
-                                  for target, name in bindings[unit["path"]].values())
-            if not (local or aliases or imported_module):
-                continue
-            calls = _call_names(unit)
-            if (local and symbol in calls) or calls & aliases or imported_module and symbol in calls:
-                is_test = unit["symbol"].split(".")[-1].startswith("test_")
-                related.append((3 if is_test else 2, unit, "test_caller" if is_test else "caller"))
-    for _, unit, relation in sorted(related, key=lambda item: (item[0], item[1]["path"], item[1]["start_line"])):
-        include(unit, relation)
+        rows, missing = neighborhood(candidate, graph_units, edges, absent)
+        missing_inputs.extend({**item, "candidate_id": candidate["candidate_id"]} for item in missing)
+        related.extend((distance, unit, relation, candidate["candidate_id"]) for distance, unit, relation in rows)
+        relevant_paths = {candidate["path"], *(unit["path"] for _, unit, _ in rows)}
+        related.extend((0, unit, "imports", candidate["candidate_id"]) for unit in all_units
+                       if unit["path"] in relevant_paths and unit["kind"] in {"Import", "ImportFrom"})
+        if candidate["change"]["before_unit_id"]:
+            related.extend((0, unit, "before_imports", candidate["candidate_id"]) for unit in old_units
+                           if unit["path"] == candidate["path"] and unit["kind"] in {"Import", "ImportFrom"})
+    for _, unit, relation, candidate_id in sorted(related, key=lambda item: (item[0], item[1]["path"], item[1]["start_line"])):
+        include(unit, relation, candidate_id)
     return {
         "subject": deepcopy(report.get("subject", {})), "profile": deepcopy(report.get("profile", {})),
         "deterministic": {key: deepcopy(report.get(key)) for key in ("status", "summary", "findings", "coverage")},
-        "sources": selected, "candidates": candidates,
+        "sources": selected, "before_sources": before_selected, "candidates": candidates,
+        "missing_inputs": missing_inputs,
         "source_scope": {"selected": sorted(paths), "omitted": sorted(set(by_path) - paths),
                          "excluded": excluded, "oversize": list(dict.fromkeys(oversize)), "truncated": [],
                          "max_source_bytes": max_source_bytes, "source_bytes": max_source_bytes - remaining,
                          "selection": "changed_ranges" if targeted else "inventory",
-                         "changed_ranges": ranges, "base_ref": base_ref, "max_candidates": max_candidates},
+                         "changed_ranges": ranges, "base_ref": base_ref, "base_commit": commit,
+                         "max_candidates": max_candidates, "role_priorities": list(role_priorities),
+                         "eligible_by_role": dict(Counter(unit.get("role") or "<unclassified>" for unit in candidate_units)),
+                         "selected_by_role": dict(Counter(unit.get("role") or "<unclassified>" for unit in candidates)),
+                         "before_source_bytes": sum(len(unit["source"].encode("utf-8")) for unit in before_selected)},
     }

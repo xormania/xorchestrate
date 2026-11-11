@@ -170,7 +170,8 @@
         "tests/hexagonal/test_security_lint.py": "calibration",
         "tests/hexagonal/test_architecture_context.py": "composition",
         "tests/hexagonal/test_architecture_effectiveness.py": "calibration",
-        "tests/hexagonal/test_jev_efficiency.py": "adapter"
+        "tests/hexagonal/test_jev_efficiency.py": "adapter",
+        "tests/hexagonal/test_architecture_packets.py": "composition"
       }
     },
     "live-acceptance": {
