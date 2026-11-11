@@ -138,7 +138,12 @@ class ProjectServer:
                 "actors": sorted({peer.actor for peer in clients}),
                 "worktrees": sorted(root for root in worktrees if isinstance(root, str)),
                 "in_flight": self.dispatcher.in_flight, "draining": self.dispatcher.draining or self._stop_decided,
-                "live_sessions": self.live_sessions()}
+                "live_sessions": self.live_sessions(),
+                "sessions_needing_reconnect": self.sessions_needing_reconnect()}
+
+    def sessions_needing_reconnect(self):
+        query = getattr(self.application, "sessions_needing_reconnect", None)
+        return query() if callable(query) else []
 
     def _refusal(self, live):
         return {"stopping": False, "error": {"code": "sessions_live", "message":

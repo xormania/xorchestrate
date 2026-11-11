@@ -169,6 +169,36 @@ class SessionLifecycleMixin:
             return sorted(key for key in owned
                           if (record := tx.get("session", key)) and record.data["status"] not in _CLOSED | {"failed"})
 
+    def sessions_needing_reconnect(self) -> list[JSON]:
+        """Sessions recorded as live (or disconnected by a runtime close) that this runtime does not hold.
+
+        After a server restart, a crash or a container failure these are the
+        sessions whose conversations may still be reachable. Each names what to
+        call: ``reconnect_session`` for a driver that reconnects (hosted and
+        bridge sessions), ``start_session`` with ``resume_session_id`` for one
+        that resumes, nothing for one that can do neither. Nothing is changed.
+        """
+        owned = self._owned_session_ids.copy()
+        found = []
+        with self.store.transaction() as tx:
+            records = [r for r in tx.list("session") if r.key not in owned
+                       and r.data.get("status") in {"starting", "active", "unknown", "disconnected"}
+                       and isinstance(r.data.get("backend"), dict)]
+        for record in sorted(records, key=lambda r: r.key):
+            driver_name = record.data.get("driver")
+            driver = self.sessions.get(driver_name)
+            arguments = {"driver": driver_name, "resume_session_id": record.key}
+            if callable(getattr(driver, "reconnect", None)):
+                call = {"action": "reconnect_session", "arguments": arguments}
+            elif callable(getattr(driver, "resume", None)):
+                call = {"action": "start_session", "arguments": arguments}
+            else:
+                call = None
+            found.append({"session_id": record.key, "driver": driver_name, "status": record.data["status"],
+                          "actor_id": record.data.get("actor_id"), "work_id": record.data.get("work_id"),
+                          "call": call})
+        return found
+
     def runtime_closed(self):
         with self.store.transaction() as tx:
             for session_id in self._owned_session_ids.copy():
