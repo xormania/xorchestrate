@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "xorchestrate.hexagonal",
-  "version": "9",
+  "version": "10",
   "description": "Current application-owned ports, infrastructure-independent core and replaceable adapters. Composition is the trusted factory boundary. Source dependencies are distinct from runtime calls through ports. Active live-test infrastructure follows the same dependency direction: generic test-kit ports/core, concrete execution adapters, independent evidence predicates and explicit runner composition. Shared test contracts remain independent of their subjects; support adapters own fixtures, and collected tests cannot import other collected tests. The public ports, their values and errors and the adapter factory convention come from the external, stdlib-only xcontracts package (Apache-2.0), which the foundation re-exports. Roles that reach the foundation allow only xcontracts.ports and xcontracts.model; the conformance kit (xcontracts.testing) and the factory types are allowed only in test support and collected tests; xcontracts never imports xorchestrate, which its own tests and tests/hexagonal/test_xcontracts.py check.",
   "source_roots": [
     "xorchestrate",
@@ -354,6 +354,9 @@
         "open",
         "input",
         "print"
+      ],
+      "forbidden_literals": [
+        "tmux"
       ]
     },
     "testkit_core": {
@@ -389,6 +392,9 @@
         "open",
         "input",
         "print"
+      ],
+      "forbidden_literals": [
+        "tmux"
       ]
     },
     "testkit_adapters": {
@@ -397,30 +403,38 @@
         "scripts.testkit.adapters.command",
         "scripts.testkit.adapters.evidence",
         "scripts.testkit.adapters.clock",
-        "scripts.testkit.adapters.tmux",
+        "scripts.testkit.adapters.ownership",
         "scripts.testkit.adapters.static",
         "scripts.testkit.adapters.identity",
         "scripts.testkit.adapters.syntax",
         "scripts.testkit.adapters.managed_store",
         "scripts.testkit.adapters.managed_process",
         "scripts.testkit.adapters.terminals",
-        "scripts.testkit.adapters.diagnostics"
+        "scripts.testkit.adapters.diagnostics",
+        "scripts.testkit.adapters.supervised_run"
       ],
       "allowed_roles": [
         "testkit_foundation",
         "testkit_core",
-        "testkit_adapters"
+        "testkit_adapters",
+        "foundation"
       ],
       "allowed_external": [
-        "stdlib:*"
+        "stdlib:*",
+        "xcontracts.ports",
+        "xcontracts.model"
       ],
-      "allow_dynamic": true
+      "allow_dynamic": true,
+      "forbidden_literals": [
+        "tmux"
+      ]
     },
     "testkit_configuration": {
       "modules": [
         "scripts.testkit.adapters.configuration",
         "scripts.testkit.adapters.profiles",
-        "scripts.testkit.adapters.native_evidence"
+        "scripts.testkit.adapters.native_evidence",
+        "scripts.testkit.adapters.terminal_selection"
       ],
       "allowed_roles": [
         "testkit_foundation",
@@ -730,6 +744,9 @@
         "open",
         "input",
         "print"
+      ],
+      "forbidden_literals": [
+        "tmux"
       ]
     },
     "acceptance_fixture": {
@@ -743,7 +760,10 @@
       "allowed_external": [
         "stdlib:*"
       ],
-      "allow_dynamic": false
+      "allow_dynamic": false,
+      "forbidden_literals": [
+        "tmux"
+      ]
     },
     "acceptance_runner": {
       "modules": [
@@ -786,10 +806,31 @@
         "acceptance_entrypoints",
         "testkit_foundation",
         "testkit_core",
-        "testkit_adapters"
+        "testkit_adapters",
+        "testkit_configuration",
+        "foundation",
+        "core",
+        "work_acceptance",
+        "inspection",
+        "adapters",
+        "composition",
+        "operator",
+        "verification_foundation",
+        "verification_core",
+        "verification_decoders",
+        "verification_composition",
+        "testkit_composition",
+        "testkit_pytest",
+        "telemetry",
+        "telemetry_views"
       ],
       "allowed_external": [
-        "stdlib:*"
+        "stdlib:*",
+        "jsonschema",
+        "referencing",
+        "pytest",
+        "xcontracts.ports",
+        "xcontracts.model"
       ],
       "allow_dynamic": true
     },
@@ -883,7 +924,10 @@
         "stdlib:*",
         "pytest"
       ],
-      "allow_dynamic": true
+      "allow_dynamic": true,
+      "forbidden_literals": [
+        "tmux"
+      ]
     },
     "architecture_foundation": {
       "modules": [

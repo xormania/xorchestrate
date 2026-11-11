@@ -65,8 +65,7 @@ def worker(run_directory, *arguments, monkeypatch, timeout=30):
     """Run the scenario worker in-process, as its owned pane would, and read what it retained."""
     from scripts.acceptance.scenario import main
 
-    monkeypatch.setenv("TMUX", "/tmp/unused-worker-context,1,0")
-    monkeypatch.setenv("TMUX_PANE", "%0")
+    monkeypatch.setenv("XORCHESTRATE_TERMINAL_HOST", "unused-worker-context")
     run_directory = Path(run_directory)
     status = main(["--run-dir", str(run_directory), "--timeout", str(timeout), *map(str, arguments)])
     text = (run_directory / "scenario.json").read_text()

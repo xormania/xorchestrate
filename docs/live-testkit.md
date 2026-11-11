@@ -17,7 +17,7 @@ testing system alongside the product.
 ## Run
 
 Use Python 3.12 for validation. Before starting Python, select a fresh external
-cache and install the declared dependencies. The tmux suite also needs tmux,
+cache and install the declared dependencies. The acceptance suite also needs a ready terminal host,
 Linux/WSL2, PTYs, Unix sockets and a matching `/proc` process namespace.
 
 Until xcontracts is published on PyPI, install with uv: it reads the pinned
@@ -69,7 +69,7 @@ For managed native prompts, use `start` and `attach`: the existing native launch
 exposes an owned interactive terminal with input/output separate from MCP pipes.
 Seeing an outer worker pane alone does not establish native prompt access.
 
-Use `--suite acceptance` for tmux/MCP callbacks and persistence, or
+Use `--suite acceptance` for terminal-host/MCP callbacks and persistence, or
 `--suite multi-harness` for the existing 46-case communication, controlled work
 and lifecycle suite. `--timeout` controls each scenario's existing timeout; the
 outer command bound allows the complete suite to finish. `--brief` selects an
@@ -88,7 +88,9 @@ protocol runs establish application/adapter behavior, not vendor authentication.
 | Bounded command processes | `testkit.adapters.command.SubprocessRunner` | Check execution, captured checks and version probes |
 | Atomic private JSON, exact command bytes, candidate identities | `testkit.adapters.evidence` | Both runners and verification/calibration capture |
 | Derived config and isolated SQLite | `testkit.adapters.configuration` | Both runners, fixture and native modes |
-| Owned tmux/PID lifecycle | `testkit.adapters.tmux` | Acceptance transport; old import delegates to this module |
+| Owned PID lifecycle | `testkit.adapters.ownership` | Identities, fenced signals and descendant tracking |
+| Supervised acceptance run | `testkit.adapters.supervised_run` | Runs the worker in an injected terminal host |
+| Terminal host selection | `testkit.adapters.terminal_selection` | Profile/CLI `terminal_host`, built through product composition |
 | Product assertions and independent verdicts | Existing acceptance scenarios and `verification` checker | Shared mechanics supply observations; product verdicts are not the oracle |
 
 The kit core imports only its model/ports and declared pure standard-library
@@ -124,7 +126,7 @@ adapters:
 - [World resource registration and reverse cleanup](https://github.com/uscient/agentscient/blob/456457b9a0a9eb1ff285ee2d3e40535b6f722cdb/ops/testkit/world.py)
   supply the shared ownership model. Cleanup drains every registered resource and
   retains failures, including explicit releases that failed earlier.
-- [Existing Xorchestrate ownership supervisor](../scripts/testkit/adapters/tmux.py)
+- [Ownership primitives](../scripts/testkit/adapters/ownership.py) and [supervised run](../scripts/testkit/adapters/supervised_run.py)
   retains PID/start identity checks, pidfd signaling and orphan adoption. It moved
   intact behind the kit adapter instead of reverting to older process scans.
 - [Existing candidate/evidence capture](../scripts/testkit/adapters/evidence.py)

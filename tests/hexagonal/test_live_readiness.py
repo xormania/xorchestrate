@@ -1,6 +1,5 @@
 """Readiness that costs nothing: the run location and an opt-in session handshake, through the public entrypoint."""
 
-import shutil
 
 import pytest
 
@@ -23,8 +22,9 @@ from tests.hexagonal.support.live_diagnostics import (
     run_testkit,
     shared_directory,
 )
+from tests.hexagonal.support.terminal_host import requires_host
 
-requires_tmux = pytest.mark.skipif(shutil.which("tmux") is None, reason="Real tmux is required for a launched story or a passed tmux readiness")
+requires_tmux = requires_host()
 
 
 # Both kinds of check that provision a private application home inside their run directory.

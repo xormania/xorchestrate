@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 
 from scripts.testkit.adapters.managed_store import owner_alive
-from scripts.testkit.adapters.tmux import Identity, send_signal
+from scripts.testkit.adapters.ownership import processes, send_signal
 
 SOURCE = Path(__file__).resolve().parents[3]
 
@@ -84,9 +84,12 @@ class PublicWorkflow:
         return json.loads((directory / "state.json").read_text())
 
     def freeze(self, directory):
-        state = self.state(directory)
-        record = state["worker"]
-        identity = Identity(record["pid"], record["started"])
+        # The run's state names no process (the terminal host exposes none); find the worker by its command line.
+        from tests.hexagonal.support.host_processes import arguments_containing
+
+        found = [pid for pid, command in arguments_containing(str(directory)) if " _worker " in f" {command} "]
+        assert len(found) == 1, found
+        identity = processes()[found[0]][0]
         send_signal(identity, signal.SIGSTOP)
         self.frozen.append(identity)
         return identity

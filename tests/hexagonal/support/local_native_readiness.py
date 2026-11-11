@@ -18,6 +18,9 @@ from scripts.testkit.adapters.native_evidence import collection_supplement
 from tests.hexagonal.support.managed_profiles import ROOT, profile_file, run_shell, shell_subject
 from xorchestrate.composition import build
 
+# These checks are about native prerequisites, not the terminal host (which has its own tests).
+READY_HOST = {"name": "terminal_host", "passed": True, "adapter": "stub", "selected": "stub", "fallback_reason": None}
+
 
 class LocalNativeReadiness:
     expected_driver = "codex"
@@ -60,7 +63,8 @@ class LocalNativeReadiness:
             "telemetry": telemetry}))
         before = self.profile.read_bytes(), self.native.read_bytes()
         with patch.object(profiles, "_interpreter_details", return_value=self.probe(False)), \
-                patch.object(profiles.shutil, "which", side_effect=lambda name: "/available/" + name):
+                patch.object(profiles.shutil, "which", side_effect=lambda name: "/available/" + name), \
+                patch.object(profiles.terminal_selection, "readiness", return_value=READY_HOST):
             result = profiles.doctor(self.profile, root=ROOT)
         unchanged = before == (self.profile.read_bytes(), self.native.read_bytes()) and not (self.profile.parent / "runs").exists()
         return result, unchanged
@@ -90,7 +94,8 @@ class LocalNativeReadiness:
             executable.chmod(0o700)
             return str(executable)
         with patch.object(profiles, "_interpreter_details", return_value=self.probe(False)), \
-                patch.object(profiles.shutil, "which", side_effect=which):
+                patch.object(profiles.shutil, "which", side_effect=which), \
+                patch.object(profiles.terminal_selection, "readiness", return_value=READY_HOST):
             try:
                 result = profiles.doctor(self.profile, root=ROOT)
             except ValueError as error:

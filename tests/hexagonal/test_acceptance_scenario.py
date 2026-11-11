@@ -1,4 +1,4 @@
-"""Scenario checks cross real processes; these tests do not claim tmux acceptance."""
+"""Scenario checks cross real processes; these tests do not claim terminal-host acceptance."""
 
 import io
 import json
@@ -112,21 +112,20 @@ def test_native_session_completion_text_without_callback_does_not_pass(tmp_path)
         work = client.tool("list_work", {})["work"][0]
         evidence = client.tool("get_work", {"work_id": work["id"]})["evidence"]
         assert any(isinstance(item["result"], dict) and item["result"].get("turn", {}).get("status") == "completed" for item in evidence)
-        assert not any(item.get("label") == "tmux-acceptance" for item in evidence)
+        assert not any(item.get("label") == "terminal-acceptance" for item in evidence)
     finally:
         scenario.cleanup()
     assert scenario.checks[0]["status"] == "failed"
 
 
-def test_worker_without_tmux_records_failure_without_false_acceptance(tmp_path, monkeypatch):
-    monkeypatch.delenv("TMUX", raising=False)
-    monkeypatch.delenv("TMUX_PANE", raising=False)
+def test_worker_outside_a_supervised_host_records_failure_without_false_acceptance(tmp_path, monkeypatch):
+    monkeypatch.delenv("XORCHESTRATE_TERMINAL_HOST", raising=False)
     previous_handlers = {number: signal.getsignal(number) for number in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)}
     assert main(["--run-dir", str(tmp_path), "--profile", "fixture", "--timeout", "30"]) == 1
     assert {number: signal.getsignal(number) for number in previous_handlers} == previous_handlers
     report = json.loads((tmp_path / "scenario.json").read_text())
     assert report["status"] == "failed"
-    assert report["error"] == {"type": "AcceptanceFailure", "code": "tmux_required"}
+    assert report["error"] == {"type": "AcceptanceFailure", "code": "terminal_host_required"}
     assert not (tmp_path / "application.json").exists()
     assert Path(tmp_path / "scenario.json").stat().st_mode & 0o077 == 0
 
