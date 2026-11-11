@@ -12,6 +12,11 @@ harness ──stdio──▶ xorchestrate connect ──unix socket──▶ ser
 A harness launches `xorchestrate connect` as its MCP command. `connect` starts
 the server if none is running and relays MCP frames between its stdio and the
 server. Closing a harness closes its connection, not the sessions it started.
+The server itself runs as terminal `server` in the project's
+[terminal host](terminal-host.md). A hosted session's bridge host is another
+terminal there and keeps running when the server only detaches. After a hard
+restart, startup recovers interrupted sessions; see
+[recovering after a container or machine failure](terminal-host.md#recovering-after-a-container-or-machine-failure).
 
 Every command here needs a set-up [project](projects.md): it is found from
 the working directory, or named with `--project PATH`. A project has one
@@ -24,10 +29,11 @@ server, shared by all its worktrees (see
 | --- | --- |
 | `serve` | Unchanged: one MCP session over this process's stdin/stdout until EOF, with the `--actor` of this process. Same as `serve --transport stdio`. |
 | `serve --transport unix [--socket PATH] [--max-connections N]` | Run the project's shared server in the foreground. Prints one `{"serving": {...}}` line when it is listening. Refused if a server for the project is already running. |
-| `connect [--socket PATH] [--actor NAME] [--start-timeout S]` | The harness's MCP entry. Relays stdio to the project's server, starting a detached `serve --transport unix` with the same global options when none is running. |
+| `connect [--socket PATH] [--actor NAME] [--start-timeout S]` | The harness's MCP entry. Relays stdio to the project's server, starting it as terminal `server` in the project's [terminal host](terminal-host.md) with the same global options when none is running. |
 | `up [--socket PATH] [--start-timeout S]` | Start the server if it is not running; print its status and whether this call started it. |
 | `down [--socket PATH] [--detach] [--timeout S]` | Drain and stop the server (see [stopping](#stopping)). |
-| `status [--socket PATH]` | Print the server's pid, socket, rendered configuration, project, instance, running configuration hash and starting worktree, connected actors and worktrees, in-flight calls, whether it is draining, its live sessions, and the settings your overlay overrides (`overrides`). Exit status 3 and `{"running": false, "socket": null, "overrides": [...]}` when none is running. |
+| `status [--socket PATH]` | Print the server's pid, socket, rendered configuration, project, instance, running configuration hash and starting worktree, connected actors and worktrees, in-flight calls, whether it is draining, its live sessions, `sessions_needing_reconnect`, `recovery`, the active `terminal_host`, and the settings your overlay overrides (`overrides`). Exit status 3 and `{"running": false, "socket": null, "overrides": [...]}` when none is running; that reply still includes `terminal_host`. |
+| `recover [--socket PATH] [--session ID] [--timeout S]` | In the running server, recover sessions a hard restart interrupted. Repeat `--session` to limit the set; the default is every interrupted session. Idempotent. Exit status 3 with `server_unavailable` when no server is running: start it with `up`, which recovers what `recovery_policy` selects. |
 
 `describe`, `call` and `run` remain for direct use and do not use the server.
 A one-shot `call` builds its own runtime, so it can read the server's durable

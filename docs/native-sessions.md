@@ -93,6 +93,48 @@ not a claim that an installed vendor version accepts every option or has been
 authenticated. Local native acceptance must record installed versions and actual
 observed settings.
 
+## Hosted sessions
+
+An owned driver ends with the server. To keep the conversation in the project's
+[terminal host](terminal-host.md#hosted-sessions), wrap the same selection:
+
+```json
+{
+  "sessions": {
+    "codex-worker": {
+      "adapter": "hosted",
+      "options": {
+        "session": {
+          "adapter": "codex",
+          "options": {
+            "command": ["codex", "app-server", "--listen", "stdio://"],
+            "pass_env": ["PATH", "HOME", "CODEX_HOME"],
+            "cwd": "${repo}"
+          }
+        },
+        "application_tools": true
+      }
+    }
+  }
+}
+```
+
+`hosted` opens a bridge host in a terminal and attaches with the existing
+bridge driver. There is no new session protocol. `stop_session` closes the
+terminal and keeps the private state for a later resume. `detach_session` and
+a server stop that only detaches leave the terminal running.
+`reconnect_session` adopts that terminal, or reopens it from the saved state
+when it is gone. Options are `directory` (default `hosted` under the project's
+data directory), `attach_timeout` (default 30 seconds) and `timeout` (default
+30 seconds). Without a terminal host, start is refused with
+`terminal_host_unavailable`. The approval summary and `doctor` list the wrapped
+command like any other launched command.
+
+After a hard restart the server recovers interrupted sessions in the background.
+The default `recovery_policy` is `reconnect`; `manual` only reports them.
+`xorchestrate recover` recovers the rest. See
+[recovery](terminal-host.md#recovering-after-a-container-or-machine-failure).
+
 Codex native approval requests are answered by explicit `native_permissions`
 responses, for example
 `{"item/commandExecution/requestApproval":{"decision":"decline"}}`. Other native
@@ -136,7 +178,9 @@ Use `resume_session_id` to resume a stored application session, or
 source receipt and source-control/destination-creation authorization. Passing a
 raw native ID in a start request is rejected. Native resumption is enabled for
 Codex; ACP/Grok additionally require `resume_supported: true` and the actual
-provider's `loadSession` capability.
+provider's `loadSession` capability. A hosted session reconnects through the
+bridge; if the terminal is gone, resume still needs the inner driver's resume
+support.
 
 Resumption with omitted parameters retains the source's requested selection.
 A changed configured driver identity fails with `configuration_changed` unless
@@ -147,12 +191,17 @@ invalidates its handle. Late events from the old incarnation do not become
 observations of the replacement.
 
 For an owned stdio driver, detach closes its owned process connection; a
-resumable native conversation may then be resumed. For an externally managed
-conversation, use the persistent session bridge. Detaching that client leaves
-the externally owned native process alive; reconnect establishes a new bridge
-incarnation. It does not attach by trusting an arbitrary PID supplied by a
-caller. See the persistent bridge documentation and local acceptance procedure
-for launching and attaching external Codex, Grok, and Claude conversations.
+resumable native conversation may then be resumed. For a conversation that
+should survive the server without an operator launching the host, use `hosted`
+(above). For a host the operator launches, use the persistent session bridge.
+Detaching that client leaves the externally owned native process alive;
+reconnect establishes a new bridge incarnation. It does not attach by trusting
+an arbitrary PID supplied by a caller. See the persistent bridge documentation
+and local acceptance procedure for launching and attaching external Codex,
+Grok, and Claude conversations. `xorchestrate recover` and the automatic run
+at server start call the same reconnect path for sessions the policy selects;
+an explicit `recover` acts only where its caller could already reconnect or
+stop that session.
 
 Grok retains unresolved interjections until matching handling or completion
 evidence arrives. A late completion for an old prompt cannot clear newer native

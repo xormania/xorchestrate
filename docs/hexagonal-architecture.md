@@ -145,13 +145,16 @@ The operator layer has its own driven ports:
 [terminal host](terminal-host.md)). The first three are defined in xcontracts
 and re-exported by `xorchestrate/ports.py`. `TerminalHost`, its values and its
 `terminal_host` kind are defined locally in `xorchestrate/ports.py` while they
-are still changing, as the pull request delivery ports are. They move to
+are still changing, as the pull request delivery ports are. `RecoveryPolicy`
+and its values are local for the same reason. Both move to
 xcontracts once they are stable; until then, third-party terminal-host
 adapters are not supported through the public contracts. Their adapters (`git-directory`, `git`,
 `github`, `tmux`, `detached-process`) are registered in composition's `BUILTINS`
 like every other adapter, but as operator kinds: they are selected from the
 user's home (`settings.json`, a project's `instance.json`), never by a project
-configuration section. See [projects](projects.md#companions-version-control-and-hosting).
+configuration section. `reconnect` and `manual` are the built-in
+`recovery_policy` adapters; that section is project configuration, not an
+operator kind. See [projects](projects.md#companions-version-control-and-hosting).
 The multiplexer adapter has its own architectural role, `terminal_multiplexer`.
 Only composition may import it, and its name is a forbidden literal in the
 roles that never reach composition, so nothing else can hardwire it.
@@ -165,7 +168,7 @@ The top-level sections are:
 | `state_engine` | Lifecycle state engine; built-in `declared` (default) accepts `definitions` and `guards` options |
 | `telemetry` | Observation collector; built-in `local` with selected `corpus` (`sqlite`) and `artifacts` (`filesystem`) storage; always on for a project (the `ProjectContext` supplies `TelemetryDefaults`) unless `enabled: false` |
 | `providers` | Named capability providers, each with `adapter` and `options` |
-| `sessions` | Named session drivers, each with `adapter` and `options` |
+| `sessions` | Named session drivers, each with `adapter` and `options`. `hosted` wraps another driver and runs it in the [terminal host](terminal-host.md#hosted-sessions) |
 | `guardrail` | An enforcement adapter and its options |
 | `routing` | A routing adapter and its options |
 | `evaluators` | Named assessment adapters and their options |
@@ -175,6 +178,7 @@ The top-level sections are:
 | `delivery_scheduler` | Manual/default or immediate/configured delivery scheduling |
 | `retry_policy` | Retry permission after a definite failed attempt |
 | `receipt_policy` | Verification of complete exchange evidence |
+| `recovery_policy` | Which interrupted sessions to recover automatically after a hard restart; built-in `reconnect` (default) or `manual`. See [recovery](terminal-host.md#recovering-after-a-container-or-machine-failure) |
 | `session_fallbacks` | Explicit unavailable-name to configured-driver substitutions |
 
 An adapter selection may use a supplied alias or a trusted installed
@@ -472,7 +476,8 @@ list is allowed to evolve with the system.
 
 ## Behavioral preservation and verification
 
-See [native sessions](native-sessions.md), [external session lifecycle](external-session-bridge.md),
+See [native sessions](native-sessions.md), [terminal host](terminal-host.md),
+[external session lifecycle](external-session-bridge.md),
 [work acceptance](work-acceptance.md), and the [implementation handoff](implementation/HANDOFF.md).
 Owner outcomes and candidate revisions remain separate from subordinate work.
 Native call replay is durably fenced, including actions without application effect

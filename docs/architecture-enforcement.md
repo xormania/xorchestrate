@@ -32,7 +32,9 @@ No package names are embedded in the evaluator. A profile declares source roots,
 module selectors, allowed roles/external dependencies, permitted dynamic loading
 and optional prohibited calls. Every source module must match exactly one role;
 every required selector must match. New adapters matching the declared adapter
-scope are accepted. New top-level modules need a role assignment; legitimate new
+scope are accepted. The multiplexer adapter is its own role,
+`terminal_multiplexer`: only composition may import it, and its name is a
+forbidden literal in roles that never reach composition. New top-level modules need a role assignment; legitimate new
 dependencies can be added to the applicable contract.
 
 The Xorchestrate profile permits adapters to depend on other adapters where the

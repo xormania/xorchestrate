@@ -109,9 +109,10 @@ connection open while using native sessions. A one-shot `call` closes the adapte
 it owns when it exits; a stored session record does not keep its process alive.
 
 Several agent harnesses can share one long-running server instead. A harness
-launches `connect` as its MCP command; it starts the server when none is running
+launches `connect` as its MCP command; it starts the server as terminal `server`
+in the project's [terminal host](docs/terminal-host.md) when none is running
 and relays MCP over stdio. Sessions belong to the server and survive a harness
-disconnect. `up`, `status` and `down` manage the server; see
+disconnect. `up`, `status`, `down` and `recover` manage the server; see
 [project server](docs/project-server.md). `init` writes Claude Code's tracked
 `.mcp.json` entry, `{"command": "xorchestrate", "args": ["connect"]}`:
 
@@ -170,10 +171,17 @@ Runtime tool arguments cannot replace a configured executable. Filesystem,
 network, and native tool access also depend on the chosen process environment and
 harness; application guardrails are not an operating-system sandbox.
 
-The native adapters include Codex, Claude Code, and Grok Build. Routed messages
-have durable delivery attempts and independently observed callback evidence;
-submission, receipt, reply, turn completion and work acceptance remain separate.
-See [native sessions](docs/native-sessions.md), [external attachment and recovery](docs/external-session-bridge.md),
+The native adapters include Codex, Claude Code, and Grok Build. A session
+configured as `hosted` runs that driver inside a bridge host in the same
+terminal host, so the conversation survives the server and can be attached to.
+After a crash, a container failure or a reboot, `up` recovers interrupted
+sessions according to `recovery_policy` (default `reconnect`);
+`xorchestrate recover` recovers the rest. Owned drivers are unchanged.
+Routed messages have durable delivery attempts and independently observed
+callback evidence; submission, receipt, reply, turn completion and work
+acceptance remain separate.
+See [native sessions](docs/native-sessions.md), [terminal host](docs/terminal-host.md),
+[external attachment and recovery](docs/external-session-bridge.md),
 and [owner requirements and acceptance](docs/work-acceptance.md).
 
 See [the architecture and contracts](docs/hexagonal-architecture.md),

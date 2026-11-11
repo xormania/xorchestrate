@@ -4,6 +4,8 @@
 around the [shared test-kit](testing-framework.md). It uses the same selected
 checks, command receipts and independent verifiers as the direct Python entry
 point. Native processes are still launched by the product's existing adapters.
+Managed runs and acceptance still use the test kit's own tmux supervisor.
+That supervisor is not the product [terminal host](terminal-host.md).
 
 The default protocol mode exercises real application processes with deterministic
 peers. Native mode uses your installed, authenticated harnesses and never falls

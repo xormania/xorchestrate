@@ -1,7 +1,8 @@
 # Local live tests with retained telemetry
 
 Use the existing managed proof runner to own the tmux worker/dashboard, native
-sessions, cancellation and evidence. It runs your installed harness through the
+sessions, cancellation and evidence. That tmux worker is the test kit's
+supervisor, not the product [terminal host](terminal-host.md). It runs your installed harness through the
 product adapters. It preserves your selected native configuration and ordinary
 authentication; a native failure does not select a fixture peer or another
 model. The [managed lifecycle](managed-proofs.md) and [story catalog](local-stories.md)
