@@ -22,7 +22,36 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 - PR edit/readiness observations preserve useful running validation and reuse
   authenticated exact-candidate behavior evidence, retaining original lane
   identities and flat references across repeated metadata activity.
-
+- The public ports, the values and errors they exchange and the adapter factory
+  convention now come from the new Apache-2.0
+  [xcontracts](https://github.com/xormania/xcontracts) package (`xcontracts>=0.1,<0.2`),
+  with a conformance kit that third-party adapters can run. `xorchestrate.ports`
+  and `xorchestrate.model` re-export the same objects, so existing imports keep
+  working. The built-in stores and operator adapters run the kit. Telemetry
+  collectors are not yet a supported third-party kind. See
+  [writing an adapter](docs/adapters.md).
+- Operator adapter factories (companion, version control, repository hosting)
+  receive a deep copy of their options, so an adapter cannot change the
+  stored selection. Companion record names with a trailing newline are now
+  refused like any other invalid name.
+- The `git-directory` companion keeps each record kind in one scope: the
+  first write records it in `<kind>/.scope`, and project-scoped and
+  project-independent use of one kind no longer see or block each other's
+  records (it is refused instead). Writes go through a unique temporary file,
+  so an interrupted write leaves no partial record and concurrent writers no
+  longer collide.
+- `doctor` no longer fails on a malformed GitHub response; the companion
+  remote's visibility is reported as unknown. A non-string `api_url` and an
+  unimportable operator adapter reference are reported as configuration
+  errors.
+- The `git` version-control adapter answers for a file or new entry inside a
+  repository through its directory, as it already did for worktrees.
+- The release identity gate refuses a release while a runtime dependency comes
+  from a git, path or URL source (until xcontracts 0.1.0 is on PyPI,
+  development uses a pinned git source).
+- Checkout installs use `uv pip install --python python3 -e .` until
+  xcontracts is on PyPI, because plain pip cannot read the pinned git source;
+  a test runs that bootstrap in a clean environment.
 - A configurable PR capability provider observes candidate-bound checks and
   discussions, checkpoints and refreshes owned branches, publishes reviewed
   source trees as drafts, and retains target custody and progress for uncertain
@@ -220,6 +249,14 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 - **Journal diagnostics:** existing operation diagnostics remain stored. Public
   projection hides unversioned diagnostic content; this is not a historical-data
   purge and needs no data-version migration.
+- **Adapter options and custom adapters:** None changed. Third-party adapters
+  that import from `xorchestrate.ports` or `xorchestrate.model` keep working;
+  new adapters should depend on `xcontracts>=0.1,<0.2` instead. `xcontracts`
+  is a new runtime dependency.
+- **Companion layout:** a `git-directory` companion gains a `<kind>/.scope`
+  file in each record kind's directory on its next write (`project` or
+  `shared`); commit it with the records. Existing records stay where they are
+  and need no migration.
 - **Configuration format:** the optional top-level `version` key is introduced
   at format version `1`. A configuration without it is read as version `1` and
   `describe` reports a `configuration_version_missing` warning; add

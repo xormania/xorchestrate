@@ -7,7 +7,7 @@ import json
 
 import pytest
 
-from tests.hexagonal.support.native import native_runtime, retry
+from tests.hexagonal.support.native import complete_json_lines, native_runtime, retry
 from xorchestrate.model import OrchestrationError
 
 
@@ -173,3 +173,14 @@ def test_native_gateway_never_relays_private_failure_text(protocol, tmp_path):
         assert replayed == {"error": {"code": "callback_failed", "details": {"outcome": "unknown"},
             "message": "External operation did not return a verified result."}}
         assert "s3cret" not in (tmp_path / "wire.jsonl").read_text(), "NATIVE_GATEWAY_PRIVATE_ERROR_TEXT"
+
+
+def test_polling_a_peer_result_file_ignores_a_record_still_being_appended(tmp_path):
+    """A poll that lands mid-append (seen in CI as a JSONDecodeError) sees only finished records."""
+    wire = tmp_path / "wire.jsonl"
+    assert complete_json_lines(wire) == []
+    wire.write_text('{"label": "first"}\n{"label": "rep')
+    assert complete_json_lines(wire) == [{"label": "first"}]
+    with wire.open("a") as output:
+        output.write('eat"}\n')
+    assert complete_json_lines(wire) == [{"label": "first"}, {"label": "repeat"}]

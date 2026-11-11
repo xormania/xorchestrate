@@ -64,6 +64,19 @@ def application_message(protocol, action, arguments, **fields):
     return {"text": json.dumps({"action": "tool", "name": action, "arguments": arguments, **fields})}
 
 
+def complete_json_lines(path):
+    """The JSON records a fixture peer has finished appending to ``path``.
+
+    Peers append one ``json.dumps(...) + "\\n"`` per record while the test
+    polls, so a read can end inside a record still being written. Only lines
+    terminated by a newline are complete; the unfinished tail is read again on
+    the next poll.
+    """
+    path = Path(path)
+    text = path.read_text() if path.exists() else ""
+    return [json.loads(line) for line in text[:text.rfind("\n") + 1].splitlines()]
+
+
 def wait_for(predicate, timeout=5, *, message="Expected native observation did not arrive"):
     """Wait on observations with one deadline; only explicitly safe reads retry."""
     deadline = time.monotonic() + timeout
@@ -179,7 +192,7 @@ def native_runtime(protocol, tmp_path, bridge=False):
             message = application_message(protocol, action, arguments, **body)
             retry(app, "send_session", {"session_id": session["id"], "message": message, "idempotency_key": label})
             def observed():
-                records = [json.loads(row) for row in wire.read_text().splitlines()] if wire.exists() else []
+                records = complete_json_lines(wire)
                 matches = [row for row in records if row["label"] == label]
                 return matches[-1] if matches else None
             row = wait_for(observed, timeout=8, message="native replay fixture did not return a wire result")

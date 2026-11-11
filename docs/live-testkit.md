@@ -20,9 +20,14 @@ Use Python 3.12 for validation. Before starting Python, select a fresh external
 cache and install the declared dependencies. The tmux suite also needs tmux,
 Linux/WSL2, PTYs, Unix sockets and a matching `/proc` process namespace.
 
+Until xcontracts is published on PyPI, install with uv: it reads the pinned
+xcontracts git source in `pyproject.toml`, which plain pip ignores (pip stops with
+`No matching distribution found for xcontracts`). Once xcontracts is on PyPI,
+`python3 -m pip install ...` works again.
+
 ```bash
 export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XXXXXX")"
-python3 -m pip install -e '.[test]' -r .github/requirements-ci.txt
+uv pip install --python python3 -e '.[test]' -r .github/requirements-ci.txt
 python3 -m scripts.testkit doctor
 python3 -m scripts.testkit run
 ```

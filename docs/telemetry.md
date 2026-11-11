@@ -7,8 +7,13 @@ there is no separate installation extra.
 ## Install and enable
 
 ```sh
-python3 -m pip install -e '.[test]' -r .github/requirements-ci.txt
+uv pip install --python python3 -e '.[test]' -r .github/requirements-ci.txt
 ```
+
+Until xcontracts is published on PyPI, install with uv: it reads the pinned
+xcontracts git source in `pyproject.toml`, which plain pip ignores (pip stops with
+`No matching distribution found for xcontracts`). Once xcontracts is on PyPI,
+`python3 -m pip install ...` works again.
 
 Use a Python build whose linked SQLite includes the WAL-reset fix (3.51.3, or a
 fixed backport: 3.50.7 or later in 3.50, 3.44.6 or later in 3.44). Check the

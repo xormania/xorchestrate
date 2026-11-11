@@ -14,6 +14,7 @@ from tests.hexagonal.contracts.ci_reuse import (
     MATERIAL_STATES,
     RUNTIME_CHANGES,
     assert_execute,
+    assert_execute_without_reuse_provenance,
     assert_metadata_burst,
     assert_reused,
     replace_path,
@@ -474,6 +475,69 @@ def producer_api(tmp_path, monkeypatch):
     peer = ProducerAPI(tmp_path / "api")
     monkeypatch.setattr(subject.candidate, "urlopen", peer.urlopen)
     return peer
+
+
+@pytest.mark.parametrize("outcome", ("unavailable", "superseded", "current", "disabled", "execute"))
+def test_planner_final_observation_controls_the_published_reuse_decision(producer_api, tmp_path, monkeypatch, outcome):
+    producer_api.summary(201)
+    producer_api.final_observation = "unavailable" if outcome == "disabled" else outcome
+    if outcome == "execute":
+        producer_api.metadata.clear()
+    monkeypatch.setattr(subject.candidate, "runtime_manifest", lambda lane, env: deepcopy(producer_api.runtime[lane]))
+    plan, bundle = subject.prepare(producer_api.current, producer_api.workflow, "fixture-token", {},
+        tmp_path / "planned", aggregate.evaluate, catalog=producer_api.catalog,
+        static_qualifier=aggregate.qualify_static, enabled=outcome != "disabled")
+    if outcome == "current":
+        assert_reused(plan, 201)
+        assert bundle is not None
+        assert plan["original_context"]["producer"]["run_id"] == 101
+        assert plan["summary_ref"]["run_id"] == 201
+        assert plan["current_pr"]["status"] == "current"
+    else:
+        assert bundle is None
+        assert_execute_without_reuse_provenance(plan)
+        assert plan["reason"] == {"unavailable": "evidence_unavailable", "superseded": "superseded_candidate",
+                                  "disabled": "reuse_disabled", "execute": "no_qualified_evidence"}[outcome]
+        if outcome != "disabled":
+            if outcome != "execute":
+                assert plan["history"], "Already observed execution history remains historical evidence"
+            assert plan["initial_pr"]["status"] == "current"
+            assert isinstance(plan["initial_pr"]["observed_at"], str)
+        if outcome == "unavailable":
+            assert plan.get("current_pr", {}).get("status") != "current"
+    assert plan["lookup_seconds"] >= 0
+    assert producer_api.current_pr_reads == (1 if outcome == "disabled" else 2)
+    assert producer_api.failed_final_observations == (1 if outcome == "unavailable" else 0)
+    if outcome not in {"disabled", "execute"}:
+        assert any(path.startswith("/actions/artifacts/") for path in producer_api.requests), \
+            "The final observation follows authentication of eligible original evidence"
+
+
+@pytest.mark.parametrize("outcome", ("unavailable", "current", "disabled"))
+def test_planner_cli_never_emits_reuse_after_a_failed_final_observation(producer_api, tmp_path, monkeypatch, outcome):
+    producer_api.summary(201)
+    producer_api.final_observation = "unavailable" if outcome == "disabled" else outcome
+    monkeypatch.setattr(subject.candidate, "runtime_manifest", lambda lane, env: deepcopy(producer_api.runtime[lane]))
+    monkeypatch.setenv("GITHUB_TOKEN", "fixture-token")
+    monkeypatch.setenv("CI_REUSE_ENABLED", "false" if outcome == "disabled" else "true")
+    for name, value in (("context", producer_api.current), ("workflow", producer_api.workflow), ("catalog", producer_api.catalog)):
+        write_json(tmp_path / (name + ".json"), value)
+    output, github = tmp_path / "plan.json", tmp_path / "github-output"
+    code = subject.main(["--context", str(tmp_path / "context.json"), "--workflow", str(tmp_path / "workflow.json"),
+        "--catalog", str(tmp_path / "catalog.json"), "--output", str(output), "--work", str(tmp_path / "planned"),
+        "--github-output", str(github)])
+    assert code == 0, "Unavailable optional reuse must fall back to execution"
+    plan = json.loads(output.read_text())
+    emitted = dict(line.split("=", 1) for line in github.read_text().splitlines())
+    assert json.loads(emitted["reuse_plan"]) == plan
+    if outcome == "current":
+        assert emitted["reuse"] == "true"
+        assert_reused(plan, 201)
+    else:
+        assert emitted["reuse"] == "false", "CI_REUSE_FINAL_FAILURE_CANNOT_SKIP_HEAVY_JOBS"
+        assert_execute_without_reuse_provenance(plan)
+        assert plan["reason"] == ("evidence_unavailable" if outcome == "unavailable" else "reuse_disabled")
+    assert producer_api.current_pr_reads == (1 if outcome == "disabled" else 2)
 
 
 def test_full_producer_api_fixture_authenticates_original_receipts(producer_api, tmp_path):

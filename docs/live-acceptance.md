@@ -19,9 +19,14 @@ WSL2 are the supported hosts for this fixture. The host must permit PTYs and
 Unix-domain sockets; a restricted container can have tmux installed and still
 reject those facilities.
 
+Until xcontracts is published on PyPI, install with uv: it reads the pinned
+xcontracts git source in `pyproject.toml`, which plain pip ignores (pip stops with
+`No matching distribution found for xcontracts`). Once xcontracts is on PyPI,
+`python3 -m pip install ...` works again.
+
 ```bash
 export PYTHONPYCACHEPREFIX="$(mktemp -d "${TMPDIR:-/tmp}/xorchestrate-pycache.XXXXXX")"
-python3 -m pip install -e '.[test]'
+uv pip install --python python3 -e '.[test]'
 python3 -m scripts.testkit run --suite acceptance --output ../xorchestrate-acceptance --timeout 120
 ```
 
@@ -104,7 +109,8 @@ WORKSPACE=/absolute/path/to/xorchestrate CACHE_VOLUME=xorchestrate-fixture-home 
   bash -eu -c '
     export PYTHONPYCACHEPREFIX="$(mktemp -d /tmp/xorchestrate-pycache.XXXXXX)"
     python3.12 -m venv /tmp/xorchestrate-acceptance
-    /tmp/xorchestrate-acceptance/bin/python -m pip install -e ".[test]"
+    /tmp/xorchestrate-acceptance/bin/python -m pip install uv==0.13.7
+    /tmp/xorchestrate-acceptance/bin/uv pip install --python /tmp/xorchestrate-acceptance/bin/python -e ".[test]"
     /tmp/xorchestrate-acceptance/bin/python -m scripts.testkit run --suite acceptance --output /tmp/xorchestrate-acceptance-evidence --timeout 120
   '
 ```

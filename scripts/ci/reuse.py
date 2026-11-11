@@ -437,16 +437,19 @@ def prepare(context, workflow, token, env, directory, qualifier, *, enabled=True
                                       static_qualifier=static_qualifier)
             bundles[run["id"]] = bundle
             return bundle
-        plan = select_run(runs, context, inspect, runtime=runtime)
-        plan["initial_pr"] = observation
+        selected = select_run(runs, context, inspect, runtime=runtime)
+        # Keep reuse provisional until the final observation and bundle are available.
+        plan.update(history=selected["history"], initial_pr=observation)
         plan["current_pr"] = observe_current(context, token)
         if plan["current_pr"]["status"] != "current":
-            plan.update(decision="execute", reason="superseded_candidate")
-        if plan["decision"] == "reuse":
-            bundle = bundles[plan["producer"]["run_id"]]
-            plan["result_artifact"] = bundle["result_artifact"]
-            plan["result_producer"] = bundle["result_producer"]
-            return plan, bundle
+            plan["reason"] = "superseded_candidate"
+            return plan, None
+        bundle = None
+        if selected["decision"] == "reuse":
+            bundle = bundles[selected["producer"]["run_id"]]
+            selected.update(result_artifact=bundle["result_artifact"], result_producer=bundle["result_producer"])
+        plan = {**selected, "initial_pr": observation, "current_pr": plan["current_pr"]}
+        return plan, bundle
     except (OSError, ValueError, KeyError, TypeError, AttributeError, zipfile.BadZipFile, zlib.error, EOFError, RuntimeError):
         pass
     finally:

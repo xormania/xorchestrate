@@ -35,6 +35,14 @@ def assert_execute(result):
     assert result["decision"] == "execute", "CI_REUSE_UNPROVED_MUST_EXECUTE"
 
 
+def assert_execute_without_reuse_provenance(result):
+    """An unavailable or superseded final observation cannot publish stale reuse."""
+    assert_execute(result)
+    reuse_fields = {"current_context", "original_context", "producer", "lanes", "references",
+                    "result_artifact", "result_producer", "summary_ref"}
+    assert not reuse_fields.intersection(result), "CI_REUSE_FAILED_FINAL_OBSERVATION_DROPS_PROVENANCE"
+
+
 def assert_metadata_burst(subject, action):
     """A validates; B/C metadata wait or are replaced; current D reuses A."""
     original = subject.add_run(101, 1)

@@ -45,7 +45,25 @@ The identity gate fails the run unless:
 - the build produced exactly one wheel and one sdist of `xorchestrate` and of
   `xork`, and nothing else, all carrying that version (in PEP 440 form, so
   `1.3.0-rc.2` becomes `1.3.0rc2` in file names);
+- every runtime dependency resolves from a package index: no direct reference,
+  no `[tool.uv.sources]` git, path, URL or workspace source for it, and only
+  registry packages in `uv.lock`;
 - for a tag push, the tag is annotated and its commit is on `master`.
+
+> **Before the first release with xcontracts:** development takes xcontracts
+> from a pinned git commit (`[tool.uv.sources]` in `pyproject.toml`), because
+> it is not on PyPI yet; the gate refuses that. Once xcontracts 0.1.0 is
+> published, delete the `xcontracts` entry under `[tool.uv.sources]` (the
+> dependency already reads `xcontracts>=0.1,<0.2`), run
+> `python3 -m scripts.ci.dependencies update` and commit `uv.lock`. Until
+> then, the pin is a commit on xcontracts' `master` (the merge commit of its
+> first pull request), never a commit reachable only from a feature branch
+> that may be deleted; repin to a `master` commit whenever xcontracts changes
+> and run `python3 -m scripts.ci.dependencies update`. When the
+> source is removed, the checkout instructions (README, `docs/live-testkit.md`,
+> `docs/live-acceptance.md`, `docs/telemetry.md`,
+> `docs/behavioral-verification.md`) can return to plain `python3 -m pip
+> install`.
 
 Run the gate locally before tagging:
 

@@ -6,6 +6,7 @@ import io
 import json
 import shutil
 from copy import deepcopy
+from urllib.error import URLError
 from urllib.parse import urlsplit
 
 from scripts.ci import result as aggregate
@@ -23,6 +24,9 @@ class ProducerAPI:
         self.payloads = {}
         self.requests = []
         self.next_artifact = 5000
+        self.current_pr_reads = 0
+        self.final_observation = "current"
+        self.failed_final_observations = 0
         self.original = self.full_execution(101)
 
     @property
@@ -262,7 +266,13 @@ class ProducerAPI:
         elif parts[:2] == ["contents", ".github"]:
             value = {"encoding": "base64", "content": base64.b64encode(self.workflow_bytes).decode()}
         elif parts[0] == "pulls":
+            self.current_pr_reads += 1
+            if self.current_pr_reads >= 2 and self.final_observation == "unavailable":
+                self.failed_final_observations += 1
+                raise URLError("Temporary failure reading the final PR observation")
             value = current_pull_request(self.current)
+            if self.current_pr_reads >= 2 and self.final_observation == "superseded":
+                value["head"]["sha"] = "f" * 40
         elif parts[:2] == ["actions", "workflows"]:
             value = {"workflow_runs": [row["run"] for row in self.metadata.values()]}
         else:
