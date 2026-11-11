@@ -37,6 +37,14 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   `worker` is now hosted. `stop` closes the terminal even when the bridge host
   does not answer, and `max_sessions` bounds running hosted terminals,
   detached ones included. See [hosted sessions](docs/terminal-host.md#hosted-sessions).
+- Recovery after a hard restart: the server detects an unclean stop or
+  interrupted sessions from durable state and recovers them in the background
+  as the project's `recovery_policy` selects (`reconnect`, the default, or
+  `manual`). `xorchestrate recover` recovers the rest, acting only where its
+  caller may reconnect or stop each session (its actor and work binding
+  weighed). `status` and `doctor` report it; doctor reads only an approved,
+  built-in store. Shutdown waits for the session in hand. See
+  [recovering after a container or machine failure](docs/terminal-host.md#recovering-after-a-container-or-machine-failure).
 - PR edit/readiness observations preserve useful running validation and reuse
   authenticated exact-candidate behavior evidence, retaining original lane
   identities and flat references across repeated metadata activity.
