@@ -45,31 +45,43 @@ from .process import positive_number, resolve_repo
 
 NATIVE = "native"
 MAX_SOCKET_PATH_BYTES = 107
+ENDPOINT_RELEASE_WAIT = 5.0
+"""How long a just-killed bridge host's endpoint may stay bound before a reopen refuses."""
 OUTPUT_LINES = 40
 
 
-def _remove_stale_endpoint(endpoint):
-    """Remove ``endpoint`` only if it is a socket of this user that nothing listens on (its host is gone)."""
-    try:
-        metadata = os.lstat(endpoint)
-    except FileNotFoundError:
-        return
-    if not stat.S_ISSOCK(metadata.st_mode) or metadata.st_uid != os.getuid():
-        raise OrchestrationError("The hosted session's endpoint path is occupied by something else.",
-                                 "terminal_host_unavailable", {"outcome": "not_started"})
-    probe = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    probe.settimeout(1)
-    try:
-        probe.connect(str(endpoint))
-    except (ConnectionRefusedError, FileNotFoundError):
-        Path(endpoint).unlink(missing_ok=True)
-        return
-    except OSError:
-        pass
-    finally:
-        probe.close()
-    raise OrchestrationError("Something still listens on the hosted session's endpoint.", "terminal_host_unavailable",
-                             {"outcome": "not_started"})
+def _remove_stale_endpoint(endpoint, release_wait=ENDPOINT_RELEASE_WAIT):
+    """Remove ``endpoint`` once it is a socket of this user that nothing listens on (its host is gone).
+
+    Called only after the session's terminal is verified gone. A bridge host
+    that was just killed can still hold its listening socket for a moment
+    while the kernel tears the process down, so a socket that still answers
+    is given up to ``release_wait`` seconds to be released before refusing.
+    """
+    deadline = time.monotonic() + release_wait
+    while True:
+        try:
+            metadata = os.lstat(endpoint)
+        except FileNotFoundError:
+            return
+        if not stat.S_ISSOCK(metadata.st_mode) or metadata.st_uid != os.getuid():
+            raise OrchestrationError("The hosted session's endpoint path is occupied by something else.",
+                                     "terminal_host_unavailable", {"outcome": "not_started"})
+        probe = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        probe.settimeout(1)
+        try:
+            probe.connect(str(endpoint))
+        except (ConnectionRefusedError, FileNotFoundError):
+            Path(endpoint).unlink(missing_ok=True)
+            return
+        except OSError:
+            pass
+        finally:
+            probe.close()
+        if time.monotonic() >= deadline:
+            raise OrchestrationError("Something still listens on the hosted session's endpoint.",
+                                     "terminal_host_unavailable", {"outcome": "not_started"})
+        time.sleep(0.05)
 
 
 def _terminal_name(entry, key):
