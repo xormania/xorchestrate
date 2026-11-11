@@ -4,8 +4,10 @@ One host is one tmux server on its own socket, started with ``-f /dev/null``
 so no user configuration is loaded. Each terminal is one tmux session holding
 one pane. By default the server is a daemon that outlives the controller, and
 a restarted controller adopts terminals from their receipts; with ``owned``
-the server runs as this controller's child (``-D``) and everything stops when
-the controller closes or dies.
+the server runs as this controller's child (``-D``). An orderly close stops and
+verifies everything. If the controller is killed outright, the server is
+killed through the Linux parent-death signal and each pane's command is hung
+up, but a process that ignores hangup or detached can survive.
 
 Identity: the server is fenced by process identity (pid, start time, boot,
 owner); a pane by its pane and session ids on that server (tmux never reuses
@@ -261,10 +263,29 @@ class TmuxTerminalHost:
         if self.owned:
             raise OrchestrationError("Owned terminals belong to the controller that opened them.",
                                      "terminal_not_recoverable")
+        terminal = self._verify_receipt(receipt)
+        if terminal.name in self._terminals:
+            raise OrchestrationError("A terminal with this name is already open here.", "terminal_exists",
+                                     {"name": terminal.name})
+        self._terminals[terminal.name] = terminal
+        return self._observe(terminal)
+
+    def attach_instruction_for(self, receipt):
+        """How to attach to the terminal ``receipt`` names, verified as ``adopt`` does, without taking control."""
+        terminal = self._verify_receipt(receipt)
+        argv = (*self._attach_prefix(), "-N", "-S", str(self.socket), "attach-session", "-t", terminal.session)
+        return AttachInstruction(argv, f"Run {shlex.join(argv)} to attach; detach again with the prefix key, then d.")
+
+    def _verify_receipt(self, receipt):
+        """The terminal ``receipt`` names, checked against this host's private server and its launch labels."""
         if not isinstance(receipt, dict) or receipt.get("kind") != KIND:
             raise OrchestrationError("Not a receipt of this terminal host.", "terminal_identity_mismatch")
         if receipt.get("host") != self.name or receipt.get("socket") != str(self.socket):
             raise OrchestrationError("The receipt belongs to another terminal host.", "terminal_identity_mismatch")
+        problem = support.location_problem(self.socket.parent)
+        if problem is not None:
+            raise OrchestrationError(f"The terminal host location is unsafe: {problem}.", "terminal_host_unavailable",
+                                     {"reason": problem})
         name = support.check_name(receipt.get("name"))
         server = support.Identity.from_json(receipt.get("server"))
         leader = receipt.get("process")
@@ -280,9 +301,6 @@ class TmuxTerminalHost:
             if self._query_server() != server:
                 raise OrchestrationError("The receipt's server identity was reused.", "terminal_identity_mismatch")
             self._server = server
-        if name in self._terminals:
-            raise OrchestrationError("A terminal with this name is already open here.", "terminal_exists",
-                                     {"name": name})
         terminal = _Terminal(name, pane_id, session_id, leader)
         panes = self._panes()
         pane = self._pane(terminal, panes)
@@ -294,8 +312,7 @@ class TmuxTerminalHost:
         if (pane.host, pane.name, pane.process) != (self.name, name, _process_label(leader)) or (
                 leader is not None and (pane.pid != leader.pid or (not pane.dead and not support.alive(leader)))):
             raise OrchestrationError("The terminal does not match its receipt.", "terminal_identity_mismatch")
-        self._terminals[name] = terminal
-        return self._observe(terminal)
+        return terminal
 
     def shutdown(self):
         for name in list(self._terminals):
@@ -322,8 +339,18 @@ class TmuxTerminalHost:
             pass
 
     def close(self):
+        """Release this controller. Owned: end only what this controller started or controls.
+
+        A controller that started the owned server (its child) shuts the host
+        down; one that only looked (``attach_instruction_for``) leaves the
+        host, and its controller's terminals, alone.
+        """
         if self.owned:
-            self.shutdown()
+            if self._child is not None:
+                self.shutdown()
+            else:
+                for name in list(self._terminals):
+                    self.close_terminal(name)
         self._terminals.clear()
 
     # -- server -------------------------------------------------------------------

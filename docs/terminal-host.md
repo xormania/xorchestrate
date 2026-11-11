@@ -20,6 +20,7 @@ home, like the other operator adapters.
 | `interrupt(name)` | Ask the terminal's work to stop; the terminal stays open. |
 | `recent_output(name, lines=None)` | The last lines of output, capped by the adapter. Works after exit until the terminal is closed. |
 | `attach_instruction(name=None)` | A command for the operator to attach to one terminal or the whole host. It checks that the location is still private and that the terminal still matches before answering. Interactive hosts only. |
+| `attach_instruction_for(receipt)` | For a process that is not the terminal's controller: how to attach to the terminal a receipt names. The receipt is verified as `adopt` verifies it, but no control is taken, so the terminal stays with its controller. Works for owned hosts too. Interactive hosts only. |
 | `close_terminal(name, grace=None)` | Stop the terminal's work and forget it. The terminal's own command is asked to stop first and gets the whole `grace` to stop its own children. Whatever remains after that is terminated, given a short wait, then forced. Returns the final observation and `cleanup_verified`, which is true only when everything is gone. |
 | `adopt(receipt)` | Take back a terminal after the controller restarted, verified against what is actually running. |
 | `shutdown()` | Stop every terminal of the host and remove its private state. |
@@ -68,9 +69,15 @@ Both take the placement the operator layer supplies (`name`, `location`,
 `socket`) and these options:
 
 - `owned` (default false): the host's mechanism runs as the controller's
-  child, and everything stops when the controller closes. On Linux it also
-  stops when the controller dies. Adoption is refused. The test kit uses this
-  mode for its leak checks.
+  child, and adoption is refused. The test kit uses this mode for its leak
+  checks.
+  - An orderly close (`close` or `shutdown`) stops everything and verifies it.
+  - If the controller is killed outright (Linux, through the parent-death
+    signal), the host is stopped. Each terminal's command is also stopped: the
+    `detached-process` leader is killed, and under `tmux` it is hung up when
+    the server dies. A process that detached from its terminal's session, or
+    that ignores hangup, can survive. A caller that must prove nothing is left
+    behind should track descendants itself, as the test kit does.
 - `output_lines` (default 2000) and `grace` (default 10 seconds).
 
 `tmux` also takes `binary`, `rows`, `columns` (default 48×160),
@@ -197,5 +204,6 @@ are unchanged.
   not at each project's placement.
 - `recent_output` for `tmux` reads the pane's history. The log written through
   `log` is the raw terminal stream.
-- Owned mode's die-with-controller guarantee for a crashed controller relies on
-  Linux's parent-death signal.
+- When an owned host's controller is killed outright, only the host and each
+  terminal's command are stopped (through Linux's parent-death signal). A
+  process that detached or ignores hangup can survive; see `owned` above.

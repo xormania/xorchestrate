@@ -3,8 +3,10 @@
 Each terminal is one command started in a new session with its output appended
 to a private log. By default it outlives the controller and a later controller
 adopts it by process identity (pid, start time, boot, owner); with the
-``owned`` option every terminal stops when the controller closes, and on
-Linux also when the controller dies.
+``owned`` option an orderly close stops and verifies everything. If the
+controller is killed outright, each terminal's leader is killed through the
+Linux parent-death signal, but a member that detached from its session can
+survive.
 
 Options: ``name`` (the host name, required), ``location`` (private directory
 for logs of terminals opened without one, required), ``socket`` (accepted
@@ -142,6 +144,9 @@ class DetachedProcessHost:
             self._known(name)
         raise OrchestrationError("Detached-process terminals cannot be attached to.", "terminal_operation_unsupported")
 
+    def attach_instruction_for(self, receipt):
+        raise OrchestrationError("Detached-process terminals cannot be attached to.", "terminal_operation_unsupported")
+
     def close_terminal(self, name, grace=None):
         terminal = self._known(name)
         grace = support.check_grace(grace, self.grace)
@@ -202,8 +207,10 @@ class DetachedProcessHost:
                 path.unlink(missing_ok=True)
 
     def close(self):
+        """Release this controller. Owned: stop only this controller's own terminals, never other controllers'."""
         if self.owned:
-            self.shutdown()
+            for name in list(self._terminals):
+                self.close_terminal(name)
         else:
             for terminal in self._terminals.values():
                 if terminal.process is not None:

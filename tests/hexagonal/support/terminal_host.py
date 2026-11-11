@@ -115,6 +115,7 @@ class Subject:
     starter: object = None
     alterer: object = None
     attacher: object = None
+    looker: object = None
     additions: frozenset = frozenset()
     wait: object = staticmethod(wait)
     counter: object = field(default_factory=itertools.count)
@@ -142,6 +143,10 @@ class Subject:
 
     def run_attach(self, argv, text):
         return self.attacher(argv, text)
+
+    def look(self, host_name, receipt):
+        """``attach_instruction_for(receipt)`` from a separate controller process: the argv, or the refusal's code."""
+        return self.looker(host_name, receipt)
 
     def log_path(self, name):
         directory = os.path.join(self.logs, f"{next(self.counter)}")
@@ -307,6 +312,19 @@ class MemoryTerminalHost:
         self._item(name)
         return AttachInstruction(("memory-attach", self.name, name), f"Attach to {name} in memory.")
 
+    def attach_instruction_for(self, receipt):
+        self._interactive()
+        if not isinstance(receipt, dict) or receipt.get("host") != self.name:
+            raise OrchestrationError("Receipt is not from this host.", "terminal_identity_mismatch")
+        name = receipt.get("terminal")
+        self._check_name(name)
+        item = self.machine.hosts.get(self.name, {}).get(name)
+        if item is None:
+            raise OrchestrationError("Terminal vanished.", "terminal_not_recoverable", {"name": name})
+        if item.incarnation != receipt.get("incarnation"):
+            raise OrchestrationError("Terminal identity changed.", "terminal_identity_mismatch", {"name": name})
+        return AttachInstruction(("memory-attach", self.name, name), f"Attach to {name} in memory.")
+
     def close_terminal(self, name, grace=None):
         item = self._item(name)
         if item.alive and item.kind == "orderly":  # its own handler runs first and stops its child
@@ -354,6 +372,13 @@ class MemoryTerminalHost:
         self.closed = True
 
 
+def _look_in_memory(host, receipt):
+    try:
+        return list(host.attach_instruction_for(receipt).argv)
+    except OrchestrationError as error:
+        return error.code
+
+
 def memory_subject(directory, *, survives_controller=True, interactive=True):
     machine = MemoryMachine()
 
@@ -384,11 +409,25 @@ def memory_subject(directory, *, survives_controller=True, interactive=True):
                    forger=lambda receipt, process: {**receipt, "incarnation": -1},
                    unsafe=machine.unsafe.add, starter=Unrelated,
                    alterer=lambda receipt: [{**receipt, "incarnation": receipt["incarnation"] + 1000}],
+                   looker=lambda name, receipt: _look_in_memory(factory(name), receipt),
                    attacher=lambda argv, text: argv[0] == "memory-attach" and any(
                        text in item.output for item in machine.hosts.get(argv[1], {}).values()))
 
 
 # -- real adapters ----------------------------------------------------------------
+
+LOOKER = """
+import importlib, json, sys
+spec = json.loads(sys.argv[1])
+module, _, factory = spec["factory"].partition(":")
+host = getattr(importlib.import_module(module), factory)(spec["options"])
+try:
+    print(json.dumps(list(host.attach_instruction_for(spec["receipt"]).argv)))
+except Exception as error:
+    print(json.dumps(getattr(error, "code", type(error).__name__)))
+finally:
+    host.close()
+"""
 
 CONTROLLER = """
 import importlib, json, sys, time
@@ -495,6 +534,13 @@ def adapter_subject(factory, options_for, directory, *, root, placement_path, ad
                 self.process.kill()
             self.process.wait(timeout=10)
 
+    def looker(host_name, receipt):
+        spec = {"factory": factory, "options": options_for(host_name), "receipt": receipt}
+        result = subprocess.run([sys.executable, "-c", LOOKER, json.dumps(spec)], cwd=root, capture_output=True,
+                                text=True, timeout=30)
+        assert result.returncode == 0, result.stderr
+        return json.loads(result.stdout.strip().splitlines()[-1])
+
     def forger(receipt, process):
         from xorchestrate.adapters.terminal_support import identity
 
@@ -517,5 +563,5 @@ def adapter_subject(factory, options_for, directory, *, root, placement_path, ad
         os.chmod(os.path.dirname(placement_path(host_name)), 0o755)  # noqa: S103
 
     return Subject(lambda host_name: build(options_for(host_name)), Programs(str(directory)), logs, crasher,
-                   tracer=tracer, forger=forger, unsafe=unsafe, starter=Unrelated, alterer=alterer,
+                   tracer=tracer, forger=forger, unsafe=unsafe, starter=Unrelated, alterer=alterer, looker=looker,
                    attacher=attacher, additions=frozenset(additions))
