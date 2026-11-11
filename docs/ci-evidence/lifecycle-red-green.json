@@ -1,0 +1,1371 @@
+{
+  "schema_version": 1,
+  "scope": "Independent lifecycle reuse, current PR observation, authenticated aggregate skips and bounded one-hop summary qualification. Existing 20 policy/aggregate fault records are retained separately from the one-hop and final-hardening amendments.",
+  "runtime": {
+    "local_python": "3.12.14",
+    "hosted_python": "Not established by this local record; configured CI pins 3.12.16."
+  },
+  "reproduction": {
+    "steps": [
+      "Use a disposable checkout matching the chosen source hashes. Set an external PYTHONPYCACHEPREFIX and disable pytest cache.",
+      "In a fresh Python interpreter import inspect, scripts.ci.reuse as reuse, and scripts.ci.result as result_evidence. Define the named mutation helper, execute mutation_python, then run the listed pytest command in that same interpreter using pytest.main(command[3:]).",
+      "Source replacement helpers require the target to occur exactly once. A missing target or other setup failure is not credited as red proof. Function substitutions modify the actual production entry points used by the tests."
+    ],
+    "mutation_helpers": {
+      "policy": "def replace_guard(old, new):\n    replace_function(reuse, \"select_run\", old, new)\n\ndef replace_function(module, name, old, new):\n    source = inspect.getsource(getattr(module, name))\n    if source.count(old) != 1:\n        raise RuntimeError(\"Fault target did not match exactly once: \" + fault)\n    namespace = dict(vars(module))\n    exec(compile(source.replace(old, new), \"<reuse-policy-fault:\" + fault + \">\", \"exec\"), namespace)\n    setattr(module, name, namespace[name])",
+      "onehop": "def change(name, *pairs):\n    source = inspect.getsource(getattr(reuse, name))\n    for old, new in pairs:\n        if source.count(old) != 1:\n            raise RuntimeError(\"One-hop fault target did not match exactly once: \" + fault)\n        source = source.replace(old, new)\n    namespace = dict(vars(reuse))\n    exec(compile(source, \"<onehop-policy-fault:\" + fault + \">\", \"exec\"), namespace)\n    setattr(reuse, name, namespace[name])",
+      "frozen": "def change(name, old, new):\n    source = inspect.getsource(getattr(reuse, name))\n    if source.count(old) != 1:\n        raise RuntimeError(\"Frozen fault target did not match exactly once: \" + fault)\n    namespace = dict(vars(reuse))\n    exec(compile(source.replace(old, new), \"<frozen-policy-fault:\" + fault + \">\", \"exec\"), namespace)\n    setattr(reuse, name, namespace[name])"
+    }
+  },
+  "snapshots": {
+    "initial_policy": {
+      "source_sha256": {
+        "scripts/ci/reuse.py": "a78659f23256bbae1deb7cef3ff72311fe00181c135e89336a6bba0c97a969e0",
+        "scripts/ci/candidate.py": "c1489d1b688c27fcda75c2346b3cf5412e089f633e89dc781edd04f0d4db975b",
+        "tests/hexagonal/support/ci_candidate.py": "622bc076763351319b1be2d833bf47ff1b5fa0997cb35541997b29f037e76085",
+        "tests/hexagonal/test_ci_reuse.py": "2a54a31ee0d12853127abce977daed922dbf73cc98c8d53dad03652c97b623a7"
+      },
+      "healthy": {
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-p",
+          "no:cacheprovider",
+          "tests/hexagonal/test_ci_reuse.py",
+          "-q",
+          "--tb=short"
+        ],
+        "exit": 0,
+        "result": "75 passed in 0.30s",
+        "log_sha256": "c09a86b3a83f70e2bf37d8498e2776b87e672b2c954ee54606e5843617b50763"
+      }
+    },
+    "aggregate_observation": {
+      "source_sha256": {
+        "scripts/ci/reuse.py": "e66b9081a49d3b7c4caa02b6146fdbd4c4be09a2268d9c1300498d18935ea20f",
+        "scripts/ci/result.py": "8aac733f9b04891a8bbfc45eee4b54391a12e289287938baeba850683d3bee99",
+        "scripts/ci/candidate.py": "dcda28565757ded3188dac73808e22ada7c7c873a2b9ab8d655d81f2bf90f542",
+        "tests/hexagonal/test_ci_reuse.py": "7f0583e4a09c94f6933977040797c142548c85595e38502e76476f5674cb08c6",
+        "tests/hexagonal/test_ci_result.py": "51ef6acbd9b8f5b2cc0bca17e7dc9917ee6098b3969f59adffe0b647e64f1c1f"
+      },
+      "healthy": {
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-p",
+          "no:cacheprovider",
+          "tests/hexagonal/test_ci_reuse.py",
+          "tests/hexagonal/test_ci_result.py",
+          "-q",
+          "--tb=short"
+        ],
+        "exit": 0,
+        "result": "217 passed in 6.59s",
+        "log_sha256": "b8bd9f4694a3b8a7058542ff96c09644b447530ae7976cd93ba711853276efbd"
+      }
+    },
+    "onehop": {
+      "source_sha256": {
+        "scripts/ci/reuse.py": "878defe71db14ef4c6e24587ec6378f80b0e2348a5919b37e75cd83790c1e59f",
+        "scripts/ci/result.py": "2b602f938a3a5a382047a2aeb7f667f0ff818aac73539fdb343e87c1ed65bbe3",
+        "scripts/ci/candidate.py": "e9858adb1b978be7463601f2b0e44bf44e9d08806322a3d3c3d42229f5101946",
+        "tests/hexagonal/test_ci_reuse.py": "8b08ff784262ec78564d7321e7aef0d41a14e3e833ae19548add7142772d7986",
+        "tests/hexagonal/test_ci_result.py": "79a6bff713ce458512221b2031a0ca056d22118f108406ce5fcbbe22e5608c5f",
+        "tests/hexagonal/support/ci_reuse_api.py": "188e15bf31bb77e2c19055c9022bb3abceda22694f9d6b5c531b5238d0519134",
+        "tests/hexagonal/support/ci_receipts.py": "90a727df8ae4eec765d5b0894d3ac132866cca86d51df02b4117da9f813102d3"
+      },
+      "healthy": {
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-p",
+          "no:cacheprovider",
+          "tests/hexagonal/test_ci_reuse.py",
+          "tests/hexagonal/test_ci_result.py",
+          "-q",
+          "--tb=short"
+        ],
+        "exit": 0,
+        "result": "232 passed in 2.73s",
+        "log_sha256": "cad155ddc0756db47e9663c326d2c916dd9e9a632dcfcdb3ce4f64186abcc199"
+      }
+    },
+    "frozen_hardening": {
+      "source_revision": "950210d",
+      "source_sha256": {
+        "scripts/ci/reuse.py": "cbb169c5ed95ccb4fd6f2826f5d04e278983ca989b1f18ecbf4ed19c0779563e",
+        "scripts/ci/result.py": "2b602f938a3a5a382047a2aeb7f667f0ff818aac73539fdb343e87c1ed65bbe3",
+        "scripts/ci/candidate.py": "e9858adb1b978be7463601f2b0e44bf44e9d08806322a3d3c3d42229f5101946",
+        "tests/hexagonal/test_ci_reuse.py": "b1136d5f97fed2cbd8dd449cd791ab728f83b8d4c232ae6f9e6048ecf83b3ce1",
+        "tests/hexagonal/test_ci_result.py": "79a6bff713ce458512221b2031a0ca056d22118f108406ce5fcbbe22e5608c5f",
+        "tests/hexagonal/support/ci_reuse_api.py": "188e15bf31bb77e2c19055c9022bb3abceda22694f9d6b5c531b5238d0519134",
+        "tests/hexagonal/support/ci_receipts.py": "90a727df8ae4eec765d5b0894d3ac132866cca86d51df02b4117da9f813102d3"
+      },
+      "healthy": {
+        "command": [
+          "python",
+          "-m",
+          "pytest",
+          "-p",
+          "no:cacheprovider",
+          "tests/hexagonal/test_ci_reuse.py",
+          "tests/hexagonal/test_ci_result.py",
+          "-q",
+          "--tb=short"
+        ],
+        "exit": 0,
+        "result": "242 passed in 34.02s",
+        "log_sha256": "cb7bea577f22170a39a3fdee1bf8b18699d64cf330f2347af365638772e7e647"
+      }
+    }
+  },
+  "faults": [
+    {
+      "id": "identity_equivalence",
+      "snapshot": "initial_policy",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "policy",
+      "mutation_python": "reuse.compatible_context = lambda current, original: True",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "changed_identity_or_validation_input"
+      ],
+      "observed_exit": 1,
+      "result": "12 failed, 63 deselected in 0.22s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: CI_REUSE_UNPROVED_MUST_EXECUTE"
+      ],
+      "log_sha256": "077f4b4e3951dfd38d96876e6310d9e73ca61d6e4f227b7040b1981af6dd3a8d"
+    },
+    {
+      "id": "material_failure",
+      "snapshot": "initial_policy",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "policy",
+      "mutation_python": "replace_guard('if run.get(\"status\") != \"completed\" or run.get(\"conclusion\") != \"success\":', 'if False:')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "newer_material_attempt or latest_attempt_start"
+      ],
+      "observed_exit": 1,
+      "result": "5 failed, 1 passed, 69 deselected in 0.16s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: CI_REUSE_UNPROVED_MUST_EXECUTE"
+      ],
+      "log_sha256": "9e3f7932af50defcbabfceb34a62655683e6ba5649c0d6a517cdd6b32d0a5825"
+    },
+    {
+      "id": "metadata_proof",
+      "snapshot": "initial_policy",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "policy",
+      "mutation_python": "reuse.unstarted_metadata = lambda run, jobs, context: run.get(\"conclusion\") == \"cancelled\"",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "cancelled_metadata_is_neutral_only"
+      ],
+      "observed_exit": 1,
+      "result": "5 failed, 70 deselected in 0.16s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: CI_REUSE_UNPROVED_MUST_EXECUTE"
+      ],
+      "log_sha256": "84aad0e0ef7ce2792da7ac1af43366710c29d39132c1cd4c1c474be1f1cb121e"
+    },
+    {
+      "id": "runtime_known",
+      "snapshot": "initial_policy",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "policy",
+      "mutation_python": "reuse.runtime_known = lambda value, lane: True",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "equal_but_unknown_relevant_runtime"
+      ],
+      "observed_exit": 1,
+      "result": "10 failed, 65 deselected in 0.37s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: CI_REUSE_UNPROVED_MUST_EXECUTE"
+      ],
+      "log_sha256": "4cc926082dc125d83a71f5f73fb4f026f14b12b75d88a692c6e083b54c21d087"
+    },
+    {
+      "id": "runtime_equality",
+      "snapshot": "initial_policy",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "policy",
+      "mutation_python": "replace_guard('manifest.get(\"runtime\") != runtime[lane]', 'False')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "changed_relevant_runtime"
+      ],
+      "observed_exit": 1,
+      "result": "9 failed, 1 passed, 65 deselected in 0.15s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: CI_REUSE_UNPROVED_MUST_EXECUTE"
+      ],
+      "log_sha256": "dc778ec138b898b41eb89667ef086e4554311cf56a2015f93447439090c58908"
+    },
+    {
+      "id": "original_execution",
+      "snapshot": "initial_policy",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "policy",
+      "mutation_python": "replace_guard('''if (bundle.get(\"result\", {}).get(\"reuse\") or bundle.get(\"result\", {}).get(\"decision\") == \"reuse\"\n                    or not isinstance(references, list) or not references or not isinstance(evidence, list)\n                    or any(not isinstance(row, dict) or row.get(\"decision\") != \"executed\" for row in (*references, *evidence))):''', 'if False:')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "requires_qualified_original_execution"
+      ],
+      "observed_exit": 1,
+      "result": "3 failed, 2 passed, 70 deselected in 0.12s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: CI_REUSE_UNPROVED_MUST_EXECUTE"
+      ],
+      "log_sha256": "606884c6098314cc09c8ab11bf5c329074cf2ae596ed4b396ff8ebe12e1bf9a0"
+    },
+    {
+      "id": "producer_qualification",
+      "snapshot": "initial_policy",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "policy",
+      "mutation_python": "replace_guard('if bundle.get(\"qualified\") is not True or bundle.get(\"result\", {}).get(\"status\") != \"passed\":', 'if False:')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "requires_qualified_original_execution"
+      ],
+      "observed_exit": 1,
+      "result": "2 failed, 3 passed, 70 deselected in 0.20s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: CI_REUSE_UNPROVED_MUST_EXECUTE"
+      ],
+      "log_sha256": "b13222f88fd206097382d8ebcd34cb06aeb047990178d2b50a255411c6596fc2"
+    },
+    {
+      "id": "attempt_order",
+      "snapshot": "initial_policy",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "policy",
+      "mutation_python": "replace_guard('(run[\"attempt_started_at\"], run[\"run_number\"], run[\"id\"])', '(run[\"run_number\"], run[\"id\"])')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "latest_attempt_start"
+      ],
+      "observed_exit": 1,
+      "result": "2 failed, 73 deselected in 0.18s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: CI_REUSE_UNPROVED_MUST_EXECUTE",
+        "E   AssertionError: CI_REUSE_ORIGINAL_PRODUCER"
+      ],
+      "log_sha256": "539f63356ac823c03468f5271da46387b5e8f4fee6fb7a6c3b8a98a076ca008e"
+    },
+    {
+      "id": "disable_switch",
+      "snapshot": "initial_policy",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "policy",
+      "mutation_python": "replace_guard('if not enabled:', 'if False:')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "disable_switch"
+      ],
+      "observed_exit": 1,
+      "result": "1 failed, 74 deselected in 0.08s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: CI_REUSE_UNPROVED_MUST_EXECUTE"
+      ],
+      "log_sha256": "4387a33c76530019bdaa2ca6d12c1fc9b65882d85eba4d961ac0045ca84eb557"
+    },
+    {
+      "id": "fallback_execution",
+      "snapshot": "initial_policy",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "policy",
+      "mutation_python": "replace_guard('\"decision\": \"execute\"', '\"decision\": \"reuse\"')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "missing_unavailable_or_malformed_evidence"
+      ],
+      "observed_exit": 1,
+      "result": "3 failed, 72 deselected in 0.15s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: CI_REUSE_UNPROVED_MUST_EXECUTE"
+      ],
+      "log_sha256": "b01087903c095dc86903c4bf25ca69a430af78650c5fbb4105997a6bb25c7a76"
+    },
+    {
+      "id": "evidence_copy",
+      "snapshot": "initial_policy",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "policy",
+      "mutation_python": "replace_guard('\"lanes\": deepcopy(lanes)', '\"lanes\": lanes')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "retains_original_producer_and_detached_evidence"
+      ],
+      "observed_exit": 1,
+      "result": "1 failed, 74 deselected in 0.13s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: CI_REUSE_EVIDENCE_IMMUTABLE",
+        "E   assert {101: {'conte...cess'}], ...}} == {101: {'conte...cess'}], ...}}",
+        "E     "
+      ],
+      "log_sha256": "ebd627aedfd98a4b6a1bc55a06ce81cad8f82b1707988db50e62fe3cc18ce015"
+    },
+    {
+      "id": "current_run_exclusion",
+      "snapshot": "initial_policy",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "policy",
+      "mutation_python": "replace_guard('run.get(\"id\") != current[\"producer\"][\"run_id\"]', 'True')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "metadata_replacement_burst"
+      ],
+      "observed_exit": 1,
+      "result": "2 failed, 73 deselected in 0.10s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: CI_REUSE_HEALTHY_EXACT_CANDIDATE"
+      ],
+      "log_sha256": "47a18775d4ffa9e29e9a8951378434ba7efed43b1485971c8f3ec50e8a350be2"
+    },
+    {
+      "id": "observation_is_input",
+      "snapshot": "initial_policy",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "policy",
+      "mutation_python": "original = reuse.candidate_key\nreuse.candidate_key = lambda value: {**original(value), \"producer\": value[\"producer\"], \"event\": value[\"event\"]}",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "observation_action_run_and_attempt"
+      ],
+      "observed_exit": 1,
+      "result": "1 failed, 74 deselected in 0.10s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: CI_REUSE_OBSERVATIONS_ARE_NOT_INPUTS",
+        "E   assert False",
+        "E    +  where False = compatible_context({'schema_version': 1, 'repository': {'id': 1430398736, 'full_name': 'xormania/xorchestrate'}, 'source_repository': {'i...736, 'full_name': 'xormania/xorchestrate'}, 'pr': {'number': 17, 'source_ref': 'feature', 'target_ref': 'master'}, ...}, {'schema_version': 1, 'repository': {'id': 1430398736, 'full_name': 'xormania/xorchestrate'}, 'source_repository': {'i...736, 'full_name': 'xormania/xorchestrate'}, 'pr': {'number': 17, 'source_ref': 'feature', 'target_ref': 'master'}, ...})"
+      ],
+      "log_sha256": "38d83eea37f31f03df94163e611bee88cdcf9ad39298a94c6ebeebc76431d1d4"
+    },
+    {
+      "id": "current_observation_identity",
+      "snapshot": "aggregate_observation",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "policy",
+      "mutation_python": "source = inspect.getsource(reuse.observe_current)\nstart = source.index(\"    current = (\")\nend = source.index(\"\\n    return \", start)\nreplace_function(reuse, \"observe_current\", source[start:end], \"    current = True\")",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "tests/hexagonal/test_ci_result.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "late_candidate_changes"
+      ],
+      "observed_exit": 1,
+      "result": "8 failed, 209 deselected in 32.41s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   urllib.error.HTTPError: HTTP Error 401: Unauthorized"
+      ],
+      "log_sha256": "982f3ae73517acc9f41dfa123627773c564a1fd50369d72e02bbed34112c5ed5"
+    },
+    {
+      "id": "current_observation_completeness",
+      "snapshot": "aggregate_observation",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "policy",
+      "mutation_python": "replace_function(reuse, \"observe_current\", 'raise ValueError(\"Current PR observation is incomplete\")', 'pass')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "tests/hexagonal/test_ci_result.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "incomplete_current_observation"
+      ],
+      "observed_exit": 1,
+      "result": "9 failed, 208 deselected in 36.57s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   urllib.error.HTTPError: HTTP Error 401: Unauthorized"
+      ],
+      "log_sha256": "1e440e56a7c9ea6ef0e21f42f40afc5ecbdaf1621da5d0b51f8397f675b40946"
+    },
+    {
+      "id": "requalification_plan_binding",
+      "snapshot": "aggregate_observation",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "policy",
+      "mutation_python": "replace_function(reuse, \"qualify\", 'raise ValueError(\"Skipped lanes have no bound reuse decision\")', 'pass')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "tests/hexagonal/test_ci_result.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "requalification_requires_a_bound_supported_plan"
+      ],
+      "observed_exit": 1,
+      "result": "3 failed, 214 deselected in 13.98s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: Regex pattern did not match.",
+        "E     Expected regex: 'no bound reuse decision'",
+        "E     Actual message: 'Planned evidence no longer qualifies: evidence_unavailable'"
+      ],
+      "log_sha256": "013ffc21a6cbf1d9e8f303b2d65f93d34c7d1e33e0bc3612cbb88cb29ce3a5e7"
+    },
+    {
+      "id": "requalification_original_identity",
+      "snapshot": "aggregate_observation",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "policy",
+      "mutation_python": "replace_function(reuse, \"qualify\", 'if observed.get(field) != plan.get(field):', 'if False:')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "tests/hexagonal/test_ci_result.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "changed_original_evidence_after_skip_planning"
+      ],
+      "observed_exit": 1,
+      "result": "4 failed, 213 deselected in 12.48s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: Regex pattern did not match.",
+        "E     Expected regex: 'Original producer changed'",
+        "E     Actual message: 'Planned evidence no longer qualifies: evidence_unavailable'"
+      ],
+      "log_sha256": "be65349ec5133b9a18a8ca9e1d576ba58fe25bf749478d16374d19a86b2c9a73"
+    },
+    {
+      "id": "requalification_fresh_policy",
+      "snapshot": "aggregate_observation",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "policy",
+      "mutation_python": "replace_function(reuse, \"qualify\", 'if observed.get(\"decision\") != \"reuse\" or bundle is None:', 'if False:')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "tests/hexagonal/test_ci_result.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "evidence_unavailable_after_skipping"
+      ],
+      "observed_exit": 1,
+      "result": "2 failed, 215 deselected in 5.95s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: Regex pattern did not match.",
+        "E     Expected regex: 'no longer qualifies'",
+        "E     Actual message: 'Original producer changed after reuse planning'"
+      ],
+      "log_sha256": "8622b8a527e98759f44b7156a61a27cc51ef68b2fa682709a6d194c61d5d92ff"
+    },
+    {
+      "id": "aggregate_unauthenticated_reuse",
+      "snapshot": "aggregate_observation",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "policy",
+      "mutation_python": "replace_function(result_evidence, \"evaluate\", 'errors.append(\"Reused lanes require authenticated schema-2 candidate and producer metadata\")', 'pass')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "tests/hexagonal/test_ci_result.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "skipped_behavior_needs_authenticated_reuse"
+      ],
+      "observed_exit": 1,
+      "result": "1 failed, 2 passed, 214 deselected in 0.21s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: CI_REUSE_UNAUTHENTICATED_SKIPS_CANNOT_QUALIFY",
+        "E   assert 'passed' == 'failed'",
+        "E     "
+      ],
+      "log_sha256": "0d2033c801bf87a6b1834e598fe7e7f34906c60d2ce2a7b4e40e1c88dbf63ca1"
+    },
+    {
+      "id": "aggregate_explicit_decision",
+      "snapshot": "aggregate_observation",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "policy",
+      "mutation_python": "replace_function(result_evidence, \"evaluate\", 'needs.get(\"paths\", {}).get(\"outputs\", {}).get(\"reuse\") != \"true\"', 'False')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "tests/hexagonal/test_ci_result.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "bound_static_receipt_cannot_turn_unselected_reuse"
+      ],
+      "observed_exit": 1,
+      "result": "3 failed, 214 deselected in 0.75s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: CI_REUSE_SKIP_DECISION_EXPLAINED",
+        "E   assert False",
+        "E    +  where False = any(<generator object test_bound_static_receipt_cannot_turn_unselected_reuse_into_a_skip_waiver.<locals>.<genexpr> at 0x7f74e7734860>)"
+      ],
+      "log_sha256": "fb4e730f8cf233ee6ff8337758f2928e274911c28d9a6800da0f1a72afce4b4e"
+    },
+    {
+      "id": "disable_flattening",
+      "snapshot": "onehop",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "onehop",
+      "mutation_python": "change(\"inspect_producer\", ('if result.get(\"reuse\"):', 'if False:'))",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "tests/hexagonal/test_ci_result.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "native_summary_flattens"
+      ],
+      "observed_exit": 1,
+      "result": "2 failed, 230 deselected in 1.03s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: CI_REUSE_ONEHOP_HEALTHY_SUMMARY",
+        "E   assert None is True",
+        "E    +  where None = <built-in method get of dict object at 0x7f4cb5a91f00>('qualified')"
+      ],
+      "log_sha256": "1edf287aa888110b1aa9a84c1a0b7bf7bdc3f7e686b15ad29724c0dfb8ee7e08"
+    },
+    {
+      "id": "trust_summary_static",
+      "snapshot": "onehop",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "onehop",
+      "mutation_python": "change(\"inspect_producer\", ('static = static_qualifier(original, metadata, workflow, summary_artifacts, needs=result[\"jobs\"])',\n        'static = [row for row in result[\"evidence_references\"] if row.get(\"decision\") == \"executed\"]'))",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "tests/hexagonal/test_ci_result.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "requires_successful_native_aggregates_and_current_static_receipts or authenticated_summary_cannot_substitute"
+      ],
+      "observed_exit": 1,
+      "result": "2 failed, 6 passed, 224 deselected in 1.06s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   Failed: DID NOT RAISE ValueError"
+      ],
+      "log_sha256": "edca16c4350bee416d08fd5cbb7ccd9045b654bfda1c64b7f84405cd0afc3b02"
+    },
+    {
+      "id": "trust_artifact_pointer",
+      "snapshot": "onehop",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "onehop",
+      "mutation_python": "change(\"inspect_producer\", ('if pointer.get(\"result_artifact\") != full.get(\"result_artifact\"):', 'if False:'))",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "tests/hexagonal/test_ci_result.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "authenticated_summary_cannot_substitute"
+      ],
+      "observed_exit": 1,
+      "result": "1 failed, 4 passed, 227 deselected in 0.82s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   Failed: DID NOT RAISE ValueError"
+      ],
+      "log_sha256": "b72b543218dd7bba9d68cc737763a5d40f4073a2be5f75024cb679eda5cad212"
+    },
+    {
+      "id": "trust_lane_references",
+      "snapshot": "onehop",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "onehop",
+      "mutation_python": "change(\"inspect_producer\", ('''if (not isinstance(recorded, list) or any(not isinstance(row, dict) for row in recorded)\n                or sorted(recorded, key=lambda row: row.get(\"lane\", \"\")) != sorted(expected, key=lambda row: row[\"lane\"])):''', 'if False:'))",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "tests/hexagonal/test_ci_result.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "authenticated_summary_cannot_substitute"
+      ],
+      "observed_exit": 1,
+      "result": "3 failed, 2 passed, 227 deselected in 0.30s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   Failed: DID NOT RAISE ValueError"
+      ],
+      "log_sha256": "94f1f4061c4c2246637cecbf6edda2953436ae5d947ec996e51d6ed90460217e"
+    },
+    {
+      "id": "allow_second_hop",
+      "snapshot": "onehop",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "onehop",
+      "mutation_python": "change(\"inspect_producer\", ('if not allow_reuse or static_qualifier is None:', 'if False:'))",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "tests/hexagonal/test_ci_result.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "second_summary_hop"
+      ],
+      "observed_exit": 1,
+      "result": "1 failed, 231 deselected in 0.50s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: CI_REUSE_ONEHOP_FETCH_BOUND",
+        "E   assert not True",
+        "E    +  where True = any(<generator object test_second_summary_hop_is_rejected_before_fetching_a_third_producer.<locals>.<genexpr> at 0x7f392aa97e00>)"
+      ],
+      "log_sha256": "96ac7e4070e3970bbffc21d4bb5be9a8f4a15d206aa7b15532352407d3bf9e59"
+    },
+    {
+      "id": "ignore_native_aggregate",
+      "snapshot": "onehop",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "onehop",
+      "mutation_python": "change(\"inspect_producer\", ('if len(selected) != 1 or newest != attempt or selected[0].get(\"conclusion\") != \"success\" or selected[0].get(\"status\") != \"completed\":', 'if False:'))",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "tests/hexagonal/test_ci_result.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "requires_successful_native_aggregates_and_current_static_receipts"
+      ],
+      "observed_exit": 1,
+      "result": "2 failed, 1 passed, 229 deselected in 0.56s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   Failed: DID NOT RAISE ValueError"
+      ],
+      "log_sha256": "cc0a586dae4dded90bd74b95aebb9a0df1732545975e17168352a4cbd6de18d9"
+    },
+    {
+      "id": "trust_original_context",
+      "snapshot": "onehop",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "onehop",
+      "mutation_python": "change(\"inspect_producer\", ('if full_id == identifier or not compatible_context(original, full_context):', 'if full_id == identifier:'),\n        ('if not full.get(\"qualified\") or full.get(\"context\") != full_context:', 'if not full.get(\"qualified\"):'))",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "tests/hexagonal/test_ci_result.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "authenticated_summary_cannot_substitute"
+      ],
+      "observed_exit": 1,
+      "result": "1 failed, 4 passed, 227 deselected in 1.04s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   Failed: DID NOT RAISE ValueError"
+      ],
+      "log_sha256": "36de98943c3e802dfe5411990003ba86ed108b423e2dd286aacb8b6d88cdbfff"
+    },
+    {
+      "id": "flatten_to_summary_identity",
+      "snapshot": "onehop",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "onehop",
+      "mutation_python": "change(\"select_run\", ('\"original_context\": deepcopy(full_original)', '\"original_context\": deepcopy(original)'))",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "tests/hexagonal/test_ci_result.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "repeated_metadata_plan_uses_latest_summary"
+      ],
+      "observed_exit": 1,
+      "result": "1 failed, 231 deselected in 3.11s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: CI_REUSE_FLATTENED_PLAN_ORIGINAL",
+        "E   assert 202 == 101"
+      ],
+      "log_sha256": "87dafc097aa2eee4275201dbab8b4deba817e5a226cd44a9ed7e86b00bd20649"
+    },
+    {
+      "id": "unparsed_attempt_time",
+      "snapshot": "frozen_hardening",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "frozen",
+      "mutation_python": "reuse._attempt_start = lambda value: value",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "tests/hexagonal/test_ci_result.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "latest_attempt_order or attempt_start_offsets"
+      ],
+      "observed_exit": 1,
+      "result": "5 failed, 237 deselected in 2.55s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: CI_REUSE_UNPROVED_MUST_EXECUTE"
+      ],
+      "log_sha256": "454c8a2e2c9cfb489a19182655b75473908c6fa72cc146b9bc6a1836745eb092"
+    },
+    {
+      "id": "cached_history_over_native_metadata",
+      "snapshot": "frozen_hardening",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "frozen",
+      "mutation_python": "change(\"select_run\", 'observed_run = bundle.get(\"run\", run)', 'observed_run = run')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "tests/hexagonal/test_ci_result.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "native_metadata_supersedes_cached_history"
+      ],
+      "observed_exit": 1,
+      "result": "3 failed, 239 deselected in 3.46s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: CI_REUSE_UNPROVED_MUST_EXECUTE"
+      ],
+      "log_sha256": "c7816737e54529e84e734ebafa6bfb4f7082cfe6d69201c41e13a89b9b3c4de0"
+    },
+    {
+      "id": "untyped_plan_schema",
+      "snapshot": "frozen_hardening",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "frozen",
+      "mutation_python": "change(\"qualify\", 'type(plan.get(\"schema_version\")) is not int or ', '')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "tests/hexagonal/test_ci_result.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "requalification_requires_a_bound_supported_plan"
+      ],
+      "observed_exit": 1,
+      "result": "2 failed, 3 passed, 237 deselected in 23.72s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   AssertionError: Regex pattern did not match.",
+        "E     Expected regex: 'no bound reuse decision'",
+        "E     Actual message: 'Planned evidence no longer qualifies: evidence_unavailable'"
+      ],
+      "log_sha256": "fd86fb66b1a34957f47e2a352fb170578f2c90978021b86a18970fe3a95a2d8b"
+    },
+    {
+      "id": "untyped_result_schema",
+      "snapshot": "frozen_hardening",
+      "mutation_mode": "isolated interpreter function replacement; snapshot source files remain unchanged",
+      "mutation_helper": "frozen",
+      "mutation_python": "change(\"inspect_producer\", 'type(result.get(\"schema_version\")) is not int or ', '')",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "tests/hexagonal/test_ci_result.py",
+        "-q",
+        "--tb=short",
+        "-k",
+        "onehop_result_schema"
+      ],
+      "observed_exit": 1,
+      "result": "2 failed, 240 deselected in 6.85s",
+      "intended_assertion_failed": true,
+      "assertion_excerpt": [
+        "E   Failed: DID NOT RAISE ValueError",
+        "E   AssertionError: CI_REUSE_TYPED_RESULT_SCHEMA",
+        "E   assert True is not True"
+      ],
+      "log_sha256": "78a2a656612c7ba302074b74d8bcd3cf844295ba82a18373f4c0fbe391ff5420"
+    }
+  ],
+  "fault_count": 32,
+  "source_reuse_note": "Earlier witnesses remain bound to their recorded snapshots. The final control exercises current tests after all changes. Changed attempt parsing, native metadata selection and schema guards receive four new targeted fault witnesses; no blanket claim reruns earlier snapshots.",
+  "additional_targeted_control": {
+    "runtime_known_after_tightening": {
+      "source_snapshot": "aggregate_observation",
+      "result": "10 failed, 207 deselected in 0.39s",
+      "exit": 1,
+      "purpose": "Re-ran the runtime-known fault after tightening lane-specific tmux requirements."
+    }
+  },
+  "unapplied_attempts": [
+    {
+      "id": "flatten_to_summary_identity",
+      "reason": "Initial source target did not match exactly once. Excluded from detection evidence; corrected exact output-expression replacement was then executed and is the credited fault above."
+    }
+  ],
+  "cli_no_token_control": {
+    "command": [
+      "python",
+      "-I",
+      "-B",
+      "scripts/ci/reuse.py",
+      "--context",
+      "context.json",
+      "--output",
+      "plan.json",
+      "--work",
+      "work",
+      "--github-output",
+      "outputs"
+    ],
+    "exit_status": 0,
+    "plan": {
+      "decision": "execute",
+      "history": [],
+      "lookup_seconds": 0.0,
+      "reason": "evidence_unavailable",
+      "schema_version": 1
+    },
+    "outputs": "reuse=false\nreuse_plan={\"schema_version\":1,\"decision\":\"execute\",\"reason\":\"evidence_unavailable\",\"history\":[],\"lookup_seconds\":0.0}\n",
+    "stdout": "",
+    "stderr": ""
+  },
+  "limits": [
+    "HTTP responses are controlled in API tests; origin checks, bounded reads, ZIP digest verification, actual extraction, candidate lineage, static qualification and full aggregate evaluation execute normally.",
+    "Hosted credential/event delivery, concurrency and platform required-check association are separate acceptance evidence.",
+    "No exception/setup/import failure is counted as an intended detection. Healthy controls and assertion excerpts identify the executed contract boundaries."
+  ],
+  "review_repairs_attempt_history": {
+    "scope": "Two pre-draft review repairs: equal attempt-start cohorts must not hide a material or unknown peer; a cancelled zero-job retry does not establish that all earlier attempts never executed. The neutral-shortcut run reread also detects a retry appearing after the run list.",
+    "defective_reuse_source_equivalent_to": "ba70d549",
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "tests/hexagonal/test_ci_reuse.py",
+      "-k",
+      "same_second_attempt_cohort or unambiguous_later_green or same_second_already_proven or zero_job_retry or metadata_cancellation_observes or cached_neutral_attempt",
+      "-q",
+      "--tb=short"
+    ],
+    "red": {
+      "exit": 1,
+      "result": "7 failed, 3 passed, 132 deselected in 0.58s",
+      "source_sha256": {
+        "scripts/ci/reuse.py": "cbb169c5ed95ccb4fd6f2826f5d04e278983ca989b1f18ecbf4ed19c0779563e",
+        "scripts/ci/result.py": "fc3973ab88410ac342819f5bedad88b2611552f7ad77f9b8656a1adff1cf428b",
+        "scripts/ci/candidate.py": "e9858adb1b978be7463601f2b0e44bf44e9d08806322a3d3c3d42229f5101946",
+        "tests/hexagonal/test_ci_reuse.py": "5f37b862ee40ba763e143ae35372712554074e23c1f732d4b179a3277f19c0a4",
+        "tests/hexagonal/support/ci_reuse_api.py": "f2764995da24bc973e4bd043decf7f33a0b555e7481c875f4f03ec82c385af8b"
+      },
+      "log_sha256": "b91991dd9c31de40a92b2490f85aeb2ec539afc7e88aad2b238e710b8c335b16",
+      "intended_assertions": [
+        "E   AssertionError: CI_REUSE_TIED_ATTEMPT_CANNOT_HIDE_MATERIAL_OR_UNKNOWN_PEER",
+        "E   AssertionError: CI_REUSE_LATEST_ZERO_JOBS_DO_NOT_ERASE_ATTEMPT_HISTORY",
+        "E   AssertionError: CI_REUSE_CANCELLED_RETRY_CANNOT_ERASE_PRIOR_FAILED_BEHAVIOR",
+        "E   AssertionError: CI_REUSE_NEUTRAL_LIST_ATTEMPT_CANNOT_HIDE_NEW_RETRY"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "result": "10 passed, 132 deselected in 0.21s",
+      "source_sha256": {
+        "scripts/ci/reuse.py": "e14e613a52fb299310420b51d5cb993b3aac00898573d66ada189bcd378c20a8",
+        "scripts/ci/result.py": "fc3973ab88410ac342819f5bedad88b2611552f7ad77f9b8656a1adff1cf428b",
+        "scripts/ci/candidate.py": "e9858adb1b978be7463601f2b0e44bf44e9d08806322a3d3c3d42229f5101946",
+        "tests/hexagonal/test_ci_reuse.py": "5f37b862ee40ba763e143ae35372712554074e23c1f732d4b179a3277f19c0a4",
+        "tests/hexagonal/support/ci_reuse_api.py": "f2764995da24bc973e4bd043decf7f33a0b555e7481c875f4f03ec82c385af8b"
+      },
+      "log_sha256": "c24960d38f811975f783d337d8aaac94c19c4fdbbd8833f397d110b528f15ce1"
+    },
+    "same_test_inputs": {
+      "tests/hexagonal/test_ci_reuse.py": "5f37b862ee40ba763e143ae35372712554074e23c1f732d4b179a3277f19c0a4",
+      "tests/hexagonal/support/ci_reuse_api.py": "f2764995da24bc973e4bd043decf7f33a0b555e7481c875f4f03ec82c385af8b"
+    },
+    "regressions": [
+      {
+        "test": "test_same_second_attempt_cohort_cannot_hide_failed_or_unknown_peer",
+        "variants": [
+          "failed earlier-numbered retry",
+          "unknown earlier-numbered execution",
+          "both input list orders"
+        ],
+        "before": "An arbitrary run-number tie break reused the green peer without examining the equally-latest failure/unknown execution.",
+        "after": "Unresolved same-start peers produce execute/ambiguous evidence rather than an older-green reuse claim."
+      },
+      {
+        "test": "test_zero_job_retry_is_not_positive_proof_of_never_executed_metadata",
+        "before": "Attempt two was classified never-executed from its zero latest jobs.",
+        "after": "Only positively proven first-attempt zero-job metadata can use that neutral shortcut."
+      },
+      {
+        "test": "test_metadata_cancellation_observes_prior_behavior_across_actual_api_attempts[True]",
+        "before": "The latest cancelled attempt hid an earlier failed behavioral job and reused the old green producer.",
+        "after": "The HTTP fixture returns jobs for the requested attempt; all-attempt history remains material and validation executes."
+      },
+      {
+        "test": "test_cached_neutral_attempt_is_rechecked_if_a_retry_appears_during_api_inspection",
+        "before": "A stale cancelled attempt-one list entry stayed neutral after the authoritative run advanced to failed attempt two.",
+        "after": "The authoritative run reread prevents the stale neutral assertion."
+      }
+    ],
+    "healthy_controls": [
+      "test_unambiguous_later_green_can_reuse_after_an_older_failed_attempt",
+      "test_same_second_already_proven_unstarted_metadata_does_not_veto_green",
+      "test_metadata_cancellation_observes_prior_behavior_across_actual_api_attempts[False]"
+    ],
+    "fixture_refinement": "ProducerAPI sequential runs 201 and 202 now have distinct seconds (identifier % 100); they previously accidentally shared a timestamp. Explicit equal-time regression inputs are unchanged. After this refinement the exact same tests/helper bytes were rerun against defective and repaired source.",
+    "whole_reuse_control": {
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "-q",
+        "--tb=short"
+      ],
+      "exit": 0,
+      "result": "142 passed in 1.00s",
+      "log_sha256": "39c57a25a5f60307180467295887f9de2685f0a5d9b0b19ead988a4f113615f9"
+    },
+    "prior_evidence_preserved": {
+      "fault_count": 32,
+      "canonical_fault_records_sha256": "13a8d596e66836c14b8d71127bce4c923c2f3573ee479bc9421cfd42e57667e9"
+    },
+    "limits": [
+      "The red execution substitutes only the real defective reuse.py from b81f1d6 in a disposable current-source snapshot; test and helper hashes match green exactly.",
+      "GitHub HTTP responses are controlled. The shared archive, digest, provenance, static and aggregate code executes normally; hosted workflow behavior remains separate evidence."
+    ],
+    "red_reuse_source_revision": "b81f1d6",
+    "green_reuse_source_revision": "782e039"
+  },
+  "review_repairs_native_aggregate_copies": {
+    "scope": "Use the shared B native lane producer resolver for CI-result artifacts as well as lane artifacts. Authenticate historical recorded observation claims before normalizing fresh API wrapper fields.",
+    "red_reuse_source_revision": "782e039",
+    "green_reuse_source_revision": "d624d5a",
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "tests/hexagonal/test_ci_reuse.py",
+      "-k",
+      "native_aggregate_copy or native_summary_aggregate_copy or actual_aggregate_retry or native_copies_cannot_launder",
+      "-q",
+      "--tb=short"
+    ],
+    "red": {
+      "exit": 1,
+      "result": "2 failed, 5 passed, 142 deselected in 0.60s",
+      "source_sha256": {
+        "scripts/ci/reuse.py": "e14e613a52fb299310420b51d5cb993b3aac00898573d66ada189bcd378c20a8",
+        "scripts/ci/result.py": "5226dcba839b4dfc384ab18c28f6d41bef0f1a38bba860646bc98f58baf25a7f",
+        "scripts/ci/candidate.py": "401a1209b744c0f6d0b3074550dd66236e4bf04e85d3fb1670fd80bf51c4b98c",
+        "tests/hexagonal/test_ci_reuse.py": "85cfef8b5fccb8957d54acd90b4adfe9d41d113ab93b72057b91563da492591f",
+        "tests/hexagonal/support/ci_reuse_api.py": "d1a1dc44bffbc43aecaeaca629e084760bdcfaf2f7b0355e08f3a7d9d3352959"
+      },
+      "log_sha256": "cbd2982bb2287751f9332f0edc044e8ca98135f6980f958755751663a88228cc",
+      "intended_assertions": [
+        "E   AssertionError: CI_REUSE_NATIVE_AGGREGATE_COPY_MUST_KEEP_ORIGINAL_EVIDENCE",
+        "E   AssertionError: CI_REUSE_NATIVE_SUMMARY_COPY_MUST_KEEP_ORIGINAL_EVIDENCE"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "result": "7 passed, 142 deselected in 0.40s",
+      "source_sha256": {
+        "scripts/ci/reuse.py": "95d92a39b7039bb8251bb24a04dc45dace3d2f4d2ad9e16974866f6107d97ac5",
+        "scripts/ci/result.py": "5226dcba839b4dfc384ab18c28f6d41bef0f1a38bba860646bc98f58baf25a7f",
+        "scripts/ci/candidate.py": "401a1209b744c0f6d0b3074550dd66236e4bf04e85d3fb1670fd80bf51c4b98c",
+        "tests/hexagonal/test_ci_reuse.py": "85cfef8b5fccb8957d54acd90b4adfe9d41d113ab93b72057b91563da492591f",
+        "tests/hexagonal/support/ci_reuse_api.py": "d1a1dc44bffbc43aecaeaca629e084760bdcfaf2f7b0355e08f3a7d9d3352959"
+      },
+      "log_sha256": "071b67cfb70f7a037f7e944b6fc4313ac8652bb92d0567b364c00ac044a348ea"
+    },
+    "same_test_inputs": {
+      "tests/hexagonal/test_ci_reuse.py": "85cfef8b5fccb8957d54acd90b4adfe9d41d113ab93b72057b91563da492591f",
+      "tests/hexagonal/support/ci_reuse_api.py": "d1a1dc44bffbc43aecaeaca629e084760bdcfaf2f7b0355e08f3a7d9d3352959"
+    },
+    "regressions": [
+      {
+        "test": "test_native_aggregate_copy_retains_original_artifact_and_fresh_observation[True]",
+        "before": "Attempt-two native job copies were treated as new aggregate executions, so the consumer demanded a nonexistent attempt-two result artifact.",
+        "after": "The original executed aggregate and artifact remain attempt one while fresh observation IDs and attempt two remain visible; stored observation claims remain historical."
+      },
+      {
+        "test": "test_native_summary_aggregate_copy_keeps_its_own_observation_and_full_original",
+        "before": "A copied CI-result wrapper also blocked an otherwise qualified one-hop summary.",
+        "after": "The summary retains its own actual-one/observed-two aggregate identity while the full original producer remains independently identified."
+      }
+    ],
+    "healthy_controls": [
+      "test_native_aggregate_copy_retains_original_artifact_and_fresh_observation[False]",
+      "test_actual_aggregate_retry_requires_its_own_qualified_artifact[False]",
+      "test_actual_aggregate_retry_requires_its_own_qualified_artifact[True]"
+    ],
+    "historical_observation_guard_witness": {
+      "target": "scripts.ci.reuse._same_executions",
+      "mutation_python": "def unauthenticated_normalization(recorded, verified, metadata, expected):\n    ignored = {\"observation_job_id\", \"observation_attempt\", \"carried_forward\"}\n\n    def identities(rows):\n        return sorted(({key: value for key, value in row.items() if key not in ignored} for row in rows),\n            key=lambda row: row.get(\"lane\", \"\"))\n\n    return identities(recorded) == identities(verified)\n\nreuse._same_executions = unauthenticated_normalization\n",
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "-k",
+        "native_aggregate_copy or native_summary_aggregate_copy or native_copies_cannot_launder",
+        "-q",
+        "--tb=short"
+      ],
+      "exit": 1,
+      "result": "2 failed, 3 passed, 144 deselected in 0.38s",
+      "log_sha256": "0585b3736f02249979e5ab4f64a6f73dba15f52f25117e33fd9175d280c7f3da",
+      "intended_assertion": "Both forged historical observation ID/attempt cases failed with DID NOT RAISE ValueError while three healthy native-copy controls still passed. Normalization alone cannot erase the historical observation authentication requirement."
+    },
+    "fixture_details": "Native HTTP records include run/head/runner identity, original timestamps and complete step data. Copied observations receive new IDs/attempt numbers and later creation times but preserve the original execution signature. Actual aggregate retries change execution timestamps and require their own artifact.",
+    "prior_fault_records_preserved": {
+      "fault_count": 32,
+      "canonical_sha256": "13a8d596e66836c14b8d71127bce4c923c2f3573ee479bc9421cfd42e57667e9"
+    },
+    "limits": [
+      "The defective-source run substitutes the actual pre-integration reuse.py from 782e039 in a disposable current-source snapshot, with the exact same test/helper hashes as green.",
+      "HTTP responses are controlled. Real metadata pagination, native producer resolution, artifact origin/bounds/digest/extraction, static qualification and aggregate evaluation execute normally. Hosted checks are separate evidence.",
+      "Verification is scoped to the seven changed-property cases plus one intended historical-observation guard fault; the final inherited candidate receives its own integrated check run."
+    ]
+  },
+  "review_repairs_canonical_branch_refs": {
+    "scope": "A PR REST snapshot matching the event/tested candidate is insufficient to claim the branch is current when canonical source or target refs have advanced. Canonical branch observations remain separate from the immutable tested candidate and from PR payload fields.",
+    "red_reuse_source_revision": "075d7e4",
+    "green_reuse_source_revision": "420a02e",
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "tests/hexagonal/test_ci_reuse.py",
+      "-k",
+      "canonical_branch_refs or malformed_canonical_branch or fork_canonical_source",
+      "-q",
+      "--tb=short"
+    ],
+    "red": {
+      "exit": 1,
+      "result": "11 failed, 1 passed, 150 deselected in 0.56s",
+      "source_sha256": {
+        "scripts/ci/reuse.py": "95d92a39b7039bb8251bb24a04dc45dace3d2f4d2ad9e16974866f6107d97ac5",
+        "scripts/ci/candidate.py": "401a1209b744c0f6d0b3074550dd66236e4bf04e85d3fb1670fd80bf51c4b98c",
+        "tests/hexagonal/test_ci_reuse.py": "856b917ec7ab5058c3615db815b387891833eab6df453450f5a1a49543020bc3",
+        "tests/hexagonal/support/ci_reuse.py": "fd9a4d20afab4bae39e0713d62b7ddf9c67b1471b1f1b80d2ebb333d2171e02a",
+        "tests/hexagonal/support/ci_reuse_api.py": "39b77067682f0a3539e870c1532b31d8becf864f0b43531490cecd6c6ed56ede"
+      },
+      "log_sha256": "202204d25e1bcda08f85671829cb2a5ca240614dd49ddd2085ff8f4ec09994a0",
+      "intended_assertions": [
+        "E   AssertionError: CI_REUSE_STALE_PR_PAYLOAD_CANNOT_HIDE_CANONICAL_ADVANCEMENT",
+        "E   AssertionError: CI_REUSE_MISSING_CANONICAL_REF_IS_UNKNOWN",
+        "E   AssertionError: CI_REUSE_CANONICAL_REFS_USE_CORRECT_REPOSITORY_AND_REF"
+      ]
+    },
+    "green": {
+      "exit": 0,
+      "result": "12 passed, 150 deselected in 0.36s",
+      "source_sha256": {
+        "scripts/ci/reuse.py": "1b6a55060c08263bc860d91845702dac0cd599b23a8f62d36392592b1f57d5a9",
+        "scripts/ci/candidate.py": "401a1209b744c0f6d0b3074550dd66236e4bf04e85d3fb1670fd80bf51c4b98c",
+        "tests/hexagonal/test_ci_reuse.py": "856b917ec7ab5058c3615db815b387891833eab6df453450f5a1a49543020bc3",
+        "tests/hexagonal/support/ci_reuse.py": "fd9a4d20afab4bae39e0713d62b7ddf9c67b1471b1f1b80d2ebb333d2171e02a",
+        "tests/hexagonal/support/ci_reuse_api.py": "39b77067682f0a3539e870c1532b31d8becf864f0b43531490cecd6c6ed56ede"
+      },
+      "log_sha256": "c0ba429fe348b58715ef7bd0a145cbd08e59b252f9773ed97a7515c203354826"
+    },
+    "same_test_inputs": {
+      "tests/hexagonal/test_ci_reuse.py": "856b917ec7ab5058c3615db815b387891833eab6df453450f5a1a49543020bc3",
+      "tests/hexagonal/support/ci_reuse.py": "fd9a4d20afab4bae39e0713d62b7ddf9c67b1471b1f1b80d2ebb333d2171e02a",
+      "tests/hexagonal/support/ci_reuse_api.py": "39b77067682f0a3539e870c1532b31d8becf864f0b43531490cecd6c6ed56ede"
+    },
+    "same_candidate_dependency_sha256": "401a1209b744c0f6d0b3074550dd66236e4bf04e85d3fb1670fd80bf51c4b98c",
+    "regressions": [
+      {
+        "test": "test_canonical_branch_refs_bound_current_claim_when_pr_payload_is_unchanged",
+        "cases": [
+          "unchanged PR payload but advanced canonical source",
+          "unchanged PR payload but advanced canonical target"
+        ],
+        "expected": "Return superseded and retain PR/event/tested facts separately from canonical_refs."
+      },
+      {
+        "test": "test_unknown_or_malformed_canonical_branch_cannot_claim_current",
+        "cases": [
+          "source and target independently missing",
+          "wrong ref",
+          "non-commit object",
+          "invalid SHA"
+        ],
+        "expected": "Unknown/incomplete or bounded ValueError/OSError; never current."
+      },
+      {
+        "test": "test_fork_canonical_source_uses_source_repository_and_quotes_branch_names",
+        "expected": "Read the source ref in source_repository, read the target ref in repository, preserve namespace slashes and encode a valid branch hash character as %23."
+      }
+    ],
+    "healthy_control": "test_canonical_branch_refs_bound_current_claim_when_pr_payload_is_unchanged[None]",
+    "related_observation_and_http_control": {
+      "command": [
+        "python",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "tests/hexagonal/test_ci_reuse.py",
+        "-k",
+        "current_observation or late_candidate_changes or canonical_branch_refs or malformed_canonical_branch or fork_canonical_source",
+        "-q",
+        "--tb=short"
+      ],
+      "exit": 0,
+      "result": "33 passed, 129 deselected in 0.32s",
+      "log_sha256": "8d9fb3bc239881202677fdf55a792364c59c14ca5b068c9fc6349f7d67e4320d",
+      "scope": "Existing readiness/current/late/incomplete PR observations plus actual origin-restricted HTTP canonical-ref routes remain useful."
+    },
+    "intermediate_failure_retained": {
+      "exit": 1,
+      "result": "2 failed, 10 passed, 149 deselected in 0.38s",
+      "source_sha256": {
+        "scripts/ci/reuse.py": "83a6e34358b7cd207ca979c6eac63233decc054045c2597842f3156e1541235a",
+        "scripts/ci/candidate.py": "401a1209b744c0f6d0b3074550dd66236e4bf04e85d3fb1670fd80bf51c4b98c",
+        "tests/hexagonal/test_ci_reuse.py": "e86462a636d0ba6a5a06d8a31ce3fb44a7bc3d2a1dbc8bd94d1a97c45e5f23b5",
+        "tests/hexagonal/support/ci_reuse.py": "fd9a4d20afab4bae39e0713d62b7ddf9c67b1471b1f1b80d2ebb333d2171e02a",
+        "tests/hexagonal/support/ci_reuse_api.py": "39b77067682f0a3539e870c1532b31d8becf864f0b43531490cecd6c6ed56ede"
+      },
+      "log_sha256": "645fba7ded44e155a55fe26fa426d29e3e643228888f0ac8ee6ccb3dcdd27b35",
+      "finding": "A null canonical-ref response raised AttributeError before raw response validation. The final source checks the raw reference object before field access and all twelve cases pass."
+    },
+    "prior_fault_records_preserved": {
+      "fault_count": 32,
+      "canonical_sha256": "13a8d596e66836c14b8d71127bce4c923c2f3573ee479bc9421cfd42e57667e9"
+    },
+    "limits": [
+      "The red execution uses actual 075d7e4 reuse.py in a disposable current-source snapshot; tests, helpers and candidate dependency have the exact same hashes as green.",
+      "HTTP replies and the fork repository are controlled fixture observations. Live GitHub source/target ref freshness and hosted event wiring require their separate platform witnesses.",
+      "These are bounded observations, not an atomic assertion that branches cannot move after the reads."
+    ]
+  }
+}

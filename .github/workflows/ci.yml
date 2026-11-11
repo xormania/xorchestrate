@@ -1,7 +1,15 @@
 {
   "name": "CI",
   "on": {
-    "pull_request": {},
+    "pull_request": {
+      "types": [
+        "opened",
+        "synchronize",
+        "reopened",
+        "edited",
+        "ready_for_review"
+      ]
+    },
     "push": {
       "branches": [
         "master"
@@ -13,17 +21,19 @@
     "contents": "read"
   },
   "concurrency": {
-    "group": "ci-${{ github.ref }}",
-    "cancel-in-progress": true
+    "group": "ci-${{ github.event_name == 'pull_request' && format('{0}-{1}-{2}-{3}', github.repository_id, github.event.pull_request.number, github.event.pull_request.head.sha, github.event.pull_request.base.sha) || github.ref }}",
+    "cancel-in-progress": "${{ github.event_name != 'pull_request' }}"
   },
   "jobs": {
     "paths": {
       "name": "Classify changed paths",
       "runs-on": "ubuntu-24.04",
-      "timeout-minutes": 3,
+      "timeout-minutes": 8,
       "outputs": {
         "code": "${{ steps.guard.outputs.force == 'false' && steps.classify.outputs.code || 'true' }}",
-        "context": "${{ steps.candidate.outputs.context }}"
+        "context": "${{ steps.candidate.outputs.context }}",
+        "reuse": "${{ steps.reuse.outputs.reuse || 'false' }}",
+        "reuse_plan": "${{ steps.reuse.outputs.reuse_plan }}"
       },
       "steps": [
         {
@@ -59,6 +69,45 @@
           "run": "python3 -I -B scripts/ci/classify_changes.py --event \"$EVENT_NAME\" --pull-request-base \"$PULL_REQUEST_BASE\" --head HEAD --github-output \"$GITHUB_OUTPUT\""
         },
         {
+          "name": "Resolve the pinned Python runtime for evidence compatibility",
+          "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
+          "with": {
+            "python-version": "3.12.16"
+          },
+          "continue-on-error": true
+        },
+        {
+          "name": "Resolve the pinned runtime manager for evidence compatibility",
+          "uses": "astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9",
+          "with": {
+            "version": "0.13.7",
+            "enable-cache": false
+          },
+          "continue-on-error": true
+        },
+        {
+          "name": "Plan qualified behavioral reuse",
+          "id": "reuse",
+          "continue-on-error": true,
+          "timeout-minutes": 3,
+          "env": {
+            "GITHUB_TOKEN": "${{ github.token }}",
+            "CI_REUSE_ENABLED": "${{ vars.CI_REUSE_ENABLED != 'false' }}"
+          },
+          "run": "python3 -I -B scripts/ci/reuse.py --context \"$RUNNER_TEMP/ci-context/context.json\" --work \"$RUNNER_TEMP/ci-reuse-planning\" --output \"$RUNNER_TEMP/ci-reuse-plan/plan.json\" --github-output \"$GITHUB_OUTPUT\""
+        },
+        {
+          "name": "Retain the lifecycle observation and reuse decision",
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+          "if": "always()",
+          "with": {
+            "name": "ci-reuse-plan--attempt-${{ github.run_attempt }}",
+            "path": "${{ runner.temp }}/ci-reuse-plan/plan.json",
+            "if-no-files-found": "warn",
+            "retention-days": 30
+          }
+        },
+        {
           "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
           "if": "always()",
           "with": {
@@ -68,7 +117,13 @@
             "retention-days": 30
           }
         }
-      ]
+      ],
+      "permissions": {
+        "contents": "read",
+        "actions": "read",
+        "checks": "read",
+        "pull-requests": "read"
+      }
     },
     "changes": {
       "name": "Static checks",
@@ -150,7 +205,7 @@
       "needs": [
         "paths"
       ],
-      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' }}",
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' }}",
       "strategy": {
         "fail-fast": false,
         "matrix": {
@@ -238,7 +293,7 @@
         "paths",
         "application-tests"
       ],
-      "if": "${{ always() && needs.paths.outputs.code != 'false' }}",
+      "if": "${{ always() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' }}",
       "steps": [
         {
           "name": "Require every tests shard",
@@ -254,7 +309,7 @@
       "needs": [
         "paths"
       ],
-      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' }}",
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' }}",
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 15,
       "steps": [
@@ -349,7 +404,7 @@
       "needs": [
         "paths"
       ],
-      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' }}",
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' }}",
       "steps": [
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
@@ -541,7 +596,7 @@
       "needs": [
         "paths"
       ],
-      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' }}",
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' }}",
       "steps": [
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
@@ -602,7 +657,7 @@
     "ci-result": {
       "name": "CI result",
       "runs-on": "ubuntu-24.04",
-      "timeout-minutes": 5,
+      "timeout-minutes": 10,
       "needs": [
         "paths",
         "changes",
@@ -624,6 +679,21 @@
           }
         },
         {
+          "name": "Resolve the pinned Python runtime for evidence compatibility",
+          "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
+          "with": {
+            "python-version": "3.12.16"
+          }
+        },
+        {
+          "name": "Resolve the pinned runtime manager for evidence compatibility",
+          "uses": "astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9",
+          "with": {
+            "version": "0.13.7",
+            "enable-cache": false
+          }
+        },
+        {
           "name": "Qualify CI result and summarize retained evidence",
           "if": "always()",
           "env": {
@@ -632,9 +702,10 @@
             "SOURCE_SHA": "${{ github.event.pull_request.head.sha || github.sha }}",
             "TESTED_SHA": "${{ github.sha }}",
             "RUN_URL": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
-            "GITHUB_TOKEN": "${{ github.token }}"
+            "GITHUB_TOKEN": "${{ github.token }}",
+            "CI_REUSE_PLAN": "${{ needs.paths.outputs.reuse_plan }}"
           },
-          "run": "mkdir -p \"$RUNNER_TEMP/ci-result\"\nprintf '%s\\n' \"$JOB_OUTCOMES\" > \"$RUNNER_TEMP/ci-result/needs.json\"\nprintf '%s\\n' \"$CI_CANDIDATE_CONTEXT\" > \"$RUNNER_TEMP/ci-result/context.json\"\ncollection_status=0\npython3 -I -B scripts/ci/candidate.py collect --output \"$RUNNER_TEMP/ci-result/metadata.json\" --artifacts \"$RUNNER_TEMP/ci-result-inputs\" --workflow .github/workflows/ci.yml --needs \"$RUNNER_TEMP/ci-result/needs.json\" || collection_status=$?\npython3 -I -B scripts/ci/result.py --needs \"$RUNNER_TEMP/ci-result/needs.json\" --workflow .github/workflows/ci.yml --catalog contracts/testing.json --artifacts \"$RUNNER_TEMP/ci-result-inputs\" --event \"$EVENT_NAME\" --source-sha \"$SOURCE_SHA\" --tested-sha \"$TESTED_SHA\" --run-url \"$RUN_URL\" --context \"$RUNNER_TEMP/ci-result/context.json\" --metadata \"$RUNNER_TEMP/ci-result/metadata.json\" --summary \"$GITHUB_STEP_SUMMARY\" --output \"$RUNNER_TEMP/ci-result/result.json\"\nexit \"$collection_status\""
+          "run": "mkdir -p \"$RUNNER_TEMP/ci-result\"\nprintf '%s\\n' \"$JOB_OUTCOMES\" > \"$RUNNER_TEMP/ci-result/needs.json\"\nprintf '%s\\n' \"$CI_CANDIDATE_CONTEXT\" > \"$RUNNER_TEMP/ci-result/context.json\"\nif [ -z \"$CI_REUSE_PLAN\" ]; then\n  CI_REUSE_PLAN='{\"schema_version\":1,\"decision\":\"execute\",\"reason\":\"planning_unavailable\",\"history\":[]}'\nfi\nprintf '%s\\n' \"$CI_REUSE_PLAN\" > \"$RUNNER_TEMP/ci-result/reuse-plan.json\"\ncollection_status=0\npython3 -I -B scripts/ci/candidate.py collect --output \"$RUNNER_TEMP/ci-result/metadata.json\" --artifacts \"$RUNNER_TEMP/ci-result-inputs\" --workflow .github/workflows/ci.yml --needs \"$RUNNER_TEMP/ci-result/needs.json\" || collection_status=$?\npython3 -I -B scripts/ci/result.py --needs \"$RUNNER_TEMP/ci-result/needs.json\" --workflow .github/workflows/ci.yml --catalog contracts/testing.json --artifacts \"$RUNNER_TEMP/ci-result-inputs\" --event \"$EVENT_NAME\" --source-sha \"$SOURCE_SHA\" --tested-sha \"$TESTED_SHA\" --run-url \"$RUN_URL\" --context \"$RUNNER_TEMP/ci-result/context.json\" --metadata \"$RUNNER_TEMP/ci-result/metadata.json\" --reuse-plan \"$RUNNER_TEMP/ci-result/reuse-plan.json\" --summary \"$GITHUB_STEP_SUMMARY\" --output \"$RUNNER_TEMP/ci-result/result.json\"\nexit \"$collection_status\""
         },
         {
           "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
@@ -653,8 +724,10 @@
       "permissions": {
         "contents": "read",
         "actions": "read",
-        "checks": "read"
+        "checks": "read",
+        "pull-requests": "read"
       }
     }
-  }
+  },
+  "run-name": "CI:${{ github.event_name }}:${{ github.event.action || 'none' }}:${{ github.event.pull_request.number || 0 }}:${{ github.event.pull_request.head.sha || github.sha }}:${{ github.event.pull_request.base.sha || github.sha }}"
 }

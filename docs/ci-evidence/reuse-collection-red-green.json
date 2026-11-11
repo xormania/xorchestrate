@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "scope": "Independent regression for the actual current-run artifact collection path after an explicit bound reuse decision. This is download-scope verification, not a substitute for final original-producer qualification.",
+  "native_failure": {
+    "run_id": 42910415815,
+    "url": "https://github.com/xormania/xorchestrate/actions/runs/42910415815",
+    "observation": "paths.outputs reuse=true contained the full bound reuse_plan; behavioral jobs were skipped, and GitHub emitted one unresolved matrix job name rather than numeric current shard jobs. The collector requested numeric current behavioral lanes and failed before downloading this consumer's context/static artifacts.",
+    "fixture": "The existing ProducerAPI supplies authenticated HTTP-shaped metadata and real SHA-256 ZIP archives. Its collection fixture independently reproduces the unresolved skipped matrix and current static/context-only artifacts. Original behavioral artifacts remain owned by the earlier execution."
+  },
+  "same_input_regression": {
+    "defective_revision": "7d7ff885562bceea77da291b4e47bee823fb87c2",
+    "defective_candidate_sha256": "401a1209b744c0f6d0b3074550dd66236e4bf04e85d3fb1670fd80bf51c4b98c",
+    "repair_revision": "af30464a1f8e5d96427f1582c6fb2695fcddd22f",
+    "repaired_candidate_sha256": "d5e007584bebdffc8aeb4a86e4871a5a12ed10041ce8a00a210d302e92ad5e51",
+    "test_sha256": "9fcf410edbbb7459843a9cbd4e1fb1ee17d797824ffb74f973c58a5f577c6232",
+    "support_sha256": "969380ce53cc4c18a8959a1376250ad44b467c6851339b182133c363031c93aa",
+    "command": "python -m pytest tests/hexagonal/test_ci_reuse.py -q -p no:cacheprovider -k test_collect_",
+    "red": "1 failed, 14 passed, 162 deselected. The native reuse collection assertion expected exit 0 and observed exit 1: CI_REUSE_NATIVE_COLLECT_STATIC_CONTEXT.",
+    "green": "15 passed, 162 deselected. The same collector invocation downloads the current context and static ZIP archives without asking this current run for skipped behavioral producers."
+  },
+  "bound_header_fault": {
+    "file": "scripts/ci/candidate.py",
+    "mutation": "Replace only plan.get(current_context) != context in collection_lanes with False, preserving schema/decision checks.",
+    "command": "python -m pytest tests/hexagonal/test_ci_reuse.py::test_collect_cannot_treat_unbound_reuse_headers_as_current_static_scope[candidate] tests/hexagonal/test_ci_reuse.py::test_collect_cannot_treat_unbound_reuse_headers_as_current_static_scope[consumer_run] tests/hexagonal/test_ci_reuse.py::test_collect_uses_bound_native_reuse_plan_before_requesting_current_behavioral_jobs -q -p no:cacheprovider",
+    "red": "2 failed, 1 passed. Mismatched candidate tree and consumer run were incorrectly accepted with exit 0; the valid native reuse control still passed.",
+    "restored_control": "3 passed after restoring the same repaired source."
+  },
+  "coverage": [
+    "Malformed or missing plans, unsupported/boolean/float schemas, non-reuse decisions, missing or mismatched current contexts, failed classification and noncanonical reuse flags cannot select an unverified static-only current scope.",
+    "Existing full execution and documentation-only collection retain their applicable inventories.",
+    "Absent current static evidence cannot qualify through the existing final qualify_static boundary; successful collection itself is not claimed as successful validation.",
+    "The complete existing reuse module passed: 177 tests. Test/support Ruff checks and git diff --check passed."
+  ],
+  "limits": [
+    "Local Python was 3.12.14. This record uses a native-shaped HTTP peer and real archive processing, not a successful new hosted reuse execution.",
+    "Final aggregate requalification of original producer evidence remains required and unchanged. Fresh hosted full execution followed by metadata reuse is a separate acceptance witness."
+  ]
+}
