@@ -1,5 +1,7 @@
 """Recovery after a hard restart: one behavioural contract on a shared durable store and a real project server."""
 
+from pathlib import Path
+
 import pytest
 
 from tests.hexagonal.contracts import recovery as contract
@@ -69,6 +71,36 @@ def test_a_server_stopping_during_recovery_waits_for_the_session_in_hand_and_tak
         served.stop()
 
 
+@pytest.mark.filterwarnings("ignore::pytest.PytestUnhandledThreadExceptionWarning")
+def test_a_server_interrupted_during_recovery_waits_for_the_session_in_hand_before_it_returns(subject):
+    """An interrupted serve loop (no drain) still joins the automatic recovery before the runtime can close."""
+    import tempfile
+    from pathlib import Path
+
+    from tests.hexagonal.support.project_server import InProcessServer
+
+    before = subject.runtime()
+    first, second = subject.start(before, "hosted"), subject.start(before, "hosted")
+    after = subject.runtime()
+    subject.slow_reconnect(1.0)
+    served = InProcessServer(after, Path(tempfile.mkdtemp(prefix="xrc-")) / "s.sock")
+    try:
+        thread = served.server.start_recovery(True)
+        _wait_for(lambda: sum(subject.reconnect_calls.values()) == 1)
+
+        def interrupted(timeout):
+            raise RuntimeError("interrupted")
+        served.server.transport.accept = interrupted  # the serve loop ends abruptly, without a drain
+        served.thread.join(30)
+        assert not served.thread.is_alive(), "the serve loop returned"
+        assert not thread.is_alive(), "the recovery finished before the serve loop returned"
+        assert sum(subject.reconnect_calls.values()) == 1, "no further session was taken"
+        left = {item.session_id for item in after.interrupted_sessions()}
+        assert len(left & {first, second}) == 1, "the session not taken stays interrupted"
+    finally:
+        served.stop()
+
+
 def test_recovery_running_belongs_to_the_live_runtime_not_to_durable_state(subject):
     """A runtime that is mid-recovery (or died there) leaves nothing that reads as running in another runtime."""
     import threading
@@ -127,3 +159,28 @@ def test_doctor_never_imports_or_constructs_a_store_factory_for_its_recovery_che
     assert not (tmp_path / "marker.constructed").exists(), "the factory was called"
     checks = {check["check"]: check for check in json.loads(result.stdout)["checks"]}
     assert checks["recovery"].get("inspected") is False, checks["recovery"]
+
+
+def test_doctor_does_not_open_a_built_in_store_of_unapproved_configuration():
+    """Unapproved configuration is not inspected even when its store is built in: the store file is left as it is."""
+    import hashlib
+    import json
+
+    from tests.hexagonal.support.project_server import CliEnvironment, short_directory
+
+    with short_directory() as directory:
+        cli = CliEnvironment(directory)
+        try:
+            cli.json("call", "list_sessions", "--json", "{}")  # an approved run created the project's store
+            stores = sorted(Path(cli.home).rglob("*.sqlite3"))
+            assert stores, "the approved run created a store"
+            digests = {path: hashlib.sha256(path.read_bytes()).hexdigest() for path in stores}
+            cli.project.write_config({"version": 1, "store": {"adapter": "sqlite", "options": {}}}, approved=False)
+            result = cli.run("doctor")
+            checks = {check["check"]: check for check in json.loads(result.stdout)["checks"]}
+            assert checks["approval"]["status"] == "error", checks["approval"]
+            assert checks["recovery"].get("inspected") is False, checks["recovery"]
+            assert sorted(Path(cli.home).rglob("*.sqlite3")) == stores, "no store was created"
+            assert {path: hashlib.sha256(path.read_bytes()).hexdigest() for path in stores} == digests
+        finally:
+            cli.cleanup()
