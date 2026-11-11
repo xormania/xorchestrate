@@ -14,17 +14,20 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from ..model import MODES, SUITES
 from ..sharding import suite_shard
 from ..stories import select_stories, validate_limits
+from . import terminal_selection
 from .configuration import capture_storage, local_capture
 from .evidence import write_json
 
 FIELDS = frozenset({"schema_version", "suite", "mode", "drivers", "families", "shard", "config", "brief",
                     "timeout", "check_timeout", "run_timeout", "shutdown_grace", "output",
-                    "environment", "interpreter", "stories", "max_sessions", "max_turns", "max_tool_calls", "project"})
+                    "environment", "interpreter", "stories", "max_sessions", "max_turns", "max_tool_calls", "project",
+                    "terminal_host", "keep_after_run"})
 PATH_FIELDS = ("config", "brief", "output", "environment", "interpreter")
 PROJECT_TOOLS = {"rust": ("rustc", "cargo"), "python": ("python3",), "php": ("php", "composer")}
 
@@ -62,6 +65,7 @@ def load_profile(path, *, root, overrides=None):
               "config": None, "project": None, "brief": str(root / "docs/implementation/owner-brief.md"),
               "timeout": 180, "check_timeout": 600, "run_timeout": None, "shutdown_grace": 10,
               "output": "runs", "environment": "environment", "interpreter": None,
+              "terminal_host": None, "keep_after_run": False,
               **source, **overrides}
     if type(values["schema_version"]) is not int or values["schema_version"] != 1:
         raise ValueError("Unsupported profile schema_version; expected 1")
@@ -75,6 +79,10 @@ def load_profile(path, *, root, overrides=None):
         raise ValueError("stories require a suite containing stories")
     if values["suite"] in {"stories", "all"}:
         select_stories(values["stories"], values["mode"])
+    if values["terminal_host"] is not None:
+        values["terminal_host"] = terminal_selection.parse(values["terminal_host"])
+    if type(values["keep_after_run"]) is not bool:
+        raise ValueError("keep_after_run must be true or false")
     for name in ("timeout", "check_timeout", "shutdown_grace", "run_timeout"):
         number = values[name]
         if name == "run_timeout" and number is None:
@@ -216,7 +224,8 @@ def _setup(profile_path, *, root, install, overrides=None):
             "workspace": str(workspace), "native_config": str(native_config), "native_prerequisites": [
                 "Install/authenticate the native clients separately; setup never changes authentication.",
                 "For native mode, configure the existing native application JSON and select acceptance drivers.",
-                "Native terminal checks require tmux, PTYs, Unix sockets and Linux/WSL /proc."]}
+                "Native terminal checks require a ready terminal host (see doctor), PTYs, Unix sockets and "
+                "Linux/WSL /proc."]}
 
 
 def doctor(profile_path, *, root, overrides=None):
@@ -258,8 +267,10 @@ def doctor(profile_path, *, root, overrides=None):
         observations.append({"name": "interpreter", "passed": False, "path": interpreter,
                              "reason": str(error)})
     if profile["suite"] in {"acceptance", "stories", "all"}:
-        observations.append({"name": "tmux", "passed": shutil.which("tmux") is not None,
-                             "path": shutil.which("tmux")})
+        with tempfile.TemporaryDirectory(prefix="xr-") as probe:
+            observations.append(terminal_selection.readiness(profile.get("terminal_host"), name="doctor",
+                                                             location=Path(probe) / "host",
+                                                             socket=Path(probe) / "host.sock"))
     project = profile.get("project")
     if project is not None:
         observations.append({"name": "project", "passed": Path(project["path"]).is_dir(),

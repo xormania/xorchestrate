@@ -17,6 +17,25 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   `doctor` and `status` report which host is active, why, and whether its
   terminals survive and are interactive. `down` closes the stopped server's
   terminal. See [terminal host](docs/terminal-host.md).
+- The test kit runs acceptance and story workers, and managed runs, in the
+  product's terminal host instead of its own private copy of the multiplexer
+  code, always in owned mode. Choose a host with the profile's `terminal_host`
+  or `--terminal-host` (JSON, as in `settings.json`; default: the product's
+  default). Readiness reports a `terminal_host` item, renamed from `tmux`, whose
+  text is the host's own reason. Acceptance receipts change: the failure
+  `tmux_missing` is now `terminal_host_unavailable`, `report.json` carries
+  `terminal_host` instead of `tmux_status_refreshes`, `session.json` is no
+  longer written, the scenario check `tmux_worker_context` is
+  `terminal_host_worker_context` (code `terminal_host_required`), and its
+  evidence label is `terminal-acceptance`. Terminal descriptors
+  (`terminal.json`) move to schema 2 with an opaque receipt and the host's
+  attach command; schema-1 multiplexer descriptors are refused with a reason.
+  Native PTY descriptors are unchanged. Managed runs report the host in their
+  state and no longer record worker or dashboard process identities.
+- `proof.sh start --keep-after-run` keeps a managed run's terminals after it
+  finishes, even if its supervisor ends; `close` adopts and ends them. Cleanup
+  then lists them as `retained` (never verified) beside the work's own
+  verified cleanup. Foreground runs refuse the option.
 
 ### Fixed
 

@@ -3,7 +3,6 @@
 import io
 import json
 import os
-import shutil
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -15,11 +14,12 @@ from scripts.testkit.adapters.command import SubprocessRunner
 from scripts.testkit.adapters.evidence import digest
 from scripts.testkit.model import Check, Timeout
 from scripts.verification import lifecycle, multi_harness
+from tests.hexagonal.support.terminal_host import MULTIPLEXER, requires_host
 from xorchestrate import composition
 
 
 @pytest.mark.parametrize("outer_grace", [0.5, 10.0], ids=["small-budget", "default-budget"])
-@pytest.mark.skipif(shutil.which("tmux") is None, reason="nested cleanup witness requires real tmux")
+@requires_host()
 def test_nested_acceptance_finalizer_finishes_before_outer_command_escalation(tmp_path, outer_grace):
     planned = testkit.plan(directory=tmp_path, suite="acceptance", mode="protocol-fixture",
                            shutdown_grace=outer_grace)[0]
@@ -35,10 +35,17 @@ def test_nested_acceptance_finalizer_finishes_before_outer_command_escalation(tm
         "while True: time.sleep(.01)\n"
     )
     wrapper = (
-        "import sys\n"
-        "from scripts.testkit.adapters.tmux import supervise\n"
-        f"supervise((sys.executable,'-c',{program!r}),{str(directory)!r},timeout=20,"
+        "import shutil,sys,tempfile\n"
+        "from scripts.testkit.adapters import terminal_selection\n"
+        "from scripts.testkit.adapters.supervised_run import supervise\n"
+        "endpoint = tempfile.mkdtemp(prefix='xa-')\n"
+        f"selected = terminal_selection.build({MULTIPLEXER!r}, name='acceptance', location=endpoint + '/host',"
+        " socket=endpoint + '/host.sock')\n"
+        "try:\n"
+        f"    supervise((sys.executable,'-c',{program!r}),{str(directory)!r},host=selected.host,timeout=20,"
         f"grace={inner_grace!r},cleanup_budget={cleanup_budget!r})\n"
+        "finally:\n"
+        "    shutil.rmtree(endpoint, ignore_errors=True)\n"
     )
     with pytest.raises(Timeout) as caught:
         SubprocessRunner(shutdown_target="owner", shutdown_grace=outer_grace).run(

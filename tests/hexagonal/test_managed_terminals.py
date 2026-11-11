@@ -2,9 +2,9 @@
 
 import json
 import os
-import shutil
 import sys
 from copy import deepcopy
+from pathlib import Path
 
 import pytest
 
@@ -20,6 +20,7 @@ from tests.hexagonal.support.managed_terminals import (
 )
 from tests.hexagonal.support.managed_workflow import PublicWorkflow, await_condition, isolated_candidate
 from tests.hexagonal.support.native import native_drivers, wait_for
+from tests.hexagonal.support.terminal_host import requires_host
 from xorchestrate.model import Capability
 
 PROMPT = """import os,sys
@@ -128,7 +129,7 @@ def test_existing_claude_launcher_keeps_hook_and_mcp_callbacks_when_using_owned_
         assert terminals.discover(tmp_path) == []
 
 
-@pytest.mark.skipif(shutil.which("tmux") is None, reason="public managed terminal witness requires real tmux")
+@requires_host()
 def test_public_attach_reaches_nested_native_prompt_and_detaches_without_stopping_it(tmp_path):
     candidate = isolated_candidate(tmp_path / "candidate with spaces")
     workflow = PublicWorkflow(candidate, tmp_path / "operator with spaces")
@@ -166,3 +167,36 @@ def test_public_attach_reaches_nested_native_prompt_and_detaches_without_stoppin
         assert closed.returncode == 0
     finally:
         workflow.close()
+
+
+def _descriptor(directory, **fields):
+    from scripts.testkit.adapters.ownership import processes
+
+    me = processes()[os.getpid()][0]
+    boot = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
+    descriptor = {"schema_version": 2, "kind": "terminal_host", "purpose": "acceptance worker", "terminal": "acceptance",
+                  "owner": {"pid": me.pid, "started": me.started, "boot_id": boot, "uid": os.getuid()},
+                  "receipt": {"opaque": True}, "attach": {"argv": ["attach-command", "--to", "acceptance"],
+                                                          "text": "Run attach-command to attach."}, **fields}
+    path = directory / "terminal.json"
+    path.write_text(json.dumps(descriptor))
+    path.chmod(0o600)
+    return descriptor
+
+
+def test_host_descriptors_are_schema_two_and_older_ones_are_refused_with_a_reason(tmp_path):
+    current = tmp_path / "current"
+    current.mkdir(mode=0o700)
+    descriptor = _descriptor(current)
+    assert terminals.validate(descriptor) and terminals.refusal(descriptor) is None
+    assert [item["terminal"] for item in terminals.discover(current)] == ["acceptance"]
+    assert not terminals.validate({**descriptor, "attach": None}), "a host without an attach command is not attachable"
+    assert not terminals.validate({**descriptor, "owner": {**descriptor["owner"], "started": 1}}), "a dead run"
+    old = tmp_path / "old"
+    old.mkdir(mode=0o700)
+    legacy = _descriptor(old, schema_version=1, kind="tmux", socket="/tmp/x.sock", pane="acceptance:0.0")
+    assert terminals.discover(old) == []
+    with pytest.raises(ValueError, match="older test kit"):
+        terminals.attach(legacy)
+    with pytest.raises(ValueError, match="expected 2"):
+        terminals.attach({**descriptor, "schema_version": 1})

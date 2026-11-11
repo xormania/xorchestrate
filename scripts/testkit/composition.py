@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import math
 import os
 import shutil
@@ -10,6 +11,7 @@ import sys
 from pathlib import Path
 from urllib.parse import quote
 
+from .adapters import terminal_selection
 from .adapters.evidence import (
     FileInputs,
     RecordingRunner,
@@ -77,8 +79,14 @@ def cache_environment(root):
 
 def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=ROOT, brief=None,
          families=(), check_timeout=600, drivers=(), shutdown_grace=10.0,
-         stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000, shard=None):
-    """Pure check definitions; filesystem preparation belongs to the owning check."""
+         stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000, shard=None, terminal_host=None):
+    """Pure check definitions; filesystem preparation belongs to the owning check.
+
+    ``terminal_host`` is a product terminal-host selection for acceptance and
+    story runs (``None``: the product's default).
+    """
+    host_options = () if terminal_host is None else ("--terminal-host", json.dumps(terminal_selection.parse(terminal_host),
+                                                                                   sort_keys=True))
     selected = _options(suite=suite, mode=mode, timeout=timeout, check_timeout=check_timeout,
                         config=config, driver=driver, families=families, drivers=drivers,
                         shutdown_grace=shutdown_grace, shard=shard)
@@ -117,7 +125,7 @@ def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=
             argv = [sys.executable, "-m", "scripts.acceptance", "--output", str(directory / output_name),
                     "--profile", "native" if mode == "native" else "fixture", "--timeout", str(timeout),
                     "--shutdown-grace", str(shutdown_grace * 0.5),
-                    "--cleanup-budget", str(shutdown_grace * 0.8)]
+                    "--cleanup-budget", str(shutdown_grace * 0.8), *host_options]
             if config:
                 argv += ["--config", str(Path(config).expanduser().resolve())]
                 if selected_driver:
@@ -138,7 +146,7 @@ def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=
             argv = [sys.executable, "-m", "scripts.acceptance", "--output", str(directory / quote(name, safe="")),
                     "--profile", "native" if mode == "native" else "fixture", "--story", story.id,
                     "--timeout", str(timeout), "--shutdown-grace", str(shutdown_grace * 0.5),
-                    "--cleanup-budget", str(shutdown_grace * 0.8)]
+                    "--cleanup-budget", str(shutdown_grace * 0.8), *host_options]
             for key, value in limits.items():
                 argv += ["--" + key.replace("_", "-"), str(value)]
             if config:
@@ -185,6 +193,15 @@ def _native_readiness(check, *, config, driver):
     return items
 
 
+def _terminal_host_readiness(selection):
+    """The run's terminal host: the item is named for the port, its text is the adapter's own reason."""
+    import tempfile
+
+    with tempfile.TemporaryDirectory(prefix="xr-") as probe:  # short and private, like a run's endpoint
+        return terminal_selection.readiness(selection, name="readiness", location=Path(probe) / "host",
+                                            socket=Path(probe) / "host.sock")
+
+
 def _run_location(output):
     """Whether the product will accept a private application home beneath this evidence root.
 
@@ -211,7 +228,8 @@ def _run_location(output):
     return {"name": "run_location", "passed": True, "path": str(location)}
 
 
-def readiness(check, *, root, mode, config=None, driver=None, brief=None, families=(), shard=None, output=None):
+def readiness(check, *, root, mode, config=None, driver=None, brief=None, families=(), shard=None, output=None,
+              terminal_host=None):
     """One side-effect-free prerequisite definition for doctor and execution.
 
     ``output`` is the evidence root (or run directory) the selected checks will
@@ -234,8 +252,7 @@ def readiness(check, *, root, mode, config=None, driver=None, brief=None, famili
                 items.append({"name": "test_shard", "passed": True, "shard": shard, "modules": len(chosen),
                               "estimated_seconds": shard_plan["estimated_seconds"]})
         if check.name == "acceptance" or check.name.startswith(("acceptance:", "story:")):
-            binary = shutil.which("tmux")
-            items.append({"name": "tmux", "passed": binary is not None, "path": binary})
+            items.append(_terminal_host_readiness(terminal_host))
             if output is not None:
                 items.append(_run_location(output))
         if check.name == "multi-harness":
@@ -252,14 +269,15 @@ def readiness(check, *, root, mode, config=None, driver=None, brief=None, famili
 
 def preflight(*, suite, mode, config=None, driver=None, timeout=180, root=ROOT,
               families=(), check_timeout=600, brief=None, drivers=(), shutdown_grace=10.0,
-              stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000, shard=None, output=None):
+              stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000, shard=None, output=None,
+              terminal_host=None):
     root = Path(root).resolve()
     cache_environment(root)
     checks = plan(directory=root.parent / "testkit-preflight", suite=suite, mode=mode, config=config,
                   driver=driver, timeout=timeout, root=root, brief=brief, families=families,
                   check_timeout=check_timeout, drivers=drivers, shutdown_grace=shutdown_grace,
                   stories=stories, max_sessions=max_sessions, max_turns=max_turns, max_tool_calls=max_tool_calls,
-                  shard=shard)
+                  shard=shard, terminal_host=terminal_host)
     if families:
         try:
             from .adapters.pytest_plugin import load_catalog
@@ -273,7 +291,7 @@ def preflight(*, suite, mode, config=None, driver=None, timeout=180, root=ROOT,
         else:
             select_families(assignments, families)
     rows = [readiness(check, root=root, mode=mode, config=config, driver=driver, brief=brief, families=families,
-                      shard=shard, output=output) for check in checks]
+                      shard=shard, output=output, terminal_host=terminal_host) for check in checks]
     return {"status": "passed" if all(row["status"] == "passed" for row in rows) else "setup_error",
             "suite": suite, "mode": mode, "shard": shard, "checks": rows,
             "authentication": "verified by live callbacks only" if mode == "native" else "not used"}
@@ -282,7 +300,7 @@ def preflight(*, suite, mode, config=None, driver=None, timeout=180, root=ROOT,
 def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=None,
         timeout=180, root=ROOT, brief=None, families=(), check_timeout=600,
         directory=None, cancellation=None, result_sink=None, shutdown_grace=10.0, drivers=(),
-        stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000, shard=None):
+        stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000, shard=None, terminal_host=None):
     root, output = Path(root).resolve(), Path(output).expanduser().resolve()
     if output == root or root in output.parents:
         raise ValueError("Run output must be outside the measured candidate")
@@ -329,7 +347,7 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
                       timeout=timeout, root=root, brief=brief, families=families,
                       check_timeout=check_timeout, drivers=drivers, shutdown_grace=shutdown_grace,
                       stories=stories, max_sessions=max_sessions, max_turns=max_turns, max_tool_calls=max_tool_calls,
-                      shard=shard)
+                      shard=shard, terminal_host=terminal_host)
         report["selected_check_ids"] = [check.name for check in checks]
         ready = preflight(suite=suite, mode=mode, config=config, driver=driver, timeout=timeout, root=root,
                           brief=brief, families=families, check_timeout=check_timeout, drivers=drivers,
@@ -358,7 +376,7 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
 
         def prepare(check):
             row = readiness(check, root=root, mode=mode, config=config, driver=driver, brief=brief, families=families,
-                            shard=shard, output=directory)
+                            shard=shard, output=directory, terminal_host=terminal_host)
             if row["status"] != "passed":
                 raise ValueError(row["reason"])
             prepared = check

@@ -7,26 +7,29 @@ import importlib.metadata
 import json
 import math
 import os
+import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from .adapters import terminal_selection
 from .adapters.configuration import isolated_config
 from .adapters.diagnostics import failure_lines
 from .adapters.evidence import candidate_identity, digest, now, write_json
-from .adapters.managed_process import ManagedWorker, observed_alive
+from .adapters.managed_process import ManagedWorker
 from .adapters.managed_store import ManagedStore, owner_alive
 from .adapters.native_evidence import collection_supplement
-from .adapters.tmux import subreaper
+from .adapters.ownership import subreaper
 from .composition import ROOT, preflight, run
 from .composition import plan as check_plan
 from .operator import FINISHED, decide, project
 
 RUN_FIELDS = ("suite", "mode", "config", "brief", "drivers", "families", "shard", "timeout", "check_timeout",
-              "stories", "max_sessions", "max_turns", "max_tool_calls")
+              "stories", "max_sessions", "max_turns", "max_tool_calls", "terminal_host")
 PROBE_STORY = "native-handshake"
 
 
@@ -74,7 +77,10 @@ def prepare_run(settings, *, parent=None):
     settings.update(schema_version=1, root=str(root), output=str(output),
                     interpreter=str(settings.get("interpreter") or sys.executable),
                     parent_run_id=Path(parent).name if parent else None,
-                    selected_check_ids=[check.name for check in checks], created_at=now())
+                    selected_check_ids=[check.name for check in checks], created_at=now(),
+                    keep_after_run=bool(settings.get("keep_after_run")),
+                    # Short and private: the host's Unix socket path is capped near 107 bytes.
+                    terminal_endpoint=tempfile.mkdtemp(prefix="xp-"))
     dependencies = {}
     for package in ("jsonschema", "pytest", "ruff"):
         try:
@@ -135,7 +141,7 @@ def start(settings, *, parent=None):
     store = ManagedStore(directory)
     while time.monotonic() < deadline:
         state = store.read_state()
-        if state.get("worker") and owner_alive(state.get("owner")):
+        if state.get("terminal") and owner_alive(state.get("owner")):
             return {"status": "launched", "run_id": directory.name, "directory": str(directory)}
         if state.get("phase") in FINISHED or process.poll() is not None:
             raise RuntimeError(f"Managed startup failed; inspect {directory}/supervisor.log and state.json")
@@ -146,8 +152,10 @@ def start(settings, *, parent=None):
 def status(directory):
     store = ManagedStore(directory)
     state = store.read_state()
-    result = project(state, owner_alive=owner_alive(state.get("owner")),
-                     worker_alive=observed_alive(state.get("worker")))
+    supervisor = owner_alive(state.get("owner"))
+    # The terminal host exposes no process identities: the worker is alive while its live supervisor has not seen it exit.
+    worker = supervisor and state.get("worker_state") != "exited" and state.get("phase") not in FINISHED
+    result = project(state, owner_alive=supervisor, worker_alive=worker)
     result["directory"] = str(store.directory)
     progress = store.directory / "checks" / "progress.json"
     if progress.exists():
@@ -178,9 +186,7 @@ def control(directory, action):
         if action == "collect":
             return store.collect(supplemental=collection_supplement)
         if action == "close" and state.get("phase") in FINISHED:
-            if observed_alive(state.get("terminal", {}).get("server")):
-                raise RuntimeError("Supervisor is gone; retained terminal cleanup is unverified")
-            return {"status": "already_closed"}
+            return close_kept_terminals(directory, state)
         raise RuntimeError("No live supervisor; run is incomplete and cannot be safely controlled")
     request = store.submit(action)
     if action == "stop":
@@ -235,6 +241,49 @@ def worker(directory):
             signal.signal(number, handler)
 
 
+def host_placement(directory, plan):
+    """Where a managed run's terminal host lives: its state under the run, its endpoint in a short private directory."""
+    endpoint = Path(plan.get("terminal_endpoint") or directory / "terminal-endpoint")
+    return {"name": "proof", "location": directory / "terminal-host", "socket": endpoint / "host.sock"}
+
+
+def managed_worker(directory, plan):
+    """The run's host from its selection: owned, unless the run keeps its terminals for a later close."""
+    keep = bool(plan.get("keep_after_run"))
+    selected = terminal_selection.build(plan.get("terminal_host"), owned=not keep, **host_placement(directory, plan))
+    if selected.host is None:
+        raise FileNotFoundError(f"Managed start requires a ready terminal host ({selected.reason}); "
+                                "foreground run remains available")
+    return ManagedWorker(directory, host=selected.host, host_report=selected.report(), root=plan["root"],
+                         interpreter=plan["interpreter"], grace=plan.get("shutdown_grace", 10), keep_after_run=keep)
+
+
+def close_kept_terminals(directory, state):
+    """After the supervisor is gone: adopt a kept run's terminals from their receipts and shut the host down."""
+    terminal = state.get("terminal") or {}
+    if not terminal.get("keep_after_run"):
+        return {"status": "already_closed"}  # an owned host ended with its supervisor
+    directory = Path(directory)
+    plan = read_json(directory / "plan.json")
+    selected = terminal_selection.build(plan.get("terminal_host"), owned=False, **host_placement(directory, plan))
+    if selected.host is None:
+        raise RuntimeError(f"Kept terminals cannot be closed: no terminal host is ready ({selected.reason})")
+    host, adopted = selected.host, []
+    try:
+        for receipt in (terminal.get("receipts") or {}).values():
+            try:
+                adopted.append(host.adopt(receipt).name)
+            except ValueError as error:
+                if getattr(error, "code", None) != "terminal_not_recoverable":
+                    raise
+        host.shutdown()
+    finally:
+        host.close()
+    with contextlib.suppress(OSError):
+        shutil.rmtree(host_placement(directory, plan)["socket"].parent)
+    return {"status": "closed", "kept_terminals": sorted(adopted)}
+
+
 def supervise(directory):
     directory = Path(directory).resolve()
     store = ManagedStore(directory)
@@ -249,8 +298,7 @@ def supervise(directory):
     started, watermark, closing_requests = time.monotonic(), 0, []
     try:
         with subreaper():
-            process = ManagedWorker(directory, root=plan["root"], interpreter=plan["interpreter"],
-                                    grace=plan.get("shutdown_grace", 10))
+            process = managed_worker(directory, plan)
             details = process.start()
             store.publish({**details, **decide(store.read_state(), "ready")})
             exit_status, finalized, close_requested = None, False, False
@@ -347,7 +395,11 @@ def supervise(directory):
     finally:
         exports.shutdown(wait=True, cancel_futures=True)
         if process:
-            process.close()
+            # Kept terminals outlive a supervisor that ends without a close request; close adopts them later.
+            keep = bool(plan.get("keep_after_run")) and not closing_requests
+            process.close(keep=keep)
+            if not keep:
+                shutil.rmtree(host_placement(directory, plan)["socket"].parent, ignore_errors=True)
         for identifier in closing_requests:
             store.complete_request(identifier, {"status": "closed"})
         store.release_owner()
@@ -381,7 +433,7 @@ def probe(settings, runner):
 
 def repeat_settings(directory, overrides):
     prior = read_json(Path(directory) / "plan.json")
-    allowed = (*RUN_FIELDS, "output", "shutdown_grace", "run_timeout", "project")
+    allowed = (*RUN_FIELDS, "output", "shutdown_grace", "run_timeout", "project", "keep_after_run")
     settings = {name: prior[name] for name in allowed if name in prior}
     settings.update(overrides)
     if "config" not in overrides:
@@ -398,6 +450,8 @@ def repeat_settings(directory, overrides):
 def foreground(settings, runner):
     """The same executor owns foreground signals and an optional whole-run bound."""
     validate_limits(settings)
+    if settings.get("keep_after_run"):
+        raise ValueError("--keep-after-run applies to managed runs (start), which close later")
     reason = []
     started = time.monotonic()
     handlers = {number: signal.signal(number, lambda n, frame: reason.append(f"signal_{n}"))

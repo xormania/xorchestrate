@@ -208,9 +208,12 @@ def test_doctor_reports_the_active_host(home, setting, status):
 MULTIPLEXER_ALLOWED = {"xorchestrate/adapters/tmux.py", "xorchestrate/composition.py"}
 
 
+SCANNED = ("xorchestrate", "scripts/testkit", "scripts/acceptance")  # the test kit reaches the host through the port
+
+
 def multiplexer_mentions(root):
     found = []
-    for path in sorted((root / "xorchestrate").rglob("*.py")):
+    for path in sorted(path for top in SCANNED for path in (root / top).rglob("*.py")):
         relative = path.relative_to(root).as_posix()
         if relative in MULTIPLEXER_ALLOWED:
             continue
@@ -228,7 +231,10 @@ def test_the_multiplexer_scan_finds_a_planted_mention(tmp_path):
     for relative, text in (("xorchestrate/adapters/tmux.py", "TMUX = 'tmux'\n"),
                            ("xorchestrate/composition.py", "BUILTINS = {'tmux': ...}\n"),
                            ("xorchestrate/server.py", "argv = [f'{binary} -S x']\n"),
-                           ("xorchestrate/instance/operations.py", "# start the Tmux server here\n")):
+                           ("xorchestrate/instance/operations.py", "# start the Tmux server here\n"),
+                           ("scripts/testkit/adapters/runner.py", "binary = shutil.which('tmux')\n"),
+                           ("scripts/acceptance/scenario.py", "context = os.environ.get('TMUX_PANE')\n")):
         (tmp_path / relative).parent.mkdir(parents=True, exist_ok=True)
         (tmp_path / relative).write_text(text, encoding="utf-8")
-    assert multiplexer_mentions(tmp_path) == ["xorchestrate/instance/operations.py:1"]
+    assert multiplexer_mentions(tmp_path) == ["scripts/acceptance/scenario.py:1", "scripts/testkit/adapters/runner.py:1",
+                                              "xorchestrate/instance/operations.py:1"]

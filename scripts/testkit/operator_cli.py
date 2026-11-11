@@ -42,6 +42,9 @@ def parser():
     value.add_argument("--check-timeout", type=float)
     value.add_argument("--run-timeout", type=float)
     value.add_argument("--shutdown-grace", type=float)
+    value.add_argument("--terminal-host", help="Terminal host selection as JSON (default: the product's default)")
+    value.add_argument("--keep-after-run", action="store_true", default=None,
+                       help="start: keep the run's terminals after it finishes, until close")
     value.add_argument("--output", type=Path)
     value.add_argument("--detach", action="store_true")
     value.add_argument("--target", type=int, help="One-based owned terminal number")
@@ -52,7 +55,8 @@ def parser():
 
 def overrides(args):
     result = {}
-    for field in ("suite", "mode", "config", "brief", "shard", "timeout", "check_timeout", "run_timeout", "shutdown_grace", "output", "max_sessions", "max_turns", "max_tool_calls"):
+    for field in ("suite", "mode", "config", "brief", "shard", "timeout", "check_timeout", "run_timeout", "shutdown_grace", "output", "max_sessions", "max_turns", "max_tool_calls", "terminal_host",
+                  "keep_after_run"):
         item = getattr(args, field)
         if item is not None:
             result[field] = str(item.expanduser().resolve()) if isinstance(item, Path) else item
@@ -81,6 +85,7 @@ def settings(args):
             "config": None, "brief": str(ROOT / "docs/implementation/owner-brief.md"),
             "stories": [], "max_sessions": 2, "max_turns": 4, "max_tool_calls": 5000,
             "timeout": 180, "check_timeout": 600, "shutdown_grace": 10, "run_timeout": None,
+            "terminal_host": None, "keep_after_run": False,
             "output": str(ROOT.parent / "xorchestrate-runs"), "interpreter": sys.executable,
             "root": str(ROOT), **explicit}
 
@@ -133,7 +138,7 @@ def attach(directory, target=None):
                 index = 0 if target is None else target - 1
                 if not 0 <= index < len(found):
                     raise ValueError("Selected owned terminal is unavailable")
-                print("Attached. Ctrl-] (PTY) or Ctrl-b d (tmux) returns to this dashboard.", flush=True)
+                print("Attached. Ctrl-] (PTY) or the terminal host's detach key returns to this dashboard.", flush=True)
                 terminals.attach(found[index])
                 paused, target = True, None
                 print("Dashboard: enter a terminal number to attach, w to follow, or q to leave.", flush=True)

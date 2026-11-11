@@ -7,6 +7,7 @@ every adapter and the fake.
 """
 from __future__ import annotations
 
+import contextlib
 import itertools
 import os
 import re
@@ -519,3 +520,49 @@ def adapter_subject(factory, options_for, directory, *, root, placement_path, ad
     return Subject(lambda host_name: build(options_for(host_name)), Programs(str(directory)), logs, crasher,
                    tracer=tracer, forger=forger, unsafe=unsafe, starter=Unrelated, alterer=alterer,
                    attacher=attacher, additions=frozenset(additions))
+
+
+# -- the test kit's hosts: one readiness helper for every test that needs a real host --
+
+MULTIPLEXER = {"adapter": "tmux"}  # selected explicitly, without the default's fallback
+
+
+def host_unready(selection=MULTIPLEXER):
+    """Why the selected host cannot run here (``None`` when it can), from the host's own readiness."""
+    import tempfile
+
+    from scripts.testkit.adapters import terminal_selection
+
+    with tempfile.TemporaryDirectory(prefix="xr-") as probe:
+        item = terminal_selection.readiness(selection, name="probe", location=os.path.join(probe, "host"),
+                                            socket=os.path.join(probe, "host.sock"))
+    return None if item["passed"] else item.get("reason", "not ready")
+
+
+def requires_host(selection=MULTIPLEXER):
+    """Skip a test when the selected terminal host is not ready on this machine."""
+    import pytest
+
+    reason = host_unready(selection)
+    return pytest.mark.skipif(reason is not None, reason=f"terminal host unavailable: {reason}")
+
+
+@contextlib.contextmanager
+def owned_host(selection=MULTIPLEXER, *, name="acceptance"):
+    """An owned host as the test kit builds one, shut down and removed afterwards even when the test fails."""
+    import shutil
+    import tempfile
+
+    from scripts.testkit.adapters import terminal_selection
+    from tests.hexagonal.support.host_processes import track
+
+    base = track(tempfile.mkdtemp(prefix="xth-"))
+    selected = terminal_selection.build(selection, name=name, location=os.path.join(base, "host"),
+                                        socket=os.path.join(base, "host.sock"), owned=True)
+    try:
+        yield selected
+    finally:
+        if selected.host is not None:
+            with contextlib.suppress(Exception):
+                selected.host.shutdown()
+        shutil.rmtree(base, ignore_errors=True)

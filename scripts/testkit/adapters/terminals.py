@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import os
 import select
-import shutil
 import socket
 import stat
 import subprocess
@@ -14,7 +13,10 @@ import termios
 import tty
 from pathlib import Path
 
-from .tmux import Identity, alive
+from .ownership import Identity, alive
+
+HOSTED_SCHEMA = 2
+"""Terminal-host descriptors carry an opaque receipt and the host's attach argv (schema 1 named a socket and binary)."""
 
 
 def _live_identity(identity):
@@ -26,19 +28,42 @@ def _live_identity(identity):
         return False
 
 
+def refusal(descriptor):
+    """Why a descriptor's shape is not accepted at all (``None`` when it is), before any liveness check."""
+    kind, schema = descriptor.get("kind"), descriptor.get("schema_version")
+    if kind == "terminal_host":
+        return None if schema == HOSTED_SCHEMA else f"Unsupported terminal descriptor schema {schema!r}; expected 2"
+    if kind == "pty":
+        return None if schema == 1 else f"Unsupported native terminal descriptor schema {schema!r}; expected 1"
+    return ("This terminal descriptor is from an older test kit (schema 1 named its socket directly); "
+            "it cannot be attached. Start a new run to attach to its terminals.")
+
+
+def _hosted(descriptor):
+    """The run that opened it is still live and its recorded attach command is well formed.
+
+    The host validated its private location when it answered the attach
+    instruction; the descriptor itself is private to this user (see discover).
+    """
+    attach = descriptor.get("attach")
+    return (_live_identity(descriptor["owner"]) and isinstance(attach, dict) and isinstance(attach.get("argv"), list)
+            and bool(attach["argv"]) and all(isinstance(part, str) and part for part in attach["argv"]))
+
+
 def validate(descriptor):
-    """Recheck process incarnation and the private socket immediately before use."""
+    """Recheck the owner's incarnation (and a native PTY's private socket) immediately before use."""
     try:
-        if descriptor.get("schema_version") != 1 or not _live_identity(descriptor["owner"]):
+        if refusal(descriptor) is not None:
+            return False
+        if descriptor["kind"] == "terminal_host":
+            return _hosted(descriptor)
+        if not _live_identity(descriptor["owner"]):
             return False
         path = Path(descriptor["socket"])
         info = path.lstat()
         if not stat.S_ISSOCK(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
             return False
-        if descriptor["kind"] == "pty":
-            return _live_identity(descriptor["native_process"]) and isinstance(descriptor.get("token"), str)
-        if descriptor["kind"] == "tmux":
-            return _live_identity(descriptor["server"]) and isinstance(descriptor.get("pane"), str)
+        return _live_identity(descriptor["native_process"]) and isinstance(descriptor.get("token"), str)
     except (KeyError, TypeError, ValueError, OSError):
         return False
     return False
@@ -87,18 +112,15 @@ def connect(descriptor, *, rows=48, columns=160):
 
 
 def attach(descriptor):
-    """Detach with Ctrl-] from a native PTY, or tmux's own detach binding."""
+    """Detach with Ctrl-] from a native PTY, or as the terminal host's attach instruction says."""
+    problem = refusal(descriptor)
+    if problem is not None:
+        raise ValueError(problem)
     if not validate(descriptor):
         raise ValueError("Interactive terminal is no longer owned and live")
-    if descriptor["kind"] == "tmux":
-        binary = shutil.which("tmux")
-        if binary is None:
-            raise ValueError("tmux is required to attach this terminal")
-        environment = dict(os.environ)
-        environment.pop("TMUX", None)
-        environment.pop("TMUX_PANE", None)
-        return subprocess.call([binary, "-N", "-S", descriptor["socket"], "attach-session", "-t", descriptor["pane"]],
-                               env=environment)
+    if descriptor["kind"] == "terminal_host":
+        print(descriptor["attach"].get("text", ""), flush=True)
+        return subprocess.call(descriptor["attach"]["argv"])
     if not sys.stdin.isatty() or not sys.stdout.isatty():
         raise ValueError("Interactive attachment requires a terminal")
     size = os.get_terminal_size(sys.stdout.fileno())

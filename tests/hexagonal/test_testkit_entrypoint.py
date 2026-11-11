@@ -223,7 +223,7 @@ def test_native_doctor_checks_inputs_without_authentication_or_process_launch(tm
     assert report["authentication"] == "verified by live callbacks only"
     readiness = [item for check in report["checks"] for item in check["readiness"]]
     assert {check["name"] for check in readiness} >= {
-        "tmux", "codex:executable", "claude:executable", "grok:executable",
+        "terminal_host", "codex:executable", "claude:executable", "grok:executable",
     }
 
 
