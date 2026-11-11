@@ -344,8 +344,8 @@ def test_a_timed_out_worker_alone_is_asked_to_stop_and_its_last_words_are_captur
 def test_an_unready_default_host_is_a_setup_error_never_a_silent_fallback(tmp_path, monkeypatch):
     """The test kit takes the product default's host without its fallback; another host only when selected."""
     import xorchestrate.composition as product
-    from scripts.testkit import composition as testkit
     from scripts.acceptance import __main__ as acceptance_cli
+    from scripts.testkit import composition as testkit
     from scripts.testkit.adapters import terminal_selection
 
     monkeypatch.setattr(product, "DEFAULT_TERMINAL_HOST", {**UNREADY, "fallback": {"adapter": "detached-process"}})
