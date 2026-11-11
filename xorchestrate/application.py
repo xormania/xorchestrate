@@ -34,6 +34,7 @@ from .ports import (
     Guardrail,
     Identifier,
     ReceiptPolicy,
+    RecoveryPolicy,
     RoutingPolicy,
     SessionDriver,
     SessionSelection,
@@ -60,7 +61,7 @@ class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
         acceptance: AcceptancePolicy | None = None, session_fallbacks: dict[str, str] | None = None,
         provider_configurations: JSON | None = None, evaluator_configurations: JSON | None = None,
         state_engine: StateEngine | None = None, telemetry: TelemetrySink | None = None,
-        worktree: JSON | None = None,
+        worktree: JSON | None = None, recovery_policy: RecoveryPolicy | None = None,
     ):
         self.store = store
         # The worktree of calls that do not bring their own (the process's own
@@ -71,6 +72,7 @@ class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
         self.session_selection = session_selection
         self.delivery_scheduler = delivery_scheduler
         self.retry_policy = retry_policy
+        self.recovery_policy = recovery_policy
         self.receipt_policy = receipt_policy
         if session_fallbacks is not None and (not isinstance(session_fallbacks, dict) or any(
             not isinstance(k, str) or not k or not isinstance(v, str) or not v for k, v in session_fallbacks.items())):

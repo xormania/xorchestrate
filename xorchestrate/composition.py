@@ -40,6 +40,8 @@ BUILTINS = {
     "session_selection": {"latest": "xorchestrate.adapters.delivery:LatestSessionSelection"},
     "delivery_scheduler": {"manual": "xorchestrate.adapters.delivery:DeliverySchedule"},
     "retry_policy": {"definite-failure": "xorchestrate.adapters.delivery:DefiniteFailureRetry"},
+    "recovery_policy": {"reconnect": "xorchestrate.adapters.recovery:ReconnectRecovery",
+                        "manual": "xorchestrate.adapters.recovery:ManualRecovery"},
     "receipt_policy": {"complete-exchange": "xorchestrate.adapters.delivery:CompleteExchangeReceipt"},
     "guardrail": {"rules": "xorchestrate.adapters.policies:RuleGuardrail"},
     "routing": {"configurable": "xorchestrate.adapters.policies:ConfigurableRouting"},
@@ -274,6 +276,7 @@ _SINGLETONS = {
     "delivery_scheduler": {"adapter": "manual"},
     "retry_policy": {"adapter": "definite-failure"},
     "receipt_policy": {"adapter": "complete-exchange"},
+    "recovery_policy": {"adapter": "reconnect"},
 }
 _COLLECTIONS = ("providers", "sessions", "evaluators")
 
@@ -471,7 +474,8 @@ def validate_config(config=None, base_dir=None, *, telemetry_defaults=None):
     for kind in ("guardrail", "routing"):
         adapters[kind] = _select(kind, config.get(kind, _SINGLETONS[kind]), base_dir)
     collection("evaluators")
-    for kind in ("acceptance", "session_selection", "delivery_scheduler", "retry_policy", "receipt_policy"):
+    for kind in ("acceptance", "session_selection", "delivery_scheduler", "retry_policy", "receipt_policy",
+                 "recovery_policy"):
         adapters[kind] = _select(kind, config.get(kind, _SINGLETONS[kind]), base_dir)
     return ResolvedConfig(
         version=version, base_dir=base_dir, config=config, adapters=adapters, collections=collections,
@@ -603,6 +607,7 @@ def build(config=None, base_dir=None, *, project=None, telemetry_defaults=None, 
             session_selection=construct(adapters["session_selection"]),
             delivery_scheduler=construct(adapters["delivery_scheduler"]),
             retry_policy=construct(adapters["retry_policy"]),
+            recovery_policy=construct(adapters["recovery_policy"]),
             receipt_policy=construct(adapters["receipt_policy"]),
             session_fallbacks=config.get("session_fallbacks"),
             provider_configurations=resolved.provider_configurations,
