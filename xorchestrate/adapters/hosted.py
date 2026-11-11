@@ -12,13 +12,20 @@ Configuration: ``{"adapter": "hosted", "options": {"session": {"adapter": ...,
 composition; the inner session's relative ``cwd`` is resolved against it),
 ``directory`` (private per-session directories; resolved by composition),
 ``attach_timeout`` (seconds, default 30), ``timeout`` (bridge request
-timeout, default 30).
+timeout, default 30), ``max_sessions`` (default: the wrapped selection's
+``max_sessions``, else 64).
 
 Composition binds the terminal host with ``bind_terminal_host``; without one,
 sessions are refused with ``terminal_host_unavailable``.
 
-- ``stop`` detaches and closes the terminal; the private directory and state
+- ``stop`` asks the bridge host to stop, then always closes the terminal, even
+  when the bridge host does not answer or this runtime holds no connection to
+  it (so a failed stop can be retried). The private directory and state
   remain, so a later resume reopens the terminal with the same state.
+- ``max_sessions`` bounds the running hosted terminals of this entry, the
+  detached ones a previous runtime left included, plus starts in flight. A new
+  terminal past the limit is refused with ``session_capacity`` before anything
+  is created; reconnecting to a running terminal is not a new session.
 - ``detach`` and ``close`` only detach: the terminal keeps running.
 """
 
@@ -41,7 +48,7 @@ from ..ports import TerminalCommand
 from . import terminal_support as support
 from .bridge import BridgeSessionDriver
 from .local_socket import open_private_file
-from .process import positive_number, resolve_repo
+from .process import positive_integer, positive_number, resolve_repo
 
 NATIVE = "native"
 MAX_SOCKET_PATH_BYTES = 107
@@ -93,7 +100,8 @@ class HostedSessionDriver:
 
     def __init__(self, options):
         options = deepcopy(options)
-        unknown = set(options) - {"session", "application_tools", "cwd", "directory", "attach_timeout", "timeout"}
+        unknown = set(options) - {"session", "application_tools", "cwd", "directory", "attach_timeout", "timeout",
+                                  "max_sessions"}
         if unknown:
             raise OrchestrationError("Unknown hosted session options.", "invalid_configuration",
                                      {"options": sorted(unknown)})
@@ -118,12 +126,16 @@ class HostedSessionDriver:
         self.directory = Path(options["directory"])
         self.attach_timeout = positive_number(options, "attach_timeout", 30.0)
         self.bridge_options = {"timeout": positive_number(options, "timeout", 30.0)}
+        self.max_sessions = positive_integer(
+            options, "max_sessions", positive_integer(inner["options"], "max_sessions", 64))
         self.host = None
         self.endpoints = None
         self.entry = "session"
         self.config_version = None
         self._capabilities, self._callback, self._replay, self._observer = (), None, None, None
         self._bridges = {}
+        self._terminals = {}  # handle -> terminal name, for the sessions this runtime holds
+        self._starting = set()  # terminal names reserved by opens in flight
         self._lock = threading.RLock()
         self._closed = False
 
@@ -181,31 +193,56 @@ class HostedSessionDriver:
             self._forget(session)
 
     def stop(self, session):
-        """End the conversation: detach, then close its terminal. Its directory and state stay for a later resume."""
-        bridge, inner = self._bridge(session)
-        try:
-            result = bridge.stop(inner)
-        finally:
-            self._forget(session)
-        hosted = session["hosted"]
+        """End the conversation: stop the bridge host, then always close its terminal.
+
+        The terminal is closed even when the bridge host fails or does not
+        answer, and when this runtime holds no connection to it (a retry after
+        such a failure, or a session another runtime started): the terminal is
+        then adopted from the session's receipt. A bridge failure with the
+        terminal closed is a successful stop that reports the bridge host did
+        not acknowledge. A failed close raises; stop can be called again. The
+        session's directory and state stay for a later resume.
+        """
+        hosted = session.get("hosted") if isinstance(session, dict) else None
+        if not isinstance(hosted, dict) or not isinstance(hosted.get("terminal"), dict) \
+                or not isinstance(hosted["terminal"].get("name"), str):
+            raise OrchestrationError("Backend receipt is not a hosted session.", "session_unavailable")
         host = self._require_host()
+        inner = {name: value for name, value in session.items() if name != "hosted"}
+        with self._lock:
+            bridge = self._bridges.get(inner.get("handle"))
+        result, acknowledged, failure = {}, None, None
+        if bridge is not None:
+            try:
+                stopped = bridge.stop(inner)
+                result = stopped if isinstance(stopped, dict) else {"result": stopped}
+                acknowledged = True
+            except (OrchestrationError, OSError) as error:
+                acknowledged = False
+                failure = error.code if isinstance(error, OrchestrationError) else "bridge_unavailable"
+            finally:
+                self._forget(session)
+        name = hosted["terminal"]["name"]
         try:
             host.adopt(hosted["terminal"])
         except OrchestrationError as error:
             if error.code not in {"terminal_exists", "terminal_not_recoverable"}:
                 raise
         closure = None
-        if any(item.name == hosted["terminal"]["name"] for item in host.terminals()):
-            closure = host.close_terminal(hosted["terminal"]["name"])
+        if any(item.name == name for item in host.terminals()):
+            closure = host.close_terminal(name)
         verified = True if closure is None else closure.cleanup_verified
-        return {**(result if isinstance(result, dict) else {"result": result}),
-                "terminal": {"closed": closure is not None, "cleanup_verified": verified}}
+        report = {**result, "terminal": {"closed": closure is not None, "cleanup_verified": verified}}
+        if acknowledged is not True:
+            report["bridge"] = {"acknowledged": False, "reason": failure or "not_connected"}
+        return report
 
     def close(self):
         with self._lock:
             self._closed = True
             bridges = list(self._bridges.values())
             self._bridges.clear()
+            self._terminals.clear()
         for bridge in bridges:
             bridge.close()  # Detaches; hosted terminals keep running.
 
@@ -309,16 +346,44 @@ class HostedSessionDriver:
                                          details) from last
             time.sleep(0.1)
 
+    def _entry_terminals(self, host):
+        """Names of this entry's running hosted terminals at the host, whoever holds them."""
+        pattern = re.compile(re.escape(_terminal_name(self.entry, "")) + r"[0-9a-f]{12}")
+        return {item.name for item in host.inventory() if item.running and pattern.fullmatch(item.name)}
+
+    def _reserve(self, key):
+        """Reserve a new terminal for ``key`` within ``max_sessions``, before anything is created."""
+        host = self._require_host()
+        name = _terminal_name(self.entry, key)
+        with self._lock:
+            if self._closed:
+                raise OrchestrationError("The hosted driver is closed.", "session_unavailable",
+                                         {"outcome": "not_started"})
+            occupied = self._entry_terminals(host) | set(self._terminals.values()) | self._starting
+            if len(occupied - {name}) >= self.max_sessions:
+                raise OrchestrationError("Configured concurrent hosted session limit reached.", "session_capacity",
+                                         {"outcome": "not_started", "max_sessions": self.max_sessions})
+            self._starting.add(name)
+        return name
+
+    def _release(self, name):
+        with self._lock:
+            self._starting.discard(name)
+
     def _launch(self, specification):
         if self._closed:
             raise OrchestrationError("The hosted driver is closed.", "session_unavailable", {"outcome": "not_started"})
         specification = deepcopy(specification)
         context = specification.pop("context", {})
         key = uuid.uuid4().hex[:12]
-        terminal, directory, endpoint = self._open_terminal(key, specification)
-        bridge, receipt = self._attach_while_running(terminal, directory, endpoint,
-                                                     lambda bridge: bridge.attach({"context": context}))
-        return self._hosted(bridge, receipt, terminal, key, directory, endpoint, specification, context)
+        reserved = self._reserve(key)
+        try:
+            terminal, directory, endpoint = self._open_terminal(key, specification)
+            bridge, receipt = self._attach_while_running(terminal, directory, endpoint,
+                                                         lambda bridge: bridge.attach({"context": context}))
+            return self._hosted(bridge, receipt, terminal, key, directory, endpoint, specification, context)
+        finally:
+            self._release(reserved)
 
     def _recover(self, method, source_backend, specification):
         hosted = source_backend.get("hosted") if isinstance(source_backend, dict) else None
@@ -349,19 +414,28 @@ class HostedSessionDriver:
         if terminal is not None and not terminal.running:
             host.close_terminal(terminal.name)
             terminal = None
-        if terminal is None:
-            # Gone (a reboot, a container restart, or stopped): a fresh terminal resumes the conversation from the
-            # saved state. The bridge host never replaces an existing endpoint, so remove our own stale one first.
-            _remove_stale_endpoint(endpoint)
-            terminal, directory, endpoint = self._open_terminal(key, native_specification)
-        bridge, receipt = self._attach_while_running(
-            terminal, directory, endpoint, lambda bridge: getattr(bridge, method)(inner_source, {"context": context}))
-        return self._hosted(bridge, receipt, terminal, key, directory, endpoint, native_specification, context)
+        reserved = None
+        try:
+            if terminal is None:
+                # Gone (a reboot, a container restart, or stopped): a fresh terminal resumes the conversation from
+                # the saved state, a new session for capacity. The bridge host never replaces an existing endpoint,
+                # so remove our own stale one first.
+                reserved = self._reserve(key)
+                _remove_stale_endpoint(endpoint)
+                terminal, directory, endpoint = self._open_terminal(key, native_specification)
+            bridge, receipt = self._attach_while_running(
+                terminal, directory, endpoint,
+                lambda bridge: getattr(bridge, method)(inner_source, {"context": context}))
+            return self._hosted(bridge, receipt, terminal, key, directory, endpoint, native_specification, context)
+        finally:
+            if reserved is not None:
+                self._release(reserved)
 
     def _hosted(self, bridge, receipt, terminal, key, directory, endpoint, native_specification, context):
         receipt = deepcopy(receipt)
         with self._lock:
             self._bridges[receipt["handle"]] = bridge
+            self._terminals[receipt["handle"]] = terminal.name
         self._diagnose(receipt, terminal, directory, context)
         return {**receipt, "hosted": {"key": key, "terminal": terminal.receipt, "endpoint": str(endpoint),
                                       "native_specification": native_specification}}
@@ -399,5 +473,6 @@ class HostedSessionDriver:
     def _forget(self, session):
         with self._lock:
             bridge = self._bridges.pop(session.get("handle"), None)
+            self._terminals.pop(session.get("handle"), None)
         if bridge is not None:
             bridge.close()

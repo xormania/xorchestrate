@@ -210,10 +210,20 @@ are unchanged.
   and names: the native specification is passed in a private file. A `hosted_terminal`
   observation records whether the session survives the server, and gives the
   attach command when the host is interactive.
-- **`stop_session`** detaches and closes the terminal. If cleanup cannot be
-  verified, it says so. The private directory and state file remain, so a later
-  resume reopens the terminal with the same state. Pruning old directories is
-  later work.
+- **Capacity.** `max_sessions` (default: the wrapped selection's
+  `max_sessions`, else 64) bounds this entry's running hosted terminals,
+  counting starts in flight and the detached terminals a previous server left
+  running. A new terminal past the limit is refused with `session_capacity`
+  before anything is created. Reconnecting to a running terminal is not a new
+  session; reopening a vanished one is.
+- **`stop_session`** asks the bridge host to stop, then always closes the
+  terminal, adopting it from the session's receipt. If the bridge host fails or
+  does not answer, or this server holds no connection to it, the terminal is
+  still closed, and the result says the bridge host did not acknowledge
+  (`bridge.acknowledged: false`). If closing fails, the stop fails and can be
+  called again. If cleanup cannot be verified, it says so. The private
+  directory and state file remain, so a later resume reopens the terminal with
+  the same state. Pruning old directories is later work.
 - **`detach_session`** and the server stopping only detach: the terminal keeps
   running.
 - **`reconnect_session`/resume** adopts the terminal from the session's
