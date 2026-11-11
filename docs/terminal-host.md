@@ -239,9 +239,9 @@ are unchanged.
   multiplexer keeps the terminals. The operator can attach, and a restarted
   controller re-adopts them from their receipts.
 - **The machine reboots.** The multiplexer is gone, and receipts are refused
-  because the boot changed. The process is not recovered. For hosted sessions,
-  the bridge's saved state will relaunch the session host in a fresh terminal,
-  so the conversation is recovered.
+  because the boot changed. The process is not recovered. A hosted session is
+  resumed in a fresh terminal from its saved bridge state, as
+  [recovery](#recovering-after-a-container-or-machine-failure) describes.
 - **`detached-process`** keeps processes running past the controller, but
   there is no terminal to attach to.
 

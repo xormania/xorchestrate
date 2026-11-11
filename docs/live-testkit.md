@@ -17,8 +17,10 @@ testing system alongside the product.
 ## Run
 
 Use Python 3.12 for validation. Before starting Python, select a fresh external
-cache and install the declared dependencies. The tmux suite also needs tmux,
-Linux/WSL2, PTYs, Unix sockets and a matching `/proc` process namespace.
+cache and install the declared dependencies. The acceptance suite also needs tmux,
+Linux/WSL2, PTYs, Unix sockets and a matching `/proc` process namespace. That
+tmux supervisor belongs to the test kit. It is not the product
+[terminal host](terminal-host.md).
 
 Until xcontracts is published on PyPI, install with uv: it reads the pinned
 xcontracts git source in `pyproject.toml`, which plain pip ignores (pip stops with

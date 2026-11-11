@@ -64,6 +64,14 @@ Which kinds are public:
 | `session_selection`, `delivery_scheduler`, `retry_policy`, `receipt_policy` | `SessionSelection`, `DeliveryScheduling`, `DeliveryRetry`, `ReceiptPolicy` | project configuration |
 | `companion`, `version_control`, `repository_hosting` | `Companion`, `VersionControl`, `RepositoryHosting` | the user's home (`settings.json`, `instance.json`) |
 
+`terminal_host` (`TerminalHost`) is selected in the user's home, not in a
+project configuration. It is defined locally in `xorchestrate.ports` while it
+is still changing, so a third-party terminal-host adapter is not supported
+through xcontracts. `recovery_policy` (`RecoveryPolicy`) is a project section
+(`reconnect` by default, or `manual`) and is local for the same reason. The
+`hosted` session adapter is a built-in wrapper around another session driver,
+not a separate port. See [terminal host](terminal-host.md).
+
 `telemetry` also accepts a `module:factory`, but `TelemetrySink` is
 provisional and the host passes it internals (a database path and artifact
 store described by `snapshot_source`/`bundle_source`), so a third-party
@@ -73,8 +81,8 @@ Xorchestrate's lifecycle engine, not a published port, and may change with
 any release. The local collector's `corpus`/`artifacts` storage and the
 client transports (`ClientTransport`, `ClientConnection`, `PeerIdentity`) are
 internal as well, and so are the pull request delivery ports
-(`PullRequestHost`, `PullRequestWorkspace`), which are new and still
-changing. The optional `bind_telemetry`, `bind_observer` and
+(`PullRequestHost`, `PullRequestWorkspace`), `TerminalHost` and
+`RecoveryPolicy`, which are new and still changing. The optional `bind_telemetry`, `bind_observer` and
 `bind_state_engine` hooks pass host internals and are not covered by
 xcontracts' compatibility policy.
 

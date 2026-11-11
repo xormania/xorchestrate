@@ -338,7 +338,11 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   `{"mcpServers": {"xorchestrate": {"command": "xorchestrate", "args": ["connect"]}}}`
   when it creates a starter configuration, and prints the snippet for harnesses
   with user-level configuration. Replace entries that pass `--config`.
-- **Project server:** `serve` without `--transport` (or with
+- **Project server and terminal host:** No settings change is required. The
+  server runs as terminal `server` in a terminal host. The default is `tmux`,
+  falling back to `detached-process` (the previous launch) when tmux is
+  missing; `doctor` and `status` report the switch. `down` still stops the
+  server, then closes its terminal. `serve` without `--transport` (or with
   `--transport stdio`) serves one client over stdio, inside a project; switch
   harness entries to `connect` to share one server. A project has at most
   one server, keyed by its instance id, shared by all its worktrees. Its lock, start lock, log and discovery record live in
@@ -359,6 +363,13 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   Where the platform has no `SO_PEERCRED`, neither side can check the peer's
   user and both proceed; keep an explicit `--socket` in a directory only you
   can traverse there (see [project server](docs/project-server.md#known-limitations)).
+- **Hosted sessions:** Opt-in. Existing owned session drivers are unchanged.
+  Set a session's adapter to `hosted`, wrapping the previous selection, only
+  when that conversation should survive the server.
+- **Recovery:** No configuration change. `recovery_policy` defaults to
+  `reconnect`. Set `{"recovery_policy": {"adapter": "manual"}}` to detect a
+  hard restart and leave reconnects to `xorchestrate recover`. Unlike `down`
+  and `status`, `recover` is handed off to the pinned release, as `up` is.
 - **Commands:** `xorchestrate` keeps working and existing harness entries stay
   valid. Before installing or upgrading with uv, check
   `ls -l "$(uv tool dir --bin)/xo"`: if another program's `xo` is there, a fresh

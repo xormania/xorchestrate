@@ -24,11 +24,13 @@ tracked setting, and approval works the same way:
 
 `upgrade` never edits tracked files and never approves anything for you.
 Between steps 2 and 3, project commands (`describe`, `call`, `run`, `serve`,
-`connect`, `up`, `telemetry`) are refused with `upgrade_required`, naming the
+`connect`, `up`, `recover`, `telemetry`) are refused with `upgrade_required`, naming the
 pinned and installed releases, so no release runs against data or a
 configuration it was not upgraded for. `down` and `status` only talk to the
 running server's socket, so they always run in the installed launcher without a
-handoff, and the server can still be inspected and stopped. To go back before
+handoff, and the server can still be inspected and stopped. `recover` is not
+one of those: it is handed off like `up`, and it needs a server that is already
+running. To go back before
 upgrading, restore the pin: the earlier configuration is still approved, and the
 next project command archives the abandoned attempt's progress file.
 

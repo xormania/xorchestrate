@@ -8,8 +8,12 @@ client launches the current `xorchestrate` application and checks observable
 results through its public tools. Tmux provides an attachable terminal and an
 owned process lifetime; application success comes from the scenario assertions.
 
-The runner lives under `scripts/acceptance/`. It does not add a tmux dependency to
-the application or require tmux for ordinary CLI/MCP use.
+The runner lives under `scripts/acceptance/`. It uses its own private tmux
+supervisor (`scripts/testkit/adapters/tmux.py`). That supervisor is not the
+product [terminal host](terminal-host.md), which is where the project server
+and hosted sessions run. One-shot `call` does not need a terminal host. `up`
+and `connect` default to tmux and fall back to detached processes when tmux
+is missing.
 
 ## Run the fixture
 

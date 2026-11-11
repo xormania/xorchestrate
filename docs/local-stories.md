@@ -1,7 +1,8 @@
 # Selectable local stories
 
 The existing proof runner executes a selected story battery in owned **tmux**
-terminals. Every story gets fresh application state, independent named assertions,
+terminals. Those terminals are the test kit's own supervisor, not the product
+[terminal host](terminal-host.md). Every story gets fresh application state, independent named assertions,
 private evidence and ownership-aware process cleanup. Linux/WSL2, tmux, PTYs,
 Unix sockets and readable `/proc` are required. Follow [managed setup](managed-proofs.md)
 once to install dependencies into an external environment.
