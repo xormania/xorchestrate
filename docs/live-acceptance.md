@@ -1,27 +1,29 @@
-# Reusable tmux live acceptance
+# Reusable live acceptance
 
 Use the [shared live test-kit](live-testkit.md) for repeatable local/CI runs.
 The direct commands below remain supported.
 
-The acceptance runner starts a real MCP client inside a private tmux pane. That
-client launches the current `xorchestrate` application and checks observable
-results through its public tools. Tmux provides an attachable terminal and an
+The acceptance runner starts a real MCP client in a terminal of a private
+[terminal host](terminal-host.md). That client launches the current
+`xorchestrate` application and checks observable results through its public
+tools. The host provides an attachable terminal (when it is interactive) and an
 owned process lifetime; application success comes from the scenario assertions.
 
-The runner lives under `scripts/acceptance/`. It uses its own private tmux
-supervisor (`scripts/testkit/adapters/tmux.py`). That supervisor is not the
-product [terminal host](terminal-host.md), which is where the project server
-and hosted sessions run. One-shot `call` does not need a terminal host. `up`
-and `connect` default to tmux and fall back to detached processes when tmux
-is missing.
+The runner lives under `scripts/acceptance/` and reaches the host only through
+the product's terminal host port. The host is the product's default selection
+(the multiplexer, with detached processes as fallback) unless `--terminal-host`
+(or the profile's `terminal_host`) selects another, as JSON in the same shape as
+`settings.json`. The runner always creates the host in owned mode, so it ends
+with the run.
 
 ## Run the fixture
 
-Use the repository checkout with Python 3.12 or newer and tmux installed. The
+Use the repository checkout with Python 3.12 or newer and a ready terminal host
+(`proof.sh doctor` reports it as `terminal_host`). The
 supervisor verifies owned process identities through Linux `/proc`; Linux and
 WSL2 are the supported hosts for this fixture. The host must permit PTYs and
-Unix-domain sockets; a restricted container can have tmux installed and still
-reject those facilities.
+Unix-domain sockets; a restricted container can have the multiplexer installed and
+still reject those facilities.
 
 Until xcontracts is published on PyPI, install with uv: it reads the pinned
 xcontracts git source in `pyproject.toml`, which plain pip ignores (pip stops with
@@ -41,7 +43,7 @@ another terminal to observe progress. The server is removed after the run;
 `pane.txt` retains the captured terminal output.
 
 The default `fixture` profile uses deterministic protocol peers. It exercises
-real tmux, public MCP calls, child processes, session callbacks, and SQLite
+a real terminal host, public MCP calls, child processes, session callbacks, and SQLite
 persistence. It needs no model subscription or service credentials. Its result
 does not establish authenticated model execution or live Jev acceptance.
 
@@ -141,8 +143,9 @@ images still needs to be run; changing images does not itself verify our fixture
 ## Read the result
 
 The command exits successfully only when the scenario passes, its worker exits
-successfully, and owned-process cleanup is verified. Missing tmux is a failure,
-not a successful skip. The top-level `report.json` is the run result;
+successfully, and owned-process cleanup is verified. A missing terminal host is
+the failure `terminal_host_unavailable`, not a successful skip; the report's
+`terminal_host` says which host was selected, which ran, and why. The top-level `report.json` is the run result;
 `scenario.json` records the scenario's named checks. A scenario receipt alone
 does not establish that teardown succeeded.
 
@@ -168,16 +171,24 @@ information. Share the summary receipts when reporting results; do not upload
 the entire native evidence directory. CI uploads only the two JSON receipts from
 the deterministic fixture.
 
-Each run uses its own tmux socket and bypasses personal tmux configuration.
-Cleanup first asks the worker to close its application connections, then checks
-the owned process tree using PID and process-start identity. Timeout and signal
-paths use bounded cleanup and do not target unrelated tmux sessions or processes.
+Each run uses its own owned host at a private location, and the host loads no
+personal configuration. Cleanup closes the worker's terminal (the worker gets
+the grace period first, so it can close its application connections), shuts the
+host down, then checks the owned process tree using PID and process-start
+identity. Timeout and signal paths use bounded cleanup and do not target
+unrelated terminals or processes. `pane.txt` is the terminal's last 2000 lines,
+captured when the worker exits (or just before a timed-out worker is stopped);
+`terminal.json` (schema 2) holds the terminal's receipt and attach command.
 Run the fixture through its standalone CLI supervisor. Its process tracking assumes
 that supervisor launches only the fixture's children; embedding it in a process
 that also launches unrelated children is not supported. Process snapshots cannot
 attribute a descendant that forks and becomes orphaned entirely between observations.
-The foreground tmux server is waited on so that completion does not leave an
-unreaped server behind. If an otherwise successful worker leaves children that
+The owned host runs as the supervisor's descendant, so it is part of that process
+tree, and on the orderly path (worker exit, timeout or interruption of the
+supervisor) nothing of it survives the run. A supervisor killed outright cannot
+clean up: the host ends with it, but a grandchild that ignores hangup can
+remain, as before the terminal host. For a managed run, `close` then ends what
+is left and reports it. If an otherwise successful worker leaves children that
 require forced termination, acceptance fails with `owned_process_leak`; the
 cleanup receipt still records whether those processes were successfully removed.
 

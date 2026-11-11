@@ -2,19 +2,23 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import select
-import shutil
 import socket
 import stat
 import subprocess
 import sys
+import tempfile
 import termios
 import tty
 from pathlib import Path
 
-from .tmux import Identity, alive
+from .ownership import Identity, alive
+
+HOSTED_SCHEMA = 2
+"""Terminal-host descriptors carry an opaque receipt and the host's attach argv (schema 1 named a socket and binary)."""
 
 
 def _live_identity(identity):
@@ -26,19 +30,92 @@ def _live_identity(identity):
         return False
 
 
-def validate(descriptor):
-    """Recheck process incarnation and the private socket immediately before use."""
+def refusal(descriptor):
+    """Why a descriptor's shape is not accepted at all (``None`` when it is), before any liveness check."""
+    kind, schema = descriptor.get("kind"), descriptor.get("schema_version")
+    if kind == "terminal_host":
+        return None if schema == HOSTED_SCHEMA else f"Unsupported terminal descriptor schema {schema!r}; expected 2"
+    if kind == "pty":
+        return None if schema == 1 else f"Unsupported native terminal descriptor schema {schema!r}; expected 1"
+    return ("This terminal descriptor is from an older test kit (schema 1 named its socket directly); "
+            "it cannot be attached. Start a new run to attach to its terminals.")
+
+
+ENDPOINT_PREFIX = "xa-"
+PLACEMENT_NAME = "acceptance"
+
+
+def run_endpoint(run_directory, prefix=ENDPOINT_PREFIX):
+    """The private endpoint directory of a run's terminal host, derived from the run's own directory.
+
+    Short (Unix socket paths are capped near 107 bytes) and re-derived wherever it is used, so a run's files,
+    which its harness can rewrite, cannot point attach or close at another run's endpoint.
+    """
+    digest = hashlib.sha256(os.fsencode(str(Path(run_directory).resolve()))).hexdigest()[:24]
+    return Path(tempfile.gettempdir()) / f"{prefix}{digest}"
+
+
+def create_endpoint(run_directory, prefix=ENDPOINT_PREFIX):
+    """Create the run's endpoint directory, private; anything already at that path is refused."""
+    path = run_endpoint(run_directory, prefix)
+    os.mkdir(path, 0o700)
+    return path
+
+
+def _private_directory(path):
     try:
-        if descriptor.get("schema_version") != 1 or not _live_identity(descriptor["owner"]):
+        info = Path(path).lstat()
+    except OSError:
+        return False
+    return stat.S_ISDIR(info.st_mode) and info.st_uid == os.getuid() and not info.st_mode & 0o077
+
+
+def placement_problem(descriptor):
+    """Why a recorded placement is not this run's own private location (``None`` when it is).
+
+    The host lives at ``<run>/terminal-host`` beside the descriptor and its
+    endpoint in the private directory derived from the run's own directory
+    (``run_endpoint``), as the acceptance runner creates them. Anything else,
+    another run's endpoint included, is refused before a host is built.
+    """
+    try:
+        placement = descriptor["host"]["placement"]
+        run = Path(descriptor["descriptor_path"]).parent
+        location, socket = Path(placement["location"]), Path(placement["socket"])
+        name = placement["name"]
+    except (KeyError, TypeError):
+        return "the descriptor names no placement"
+    if name != PLACEMENT_NAME or location != run / "terminal-host":
+        return "the host location is not this run's own"
+    endpoint = socket.parent
+    if endpoint != run_endpoint(run) or socket.name != "host.sock" or not _private_directory(endpoint):
+        return "the host endpoint is not this run's private directory"
+    return None
+
+
+def _hosted(descriptor):
+    """The run that opened it is live and its recorded placement is the run's own private location.
+
+    Nothing recorded is executed: attach rebuilds the host there and asks it.
+    """
+    return (_live_identity(descriptor["owner"]) and isinstance(descriptor.get("receipt"), dict)
+            and placement_problem(descriptor) is None)
+
+
+def validate(descriptor):
+    """Recheck the owner's incarnation (and a native PTY's private socket) immediately before use."""
+    try:
+        if refusal(descriptor) is not None:
+            return False
+        if descriptor["kind"] == "terminal_host":
+            return _hosted(descriptor)
+        if not _live_identity(descriptor["owner"]):
             return False
         path = Path(descriptor["socket"])
         info = path.lstat()
         if not stat.S_ISSOCK(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
             return False
-        if descriptor["kind"] == "pty":
-            return _live_identity(descriptor["native_process"]) and isinstance(descriptor.get("token"), str)
-        if descriptor["kind"] == "tmux":
-            return _live_identity(descriptor["server"]) and isinstance(descriptor.get("pane"), str)
+        return _live_identity(descriptor["native_process"]) and isinstance(descriptor.get("token"), str)
     except (KeyError, TypeError, ValueError, OSError):
         return False
     return False
@@ -55,8 +132,10 @@ def discover(run_directory):
                     or not path.resolve().is_relative_to(root)):
                 continue
             descriptor = json.loads(path.read_text(encoding="utf-8"))
-            if isinstance(descriptor, dict) and validate(descriptor):
-                found.append({**descriptor, "descriptor_path": str(path)})
+            if isinstance(descriptor, dict):
+                descriptor = {**descriptor, "descriptor_path": str(path)}
+                if validate(descriptor):
+                    found.append(descriptor)
         except (OSError, ValueError, TypeError):
             continue
     # The native prompt wins over its enclosing worker's progress terminal.
@@ -86,19 +165,35 @@ def connect(descriptor, *, rows=48, columns=160):
         raise
 
 
-def attach(descriptor):
-    """Detach with Ctrl-] from a native PTY, or tmux's own detach binding."""
+def attach(descriptor, *, host_for=None):
+    """Detach with Ctrl-] from a native PTY, or as the terminal host's attach instruction says.
+
+    ``host_for(selection, placement)`` builds the run's host (composition injects
+    it); the host verifies the receipt and supplies the only command that runs.
+    It must take only a built-in host name from the recorded selection (a
+    rewritten one is refused before anything is imported); only the validated
+    placement is passed to it.
+    """
+    problem = refusal(descriptor)
+    if problem is not None:
+        raise ValueError(problem)
     if not validate(descriptor):
         raise ValueError("Interactive terminal is no longer owned and live")
-    if descriptor["kind"] == "tmux":
-        binary = shutil.which("tmux")
-        if binary is None:
-            raise ValueError("tmux is required to attach this terminal")
-        environment = dict(os.environ)
-        environment.pop("TMUX", None)
-        environment.pop("TMUX_PANE", None)
-        return subprocess.call([binary, "-N", "-S", descriptor["socket"], "attach-session", "-t", descriptor["pane"]],
-                               env=environment)
+    if descriptor["kind"] == "terminal_host":
+        if host_for is None:
+            raise ValueError("Attaching a terminal host requires the host it runs in")
+        # The descriptor is writable by the run's harness: ``host_for`` takes only a built-in host name from the
+        # selection, and only the placement validated above is passed on.
+        placement = {key: descriptor["host"]["placement"][key] for key in ("name", "location", "socket")}
+        host = host_for(descriptor["host"].get("selection"), placement)
+        if host is None:
+            raise ValueError("The run's terminal host is not ready here")
+        try:
+            instruction = host.attach_instruction_for(descriptor["receipt"])
+        finally:
+            host.close()
+        print(instruction.text, flush=True)
+        return subprocess.call(list(instruction.argv))
     if not sys.stdin.isatty() or not sys.stdout.isatty():
         raise ValueError("Interactive attachment requires a terminal")
     size = os.get_terminal_size(sys.stdout.fileno())

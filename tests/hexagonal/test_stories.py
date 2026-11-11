@@ -1,7 +1,6 @@
 """Story selection, admitted-request bounds and real owned tmux automation."""
 
 import json
-import shutil
 
 import pytest
 
@@ -13,6 +12,7 @@ from tests.hexagonal.contracts.stories import STORIES, completed_story, rejected
 from tests.hexagonal.support.live_diagnostics import native_configuration, pane_text, peer_session
 from tests.hexagonal.support.managed_workflow import PublicWorkflow, isolated_candidate
 from tests.hexagonal.support.stories import DispatchProbe, acceptance
+from tests.hexagonal.support.terminal_host import requires_host
 
 
 def test_selected_story_is_a_tmux_supervised_check_with_retained_bounds(tmp_path):
@@ -151,7 +151,7 @@ def test_valid_dispatch_consumes_only_applicable_limits(tmp_path):
     assert len(subject.dispatched) == 3
 
 
-@pytest.mark.skipif(shutil.which("tmux") is None, reason="Real tmux is required for story automation")
+@requires_host()
 def test_managed_tmux_repeat_preserves_story_limits_and_original_evidence(tmp_path):
     candidate = isolated_candidate(tmp_path / "candidate")
     workflow = PublicWorkflow(candidate, tmp_path / "operator")
@@ -185,7 +185,7 @@ def test_managed_tmux_repeat_preserves_story_limits_and_original_evidence(tmp_pa
 
 
 @pytest.mark.parametrize("story", STORIES)
-@pytest.mark.skipif(shutil.which("tmux") is None, reason="Real tmux is required for story automation")
+@requires_host()
 def test_named_story_runs_in_tmux_and_has_complete_named_evidence(tmp_path, story):
     result, _, receipt, lifecycle, directory = acceptance(tmp_path / "runs", story)
     assert result.returncode == 0, result.stdout + result.stderr
@@ -194,7 +194,7 @@ def test_named_story_runs_in_tmux_and_has_complete_named_evidence(tmp_path, stor
     assert lifecycle["cleanup"]["verified"]
     assert not lifecycle["cleanup"]["forced"]
     assert directory is not None
-    assert any(row["name"] == "tmux_worker_context" for row in receipt["checks"])
+    assert any(row["name"] == "terminal_host_worker_context" for row in receipt["checks"])
     if story == "effects-recovery":
         assert len((directory / "cli-effects.jsonl").read_text().splitlines()) == 1
         assert len((directory / "mcp-effects.jsonl").read_text().splitlines()) == 2
@@ -206,7 +206,7 @@ def test_named_story_runs_in_tmux_and_has_complete_named_evidence(tmp_path, stor
         assert (directory / "product.txt").read_bytes() == b"broken\n"
 
 
-@pytest.mark.skipif(shutil.which("tmux") is None, reason="Real tmux is required for story automation")
+@requires_host()
 def test_budget_exhaustion_fails_story_and_still_cleans_owned_tmux_resources(tmp_path):
     result, _, receipt, lifecycle, _ = acceptance(tmp_path / "runs", "native-callback", "--max-tool-calls", "1")
     assert result.returncode != 0, result.stdout + result.stderr
@@ -218,7 +218,7 @@ def test_budget_exhaustion_fails_story_and_still_cleans_owned_tmux_resources(tmp
     assert lifecycle["cleanup"]["verified"]
 
 
-@pytest.mark.skipif(shutil.which("tmux") is None, reason="Real tmux is required for story automation")
+@requires_host()
 def test_wrapper_names_only_the_private_diagnostics_location_of_a_failed_story(tmp_path):
     config = native_configuration(tmp_path / "operator" / "native.json", {"refused": peer_session("--refuse-start")})
     result, rows, receipt, _, directory = acceptance(tmp_path / "runs", "native-callback", "--profile", "native",

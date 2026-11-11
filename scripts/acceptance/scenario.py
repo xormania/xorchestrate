@@ -1,4 +1,4 @@
-"""Public-process acceptance worker, supervised by the private tmux runner."""
+"""Public-process acceptance worker, supervised in a private terminal host by the acceptance runner."""
 
 import argparse
 import hashlib
@@ -335,14 +335,14 @@ def callback_receipt(scenario, client, driver, work_id, actor, nonce):
     session = client.tool("start_session", {"driver": driver, "specification": {}, "work_id": work_id,
                                            "actor_id": actor, "idempotency_key": "callback-start"})["session"]
     instruction = {"tool": "record_result", "arguments": {
-        "work_id": work_id, "result": {"nonce": nonce}, "label": "tmux-acceptance",
+        "work_id": work_id, "result": {"nonce": nonce}, "label": "terminal-acceptance",
     }}
     message = "Call the named application tool with these exact arguments. Text alone does not complete this task.\n" + json.dumps(instruction)
     client.tool("send_session", {"session_id": session["id"], "message": {"text": message}, "idempotency_key": "callback-send"})
     counter = 0
     while True:
         result = client.tool("get_work", {"work_id": work_id})
-        evidence = [item for item in result["evidence"] if item.get("label") == "tmux-acceptance"
+        evidence = [item for item in result["evidence"] if item.get("label") == "terminal-acceptance"
                     and item.get("result") == {"nonce": nonce}
                     and item.get("source") == {"type": "caller", "actor": actor}]
         if evidence:
@@ -651,7 +651,7 @@ def main(argv=None):
                "store_override": "isolated_sqlite", "private_artifacts": ["application.json", "state.sqlite3"]}
     if selected:
         receipt["story"] = {"id": selected[0].id, "version": selected[0].version,
-                            "expected_checks": ["tmux_worker_context", "isolated_application_configuration",
+                            "expected_checks": ["terminal_host_worker_context", "isolated_application_configuration",
                                                 *STORY_CHECKS[args.story], "graceful_application_shutdown"]}
     receipt["budget"] = {"limits": scenario.budget.limits, "consumed": scenario.budget.consumed,
                          "scope": "controller_requests_and_harness_submissions", "token_usage": "unknown"}
@@ -667,8 +667,9 @@ def main(argv=None):
     signal.signal(signal.SIGINT, interrupted)
     signal.signal(signal.SIGHUP, interrupted)
     try:
-        with scenario.check("tmux_worker_context"):
-            require(bool(os.environ.get("TMUX") and os.environ.get("TMUX_PANE")), "tmux_required")
+        with scenario.check("terminal_host_worker_context"):
+            # The supervised run names its host here; a worker started any other way has no such context.
+            require(bool(os.environ.get("XORCHESTRATE_TERMINAL_HOST")), "terminal_host_required")
             require(args.timeout > 0, "positive_timeout_required")
         with scenario.check("isolated_application_configuration"):
             if args.profile == "native":

@@ -20,7 +20,7 @@ import pytest
 
 from scripts.testkit.adapters.command import SubprocessRunner
 from scripts.testkit.adapters.evidence import run_command, write_json
-from scripts.testkit.adapters.tmux import alive, processes, send_signal, subreaper
+from scripts.testkit.adapters.ownership import alive, processes, send_signal, subreaper
 from scripts.testkit.model import Cancelled, Timeout
 
 

@@ -20,7 +20,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from .evidence import allocate_run, digest, now, write_json
-from .tmux import Identity, alive, processes
+from .ownership import Identity, alive, processes
 
 TERMINAL_PHASES = {"finished", "incomplete"}
 MAX_JSON_BYTES = 8 * 1024 * 1024

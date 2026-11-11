@@ -1,7 +1,6 @@
 """Real public-interface managed success, fresh repeat and cancellation workflows."""
 
 import json
-import shutil
 
 import pytest
 
@@ -20,8 +19,9 @@ from tests.hexagonal.support.managed_workflow import (
     foreign_terminal,
     isolated_candidate,
 )
+from tests.hexagonal.support.terminal_host import requires_host
 
-pytestmark = pytest.mark.skipif(shutil.which("tmux") is None, reason="Real tmux is unavailable")
+pytestmark = requires_host()
 
 
 def test_public_detached_success_repeat_close_and_ownerless_recollection(tmp_path):
@@ -149,5 +149,126 @@ def test_public_failure_reason_reaches_the_operator_but_never_the_saved_state_or
             assert PROVIDER_REASON not in text, f"{name} exposes the provider's reason"
         assert receipt["telemetry"]["status"] != "disabled", "Captured telemetry must be part of the checked export"
         assert "diagnostics.json" not in [name.rsplit("/", 1)[-1] for name in archive_names(receipt["archive"])]
+    finally:
+        workflow.close()
+
+
+def test_kept_terminals_outlive_a_killed_supervisor_until_close_adopts_and_ends_them(tmp_path):
+    """--keep-after-run: cleanup reports the kept terminals as retained, and a later close ends them."""
+    import signal
+    from pathlib import Path
+
+    from scripts.testkit.adapters.ownership import Identity, send_signal
+    from tests.hexagonal.support.host_processes import arguments_containing
+
+    candidate = isolated_candidate(tmp_path / "candidate")
+    workflow = PublicWorkflow(candidate, tmp_path / "operator")
+    try:
+        refused, _ = workflow.command("run", "--suite", "multi-harness", "--mode", "fixture", "--keep-after-run",
+                                      "--output", str(workflow.outside / "runs"))
+        assert refused.returncode != 0 and "managed runs" in refused.stdout + refused.stderr
+        started, launch = workflow.command("start", "--detach", "--suite", "multi-harness", "--mode", "fixture",
+                                           "--timeout", "5", "--shutdown-grace", "1", "--keep-after-run",
+                                           "--output", str(workflow.outside / "runs"))
+        assert launch.get("status") == "launched", started.stdout + started.stderr
+        directory = Path(launch["directory"])
+        workflow.runs.append(directory)
+        waited, result = workflow.command("wait", directory)
+        assert result["phase"] == "finished", waited.stdout + waited.stderr
+        assert result["cleanup"]["verified"] and not result["cleanup"]["forced"], result["cleanup"]
+        assert result["cleanup"]["retained"] == {"terminals": ["dashboard", "worker"], "verified": False}
+        assert result["terminal"]["keep_after_run"] is True and result["terminal"]["host"]["survives_controller"]
+
+        def dashboards():
+            return [pid for pid, command in arguments_containing(str(directory)) if " _dashboard " in f" {command} "]
+
+        assert dashboards(), "the kept dashboard is running"
+        owner = workflow.state(directory)["owner"]
+        send_signal(Identity(owner["pid"], owner["started"]), signal.SIGKILL)
+        await_condition(lambda: not owner_alive(workflow.state(directory)["owner"]))
+        assert dashboards(), "kept terminals outlive their supervisor"
+        closed, response = workflow.command("close", directory)
+        assert closed.returncode == 0, closed.stdout + closed.stderr
+        assert response["status"] == "closed" and response["kept_terminals"] == ["dashboard", "worker"], response
+        await_condition(lambda: not dashboards())
+    finally:
+        workflow.close()
+
+
+def test_close_after_a_supervisor_killed_mid_run_leaves_no_process_and_no_endpoint(tmp_path):
+    """An owned host does not end with a supervisor killed outright; close ends what is left and says so."""
+    import signal
+    from pathlib import Path
+
+    from scripts.testkit.adapters.ownership import Identity, processes_naming, send_signal
+
+    candidate = isolated_candidate(tmp_path / "candidate")
+    workflow = PublicWorkflow(candidate, tmp_path / "operator")
+    try:
+        directory, launch = workflow.start(timeout=60)
+        assert launch["status"] == "launched"
+        workflow.freeze(directory)  # hold the worker mid-run
+        endpoint = Path(json.loads((directory / "plan.json").read_text())["terminal_endpoint"])
+        assert endpoint.is_dir() and processes_naming(directory)
+        owner = workflow.state(directory)["owner"]
+        send_signal(Identity(owner["pid"], owner["started"]), signal.SIGKILL)
+        await_condition(lambda: not owner_alive(workflow.state(directory)["owner"]))
+        closed, response = workflow.command("close", directory)
+        assert closed.returncode == 0, closed.stdout + closed.stderr
+        assert response["status"] == "closed" and response["cleanup"]["verified"], response
+        assert processes_naming(directory) == [] and not endpoint.exists()
+        again, repeated = workflow.command("close", directory)
+        assert again.returncode == 0 and repeated["status"] == "already_closed", repeated
+    finally:
+        workflow.frozen.clear()  # its worker is gone; nothing to resume
+        workflow.close()
+
+
+def test_an_endpoint_named_in_the_plan_is_removed_only_when_it_is_the_runs_own(tmp_path):
+    import os
+    import tempfile
+    from pathlib import Path
+
+    from scripts.testkit.operator_composition import remove_endpoint
+
+    own = Path(tempfile.mkdtemp(prefix="xp-"))
+    elsewhere = tmp_path / "xp-not-in-the-temporary-root"
+    elsewhere.mkdir(mode=0o700)
+    wrong_name = Path(tempfile.mkdtemp(prefix="other-"))
+    link = Path(tempfile.gettempdir()) / f"xp-link-{os.getpid()}"
+    link.symlink_to(elsewhere)
+    try:
+        for refused in (elsewhere, wrong_name, link):
+            assert remove_endpoint(refused) is False and refused.exists(), refused
+        assert remove_endpoint(own) is True and not own.exists()
+        assert remove_endpoint(own) is True, "an endpoint already gone is fine"
+    finally:
+        link.unlink(missing_ok=True)
+        wrong_name.rmdir()
+
+
+def test_ctrl_c_on_the_supervisor_finishes_unsuccessfully_with_verified_cleanup(tmp_path):
+    """Ctrl-C (SIGINT) to a managed run's supervisor stops it like stop and the deadline: same receipt, clean exit."""
+    import signal
+
+    from scripts.testkit.adapters.ownership import Identity, processes_naming, send_signal
+
+    candidate = isolated_candidate(tmp_path / "candidate")
+    workflow = PublicWorkflow(candidate, tmp_path / "operator")
+    try:
+        directory, _ = workflow.start(suite="acceptance", mode="protocol-fixture", timeout=30)
+        workflow.freeze(directory)
+        owner = workflow.state(directory)["owner"]
+        send_signal(Identity(owner["pid"], owner["started"]), signal.SIGINT)
+        await_condition(lambda: workflow.state(directory).get("reason") == "supervisor_signal")
+        workflow.resume()
+        waited, result = workflow.command("wait", directory, timeout=45)
+        assert waited.returncode != 0
+        assert result["phase"] in TERMINAL_PHASES and result["outcome"] == "failed"
+        assert result["reason"] == "supervisor_signal"
+        assert result["cleanup"]["verified"] and not result["observed"]["worker_alive"], result["cleanup"]
+        await_condition(lambda: not owner_alive(workflow.state(directory)["owner"]))
+        # The host's processes end just after the supervisor; a real leak never clears.
+        await_condition(lambda: processes_naming(directory) == [], timeout=20)
     finally:
         workflow.close()

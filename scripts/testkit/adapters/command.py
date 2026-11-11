@@ -24,9 +24,9 @@ class _OwnedGroup:
     """Observe one acquired group and fence every signal by process identity."""
 
     def __init__(self, child):
-        # Lazy reuse avoids command -> tmux -> evidence -> command imports at
+        # Lazy reuse avoids command -> ownership -> command imports at
         # module initialization. These are the existing PID/start/pidfd fences.
-        from .tmux import processes
+        from .ownership import processes
 
         self.pid = child.pid
         self.known = set()
@@ -37,7 +37,7 @@ class _OwnedGroup:
         self.observe()
 
     def observe(self):
-        from .tmux import processes
+        from .ownership import processes
 
         snapshot = processes()
         members = set()
@@ -55,7 +55,7 @@ class _OwnedGroup:
                 if snapshot.get(identity.pid, (None,))[0] == identity and snapshot[identity.pid][2] != "Z"}
 
     def signal(self, number, *, owner_only=False):
-        from .tmux import send_signal
+        from .ownership import send_signal
 
         for identity in self.observe():
             if not owner_only or identity.pid == self.pid:
@@ -125,7 +125,7 @@ class SubprocessRunner:
         """Signal the command owner first when it owns an interactive finalizer.
 
         Ordinary commands own a single session; their group receives TERM.
-        Supervised check wrappers coordinate nested tmux/native cleanup, so
+        Supervised check wrappers coordinate nested terminal-host/native cleanup, so
         only the wrapper receives TERM before a bounded group escalation.
         The session was acquired by this Popen and is never recovered from an
         unverified saved PID. Its group identity remains allocated while any

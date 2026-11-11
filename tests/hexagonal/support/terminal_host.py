@@ -7,6 +7,7 @@ every adapter and the fake.
 """
 from __future__ import annotations
 
+import contextlib
 import itertools
 import os
 import re
@@ -15,7 +16,7 @@ import time
 from dataclasses import dataclass, field
 
 from xorchestrate.model import OrchestrationError
-from xorchestrate.ports import AttachInstruction, HostedTerminal, TerminalClosure, TerminalCommand
+from xorchestrate.ports import AttachInstruction, HostedTerminal, InventoryItem, TerminalClosure, TerminalCommand
 
 SIGINT, SIGKILL = 2, 9
 NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
@@ -116,6 +117,7 @@ class Subject:
     alterer: object = None
     attacher: object = None
     looker: object = None
+    killer: object = None
     additions: frozenset = frozenset()
     wait: object = staticmethod(wait)
     counter: object = field(default_factory=itertools.count)
@@ -143,6 +145,29 @@ class Subject:
 
     def run_attach(self, argv, text):
         return self.attacher(argv, text)
+
+    def race(self, host_name, names, command):
+        """Open ``names`` concurrently, each from its own controller process (``crash``); ``(receipts, errors)``."""
+        import threading
+
+        receipts, errors = {}, []
+
+        def open_one(name):
+            try:
+                receipts[name] = self.crash(host_name, name, command)
+            except Exception as error:  # noqa: BLE001 - reported to the contract
+                errors.append((name, error))
+
+        racers = [threading.Thread(target=open_one, args=(name,)) for name in names]
+        for racer in racers:
+            racer.start()
+        for racer in racers:
+            racer.join(30)
+        return receipts, errors
+
+    def kill(self, host_name, receipt):
+        """Kill the terminal's process outright (SIGKILL), as a crash would, and wait until it is gone."""
+        self.killer(host_name, receipt)
 
     def look(self, host_name, receipt):
         """``attach_instruction_for(receipt)`` from a separate controller process: the argv, or the refusal's code."""
@@ -355,6 +380,18 @@ class MemoryTerminalHost:
         self.owned[name] = item.incarnation
         return self._observe(name, item)
 
+    def inventory(self):
+        hosted = self.machine.hosts.get(self.name, {})
+        return [InventoryItem(name, hosted[name].alive, self.owned.get(name) == hosted[name].incarnation)
+                for name in sorted(hosted)]
+
+    def sweep(self):
+        hosted = self.machine.hosts.get(self.name, {})
+        removed = [name for name, item in sorted(hosted.items()) if not item.alive and name not in self.owned]
+        for name in removed:
+            del hosted[name]
+        return removed
+
     def shutdown(self):
         for item in self.machine.hosts.pop(self.name, {}).values():
             if item.alive:
@@ -410,6 +447,7 @@ def memory_subject(directory, *, survives_controller=True, interactive=True):
                    unsafe=machine.unsafe.add, starter=Unrelated,
                    alterer=lambda receipt: [{**receipt, "incarnation": receipt["incarnation"] + 1000}],
                    looker=lambda name, receipt: _look_in_memory(factory(name), receipt),
+                   killer=lambda name, receipt: machine.hosts[name][receipt["terminal"]].exit(signal=SIGKILL),
                    attacher=lambda argv, text: argv[0] == "memory-attach" and any(
                        text in item.output for item in machine.hosts.get(argv[1], {}).values()))
 
@@ -541,6 +579,18 @@ def adapter_subject(factory, options_for, directory, *, root, placement_path, ad
         assert result.returncode == 0, result.stderr
         return json.loads(result.stdout.strip().splitlines()[-1])
 
+    def killer(host_name, receipt):
+        from xorchestrate.adapters.terminal_support import alive, identity
+
+        # Receipt layout knowledge stays here: both adapters keep the launched process under "process".
+        leader = identity(receipt["process"]["pid"])
+        if leader is None or leader.started != receipt["process"]["started"]:
+            return
+        os.kill(leader.pid, signal.SIGKILL)
+        deadline = time.monotonic() + 10
+        while alive(leader) and time.monotonic() < deadline:
+            time.sleep(0.02)
+
     def forger(receipt, process):
         from xorchestrate.adapters.terminal_support import identity
 
@@ -564,4 +614,51 @@ def adapter_subject(factory, options_for, directory, *, root, placement_path, ad
 
     return Subject(lambda host_name: build(options_for(host_name)), Programs(str(directory)), logs, crasher,
                    tracer=tracer, forger=forger, unsafe=unsafe, starter=Unrelated, alterer=alterer, looker=looker,
+                   killer=killer,
                    attacher=attacher, additions=frozenset(additions))
+
+
+# -- the test kit's hosts: one readiness helper for every test that needs a real host --
+
+MULTIPLEXER = {"adapter": "tmux"}  # selected explicitly, without the default's fallback
+
+
+def host_unready(selection=MULTIPLEXER):
+    """Why the selected host cannot run here (``None`` when it can), from the host's own readiness."""
+    import tempfile
+
+    from scripts.testkit.adapters import terminal_selection
+
+    with tempfile.TemporaryDirectory(prefix="xr-") as probe:
+        item = terminal_selection.readiness(selection, name="probe", location=os.path.join(probe, "host"),
+                                            socket=os.path.join(probe, "host.sock"))
+    return None if item["passed"] else item.get("reason", "not ready")
+
+
+def requires_host(selection=MULTIPLEXER):
+    """Skip a test when the selected terminal host is not ready on this machine."""
+    import pytest
+
+    reason = host_unready(selection)
+    return pytest.mark.skipif(reason is not None, reason=f"terminal host unavailable: {reason}")
+
+
+@contextlib.contextmanager
+def owned_host(selection=MULTIPLEXER, *, name="acceptance"):
+    """An owned host as the test kit builds one, shut down and removed afterwards even when the test fails."""
+    import shutil
+    import tempfile
+
+    from scripts.testkit.adapters import terminal_selection
+    from tests.hexagonal.support.host_processes import track
+
+    base = track(tempfile.mkdtemp(prefix="xth-"))
+    selected = terminal_selection.build(selection, name=name, location=os.path.join(base, "host"),
+                                        socket=os.path.join(base, "host.sock"), owned=True)
+    try:
+        yield selected
+    finally:
+        if selected.host is not None:
+            with contextlib.suppress(Exception):
+                selected.host.shutdown()
+        shutil.rmtree(base, ignore_errors=True)

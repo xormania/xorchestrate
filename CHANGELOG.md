@@ -17,6 +17,48 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   `doctor` and `status` report which host is active, why, and whether its
   terminals survive and are interactive. `down` closes the stopped server's
   terminal. See [terminal host](docs/terminal-host.md).
+- The test kit runs acceptance and story workers, and managed runs, in the
+  product's terminal host instead of its own private copy of the multiplexer
+  code, always in owned mode. Choose a host with the profile's `terminal_host`
+  or `--terminal-host` (JSON, as in `settings.json`). The default is the
+  product's default host *without* its fallback: an unready host is a setup
+  error (`terminal_host_unavailable`) before anything launches, so a run never
+  moves to another host unless one is selected explicitly.
+  Renamed or changed in reports and receipts:
+  - readiness item `tmux` → `terminal_host`; its text is the host's own reason;
+  - acceptance failure `tmux_missing` → `terminal_host_unavailable`;
+    `tmux_start_failed` and `tmux_control_failed` → the host's own error code;
+  - acceptance cleanup error `tmux_shutdown` → `terminal_shutdown`,
+    `terminal_host_shutdown` or `terminal_cleanup_unverified`;
+  - `report.json`: `tmux_status_refreshes` removed, `terminal_host` added
+    (selected and active host, fallback reason);
+  - `session.json` is no longer written; the run keeps `terminal.log` (all the
+    worker printed) beside `pane.txt`. On timeout the worker is asked alone to
+    stop and given the grace, and `pane.txt` is the tail of that log, so its
+    interruption lines are kept;
+  - scenario check `tmux_worker_context` → `terminal_host_worker_context`, code
+    `tmux_required` → `terminal_host_required`; evidence label
+    `tmux-acceptance` → `terminal-acceptance`. The worker receives
+    `XORCHESTRATE_TERMINAL_HOST`; the multiplexer's own markers no longer reach it;
+  - `terminal.json` schema 1 → 2: the host's selection, its placement and an
+    opaque receipt. Attach rebuilds the host at the run's own private
+    placement and asks it for the attach command; nothing in the file is
+    executed. Schema-1 multiplexer descriptors are refused with a reason.
+    Native PTY descriptors are unchanged;
+  - managed state: `worker` and `dashboard` process identities and the
+    `terminal` server identity are replaced by `terminal` (host report and
+    receipts); `status` derives `observed.worker_alive` from the live
+    supervisor and the run's lifecycle; stalled workers get a keyboard
+    interrupt instead of SIGTERM.
+- `proof.sh close` on a run whose supervisor is gone (finished or killed
+  mid-run) shuts the run's host down at its recorded placement, stops anything
+  still naming the run, removes the run's own endpoint directory only, and
+  reports `cleanup` from what is actually left (`closed`, or `already_closed`
+  when nothing was).
+- `proof.sh start --keep-after-run` keeps a managed run's terminals after it
+  finishes, even if its supervisor ends; `close` adopts and ends them. Cleanup
+  then lists them as `retained` (never verified) beside the work's own
+  verified cleanup. Foreground runs refuse the option.
 
 ### Fixed
 

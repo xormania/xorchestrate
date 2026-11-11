@@ -4,8 +4,9 @@
 around the [shared test-kit](testing-framework.md). It uses the same selected
 checks, command receipts and independent verifiers as the direct Python entry
 point. Native processes are still launched by the product's existing adapters.
-Managed runs and acceptance still use the test kit's own tmux supervisor.
-That supervisor is not the product [terminal host](terminal-host.md).
+Managed runs and acceptance open their terminals through the product's
+[terminal host](terminal-host.md) port, in owned mode unless a run keeps its
+terminals.
 
 The default protocol mode exercises real application processes with deterministic
 peers. Native mode uses your installed, authenticated harnesses and never falls
@@ -291,7 +292,7 @@ retained state supports inspection, not automatic message/effect replay.
 | Shared suite definitions and catalog | `scripts.testkit.composition`, `contracts/testing.json` | Expand profile selection through the same definitions; record selected and executed IDs; static checks remain unique. |
 | Agentscient check execution | `scripts.testkit.core.execute_checks` | Extend the existing loop with scoped cancellation and incremental results; do not add another executor. |
 | Agentscient resource scope and command bounds | `ResourceScope`, `adapters.command` | Preserve cleanup ownership, bounded grace/escalation and interrupted command receipts. |
-| Existing Xorchestrate tmux supervisor | `scripts.testkit.adapters.tmux` | Reuse private-socket targets and PID/start identity fencing; real tmux checks cover parsing and foreign-resource preservation. |
+| Product terminal host | `TerminalHost` port, built by `scripts.testkit.adapters.terminal_selection` through product composition | Terminals open only through the port; private placement, receipts and PID/start identity fencing are the host's, and the host's contract covers foreign-resource preservation. |
 | Existing native launch and configuration | Product native adapters, `adapters.configuration` | Route terminals through the existing launcher and derive private per-run configuration/SQLite; never launch duplicate peers. |
 | Candidate/effective-input capture | `adapters.evidence`, `adapters.identity`, static manifests | Bind actual bytes, ignored inputs, symlink targets, commands and validation status; check integrity again before delivery. |
 | PoC managed operator workflow | Operator services and storage/process/terminal adapters | Adapt fresh-run controls, retained partial diagnostics and distinct exports; preserve the shared verifier as the verdict owner. |

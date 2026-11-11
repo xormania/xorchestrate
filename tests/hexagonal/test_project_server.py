@@ -1060,3 +1060,71 @@ def test_a_crashed_server_restarted_with_another_runtime_directory_is_recorded_w
         for placement in (old, files.read_terminal_record() and files.read_terminal_record()["placement"]):
             if placement:
                 factory_for("terminal_host", "tmux")(dict(placement)).shutdown()
+
+
+@pytest.mark.parametrize("adapter", ["tmux", "detached-process"])
+def test_down_lets_a_stopped_servers_process_end_on_its_own(directory, adapter, monkeypatch):
+    """The server releases its lock just before its process ends: down waits for it instead of closing it mid-exit."""
+    if adapter == "tmux" and shutil.which("tmux") is None:
+        pytest.skip("the multiplexer is not installed")
+    from xorchestrate import cli
+
+    environ = _terminal_environment(directory, adapter)
+    monkeypatch.setenv("XORCHESTRATE_HOME", environ["XORCHESTRATE_HOME"])
+    files = ServerFiles.locate("ending-" + adapter, environ).ensure()
+    ended = directory / "ended"
+    # Stands for a server past its lock release: it finishes its last writes for a second, then exits by itself.
+    lingering = ("import signal,sys,time; from pathlib import Path\n"
+                 f"marker = Path({str(ended)!r})\n"
+                 "signal.signal(signal.SIGTERM, lambda *_: (marker.write_text('killed'), sys.exit(1)))\n"
+                 "time.sleep(1.0); marker.write_text('finished'); sys.exit(0)\n")
+    launcher = cli.ServerTerminals(files, environ)
+    try:
+        launcher([sys.executable, "-c", lingering], files.log, str(directory))
+    finally:
+        launcher.close()
+    down = cli.ServerTerminals(files, environ)
+    try:
+        down.finish()
+    finally:
+        down.close()
+    assert ended.read_text() == "finished", "down closed a server that was ending on its own"
+    assert files.read_terminal_record() is None
+    observer = cli.ServerTerminals(files, environ)
+    try:
+        assert observer.adopt() is None and [item for item in observer._open_host(observer.placement()).inventory()
+                                             if item.running] == []
+    finally:
+        observer.close()
+
+
+def test_total_loss_never_blocks_status_doctor_down_or_the_next_up(cli):
+    """A container failure kills every process at once and cleans nothing; the project still starts again unaided."""
+    import signal
+    import time
+
+    from tests.hexagonal.support.host_processes import processes_under
+
+    first = cli.json("up")
+    victims = {pid for pid, _ in processes_under([cli.directory])} | {first["pid"]}
+    assert len(victims) >= 1
+    for pid in victims:
+        with contextlib.suppress(ProcessLookupError):
+            os.kill(pid, signal.SIGKILL)
+    deadline = time.monotonic() + 10
+    while processes_under([cli.directory]) and time.monotonic() < deadline:
+        time.sleep(0.05)
+    assert processes_under([cli.directory]) == [], "the simulated failure left processes"
+    assert list((cli.home / "servers").glob("*.terminal.json")), "the failure left the terminal record behind"
+
+    status = cli.json("status", expect=3)
+    assert status["running"] is False and "error" not in status["terminal_host"], status
+    doctor = cli.run("doctor")
+    report = json.loads(doctor.stdout)
+    checks = {item["check"]: item for item in report.get("checks", []) if isinstance(item, dict)}
+    assert checks.get("terminal_host", {}).get("status") in {"ok", "warning"}, report
+    assert cli.run("down").returncode == 0
+    second = cli.json("up")
+    assert second["started"] is True and second["pid"] != first["pid"], second
+    assert cli.json("status")["terminal_host"]["server_terminal"]["running"] is True
+    assert cli.json("down")["stopped"] is True
