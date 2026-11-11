@@ -74,7 +74,8 @@ the aggregate never assigns the current attempt to all historical receipts.
 The runtime manifest records resolved Python/implementation, uv, architecture,
 platform, runner image identity, fixture mode, and tmux for the tmux lane. An
 unknown tool/image input stays unknown. Recording it does not establish runtime
-equivalence or authorize reuse; this change continues full applicable validation.
+equivalence on their own. [Lifecycle validation](pr-lifecycle-ci.md) separately
+qualifies exact-candidate reuse using these manifests and original receipts.
 
 ## Qualification and limits
 
@@ -109,4 +110,6 @@ Artifacts authenticate an identified producer, not the honesty of candidate code
 Existing review and independent behavioral assertions remain necessary. A local
 `result.evaluate` call without context/metadata retains the receipt-only API for
 focused existing tests; the hosted CLI requires both inputs and cannot use that
-legacy path. No cross-run reuse or merge freshness setting changes here.
+legacy path. Reuse always requires authenticated schema-2 context and metadata;
+the receipt-only API cannot qualify skipped lanes. Merge freshness settings remain
+independent of evidence qualification.

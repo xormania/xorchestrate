@@ -35,6 +35,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   can be attached to, and is reconnected (or resumed in a fresh terminal from
   its saved state) through the existing bridge. The `connected` example's
   `worker` is now hosted. See [hosted sessions](docs/terminal-host.md#hosted-sessions).
+- PR edit/readiness observations preserve useful running validation and reuse
+  authenticated exact-candidate behavior evidence, retaining original lane
+  identities and flat references across repeated metadata activity.
 - The public ports, the values and errors they exchange and the adapter factory
   convention now come from the new Apache-2.0
   [xcontracts](https://github.com/xormania/xcontracts) package (`xcontracts>=0.1,<0.2`),
@@ -257,6 +260,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   `migrate-config` on the installed launcher.
 
 ### Upgrade notes
+
+- **CI policy:** edited/readiness PR events now run current observations.
+  `CI_REUSE_ENABLED=false` disables behavioral reuse without weakening ordinary
+  validation. Existing required status names and merge freshness settings remain.
 
 - **Journal diagnostics:** existing operation diagnostics remain stored. Public
   projection hides unversioned diagnostic content; this is not a historical-data
