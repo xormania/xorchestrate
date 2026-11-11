@@ -30,6 +30,20 @@ SOURCES = {
               "print('ready', flush=True)\ntime.sleep(120)\n"),
     "stubborn": ("import signal, time\nsignal.signal(signal.SIGINT, signal.SIG_IGN)\n"
                  "signal.signal(signal.SIGTERM, signal.SIG_IGN)\nprint('ready', flush=True)\ntime.sleep(120)\n"),
+    # The child marks a SIGTERM it receives; the leader stops it with SIGKILL, which leaves no mark. So the leader
+    # reports whether the host signalled its child before (or instead of) asking the leader first.
+    "orderly": ("import os, signal, subprocess, sys, time\n"
+                "marker = os.path.abspath(f'orderly-{os.getpid()}.term')\n"
+                "child = subprocess.Popen([sys.executable, '-c', 'import signal, sys, time\\n'\n"
+                "    f'def mark(*_):\\n    open({marker!r}, \"w\").close(); sys.exit(0)\\n'\n"
+                "    'signal.signal(signal.SIGTERM, mark)\\n'\n"
+                "    f'open({marker!r} + \".ready\", \"w\").close()\\ntime.sleep(120)\\n'])\n"
+                "while not os.path.exists(marker + '.ready'):\n    time.sleep(0.01)\n"
+                "def stop(*_):\n"
+                "    time.sleep(0.3)\n"
+                "    print(f'term:child-signalled={os.path.exists(marker)}', flush=True)\n"
+                "    child.kill(); child.wait(); sys.exit(0)\n"
+                "signal.signal(signal.SIGTERM, stop)\nprint('ready', flush=True)\ntime.sleep(120)\n"),
     "environment": ("import os\nfor key, value in sorted(os.environ.items()):\n    print(f'env:{key}={value}')\n"
                     "print('env-done', flush=True)\n"),
     "size": ("import os\ntry:\n    columns, rows = os.get_terminal_size(1)\n    print(f'size:{rows}x{columns}', flush=True)\n"
@@ -64,6 +78,9 @@ class Programs:
 
     def stubborn(self):
         return self.command("stubborn")
+
+    def orderly(self):
+        return self.command("orderly")
 
     def environment(self, variables):
         return self.command("environment", environment=variables)
@@ -292,6 +309,10 @@ class MemoryTerminalHost:
 
     def close_terminal(self, name, grace=None):
         item = self._item(name)
+        if item.alive and item.kind == "orderly":  # its own handler runs first and stops its child
+            item.output.append("term:child-signalled=False")
+            self.machine.flush(item)
+            item.exit(0)
         if item.alive:
             item.exit(signal=SIGKILL if item.kind == "stubborn" else 15)
         final = self._observe(name, item)

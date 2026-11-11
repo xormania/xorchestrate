@@ -231,6 +231,21 @@ def interrupt_and_forced_close(subject):
         host.shutdown()
 
 
+def orderly_close_lets_the_command_stop_its_children(subject):
+    """The grace goes to the terminal's own command first, so it can stop its children in order."""
+    host = subject.host("orderly")
+    log = subject.log_path("orderly")
+    try:
+        host.open_terminal("orderly", subject.programs.orderly(), log=log)
+        shows(subject, host, "orderly", "ready")
+        closure = host.close_terminal("orderly", grace=5)
+        assert closure.cleanup_verified, closure
+        lines = [line.strip() for line in subject.read_log(log).splitlines()]
+        assert "term:child-signalled=False" in lines, f"the host signalled the command's children itself: {lines}"
+    finally:
+        host.shutdown()
+
+
 def attach(subject):
     host = subject.host("attach")
     try:
@@ -467,4 +482,5 @@ CHECKS =(readiness_never_raises, names_and_listing, exit_codes_and_output, input
           sizes_follow_the_command, interrupt_and_forced_close, attach, ownership_and_adoption,
           log_outlives_the_terminal, survives_a_killed_controller, an_empty_host_ends, shutdown_stops_everything,
           shutdown_reaches_terminals_of_other_controllers, adopt_refuses_a_process_the_host_did_not_launch,
-          names_are_reusable_once_exited, an_unsafe_location_is_reported)
+          names_are_reusable_once_exited, an_unsafe_location_is_reported,
+          orderly_close_lets_the_command_stop_its_children)
