@@ -20,6 +20,7 @@ home, like the other operator adapters.
 | `interrupt(name)` | Ask the terminal's work to stop; the terminal stays open. |
 | `recent_output(name, lines=None)` | The last lines of output, capped by the adapter. Works after exit until the terminal is closed. |
 | `attach_instruction(name=None)` | A command for the operator to attach to one terminal or the whole host. It checks that the location is still private and that the terminal still matches before answering. Interactive hosts only. |
+| `attach_instruction_for(receipt)` | For a process that is not the terminal's controller: how to attach to the terminal a receipt names. The receipt is verified as `adopt` verifies it, but no control is taken, so the terminal stays with its controller. Works for owned hosts too. Interactive hosts only. |
 | `close_terminal(name, grace=None)` | Stop the terminal's work and forget it. The terminal's own command is asked to stop first and gets the whole `grace` to stop its own children. Whatever remains after that is terminated, given a short wait, then forced. Returns the final observation and `cleanup_verified`, which is true only when everything is gone. |
 | `adopt(receipt)` | Take back a terminal after the controller restarted, verified against what is actually running. |
 | `shutdown()` | Stop every terminal of the host and remove its private state. |

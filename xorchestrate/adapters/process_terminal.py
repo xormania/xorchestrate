@@ -144,6 +144,9 @@ class DetachedProcessHost:
             self._known(name)
         raise OrchestrationError("Detached-process terminals cannot be attached to.", "terminal_operation_unsupported")
 
+    def attach_instruction_for(self, receipt):
+        raise OrchestrationError("Detached-process terminals cannot be attached to.", "terminal_operation_unsupported")
+
     def close_terminal(self, name, grace=None):
         terminal = self._known(name)
         grace = support.check_grace(grace, self.grace)
@@ -204,8 +207,10 @@ class DetachedProcessHost:
                 path.unlink(missing_ok=True)
 
     def close(self):
+        """Release this controller. Owned: stop only this controller's own terminals, never other controllers'."""
         if self.owned:
-            self.shutdown()
+            for name in list(self._terminals):
+                self.close_terminal(name)
         else:
             for terminal in self._terminals.values():
                 if terminal.process is not None:

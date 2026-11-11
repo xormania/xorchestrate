@@ -286,6 +286,18 @@ class TerminalHost(Protocol):
         """
         ...
 
+    def attach_instruction_for(self, receipt: JSON) -> AttachInstruction:
+        """How to attach to the terminal ``receipt`` names, for a process that is not its controller.
+
+        The receipt is verified exactly as ``adopt`` verifies it, with the same
+        error codes for forged, stale, foreign or vanished receipts, but no
+        control is taken: the terminal is not added to ``terminals()`` and
+        stays with its controller. It works whatever ``survives_controller``
+        is (an owned host is alive while its controller is) and needs
+        ``interactive`` (else ``terminal_operation_unsupported``).
+        """
+        ...
+
     def close_terminal(self, name: str, grace: float | None = None) -> TerminalClosure:
         """Stop and forget one terminal, allowing ``grace`` seconds (adapter default when ``None``) before forcing.
 
@@ -315,5 +327,9 @@ class TerminalHost(Protocol):
         ...
 
     def close(self) -> None:
-        """Release this controller's resources. Terminals survive iff ``survives_controller``."""
+        """Release this controller's resources. Terminals survive iff ``survives_controller``.
+
+        Only what this controller started or controls is ended; a controller
+        that merely asked ``attach_instruction_for`` leaves the host alone.
+        """
         ...
