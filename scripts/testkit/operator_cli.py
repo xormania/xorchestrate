@@ -53,6 +53,13 @@ def parser():
     return value
 
 
+def _attach_host(selection, placement):
+    """The run's host at its recorded placement, built as the run built it, for an attach lookup only."""
+    from .adapters import terminal_selection
+
+    return terminal_selection.build(selection, owned=True, **placement).host
+
+
 def overrides(args):
     result = {}
     for field in ("suite", "mode", "config", "brief", "shard", "timeout", "check_timeout", "run_timeout", "shutdown_grace", "output", "max_sessions", "max_turns", "max_tool_calls", "terminal_host",
@@ -139,7 +146,7 @@ def attach(directory, target=None):
                 if not 0 <= index < len(found):
                     raise ValueError("Selected owned terminal is unavailable")
                 print("Attached. Ctrl-] (PTY) or the terminal host's detach key returns to this dashboard.", flush=True)
-                terminals.attach(found[index])
+                terminals.attach(found[index], host_for=_attach_host)
                 paused, target = True, None
                 print("Dashboard: enter a terminal number to attach, w to follow, or q to leave.", flush=True)
             else:

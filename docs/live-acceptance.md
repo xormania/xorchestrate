@@ -184,7 +184,11 @@ that supervisor launches only the fixture's children; embedding it in a process
 that also launches unrelated children is not supported. Process snapshots cannot
 attribute a descendant that forks and becomes orphaned entirely between observations.
 The owned host runs as the supervisor's descendant, so it is part of that process
-tree and nothing of it survives the run. If an otherwise successful worker leaves children that
+tree, and on the orderly path (worker exit, timeout or interruption of the
+supervisor) nothing of it survives the run. A supervisor killed outright cannot
+clean up: the host ends with it, but a grandchild that ignores hangup can
+remain, as before the terminal host. For a managed run, `close` then ends what
+is left and reports it. If an otherwise successful worker leaves children that
 require forced termination, acceptance fails with `owned_process_leak`; the
 cleanup receipt still records whether those processes were successfully removed.
 

@@ -148,3 +148,27 @@ def environment(profile, run_dir):
     result["PYTHONUNBUFFERED"] = "1"
     result.setdefault("TERM", "xterm-256color")
     return result
+
+
+def processes_naming(text):
+    """Live identities of this user's processes whose command line names ``text``, never this process or its ancestors.
+
+    How a run whose supervisor is gone finds what it left: its terminals' commands name the run directory.
+    """
+    snapshot = processes()
+    ancestors, pid = set(), os.getpid()
+    while pid in snapshot and pid not in ancestors:
+        ancestors.add(pid)
+        pid = snapshot[pid][1]
+    needle, found = os.fsencode(str(text)), []
+    for pid, (identity, _, state) in snapshot.items():
+        if pid in ancestors or state == "Z":
+            continue
+        try:
+            path = Path("/proc") / str(pid)
+            if path.stat().st_uid != os.getuid() or needle not in (path / "cmdline").read_bytes():
+                continue
+        except OSError:
+            continue
+        found.append(identity)
+    return found

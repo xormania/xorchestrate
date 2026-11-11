@@ -169,34 +169,71 @@ def test_public_attach_reaches_nested_native_prompt_and_detaches_without_stoppin
         workflow.close()
 
 
-def _descriptor(directory, **fields):
+def _descriptor(directory, endpoint, **fields):
     from scripts.testkit.adapters.ownership import processes
 
     me = processes()[os.getpid()][0]
     boot = Path("/proc/sys/kernel/random/boot_id").read_text().strip()
     descriptor = {"schema_version": 2, "kind": "terminal_host", "purpose": "acceptance worker", "terminal": "acceptance",
                   "owner": {"pid": me.pid, "started": me.started, "boot_id": boot, "uid": os.getuid()},
-                  "receipt": {"opaque": True}, "attach": {"argv": ["attach-command", "--to", "acceptance"],
-                                                          "text": "Run attach-command to attach."}, **fields}
+                  "receipt": {"opaque": True}, "interactive": True,
+                  "host": {"selection": {"adapter": "tmux"},
+                           "placement": {"name": "acceptance", "location": str(directory / "terminal-host"),
+                                         "socket": str(endpoint / "host.sock")}}, **fields}
     path = directory / "terminal.json"
     path.write_text(json.dumps(descriptor))
     path.chmod(0o600)
-    return descriptor
+    return {**descriptor, "descriptor_path": str(path)}
 
 
-def test_host_descriptors_are_schema_two_and_older_ones_are_refused_with_a_reason(tmp_path):
+@pytest.fixture
+def endpoint():
+    import shutil as files
+    import tempfile
+
+    path = Path(tempfile.mkdtemp(prefix="xa-"))
+    yield path
+    files.rmtree(path, ignore_errors=True)
+
+
+def test_host_descriptors_are_schema_two_and_older_ones_are_refused_with_a_reason(tmp_path, endpoint):
     current = tmp_path / "current"
     current.mkdir(mode=0o700)
-    descriptor = _descriptor(current)
+    descriptor = _descriptor(current, endpoint)
     assert terminals.validate(descriptor) and terminals.refusal(descriptor) is None
     assert [item["terminal"] for item in terminals.discover(current)] == ["acceptance"]
-    assert not terminals.validate({**descriptor, "attach": None}), "a host without an attach command is not attachable"
     assert not terminals.validate({**descriptor, "owner": {**descriptor["owner"], "started": 1}}), "a dead run"
     old = tmp_path / "old"
     old.mkdir(mode=0o700)
-    legacy = _descriptor(old, schema_version=1, kind="tmux", socket="/tmp/x.sock", pane="acceptance:0.0")
+    legacy = _descriptor(old, endpoint, schema_version=1, kind="tmux", socket="/tmp/x.sock", pane="acceptance:0.0")
     assert terminals.discover(old) == []
     with pytest.raises(ValueError, match="older test kit"):
         terminals.attach(legacy)
     with pytest.raises(ValueError, match="expected 2"):
         terminals.attach({**descriptor, "schema_version": 1})
+
+
+def test_a_planted_descriptor_is_neither_offered_nor_run(tmp_path, endpoint):
+    """Run directories are writable by the launched harness: nothing a descriptor says is executed."""
+    run = tmp_path / "run"
+    run.mkdir(mode=0o700)
+    marker = tmp_path / "executed"
+    planted = _descriptor(run, endpoint, attach={"argv": ["touch", str(marker)], "text": "planted"})
+    calls = []
+
+    def host_for(selection, placement):
+        calls.append((selection, placement))
+        return None
+
+    with pytest.raises(ValueError):
+        terminals.attach(planted, host_for=host_for)
+    assert not marker.exists(), "an argv read from a descriptor was executed"
+    assert calls and calls[0][1]["location"] == str(run / "terminal-host"), "attach asks the host, never the file"
+    for placement in ({"name": "acceptance", "location": str(tmp_path / "elsewhere"), "socket": str(endpoint / "host.sock")},
+                      {"name": "acceptance", "location": str(run / "terminal-host"), "socket": str(tmp_path / "host.sock")},
+                      {"name": "acceptance", "location": str(run / "terminal-host"), "socket": "/tmp/host.sock"}):
+        moved = _descriptor(run, endpoint, host={"selection": None, "placement": placement})
+        assert not terminals.validate(moved) and terminals.discover(run) == [], placement
+        with pytest.raises(ValueError):
+            terminals.attach(moved, host_for=host_for)
+    assert len(calls) == 1, "a placement outside the run's own location never builds a host"

@@ -193,3 +193,55 @@ def test_kept_terminals_outlive_a_killed_supervisor_until_close_adopts_and_ends_
         await_condition(lambda: not dashboards())
     finally:
         workflow.close()
+
+
+def test_close_after_a_supervisor_killed_mid_run_leaves_no_process_and_no_endpoint(tmp_path):
+    """An owned host does not end with a supervisor killed outright; close ends what is left and says so."""
+    import signal
+    from pathlib import Path
+
+    from scripts.testkit.adapters.ownership import Identity, processes_naming, send_signal
+
+    candidate = isolated_candidate(tmp_path / "candidate")
+    workflow = PublicWorkflow(candidate, tmp_path / "operator")
+    try:
+        directory, launch = workflow.start(timeout=60)
+        assert launch["status"] == "launched"
+        workflow.freeze(directory)  # hold the worker mid-run
+        endpoint = Path(json.loads((directory / "plan.json").read_text())["terminal_endpoint"])
+        assert endpoint.is_dir() and processes_naming(directory)
+        owner = workflow.state(directory)["owner"]
+        send_signal(Identity(owner["pid"], owner["started"]), signal.SIGKILL)
+        await_condition(lambda: not owner_alive(workflow.state(directory)["owner"]))
+        closed, response = workflow.command("close", directory)
+        assert closed.returncode == 0, closed.stdout + closed.stderr
+        assert response["status"] == "closed" and response["cleanup"]["verified"], response
+        assert processes_naming(directory) == [] and not endpoint.exists()
+        again, repeated = workflow.command("close", directory)
+        assert again.returncode == 0 and repeated["status"] == "already_closed", repeated
+    finally:
+        workflow.frozen.clear()  # its worker is gone; nothing to resume
+        workflow.close()
+
+
+def test_an_endpoint_named_in_the_plan_is_removed_only_when_it_is_the_runs_own(tmp_path):
+    import os
+    import tempfile
+    from pathlib import Path
+
+    from scripts.testkit.operator_composition import remove_endpoint
+
+    own = Path(tempfile.mkdtemp(prefix="xp-"))
+    elsewhere = tmp_path / "xp-not-in-the-temporary-root"
+    elsewhere.mkdir(mode=0o700)
+    wrong_name = Path(tempfile.mkdtemp(prefix="other-"))
+    link = Path(tempfile.gettempdir()) / f"xp-link-{os.getpid()}"
+    link.symlink_to(elsewhere)
+    try:
+        for refused in (elsewhere, wrong_name, link):
+            assert remove_endpoint(refused) is False and refused.exists(), refused
+        assert remove_endpoint(own) is True and not own.exists()
+        assert remove_endpoint(own) is True, "an endpoint already gone is fine"
+    finally:
+        link.unlink(missing_ok=True)
+        wrong_name.rmdir()

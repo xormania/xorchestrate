@@ -68,11 +68,11 @@ def main(argv=None):
     # A short private directory for the host's endpoint: Unix socket paths are capped near 107 bytes.
     endpoint = tempfile.mkdtemp(prefix="xa-")
     try:
-        selected = terminal_selection.build(selection, name="acceptance", location=run_dir / "terminal-host",
-                                            socket=Path(endpoint) / "host.sock", owned=True)
+        placement = {"name": "acceptance", "location": run_dir / "terminal-host", "socket": Path(endpoint) / "host.sock"}
+        selected = terminal_selection.build(selection, owned=True, **placement)
         report = supervise(command, run_dir, host=selected.host, host_report=selected.report(), profile=args.profile,
                            timeout=args.timeout, cwd=root, grace=args.shutdown_grace,
-                           cleanup_budget=args.cleanup_budget)
+                           cleanup_budget=args.cleanup_budget, selection=selection, placement=placement)
     finally:
         shutil.rmtree(endpoint, ignore_errors=True)
     summary = {"status": report["status"], "report": str(run_dir / "report.json")}

@@ -27,16 +27,30 @@ WORKER_CONTEXT = "XORCHESTRATE_TERMINAL_HOST"
 """Set in the worker's environment to the host's name: the scenario's proof that it runs in the supervised host."""
 
 
+def _log_tail(path, lines=CAPTURE_LINES, limit=4 * 1024 * 1024):
+    """The last ``lines`` lines of a terminal log, read within a bounded size."""
+    try:
+        with open(path, "rb") as source:
+            size = source.seek(0, os.SEEK_END)
+            source.seek(max(0, size - limit))
+            data = source.read(limit)
+    except OSError:
+        return ""
+    return "\n".join(data.decode("utf-8", "replace").splitlines()[-lines:]) + "\n"
+
+
 def _boot_id():
     return Path("/proc/sys/kernel/random/boot_id").read_text().strip()
 
 
 def supervise(command, run_dir, *, host, host_report=None, profile="fixture", timeout=120, cwd=None, grace=10,
-              cleanup_budget=None):
+              cleanup_budget=None, selection=None, placement=None):
     """Run one worker in ``host`` (or report why none is ready), retaining diagnostics and an exportable receipt.
 
     ``host`` is a terminal host in owned mode, or ``None`` when no host is
     ready; ``host_report`` describes the selection (adapter, fallback, reason).
+    ``selection`` and ``placement`` are recorded so an operator can attach:
+    attach rebuilds the host from them and asks it, nothing recorded is executed.
     """
     if cleanup_budget is not None and (isinstance(cleanup_budget, bool)
             or not isinstance(cleanup_budget, (int, float)) or not math.isfinite(cleanup_budget)
@@ -81,13 +95,20 @@ def supervise(command, run_dir, *, host, host_report=None, profile="fixture", ti
             tracker.observe()
         if opened:
             try:
-                (run_dir / "pane.txt").write_text(host.recent_output(TERMINAL, CAPTURE_LINES), encoding="utf-8")
-            except (OSError, ValueError) as error:
-                errors.append(getattr(error, "code", "terminal_capture"))
-            try:
-                closure = host.close_terminal(TERMINAL, grace=max(0.1, remaining(grace)))
-                if not closure.cleanup_verified:
-                    errors.append("terminal_cleanup_unverified")
+                current = observation()
+                if current is not None and current.running:
+                    # Timeout or interruption: close first. The host asks the worker alone to stop and gives it the
+                    # grace (its children stay up for it to stop in order); what it prints meanwhile goes to the
+                    # terminal's log, whose tail becomes the capture.
+                    closure = host.close_terminal(TERMINAL, grace=max(0.1, remaining(grace)))
+                    if not closure.cleanup_verified:
+                        errors.append("terminal_cleanup_unverified")
+                    (run_dir / "pane.txt").write_text(_log_tail(run_dir / "terminal.log"), encoding="utf-8")
+                else:
+                    (run_dir / "pane.txt").write_text(host.recent_output(TERMINAL, CAPTURE_LINES), encoding="utf-8")
+                    closure = host.close_terminal(TERMINAL, grace=max(0.1, remaining(grace)))
+                    if not closure.cleanup_verified:
+                        errors.append("terminal_cleanup_unverified")
             except (OSError, ValueError) as error:
                 errors.append(getattr(error, "code", "terminal_shutdown"))
         if host is not None:
@@ -134,21 +155,20 @@ def supervise(command, run_dir, *, host, host_report=None, profile="fixture", ti
             try:
                 deadline = started + timeout
                 terminal = host.open_terminal(TERMINAL, TerminalCommand(
-                    tuple(command), str(cwd or Path.cwd()), tuple(env.items()), ROWS, COLUMNS))
+                    tuple(command), str(cwd or Path.cwd()), tuple(env.items()), ROWS, COLUMNS),
+                    log=str(run_dir / "terminal.log"))  # everything the worker prints, beyond the capture
                 opened = True
                 tracker.observe()
-                attach = None
-                if host.interactive:
-                    instruction = host.attach_instruction(TERMINAL)
-                    attach = {"argv": list(instruction.argv), "text": instruction.text}
                 owner = processes()[os.getpid()][0]
                 write_json(run_dir / "terminal.json", {
                     "schema_version": 2, "kind": "terminal_host", "purpose": "acceptance worker",
                     "owner": {"pid": owner.pid, "started": owner.started, "boot_id": _boot_id(), "uid": os.getuid()},
-                    "terminal": TERMINAL, "receipt": terminal.receipt, "attach": attach,
+                    "terminal": TERMINAL, "receipt": terminal.receipt, "interactive": host.interactive,
+                    "host": {"selection": selection, "placement": {key: str(value) for key, value in
+                                                                   (placement or {}).items()}},
                 })
-                if attach is not None:
-                    print(f"Attach while running: {attach['text']}", flush=True)
+                if host.interactive:
+                    print(f"Attach while running: {host.attach_instruction(TERMINAL).text}", flush=True)
                 while True:
                     tracker.observe()
                     if interrupted:

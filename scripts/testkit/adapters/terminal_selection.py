@@ -2,7 +2,7 @@
 
 The selection is a product terminal-host selection (``{"adapter", "options"?,
 "fallback"?}``) taken from the profile or the command line, defaulting to the
-product's default. The test kit adds the placement and the ownership mode
+product's default host without its fallback. The test kit adds the placement and the ownership mode
 itself and builds the adapter through the product's composition, so no adapter
 is named here.
 """
@@ -44,7 +44,9 @@ def parse(value):
     """A selection from configuration: a mapping, a JSON text, or ``None`` for the product's default."""
     default, _, _, terminal_host_selection, _ = _product()
     if value is None:
-        return default
+        # The product's default host without its fallback: a test run never moves to another host silently.
+        # Another host is used only when selected explicitly.
+        return {key: item for key, item in default.items() if key != "fallback"}
     if isinstance(value, str):
         try:
             value = json.loads(value)

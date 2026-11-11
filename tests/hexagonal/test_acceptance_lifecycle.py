@@ -299,3 +299,62 @@ def test_fast_orphan_cannot_escape_cleanup(tmp_path):
     finally:
         unrelated.terminate()
         unrelated.wait(timeout=5)
+
+
+@real_tmux
+def test_a_timed_out_scenario_reports_its_interruption_in_the_capture_and_cleans_up(tmp_path):
+    """On timeout the worker is interrupted first, so its own FAILED line is captured before the terminal closes."""
+    root = Path(__file__).resolve().parents[2]
+    command = [sys.executable, "-m", "scripts.acceptance.scenario", "--run-dir", str(tmp_path), "--profile", "fixture",
+               "--timeout", "120"]
+    report = run_in_host(command, tmp_path, timeout=1.0, grace=8, cwd=root)
+    assert report["failure"] == "timeout", report
+    assert report["cleanup"]["verified"], report["cleanup"]
+    # Whether the scenario's own runtime cleanup succeeds depends on the phase it was interrupted in (as before
+    # the terminal host); the ordering itself is proven deterministically below.
+    capture = (tmp_path / "pane.txt").read_text()
+    assert any(line.startswith("FAILED") and "interrupted" in line for line in capture.splitlines()), capture[-2000:]
+    assert "interrupted" in (tmp_path / "terminal.log").read_text(errors="replace"), "the log keeps the full output"
+
+
+@real_tmux
+def test_a_timed_out_worker_alone_is_asked_to_stop_and_its_last_words_are_captured(tmp_path):
+    """Timeout stops the worker first (its children untouched, for it to stop in order), then captures its output."""
+    marker = tmp_path / "child.signalled"
+    code = ("import os,signal,subprocess,sys,time; from pathlib import Path\n"
+            f"marker = {str(marker)!r}\n"
+            "child = subprocess.Popen([sys.executable, '-c', 'import signal,sys,time\\n'\n"
+            "    f'signal.signal(signal.SIGTERM, lambda *_: (open({marker!r}, \"w\").close(), sys.exit(0)))\\n'\n"
+            "    f'signal.signal(signal.SIGINT, lambda *_: (open({marker!r}, \"w\").close(), sys.exit(0)))\\n'\n"
+            "    f'open({marker!r} + \".ready\", \"w\").close()\\ntime.sleep(60)\\n'])\n"
+            "while not os.path.exists(marker + '.ready'): time.sleep(0.01)\n"
+            "def stop(*_):\n"
+            "    time.sleep(0.3)\n"
+            "    print(f'FAILED worker: interrupted child-signalled={os.path.exists(marker)}', flush=True)\n"
+            "    child.kill(); child.wait(); sys.exit(1)\n"
+            "for number in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP): signal.signal(number, stop)\n"
+            "print('working', flush=True); time.sleep(60)\n")
+    report = run_in_host([sys.executable, "-c", code], tmp_path, timeout=2, grace=5)
+    assert report["failure"] == "timeout" and report["cleanup"]["verified"], report
+    assert "FAILED worker: interrupted child-signalled=False" in (tmp_path / "pane.txt").read_text(), \
+        (tmp_path / "pane.txt").read_text()[-500:]
+
+
+def test_an_unready_default_host_is_a_setup_error_never_a_silent_fallback(tmp_path, monkeypatch):
+    """The test kit takes the product default's host without its fallback; another host only when selected."""
+    import xorchestrate.composition as product
+    from scripts.testkit import composition as testkit
+    from scripts.acceptance import __main__ as acceptance_cli
+    from scripts.testkit.adapters import terminal_selection
+
+    monkeypatch.setattr(product, "DEFAULT_TERMINAL_HOST", {**UNREADY, "fallback": {"adapter": "detached-process"}})
+    assert "fallback" not in terminal_selection.parse(None)
+    check = testkit.plan(directory=tmp_path / "plan", suite="acceptance", mode="protocol-fixture")[0]
+    row = testkit.readiness(check, root=Path(__file__).resolve().parents[2], mode="protocol-fixture")
+    item = next(item for item in row["readiness"] if item["name"] == "terminal_host")
+    assert row["status"] != "passed" and item["passed"] is False and item["adapter"] is None, row
+    assert acceptance_cli.main(["--output", str(tmp_path / "runs"), "--timeout", "5"]) == 1
+    [report] = (tmp_path / "runs").rglob("report.json")
+    assert json.loads(report.read_text())["failure"] == "terminal_host_unavailable", "the CI lane cannot pass on it"
+    explicit = terminal_selection.parse('{"adapter": "detached-process"}')
+    assert explicit == {"adapter": "detached-process"}, "an explicitly selected host is used as selected"

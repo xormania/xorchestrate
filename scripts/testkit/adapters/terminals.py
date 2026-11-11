@@ -9,6 +9,7 @@ import socket
 import stat
 import subprocess
 import sys
+import tempfile
 import termios
 import tty
 from pathlib import Path
@@ -39,15 +40,47 @@ def refusal(descriptor):
             "it cannot be attached. Start a new run to attach to its terminals.")
 
 
-def _hosted(descriptor):
-    """The run that opened it is still live and its recorded attach command is well formed.
+ENDPOINT_PREFIX = "xa-"
 
-    The host validated its private location when it answered the attach
-    instruction; the descriptor itself is private to this user (see discover).
+
+def _private_directory(path):
+    try:
+        info = Path(path).lstat()
+    except OSError:
+        return False
+    return stat.S_ISDIR(info.st_mode) and info.st_uid == os.getuid() and not info.st_mode & 0o077
+
+
+def placement_problem(descriptor):
+    """Why a recorded placement is not this run's own private location (``None`` when it is).
+
+    The host lives at ``<run>/terminal-host`` beside the descriptor and its
+    endpoint in a private ``xa-*`` directory of the temporary root, as the
+    acceptance runner creates them. Anything else is refused before a host is built.
     """
-    attach = descriptor.get("attach")
-    return (_live_identity(descriptor["owner"]) and isinstance(attach, dict) and isinstance(attach.get("argv"), list)
-            and bool(attach["argv"]) and all(isinstance(part, str) and part for part in attach["argv"]))
+    try:
+        placement = descriptor["host"]["placement"]
+        run = Path(descriptor["descriptor_path"]).parent
+        location, socket = Path(placement["location"]), Path(placement["socket"])
+        name = placement["name"]
+    except (KeyError, TypeError):
+        return "the descriptor names no placement"
+    if not isinstance(name, str) or location != run / "terminal-host":
+        return "the host location is not this run's own"
+    endpoint = socket.parent
+    if (endpoint.parent != Path(tempfile.gettempdir()) or not endpoint.name.startswith(ENDPOINT_PREFIX)
+            or socket.name != "host.sock" or not _private_directory(endpoint)):
+        return "the host endpoint is not this run's private directory"
+    return None
+
+
+def _hosted(descriptor):
+    """The run that opened it is live and its recorded placement is the run's own private location.
+
+    Nothing recorded is executed: attach rebuilds the host there and asks it.
+    """
+    return (_live_identity(descriptor["owner"]) and isinstance(descriptor.get("receipt"), dict)
+            and placement_problem(descriptor) is None)
 
 
 def validate(descriptor):
@@ -80,8 +113,10 @@ def discover(run_directory):
                     or not path.resolve().is_relative_to(root)):
                 continue
             descriptor = json.loads(path.read_text(encoding="utf-8"))
-            if isinstance(descriptor, dict) and validate(descriptor):
-                found.append({**descriptor, "descriptor_path": str(path)})
+            if isinstance(descriptor, dict):
+                descriptor = {**descriptor, "descriptor_path": str(path)}
+                if validate(descriptor):
+                    found.append(descriptor)
         except (OSError, ValueError, TypeError):
             continue
     # The native prompt wins over its enclosing worker's progress terminal.
@@ -111,16 +146,29 @@ def connect(descriptor, *, rows=48, columns=160):
         raise
 
 
-def attach(descriptor):
-    """Detach with Ctrl-] from a native PTY, or as the terminal host's attach instruction says."""
+def attach(descriptor, *, host_for=None):
+    """Detach with Ctrl-] from a native PTY, or as the terminal host's attach instruction says.
+
+    ``host_for(selection, placement)`` builds the run's host (composition injects
+    it); the host verifies the receipt and supplies the only command that runs.
+    """
     problem = refusal(descriptor)
     if problem is not None:
         raise ValueError(problem)
     if not validate(descriptor):
         raise ValueError("Interactive terminal is no longer owned and live")
     if descriptor["kind"] == "terminal_host":
-        print(descriptor["attach"].get("text", ""), flush=True)
-        return subprocess.call(descriptor["attach"]["argv"])
+        if host_for is None:
+            raise ValueError("Attaching a terminal host requires the host it runs in")
+        host = host_for(descriptor["host"].get("selection"), descriptor["host"]["placement"])
+        if host is None:
+            raise ValueError("The run's terminal host is not ready here")
+        try:
+            instruction = host.attach_instruction_for(descriptor["receipt"])
+        finally:
+            host.close()
+        print(instruction.text, flush=True)
+        return subprocess.call(list(instruction.argv))
     if not sys.stdin.isatty() or not sys.stdout.isatty():
         raise ValueError("Interactive attachment requires a terminal")
     size = os.get_terminal_size(sys.stdout.fileno())

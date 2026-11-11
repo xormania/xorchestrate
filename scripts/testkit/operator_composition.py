@@ -9,6 +9,7 @@ import math
 import os
 import shutil
 import signal
+import stat
 import subprocess
 import sys
 import tempfile
@@ -23,7 +24,7 @@ from .adapters.evidence import candidate_identity, digest, now, write_json
 from .adapters.managed_process import ManagedWorker
 from .adapters.managed_store import ManagedStore, owner_alive
 from .adapters.native_evidence import collection_supplement
-from .adapters.ownership import subreaper
+from .adapters.ownership import processes_naming, send_signal, subreaper
 from .composition import ROOT, preflight, run
 from .composition import plan as check_plan
 from .operator import FINISHED, decide, project
@@ -80,7 +81,7 @@ def prepare_run(settings, *, parent=None):
                     selected_check_ids=[check.name for check in checks], created_at=now(),
                     keep_after_run=bool(settings.get("keep_after_run")),
                     # Short and private: the host's Unix socket path is capped near 107 bytes.
-                    terminal_endpoint=tempfile.mkdtemp(prefix="xp-"))
+                    terminal_endpoint=tempfile.mkdtemp(prefix=ENDPOINT_PREFIX))
     dependencies = {}
     for package in ("jsonschema", "pytest", "ruff"):
         try:
@@ -178,15 +179,17 @@ def wait(directory):
 def control(directory, action):
     store = ManagedStore(directory)
     state = store.read_state()
-    if action == "close" and state.get("phase") not in FINISHED:
+    supervisor_alive = owner_alive(state.get("owner"))
+    if action == "close" and state.get("phase") not in FINISHED and supervisor_alive:
         raise ValueError("Active runs must finalize before their dashboard can close")
     if action == "stop" and state.get("phase") in FINISHED:
         return {"status": "already_finished", "outcome": state.get("outcome", "failed")}
-    if not owner_alive(state.get("owner")):
+    if not supervisor_alive:
         if action == "collect":
             return store.collect(supplemental=collection_supplement)
-        if action == "close" and state.get("phase") in FINISHED:
-            return close_kept_terminals(directory, state)
+        if action == "close":
+            # Finished, or abandoned by a supervisor that died: end whatever of the run is still reachable.
+            return close_without_supervisor(directory, state)
         raise RuntimeError("No live supervisor; run is incomplete and cannot be safely controlled")
     request = store.submit(action)
     if action == "stop":
@@ -241,6 +244,24 @@ def worker(directory):
             signal.signal(number, handler)
 
 
+ENDPOINT_PREFIX = "xp-"
+
+
+def remove_endpoint(path):
+    """Remove a run's endpoint directory only if it is one this kit created: ``xp-*`` directly in the temporary
+    root, a real directory (not a symlink), owned by this user and private. Anything else is refused and left."""
+    path = Path(path)
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return True
+    if (path.parent != Path(tempfile.gettempdir()) or not path.name.startswith(ENDPOINT_PREFIX)
+            or not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077):
+        return False
+    shutil.rmtree(path, ignore_errors=True)
+    return True
+
+
 def host_placement(directory, plan):
     """Where a managed run's terminal host lives: its state under the run, its endpoint in a short private directory."""
     endpoint = Path(plan.get("terminal_endpoint") or directory / "terminal-endpoint")
@@ -258,30 +279,61 @@ def managed_worker(directory, plan):
                          interpreter=plan["interpreter"], grace=plan.get("shutdown_grace", 10), keep_after_run=keep)
 
 
-def close_kept_terminals(directory, state):
-    """After the supervisor is gone: adopt a kept run's terminals from their receipts and shut the host down."""
-    terminal = state.get("terminal") or {}
-    if not terminal.get("keep_after_run"):
-        return {"status": "already_closed"}  # an owned host ended with its supervisor
+def close_without_supervisor(directory, state):
+    """Close a finished run whose supervisor is gone: end its host at the recorded placement, then stop leftovers.
+
+    Kept terminals are adopted from their receipts first. ``shutdown`` reaches
+    terminals no live controller holds; anything still naming the run (an
+    owned host does not end with a supervisor that was killed outright) is
+    stopped by identity. Cleanup is reported from what is actually left.
+    """
     directory = Path(directory)
+    terminal = state.get("terminal") or {}
+    keep = bool(terminal.get("keep_after_run"))
     plan = read_json(directory / "plan.json")
-    selected = terminal_selection.build(plan.get("terminal_host"), owned=False, **host_placement(directory, plan))
+    placement = host_placement(directory, plan)
+    before = processes_naming(directory)
+    found = bool(before) or placement["socket"].exists()
+    selected = terminal_selection.build(plan.get("terminal_host"), owned=not keep, **placement)
+    adopted, errors = [], []
     if selected.host is None:
-        raise RuntimeError(f"Kept terminals cannot be closed: no terminal host is ready ({selected.reason})")
-    host, adopted = selected.host, []
-    try:
-        for receipt in (terminal.get("receipts") or {}).values():
-            try:
-                adopted.append(host.adopt(receipt).name)
-            except ValueError as error:
-                if getattr(error, "code", None) != "terminal_not_recoverable":
-                    raise
-        host.shutdown()
-    finally:
-        host.close()
-    with contextlib.suppress(OSError):
-        shutil.rmtree(host_placement(directory, plan)["socket"].parent)
-    return {"status": "closed", "kept_terminals": sorted(adopted)}
+        errors.append("terminal_host_unavailable")
+    else:
+        host = selected.host
+        try:
+            if keep:
+                for receipt in (terminal.get("receipts") or {}).values():
+                    try:
+                        adopted.append(host.adopt(receipt).name)
+                    except ValueError as error:
+                        if getattr(error, "code", None) != "terminal_not_recoverable":
+                            raise
+            host.shutdown()
+        except (OSError, ValueError) as error:
+            errors.append(getattr(error, "code", "terminal_host_shutdown"))
+        finally:
+            host.close()
+    for number in (signal.SIGTERM, signal.SIGKILL):
+        survivors = processes_naming(directory)
+        for identity in survivors:
+            send_signal(identity, number)
+        deadline = time.monotonic() + 3
+        while survivors and time.monotonic() < deadline:
+            time.sleep(.05)
+            survivors = processes_naming(directory)
+        if not survivors:
+            break
+    remaining = processes_naming(directory)
+    if not remove_endpoint(placement["socket"].parent):
+        errors.append("endpoint_not_owned")
+    cleanup = {"verified": not remaining and not errors and not placement["socket"].exists(),
+               "stopped_processes": len(before), "remaining_processes": len(remaining)}
+    if errors:
+        cleanup["errors"] = sorted(set(errors))
+    result = {"status": "closed" if found or adopted else "already_closed", "cleanup": cleanup}
+    if keep:
+        result["kept_terminals"] = sorted(adopted)
+    return result
 
 
 def supervise(directory):
@@ -399,7 +451,7 @@ def supervise(directory):
             keep = bool(plan.get("keep_after_run")) and not closing_requests
             process.close(keep=keep)
             if not keep:
-                shutil.rmtree(host_placement(directory, plan)["socket"].parent, ignore_errors=True)
+                remove_endpoint(host_placement(directory, plan)["socket"].parent)
         for identifier in closing_requests:
             store.complete_request(identifier, {"status": "closed"})
         store.release_owner()
