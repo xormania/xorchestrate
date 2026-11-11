@@ -41,6 +41,7 @@ def refusal(descriptor):
 
 
 ENDPOINT_PREFIX = "xa-"
+PLACEMENT_NAME = "acceptance"
 
 
 def _private_directory(path):
@@ -65,7 +66,7 @@ def placement_problem(descriptor):
         name = placement["name"]
     except (KeyError, TypeError):
         return "the descriptor names no placement"
-    if not isinstance(name, str) or location != run / "terminal-host":
+    if name != PLACEMENT_NAME or location != run / "terminal-host":
         return "the host location is not this run's own"
     endpoint = socket.parent
     if (endpoint.parent != Path(tempfile.gettempdir()) or not endpoint.name.startswith(ENDPOINT_PREFIX)
@@ -151,6 +152,9 @@ def attach(descriptor, *, host_for=None):
 
     ``host_for(selection, placement)`` builds the run's host (composition injects
     it); the host verifies the receipt and supplies the only command that runs.
+    It must take only a built-in host name from the recorded selection (a
+    rewritten one is refused before anything is imported); only the validated
+    placement is passed to it.
     """
     problem = refusal(descriptor)
     if problem is not None:
@@ -160,7 +164,10 @@ def attach(descriptor, *, host_for=None):
     if descriptor["kind"] == "terminal_host":
         if host_for is None:
             raise ValueError("Attaching a terminal host requires the host it runs in")
-        host = host_for(descriptor["host"].get("selection"), descriptor["host"]["placement"])
+        # The descriptor is writable by the run's harness: ``host_for`` takes only a built-in host name from the
+        # selection, and only the placement validated above is passed on.
+        placement = {key: descriptor["host"]["placement"][key] for key in ("name", "location", "socket")}
+        host = host_for(descriptor["host"].get("selection"), placement)
         if host is None:
             raise ValueError("The run's terminal host is not ready here")
         try:

@@ -9,7 +9,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from scripts.testkit.adapters import terminal_selection
+from scripts.testkit.adapters import terminal_selection, terminals
 from scripts.testkit.adapters.diagnostics import NAME as DIAGNOSTICS
 from scripts.testkit.adapters.evidence import allocate_run
 from scripts.testkit.adapters.supervised_run import supervise
@@ -68,7 +68,7 @@ def main(argv=None):
     # A short private directory for the host's endpoint: Unix socket paths are capped near 107 bytes.
     endpoint = tempfile.mkdtemp(prefix="xa-")
     try:
-        placement = {"name": "acceptance", "location": run_dir / "terminal-host", "socket": Path(endpoint) / "host.sock"}
+        placement = {"name": terminals.PLACEMENT_NAME, "location": run_dir / "terminal-host", "socket": Path(endpoint) / "host.sock"}
         selected = terminal_selection.build(selection, owned=True, **placement)
         report = supervise(command, run_dir, host=selected.host, host_report=selected.report(), profile=args.profile,
                            timeout=args.timeout, cwd=root, grace=args.shutdown_grace,

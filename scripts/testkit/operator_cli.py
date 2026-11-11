@@ -54,10 +54,15 @@ def parser():
 
 
 def _attach_host(selection, placement):
-    """The run's host at its recorded placement, built as the run built it, for an attach lookup only."""
+    """The run's host at its recorded placement, for an attach lookup only.
+
+    The descriptor is writable by the run's harness: only a built-in host name is taken from its selection, never
+    options or a ``module:factory``, and that is checked before anything is imported.
+    """
     from .adapters import terminal_selection
 
-    return terminal_selection.build(selection, owned=True, **placement).host
+    return terminal_selection.build(terminal_selection.recorded(selection), owned=True, name=placement["name"],
+                                    location=placement["location"], socket=placement["socket"]).host
 
 
 def overrides(args):

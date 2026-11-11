@@ -262,6 +262,31 @@ def remove_endpoint(path):
     return True
 
 
+def endpoint_problem(directory, socket):
+    """Why a recorded endpoint is not this run's own private one (``None`` when it is), read without following links.
+
+    A managed run's endpoint is a private ``xp-*`` directory of the temporary root (or, before that, the run's
+    ``terminal-endpoint``); its socket, if any is left, is a socket and no link to another one.
+    """
+    endpoint = socket.parent
+    if socket.name != "host.sock" or not (
+            endpoint == Path(directory) / "terminal-endpoint"
+            or (endpoint.parent == Path(tempfile.gettempdir()) and endpoint.name.startswith(ENDPOINT_PREFIX))):
+        return "endpoint_not_owned"
+    try:
+        info = endpoint.lstat()
+    except FileNotFoundError:
+        return None
+    if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
+        return "endpoint_not_owned"
+    try:
+        if not stat.S_ISSOCK(socket.lstat().st_mode):
+            return "endpoint_not_owned"
+    except FileNotFoundError:
+        pass
+    return None
+
+
 def host_placement(directory, plan):
     """Where a managed run's terminal host lives: its state under the run, its endpoint in a short private directory."""
     endpoint = Path(plan.get("terminal_endpoint") or directory / "terminal-endpoint")
@@ -294,9 +319,17 @@ def close_without_supervisor(directory, state):
     placement = host_placement(directory, plan)
     before = processes_naming(directory)
     found = bool(before) or placement["socket"].exists()
-    selected = terminal_selection.build(plan.get("terminal_host"), owned=not keep, **placement)
     adopted, errors = [], []
-    if selected.host is None:
+    # The run's harness can rewrite plan.json: a built-in host name only, at an endpoint that is still the run's own.
+    try:
+        selection = terminal_selection.recorded(plan.get("terminal_host"))
+        problem = endpoint_problem(directory, placement["socket"])
+    except ValueError:
+        selection, problem = None, "terminal_host_refused"
+    selected = None if problem else terminal_selection.build(selection, owned=not keep, **placement)
+    if problem:
+        errors.append(problem)
+    elif selected.host is None:
         errors.append("terminal_host_unavailable")
     else:
         host = selected.host

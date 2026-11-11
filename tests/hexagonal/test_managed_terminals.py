@@ -237,3 +237,45 @@ def test_a_planted_descriptor_is_neither_offered_nor_run(tmp_path, endpoint):
         with pytest.raises(ValueError):
             terminals.attach(moved, host_for=host_for)
     assert len(calls) == 1, "a placement outside the run's own location never builds a host"
+
+
+@pytest.mark.parametrize("planted", ["factory", "options"])
+def test_a_rewritten_host_selection_is_refused_before_anything_is_imported_or_run(tmp_path, endpoint, monkeypatch,
+                                                                               planted):
+    """The harness can rewrite the run's files: attach and ownerless close take only a built-in host name from them."""
+    import shutil as files
+    import tempfile
+
+    from scripts.testkit import operator_cli
+    from scripts.testkit.operator_composition import ENDPOINT_PREFIX, close_without_supervisor
+
+    marker = tmp_path / "imported"
+    package = tmp_path / "planted"
+    package.mkdir()
+    (package / "planted_host.py").write_text(f"open({str(marker)!r}, 'w').write('imported')\nmake = lambda options: None\n")
+    monkeypatch.syspath_prepend(str(package))
+    binary = tmp_path / "binary.sh"
+    binary.write_text(f"#!/bin/sh\ntouch {marker}\n")
+    binary.chmod(0o700)
+    selection = ({"adapter": "planted_host:make"} if planted == "factory"
+                 else {"adapter": "tmux", "options": {"binary": str(binary)}})
+    run = tmp_path / "run"
+    run.mkdir(mode=0o700)
+    descriptor = _descriptor(run, endpoint)
+    descriptor["host"]["selection"] = selection
+    with pytest.raises(ValueError):
+        terminals.attach(descriptor, host_for=operator_cli._attach_host)
+    assert not marker.exists() and "planted_host" not in sys.modules, "attach built a host the file chose"
+
+    closing = tmp_path / "closing"
+    closing.mkdir(mode=0o700)
+    closing_endpoint = Path(tempfile.mkdtemp(prefix=ENDPOINT_PREFIX))
+    try:
+        (closing / "plan.json").write_text(json.dumps({"terminal_host": selection,
+                                                       "terminal_endpoint": str(closing_endpoint)}))
+        result = close_without_supervisor(closing, {})
+    finally:
+        files.rmtree(closing_endpoint, ignore_errors=True)
+    assert not marker.exists() and "planted_host" not in sys.modules, "ownerless close built a host the file chose"
+    if planted == "factory":
+        assert not result["cleanup"]["verified"] and result["cleanup"].get("errors"), result

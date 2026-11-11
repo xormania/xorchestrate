@@ -58,6 +58,35 @@ def parse(value):
     return value
 
 
+def recorded(value):
+    """A selection read back from a run's own files, which the run's harness can rewrite: built-in host names only.
+
+    Only the adapter name (and its fallback's) is taken, never options. Anything that is not one of the
+    product's built-in terminal hosts, any ``module:factory`` included, is refused before anything is imported.
+    """
+    from xorchestrate.composition import BUILTINS
+
+    if value is None:
+        return None
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except ValueError:
+            value = None
+    builtin = set(BUILTINS["terminal_host"])
+
+    def name(specification):
+        adapter = specification.get("adapter") if isinstance(specification, dict) else None
+        if not isinstance(adapter, str) or adapter not in builtin:
+            raise ValueError("The run's recorded terminal host is not a built-in host; it is not used")
+        return adapter
+
+    result = {"adapter": name(value)}
+    if isinstance(value, dict) and value.get("fallback") is not None:
+        result["fallback"] = {"adapter": name(value["fallback"])}
+    return result
+
+
 def build(value, *, name, location, socket, owned=True):
     """Build the selected host at this placement, or its fallback when the selected one is not ready.
 
