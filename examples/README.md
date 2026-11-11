@@ -57,11 +57,14 @@ xorchestrate call list_work --json '{}'
 ```
 
 The harness launches `xorchestrate connect`, which starts the project's shared
-server on first use and relays MCP ([project server](../docs/project-server.md)).
+server on first use, in the [terminal host](../docs/terminal-host.md), and relays
+MCP ([project server](../docs/project-server.md)).
 Harnesses that keep MCP servers in user-level configuration need the same entry
 there; `init` prints it. `xorchestrate serve` still serves one MCP client over
 stdio for direct use. The application tool names and schemas are the ones `describe`
-shows.
+shows. A session that should survive that server is `hosted`; see the connected
+example. After a hard restart, `up` recovers interrupted sessions
+(`recovery_policy` defaults to `reconnect`).
 
 ## Local telemetry
 

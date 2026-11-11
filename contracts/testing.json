@@ -63,7 +63,9 @@
         "tests/hexagonal/test_session_resume.py": "adapter",
         "tests/hexagonal/test_claude_overlap.py": "adapter",
         "tests/hexagonal/test_native_producer_capture.py": "adapter",
-        "tests/hexagonal/test_transcript_producer_capture.py": "adapter"
+        "tests/hexagonal/test_transcript_producer_capture.py": "adapter",
+        "tests/hexagonal/test_recovery.py": "contract",
+        "tests/hexagonal/test_recovery_end_to_end.py": "composition"
       }
     },
     "bridge": {

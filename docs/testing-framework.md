@@ -48,7 +48,7 @@ python3 -m scripts.testkit run --suite calibration
 python3 -m scripts.testkit run --suite multi-harness
 python3 -m scripts.testkit run --suite acceptance
 
-# Selectable, bounded scenarios in owned tmux terminals.
+# Selectable, bounded scenarios in owned terminals of the product's terminal host.
 python3 -m scripts.testkit stories
 python3 -m scripts.testkit run --suite stories --story work-acceptance --timeout 60
 

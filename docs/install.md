@@ -155,7 +155,9 @@ These are the same for every path.
 
    Agent harnesses then run `xorchestrate connect` (the entry `init` writes
    into Claude Code's `.mcp.json`, by the long name); the project server starts
-   by itself. The
+   by itself, as a terminal in the [terminal host](terminal-host.md). The
+   default host is tmux, and it falls back to a detached process when tmux is
+   not installed, so a missing multiplexer does not block `connect`. The
    launcher hands each project command to the release the project pins in
    `.xorchestrate/project.json`, building that toolchain with uv when needed.
 

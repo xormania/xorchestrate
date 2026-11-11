@@ -7,7 +7,8 @@ client transport ports (``PeerIdentity``, ``ClientConnection``,
 ``ClientTransport``) stay here: the entrypoints choose them, not configuration,
 and they evolve with the project server. So do the pull request delivery ports
 (``PullRequestHost``, ``PullRequestWorkspace``), which are new and still changing,
-and the terminal host port (``TerminalHost`` and its values), for the same reason.
+and the terminal host and recovery policy ports (``TerminalHost``,
+``RecoveryPolicy`` and their values), for the same reason.
 
 Implementations are supplied by composition. No port exposes SQL, subprocesses,
 MCP packets, vendor model names, or a prescribed organizational hierarchy.
@@ -53,6 +54,7 @@ __all__ = [
     "PullRequestHost", "PullRequestWorkspace", "ReceiptPolicy", "RepositoryHosting", "ResumableSessionDriver", "RoutingPolicy", "SessionDriver",
     "SessionSelection", "StateStore", "TelemetrySink", "Transaction", "VersionControl", "WorktreeLocation",
     "AttachInstruction", "HostedTerminal", "InventoryItem", "TerminalClosure", "TerminalCommand", "TerminalHost",
+    "InterruptedSession", "RecoveryPolicy",
 ]
 
 
@@ -141,6 +143,32 @@ class PullRequestWorkspace(Protocol):
     def identity(self, name: str) -> JSON: ...
     def refresh(self, name: str, expected_head: str, target: str, paths: list[str]) -> JSON: ...
     def publish(self, name: str, expected_head: str, branch: str) -> JSON: ...
+
+
+# -- recovery ---------------------------------------------------------------------
+# After a hard restart (a crash, a container failure) sessions persisted as live
+# are held by no runtime. A recovery policy decides which of them the server
+# recovers automatically. Local for now, like the terminal host.
+
+
+@dataclass(frozen=True)
+class InterruptedSession:
+    """A session persisted as live that no runtime holds, as the recovery policy sees it."""
+
+    session_id: str
+    driver: str
+    actor_id: str | None
+    work_id: str | None
+    can_reconnect: bool
+    """Whether its configured driver reconnects (else it can only be marked disconnected)."""
+
+
+class RecoveryPolicy(Protocol):
+    """Which interrupted sessions to recover automatically after a hard restart."""
+
+    def select(self, interrupted: list[InterruptedSession]) -> list[str]:
+        """The session identifiers to recover now; the rest are reported and left for an explicit ``recover``."""
+        ...
 
 
 # -- terminal host ---------------------------------------------------------------

@@ -70,6 +70,9 @@ ACTIONS = {
         "session_id": STRING, "idempotency_key": STRING,
     }, ("session_id", "idempotency_key")),
     "list_sessions": action_spec("List sessions, optionally for one work item.", {"work_id": STRING}, read=True),
+    "recover": action_spec("Recover sessions interrupted by a hard restart: reconnect those that can, mark the rest "
+                           "disconnected; report each old session's replacement.",
+                           {"session_ids": {"type": "array", "items": STRING}}),
     "capabilities": action_spec("Discover provider capabilities using provider/name addresses.", {"provider": STRING}, read=True),
     "invoke": action_spec("Invoke a discovered capability, once per explicit idempotency key.", {
         "capability": STRING, "arguments": OBJECT, "idempotency_key": STRING, "work_id": STRING,

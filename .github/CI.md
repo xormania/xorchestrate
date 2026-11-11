@@ -60,7 +60,7 @@ evidence links and the `CI_REUSE_ENABLED=false` recovery switch. Selected jobs a
 | Application tests shard K/N (Python 3.12) | Matrix of N jobs, each running `--suite tests --shard K/N` with its own pytest inventory/JUnit |
 | Application and adapter tests (Python 3.12) | Retains the existing status name; needs every tests shard and fails unless the shard matrix succeeded. It does not rerun validation |
 | Calibration and multi-harness verification | Shared `calibration` suite and composed three-harness `multi-harness` protocol suite, in parallel with the tests shards |
-| Tmux live acceptance (protocol fixture) | Shared acceptance suite with tmux required (installed through apt only when the runner image lacks it; the step prints `tmux -V`); private owned process cleanup is part of the receipt |
+| Tmux live acceptance (protocol fixture) | Shared acceptance suite. The job provisions tmux for the test kit's own supervisor (installed through apt only when the runner image lacks it; the step prints `tmux -V`). That supervisor is not the product terminal host. Private owned process cleanup is part of the receipt |
 | Jev architecture diagnostics | Independent diagnostics-only invocation with retained advisory output |
 | Hexagonal architecture | Retains the existing required status name and reports the shared static job's outcome; it does not rerun validation |
 

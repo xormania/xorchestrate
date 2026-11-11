@@ -33,8 +33,9 @@ Two directories share a name and hold different things:
     telemetry/                       the live telemetry corpus
     launchers/                       launchers copied from the companion (mode 0755)
     backups/                         upgrade backups (see upgrade.md)
+    hosted/                          private directories of hosted sessions (host configuration, bridge state, terminal log)
     upgrade.json                     progress of an unfinished upgrade
-  servers/                           project servers' locks, sockets and discovery records
+  servers/                           project servers' locks, sockets, discovery records, terminal placement and receipts
 
 <companion>/                         the user's private repository (git-directory adapter)
   overlay/<project>/overlay.json     the user's overrides for one project
@@ -59,8 +60,8 @@ Two directories share a name and hold different things:
 | `xorchestrate companion use PATH [--project [REPO]]` | Use an existing companion clone, as the machine default or for one project. |
 | `xorchestrate init [PATH] [--name NAME] [--approve]` | Once per project per machine; see below. |
 | `xorchestrate approve [PATH]` | Approve the tracked `.xorchestrate/` of the worktree at `PATH` (default: the working directory). |
-| `xorchestrate doctor` | Check Python and its SQLite WAL fix, `git`, `uv`, the project's approval, the overlay's overrides, that configured harness commands and `requires` resolve on `PATH`, and that `pass_env` variables are set. Exit status 1 when any check is an error. |
-| `describe`, `call`, `run`, `serve`, `connect`, `up`, `down`, `status` | Run the application for the project found from the working directory, or the one named by `--project PATH`. |
+| `xorchestrate doctor` | Check Python and its SQLite WAL fix, `git`, `uv`, the project's approval, the overlay's overrides, that configured harness commands and `requires` resolve on `PATH`, and that `pass_env` variables are set. Also reports the terminal host (`terminal_host`), what the project's host holds (`project_terminals`), and, while no server is running, whether the last stop was clean and which sessions are persisted as live (`recovery`). That recovery read opens the store only for an approved configuration with a built-in store adapter. Exit status 1 when any check is an error. |
+| `describe`, `call`, `run`, `serve`, `connect`, `up`, `down`, `status`, `recover` | Run the application for the project found from the working directory, or the one named by `--project PATH`. `recover [--session ID]` asks the running server to recover interrupted sessions; see [terminal host](terminal-host.md#recovering-after-a-container-or-machine-failure). |
 | `xorchestrate telemetry snapshot [--destination NAME] [--archive]` | Take a manual snapshot bundle of the project's telemetry corpus (see [telemetry](telemetry.md#snapshots-at-chosen-moments)). |
 | `xorchestrate telemetry archive BUNDLE` | Copy a complete, verified bundle into the companion. |
 | `xorchestrate upgrade [--to TAG] [--plan-only] [--detach]` | Move this machine's instance to the approved pinned release (see [upgrading](upgrade.md)). |
@@ -104,7 +105,7 @@ The first approval of a project is always a separate `approve`. Afterwards,
 
 ## No project, no run
 
-`describe`, `call`, `run`, `serve`, `connect`, `up`, `down` and `status`
+`describe`, `call`, `run`, `serve`, `connect`, `up`, `down`, `status` and `recover`
 refuse to run outside a set-up project with `project_required`, naming
 `xorchestrate init`. The project is the git worktree containing the working
 directory (or `--project PATH`), which must have `.xorchestrate/project.json`

@@ -10,10 +10,11 @@ from typing import Any
 from .actions import SESSION_CREATIONS
 from .model import JSON, Conflict, OrchestrationError, Record, record_view
 from .outcomes import before_effect
-from .ports import Transaction
+from .ports import InterruptedSession, Transaction
 from .worktrees import current_worktree, session_workspace, session_worktree
 
 _CLOSED = {"stopped", "detached", "disconnected", "superseded"}
+RESUME_IN_FLIGHT = "The source session is already being resumed or reconnected."
 _INDEPENDENT = {"poll_session", "stop_session", "detach_session"}
 
 
@@ -199,6 +200,208 @@ class SessionLifecycleMixin:
                           "call": call})
         return found
 
+    @staticmethod
+    def _superseded(session):
+        replacement = session.data.get("replacement_session_id")
+        return OrchestrationError(f"The session was replaced by session {replacement}; use that session.",
+                                  "stale_session", {"session_id": session.key,
+                                                         "replacement_session_id": replacement})
+
+    # -- recovery after a hard restart ---------------------------------------------------
+
+    def interrupted_sessions(self) -> list[InterruptedSession]:
+        """Sessions persisted as live (starting, active, unknown) that this runtime does not hold.
+
+        After a clean stop a runtime records its sessions as disconnected, so
+        these exist only after a hard restart: a crash, a killed server, a
+        container or machine failure.
+        """
+        owned = self._owned_session_ids.copy()
+        with self.store.transaction() as tx:
+            records = [r for r in tx.list("session") if r.key not in owned
+                       and r.data.get("status") in {"starting", "active", "unknown"}]
+        return [InterruptedSession(r.key, r.data.get("driver"), r.data.get("actor_id"), r.data.get("work_id"),
+                                   isinstance(r.data.get("backend"), dict) and bool(r.data.get("backend"))
+                                   and callable(getattr(self.sessions.get(r.data.get("driver")), "reconnect", None)))
+                for r in sorted(records, key=lambda r: r.key)]
+
+    def interrupted_operations(self, session_ids=None) -> list[JSON]:
+        """Operations a hard restart interrupted: still pending (or uncertain) with no runtime carrying them.
+
+        Their status stays the journal's own ("pending" means the outcome is
+        unknown, not that anything is still running); they are listed so the
+        operator reconciles them. Nothing is replayed or re-sent, and a session
+        that carries them refuses new sends until they are resolved.
+        """
+        with self.store.transaction() as tx:
+            operations = [r for r in tx.list("operation")
+                          if r.data.get("status") in {"pending", "unknown", "completed_unapplied"}
+                          and r.data.get("session_id")
+                          and (session_ids is None or r.data.get("session_id") in session_ids)]
+        owned = self._owned_session_ids.copy()
+        return [{"operation_id": r.key, "session_id": r.data["session_id"], "action": r.data.get("action"),
+                 "status": r.data["status"], "interrupted": True,
+                 "inspect": {"action": "get_operation", "arguments": {"operation_id": r.key}},
+                 "call": {"action": "resolve_operation", "arguments": {"operation_id": r.key}}}
+                for r in sorted(operations, key=lambda r: r.key) if r.data["session_id"] not in owned]
+
+    def _runtime_incarnation(self):
+        """This runtime's identity, fixed for its lifetime."""
+        incarnation = getattr(self, "_incarnation", None)
+        if incarnation is None:
+            incarnation = self._incarnation = self.identifiers()
+        return incarnation
+
+    def recovery_status(self) -> JSON:
+        """Whether a recovery is running in this runtime, and the last report that changed anything (or ``None``).
+
+        Running belongs to the live runtime and is never read from the store, so
+        a runtime that died mid-recovery leaves nothing that reads as running.
+        Only the report is durable.
+        """
+        with self.store.transaction() as tx:
+            record = tx.get("recovery", "current")
+        report = None if record is None else deepcopy(record.data.get("report"))
+        return {"running": bool(self._running_recoveries), "report": report}
+
+    def _keep_report(self, report, changed):
+        """Persist ``report`` when it changed anything or none is stored (a run that did nothing keeps the last)."""
+        with self.store.transaction() as tx:
+            record = tx.get("recovery", "current")
+            if changed or record is None or record.data.get("report") is None:
+                tx.put("recovery", "current", {"report": report}, None if record is None else record.version)
+
+    def recover(self, session_ids=None, *, reason="hard_restart", caller=None, stopping=None) -> JSON:
+        """Recover interrupted sessions: reconnect those whose driver can, mark the others disconnected.
+
+        Idempotent: closed, superseded or held sessions are skipped. Each
+        session's reconnect runs as its own actor with its own work binding,
+        under a key derived from the session, and the store refuses a second
+        reconnect of a source while one is in flight, so concurrent recoveries
+        (automatic and explicit) make exactly one reconnect per session. One
+        session's failure is reported and never stops the others. A start that
+        was in flight is marked unknown for reconciliation; effects pending at
+        the failure stay unresolved; nothing is replayed or re-sent.
+
+        ``caller`` is the actor of an explicit recover: it acts only on sessions
+        that caller may reconnect through ``reconnect_session`` (the existing
+        source-control authorisation) and reconciles only sessions it may stop;
+        the rest are listed as ``not_authorised`` and left as they are. The
+        automatic run at server start passes no caller and acts as the runtime.
+
+        ``stopping()``, when given, is asked before each session: once it is
+        true no further session is taken (the server is shutting down). Those
+        sessions stay interrupted, for the next start or an explicit recover.
+        """
+        report = {"reason": reason, "started_at": self.clock(), "recovered": [], "disconnected": [],
+                  "uncertain": [], "failed": [], "skipped": [], "not_authorised": [], "needs_reconciliation": []}
+        token = object()
+        self._running_recoveries.add(token)
+        try:
+            wanted = None if session_ids is None else set(session_ids)
+            for found in self.interrupted_sessions():
+                if wanted is not None and found.session_id not in wanted:
+                    continue
+                if stopping is not None and stopping():
+                    report["skipped"].append({"session_id": found.session_id, "reason": "shutting down"})
+                    continue
+                try:
+                    if caller is not None and not self._may_recover(caller, found):
+                        report["not_authorised"].append({"session_id": found.session_id})
+                        continue
+                    self._recover_one(found, report, reason)
+                except Conflict as error:
+                    if str(error) != RESUME_IN_FLIGHT:
+                        report["failed"].append({"session_id": found.session_id, "code": error.code,
+                                                 "message": str(error)})
+                        continue
+                    report["skipped"].append({"session_id": found.session_id, "reason": "recovery in progress"})
+                except OrchestrationError as error:
+                    if error.code == "operation_unresolved":
+                        # The same recovery key is in flight from a concurrent recover: exactly one reconnect.
+                        report["skipped"].append({"session_id": found.session_id, "reason": "recovery in progress"})
+                        continue
+                    report["failed"].append({"session_id": found.session_id, "code": error.code, "message": str(error)})
+                except Exception as error:  # One session never blocks the others or the server.
+                    report["failed"].append({"session_id": found.session_id, "code": type(error).__name__})
+            report["needs_reconciliation"] = self.interrupted_operations(
+                {item["session_id"] for key in ("recovered", "disconnected", "uncertain") for item in report[key]})
+            report["finished_at"] = self.clock()
+            with self.store.transaction() as tx:
+                self._event(tx, "recovery.completed", "runtime", reason=reason, recovered=len(report["recovered"]),
+                            disconnected=len(report["disconnected"]), failed=len(report["failed"]))
+        finally:
+            try:
+                self._keep_report(report, any(report[key] for key in ("recovered", "disconnected", "uncertain",
+                                                                       "failed")))
+            finally:
+                self._running_recoveries.discard(token)
+        return report
+
+    def _may_recover(self, caller, found):
+        """Whether ``caller`` could reconnect this session (or, if it cannot reconnect, stop it) itself."""
+        try:
+            if found.can_reconnect:
+                arguments = {"driver": found.driver, "resume_session_id": found.session_id, "specification": {},
+                             "idempotency_key": "recover-authorisation"}
+                if found.actor_id:
+                    # The replacement belongs to the session's own actor, so that is the actor the guardrail weighs.
+                    arguments["actor_id"] = found.actor_id
+                if found.work_id:
+                    # The same work binding the reconnect carries, so a rule for that work applies to the caller.
+                    arguments["work_id"] = found.work_id
+                context = self._context(caller, arguments)
+                self._bind_resume_source("reconnect_session", arguments, caller, context)
+                self._authorize("reconnect_session", context)
+            else:
+                # The session identifier binds the session's own work, as a stop_session call would.
+                context = self._context(caller, {"session_id": found.session_id,
+                                                 "idempotency_key": "recover-authorisation"})
+                self._authorize("stop_session", context)
+        except OrchestrationError as error:
+            if error.code in {"denied", "review_required"}:
+                return False
+            raise
+        return True
+
+    def _recover_one(self, found, report, reason):
+        with self.store.transaction() as tx:
+            session = self._require(tx, "session", found.session_id)
+        if session.data["status"] not in {"starting", "active", "unknown"} or session.key in self._owned_session_ids:
+            report["skipped"].append({"session_id": found.session_id, "reason": "no longer interrupted"})
+            return
+        if found.can_reconnect:
+            backend = session.data.get("backend") or {}
+            # One key per session, backend incarnation and runtime: concurrent recoveries in this runtime share it
+            # (exactly one reconnect), and an attempt a dead runtime left pending never blocks the next one.
+            key = f"recover:{found.session_id}:{backend.get('incarnation', '')}:{self._runtime_incarnation()}"
+            arguments = {"driver": found.driver, "resume_session_id": found.session_id, "specification": {},
+                         "idempotency_key": key}
+            if found.work_id:
+                arguments["work_id"] = found.work_id
+            # As the session's own actor: the replacement keeps that actor and its work binding, and gains nothing.
+            result = self.call("reconnect_session", arguments, found.actor_id or "owner")
+            report["recovered"].append({"session_id": found.session_id,
+                                        "replacement_session_id": result["session"]["id"]})
+            return
+        if not session.data.get("backend"):
+            # A start that was in flight: its outcome is unknown and belongs to the effect journal.
+            if session.data["status"] == "starting":
+                with self.store.transaction() as tx:
+                    current = self._require(tx, "session", session.key)
+                    self._transition(tx, current, "uncertain", {**current.data, "status": "unknown"}, "runtime")
+            report["uncertain"].append({"session_id": found.session_id, "operation_id": session.data.get("start_operation_id")})
+            return
+        with self.store.transaction() as tx:
+            current = self._require(tx, "session", session.key)
+            self._transition(tx, current, "disconnect", {**current.data, "status": "disconnected",
+                             "connection_state": "closed", "disconnect_reason": reason}, "runtime")
+            self._event(tx, "session.disconnected", "runtime", session_id=current.key, reason=reason)
+        report["disconnected"].append({"session_id": found.session_id, "reason": reason})
+
+    def _recover(self, args: JSON, actor: str, context: JSON) -> JSON:
+        return self.recover(args.get("session_ids"), caller=actor)
+
     def runtime_closed(self):
         with self.store.transaction() as tx:
             for session_id in self._owned_session_ids.copy():
@@ -226,6 +429,16 @@ class SessionLifecycleMixin:
             provenance = {}
             if context.get("resume_source"):
                 source = context["resume_source"]
+                current = self._require(tx, "session", source["session"]["id"])
+                if current.data["status"] == "superseded":
+                    raise self._superseded(current)
+                owned = self._owned_session_ids.copy()
+                if any(r.data.get("resume_source", {}).get("session_id") == current.key
+                       and r.data["status"] == "starting" and r.key in owned for r in tx.list("session")):
+                    # Exactly one resume or reconnect per source at a time in this runtime (an automatic recovery
+                    # and an explicit call can race); the reservation is serialized by this transaction. A start
+                    # left by a dead runtime is not ours, so it never blocks the next attempt.
+                    raise Conflict(RESUME_IN_FLIGHT)
                 if source["session"].get("pending_operation") and action != "reconnect_session":
                     raise Conflict("The resume source has a pending or unresolved operation; reconcile it before another effect.")
                 provenance["resume_source"] = {"session_id": source["session"]["id"], "version": source["session"]["version"],
@@ -263,6 +476,8 @@ class SessionLifecycleMixin:
             self._check_recovered_effects(tx, session)
         if session.data.get("pending_operation") and not independent:
             raise Conflict("A session operation is pending or unresolved; inspect it before another effect.")
+        if session.data["status"] == "superseded":
+            raise self._superseded(session)
         if session.data["status"] not in ({"active", "unknown"} if independent else {"active"}):
             raise OrchestrationError("The session is not active.", "invalid_state")
         if session.version != context["session"]["version"]:

@@ -88,7 +88,10 @@ evolve when that intent changes.
 
 ## Architecture and execution
 
-Tests use the shared framework described in `docs/testing-framework.md`. Put
+Tests use the shared framework described in `docs/testing-framework.md`. The
+test kit opens its terminals only through the product's terminal host port
+(`docs/terminal-host.md`); it has no tmux supervisor of its own.
+Put
 expected behavior in reusable contracts and concrete setup in support adapters;
 never use a collected test module as a fixture library. Reuse the existing
 application builder, store selector, native harness helpers and execution/evidence

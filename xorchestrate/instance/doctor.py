@@ -117,7 +117,60 @@ def project_terminal_check(services, placement, tracked=()):
                   f"the project's {active.adapter} terminal host holds " + "; ".join(advice), **details)
 
 
-def project_checks(path=None, environ=None, terminal_placement=None):
+def recovery_check(rendered, data_dir, state, *, approved):
+    """Sessions a hard restart interrupted, read from the project's store while no server runs; nothing is changed.
+
+    The store is read only for an ``approved`` configuration that selects a
+    built-in store adapter: doctor never imports or constructs an adapter that
+    unapproved configuration, or a ``module:factory``, chose.
+    """
+    if state.get("running"):
+        return _check("recovery", "ok", "the server is running; `xorchestrate status` shows its recovery")
+    from ..composition import BUILTINS, factory_for, validate_config
+
+    if not approved:
+        return _check("recovery", "warning", "not inspected: the configuration is not approved, so its store is not "
+                      "opened; approve it, then run doctor again", inspected=False)
+    try:
+        selection = validate_config(rendered.config, data_dir).adapters["store"]
+        if selection.adapter not in BUILTINS["store"]:
+            return _check("recovery", "ok", f"not inspected: the store adapter {selection.adapter!r} is not built in, "
+                          "so doctor does not construct it; a running server's `xorchestrate status` shows its "
+                          "recovery", inspected=False)
+        path = selection.options.get("path")
+        if path is not None and not Path(path).exists():
+            sessions, report, operations = [], None, []
+        else:
+            store = factory_for("store", selection.adapter)(dict(selection.options))
+            try:
+                with store.transaction() as tx:
+                    sessions = [r for r in tx.list("session") if r.data.get("status") in {"starting", "active", "unknown"}]
+                    # No server runs, so nothing carries these: their outcome is unknown until reconciled.
+                    operations = [r.key for r in tx.list("operation") if r.data.get("session_id")
+                                  and r.data.get("status") in {"pending", "unknown", "completed_unapplied"}]
+                    record = tx.get("recovery", "current")
+                    report = record.data.get("report") if record is not None else None
+            finally:
+                store.close()
+    except OrchestrationError as error:
+        return _check("recovery", "warning", f"Recovery state cannot be read: {error}", code=error.code)
+    interrupted = sorted(r.key for r in sessions)
+    details = {"unclean_stop": bool(state.get("unclean_stop")), "interrupted": interrupted,
+               "needs_reconciliation": sorted(operations),
+               "last_report": None if report is None else {key: len(report.get(key, [])) for key in
+                                                           ("recovered", "disconnected", "uncertain", "failed")}}
+    if not interrupted and not state.get("unclean_stop") and not operations:
+        return _check("recovery", "ok", "no hard restart detected and no interrupted sessions", **details)
+    return _check("recovery", "warning",
+                  f"the last server did not stop cleanly; {len(interrupted)} session(s) persisted as live: "
+                  "`xorchestrate up` recovers them as the project's recovery_policy selects (default reconnect), "
+                  "and `xorchestrate recover` recovers the rest"
+                  + (f"; {len(operations)} interrupted operation(s) need reconciliation (get_operation, then "
+                     "resolve_operation): their outcome is unknown and they are never replayed" if operations else ""),
+                  **details)
+
+
+def project_checks(path=None, environ=None, terminal_placement=None, server_state=None):
     """Approval, overrides, harness binaries and ``pass_env`` of the project at ``path``.
 
     ``terminal_placement(instance_id)`` gives ``{"placement", "tracked"}``: where
@@ -178,6 +231,9 @@ def project_checks(path=None, environ=None, terminal_placement=None):
             checks.append(_check("pass_env", "warning" if missing else "ok",
                                  f"{label} passes {', '.join(item['pass_env'])}"
                                  + (f"; unset: {', '.join(missing)}" if missing else ""), missing=missing))
+    if server_state is not None:
+        checks.append(recovery_check(rendered, instance.data_dir, server_state(instance.instance_id),
+                                     approved=refusal is None))
     return checks, rendered
 
 
@@ -204,8 +260,8 @@ def terminal_host_check(environ=None):
     return _check("terminal_host", "ok", f"{report['adapter']}: {traits}", **report)
 
 
-def doctor(path=None, environ=None, *, project=True, terminal_placement=None):
+def doctor(path=None, environ=None, *, project=True, terminal_placement=None, server_state=None):
     checks = machine_checks() + [terminal_host_check(environ)]
     if project:
-        checks += project_checks(path, environ, terminal_placement)[0]
+        checks += project_checks(path, environ, terminal_placement, server_state)[0]
     return {"ok": all(item["status"] != "error" for item in checks), "checks": checks}

@@ -45,6 +45,8 @@ from .model import OrchestrationError
 
 RUNTIME_DIR_VARIABLE = "XORCHESTRATE_RUNTIME_DIR"
 SERVER_LOCK_WAIT = 2.0
+RECOVERY_STOP_WAIT = 120.0
+"""A bound on waiting for the automatic recovery at shutdown, beyond the drivers' own per-session timeouts."""
 # Refusals that waiting cannot change: a client gives up at once instead of retrying.
 FINAL_REFUSALS = frozenset({"server_full", "configuration_mismatch", "worktree_required"})
 
@@ -62,6 +64,9 @@ class ProjectServer:
             if type(value) is not int or value < 1:
                 raise OrchestrationError(f"{name} must be a positive integer.", "invalid_configuration")
         self.application = application
+        self._recovery_detected = None
+        self._recovery_thread = None
+        self._recovery_stopping = threading.Event()
         self.transport = transport
         self.dispatcher = dispatcher
         self.limits = {"mcp": max_connections, "control": max_control_connections}
@@ -99,6 +104,7 @@ class ProjectServer:
             self.transport.close()
             # Already idle after a drain; on an interrupt, admit nothing further.
             self.dispatcher.stop_admission()
+            self._stop_recovery()  # Before the caller closes the runtime's drivers and store.
             with self._lock:
                 connections = list(self._connections.items())
             for connection, _thread in connections:
@@ -139,7 +145,62 @@ class ProjectServer:
                 "worktrees": sorted(root for root in worktrees if isinstance(root, str)),
                 "in_flight": self.dispatcher.in_flight, "draining": self.dispatcher.draining or self._stop_decided,
                 "live_sessions": self.live_sessions(),
-                "sessions_needing_reconnect": self.sessions_needing_reconnect()}
+                "sessions_needing_reconnect": self.sessions_needing_reconnect(),
+                "recovery": self.recovery()}
+
+    def recovery(self):
+        """Whether recovery is running, the last report, and what the policy left for an explicit ``recover``."""
+        status = getattr(self.application, "recovery_status", None)
+        if not callable(status):
+            return None
+        operations = getattr(self.application, "interrupted_operations", None)
+        return {**status(), "detected": self._recovery_detected,
+                "needs_reconciliation": operations() if callable(operations) else []}
+
+    def start_recovery(self, unclean_stop, *, timeout=None):
+        """After a hard restart, ask the recovery policy which interrupted sessions to recover and recover them.
+
+        Runs in the background so the server serves meanwhile; calls on a
+        session not yet recovered fail as for any session this runtime does not
+        hold. Returns the thread, or ``None`` when nothing was interrupted.
+        """
+        interrupted = self.application.interrupted_sessions()
+        if not unclean_stop and not interrupted:
+            return None
+        policy = getattr(self.application, "recovery_policy", None)
+        selected = list(policy.select(list(interrupted))) if policy is not None and interrupted else []
+        # Sessions that cannot reconnect are certainly gone after a hard restart: their state is reconciled
+        # (disconnected, or unknown for a start in flight) whatever the policy; the policy chooses reconnects.
+        reconcile = [session.session_id for session in interrupted if not session.can_reconnect]
+        self._recovery_detected = {"unclean_stop": unclean_stop,
+                                   "interrupted": [session.session_id for session in interrupted],
+                                   "selected": selected, "reconciled": reconcile}
+        work = list(dict.fromkeys([*selected, *reconcile]))
+        if not work:
+            return None
+        thread = threading.Thread(target=self._run_recovery, args=(work,), daemon=True, name="recovery")
+        self._recovery_thread = thread
+        thread.start()
+        return thread
+
+    def _run_recovery(self, selected):
+        try:
+            self.application.recover(selected, stopping=self._recovery_stopping.is_set)
+        except Exception:
+            pass  # recover reports per session; a failure here must not stop the server.
+
+    def _stop_recovery(self):
+        """Let the automatic recovery take no further session and wait for the one in hand.
+
+        Called once the server has decided to stop, before the runtime is
+        closed. Each session's reconnect is bounded by its driver's own
+        timeouts; ``RECOVERY_STOP_WAIT`` only guards against a driver that
+        ignores them. Sessions not attempted stay interrupted and listed.
+        """
+        self._recovery_stopping.set()
+        thread = self._recovery_thread
+        if thread is not None and thread is not threading.current_thread():
+            thread.join(RECOVERY_STOP_WAIT)
 
     def sessions_needing_reconnect(self):
         query = getattr(self.application, "sessions_needing_reconnect", None)
@@ -167,6 +228,7 @@ class ProjectServer:
             self._stop_decided = True
             self.dispatcher.stop_admission()
             self.dispatcher.wait_idle()
+            self._stop_recovery()
             return {"stopping": True, "pid": os.getpid(), "detached_sessions": live}
 
     # -- admission (called by the transport during each handshake) -----------
@@ -230,6 +292,10 @@ class ProjectServer:
                     command = request.get("command") if isinstance(request, dict) else None
                     if command == "status":
                         reply = self.status()
+                    elif command == "recover":
+                        # An application action: the guardrail decides whether this caller may recover.
+                        arguments = {k: v for k, v in request.items() if k == "session_ids"}
+                        reply = self.application.call("recover", arguments, connection.peer.actor)
                     elif command == "down":
                         detach = request.get("detach", False)
                         if type(detach) is not bool:

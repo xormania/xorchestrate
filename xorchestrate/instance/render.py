@@ -229,7 +229,7 @@ def launched_commands(config):
 
 
 ADAPTER_SECTIONS = ("state_engine", "store", "guardrail", "routing", "acceptance", "session_selection",
-                    "delivery_scheduler", "retry_policy", "receipt_policy", "telemetry")
+                    "delivery_scheduler", "retry_policy", "receipt_policy", "recovery_policy", "telemetry")
 
 
 def repository_references(config):

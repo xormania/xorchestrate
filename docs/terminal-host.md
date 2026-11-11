@@ -239,9 +239,9 @@ are unchanged.
   multiplexer keeps the terminals. The operator can attach, and a restarted
   controller re-adopts them from their receipts.
 - **The machine reboots.** The multiplexer is gone, and receipts are refused
-  because the boot changed. The process is not recovered. For hosted sessions,
-  the bridge's saved state will relaunch the session host in a fresh terminal,
-  so the conversation is recovered.
+  because the boot changed. The process is not recovered. A hosted session is
+  resumed in a fresh terminal from its saved bridge state, as
+  [recovery](#recovering-after-a-container-or-machine-failure) describes.
 - **`detached-process`** keeps processes running past the controller, but
   there is no terminal to attach to.
 
@@ -270,19 +270,88 @@ whose process no longer exists are normal starting states.
 1. Run `xorchestrate up` (or connect). A stale socket the host owns is removed
    once nothing answers on it. A record whose process is gone is set aside, and
    the server starts in a fresh terminal.
-2. Run `xorchestrate status`. Under `sessions_needing_reconnect` it lists the
-   sessions that were live and that the new server does not hold, each with the
-   call to make.
-3. Make that call. For a hosted session it is `reconnect_session` with
-   `resume_session_id`. The hosted adapter checks that the old terminal is
-   gone, removes its own stale endpoint, reopens the terminal with the same
-   state so the bridge resumes the native conversation, and reconnects.
-   Nothing is reconnected automatically.
+2. The server detects the hard restart from durable state: a discovery record
+   left by a server that did not stop cleanly, or sessions persisted as live
+   that it does not hold. It asks the project's `recovery_policy` which of these
+   interrupted sessions to recover, and recovers them in the background while it
+   serves. With the default `reconnect` policy, every session whose driver can
+   reconnect comes back without a call. With `manual`, nothing is recovered
+   automatically.
+3. `xorchestrate status` shows `recovery` (`running`, the last `report`, and
+   what was `detected` and `selected`) and `sessions_needing_reconnect`.
+   `running` belongs to the live server and is never read from the store, so a
+   server that died mid-recovery leaves nothing that reads as running; only the
+   report is kept.
+   `xorchestrate recover` (or the `recover` action) recovers the rest; it is
+   idempotent.
+   With no server running, `xorchestrate doctor`'s `recovery` check reports
+   whether the last server stopped cleanly and which sessions are persisted as
+   live, read from the store without changing anything. It opens the store only
+   for an approved configuration with a built-in store adapter; otherwise it
+   constructs nothing and says so (a running server's `status` shows recovery).
+
+Recovering a session reconnects it through its driver. For a hosted session,
+the adapter checks that the old terminal is gone, removes its own stale
+endpoint, reopens the terminal with the same state so the bridge resumes the
+native conversation, and reconnects. A session whose driver cannot reconnect is
+marked `disconnected` (reason `hard_restart`); resume it later with
+`start_session` and `resume_session_id` if its driver resumes. A start that was
+in flight is marked unknown for reconciliation.
+
+- **Identity.** Reconnecting creates a new session. The report maps each old
+  session to its replacement. The old record is `superseded` and names its
+  replacement, and a call on the old identifier fails with `stale_session`,
+  naming the replacement.
+- **Concurrency.** The automatic run, an explicit `recover` and a client's own
+  `reconnect_session` can overlap. They make exactly one reconnect per session,
+  and the others report it as in progress or refused. Until a session is
+  recovered, calls on it fail as for any session the server does not hold.
+- **Authority.** A recovered session keeps its original actor and work binding
+  and gains nothing; the reconnect runs as that actor. Who may call `recover`
+  is decided by the guardrail, like any action. An explicit `recover` acts only
+  where its caller already could: it reconnects only sessions the caller may
+  reconnect through `reconnect_session` (the existing source-control
+  authorisation, weighed with the session's own actor and work binding, so a
+  rule for that work applies), and reconciles only sessions the caller may
+  stop. Others are
+  listed under `not_authorised` and left exactly as they were. The automatic
+  run at server start acts as the trusted runtime on what the policy selects.
+- **Reconciliation.** Sessions that cannot reconnect are certainly gone after a
+  hard restart. The server reconciles them at start, whatever the policy: they
+  become `disconnected`, or `unknown` for a start that was in flight. The
+  policy chooses only which sessions to reconnect.
+- **Shutdown during recovery.** A server told to stop (`down`, SIGTERM) lets
+  the automatic recovery take no further session and waits for the one in
+  hand before closing its drivers and store. Sessions not attempted stay
+  interrupted and listed, for the next start or an explicit `recover`.
+- **A second failure during recovery.** Each runtime uses its own recovery key,
+  and only refuses a concurrent reconnect it is running itself. A recovery left
+  half-done by a dead server therefore never blocks the next one: its
+  half-started replacement is marked unknown, and the session is recovered
+  again.
+- **Terminals that survived.** When only the server died (the terminal host and
+  each bridge host still run), recovery adopts the running terminal and
+  reconnects to the same bridge host and native conversation, with no native
+  resume. A turn that was in flight finishes in the bridge host, and its
+  observations are available by polling. The application's operation for it
+  stays unresolved on the replacement, and further sends are refused until it
+  is reconciled (`resolve_operation`).
+- **Policy.** `recovery_policy` is a project configuration section, like
+  `retry_policy`: `{"adapter": "reconnect"}` (the default) or
+  `{"adapter": "manual"}`. It answers one question: which interrupted sessions
+  to recover automatically. Recovery runs only in the server, never in one-shot
+  commands.
 
 **What stays uncertain:** effects that were in flight at the failure. Their
-outcome is unknown; they are not replayed or re-sent, and they stay in the
-effect journal for reconciliation (`resolve_operation`). A native driver
-without resume cannot continue its conversation: start a fresh session.
+outcome is unknown. Each operation keeps the effect journal's own status
+(usually `pending`), and recovery adds no reconciliation of its own. Here
+`pending` means "outcome unknown", not "still running". To make that clear,
+the recovery report, `status` (`recovery.needs_reconciliation`) and `doctor`
+list each such operation as interrupted, with the call to make: inspect it with
+`get_operation`, then settle it with `resolve_operation`. Nothing is replayed
+or re-sent, and a session that carries such an operation refuses new sends
+until it is resolved. A native driver without resume cannot continue its
+conversation: start a fresh session.
 
 ## Known limitations
 

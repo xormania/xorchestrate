@@ -10,6 +10,11 @@ It does not claim attachment to an arbitrary already-running terminal process.
 The host wraps the configured Codex, Claude, Grok, or another session driver;
 native resume support remains the responsibility of that driver.
 
+The `hosted` session adapter launches this same host for you, in the project's
+[terminal host](terminal-host.md#hosted-sessions), and reconnects it after a
+hard restart. Use the commands below when you want to launch and attach the
+host yourself. A hosted session does not replace this path.
+
 ## Launch and attach
 
 Launch the host in an operator-managed terminal. Use a configured native driver

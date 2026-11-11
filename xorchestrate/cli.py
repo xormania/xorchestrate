@@ -63,7 +63,7 @@ from .server import (
     wait_stopped,
 )
 
-SERVER_COMMANDS = {"connect", "up", "down", "status"}
+SERVER_COMMANDS = {"connect", "up", "down", "status", "recover"}
 PROJECT_COMMANDS = SERVER_COMMANDS | {"describe", "call", "run", "serve", "telemetry"}
 # Only talk to the running server's socket, so they run in this launcher, never through a handoff:
 # whichever release the server runs, and while an upgrade to a newly pinned release is pending.
@@ -142,6 +142,11 @@ def _parser():
     down.add_argument("--timeout", type=float, default=60.0, help="Seconds to wait for the drain and exit")
     status = commands.add_parser("status", help="Report whether the server is running, what it holds and the overrides")
     status.add_argument("--socket", help=socket_help)
+    recover = commands.add_parser("recover", help="Recover sessions interrupted by a hard restart, in the running server")
+    recover.add_argument("--socket", help=socket_help)
+    recover.add_argument("--session", dest="session_ids", action="append",
+                         help="Recover only this session (repeatable); default: every interrupted session")
+    recover.add_argument("--timeout", type=float, default=600.0, help="Seconds to wait for the recovery")
     setup = commands.add_parser("setup", help="First run: create or link the companion, then run doctor")
     setup.add_argument("path", nargs="?", help="A new or empty directory, or an existing companion clone")
     companion = commands.add_parser("companion", help="Create or register the companion repository")
@@ -275,7 +280,11 @@ def _serve_unix(args, prepared):
                                        details=details, peer_policy=worktree_policy(prepared.tracked))
                 if threading.current_thread() is threading.main_thread():
                     signal.signal(signal.SIGTERM, lambda *_: server.terminate())
+                # A discovery record left behind means the previous server did not stop cleanly (this one
+                # holds the instance lock, so none other runs); recovery runs in the background meanwhile.
+                unclean_stop = files.read_record() is not None
                 files.write_record(path, rendered)
+                server.start_recovery(unclean_stop)
                 _write({"serving": {"socket": str(path), "pid": os.getpid()}}, sys.stdout)
                 server.serve_forever()
             finally:
@@ -462,6 +471,13 @@ def _finish_under_start_lock(files, terminals):
         starting.release()
 
 
+def _server_state(instance_id):
+    """Whether a project's server runs, and whether the last one left its discovery record (did not stop cleanly)."""
+    files = ServerFiles.locate(server_identity(instance_id))
+    running = lock_is_held(files.lock)
+    return {"running": running, "unclean_stop": not running and files.read_record() is not None}
+
+
 def _project_terminal_placement(instance_id):
     """Where a project's terminal host is: its recorded placement, else the one the launcher would compute."""
     files = ServerFiles.locate(server_identity(instance_id))
@@ -543,6 +559,11 @@ def _server_command(args, tracked):
         client = open_client(target, actor=args.actor, purpose="control")
     except OSError:
         reply = {"running": False, "socket": None if target is None else str(target)}
+        if args.command == "recover":
+            _write({"error": {"code": "server_unavailable", "message": "No server is running. Start it with "
+                    "`xorchestrate up`: at startup it recovers interrupted sessions as its recovery policy selects, "
+                    "and `xorchestrate recover` recovers the rest."}}, sys.stderr)
+            return 3
         if args.command == "status":
             reply["overrides"] = _overrides(tracked)
             reply["terminal_host"] = _server_terminal_report(files, sweep=True)
@@ -560,6 +581,11 @@ def _server_command(args, tracked):
     try:
         if args.command == "status":
             reply = client.request({"command": "status"}, 30)
+        elif args.command == "recover":
+            request = {"command": "recover"}
+            if args.session_ids:
+                request["session_ids"] = args.session_ids
+            reply = client.request(request, args.timeout)
         else:
             reply = client.request({"command": "down", "detach": args.detach}, args.timeout)
     except TimeoutError:
@@ -571,6 +597,9 @@ def _server_command(args, tracked):
     if "error" in reply:
         _write({"error": reply["error"]}, sys.stderr)
         return 2
+    if args.command == "recover":
+        _write(reply, sys.stdout)
+        return 0
     if args.command == "down":
         stopped = wait_stopped(files, args.timeout)
         reply = {**reply, "stopped": stopped}
@@ -658,7 +687,7 @@ def _operator_command(args):
     elif args.command == "approve":
         report = operations.approve(args.path or args.project)
     else:
-        report = doctor(args.project, terminal_placement=_project_terminal_placement)
+        report = doctor(args.project, terminal_placement=_project_terminal_placement, server_state=_server_state)
         _write(report, sys.stdout)
         return 0 if report["ok"] else 1
     _write(report, sys.stdout)
