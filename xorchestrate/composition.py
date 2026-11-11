@@ -34,6 +34,7 @@ BUILTINS = {
         "grok": "xorchestrate.adapters.grok:GrokSessionDriver",
         "claude": "xorchestrate.adapters.claude:ClaudeSessionDriver",
         "bridge": "xorchestrate.adapters.bridge:BridgeSessionDriver",
+        "hosted": "xorchestrate.adapters.hosted:HostedSessionDriver",
     },
     "acceptance": {"required-checks": "xorchestrate.adapters.acceptance:RequiredChecksAcceptance"},
     "session_selection": {"latest": "xorchestrate.adapters.delivery:LatestSessionSelection"},
@@ -379,6 +380,9 @@ def _select(kind, specification, base_dir):
         raise OrchestrationError(f"Unknown {kind} adapter: {adapter}", "configuration_error")
     if kind in {"providers", "sessions"} and adapter in BUILTINS[kind] and adapter != "pr":
         options["cwd"] = _resolve_path(base_dir, options.get("cwd", "."), kind, adapter)
+    if kind == "sessions" and adapter == "hosted":
+        options["directory"] = str(_resolve_path(base_dir, options.get("directory", "hosted"), kind, adapter,
+                                                 strict=False))
     if kind == "store" and adapter == "sqlite":
         options["path"] = sqlite_store_path(options, base_dir)
     if kind == "telemetry" and adapter == "local" and isinstance(options.get("runtime_root"), str):
@@ -512,7 +516,15 @@ def build_telemetry(config=None, base_dir=None, *, project=None):
                                  {"cause": construction_cause(error)}) from error
 
 
-def build(config=None, base_dir=None, *, project=None, telemetry_defaults=None):
+@dataclass(frozen=True)
+class TerminalHosting:
+    """The project's terminal host and a short private directory for hosted sessions' endpoints."""
+
+    host: object
+    endpoints: str
+
+
+def build(config=None, base_dir=None, *, project=None, telemetry_defaults=None, terminal_hosting=None):
     """Assemble a runtime.
 
     ``project`` is the explicit ``ProjectContext`` of a set-up project: it
@@ -520,6 +532,9 @@ def build(config=None, base_dir=None, *, project=None, telemetry_defaults=None):
     when none is given, and the default worktree. ``telemetry_defaults``
     enables collection without a telemetry section for callers without a
     project; it takes precedence over the project's defaults when both are given.
+    ``terminal_hosting`` (a ``TerminalHosting``) is bound to session drivers that
+    run their sessions in the terminal host (``bind_terminal_host``); the caller
+    owns and closes the host.
     """
     if project is not None and not isinstance(project, ProjectContext):
         raise OrchestrationError("Project must be a ProjectContext value.", "configuration_error")
@@ -610,6 +625,10 @@ def build(config=None, base_dir=None, *, project=None, telemetry_defaults=None):
             bind_state_engine = getattr(driver, "bind_state_engine", None)
             if callable(bind_state_engine):
                 bind_state_engine(state_engine)
+            bind_terminal_host = getattr(driver, "bind_terminal_host", None)
+            if callable(bind_terminal_host) and terminal_hosting is not None:
+                bind_terminal_host(terminal_hosting.host, endpoints=terminal_hosting.endpoints, entry=name,
+                                   config_version=resolved.version)
             bind_observer = getattr(driver, "bind_observer", None)
             if callable(bind_observer):
                 bind_observer(lambda context, observation, name=name: application.observe_native(name, context, observation))

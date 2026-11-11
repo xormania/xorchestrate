@@ -138,8 +138,11 @@ def check_repo_placeholders(value, path=()):
         for index, item in enumerate(value):
             check_repo_placeholders(item, (*path, index))
     elif isinstance(value, str) and "${repo}" in value:
+        option = path[3:]
+        while option[:2] == ("session", "options"):  # A wrapped selection (a hosted session) launches it too.
+            option = option[2:]
         allowed = (len(path) >= 4 and path[0] in {"providers", "sessions", "evaluators"} and path[2] == "options"
-                   and path[3] in REPO_ALLOWED_OPTIONS)
+                   and bool(option) and option[0] in REPO_ALLOWED_OPTIONS)
         if not allowed:
             raise OrchestrationError(
                 f"${{repo}} is resolved only in process command, cwd and env options; it is not allowed at {_pointer(path)}.",
@@ -210,15 +213,18 @@ def launched_commands(config):
         for name, specification in entries.items():
             if not isinstance(specification, dict) or specification.get("enabled") is False:
                 continue
-            options = specification.get("options", {})
-            if not isinstance(options, dict):
-                continue
-            for key in ("command", "discovery_command"):
-                if isinstance(options.get(key), list):
-                    commands.append({"kind": kind, "name": name, "adapter": specification.get("adapter"),
-                                     "option": key, "command": list(options[key]),
-                                     "pass_env": list(options.get("pass_env", []))
-                                     if isinstance(options.get("pass_env"), list) else []})
+            # A selection may wrap another (a hosted session's ``session``); its commands run too.
+            while isinstance(specification, dict):
+                options = specification.get("options", {})
+                if not isinstance(options, dict):
+                    break
+                for key in ("command", "discovery_command"):
+                    if isinstance(options.get(key), list):
+                        commands.append({"kind": kind, "name": name, "adapter": specification.get("adapter"),
+                                         "option": key, "command": list(options[key]),
+                                         "pass_env": list(options.get("pass_env", []))
+                                         if isinstance(options.get("pass_env"), list) else []})
+                specification = options.get("session")
     return commands
 
 
@@ -243,7 +249,7 @@ def repository_references(config):
             found.append({"where": where, "kind": "module", "adapter": target})
         options = specification.get("options")
         if isinstance(options, dict):
-            for nested in ("corpus", "artifacts"):
+            for nested in ("corpus", "artifacts", "session"):
                 if isinstance(options.get(nested), dict):
                     adapter(f"{where}.options.{nested}", options[nested])
 

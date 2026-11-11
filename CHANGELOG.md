@@ -30,6 +30,11 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Added
 
+- `hosted` session adapter: a native session runs in a bridge host that
+  Xorchestrate opens in the project's terminal host. It survives the server,
+  can be attached to, and is reconnected (or resumed in a fresh terminal from
+  its saved state) through the existing bridge. The `connected` example's
+  `worker` is now hosted. See [hosted sessions](docs/terminal-host.md#hosted-sessions).
 - The public ports, the values and errors they exchange and the adapter factory
   convention now come from the new Apache-2.0
   [xcontracts](https://github.com/xormania/xcontracts) package (`xcontracts>=0.1,<0.2`),

@@ -2,7 +2,7 @@
 
 Xorchestrate runs long-lived local work in a **terminal host**: a named group of
 terminals it can list, drive, attach to and recover. Today the project server
-runs there; hosted sessions follow.
+runs there, and so do [hosted sessions](#hosted-sessions).
 
 The host is a port, `TerminalHost` in `xorchestrate/ports.py`. The application
 sees hosted terminals, receipts and capabilities, not a particular
@@ -137,6 +137,47 @@ refusal `terminal_host_unavailable`.
 - The server runs with the launching client's environment, as before. With
   `tmux` it reaches the server through the private environment file, never a
   command line.
+
+## Hosted sessions
+
+A session that should survive the server is configured as `hosted`, wrapping
+the native session's own selection:
+
+```json
+{"sessions": {"worker": {"adapter": "hosted", "options": {
+  "session": {"adapter": "codex", "options": {"command": ["codex", "app-server", "--listen", "stdio://"],
+                                               "cwd": "${repo}"}},
+  "application_tools": true}}}}
+```
+
+Each hosted session is a bridge host (`python -m xorchestrate.bridge`) that
+Xorchestrate opens in the project's terminal host and attaches to with the
+existing bridge driver. There is no new session protocol, and owned drivers
+are unchanged.
+
+- **Where it runs.** The server binds its terminal host to hosted drivers. The
+  terminal is named after the configured entry plus a short key. Each session
+  has a private directory (`options.directory`, default `hosted` under the
+  project's data directory). It holds the generated host configuration, the
+  host's state file and the terminal's log. The bridge endpoint sits beside the
+  host's socket.
+- **Start.** The driver opens the terminal and retries attaching while it runs,
+  up to `attach_timeout` (default 30 seconds). A failed or timed-out start
+  returns the terminal's recent output and the log location. A `hosted_terminal`
+  observation records whether the session survives the server, and gives the
+  attach command when the host is interactive.
+- **`stop_session`** detaches and closes the terminal. If cleanup cannot be
+  verified, it says so. The private directory and state file remain, so a later
+  resume reopens the terminal with the same state. Pruning old directories is
+  later work.
+- **`detach_session`** and the server stopping only detach: the terminal keeps
+  running.
+- **`reconnect_session`/resume** adopts the terminal from the session's
+  receipt and reconnects through the bridge. If the terminal is gone (after a
+  reboot or a `stop`), it reopens it with the same state, so the bridge resumes
+  the native conversation. Resuming needs a native driver that supports it.
+- **Approval.** The approval summary and `doctor` list the wrapped session's
+  command like any other launched command.
 
 ## What "recoverable" means
 

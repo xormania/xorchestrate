@@ -330,9 +330,10 @@ class ServerFiles:
     def terminal_record(self):
         """Where the server's terminal host is placed and the terminal's receipt, so later commands can adopt it.
 
-        Like the discovery record, it is written once by the launching client;
-        later clients read it instead of recomputing the placement from their
-        own environment.
+        Like the discovery record, it is written once, by the launching client
+        or, for a server started directly, by the server itself with no
+        receipt; later clients and the server read it instead of recomputing
+        the placement from their own environment.
         """
         return self.directory / f"{self.key}.terminal.json"
 
@@ -352,8 +353,8 @@ class ServerFiles:
             record = json.loads(data)
         except ValueError:
             record = None
-        valid = isinstance(record, dict) and isinstance(record.get("placement"), dict) and isinstance(
-            record.get("receipt"), dict)
+        valid = isinstance(record, dict) and isinstance(record.get("placement"), dict) and (
+            record.get("receipt") is None or isinstance(record.get("receipt"), dict))
         if not valid:
             self.remove_terminal_record()  # A corrupt record is treated as missing.
             return None
