@@ -990,7 +990,8 @@
         "scripts.ci.dependencies",
         "scripts.ci.release_identity",
         "scripts.ci.result",
-        "scripts.ci.candidate"
+        "scripts.ci.candidate",
+        "scripts.ci.reuse"
       ],
       "allowed_roles": [
         "ci_tooling"

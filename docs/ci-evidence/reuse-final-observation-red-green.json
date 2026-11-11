@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "scope": "Independent regression for PR 68 review comment 4531561924: an unavailable final observation after eligible reuse must fall back to execution before publishing planner and GitHub outputs.",
+  "boundary": {
+    "transport": "Existing ProducerAPI HTTP peer with real digest-bound ZIP evidence and a qualified one-hop summary (201) pointing directly to original execution 101.",
+    "failure": "The initial actual PR observation succeeds. After producer evidence is authenticated, the second HTTP PR read raises URLError. No selector, observe_current, prepare, or CLI function is mocked.",
+    "runtime_input": "The runtime probe port supplies the existing peer's resolved runtime manifests; this is input setup, not a substituted reuse decision."
+  },
+  "revisions": {
+    "defective": "0c4fe587035fcb123dbdc0fd5148af7981d81041",
+    "repair": "b8207e83617c479e3e58421000c255bcf9386c6d",
+    "defective_reuse_sha256": "1b6a55060c08263bc860d91845702dac0cd599b23a8f62d36392592b1f57d5a9",
+    "repaired_reuse_sha256": "99b58b21dd3fd8398f19fb198488f80c416e3165120b1c3d6591e05810569ca4",
+    "test_sha256": "10b7c2b2427172ac9c1bd61c747daa026c36a2142d9eeec0d5beb83623bb78b4",
+    "contract_sha256": "6546b515b64370187d35c0377af5def3f2f0642da6971ef1077458b2e9afadca",
+    "support_sha256": "6ca4e550b579986debf45aa44d4d276d0f2037e2d5b807eb49257b9a3355c00a"
+  },
+  "same_input_command": "python -m pytest tests/hexagonal/test_ci_reuse.py -q -p no:cacheprovider -k 'planner_final_observation or planner_cli_never_emits'",
+  "red": {
+    "result": "3 failed, 5 passed, 177 deselected",
+    "intended_failures": [
+      "Unavailable final observation: the actual planner returned decision reuse while returning no bundle; CI_REUSE_UNPROVED_MUST_EXECUTE failed.",
+      "Known final supersession: execute was selected but stale current/original context, producer, lanes, references and summary provenance remained; CI_REUSE_FAILED_FINAL_OBSERVATION_DROPS_PROVENANCE failed.",
+      "Unavailable final observation: the actual CLI wrote reuse=true to GitHub outputs; CI_REUSE_FINAL_FAILURE_CANNOT_SKIP_HEAVY_JOBS failed."
+    ],
+    "setup_errors": false
+  },
+  "green": {
+    "same_input_result": "8 passed, 177 deselected",
+    "full_reuse_module": "185 passed",
+    "lint": "Ruff passed for the changed test, contract and HTTP support files.",
+    "diff_check": "git diff --check passed"
+  },
+  "preserved_controls": [
+    "Successful one-hop reuse remains reuse with a qualified bundle and original execution 101.",
+    "Reuse-disabled planner and CLI execution retain the reuse_disabled reason and emit reuse=false.",
+    "Ordinary selected execution with no qualified history retains no_qualified_evidence.",
+    "Unavailable final observation retains timestamped initial observation and historical attempts while removing all reuse-only provenance; no unsupported current-ready claim is emitted.",
+    "Exactly two current PR reads occur when final observation is required; there is no blind retry."
+  ],
+  "limits": "Local Python was 3.12.14. This verifies planner and CLI wiring through the HTTP peer, not a newly completed hosted execution. Native CI remains separate acceptance evidence."
+}

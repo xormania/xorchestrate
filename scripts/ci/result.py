@@ -7,6 +7,7 @@ import hashlib
 import importlib.util
 import json
 import math
+import os
 from collections import Counter
 from pathlib import Path
 
@@ -195,7 +196,7 @@ def jev_evidence(artifacts, needs, *, tested_sha):
         }.items() if key not in {"source_scope", "context_sha256", "concerns"}}
 
 
-def job_verdict(needs, *, event, package=False):
+def job_verdict(needs, *, event, package=False, reused=False):
     """Only a successful PR classifier may permit documented heavy-job skips."""
     errors = []
     if not isinstance(needs, dict):
@@ -212,7 +213,8 @@ def job_verdict(needs, *, event, package=False):
     for name in (*ALWAYS, *HEAVY, *(("package",) if package else ())):
         row = needs.get(name)
         state = row.get("result") if isinstance(row, dict) else None
-        allowed = {"success", "skipped"} if docs and name not in ALWAYS else {"success"}
+        skipped = docs or (reused and event == "pull_request" and code == "true" and paths.get("result") == "success")
+        allowed = {"success", "skipped"} if skipped and name not in ALWAYS else {"success"}
         if state not in allowed:
             errors.append(f"Required job {name} did not pass: {state or 'missing'}")
     return docs, errors
@@ -248,6 +250,28 @@ def _reports(directory, suites, tested_sha, tested_tree=None):
         if len(matches) != 1 or matches[0].get("status") != "passed":
             raise ValueError("Required suite evidence did not pass exactly once: " + suite)
     return reports
+
+
+def _qualified_lanes(context, metadata, workflow, artifacts, *, static=False):
+    candidate_evidence.validate_context(context)
+    captured = _read(artifacts / f"candidate-context--attempt-{context['producer']['run_attempt']}" / "context.json")
+    if captured != context:
+        raise ValueError("Aggregate context does not match the original captured context")
+    expected = candidate_evidence.expected_lanes(workflow, documentation_only=static)
+    manifests = {path.parent.name: _read(path) for path in artifacts.glob("*--attempt-*/producer.json")}
+    references = candidate_evidence.qualify_lineage(context, manifests, metadata, expected)
+    return references, {row["lane"]: artifacts / row["artifact_name"] for row in references}
+
+
+def qualify_static(context, metadata, workflow, artifacts, *, needs=None):
+    """Authenticate a summary's own static execution before following its original references."""
+    references, directories = _qualified_lanes(context, metadata, workflow, artifacts, static=True)
+    if needs is not None:
+        docs, errors = job_verdict(needs, event=context["event"]["name"], package="package" in workflow["jobs"], reused=True)
+        if docs or errors or needs.get("paths", {}).get("outputs", {}).get("reuse") != "true":
+            raise ValueError("Reuse summary has no explicit successful skipped-lane decision")
+    _reports(directories["static-checks-python-3.12"], ("static",), context["checkout"]["commit"], context["checkout"]["tree"])
+    return references
 
 
 def shard_evidence(artifacts, workflow, *, tested_sha, catalog, directories=None, tested_tree=None):
@@ -310,9 +334,13 @@ def shard_evidence(artifacts, workflow, *, tested_sha, catalog, directories=None
     return rows, {name: dict(counts) for name, counts in sorted(families.items())}
 
 
-def evaluate(needs, *, event, source_sha, tested_sha, workflow, artifacts, catalog, context=None, metadata=None):
+def evaluate(needs, *, event, source_sha, tested_sha, workflow, artifacts, catalog, context=None, metadata=None,
+             reuse=None, reuse_work=None, reuse_token=None, reuse_env=None):
     package = "package" in workflow["jobs"]
-    docs, errors = job_verdict(needs, event=event, package=package)
+    reused = isinstance(reuse, dict) and reuse.get("decision") == "reuse"
+    docs, errors = job_verdict(needs, event=event, package=package, reused=reused)
+    if reused and (context is None or metadata is None):
+        errors.append("Reused lanes require authenticated schema-2 candidate and producer metadata")
     result = {"schema_version": 2 if context is not None or metadata is not None else 1,
               "status": "failed", "source_sha": source_sha, "tested_sha": tested_sha,
               "documentation_only": docs, "jobs": needs if isinstance(needs, dict) else {}, "shards": [], "families": {}, "suites": [], "errors": errors}
@@ -324,19 +352,39 @@ def evaluate(needs, *, event, source_sha, tested_sha, workflow, artifacts, catal
             if (context["source_sha"] != source_sha or context["checkout"]["commit"] != tested_sha
                     or context["event"]["name"] != event):
                 raise ValueError("Aggregate inputs contradict the captured candidate")
-            captured = _read(artifacts / f"candidate-context--attempt-{context['producer']['run_attempt']}" / "context.json")
-            if captured != context:
-                raise ValueError("Aggregate context does not match the original captured context")
-            expected = candidate_evidence.expected_lanes(workflow, documentation_only=docs)
-            manifests = {}
-            for path in artifacts.glob("*--attempt-*/producer.json"):
-                manifests[path.parent.name] = _read(path)
-            references = candidate_evidence.qualify_lineage(context, manifests, metadata, expected)
+            expected = candidate_evidence.expected_lanes(workflow, documentation_only=docs or reused)
+            references, directories = _qualified_lanes(context, metadata, workflow, artifacts, static=docs or reused)
             tested_tree = context["checkout"]["tree"]
-            directories = {row["lane"]: artifacts / row["artifact_name"] for row in references}
             result.update(schema_version=2, candidate_context=context, evidence_references=references,
                           attempts=[{key: job.get(key) for key in ("id", "name", "run_attempt", "status", "conclusion")}
                                     for job in metadata["jobs"]])
+            if reused:
+                if (docs or event != "pull_request" or needs.get("paths", {}).get("outputs", {}).get("reuse") != "true"
+                        or reuse_work is None):
+                    raise ValueError("Skipped behavioral lanes have no explicit reuse execution path")
+                spec = importlib.util.spec_from_file_location("ci_reuse", Path(__file__).with_name("reuse.py"))
+                reuse_evidence = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(reuse_evidence)
+                qualified, previous = reuse_evidence.qualify(reuse, context, workflow, catalog, reuse_work, evaluate,
+                    token=reuse_token or "", env={} if reuse_env is None else reuse_env, static_qualifier=qualify_static)
+                original = previous["result"]
+                original_references = qualified["references"]
+                directories.update({row["lane"]: previous["artifacts"] / row["artifact_name"] for row in original_references})
+                references.extend({**row, "decision": "reused", "equivalence": "exact-candidate-v1",
+                                   "consumer_run_id": context["producer"]["run_id"]} for row in original_references)
+                result.update(reuse={key: qualified[key] for key in
+                    ("producer", "original_context", "result_artifact", "history", "current_pr")},
+                    reused_attempts=[{key: job.get(key) for key in ("id", "name", "run_attempt", "status", "conclusion")}
+                                     for job in previous["metadata"]["jobs"]],
+                    lifecycle={"decision": "reuse", "reason": qualified["reason"],
+                        "new_metadata_event": context["event"].get("action") in reuse_evidence.METADATA_ACTIONS,
+                        "planning_seconds": reuse.get("lookup_seconds"), "requalification_seconds": qualified.get("lookup_seconds"),
+                        "executed_lanes": len(expected), "reused_lanes": len(original_references),
+                        "original_shard_command_seconds": sum(row.get("command_seconds", 0) or 0 for row in original["shards"])})
+                if qualified.get("summary_ref"):
+                    result["reuse"]["summary_ref"] = qualified["summary_ref"]
+                if qualified.get("result_producer"):
+                    result["reuse"]["result_producer"] = qualified["result_producer"]
         for name, suites in ARTIFACTS.items():
             if docs and name != "static-checks-python-3.12":
                 continue
@@ -359,6 +407,9 @@ def evaluate(needs, *, event, source_sha, tested_sha, workflow, artifacts, catal
         errors.append("Evidence qualification: " + str(error))
     result["status"] = "failed" if errors else "passed"
     result["jev"] = jev_evidence(artifacts, needs, tested_sha=tested_sha)
+    if isinstance(reuse, dict) and not reused:
+        result["lifecycle"] = {key: reuse.get(key) for key in
+                               ("decision", "reason", "lookup_seconds", "current_pr", "history", "ambiguous_attempts")}
     return result
 
 
@@ -384,15 +435,30 @@ def markdown(result, run_url):
         counts = shard["outcomes"]
         rows.append(f"| {shard['shard']} | {counts.get('passed', 0)} | {counts.get('skipped', 0)} | {shard['command_seconds']} |")
     if result.get("evidence_references"):
-        rows.extend(["", "| Evidence lane | Original run / attempt | Job | Artifact | GitHub observation |",
-                     "|---|---|---|---|---|"])
+        rows.extend(["", "| Evidence lane | Decision | Original run / attempt | Job | Artifact | GitHub observation |", "|---|---|---|---|---|---|"])
+        repository_url = run_url.rsplit("/actions/runs/", 1)[0]
         for reference in result["evidence_references"]:
+            original_url = f"{repository_url}/actions/runs/{reference['run_id']}"
             observation = (str(reference.get("observation_job_id", reference["job_id"])) + " / "
                            + str(reference.get("observation_attempt", reference["run_attempt"])))
             if reference.get("carried_forward"):
                 observation += " (carried forward)"
-            rows.append(f"| {text(reference['lane'])} | {reference['run_id']} / {reference['run_attempt']} | "
-                        f"{reference['job_id']} | {reference['artifact_id']} | {observation} |")
+            rows.append(f"| {text(reference['lane'])} | {text(reference.get('decision', 'unknown'))} | "
+                        f"[{reference['run_id']} / {reference['run_attempt']}]({original_url}/attempts/{reference['run_attempt']}) | "
+                        f"{reference['job_id']} | [{reference['artifact_id']}]({original_url}/artifacts/{reference['artifact_id']}) | {observation} |")
+    lifecycle = result.get("lifecycle")
+    if isinstance(lifecycle, dict):
+        rows.extend(["", "## Lifecycle validation", "",
+                     f"Decision: **{text(lifecycle.get('decision', 'unknown'))}**; reason: {text(lifecycle.get('reason', 'unknown'))}."])
+        observed = result.get("reuse", {}).get("current_pr", lifecycle.get("current_pr"))
+        if isinstance(observed, dict):
+            rows.append("Current PR observation: " + text(observed.get("status", "unknown"))
+                        + "; observed at " + text(observed.get("observed_at", "unavailable")) + ".")
+        if lifecycle.get("decision") == "reuse":
+            rows.extend([f"Fresh lanes: {lifecycle['executed_lanes']}; reused lanes: {lifecycle['reused_lanes']}.",
+                f"Planning lookup: {lifecycle.get('planning_seconds', 'unknown')} s; final qualification: {lifecycle.get('requalification_seconds', 'unknown')} s.",
+                f"Original shard command time: {lifecycle['original_shard_command_seconds']:.3f} s. "
+                "This records historical work, not measured net savings. Metadata events add observations absent from the old event set."])
     if result["families"]:
         rows.extend(["", "| Family | Passed | Skipped |", "|---|---:|---:|"])
         for name, counts in result["families"].items():
@@ -463,10 +529,23 @@ def main(argv=None):
         parser.add_argument("--" + name, required=True)
     parser.add_argument("--context", required=True, type=Path)
     parser.add_argument("--metadata", required=True, type=Path)
+    parser.add_argument("--reuse-plan", type=Path)
     args = parser.parse_args(argv)
     result = evaluate(_read(args.needs), event=args.event, source_sha=args.source_sha, tested_sha=args.tested_sha,
                       workflow=_read(args.workflow), artifacts=args.artifacts, catalog=_read(args.catalog),
-                      context=_read(args.context), metadata=_read(args.metadata))
+                      context=_read(args.context), metadata=_read(args.metadata),
+                      reuse=_read(args.reuse_plan) if args.reuse_plan else None,
+                      reuse_work=args.output.parent.parent / "ci-reuse-qualification", reuse_token=os.environ.get("GITHUB_TOKEN", ""),
+                      reuse_env=os.environ)
+    if args.event == "pull_request" and not result.get("reuse"):
+        try:
+            spec = importlib.util.spec_from_file_location("ci_reuse", Path(__file__).with_name("reuse.py"))
+            lifecycle = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(lifecycle)
+            current = lifecycle.observe_current(_read(args.context), os.environ.get("GITHUB_TOKEN", ""))
+        except (OSError, ValueError, KeyError, TypeError, AttributeError):
+            current = {"status": "incomplete", "reason": "current_pr_unavailable"}
+        result.setdefault("lifecycle", {"decision": "execute"})["current_pr"] = current
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     with args.summary.open("a") as stream:

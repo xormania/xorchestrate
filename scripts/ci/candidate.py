@@ -346,6 +346,29 @@ def expected_lanes(workflow, *, documentation_only=False):
     return result
 
 
+def collection_lanes(context, needs, workflow):
+    """Collect this consumer's executed lanes; the aggregate authenticates reuse."""
+    if not isinstance(needs, dict):
+        raise ValueError("Current job outcomes are missing")
+    paths = needs.get("paths", {})
+    paths = paths if isinstance(paths, dict) else {}
+    outputs = paths.get("outputs", {})
+    outputs = outputs if isinstance(outputs, dict) else {}
+    pr = context["event"]["name"] == "pull_request" and paths.get("result") == "success"
+    docs = pr and outputs.get("code") == "false"
+    reused = outputs.get("reuse") == "true"
+    if reused:
+        raw = outputs.get("reuse_plan")
+        if not isinstance(raw, str):
+            raise ValueError("Current reuse decision has no bound plan")
+        plan = json.loads(raw)
+        if (not pr or outputs.get("code") != "true" or not isinstance(plan, dict)
+                or type(plan.get("schema_version")) is not int or plan["schema_version"] != 1
+                or plan.get("decision") != "reuse" or plan.get("current_context") != context):
+            raise ValueError("Current reuse decision contradicts its candidate or execution scope")
+    return expected_lanes(workflow, documentation_only=docs or reused)
+
+
 def api_bytes(url, token, limit):
     """Restrict credential origin; redirected artifact downloads receive no token."""
     origin = urlsplit(url)
@@ -502,10 +525,8 @@ def main(argv=None):
             value = json.loads(os.environ["CI_CANDIDATE_CONTEXT"])
             metadata = collect_metadata(value, os.environ["GITHUB_TOKEN"])
             needs = json.loads(args.needs.read_text())
-            docs = (value["event"]["name"] == "pull_request" and needs.get("paths", {}).get("result") == "success"
-                    and needs["paths"].get("outputs", {}).get("code") == "false")
             download_evidence(value, metadata, os.environ["GITHUB_TOKEN"], args.artifacts,
-                              expected_lanes(json.loads(args.workflow.read_text()), documentation_only=docs))
+                              collection_lanes(value, needs, json.loads(args.workflow.read_text())))
             write_json(args.output, metadata)
         except (OSError, ValueError, KeyError, TypeError, zipfile.BadZipFile) as error:
             write_json(args.output, {"error": "evidence_collection_unavailable", "error_type": type(error).__name__})

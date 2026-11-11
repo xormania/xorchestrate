@@ -16,22 +16,24 @@ from tests.hexagonal.support.ci_candidate import (
     github_observation,
     strict_documentation_receipts,
 )
-
-MANDATORY = (
-    "paths", "changes", "application-tests", "application", "verification",
-    "tmux-acceptance", "architecture-status",
+from tests.hexagonal.support.ci_receipts import (
+    BEHAVIORAL_JOBS as HEAVY,
 )
-HEAVY = ("application-tests", "application", "verification", "tmux-acceptance")
-
-
-def _needs(*, docs=False):
-    needs = {name: {"result": "success", "outputs": {}} for name in MANDATORY}
-    needs["paths"]["outputs"] = {"code": "false" if docs else "true"}
-    needs["architecture"] = {"result": "failure", "outputs": {}}
-    if docs:
-        for name in HEAVY:
-            needs[name]["result"] = "skipped"
-    return needs
+from tests.hexagonal.support.ci_receipts import (
+    MANDATORY_JOBS as MANDATORY,
+)
+from tests.hexagonal.support.ci_receipts import (
+    complete_receipts as _complete_receipts,
+)
+from tests.hexagonal.support.ci_receipts import (
+    job_needs as _needs,
+)
+from tests.hexagonal.support.ci_receipts import (
+    shard_receipts as _receipt_set,
+)
+from tests.hexagonal.support.ci_receipts import (
+    write_json as _write,
+)
 
 
 def test_code_handoff_requires_successful_execution_but_not_jev_advice():
@@ -111,35 +113,8 @@ def test_packaged_consumer_has_the_same_explicit_documentation_exemption():
     assert errors == []
 
 
-def _write(path, document):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(document) + "\n")
 
 
-def _receipt_set(root):
-    catalog = {"id": "ci-control", "families": {"behavior": {
-        "guarantee": "Two independent behavioral modules execute once.",
-        "modules": {"tests/a.py": "contract", "tests/b.py": "adapter"},
-    }}}
-    catalog_hash = hashlib.sha256(json.dumps(catalog, sort_keys=True, separators=(",", ":"),
-                                            allow_nan=False).encode()).hexdigest()
-    workflow = {"jobs": {"application-tests": {"strategy": {"matrix": {"shards": [2], "shard": [1, 2]}}}}}
-    for index, module in enumerate(("tests/a.py", "tests/b.py"), 1):
-        directory = root / f"framework-tests-python-3.12-shard-{index}-of-2" / "run"
-        inventory = {"schema_version": 1, "status": "passed", "exit_status": 0,
-                     "catalog_id": catalog["id"], "catalog_sha256": catalog_hash,
-                     "shard": {"index": index, "count": 2, "modules": [module]}, "selected": 1,
-                     "cases": [{"id": module + "::test_observable_behavior", "path": module,
-                                "family": "behavior", "selected": True, "outcome": "passed"}]}
-        _write(directory / "inventory.json", inventory)
-        _write(directory / "report.json", {
-            "schema_version": 2, "suite": "tests", "shard": f"{index}/2", "status": "passed",
-            "checks": [{"name": "tests", "status": "passed", "duration_seconds": 1.25,
-                        "tool_report": {"sha256": hashlib.sha256((directory / "inventory.json").read_bytes()).hexdigest(),
-                                        "selected": 1}}],
-        })
-        _write(directory / "candidate.json", {"commit": "a" * 40, "status": ""})
-    return workflow, catalog
 
 
 def test_complete_distinct_shards_reconcile_to_the_catalog_and_report_families(tmp_path):
@@ -225,31 +200,43 @@ def test_actual_cli_preserves_a_required_job_failure_with_healthy_receipts(tmp_p
         assert "Required job changes did not pass: failure" in summary.read_text()
 
 
-def _complete_receipts(root):
-    workflow, catalog = _receipt_set(root)
-    workflow["jobs"]["package"] = {}
-    needs = _needs()
-    needs["package"] = {"result": "success", "outputs": {}}
-    artifacts = (
-        ("static-checks-python-3.12", ("static",)),
-        ("calibration-python-3.12", ("calibration",)),
-        ("composed-protocol-evidence", ("multi-harness",)),
-        ("tmux-acceptance-evidence", ("acceptance", "stories")),
-    )
-    for name, suites in artifacts:
-        for suite in suites:
-            directory = root / name / suite
-            _write(directory / "report.json", {"schema_version": 2, "suite": suite, "status": "passed"})
-            _write(directory / "candidate.json", {"commit": "a" * 40, "status": ""})
-    _write(root / "package-acceptance-evidence/run/report.json", {
-        "schema_version": 1, "status": "passed", "candidate": {"commit": "a" * 40, "status": ""},
-    })
-    return needs, workflow, catalog
 
 
 def _evaluate_complete(root, needs, workflow, catalog):
     return subject.evaluate(needs, event="pull_request", source_sha="c" * 40, tested_sha="a" * 40,
                             workflow=workflow, artifacts=root, catalog=catalog)
+
+
+@pytest.mark.parametrize("plan", (None, {"decision": "execute"}, {"schema_version": 1, "decision": "reuse"}))
+def test_skipped_behavior_needs_authenticated_reuse_even_with_healthy_old_receipts(tmp_path, plan):
+    needs, workflow, catalog = _complete_receipts(tmp_path)
+    assert _evaluate_complete(tmp_path, needs, workflow, catalog)["status"] == "passed", "control: receipts are healthy"
+    for name in (*HEAVY, "package"):
+        needs[name]["result"] = "skipped"
+    needs["paths"]["outputs"]["reuse"] = "true"
+    result = subject.evaluate(needs, event="pull_request", source_sha="c" * 40, tested_sha="a" * 40,
+        workflow=workflow, artifacts=tmp_path, catalog=catalog, reuse=plan, reuse_work=tmp_path / "requalification")
+    assert result["status"] == "failed", "CI_REUSE_UNAUTHENTICATED_SKIPS_CANNOT_QUALIFY"
+
+
+@pytest.mark.parametrize("reuse_output", (None, "false", "unknown"))
+def test_bound_static_receipt_cannot_turn_unselected_reuse_into_a_skip_waiver(tmp_path, reuse_output):
+    repository = candidate_repository(tmp_path / "repository")
+    event, env = github_observation(repository)
+    context = subject.candidate_evidence.capture_context(repository["root"], event, env)
+    artifacts = tmp_path / "artifacts"
+    context, metadata, needs, workflow = strict_documentation_receipts(artifacts, context)
+    control = subject.evaluate(needs, event="pull_request", source_sha=context["source_sha"],
+        tested_sha=context["checkout"]["commit"], workflow=workflow, artifacts=artifacts, catalog={},
+        context=context, metadata=metadata)
+    assert control["status"] == "passed", "control: current static evidence qualifies"
+    needs["paths"]["outputs"].update(code="true", reuse=reuse_output)
+    result = subject.evaluate(needs, event="pull_request", source_sha=context["source_sha"],
+        tested_sha=context["checkout"]["commit"], workflow=workflow, artifacts=artifacts, catalog={},
+        context=context, metadata=metadata, reuse={"schema_version": 1, "decision": "reuse"},
+        reuse_work=tmp_path / "requalification")
+    assert result["status"] == "failed", "CI_REUSE_EXPLICIT_EXECUTION_DECISION_REQUIRED"
+    assert any("explicit reuse execution path" in error for error in result["errors"]), "CI_REUSE_SKIP_DECISION_EXPLAINED"
 
 
 def test_full_producer_shapes_with_clean_candidates_remain_a_valid_handoff(tmp_path):
