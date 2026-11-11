@@ -18,6 +18,9 @@ Every check receives a ``subject`` (see ``tests.hexagonal.support.terminal_host`
   of identity evidence changed.
 - ``subject.run_attach(argv, text)`` runs an attach command as an operator's
   terminal would, until ``text`` is seen, then ends that client; true if seen.
+- ``subject.race(host_name, names, command)`` opens one terminal per name, each
+  from its own controller process, all at once; returns ``(receipts, errors)``.
+- ``subject.kill(host_name, receipt)`` kills the terminal's process outright, as a crash would.
 - ``subject.look(host_name, receipt)`` calls ``attach_instruction_for`` from a
   separate controller process and returns the argv, or the refusal's code.
 - ``subject.additions`` names the variables the adapter declares it adds.
@@ -475,6 +478,88 @@ def an_unsafe_location_is_reported(subject):
         host.shutdown()
 
 
+def inventory_sees_everything_and_takes_nothing(subject):
+    """inventory() lists every terminal at the host, running or exited, held or not, without taking control."""
+    host = subject.host("inventory")
+    probe = None
+    try:
+        host.open_terminal("mine", subject.programs.waits())
+        host.open_terminal("done", subject.programs.exits(0))
+        shows(subject, host, "mine", "ready")
+        exited(subject, host, "done")
+        expected = {"mine": (True, True), "done": (False, True)}
+        if host.survives_controller:
+            subject.crash("inventory", "orphan", subject.programs.waits())
+            expected["orphan"] = (True, False)
+        seen = host.inventory()
+        assert [item.name for item in seen] == sorted(expected), seen
+        assert {item.name: (item.running, item.held) for item in seen} == expected, seen
+        if host.survives_controller:
+            probe = subject.host("inventory")
+            assert {item.name: item.held for item in probe.inventory()} == dict.fromkeys(expected, False)
+            assert probe.terminals() == [], "inventory takes no control"
+            assert [item.name for item in host.terminals()] == ["done", "mine"]
+    finally:
+        if probe is not None:
+            probe.close()
+        host.shutdown()
+
+
+def sweep_removes_only_exited_terminals_nobody_here_holds(subject):
+    host = subject.host("sweep")
+    try:
+        host.open_terminal("held-exited", subject.programs.exits(0))
+        exited(subject, host, "held-exited")
+        if not host.survives_controller:
+            assert host.sweep() == [] and [item.name for item in host.terminals()] == ["held-exited"]
+            return
+        subject.crash("sweep", "orphan-exited", subject.programs.exits(0))
+        subject.crash("sweep", "orphan-running", subject.programs.waits())
+        subject.wait(lambda: any(item.name == "orphan-exited" and not item.running for item in host.inventory()), 10)
+        assert host.sweep() == ["orphan-exited"]
+        names = {item.name: item.running for item in host.inventory()}
+        assert names == {"held-exited": False, "orphan-running": True}, names
+        assert host.sweep() == [], "sweeping twice removes nothing more"
+    finally:
+        host.shutdown()
+
+
+def a_crashed_terminal_stays_listed_until_swept(subject):
+    """A terminal whose process is killed while no controller holds it is still at the host, exited, until swept."""
+    probe = subject.host("crashed")
+    try:
+        if not probe.survives_controller:
+            return
+        alone = subject.crash("crashed", "alone", subject.programs.waits())
+        subject.kill("crashed", alone)  # the host's only terminal
+        subject.wait(lambda: {item.name: item.running for item in probe.inventory()}.get("alone") is False, 10)
+        assert probe.sweep() == ["alone"], "a lone crashed terminal is still at the host, exited, until swept"
+        receipt = subject.crash("crashed", "victim", subject.programs.waits())
+        subject.crash("crashed", "bystander", subject.programs.waits())
+        subject.kill("crashed", receipt)
+        subject.wait(lambda: {item.name: item.running for item in probe.inventory()}.get("victim") is False, 10)
+        assert {item.name: item.running for item in probe.inventory()} == {"victim": False, "bystander": True}
+        assert probe.sweep() == ["victim"]
+        assert [item.name for item in probe.inventory()] == ["bystander"]
+    finally:
+        probe.shutdown()
+
+
+def the_first_open_is_atomic(subject):
+    """Controllers racing to open a fresh surviving host's first terminals share one host; neither is lost."""
+    probe = subject.host("race")
+    try:
+        if not probe.survives_controller:
+            return
+        receipts, errors = subject.race("race", ("left", "right"), subject.programs.waits())
+        assert errors == [] and sorted(receipts) == ["left", "right"], errors
+        assert {item.name: item.running for item in probe.inventory()} == {"left": True, "right": True}
+        processes = [trace for trace in subject.traces("race") if trace.startswith("process")]
+        assert len(processes) <= 1, f"one host serves both terminals: {processes}"
+    finally:
+        probe.shutdown()
+
+
 def shutdown_stops_everything(subject):
     host = subject.host("shutdown")
     try:
@@ -518,4 +603,6 @@ CHECKS =(readiness_never_raises, names_and_listing, exit_codes_and_output, input
           log_outlives_the_terminal, survives_a_killed_controller, an_empty_host_ends, shutdown_stops_everything,
           shutdown_reaches_terminals_of_other_controllers, adopt_refuses_a_process_the_host_did_not_launch,
           names_are_reusable_once_exited, an_unsafe_location_is_reported,
-          orderly_close_lets_the_command_stop_its_children, attach_by_receipt_takes_no_control)
+          orderly_close_lets_the_command_stop_its_children, attach_by_receipt_takes_no_control,
+          inventory_sees_everything_and_takes_nothing, sweep_removes_only_exited_terminals_nobody_here_holds,
+          the_first_open_is_atomic, a_crashed_terminal_stays_listed_until_swept)
