@@ -225,6 +225,26 @@ class SessionLifecycleMixin:
                                    and callable(getattr(self.sessions.get(r.data.get("driver")), "reconnect", None)))
                 for r in sorted(records, key=lambda r: r.key)]
 
+    def interrupted_operations(self, session_ids=None) -> list[JSON]:
+        """Operations a hard restart interrupted: still pending (or uncertain) with no runtime carrying them.
+
+        Their status stays the journal's own ("pending" means the outcome is
+        unknown, not that anything is still running); they are listed so the
+        operator reconciles them. Nothing is replayed or re-sent, and a session
+        that carries them refuses new sends until they are resolved.
+        """
+        with self.store.transaction() as tx:
+            operations = [r for r in tx.list("operation")
+                          if r.data.get("status") in {"pending", "unknown", "completed_unapplied"}
+                          and r.data.get("session_id")
+                          and (session_ids is None or r.data.get("session_id") in session_ids)]
+        owned = self._owned_session_ids.copy()
+        return [{"operation_id": r.key, "session_id": r.data["session_id"], "action": r.data.get("action"),
+                 "status": r.data["status"], "interrupted": True,
+                 "inspect": {"action": "get_operation", "arguments": {"operation_id": r.key}},
+                 "call": {"action": "resolve_operation", "arguments": {"operation_id": r.key}}}
+                for r in sorted(operations, key=lambda r: r.key) if r.data["session_id"] not in owned]
+
     def _runtime_incarnation(self):
         """This runtime's identity, fixed for its lifetime."""
         incarnation = getattr(self, "_incarnation", None)
@@ -266,7 +286,7 @@ class SessionLifecycleMixin:
         automatic run at server start passes no caller and acts as the runtime.
         """
         report = {"reason": reason, "started_at": self.clock(), "recovered": [], "disconnected": [],
-                  "uncertain": [], "failed": [], "skipped": [], "not_authorised": []}
+                  "uncertain": [], "failed": [], "skipped": [], "not_authorised": [], "needs_reconciliation": []}
         self._update_recovery(lambda data: data.update(running=data["running"] + 1))
         try:
             wanted = None if session_ids is None else set(session_ids)
@@ -292,6 +312,8 @@ class SessionLifecycleMixin:
                     report["failed"].append({"session_id": found.session_id, "code": error.code, "message": str(error)})
                 except Exception as error:  # One session never blocks the others or the server.
                     report["failed"].append({"session_id": found.session_id, "code": type(error).__name__})
+            report["needs_reconciliation"] = self.interrupted_operations(
+                {item["session_id"] for key in ("recovered", "disconnected", "uncertain") for item in report[key]})
             report["finished_at"] = self.clock()
             with self.store.transaction() as tx:
                 self._event(tx, "recovery.completed", "runtime", reason=reason, recovered=len(report["recovered"]),

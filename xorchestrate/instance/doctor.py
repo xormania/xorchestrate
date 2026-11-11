@@ -127,12 +127,15 @@ def recovery_check(rendered, data_dir, state):
         selection = validate_config(rendered.config, data_dir).adapters["store"]
         path = selection.options.get("path")
         if path is not None and not Path(path).exists():
-            sessions, report = [], None
+            sessions, report, operations = [], None, []
         else:
             store = factory_for("store", selection.adapter)(dict(selection.options))
             try:
                 with store.transaction() as tx:
                     sessions = [r for r in tx.list("session") if r.data.get("status") in {"starting", "active", "unknown"}]
+                    # No server runs, so nothing carries these: their outcome is unknown until reconciled.
+                    operations = [r.key for r in tx.list("operation") if r.data.get("session_id")
+                                  and r.data.get("status") in {"pending", "unknown", "completed_unapplied"}]
                     record = tx.get("recovery", "current")
                     report = record.data.get("report") if record is not None else None
             finally:
@@ -141,14 +144,18 @@ def recovery_check(rendered, data_dir, state):
         return _check("recovery", "warning", f"Recovery state cannot be read: {error}", code=error.code)
     interrupted = sorted(r.key for r in sessions)
     details = {"unclean_stop": bool(state.get("unclean_stop")), "interrupted": interrupted,
+               "needs_reconciliation": sorted(operations),
                "last_report": None if report is None else {key: len(report.get(key, [])) for key in
                                                            ("recovered", "disconnected", "uncertain", "failed")}}
-    if not interrupted and not state.get("unclean_stop"):
+    if not interrupted and not state.get("unclean_stop") and not operations:
         return _check("recovery", "ok", "no hard restart detected and no interrupted sessions", **details)
     return _check("recovery", "warning",
                   f"the last server did not stop cleanly; {len(interrupted)} session(s) persisted as live: "
                   "`xorchestrate up` recovers them as the project's recovery_policy selects (default reconnect), "
-                  "and `xorchestrate recover` recovers the rest", **details)
+                  "and `xorchestrate recover` recovers the rest"
+                  + (f"; {len(operations)} interrupted operation(s) need reconciliation (get_operation, then "
+                     "resolve_operation): their outcome is unknown and they are never replayed" if operations else ""),
+                  **details)
 
 
 def project_checks(path=None, environ=None, terminal_placement=None, server_state=None):

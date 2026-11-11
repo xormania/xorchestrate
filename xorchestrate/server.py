@@ -148,7 +148,9 @@ class ProjectServer:
         status = getattr(self.application, "recovery_status", None)
         if not callable(status):
             return None
-        return {**status(), "detected": self._recovery_detected}
+        operations = getattr(self.application, "interrupted_operations", None)
+        return {**status(), "detected": self._recovery_detected,
+                "needs_reconciliation": operations() if callable(operations) else []}
 
     def start_recovery(self, unclean_stop, *, timeout=None):
         """After a hard restart, ask the recovery policy which interrupted sessions to recover and recover them.

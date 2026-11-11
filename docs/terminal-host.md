@@ -322,9 +322,15 @@ in flight is marked unknown for reconciliation.
   commands.
 
 **What stays uncertain:** effects that were in flight at the failure. Their
-outcome is unknown; they are not replayed or re-sent, and they stay in the
-effect journal for reconciliation (`resolve_operation`). A native driver
-without resume cannot continue its conversation: start a fresh session.
+outcome is unknown. Each operation keeps the effect journal's own status
+(usually `pending`), and recovery adds no reconciliation of its own. Here
+`pending` means "outcome unknown", not "still running". To make that clear,
+the recovery report, `status` (`recovery.needs_reconciliation`) and `doctor`
+list each such operation as interrupted, with the call to make: inspect it with
+`get_operation`, then settle it with `resolve_operation`. Nothing is replayed
+or re-sent, and a session that carries such an operation refuses new sends
+until it is resolved. A native driver without resume cannot continue its
+conversation: start a fresh session.
 
 ## Known limitations
 
