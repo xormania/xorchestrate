@@ -33,4 +33,17 @@ python -m pytest -p no:cacheprovider tests/hexagonal/test_jev_operational.py -q
 
 The review controls show that flat request/retry options reach the shared evaluator and repeated trials do not multiply unique confirmed findings. The pre-repair operational module was an uncommitted prototype; its exact working-byte hash is retained rather than attributing that file to the master commit where it did not yet exist.
 
-Provider answers are controlled fixtures. These records establish detection and integration behavior, not live Jev accuracy or measured engineering savings.
+Provider answers in the independent detection checks are controlled fixtures. Those checks establish detection and integration behavior, not live Jev accuracy or measured engineering savings.
+
+## Hosted PR79 observation
+
+[Run 43052078315](https://github.com/xormania/xorchestrate/actions/runs/43052078315) evaluated source `1d706854f152b11bdc3e4e6318b810a91d5dd418` at tested merge `778c631d2251c25b3aaafde85a248a26ef206d34`. Changed evaluation inputs selected the full pilot. The `jev-1.14.0` heldout replay completed four fresh calls across two before/after incident pairs, using **47,224 input / 2,804 output tokens**, with cache disabled. All four cases routed to **insufficient_evidence**: zero known-fault matches, confirmed findings or false alerts; all four remained unknown. The structural baseline passed four cases; two historical Codex findings remain a separate comparator.
+
+| Heldout case | Applicability choice / confidence | Sufficiency choice / confidence | Violation choice / confidence | Routed outcome |
+|---|---|---|---|---|
+| Hosted capacity before | yes .61 | yes .35 | yes .80 | insufficient evidence |
+| Hosted capacity after | yes .42 | yes .14 | no .31 | insufficient evidence |
+| Recovery authority before | yes .44 | insufficient .07 | yes .38 | insufficient evidence |
+| Recovery authority after | yes .33 | insufficient .11 | no .52 | insufficient evidence |
+
+The values above are the adapter-reported confidence scores, not choice probabilities or calibrated defect likelihoods. The raw choices point toward the known before/after distinction, but did not pass the composed evidence requirements and do not establish added detection or clearance. All target spans were complete; that does not imply every supporting dependency was included. The separate six-case synthetic pilot used **6 calls, 14,793 input / 1,566 output tokens** and produced five unknowns plus one unsupported storage concern, with zero confirmed findings. Billing and reviewer time remain unknown; no engineering savings are claimed. Exact artifact content hashes, identities, raw facet choices and usage are retained under `hosted_pr79` in [v3-operational.json](v3-operational.json).

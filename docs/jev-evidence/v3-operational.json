@@ -298,6 +298,314 @@
   "limits": [
     "Controlled provider answers verify composition and evidence rules, not live model accuracy.",
     "Operational witness JSON records supplied dispositions; it does not attest remote execution.",
-    "No paid provider calls are included in this evidence."
-  ]
+    "Independent local detection checks make no provider calls; the hosted section records previously collected live artifact usage."
+  ],
+  "hosted_pr79": {
+    "run_id": 43052078315,
+    "run_url": "https://github.com/xormania/xorchestrate/actions/runs/43052078315",
+    "pr": 79,
+    "source_sha": "1d706854f152b11bdc3e4e6318b810a91d5dd418",
+    "tested_sha": "778c631d2251c25b3aaafde85a248a26ef206d34",
+    "tested_tree": "5ff939105f385e2f2f47c337a31cce6d1ee042c2",
+    "tested_content_sha256": "7645f67bf61fc8cd4bddf25109e1d00fee09564c0d97346f8cd387ec1c4adde8",
+    "identity_basis": "Both evaluation artifacts record the tested commit and clean status; its Git second parent is the recorded PR source SHA.",
+    "archive_sha256": "d5fe2a4f03833ef2fd3d7f1907d4e4871a6bbb29bfd3792c0454b164fa772fc4",
+    "artifact_content_sha256": {
+      "evaluation-selection.json": "07d013c40c213c64508f4556f92ed282d25a8475a0449d208fc39c448fe127da",
+      "effectiveness.json": "f77737afbf45963619071416607a05f124917018aa7863a45e26357bf1775a53",
+      "operational.json": "0a7d2557e1adfd241bd9c9a21e9bbddc44b471630c12655934cb30c961db384f",
+      "diagnostics.json": "1823e1921804da3a2719a096065b7805083a7bd6fd2babb573272e13532dc597"
+    },
+    "selection": {
+      "evaluation_paths": [
+        ".github/workflows/ci.yml",
+        "contracts/hexagonal.json",
+        "scripts/architecture/operational.py",
+        "tests/fixtures/jev-operational/catalog.json",
+        "tests/hexagonal/contracts/jev_operational.py",
+        "tests/hexagonal/support/jev_operational.py",
+        "tests/hexagonal/test_jev_operational.py"
+      ],
+      "mode": "full",
+      "paths": [
+        ".github/CI.md",
+        ".github/workflows/ci.yml",
+        "CHANGELOG.md",
+        "contracts/hexagonal.json",
+        "contracts/testing.json",
+        "docs/jev-effectiveness.md",
+        "docs/jev-evidence/v3-operational.json",
+        "docs/jev-evidence/v3-operational.md",
+        "docs/jev-operational.md",
+        "scripts/architecture/operational.py",
+        "tests/fixtures/jev-operational/catalog.json",
+        "tests/hexagonal/contracts/jev_operational.py",
+        "tests/hexagonal/support/jev_operational.py",
+        "tests/hexagonal/test_jev_operational.py"
+      ],
+      "reason": "evaluation_inputs_changed"
+    },
+    "operational": {
+      "mode": "live",
+      "split": "heldout",
+      "model": "jev-1.14.0",
+      "catalog_sha256": "51b3be008c282e5aa39ee2cfb8d1fb74ed1dace6c476b653dce8d3fe35265312",
+      "question_policy_sha256": "af4ec92882d378852a97c59a1fd363f27b85ef5bf2ed47bc36f6d470b4b48b64",
+      "duration_seconds": 18.728175012999998,
+      "summary": {
+        "attempt_outcomes": {
+          "confirmed_findings": 0,
+          "errors": 0,
+          "false_alerts": 0,
+          "known_fault_matches": 0,
+          "misses": 0,
+          "unavailable": 0,
+          "unconfirmed_findings": 0,
+          "unknown": 4
+        },
+        "attempts": 4,
+        "baseline": {
+          "architecture": {
+            "error": 0,
+            "pass": 4,
+            "violation": 0
+          },
+          "historical_codex_findings": 2
+        },
+        "cache_hits": 0,
+        "cases": 4,
+        "confirmed_findings": 0,
+        "cost": {
+          "reason": "no_rate_card_or_invoice",
+          "status": "unknown"
+        },
+        "coverage": {
+          "eligible": 4,
+          "ineligible": 0
+        },
+        "errors": 0,
+        "false_alerts": 0,
+        "finding_unit": "unique_case_source_packet",
+        "fresh_usage": {
+          "input_tokens": 47224,
+          "output_tokens": 2804
+        },
+        "groups": 2,
+        "known_fault_matches": 0,
+        "misses": 0,
+        "missing_review_times": 4,
+        "observed_review_minutes": null,
+        "provider_calls": 4,
+        "reused_usage": {
+          "input_tokens": 0,
+          "output_tokens": 0
+        },
+        "reviewer_minutes": null,
+        "stability": {
+          "cache_replays_excluded": 0,
+          "changed_cases": 0,
+          "compared_cases": 0,
+          "identical_cases": 0
+        },
+        "unavailable": 0,
+        "unconfirmed_findings": 0,
+        "unknown": 4,
+        "unknown_call_counts": 0
+      },
+      "cases": [
+        {
+          "id": "hosted-capacity-before",
+          "source_ref": "19df4c79f2218486574cb9dae44ed2b6e8d17cc0",
+          "packet_sha256": "1c1dca8c2c20a97b3ad6d2e1108b5af233f439b0b152c990ae9a8cc7f24926ce",
+          "expected_fault": true,
+          "target_complete": true,
+          "provider_status": "complete",
+          "routed_outcome": "insufficient_evidence",
+          "confirmed": false,
+          "raw_facets": {
+            "applicable": {
+              "outcome": "yes",
+              "confidence": 0.61
+            },
+            "claim": {
+              "outcome": "yes",
+              "confidence": 0.8
+            },
+            "sufficient": {
+              "outcome": "yes",
+              "confidence": 0.35
+            }
+          },
+          "execution": {
+            "provider_calls": 1,
+            "cache_status": "disabled",
+            "fresh_usage": {
+              "input_tokens": 14372,
+              "output_tokens": 698
+            },
+            "reused_usage": {
+              "input_tokens": 0,
+              "output_tokens": 0
+            },
+            "reused_assessments": 0
+          }
+        },
+        {
+          "id": "hosted-capacity-after",
+          "source_ref": "a7f4bb16294c36afe1c62ba5ca656f686e7f83a1",
+          "packet_sha256": "b9a8ce67cf032847f53bd2a8ea91a3390174084cd51ee84fdcfa623331bbcf0b",
+          "expected_fault": false,
+          "target_complete": true,
+          "provider_status": "complete",
+          "routed_outcome": "insufficient_evidence",
+          "confirmed": false,
+          "raw_facets": {
+            "applicable": {
+              "outcome": "yes",
+              "confidence": 0.42
+            },
+            "claim": {
+              "outcome": "no",
+              "confidence": 0.31
+            },
+            "sufficient": {
+              "outcome": "yes",
+              "confidence": 0.14
+            }
+          },
+          "execution": {
+            "provider_calls": 1,
+            "cache_status": "disabled",
+            "fresh_usage": {
+              "input_tokens": 13734,
+              "output_tokens": 698
+            },
+            "reused_usage": {
+              "input_tokens": 0,
+              "output_tokens": 0
+            },
+            "reused_assessments": 0
+          }
+        },
+        {
+          "id": "recovery-work-authority-before",
+          "source_ref": "1361a588d6034baf1f3002a4d94e32e76cc94506",
+          "packet_sha256": "2ff0039577a8ad0858fc36371299bdb1772b8adc569d5a6d685a2ca1ab3b1b20",
+          "expected_fault": true,
+          "target_complete": true,
+          "provider_status": "complete",
+          "routed_outcome": "insufficient_evidence",
+          "confirmed": false,
+          "raw_facets": {
+            "applicable": {
+              "outcome": "yes",
+              "confidence": 0.44
+            },
+            "claim": {
+              "outcome": "yes",
+              "confidence": 0.38
+            },
+            "sufficient": {
+              "outcome": "insufficient_evidence",
+              "confidence": 0.07
+            }
+          },
+          "execution": {
+            "provider_calls": 1,
+            "cache_status": "disabled",
+            "fresh_usage": {
+              "input_tokens": 9282,
+              "output_tokens": 704
+            },
+            "reused_usage": {
+              "input_tokens": 0,
+              "output_tokens": 0
+            },
+            "reused_assessments": 0
+          }
+        },
+        {
+          "id": "recovery-work-authority-after",
+          "source_ref": "ddbe9f37f82b01d05782224ac8b8e0897db4b2f1",
+          "packet_sha256": "4843cb2c595a93ff274f7bd613ba0bc4ed1e5f344c69f595779b6f4cb59b71a7",
+          "expected_fault": false,
+          "target_complete": true,
+          "provider_status": "complete",
+          "routed_outcome": "insufficient_evidence",
+          "confirmed": false,
+          "raw_facets": {
+            "applicable": {
+              "outcome": "yes",
+              "confidence": 0.33
+            },
+            "claim": {
+              "outcome": "no",
+              "confidence": 0.52
+            },
+            "sufficient": {
+              "outcome": "insufficient_evidence",
+              "confidence": 0.11
+            }
+          },
+          "execution": {
+            "provider_calls": 1,
+            "cache_status": "disabled",
+            "fresh_usage": {
+              "input_tokens": 9836,
+              "output_tokens": 704
+            },
+            "reused_usage": {
+              "input_tokens": 0,
+              "output_tokens": 0
+            },
+            "reused_assessments": 0
+          }
+        }
+      ]
+    },
+    "synthetic_effectiveness": {
+      "mode": "live",
+      "summary": {
+        "baseline": {
+          "confirmed_findings": 1,
+          "false_alarms": 0,
+          "misses": 2,
+          "unknown": 0
+        },
+        "cases": 6,
+        "comparison_eligible_cases": 6,
+        "cost": null,
+        "fault_cases": 3,
+        "groups": 3,
+        "healthy_cases": 3,
+        "jev": {
+          "confirmed_findings": 0,
+          "errors": 0,
+          "false_alarms": 0,
+          "false_clears": 0,
+          "incremental_confirmed_findings": 0,
+          "misses": 1,
+          "unavailable": 0,
+          "unknown": 5,
+          "unsupported_concerns": 1
+        },
+        "reviewer_minutes": null
+      },
+      "provider_calls": 6,
+      "fresh_usage": {
+        "input_tokens": 14793,
+        "output_tokens": 1566
+      },
+      "cache_status": "disabled",
+      "routed_outcomes": {
+        "imports-healthy": "insufficient_evidence",
+        "imports-fault": "insufficient_evidence",
+        "storage-healthy": "insufficient_evidence",
+        "storage-fault": "concern",
+        "transport-healthy-suspicious-name": "insufficient_evidence",
+        "transport-fault": "insufficient_evidence"
+      }
+    },
+    "interpretation": "All four heldout attempts abstained. Raw claim yes/no choices are retained for interpretation but neither clearance nor demonstrated added detection follows. The synthetic storage concern was unsupported by its frozen oracle. Billing and reviewer benefit remain unmeasured."
+  }
 }
