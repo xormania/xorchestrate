@@ -300,5 +300,93 @@
     "red_command": "python -m pytest -p no:cacheprovider tests/hexagonal/test_jev_post_test_triage.py -k many_complete_units_finish -q",
     "green_command": "python -m pytest -p no:cacheprovider tests/hexagonal/test_jev_post_test_triage.py -q",
     "interpretation": "Controlled typed provider answers exercise the real request planner under default budgets, without network calls or live-quality claims. Source hashes bind the targeted working-tree production repair."
+  },
+  "hosted_launcher_fixture_repair": {
+    "red_source": "c2a6a4f50f85e399a6bc492fc958302bfbe03aa1",
+    "hosted_red_run": 43052026182,
+    "hosted_tested_sha": "951e310c87b782fab4e881eba7d95c05db93eedb",
+    "selector": "tests/hexagonal/test_static_checks.py::test_documented_launcher_keeps_cold_and_warm_cache_outputs_external",
+    "red_assertion": "assert cold.returncode == 0",
+    "diagnostic": "Ruff I001 in scripts/architecture/triage.py: copied fixture omitted new scripts.ci dependency",
+    "red_test_sha256": "19c977c1b868dbc75ba951824380d57d57da3b00166176b95a488a5701399dd4",
+    "green_test_sha256": "5e2c8a9c0e8f22da98025aab7a00a64f4e57bfe2729f0f2c7d347bc9eef9d590",
+    "repair": "Include scripts/ci in the isolated launcher candidate; preserve lint and cold/warm assertions",
+    "green_command": "python -m pytest -q -p no:cacheprovider tests/hexagonal/test_static_checks.py",
+    "green_exit": 0,
+    "green_passed": 17,
+    "runtime": "CPython 3.12.16, Ruff 0.16.8",
+    "excluded_attempt": "First local green assertions used explicit --basetemp. The process-leak hook matched sandbox PID 1 command arguments and returned exit 1; rerunning without explicit basetemp passed cleanly."
+  },
+  "initial_hosted_post_test": {
+    "78": {
+      "run_id": 43052026182,
+      "triage_sha256": "6396d92935f955e2487bac55405bc9b33462ae11f41949305d66d8f4f827e87c",
+      "status": "complete",
+      "deterministic_status": "failed",
+      "candidate": {
+        "source_sha": "73f3991c47240d9909473faac57b4c3ab06787d1",
+        "tested_sha": "951e310c87b782fab4e881eba7d95c05db93eedb",
+        "tree": "05cf952735663c84c5c4b1e8b108f4cbe8eadc08"
+      },
+      "outcomes": {
+        "insufficient_evidence": 5
+      },
+      "provider_calls": 3,
+      "failed_case_prioritized": true,
+      "concerns": 0
+    },
+    "79": {
+      "run_id": 43052078315,
+      "triage_sha256": "4760eecb9ab63640bf28d5b9cd0d8c71a353655843c951f3c245c6d62f938121",
+      "status": "complete",
+      "deterministic_status": "failed",
+      "candidate": {
+        "source_sha": "1d706854f152b11bdc3e4e6318b810a91d5dd418",
+        "tested_sha": "778c631d2251c25b3aaafde85a248a26ef206d34",
+        "tree": "5ff939105f385e2f2f47c337a31cce6d1ee042c2"
+      },
+      "outcomes": {
+        "insufficient_evidence": 3
+      },
+      "provider_calls": 2,
+      "failed_case_prioritized": true,
+      "concerns": 0
+    }
+  },
+  "hosted_bridge_snapshot_repair": {
+    "candidate_sha256": "e741e86d2539a385724067a96ec15f19012ddabdf8bb7e5fc1a3d11fb0fab6e7",
+    "mutation_sha256": "fada2b4c1be2d82120d7c197572ee3171f6e730cd96b89f30292e092f37e14c1",
+    "mutation_applied": true,
+    "classification": "detected",
+    "target": "tests.hexagonal.test_external_bridge::test_durable_host_recovery_preserves_uncertain_effect_and_native_identity",
+    "expected_diagnostic": "HOST_EFFECT_PENDING_AT_NATIVE_BOUNDARY",
+    "hosted_red_run": 43052026182,
+    "red_source_sha": "73f3991c47240d9909473faac57b4c3ab06787d1",
+    "red_assertion": "assert native.entered.is_set()",
+    "cause": "100ms RPC timeout could fire before the native effect entered under hosted load",
+    "repair": "Wait for native entry, assert request remains in flight, then capture pending durable state before releasing native completion",
+    "mutation_patch": "--- a/xorchestrate/adapters/bridge_host.py\n+++ b/xorchestrate/adapters/bridge_host.py\n@@ -301,6 +301,7 @@\n                 if not callable(function):\n                     raise bridge_error(\"Native driver does not implement this operation.\", \"unsupported_operation\")\n                 self._transition_effect(key, \"reserve\", {\"identity\": identity, \"incarnation\": lease})\n+                self._effects[key][\"status\"] = \"completed\"\n                 if message.get(\"attempt_id\"):\n                     self._bindings[(\"attempt_id\", message[\"attempt_id\"])] = lease\n                 self._save_state()\n",
+    "test_sha256": "4666ba7f932dda38b2e808bf95bad123b9e6c2b037ad1d00cc3daa9a8e9098a3",
+    "command": "python -m pytest -q -p no:cacheprovider tests/hexagonal/test_external_bridge.py::test_durable_host_recovery_preserves_uncertain_effect_and_native_identity",
+    "red_exit": 1,
+    "green_exit": 0,
+    "preserved_guarantees": [
+      "pending state at native entry",
+      "restart turns pending effect unknown",
+      "native identity preserved",
+      "no automatic replay",
+      "private snapshot mode"
+    ],
+    "separate_timeout_test": "test_lost_response_preserves_host_effect_and_control_progress",
+    "excluded_attempt": "An initially guessed second module selector did not exist; that setup error is not a detection witness.",
+    "affected_verification": {
+      "command": "python -m pytest -q -p no:cacheprovider tests/hexagonal/test_external_bridge.py tests/hexagonal/test_bridge_turn_contracts.py",
+      "passed": 17,
+      "blocked_setup": 2,
+      "blocked_reason": "Managed host rejects AF_UNIX socket creation with EPERM in turn_id-unix and prompt_id-unix. These setup failures are not RED proof; hosted CI covers this boundary.",
+      "external_bridge_cases_passed": 15,
+      "fifo_turn_cases_passed": 2,
+      "shared_static": "Ruff, syntax and architecture passed"
+    }
   }
 }
