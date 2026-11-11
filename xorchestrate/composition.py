@@ -47,14 +47,23 @@ BUILTINS = {
     "companion": {"git-directory": "xorchestrate.adapters.companion_git:GitDirectoryCompanion"},
     "version_control": {"git": "xorchestrate.adapters.git_cli:GitCLI"},
     "repository_hosting": {"github": "xorchestrate.adapters.github:GitHubHosting"},
+    "terminal_host": {
+        "tmux": "xorchestrate.adapters.tmux:TmuxTerminalHost",
+        "detached-process": "xorchestrate.adapters.process_terminal:DetachedProcessHost",
+    },
 }
+
+# The machine default when settings.json has no ``terminal_host``: the
+# multiplexer, falling back (visibly, in doctor and status) to detached
+# processes where it is not ready. Removing ``fallback`` makes that a refusal.
+DEFAULT_TERMINAL_HOST = {"adapter": "tmux", "fallback": {"adapter": "detached-process"}}
 
 
 # Adapter kinds that are selected inside another adapter's options, not as sections.
 NESTED = frozenset({"telemetry_corpus", "telemetry_artifacts"})
 # Adapter kinds the operator layer selects from the user's home (settings.json,
 # instance.json); a project configuration cannot select them.
-OPERATOR = frozenset({"companion", "version_control", "repository_hosting"})
+OPERATOR = frozenset({"companion", "version_control", "repository_hosting", "terminal_host"})
 
 
 @dataclass(frozen=True)

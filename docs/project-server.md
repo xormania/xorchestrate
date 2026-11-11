@@ -163,8 +163,11 @@ uid before sending anything (see [access](#access-and-connections)).
 ## Starting
 
 `connect` and `up` first try the recorded socket. If no server answers, they
-take the start lock, then start one detached server only if no process holds
-the instance lock. Simultaneous callers wait on the start lock and then
+take the start lock, then start one server only if no process holds the
+instance lock. The server runs as terminal `server` in the project's
+[terminal host](terminal-host.md#the-project-server), selected in
+`settings.json`. It is a private multiplexer server by default, with detached
+processes as the fallback. Simultaneous callers wait on the start lock and then
 connect to the server the first caller started, so exactly one server starts.
 
 Clients probe the instance lock with a shared lock, and a starting server
@@ -175,7 +178,7 @@ listens on it; a live server is never replaced even if its lock file is gone.
 If the started server exits during startup, the client reports
 `server_unavailable` with its exit code and the log path.
 
-The detached server is started with this interpreter (with `-P`, so the
+The server is started with this interpreter (with `-P`, so the
 working directory is not on `sys.path`), the client's global options
 (`--project` set to the client's worktree root, frame and worker limits),
 `--socket` if the client gave one, and the project's instance directory as its

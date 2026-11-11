@@ -1,7 +1,9 @@
 """Project server: per-connection MCP sessions over interchangeable client transports."""
 
+import contextlib
 import json
 import os
+import shutil
 import socket
 import stat
 import sys
@@ -48,9 +50,23 @@ def directory():
         yield path
 
 
-@pytest.fixture
-def cli(directory):
-    environment = CliEnvironment(directory)
+# D3: the server behaves the same whichever terminal host launches it. Each host is
+# selected explicitly without a fallback, so a missing one skips instead of hiding.
+SERVER_TERMINAL_HOSTS = {"multiplexer": {"adapter": "tmux"}, "detached-process": {"adapter": "detached-process"}}
+# The multiplexer keeps an exited terminal (and its output) until it is closed; a
+# detached process is its own terminal, so once it has exited nothing is left to adopt.
+KEEPS_EXITED_TERMINALS = {"tmux": True, "detached-process": False}
+
+
+def keeps_exited(cli):
+    return KEEPS_EXITED_TERMINALS[cli.terminal_host["adapter"]]
+
+
+@pytest.fixture(params=sorted(SERVER_TERMINAL_HOSTS))
+def cli(request, directory):
+    if request.param == "multiplexer" and shutil.which("tmux") is None:
+        pytest.skip("the multiplexer is not installed")
+    environment = CliEnvironment(directory, terminal_host=SERVER_TERMINAL_HOSTS[request.param])
     try:
         yield environment
     finally:
@@ -387,7 +403,10 @@ def test_simultaneous_connects_start_exactly_one_server(cli):
     for process, channel in clients:
         assert cli.finish(process, channel)[0] == 0
     assert cli.json("down")["stopped"] is True
-    assert cli.json("status", expect=3) == {"running": False, "socket": None, "overrides": []}
+    status = cli.json("status", expect=3)
+    assert {key: status[key] for key in ("running", "socket", "overrides")} == {
+        "running": False, "socket": None, "overrides": []}
+    assert status["terminal_host"]["adapter"] == cli.terminal_host["adapter"], status
 
 
 def test_sessions_started_through_the_server_survive_client_disconnect(cli):
@@ -840,13 +859,40 @@ def test_a_crashed_server_is_replaced_on_the_next_start(cli):
         assert time.monotonic() < deadline, "the killed server still answered"
         time.sleep(0.05)
     assert os.path.exists(first["socket"]), "the crash left its socket file behind"
+    crashed = cli.json("status", expect=3)["terminal_host"]["server_terminal"]
+    if keeps_exited(cli):
+        assert crashed is not None and crashed["running"] is False, crashed
+    else:
+        assert crashed is None, crashed
     second = cli.json("up")
     assert second["started"] is True and second["pid"] != first["pid"] and second["socket"] == first["socket"]
     process, channel = cli.spawn("connect", "--actor", "after-crash")
     open_session(channel)
     assert created_by(create(channel, 2, "after the crash")) == "after-crash"
     assert cli.finish(process, channel)[0] == 0
-    assert cli.json("down")["stopped"] is True
+    assert cli.json("status")["terminal_host"]["server_terminal"]["running"] is True
+    stopped = cli.json("down")
+    assert stopped["stopped"] is True, stopped
+    assert stopped.get("terminal") == ({"closed": True} if keeps_exited(cli) else None), stopped
+    assert list((cli.home / "servers").glob("*.terminal.json")) == [], "down forgets the server's terminal"
+
+
+def test_the_server_runs_in_the_selected_terminal_host_and_down_closes_it(cli):
+    import stat as modes
+    started = cli.json("up")
+    records = list((cli.home / "servers").glob("*.terminal.json"))
+    assert len(records) == 1 and modes.S_IMODE(records[0].stat().st_mode) == 0o600, records
+    status = cli.json("status")
+    host = status["terminal_host"]
+    assert host["adapter"] == host["selected"] == cli.terminal_host["adapter"] and host["fallback_reason"] is None
+    assert host["survives_controller"] is True and host["server_terminal"]["running"] is True, host
+    assert cli.json("up")["pid"] == started["pid"], "a running server is not launched twice"
+    stopped = cli.json("down")
+    assert stopped["stopped"] is True, stopped
+    assert stopped.get("terminal") == ({"closed": True} if keeps_exited(cli) else None), stopped
+    assert list((cli.home / "servers").glob("*.terminal.json")) == []
+    after = cli.json("status", expect=3)["terminal_host"]
+    assert after["server_terminal"] is None, after
 
 
 def test_startup_failure_is_reported_with_the_server_log(cli):
@@ -857,3 +903,160 @@ def test_startup_failure_is_reported_with_the_server_log(cli):
     assert error["code"] == "server_unavailable" and error["details"]["exit_code"] == 2
     assert "configuration_error" in cli.server_log()
     assert cli.run("status").returncode == 3
+
+
+# -- the server's terminal record: lost or damaged records do not strand a project --
+
+def crash_server(cli):
+    import signal
+    import time
+    first = cli.json("status")
+    os.kill(first["pid"], signal.SIGKILL)
+    deadline = time.monotonic() + 10
+    while cli.run("status").returncode != 3:
+        assert time.monotonic() < deadline, "the killed server still answered"
+        time.sleep(0.05)
+    return first
+
+
+@pytest.mark.parametrize("damage", ["missing", "corrupt"])
+def test_a_crashed_server_recovers_without_a_usable_terminal_record(cli, damage):
+    cli.json("up")
+    records = list((cli.home / "servers").glob("*.terminal.json"))
+    assert len(records) == 1, records
+    record = records[0]
+    first = crash_server(cli)  # status may already have dropped a record whose terminal is gone
+    if damage == "missing":
+        record.unlink(missing_ok=True)
+    else:
+        descriptor = os.open(record, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as target:
+            target.write("{not json")
+    second = cli.json("up")
+    assert second["started"] is True and second["pid"] != first["pid"], second
+    [record] = list((cli.home / "servers").glob("*.terminal.json"))
+    assert isinstance(json.loads(record.read_text(encoding="utf-8")), dict), "the damaged record was replaced"
+    assert cli.json("status")["terminal_host"]["server_terminal"]["running"] is True
+    stopped = cli.json("down")
+    assert stopped["stopped"] is True, stopped
+
+
+def test_down_closes_the_terminal_only_after_the_server_released_its_lock(cli, monkeypatch, capsys):
+    """The terminal is closed after the drain: never while the server still holds its instance lock."""
+    from xorchestrate import cli as command_line
+    from xorchestrate.server import lock_is_held
+
+    cli.json("up")
+    observed = []
+    finish = command_line.ServerTerminals.finish
+
+    def spy(self):
+        observed.append(lock_is_held(self.files.lock))
+        return finish(self)
+
+    monkeypatch.setattr(command_line.ServerTerminals, "finish", spy)
+    monkeypatch.chdir(cli.repo)
+    for key in list(os.environ):
+        monkeypatch.delenv(key)
+    for key, value in cli.environment.items():
+        monkeypatch.setenv(key, value)
+    assert command_line.main(["down"]) == 0
+    reply = json.loads(capsys.readouterr().out)
+    assert reply["stopped"] is True and observed == [False], (reply, observed)
+
+
+def test_down_never_closes_a_terminal_whose_server_still_holds_its_lock(cli):
+    """An unreachable but live server (here: its socket removed) is not stopped by closing its terminal."""
+    started = cli.json("up")
+    os.unlink(started["socket"])
+    reply = cli.run("down")
+    try:
+        os.kill(started["pid"], 0)
+    except ProcessLookupError:
+        raise AssertionError(f"down killed a server that still held its lock: {reply.stdout!r}") from None
+    finally:
+        import signal
+        with contextlib.suppress(ProcessLookupError):
+            os.kill(started["pid"], signal.SIGTERM)
+
+
+# -- the server's terminal under concurrent clients and changed placements -------------------
+
+def _terminal_environment(directory, adapter):
+    from xorchestrate.instance.home import Home
+
+    home = directory / "home"
+    home.mkdir(mode=0o700, exist_ok=True)
+    Home(home).update_settings(terminal_host={"adapter": adapter})
+    return {**os.environ, "XORCHESTRATE_HOME": str(home)}
+
+
+@pytest.mark.parametrize("adapter", ["tmux", "detached-process"])
+def test_down_never_closes_a_terminal_while_a_client_is_starting_the_server(directory, adapter, monkeypatch):
+    """A starting client holds the start lock between its instance-lock check and its launch; cleanup waits for it."""
+    if adapter == "tmux" and shutil.which("tmux") is None:
+        pytest.skip("the multiplexer is not installed")
+    from xorchestrate import cli
+    from xorchestrate.adapters.local_socket import InstanceLock
+
+    environ = _terminal_environment(directory, adapter)
+    monkeypatch.setenv("XORCHESTRATE_HOME", environ["XORCHESTRATE_HOME"])
+    files = ServerFiles.locate("race-" + adapter, environ).ensure()
+    terminals = cli.ServerTerminals(files, environ)
+    try:
+        # The replacement server a concurrent up/connect has just launched (it does not hold the instance lock yet).
+        terminals([sys.executable, "-c", "import time; time.sleep(30)"], files.log, str(directory))
+    finally:
+        terminals.close()
+    starting = InstanceLock(files.start_lock)
+    assert starting.acquire(wait=1)
+    try:
+        reply = cli._finish_server_terminal(files, {})
+    finally:
+        starting.release()
+    observer = cli.ServerTerminals(files, environ)
+    try:
+        replacement = observer.adopt()
+        assert replacement is not None and replacement.running, (reply, replacement)
+        assert "terminal" not in reply or reply["terminal"].get("closed") is not True, reply
+    finally:
+        observer.finish()
+        observer.close()
+
+
+def test_a_crashed_server_restarted_with_another_runtime_directory_is_recorded_where_it_runs(directory):
+    """The new terminal opens at the newly computed placement, so later status and down can adopt it."""
+    if shutil.which("tmux") is None:
+        pytest.skip("the multiplexer is not installed")
+    from xorchestrate import cli
+    from xorchestrate.composition import factory_for
+
+    environ = _terminal_environment(directory, "tmux")
+    files = ServerFiles.locate("moved", environ).ensure()
+    first = cli.ServerTerminals(files, environ)
+    try:
+        first([sys.executable, "-c", "raise SystemExit(3)"], files.log, str(directory))
+    finally:
+        first.close()
+    old = files.read_terminal_record()["placement"]
+    moved = directory / "run-b"
+    moved.mkdir(mode=0o700)
+    environ_b = {**environ, "XORCHESTRATE_RUNTIME_DIR": str(moved)}
+    second = cli.ServerTerminals(files, environ_b)
+    try:
+        second([sys.executable, "-c", "import time; time.sleep(30)"], files.log, str(directory))
+    finally:
+        second.close()
+    try:
+        record = files.read_terminal_record()
+        assert record["placement"]["socket"] == record["receipt"]["socket"], record
+        assert record["placement"]["socket"].startswith(str(moved)), record
+        later = cli.ServerTerminals(files, environ_b)
+        try:
+            assert later.adopt() is not None, "status and down can adopt the restarted server's terminal"
+        finally:
+            later.close()
+    finally:
+        for placement in (old, files.read_terminal_record() and files.read_terminal_record()["placement"]):
+            if placement:
+                factory_for("terminal_host", "tmux")(dict(placement)).shutdown()

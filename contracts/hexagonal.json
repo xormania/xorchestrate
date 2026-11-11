@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "xorchestrate.hexagonal",
-  "version": "8",
+  "version": "9",
   "description": "Current application-owned ports, infrastructure-independent core and replaceable adapters. Composition is the trusted factory boundary. Source dependencies are distinct from runtime calls through ports. Active live-test infrastructure follows the same dependency direction: generic test-kit ports/core, concrete execution adapters, independent evidence predicates and explicit runner composition. Shared test contracts remain independent of their subjects; support adapters own fixtures, and collected tests cannot import other collected tests. The public ports, their values and errors and the adapter factory convention come from the external, stdlib-only xcontracts package (Apache-2.0), which the foundation re-exports. Roles that reach the foundation allow only xcontracts.ports and xcontracts.model; the conformance kit (xcontracts.testing) and the factory types are allowed only in test support and collected tests; xcontracts never imports xorchestrate, which its own tests and tests/hexagonal/test_xcontracts.py check.",
   "source_roots": [
     "xorchestrate",
@@ -40,7 +40,10 @@
         "input",
         "print"
       ],
-      "description": "Model and ports: application helpers plus re-exports of the xcontracts ports, values and errors; the client transport ports stay here."
+      "description": "Model and ports: application helpers plus re-exports of the xcontracts ports, values and errors; the client transport ports stay here.",
+      "forbidden_literals": [
+        "tmux"
+      ]
     },
     "core": {
       "modules": [
@@ -90,6 +93,9 @@
         "open",
         "input",
         "print"
+      ],
+      "forbidden_literals": [
+        "tmux"
       ]
     },
     "work_acceptance": {
@@ -119,7 +125,10 @@
         "input",
         "print"
       ],
-      "description": "Assessment and acceptance workflows and their material binding calculations depend on contracts and explicit mutation/invocation callbacks, without application, inspection, delivery or infrastructure imports."
+      "description": "Assessment and acceptance workflows and their material binding calculations depend on contracts and explicit mutation/invocation callbacks, without application, inspection, delivery or infrastructure imports.",
+      "forbidden_literals": [
+        "tmux"
+      ]
     },
     "inspection": {
       "modules": [
@@ -147,7 +156,10 @@
         "input",
         "print"
       ],
-      "description": "Public record projection depends only on contracts and explicit authority callbacks; it cannot import application, delivery or acceptance workflows."
+      "description": "Public record projection depends only on contracts and explicit authority callbacks; it cannot import application, delivery or acceptance workflows.",
+      "forbidden_literals": [
+        "tmux"
+      ]
     },
     "telemetry": {
       "modules": [
@@ -177,12 +189,16 @@
         "input",
         "print"
       ],
-      "description": "Pure observation protection and authorized telemetry views; storage and transport remain adapters."
+      "description": "Pure observation protection and authorized telemetry views; storage and transport remain adapters.",
+      "forbidden_literals": [
+        "tmux"
+      ]
     },
     "adapters": {
       "modules": [
         "xorchestrate.adapters",
-        "xorchestrate.adapters.*"
+        "xorchestrate.adapters.[!t]*",
+        "xorchestrate.adapters.t[!m]*"
       ],
       "allowed_roles": [
         "foundation",
@@ -200,7 +216,33 @@
         "xcontracts.ports",
         "xcontracts.model"
       ],
-      "allow_dynamic": true
+      "allow_dynamic": true,
+      "forbidden_literals": [
+        "tmux"
+      ]
+    },
+    "terminal_multiplexer": {
+      "modules": [
+        "xorchestrate.adapters.tmux"
+      ],
+      "allowed_roles": [
+        "foundation",
+        "core",
+        "work_acceptance",
+        "inspection",
+        "adapters",
+        "telemetry",
+        "telemetry_views"
+      ],
+      "allowed_external": [
+        "stdlib:*",
+        "jsonschema",
+        "referencing",
+        "xcontracts.ports",
+        "xcontracts.model"
+      ],
+      "allow_dynamic": false,
+      "description": "The terminal multiplexer adapter of the TerminalHost port (xorchestrate.ports). Only composition may import it, by its registry entry; every other role reaches it through the port. The adapters role's selectors exclude this module by name prefix, so a new adapters.tm* module is unclassified until declared."
     },
     "composition": {
       "modules": [
@@ -212,6 +254,7 @@
         "work_acceptance",
         "inspection",
         "adapters",
+        "terminal_multiplexer",
         "composition",
         "telemetry",
         "telemetry_views"
@@ -1258,7 +1301,10 @@
         "input",
         "print"
       ],
-      "description": "Pure versioned projections consume authorized observations without storage, capture or authority decisions."
+      "description": "Pure versioned projections consume authorized observations without storage, capture or authority decisions.",
+      "forbidden_literals": [
+        "tmux"
+      ]
     },
     "package_acceptance": {
       "modules": [

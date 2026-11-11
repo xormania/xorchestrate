@@ -7,6 +7,17 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ## Unreleased
 
+### Changed
+
+- The project server now runs in a terminal host, selected in `settings.json`
+  as `terminal_host`. It defaults to a private multiplexer server (`tmux`),
+  so the server's terminal survives its client and an operator can attach to
+  it. Detached processes (`detached-process`) are the configured fallback
+  where the multiplexer is missing and run the server exactly as before.
+  `doctor` and `status` report which host is active, why, and whether its
+  terminals survive and are interactive. `down` closes the stopped server's
+  terminal. See [terminal host](docs/terminal-host.md).
+
 ### Fixed
 
 - The built-in PR provider limits authenticated inspection and handoff reads to
@@ -58,7 +69,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   writes. See [PR preparation](docs/pr-delivery.md) for configuration and recovery.
 - CI candidate contexts bind the tested merge/base/tree to GitHub checks and
   immutable per-lane producer artifacts, including successful partial reruns.
-
+- `TerminalHost` port with `tmux` and `detached-process` adapters: open,
+  list, input, interrupt, bounded output, attach, verified close and
+  identity-checked adoption after a controller restart, plus an `owned` mode
+  in which everything stops with the controller.
 - Live test-kit failures keep their reason. A failed scenario check still
   records only its assertion code in the shareable `scenario.json`; the request
   involved, the application's error and the preserved outcome of a failed effect

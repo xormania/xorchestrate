@@ -30,8 +30,12 @@ ROOT = Path(__file__).resolve().parents[2]
 # Host-internal kinds: the lifecycle engine's interface and the local collector's storage are not public ports;
 # telemetry's port is published but provisional (it passes host internals), so it is not a selectable public kind.
 INTERNAL_KINDS = {"state_engine", "telemetry"} | NESTED
-# Driving-side client transport and the new pull request delivery ports stay in xorchestrate.
-LOCAL_PORTS = {"PeerIdentity", "ClientConnection", "ClientTransport", "PullRequestHost", "PullRequestWorkspace"}
+# Driving-side client transport, the new pull request delivery ports and the new terminal host port stay in
+# xorchestrate: they are still evolving and not yet published.
+LOCAL_PORTS = {"PeerIdentity", "ClientConnection", "ClientTransport", "PullRequestHost", "PullRequestWorkspace",
+               "AttachInstruction", "HostedTerminal", "InventoryItem", "TerminalClosure", "TerminalCommand", "TerminalHost"}
+# Selectable, defined locally, not yet published: a kind whose port is one of LOCAL_PORTS.
+LOCAL_KINDS = {"terminal_host"}
 
 
 def test_the_foundation_re_exports_the_xcontracts_ports_and_values_unchanged():
@@ -46,9 +50,9 @@ def test_the_foundation_re_exports_the_xcontracts_ports_and_values_unchanged():
         assert getattr(xorchestrate.model, name) is getattr(model, name), name
 
 
-def test_every_selectable_kind_is_a_public_xcontracts_kind_unless_it_is_host_internal():
-    assert set(BUILTINS) - INTERNAL_KINDS == set(factories.KINDS)
-    assert {name for name, kind in factories.KINDS.items() if kind.scope == "operator"} == OPERATOR
+def test_every_selectable_kind_is_a_public_xcontracts_kind_unless_it_is_host_internal_or_local():
+    assert set(BUILTINS) - INTERNAL_KINDS - LOCAL_KINDS == set(factories.KINDS)
+    assert {name for name, kind in factories.KINDS.items() if kind.scope == "operator"} == OPERATOR - LOCAL_KINDS
 
 
 # Built-ins that construct from empty options without launching anything.
