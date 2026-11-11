@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "test_commit": "5fb9a32",
+  "defective_commit": "182044c",
+  "adapter_path": "xorchestrate/adapters/pr_github.py",
+  "defective_sha256": "e4a7de342db34a03ad6afeae8ff07384b00ee6594f60b4c7adf5364758d94c87",
+  "repaired_sha256": "5d3dc104b5872b65702a8e585be80bc6df84e48abe0321a1339786aa50ef715e",
+  "witness": "A lower-created run with a later-started retry must outrank a newer-created run; completion order is irrelevant; missing authoritative attempt-start ordering remains incomplete.",
+  "red": {
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-q",
+      "tests/hexagonal/test_pr_github.py",
+      "-k",
+      "authoritative_attempt_start"
+    ],
+    "exit_code": 1,
+    "summary": "2 failed, 1 passed, 18 deselected in 0.80s",
+    "failure_excerpt": [
+      "E       assert 42778000000 == 42777999999",
+      "E           Failed: DID NOT RAISE OrchestrationError",
+      "FAILED tests/hexagonal/test_pr_github.py::test_authoritative_attempt_start_orders_reruns_across_different_run_ids[True]",
+      "FAILED tests/hexagonal/test_pr_github.py::test_missing_authoritative_attempt_start_cannot_certify_latest_success"
+    ]
+  },
+  "green": {
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-q",
+      "tests/hexagonal/test_pr_github.py"
+    ],
+    "exit_code": 0,
+    "summary": "21 passed in 10.57s",
+    "failure_excerpt": []
+  }
+}

@@ -229,7 +229,7 @@ class TmuxTerminalHost:
         else:
             terminal, _ = self._verified(name)
             target = ["-t", terminal.session]
-        argv = (self.binary, "-N", "-S", str(self.socket), "attach-session", *target)
+        argv = (*self._attach_prefix(), "-N", "-S", str(self.socket), "attach-session", *target)
         return AttachInstruction(argv, f"Run {shlex.join(argv)} to attach; detach again with the prefix key, then d.")
 
     def close_terminal(self, name, grace=None):
@@ -370,13 +370,18 @@ class TmuxTerminalHost:
             raise OrchestrationError("The terminal host did not start.", "terminal_host_unavailable")
         os.chmod(self.socket, 0o600)
 
+    def _attach_prefix(self):
+        """The multiplexer command, run with its nesting markers cleared so attaching works from inside a session."""
+        return (shutil.which("env") or "/usr/bin/env", *(part for marker in NESTING_MARKERS for part in ("-u", marker)),
+                self.binary)
+
     def _release_name(self, name):
         """Free ``name`` on the server: replace an exited terminal; refuse a running one, saying how to look at it."""
         for pane in self._panes():
             if (pane.host, pane.name) != (self.name, name):
                 continue
             if not pane.dead:
-                argv = (self.binary, "-N", "-S", str(self.socket), "attach-session", "-t", pane.session)
+                argv = (*self._attach_prefix(), "-N", "-S", str(self.socket), "attach-session", "-t", pane.session)
                 raise OrchestrationError("A terminal with this name is running; adopt it from its receipt.",
                                          "terminal_exists", {"name": name, "attach": list(argv)})
             # Fenced by the server identity checked in this call; ending the last session is expected here.

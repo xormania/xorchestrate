@@ -15,7 +15,7 @@
       }
     },
     "storage": {
-      "guarantee": "Replaceable stores provide equivalent record, transaction, concurrency and persistence behavior.",
+      "guarantee": "Replaceable stores pass the xcontracts StateStore conformance kit and the SQLite store keeps its persistence behavior.",
       "modules": {
         "tests/hexagonal/test_storage.py": "adapter"
       }
@@ -37,10 +37,13 @@
       }
     },
     "capabilities": {
-      "guarantee": "Configured capability providers and evaluators preserve discovery, invocation, permissions and assessment evidence across process adapters.",
+      "guarantee": "Configured capability providers and evaluators preserve discovery, invocation, permissions and assessment evidence across process adapters; PR reads honor their configured repository scope before hosting access.",
       "modules": {
         "tests/hexagonal/test_capabilities.py": "adapter",
-        "tests/hexagonal/test_evaluation.py": "adapter"
+        "tests/hexagonal/test_evaluation.py": "adapter",
+        "tests/hexagonal/test_pr_operations.py": "contract",
+        "tests/hexagonal/test_pr_workspace.py": "adapter",
+        "tests/hexagonal/test_pr_github.py": "adapter"
       }
     },
     "delivery": {
@@ -198,7 +201,8 @@
         "tests/hexagonal/test_live_readiness.py": "composition",
         "tests/hexagonal/test_ci_changes.py": "contract",
         "tests/hexagonal/test_ci_dependencies.py": "adapter",
-        "tests/hexagonal/test_ci_result.py": "contract"
+        "tests/hexagonal/test_ci_result.py": "contract",
+        "tests/hexagonal/test_candidate_evidence.py": "contract"
       }
     },
     "telemetry": {
@@ -218,6 +222,12 @@
         "tests/hexagonal/test_telemetry_collector_selection.py": "composition",
         "tests/hexagonal/test_telemetry_collector_compatibility.py": "adapter",
         "tests/hexagonal/test_telemetry_snapshots.py": "composition"
+      }
+    },
+    "contracts": {
+      "guarantee": "The public ports, their values and errors and the adapter factory convention come from xcontracts unchanged; built-in adapters are selectable through that convention and satisfy its ports and conformance kit, and xcontracts depends on nothing but the standard library.",
+      "modules": {
+        "tests/hexagonal/test_xcontracts.py": "contract"
       }
     }
   }

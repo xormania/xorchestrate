@@ -10,6 +10,12 @@ from pathlib import Path
 import pytest
 
 from scripts.ci import result as subject
+from tests.hexagonal.support.ci_candidate import (
+    artifact_zip,
+    candidate_repository,
+    github_observation,
+    strict_documentation_receipts,
+)
 
 MANDATORY = (
     "paths", "changes", "application-tests", "application", "verification",
@@ -188,14 +194,15 @@ def test_documentation_static_receipt_belongs_to_the_tested_candidate(tmp_path, 
 
 @pytest.mark.parametrize("static_succeeded", (True, False))
 def test_actual_cli_preserves_a_required_job_failure_with_healthy_receipts(tmp_path, static_succeeded):
+    repository = candidate_repository(tmp_path / "repository")
+    event, env = github_observation(repository)
+    context = subject.candidate_evidence.capture_context(repository["root"], event, env)
     artifacts = tmp_path / "artifacts"
-    directory = artifacts / "static-checks-python-3.12" / "run"
-    _write(directory / "report.json", {"schema_version": 2, "suite": "static", "status": "passed"})
-    _write(directory / "candidate.json", {"commit": "a" * 40, "status": ""})
-    needs = _needs(docs=True)
+    context, metadata, needs, workflow = strict_documentation_receipts(artifacts, context)
     if not static_succeeded:
         needs["changes"]["result"] = "failure"
-    for name, value in (("needs", needs), ("workflow", {"jobs": {}}), ("catalog", {})):
+    for name, value in (("needs", needs), ("workflow", workflow), ("catalog", {}),
+                        ("context", context), ("metadata", metadata)):
         _write(tmp_path / (name + ".json"), value)
     summary = tmp_path / "summary.md"
     output = tmp_path / "result.json"
@@ -204,13 +211,15 @@ def test_actual_cli_preserves_a_required_job_failure_with_healthy_receipts(tmp_p
         "--needs", str(tmp_path / "needs.json"), "--workflow", str(tmp_path / "workflow.json"),
         "--catalog", str(tmp_path / "catalog.json"), "--artifacts", str(artifacts),
         "--summary", str(summary), "--output", str(output), "--event", "pull_request",
-        "--source-sha", "c" * 40, "--tested-sha", "a" * 40,
+        "--source-sha", context["source_sha"], "--tested-sha", context["checkout"]["commit"],
+        "--context", str(tmp_path / "context.json"), "--metadata", str(tmp_path / "metadata.json"),
         "--run-url", "https://example.invalid/run/1",
     ], cwd=tmp_path, check=False, capture_output=True, text=True, timeout=30)
     report = json.loads(output.read_text())
     assert result.returncode == (0 if static_succeeded else 1), result.stderr
     assert report["status"] == ("passed" if static_succeeded else "failed")
-    assert report["source_sha"] == "c" * 40 and report["tested_sha"] == "a" * 40
+    assert report["source_sha"] == context["source_sha"]
+    assert report["tested_sha"] == context["checkout"]["commit"]
     if not static_succeeded:
         assert any("Required job changes did not pass: failure" in error for error in report["errors"])
         assert "Required job changes did not pass: failure" in summary.read_text()
@@ -408,20 +417,43 @@ def test_ci_summary_waits_for_advisory_artifact_without_requiring_jev_success():
 def test_ci_advisory_link_is_exported_from_the_actual_artifact_upload():
     workflow = json.loads((Path(__file__).parents[2] / ".github/workflows/ci.yml").read_text())
     diagnostic = workflow["jobs"]["architecture"]
-    upload = next(step for step in diagnostic["steps"] if step.get("with", {}).get("name") == "architecture-evidence")
+    upload = next(step for step in diagnostic["steps"]
+                  if step.get("with", {}).get("name", "").startswith("architecture-evidence--attempt-"))
     assert upload.get("id"), "The retained upload must expose its own artifact URL"
     assert diagnostic.get("outputs", {}).get("artifact_url") == "${{ steps." + upload["id"] + ".outputs.artifact-url }}"
 
 
-def test_optional_advisory_transfer_cannot_fail_required_evidence_download():
-    workflow = json.loads((Path(__file__).parents[2] / ".github/workflows/ci.yml").read_text())
-    downloads = [step for step in workflow["jobs"]["ci-result"]["steps"]
-                 if step.get("uses", "").startswith("actions/download-artifact@")]
-    required = [step for step in downloads if not step.get("continue-on-error", False)]
-    assert len(required) == 1 and required[0].get("with", {}).get("pattern") == "!architecture-evidence"
-    optional = [step for step in downloads if step.get("with", {}).get("name") == "architecture-evidence"]
-    assert len(optional) == 1 and optional[0].get("continue-on-error") is True
-    assert optional[0]["with"]["path"] == "${{ runner.temp }}/ci-result-inputs/architecture-evidence"
+@pytest.mark.parametrize("advice_fault", ("http", "archive"))
+def test_optional_advisory_transfer_cannot_fail_required_evidence_download(tmp_path, monkeypatch, advice_fault):
+    payload = artifact_zip([("report.json", b'{"status":"passed"}', "file")])
+    digest = "sha256:" + hashlib.sha256(payload).hexdigest()
+    lane = "static-checks-python-3.12"
+    context = {"repository": {"full_name": "xormania/xorchestrate"}, "producer": {"run_attempt": 1}}
+    metadata = {"jobs": [{"name": "Static checks", "run_attempt": 1}], "artifacts": [
+        {"id": 1, "name": lane + "--attempt-1", "digest": digest},
+        {"id": 2, "name": "architecture-evidence--attempt-1", "digest": digest},
+    ]}
+
+    def respond(url, token, limit):
+        assert token == "inert-canary"
+        if url.endswith("/2/zip"):
+            if advice_fault == "http":
+                raise OSError("controlled optional download failure")
+            return b"invalid archive bytes"
+        return payload
+
+    monkeypatch.setattr(subject.candidate_evidence, "api_bytes", respond)
+    subject.candidate_evidence.download_evidence(context, metadata, "inert-canary", tmp_path / "healthy",
+                                                {lane: "Static checks"})
+    assert (tmp_path / "healthy" / (lane + "--attempt-1") / "report.json").is_file()
+
+    def unavailable(*args, **kwargs):
+        raise OSError("controlled required download failure")
+
+    monkeypatch.setattr(subject.candidate_evidence, "api_bytes", unavailable)
+    with pytest.raises(OSError):
+        subject.candidate_evidence.download_evidence(context, metadata, "inert-canary", tmp_path / "blocked",
+                                                    {lane: "Static checks"})
 
 
 @pytest.mark.parametrize("dirty", (False, True))

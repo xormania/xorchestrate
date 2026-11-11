@@ -67,10 +67,14 @@ Maintainers publish releases as described in [releases](docs/releases.md).
 
 ## Run locally
 
-Use Python 3.12 or newer. From the checkout:
+Use Python 3.12 or newer and [uv](https://docs.astral.sh/uv/). Until xcontracts is published on PyPI, install with uv: it reads the pinned
+xcontracts git source in `pyproject.toml`, which plain pip ignores (pip stops with
+`No matching distribution found for xcontracts`). Once xcontracts is on PyPI,
+`python3 -m pip install ...` works again.
+From the checkout:
 
 ```bash
-python3 -m pip install -e .
+uv pip install --python python3 -e .
 xorchestrate setup ~/companion        # once per user: your private overlays and approvals
 cd /path/to/your/project              # a git repository
 xorchestrate init                     # creates a starter .xorchestrate/ and registers this machine's instance
@@ -173,6 +177,8 @@ See [native sessions](docs/native-sessions.md), [external attachment and recover
 and [owner requirements and acceptance](docs/work-acceptance.md).
 
 See [the architecture and contracts](docs/hexagonal-architecture.md),
+[writing an adapter](docs/adapters.md) against the
+[xcontracts](https://github.com/xormania/xcontracts) ports,
 [configuration examples](examples/), and [validation](.github/CI.md) for the
 supported behavior and limits. The deterministic tests use real subprocess
 boundaries with fixture servers; they do not establish authenticated vendor or

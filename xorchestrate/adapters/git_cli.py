@@ -35,11 +35,17 @@ class GitCLI:
             raise OrchestrationError("git is required to identify a project.", "git_unavailable") from exc
         return result.stdout.strip() if result.returncode == 0 else None
 
-    def worktree(self, path):
+    @staticmethod
+    def _directory(path):
+        """``path`` if it is a directory, else its parent if that is one (a file or a not yet existing entry)."""
         directory = Path(path)
         if not directory.is_dir():
             directory = directory.parent
-        if not directory.is_dir():
+        return directory if directory.is_dir() else None
+
+    def worktree(self, path):
+        directory = self._directory(path)
+        if directory is None:
             return None
         root = self._run("rev-parse", "--show-toplevel", cwd=directory)
         private = self._run("rev-parse", "--absolute-git-dir", cwd=directory)
@@ -51,20 +57,19 @@ class GitCLI:
                                 branch)
 
     def root_commits(self, path):
-        if not Path(path).is_dir():
+        directory = self._directory(path)
+        if directory is None:
             return frozenset()
-        output = self._run("rev-list", "--max-parents=0", "--all", cwd=path)
+        output = self._run("rev-list", "--max-parents=0", "--all", cwd=directory)
         return frozenset(output.split()) if output else frozenset()
 
     def remote_url(self, path, name="origin"):
-        if not Path(path).is_dir():
-            return None
-        return self._run("remote", "get-url", name, cwd=path) or None
+        directory = self._directory(path)
+        return None if directory is None else self._run("remote", "get-url", name, cwd=directory) or None
 
     def revision(self, path):
-        if not Path(path).is_dir():
-            return None
-        return self._run("rev-parse", "--verify", "-q", "HEAD", cwd=path) or None
+        directory = self._directory(path)
+        return None if directory is None else self._run("rev-parse", "--verify", "-q", "HEAD", cwd=directory) or None
 
     def initialize(self, path):
         Path(path).mkdir(parents=True, exist_ok=True)

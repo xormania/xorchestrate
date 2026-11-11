@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "scope": "First hosted candidate-provenance execution and bounded follow-up repair; this attempt did not pass CI.",
+  "run": {
+    "id": 42899768226,
+    "attempt": 1,
+    "url": "https://github.com/xormania/xorchestrate/actions/runs/42899768226",
+    "source_sha": "5ca043cd279ddd40c2e3db35d47b438152de91a8",
+    "tested_commit": "1c4d137f802ff9b263629e840c6dc542e61d9bb7",
+    "tested_tree": "07078c069ddbd85de4bf683448170a8e09143f5b",
+    "captured_target_ref": "feat/pr-safe-effects",
+    "tested_base_sha": "6b3d91073822abb2575fe9039e80029741040057"
+  },
+  "shard_assertion": {
+    "job_id": 130122491583,
+    "artifact_id": 13802597332,
+    "artifact_url": "https://github.com/xormania/xorchestrate/actions/runs/42899768226/artifacts/13802597332",
+    "selected": 832,
+    "passed": 831,
+    "failed": 1,
+    "test": "tests/hexagonal/test_testkit_sharding.py::test_ci_defines_the_shard_count_once_and_keeps_the_application_aggregate_name",
+    "observed_failure": "The old assertion required the artifact name to end at the logical shard name, rejecting the intended --attempt-${{ github.run_attempt }} suffix.",
+    "repair": "Check the logical shard name separately from the actual-attempt suffix; retain all existing matrix-count and aggregate-name guarantees.",
+    "checking_fault": {
+      "file": ".github/workflows/ci.yml",
+      "mutation": "In application-tests upload-artifact name only, replace ${{ github.run_attempt }} with literal 1.",
+      "command": "python -m pytest tests/hexagonal/test_testkit_sharding.py::test_ci_defines_the_shard_count_once_and_keeps_the_application_aggregate_name -q -p no:cacheprovider",
+      "red": "1 failed: AssertionError: retry artifacts identify their actual attempt",
+      "healthy": "1 passed with the workflow restored and the same test/command."
+    }
+  },
+  "superseded_target": {
+    "aggregate_artifact_id": 13802761430,
+    "aggregate_artifact_url": "https://github.com/xormania/xorchestrate/actions/runs/42899768226/artifacts/13802761430",
+    "authoritative_pr_number": 65,
+    "authoritative_target_ref_at_collection": "master",
+    "authoritative_base_sha_at_collection": "9da34342061f731e1d38deb9b4a9d21bcc003f02",
+    "aggregate_error": "Evidence qualification: GitHub PR number/target association disagrees with the candidate",
+    "cause": "PR 63 merged while the run was active; GitHub retargeted dependent PR 65 from feat/pr-safe-effects to master.",
+    "disposition": "The stale-target rejection is correct and the association guard is preserved. Refresh master and execute the next candidate; do not relabel this attempt as current or erase its failure."
+  },
+  "limits": [
+    "This record does not claim a successful hosted aggregate or a successful partial rerun.",
+    "The first run verifies actual context capture and downstream checkout agreement; fresh hosted acceptance remains required after the narrow test repair and base refresh."
+  ]
+}

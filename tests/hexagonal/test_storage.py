@@ -1,16 +1,17 @@
-"""Adapter contract, concurrency, and real persistence checks."""
+"""Built-in stores against the xcontracts StateStore kit, and SQLite persistence checks."""
 
 import multiprocessing
 import os
 import stat
 import tempfile
-import threading
 import unittest
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import pytest
+from xcontracts.testing import state_store
+
 from xorchestrate.adapters.storage import MemoryStore, SQLiteStore
-from xorchestrate.model import Conflict, OrchestrationError
+from xorchestrate.model import OrchestrationError
 
 
 def _increment_process(path, iterations, ready, start):
@@ -29,214 +30,37 @@ def _increment_process(path, iterations, ready, start):
         store.close()
 
 
-class StorageContract:
+@pytest.mark.parametrize("check", state_store.CHECKS, ids=str)
+@pytest.mark.parametrize("adapter", ["memory", "sqlite"])
+def test_built_in_stores_pass_the_xcontracts_state_store_kit(adapter, check, tmp_path):
+    """The shared StateStore contract now lives in xcontracts' conformance kit."""
+    if adapter == "memory":
+        check(MemoryStore)
+    else:
+        check(lambda: SQLiteStore({"path": str(tmp_path / "state.db")}))
+
+
+@pytest.mark.parametrize("adapter", ["memory", "sqlite"])
+def test_built_in_stores_round_trip_lone_surrogates_in_data(adapter, tmp_path):
+    """Beyond the port contract: the built-in stores keep any Python string, even an unpaired surrogate."""
+    store = MemoryStore() if adapter == "memory" else SQLiteStore({"path": str(tmp_path / "state.db")})
+    try:
+        with store.transaction() as tx:
+            tx.put("job", "one", {"text": "\ud800"})
+        with store.transaction() as tx:
+            assert tx.get("job", "one").data == {"text": "\ud800"}
+    finally:
+        store.close()
+
+
+class SQLiteStoreTests(unittest.TestCase):
+    """SQLite persistence beyond the port contract: restarts, processes, files and options."""
+
     def setUp(self):
         self.directory = tempfile.TemporaryDirectory()
         self.addCleanup(self.directory.cleanup)
-        self.store = self.make_store()
+        self.store = SQLiteStore({"path": str(Path(self.directory.name) / "state.db")})
         self.addCleanup(self.store.close)
-
-    def test_create_replace_delete_and_stale_versions(self):
-        with self.store.transaction() as tx:
-            self.assertIsNone(tx.get("job", "missing"))
-            first = tx.put("job", "one", {"value": 1})
-            self.assertEqual(first.version, 1)
-            with self.assertRaises(Conflict):
-                tx.put("job", "one", {"value": 2})
-            with self.assertRaises(Conflict):
-                tx.put("job", "missing", {}, expected_version=1)
-            changed = tx.put("job", "one", {"value": 2}, expected_version=first.version)
-            self.assertEqual(changed.version, 2)
-            with self.assertRaises(Conflict):
-                tx.put("job", "one", {"value": 3}, expected_version=first.version)
-            with self.assertRaises(Conflict):
-                tx.delete("job", "one", expected_version=first.version)
-            self.assertEqual(tx.get("job", "one"), changed)
-            tx.delete("job", "one", expected_version=changed.version)
-            with self.assertRaises(Conflict):
-                tx.delete("job", "one", expected_version=changed.version)
-            self.assertIsNone(tx.get("job", "one"))
-
-    def test_inputs_and_returned_records_are_detached(self):
-        original = {"nested": [{"value": 1}], "unicode": "\ud800"}
-        with self.store.transaction() as tx:
-            created = tx.put("job", "one", original)
-            original["nested"][0]["value"] = 9
-            created.data["nested"][0]["value"] = 8
-            fetched = tx.get("job", "one")
-            self.assertEqual(fetched.data["nested"][0]["value"], 1)
-            fetched.data["nested"].append({"value": 7})
-            listed = tx.list("job")
-            listed[0].data["nested"][0]["value"] = 6
-        with self.store.transaction() as tx:
-            self.assertEqual(tx.get("job", "one").data["nested"], [{"value": 1}])
-
-    def test_lists_are_sorted_and_scoped_to_kind(self):
-        with self.store.transaction() as tx:
-            tx.put("job", "z", {})
-            tx.put("actor", "a", {})
-            tx.put("job", "a", {})
-            self.assertEqual([record.key for record in tx.list("job")], ["a", "z"])
-            self.assertEqual(tx.list("missing"), [])
-
-    def test_exception_rolls_back_record_and_event_bundle(self):
-        with self.store.transaction() as tx:
-            original = tx.put("job", "one", {"phase": "initial"})
-            tx.emit({"phase": "initial"})
-        for failure in (RuntimeError, KeyboardInterrupt):
-            with self.assertRaises(failure):
-                with self.store.transaction() as tx:
-                    tx.put("job", "one", {"phase": "changed"}, original.version)
-                    tx.put("job", "two", {})
-                    tx.emit({"phase": "changed"})
-                    raise failure()
-            with self.store.transaction() as tx:
-                self.assertEqual(tx.get("job", "one"), original)
-                self.assertIsNone(tx.get("job", "two"))
-                self.assertEqual(tx.events(), [{"phase": "initial", "seq": 1}])
-        with self.store.transaction() as tx:
-            tx.delete("job", "one", original.version)
-            seq = tx.emit({"phase": "deleted"})
-        with self.store.transaction() as tx:
-            self.assertIsNone(tx.get("job", "one"))
-            self.assertEqual(tx.events(after=1), [{"phase": "deleted", "seq": seq}])
-
-    def test_events_are_detached_ordered_and_pageable(self):
-        event = {"nested": ["original"], "seq": "untrusted input"}
-        with self.store.transaction() as tx:
-            first = tx.emit(event)
-            event["nested"].append("changed")
-            tx.emit({"kind": "second"})
-            returned = tx.events()
-            self.assertEqual(returned[0], {"nested": ["original"], "seq": first})
-            returned[0]["nested"].append("changed")
-        with self.store.transaction() as tx:
-            third = tx.emit({"kind": "third"})
-            self.assertEqual(tx.events(after=first, limit=1), [{"kind": "second", "seq": first + 1}])
-            self.assertEqual(tx.events(after=first + 1), [{"kind": "third", "seq": third}])
-            self.assertEqual(tx.events(limit=0), [])
-            self.assertEqual(tx.events(after=third + 100), [])
-            self.assertEqual(tx.events(limit=1)[0]["nested"], ["original"])
-
-    def test_invalid_json_rejected_without_partial_writes(self):
-        cycle = []
-        cycle.append(cycle)
-        invalid = [
-            {"value": float("nan")},
-            {"value": float("inf")},
-            {"value": object()},
-            {"value": (1, 2)},
-            {1: "non-string key"},
-            {"nested": [{False: "non-string key"}]},
-            {"value": cycle},
-            [],
-            None,
-        ]
-        with self.store.transaction() as tx:
-            for value in invalid:
-                with self.subTest(value=repr(value)):
-                    with self.assertRaises(OrchestrationError):
-                        tx.put("job", "invalid", value)
-                    with self.assertRaises(OrchestrationError):
-                        tx.emit(value)
-            self.assertIsNone(tx.get("job", "invalid"))
-            self.assertEqual(tx.events(), [])
-
-    def test_invalid_identifiers_versions_and_pagination(self):
-        with self.store.transaction() as tx:
-            for key in (None, "", 2, "\ud800"):
-                with self.assertRaises(OrchestrationError):
-                    tx.put("job", key, {})
-            for version in (True, 0, -1, 1.5, "1"):
-                with self.assertRaises(OrchestrationError):
-                    tx.put("job", "one", {}, version)
-                with self.assertRaises(OrchestrationError):
-                    tx.delete("job", "one", version)
-            for after, limit in ((-1, 1), (1, -1), (True, 1), (1, 1.5)):
-                with self.assertRaises(OrchestrationError):
-                    tx.events(after, limit)
-
-    def test_transaction_lifetime_thread_ownership_and_nested_context(self):
-        with self.store.transaction() as tx:
-            with self.assertRaises(RuntimeError):
-                with self.store.transaction():
-                    self.fail("Nested transaction entered.")
-            with self.assertRaises(RuntimeError):
-                self.store.close()
-            with ThreadPoolExecutor(max_workers=1) as pool:
-                with self.assertRaises(RuntimeError):
-                    pool.submit(tx.get, "job", "one").result(timeout=5)
-            tx.put("job", "one", {})
-        for operation in (
-            lambda: tx.get("job", "one"),
-            lambda: tx.list("job"),
-            lambda: tx.put("job", "two", {}),
-            lambda: tx.delete("job", "one", 1),
-            lambda: tx.emit({}),
-            lambda: tx.events(),
-        ):
-            with self.assertRaises(RuntimeError):
-                operation()
-
-    def test_close_is_idempotent_and_prevents_reuse(self):
-        self.store.close()
-        self.store.close()
-        with self.assertRaises(RuntimeError):
-            with self.store.transaction():
-                self.fail("Closed store accepted transaction.")
-
-    def test_concurrent_stale_snapshots_allow_exactly_one_winner(self):
-        with self.store.transaction() as tx:
-            tx.put("job", "one", {"winner": None})
-        barrier = threading.Barrier(2, timeout=5)
-
-        def replace(winner):
-            with self.store.transaction() as tx:
-                previous = tx.get("job", "one")
-            barrier.wait()
-            try:
-                with self.store.transaction() as tx:
-                    tx.put("job", "one", {"winner": winner}, previous.version)
-                    tx.emit({"winner": winner})
-                return winner
-            except Conflict:
-                return None
-
-        with ThreadPoolExecutor(max_workers=2) as pool:
-            results = list(pool.map(replace, ["first", "second"]))
-        winners = [result for result in results if result is not None]
-        self.assertEqual(len(winners), 1)
-        with self.store.transaction() as tx:
-            self.assertEqual(tx.get("job", "one").data["winner"], winners[0])
-            self.assertEqual(tx.events(), [{"winner": winners[0], "seq": 1}])
-
-    def test_concurrent_transactional_updates_keep_events_consistent(self):
-        with self.store.transaction() as tx:
-            tx.put("counter", "one", {"count": 0})
-
-        def increment(_):
-            for _ in range(15):
-                with self.store.transaction() as tx:
-                    previous = tx.get("counter", "one")
-                    count = previous.data["count"] + 1
-                    tx.put("counter", "one", {"count": count}, previous.version)
-                    tx.emit({"count": count})
-
-        with ThreadPoolExecutor(max_workers=4) as pool:
-            list(pool.map(increment, range(4)))
-        with self.store.transaction() as tx:
-            self.assertEqual(tx.get("counter", "one").data["count"], 60)
-            self.assertEqual(tx.events(), [{"count": count, "seq": count} for count in range(1, 61)])
-
-
-class MemoryStoreTests(StorageContract, unittest.TestCase):
-    def make_store(self):
-        return MemoryStore()
-
-
-class SQLiteStoreTests(StorageContract, unittest.TestCase):
-    def make_store(self):
-        return SQLiteStore({"path": str(Path(self.directory.name) / "state.db")})
 
     def test_restart_keeps_records_versions_and_event_sequence(self):
         path = str(Path(self.directory.name) / "state.db")

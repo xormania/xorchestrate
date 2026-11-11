@@ -20,5 +20,6 @@ requirements. Carry forward useful mechanisms and revise historical assumptions
 when they conflict with the intended behavior. Keep simple configurations simple.
 See [CI](.github/CI.md) and the [extraction provenance](docs/extraction.md).
 
-Keep original license and source notices. New work is attributed to xormania;
-do not add AI co-author trailers.
+Keep original license and source notices. New work is attributed to xormania
+only; do not add co-author trailers, session lines or "Generated with ..."
+footers anywhere (see [AGENTS.md](AGENTS.md)).

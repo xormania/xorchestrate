@@ -85,6 +85,8 @@ How `tmux` works:
   command, so no environment value appears on a command line, which other users
   can read. The environment is exactly the caller's plus `TERM`; the
   multiplexer's own nesting variables are removed.
+- The attach command clears the multiplexer's nesting variables itself, so it
+  works from inside another session.
 - Exited panes stay until they are closed (their status and output remain
   readable).
 - The server ends with its last terminal.

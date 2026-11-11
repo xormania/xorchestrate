@@ -25,7 +25,8 @@ BUILTINS = {
     "telemetry_artifacts": {"filesystem": "xorchestrate.adapters.telemetry_collector.artifacts:filesystem"},
     "state_engine": {"declared": "xorchestrate.adapters.state:ConfiguredStateEngine"},
     "store": {"memory": "xorchestrate.adapters.storage:MemoryStore", "sqlite": "xorchestrate.adapters.storage:SQLiteStore"},
-    "providers": {"mcp": "xorchestrate.adapters.capabilities:StdioMCPProvider", "cli": "xorchestrate.adapters.capabilities:CLIProvider"},
+    "providers": {"mcp": "xorchestrate.adapters.capabilities:StdioMCPProvider", "cli": "xorchestrate.adapters.capabilities:CLIProvider",
+        "pr": "xorchestrate.adapters.pr:PullRequestProvider"},
     "sessions": {
         "jsonrpc": "xorchestrate.adapters.process_sessions:JSONRPCSessionDriver",
         "codex": "xorchestrate.adapters.codex:CodexSessionDriver",
@@ -376,7 +377,7 @@ def _select(kind, specification, base_dir):
     target = BUILTINS[kind].get(adapter, adapter)
     if ":" not in target:
         raise OrchestrationError(f"Unknown {kind} adapter: {adapter}", "configuration_error")
-    if kind in {"providers", "sessions"} and adapter in BUILTINS[kind]:
+    if kind in {"providers", "sessions"} and adapter in BUILTINS[kind] and adapter != "pr":
         options["cwd"] = _resolve_path(base_dir, options.get("cwd", "."), kind, adapter)
     if kind == "store" and adapter == "sqlite":
         options["path"] = sqlite_store_path(options, base_dir)
@@ -539,6 +540,8 @@ def build(config=None, base_dir=None, *, project=None, telemetry_defaults=None):
                 resource = _construct_telemetry(selection)
             elif selection.kind == "evaluators" and selection.adapter == "tool":
                 resource = factory(options, providers)
+            elif selection.kind == "providers" and selection.adapter == "pr":
+                resource = factory(options, store=store, state_engine=state_engine)
             else:
                 resource = factory(options)
         except OrchestrationError:

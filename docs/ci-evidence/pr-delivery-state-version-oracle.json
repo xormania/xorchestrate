@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "candidate_base": "16932c5",
+  "oracle_repair_commit": "48f6490",
+  "expected_default_versions": {
+    "operation": 2,
+    "session": 1,
+    "invocation": 1,
+    "delivery": 1,
+    "delivery_attempt": 1,
+    "native_call": 1,
+    "measurement": 1
+  },
+  "oracle_sha256": "28feee95b7939f6a6cfbae61d218654120efc02f8ffa332babcdb11b5369b2af",
+  "healthy_lifecycles_sha256": "d82baf2416cdc175eeb132239e7970b705e5393f0a8b10a77b57552b47bb23f2",
+  "mutant_lifecycles_sha256": "f68c390e225c43a97ea9cfbe203f6b4974528496d217a442e8a876b0313d6935",
+  "fault": {
+    "before": "), version=2),",
+    "after": "), version=1),"
+  },
+  "red": {
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-q",
+      "tests/hexagonal/test_state_integration_contracts.py",
+      "-k",
+      "live_effects_produce_versioned_history"
+    ],
+    "exit_code": 1,
+    "summary": "2 failed, 8 deselected in 0.83s",
+    "failure_excerpt": [
+      "E           AssertionError: ('STATE_ACTIVE_LIFECYCLE_HAS_EXPECTED_DEFINITION_VERSION', 'operation')",
+      "E           AssertionError: ('STATE_ACTIVE_LIFECYCLE_HAS_EXPECTED_DEFINITION_VERSION', 'operation')",
+      "FAILED tests/hexagonal/test_state_integration_contracts.py::test_live_effects_produce_versioned_history_for_all_seven_finite_records[memory]",
+      "FAILED tests/hexagonal/test_state_integration_contracts.py::test_live_effects_produce_versioned_history_for_all_seven_finite_records[sqlite]"
+    ]
+  },
+  "restored_green": {
+    "command": [
+      "python",
+      "-m",
+      "pytest",
+      "-q",
+      "tests/hexagonal/test_state_integration_contracts.py",
+      "-k",
+      "live_effects_produce_versioned_history"
+    ],
+    "exit_code": 0,
+    "summary": "2 passed, 8 deselected in 0.37s",
+    "failure_excerpt": []
+  },
+  "historical_custom_v1_replay": [
+    {
+      "store": "memory",
+      "custom_operation_history_version": 1,
+      "replay_under_current_default_preserves_history": true,
+      "provider_calls": 1,
+      "reopened": false
+    },
+    {
+      "store": "sqlite",
+      "custom_operation_history_version": 1,
+      "replay_under_current_default_preserves_history": true,
+      "provider_calls": 1,
+      "reopened": true
+    }
+  ]
+}
