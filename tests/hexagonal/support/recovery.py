@@ -201,7 +201,7 @@ class RecoverySubject:
 
         rendered = SimpleNamespace(config={"version": 1, "store": {"adapter": "sqlite",
                                                                     "options": {"path": str(self.database)}}})
-        return recovery_check(rendered, self.directory, {"running": False, "unclean_stop": True})
+        return recovery_check(rendered, self.directory, {"running": False, "unclean_stop": True}, approved=True)
 
     def one_shot_runtime(self):
         """Build a one-shot runtime from configuration (as a CLI command does) with a policy that records any use."""

@@ -210,10 +210,20 @@ are unchanged.
   and names: the native specification is passed in a private file. A `hosted_terminal`
   observation records whether the session survives the server, and gives the
   attach command when the host is interactive.
-- **`stop_session`** detaches and closes the terminal. If cleanup cannot be
-  verified, it says so. The private directory and state file remain, so a later
-  resume reopens the terminal with the same state. Pruning old directories is
-  later work.
+- **Capacity.** `max_sessions` (default: the wrapped selection's
+  `max_sessions`, else 64) bounds this entry's running hosted terminals,
+  counting starts in flight and the detached terminals a previous server left
+  running. A new terminal past the limit is refused with `session_capacity`
+  before anything is created. Reconnecting to a running terminal is not a new
+  session; reopening a vanished one is.
+- **`stop_session`** asks the bridge host to stop, then always closes the
+  terminal, adopting it from the session's receipt. If the bridge host fails or
+  does not answer, or this server holds no connection to it, the terminal is
+  still closed, and the result says the bridge host did not acknowledge
+  (`bridge.acknowledged: false`). If closing fails, the stop fails and can be
+  called again. If cleanup cannot be verified, it says so. The private
+  directory and state file remain, so a later resume reopens the terminal with
+  the same state. Pruning old directories is later work.
 - **`detach_session`** and the server stopping only detach: the terminal keeps
   running.
 - **`reconnect_session`/resume** adopts the terminal from the session's
@@ -269,11 +279,16 @@ whose process no longer exists are normal starting states.
    automatically.
 3. `xorchestrate status` shows `recovery` (`running`, the last `report`, and
    what was `detected` and `selected`) and `sessions_needing_reconnect`.
+   `running` belongs to the live server and is never read from the store, so a
+   server that died mid-recovery leaves nothing that reads as running; only the
+   report is kept.
    `xorchestrate recover` (or the `recover` action) recovers the rest; it is
    idempotent.
    With no server running, `xorchestrate doctor`'s `recovery` check reports
    whether the last server stopped cleanly and which sessions are persisted as
-   live, read from the store without changing anything.
+   live, read from the store without changing anything. It opens the store only
+   for an approved configuration with a built-in store adapter; otherwise it
+   constructs nothing and says so (a running server's `status` shows recovery).
 
 Recovering a session reconnects it through its driver. For a hosted session,
 the adapter checks that the old terminal is gone, removes its own stale
@@ -296,13 +311,19 @@ in flight is marked unknown for reconciliation.
   is decided by the guardrail, like any action. An explicit `recover` acts only
   where its caller already could: it reconnects only sessions the caller may
   reconnect through `reconnect_session` (the existing source-control
-  authorisation), and reconciles only sessions the caller may stop. Others are
+  authorisation, weighed with the session's own actor and work binding, so a
+  rule for that work applies), and reconciles only sessions the caller may
+  stop. Others are
   listed under `not_authorised` and left exactly as they were. The automatic
   run at server start acts as the trusted runtime on what the policy selects.
 - **Reconciliation.** Sessions that cannot reconnect are certainly gone after a
   hard restart. The server reconciles them at start, whatever the policy: they
   become `disconnected`, or `unknown` for a start that was in flight. The
   policy chooses only which sessions to reconnect.
+- **Shutdown during recovery.** A server told to stop (`down`, SIGTERM) lets
+  the automatic recovery take no further session and waits for the one in
+  hand before closing its drivers and store. Sessions not attempted stay
+  interrupted and listed, for the next start or an explicit `recover`.
 - **A second failure during recovery.** Each runtime uses its own recovery key,
   and only refuses a concurrent reconnect it is running itself. A recovery left
   half-done by a dead server therefore never blocks the next one: its

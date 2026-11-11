@@ -34,14 +34,17 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   Xorchestrate opens in the project's terminal host. It survives the server,
   can be attached to, and is reconnected (or resumed in a fresh terminal from
   its saved state) through the existing bridge. The `connected` example's
-  `worker` is now hosted. See [hosted sessions](docs/terminal-host.md#hosted-sessions).
-- After a hard restart (a killed server, a container failure or a reboot), the
-  server detects interrupted sessions from durable state and recovers them in
-  the background according to `recovery_policy` (`reconnect` by default, or
-  `manual`). `status` and `doctor` report what happened. `xorchestrate recover
-  [--session ID]` recovers the rest and is idempotent. Effects that were in
-  flight stay unresolved and are never replayed. See
-  [recovery](docs/terminal-host.md#recovering-after-a-container-or-machine-failure).
+  `worker` is now hosted. `stop` closes the terminal even when the bridge host
+  does not answer, and `max_sessions` bounds running hosted terminals,
+  detached ones included. See [hosted sessions](docs/terminal-host.md#hosted-sessions).
+- Recovery after a hard restart: the server detects an unclean stop or
+  interrupted sessions from durable state and recovers them in the background
+  as the project's `recovery_policy` selects (`reconnect`, the default, or
+  `manual`). `xorchestrate recover` recovers the rest, acting only where its
+  caller may reconnect or stop each session (its actor and work binding
+  weighed). `status` and `doctor` report it; doctor reads only an approved,
+  built-in store. Shutdown waits for the session in hand. See
+  [recovering after a container or machine failure](docs/terminal-host.md#recovering-after-a-container-or-machine-failure).
 - PR edit/readiness observations preserve useful running validation and reuse
   authenticated exact-candidate behavior evidence, retaining original lane
   identities and flat references across repeated metadata activity.

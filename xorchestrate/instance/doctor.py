@@ -117,14 +117,26 @@ def project_terminal_check(services, placement, tracked=()):
                   f"the project's {active.adapter} terminal host holds " + "; ".join(advice), **details)
 
 
-def recovery_check(rendered, data_dir, state):
-    """Sessions a hard restart interrupted, read from the project's store while no server runs; nothing is changed."""
+def recovery_check(rendered, data_dir, state, *, approved):
+    """Sessions a hard restart interrupted, read from the project's store while no server runs; nothing is changed.
+
+    The store is read only for an ``approved`` configuration that selects a
+    built-in store adapter: doctor never imports or constructs an adapter that
+    unapproved configuration, or a ``module:factory``, chose.
+    """
     if state.get("running"):
         return _check("recovery", "ok", "the server is running; `xorchestrate status` shows its recovery")
-    from ..composition import factory_for, validate_config
+    from ..composition import BUILTINS, factory_for, validate_config
 
+    if not approved:
+        return _check("recovery", "warning", "not inspected: the configuration is not approved, so its store is not "
+                      "opened; approve it, then run doctor again", inspected=False)
     try:
         selection = validate_config(rendered.config, data_dir).adapters["store"]
+        if selection.adapter not in BUILTINS["store"]:
+            return _check("recovery", "ok", f"not inspected: the store adapter {selection.adapter!r} is not built in, "
+                          "so doctor does not construct it; a running server's `xorchestrate status` shows its "
+                          "recovery", inspected=False)
         path = selection.options.get("path")
         if path is not None and not Path(path).exists():
             sessions, report, operations = [], None, []
@@ -220,7 +232,8 @@ def project_checks(path=None, environ=None, terminal_placement=None, server_stat
                                  f"{label} passes {', '.join(item['pass_env'])}"
                                  + (f"; unset: {', '.join(missing)}" if missing else ""), missing=missing))
     if server_state is not None:
-        checks.append(recovery_check(rendered, instance.data_dir, server_state(instance.instance_id)))
+        checks.append(recovery_check(rendered, instance.data_dir, server_state(instance.instance_id),
+                                     approved=refusal is None))
     return checks, rendered
 
 

@@ -79,6 +79,8 @@ class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
             raise OrchestrationError("Session fallbacks must map requested names to configured driver names.", "configuration_error")
         self.session_fallbacks = deepcopy(session_fallbacks or {})
         self._owned_session_ids = set()
+        # One token per recovery running in this runtime (set add/discard are atomic for the builtin set).
+        self._running_recoveries = set()
         self.providers = dict(providers)
         self.provider_configurations = deepcopy(provider_configurations or {})
         self.sessions = dict(sessions)

@@ -128,3 +128,77 @@ def test_a_failed_hosted_start_answers_the_caller_with_a_safe_summary_the_operat
     finally:
         driver.close()
         hosted.cleanup()
+
+
+# -- stop always closes the terminal; a hosted entry is bounded by max_sessions -----------------------
+
+def _hosted_driver(hosted, **options):
+    from xorchestrate.adapters.hosted import HostedSessionDriver
+
+    driver = HostedSessionDriver(hosted.options(**options))
+    driver.bind_terminal_host(hosted.host(), endpoints=str(hosted.base), entry="agent")
+    return driver
+
+
+def test_a_hosted_stop_closes_the_terminal_when_the_bridge_host_does_not_answer_and_can_be_retried():
+    """A bridge host that does not answer still has its terminal closed; a runtime holding no connection can stop."""
+    import os
+    import signal
+
+    from tests.hexagonal.support.hosted_sessions import hosted_subject
+
+    hosted = hosted_subject("detached-process")
+    first = _hosted_driver(hosted, timeout=1)
+    try:
+        session = first.start(hosted.spec("unanswered"))
+        os.kill(session["hosted"]["terminal"]["process"]["pid"], signal.SIGSTOP)  # the bridge host stops answering
+        report = first.stop(session)
+        assert report["bridge"]["acknowledged"] is False, report
+        assert report["terminal"]["closed"] is True, report
+        assert not hosted.terminal_running(session), "the terminal of an unanswering bridge host is closed"
+
+        held_elsewhere = first.start(hosted.spec("retry"))
+        first.close()  # detaches: the terminal keeps running, and this runtime's connection is gone
+        assert hosted.terminal_running(held_elsewhere)
+        second = _hosted_driver(hosted)
+        try:
+            report = second.stop(held_elsewhere)  # a retry from a runtime that holds no connection
+            assert report["terminal"]["closed"] is True, report
+            assert not hosted.terminal_running(held_elsewhere)
+        finally:
+            second.close()
+    finally:
+        first.close()
+        hosted.cleanup()
+
+
+def test_hosted_sessions_are_bounded_by_max_sessions_counting_detached_terminals():
+    """Past ``max_sessions`` a new start is refused before anything is created; detached terminals count."""
+    from tests.hexagonal.support.hosted_sessions import hosted_subject
+    from xorchestrate.model import OrchestrationError
+
+    hosted = hosted_subject("detached-process")
+    first = _hosted_driver(hosted, max_sessions=1)
+    try:
+        session = first.start(hosted.spec("one"))
+        created = sorted(hosted.sessions.iterdir())
+        with pytest.raises(OrchestrationError) as refused:
+            first.start(hosted.spec("two"))
+        assert refused.value.code == "session_capacity" and refused.value.details["outcome"] == "not_started"
+        assert sorted(hosted.sessions.iterdir()) == created, "nothing was created for the refused start"
+
+        first.close()  # the terminal keeps running, detached
+        second = _hosted_driver(hosted, max_sessions=1)
+        try:
+            with pytest.raises(OrchestrationError) as refused:
+                second.start(hosted.spec("three"))
+            assert refused.value.code == "session_capacity", "a detached running terminal counts"
+            again = second.reconnect(session, hosted.spec("one"))  # reconnecting to it is not a new session
+            assert again["native_id"] == session["native_id"]
+            second.stop(again)
+            second.stop(second.start(hosted.spec("four")))  # its slot is free once it is stopped
+        finally:
+            second.close()
+    finally:
+        first.close()
+        hosted.cleanup()

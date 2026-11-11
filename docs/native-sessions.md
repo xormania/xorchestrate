@@ -120,8 +120,11 @@ An owned driver ends with the server. To keep the conversation in the project's
 ```
 
 `hosted` opens a bridge host in a terminal and attaches with the existing
-bridge driver. There is no new session protocol. `stop_session` closes the
-terminal and keeps the private state for a later resume. `detach_session` and
+bridge driver. There is no new session protocol. `stop_session` asks the
+bridge host to stop, then always closes the terminal, even when the host does
+not answer; the private state stays for a later resume. `max_sessions`
+(default: the wrapped selection's `max_sessions`, else 64) bounds this entry's
+running hosted terminals, detached ones included. `detach_session` and
 a server stop that only detaches leave the terminal running.
 `reconnect_session` adopts that terminal, or reopens it from the saved state
 when it is gone. Options are `directory` (default `hosted` under the project's
@@ -199,9 +202,12 @@ reconnect establishes a new bridge incarnation. It does not attach by trusting
 an arbitrary PID supplied by a caller. See the persistent bridge documentation
 and local acceptance procedure for launching and attaching external Codex,
 Grok, and Claude conversations. `xorchestrate recover` and the automatic run
-at server start call the same reconnect path for sessions the policy selects;
-an explicit `recover` acts only where its caller could already reconnect or
-stop that session.
+at server start call the same reconnect path for sessions the policy selects.
+An explicit `recover` acts only where its caller could already reconnect or
+stop that session, with the session's actor and work binding weighed. A server
+told to stop waits for the session recovery is holding and leaves the rest
+interrupted. `doctor`'s recovery check, while no server is running, reads only
+an approved configuration with a built-in store.
 
 Grok retains unresolved interjections until matching handling or completion
 evidence arrives. A late completion for an old prompt cannot clear newer native

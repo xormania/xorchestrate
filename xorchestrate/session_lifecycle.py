@@ -253,21 +253,25 @@ class SessionLifecycleMixin:
         return incarnation
 
     def recovery_status(self) -> JSON:
-        """Whether a recovery is running and the last report that changed anything (``None`` before any)."""
+        """Whether a recovery is running in this runtime, and the last report that changed anything (or ``None``).
+
+        Running belongs to the live runtime and is never read from the store, so
+        a runtime that died mid-recovery leaves nothing that reads as running.
+        Only the report is durable.
+        """
         with self.store.transaction() as tx:
             record = tx.get("recovery", "current")
-        data = {"running": 0, "report": None} if record is None else deepcopy(record.data)
-        return {"running": data["running"] > 0, "report": data["report"]}
+        report = None if record is None else deepcopy(record.data.get("report"))
+        return {"running": bool(self._running_recoveries), "report": report}
 
-    def _update_recovery(self, change):
-        """Apply ``change(data)`` to the stored recovery state in one transaction (concurrent runs are counted)."""
+    def _keep_report(self, report, changed):
+        """Persist ``report`` when it changed anything or none is stored (a run that did nothing keeps the last)."""
         with self.store.transaction() as tx:
             record = tx.get("recovery", "current")
-            data = {"running": 0, "report": None} if record is None else deepcopy(record.data)
-            change(data)
-            tx.put("recovery", "current", data, None if record is None else record.version)
+            if changed or record is None or record.data.get("report") is None:
+                tx.put("recovery", "current", {"report": report}, None if record is None else record.version)
 
-    def recover(self, session_ids=None, *, reason="hard_restart", caller=None) -> JSON:
+    def recover(self, session_ids=None, *, reason="hard_restart", caller=None, stopping=None) -> JSON:
         """Recover interrupted sessions: reconnect those whose driver can, mark the others disconnected.
 
         Idempotent: closed, superseded or held sessions are skipped. Each
@@ -284,14 +288,22 @@ class SessionLifecycleMixin:
         source-control authorisation) and reconciles only sessions it may stop;
         the rest are listed as ``not_authorised`` and left as they are. The
         automatic run at server start passes no caller and acts as the runtime.
+
+        ``stopping()``, when given, is asked before each session: once it is
+        true no further session is taken (the server is shutting down). Those
+        sessions stay interrupted, for the next start or an explicit recover.
         """
         report = {"reason": reason, "started_at": self.clock(), "recovered": [], "disconnected": [],
                   "uncertain": [], "failed": [], "skipped": [], "not_authorised": [], "needs_reconciliation": []}
-        self._update_recovery(lambda data: data.update(running=data["running"] + 1))
+        token = object()
+        self._running_recoveries.add(token)
         try:
             wanted = None if session_ids is None else set(session_ids)
             for found in self.interrupted_sessions():
                 if wanted is not None and found.session_id not in wanted:
+                    continue
+                if stopping is not None and stopping():
+                    report["skipped"].append({"session_id": found.session_id, "reason": "shutting down"})
                     continue
                 try:
                     if caller is not None and not self._may_recover(caller, found):
@@ -319,13 +331,11 @@ class SessionLifecycleMixin:
                 self._event(tx, "recovery.completed", "runtime", reason=reason, recovered=len(report["recovered"]),
                             disconnected=len(report["disconnected"]), failed=len(report["failed"]))
         finally:
-            changed = any(report[key] for key in ("recovered", "disconnected", "uncertain", "failed"))
-
-            def finish(data):
-                data["running"] = max(0, data["running"] - 1)
-                if changed or data["report"] is None:
-                    data["report"] = report  # A run that found nothing to do keeps the last meaningful report.
-            self._update_recovery(finish)
+            try:
+                self._keep_report(report, any(report[key] for key in ("recovered", "disconnected", "uncertain",
+                                                                       "failed")))
+            finally:
+                self._running_recoveries.discard(token)
         return report
 
     def _may_recover(self, caller, found):
@@ -337,10 +347,14 @@ class SessionLifecycleMixin:
                 if found.actor_id:
                     # The replacement belongs to the session's own actor, so that is the actor the guardrail weighs.
                     arguments["actor_id"] = found.actor_id
+                if found.work_id:
+                    # The same work binding the reconnect carries, so a rule for that work applies to the caller.
+                    arguments["work_id"] = found.work_id
                 context = self._context(caller, arguments)
                 self._bind_resume_source("reconnect_session", arguments, caller, context)
                 self._authorize("reconnect_session", context)
             else:
+                # The session identifier binds the session's own work, as a stop_session call would.
                 context = self._context(caller, {"session_id": found.session_id,
                                                  "idempotency_key": "recover-authorisation"})
                 self._authorize("stop_session", context)
