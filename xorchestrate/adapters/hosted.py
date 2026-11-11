@@ -47,7 +47,6 @@ NATIVE = "native"
 MAX_SOCKET_PATH_BYTES = 107
 ENDPOINT_RELEASE_WAIT = 5.0
 """How long a just-killed bridge host's endpoint may stay bound before a reopen refuses."""
-OUTPUT_LINES = 40
 
 
 def _remove_stale_endpoint(endpoint, release_wait=ENDPOINT_RELEASE_WAIT):
@@ -261,9 +260,12 @@ class HostedSessionDriver:
         host = self._require_host()
         directory, endpoint = self._prepare(key)
         name = _terminal_name(self.entry, key)
+        # Only paths and names on the command line (readable by other local users); the native specification,
+        # which can carry a work goal, goes in a private file the bridge host reads.
+        self._write_private(directory / "specification.json", native_specification)
         argv = [sys.executable, "-P", "-m", "xorchestrate.bridge", "--config", str(directory / "config.json"),
                 "--driver", NATIVE, "--endpoint", str(endpoint), "--state", str(directory / "state.json"),
-                "--specification", json.dumps(native_specification)]
+                "--specification-file", str(directory / "specification.json")]
         if self.application_tools:
             argv.append("--application-tools")
         terminal = host.open_terminal(name, TerminalCommand(tuple(argv), str(directory), tuple(os.environ.items())),
@@ -296,12 +298,10 @@ class HostedSessionDriver:
                     raise
             current = next((item for item in host.terminals() if item.name == terminal.name), None)
             if current is None or not current.running or time.monotonic() >= deadline:
+                # A safe summary and where the private log is: what the terminal printed stays in that log
+                # (it is not provider error data, so it never enters the public response or preserved outcome).
                 details = {"outcome": "not_started", "log": str(directory / "terminal.log"),
                            "terminal_running": bool(current and current.running)}
-                try:
-                    details["recent_output"] = host.recent_output(terminal.name, OUTPUT_LINES)
-                except OrchestrationError:
-                    pass
                 if current is not None:
                     host.close_terminal(terminal.name)
                 reason = "exited" if current is None or not current.running else "did not accept a connection in time"

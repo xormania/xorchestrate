@@ -29,6 +29,9 @@ from .model import (
 )
 from .outcomes import before_effect, completed_effect_result, effect_outcome
 
+PUBLIC_FAILURE_DETAILS = ("log",)
+"""Failure details that reach the caller's response: locations of private diagnostics, never their content."""
+
 
 class EffectJournalMixin:
     def _effect(self, action: str, args: JSON, actor: str, context: JSON, perform: Callable[[Record], Any]) -> JSON:
@@ -64,9 +67,13 @@ class EffectJournalMixin:
                 self._fail_effect(key, error, status)
             except Exception as storage_error:
                 recording_error = public_error_message(storage_error)
+            cause = public_error(error)
             raise OrchestrationError(public_error_message(error), "operation_unknown" if unknown else "operation_failed", {
-                "operation_id": key, "outcome": status, "cause": public_error(error)["code"],
+                "operation_id": key, "outcome": status, "cause": cause["code"],
                 "recording_error": recording_error,
+                # Where the failure's private diagnostics are kept (a location, never their content).
+                **{name: cause["details"][name] for name in PUBLIC_FAILURE_DETAILS
+                   if isinstance(cause["details"].get(name), str)},
             }) from error
         try:
             with self.store.transaction() as tx:
