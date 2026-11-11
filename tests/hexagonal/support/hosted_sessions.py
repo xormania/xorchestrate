@@ -168,6 +168,23 @@ class HostedSubject:
     def log_exists(self, details):
         return any("log" in key and os.path.isfile(text) for key, text in self._strings(details))
 
+    def log_has_output(self, details):
+        logs = [text for key, text in self._strings(details) if "log" in key and os.path.isfile(text)]
+        return any(Path(path).stat().st_size > 0 for path in logs)
+
+    @staticmethod
+    def secret():
+        import secrets
+
+        return "xo-goal-" + secrets.token_hex(12)
+
+    @staticmethod
+    def argv_containing(text):
+        from tests.hexagonal.support.host_processes import arguments_containing
+
+        # This test process's own arguments never hold it; anything else that does is a leak.
+        return [command for pid, command in arguments_containing(text) if pid != os.getpid()]
+
     def cleanup(self):
         host = self.host()
         try:

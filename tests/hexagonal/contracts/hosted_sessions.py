@@ -11,6 +11,7 @@ Every check receives a ``subject`` (see ``tests.hexagonal.support.hosted_session
 - ``subject.crash(key)`` starts a session from a controller process that is then killed; returns its receipt.
 - ``subject.unverified()`` returns a driver whose host reports cleanup it could not verify.
 - ``subject.failing()`` returns a driver whose wrapped session cannot start.
+- ``subject.secret()`` makes a unique text; ``subject.argv_containing(text)`` lists processes whose arguments hold it.
 
 The contract never assumes a terminal mechanism or a receipt layout.
 """
@@ -120,13 +121,31 @@ def unverified_cleanup_is_reported_and_nothing_is_removed(subject):
         driver.close()
 
 
-def a_failed_start_reports_what_the_session_printed_and_where_its_log_is(subject):
+def a_failed_start_keeps_its_output_private_and_says_where_the_log_is(subject):
+    """#63: the caller learns that it failed and where the private log is; terminal output stays in that log."""
     driver = subject.failing()
     try:
         error = refuses("session_start_failed", lambda: driver.start(subject.spec("broken")))
         details = getattr(error, "details", {})
-        assert subject.failure_output(details), f"recent output is returned: {details}"
+        assert not subject.failure_output(details), f"no terminal output reaches the caller: {details}"
         assert subject.log_exists(details), f"the log location is returned and exists: {details}"
+        assert subject.log_has_output(details), "what the session printed is kept in the private log"
+    finally:
+        driver.close()
+
+
+def the_specification_never_reaches_process_arguments(subject):
+    """A goal is the user's words: it travels privately, never on any command line another user can read."""
+    driver = subject.driver()
+    secret = subject.secret()
+    try:
+        session = driver.start({**subject.spec("private"), "goal": secret})
+        converses(driver, session, "hello")
+        assert subject.argv_containing(secret) == [], "the goal is visible in a process's arguments"
+        driver.stop(session)
+        resumed = driver.resume(session, subject.spec("private"))
+        assert subject.argv_containing(secret) == [], "nor after a resume"
+        driver.stop(resumed)
     finally:
         driver.close()
 
@@ -143,4 +162,5 @@ CHECKS = (start_converses_and_detach_only_detaches, stop_closes_the_terminal_kee
           reconnect_reopens_a_vanished_conversation_without_manual_cleanup,
           reconnect_replaces_a_crashed_bridge_host_in_a_living_terminal_host, a_session_survives_its_killed_controller,
           unverified_cleanup_is_reported_and_nothing_is_removed,
-          a_failed_start_reports_what_the_session_printed_and_where_its_log_is, without_a_bound_host_start_is_refused)
+          a_failed_start_keeps_its_output_private_and_says_where_the_log_is, without_a_bound_host_start_is_refused,
+          the_specification_never_reaches_process_arguments)

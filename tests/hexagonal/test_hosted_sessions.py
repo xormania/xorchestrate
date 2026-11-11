@@ -103,3 +103,28 @@ def test_status_lists_the_sessions_a_restart_left_without_their_runtime():
                                                 "arguments": {"driver": "resumable",
                                                               "resume_session_id": ids["resumable"]}}
     assert listed[ids["plain"]]["call"] is None
+
+
+def test_a_failed_hosted_start_answers_the_caller_with_a_safe_summary_the_operation_and_the_log(tmp_path):
+    """Through the application: the caller gets the operation id and the log location, never terminal output."""
+    from tests.hexagonal.support.application import application, make_store
+    from tests.hexagonal.support.hosted_sessions import hosted_subject
+    from xorchestrate.model import OrchestrationError
+
+    hosted = hosted_subject("detached-process")
+    driver = hosted.failing()
+    try:
+        app = application(make_store("memory"), sessions={"agent": driver})
+        with pytest.raises(OrchestrationError) as failed:
+            app.call("start_session", {"driver": "agent", "specification": {}, "idempotency_key": "broken"})
+        details = failed.value.details
+        logs = [text for key, text in hosted._strings(details) if "log" in key]
+        assert details.get("operation_id") and logs, details
+        printed = [line.strip() for line in open(logs[0], errors="replace") if len(line.strip()) > 12]
+        assert printed, "the session's output is in its private log"
+        assert not any(line in repr(details) for line in printed), "no terminal output reaches the caller"
+        outcome = app.call("get_operation", {"operation_id": details["operation_id"]})
+        assert not any(line in repr(outcome) for line in printed), "nor the preserved outcome"
+    finally:
+        driver.close()
+        hosted.cleanup()
