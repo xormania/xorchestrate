@@ -14,6 +14,7 @@ from .ports import InterruptedSession, Transaction
 from .worktrees import current_worktree, session_workspace, session_worktree
 
 _CLOSED = {"stopped", "detached", "disconnected", "superseded"}
+RESUME_IN_FLIGHT = "The source session is already being resumed or reconnected."
 _INDEPENDENT = {"poll_session", "stop_session", "detach_session"}
 
 
@@ -246,7 +247,7 @@ class SessionLifecycleMixin:
             change(data)
             tx.put("recovery", "current", data, None if record is None else record.version)
 
-    def recover(self, session_ids=None, *, reason="hard_restart") -> JSON:
+    def recover(self, session_ids=None, *, reason="hard_restart", caller=None) -> JSON:
         """Recover interrupted sessions: reconnect those whose driver can, mark the others disconnected.
 
         Idempotent: closed, superseded or held sessions are skipped. Each
@@ -257,9 +258,15 @@ class SessionLifecycleMixin:
         session's failure is reported and never stops the others. A start that
         was in flight is marked unknown for reconciliation; effects pending at
         the failure stay unresolved; nothing is replayed or re-sent.
+
+        ``caller`` is the actor of an explicit recover: it acts only on sessions
+        that caller may reconnect through ``reconnect_session`` (the existing
+        source-control authorisation) and reconciles only sessions it may stop;
+        the rest are listed as ``not_authorised`` and left as they are. The
+        automatic run at server start passes no caller and acts as the runtime.
         """
         report = {"reason": reason, "started_at": self.clock(), "recovered": [], "disconnected": [],
-                  "uncertain": [], "failed": [], "skipped": []}
+                  "uncertain": [], "failed": [], "skipped": [], "not_authorised": []}
         self._update_recovery(lambda data: data.update(running=data["running"] + 1))
         try:
             wanted = None if session_ids is None else set(session_ids)
@@ -267,9 +274,16 @@ class SessionLifecycleMixin:
                 if wanted is not None and found.session_id not in wanted:
                     continue
                 try:
+                    if caller is not None and not self._may_recover(caller, found):
+                        report["not_authorised"].append({"session_id": found.session_id})
+                        continue
                     self._recover_one(found, report, reason)
                 except Conflict as error:
-                    report["skipped"].append({"session_id": found.session_id, "reason": str(error)})
+                    if str(error) != RESUME_IN_FLIGHT:
+                        report["failed"].append({"session_id": found.session_id, "code": error.code,
+                                                 "message": str(error)})
+                        continue
+                    report["skipped"].append({"session_id": found.session_id, "reason": "recovery in progress"})
                 except OrchestrationError as error:
                     if error.code == "operation_unresolved":
                         # The same recovery key is in flight from a concurrent recover: exactly one reconnect.
@@ -291,6 +305,28 @@ class SessionLifecycleMixin:
                     data["report"] = report  # A run that found nothing to do keeps the last meaningful report.
             self._update_recovery(finish)
         return report
+
+    def _may_recover(self, caller, found):
+        """Whether ``caller`` could reconnect this session (or, if it cannot reconnect, stop it) itself."""
+        try:
+            if found.can_reconnect:
+                arguments = {"driver": found.driver, "resume_session_id": found.session_id, "specification": {},
+                             "idempotency_key": "recover-authorisation"}
+                if found.actor_id:
+                    # The replacement belongs to the session's own actor, so that is the actor the guardrail weighs.
+                    arguments["actor_id"] = found.actor_id
+                context = self._context(caller, arguments)
+                self._bind_resume_source("reconnect_session", arguments, caller, context)
+                self._authorize("reconnect_session", context)
+            else:
+                context = self._context(caller, {"session_id": found.session_id,
+                                                 "idempotency_key": "recover-authorisation"})
+                self._authorize("stop_session", context)
+        except OrchestrationError as error:
+            if error.code in {"denied", "review_required"}:
+                return False
+            raise
+        return True
 
     def _recover_one(self, found, report, reason):
         with self.store.transaction() as tx:
@@ -328,7 +364,7 @@ class SessionLifecycleMixin:
         report["disconnected"].append({"session_id": found.session_id, "reason": reason})
 
     def _recover(self, args: JSON, actor: str, context: JSON) -> JSON:
-        return self.recover(args.get("session_ids"))
+        return self.recover(args.get("session_ids"), caller=actor)
 
     def runtime_closed(self):
         with self.store.transaction() as tx:
@@ -366,7 +402,7 @@ class SessionLifecycleMixin:
                     # Exactly one resume or reconnect per source at a time in this runtime (an automatic recovery
                     # and an explicit call can race); the reservation is serialized by this transaction. A start
                     # left by a dead runtime is not ours, so it never blocks the next attempt.
-                    raise Conflict("The source session is already being resumed or reconnected.")
+                    raise Conflict(RESUME_IN_FLIGHT)
                 if source["session"].get("pending_operation") and action != "reconnect_session":
                     raise Conflict("The resume source has a pending or unresolved operation; reconcile it before another effect.")
                 provenance["resume_source"] = {"session_id": source["session"]["id"], "version": source["session"]["version"],

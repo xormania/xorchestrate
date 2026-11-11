@@ -291,7 +291,12 @@ in flight is marked unknown for reconciliation.
   recovered, calls on it fail as for any session the server does not hold.
 - **Authority.** A recovered session keeps its original actor and work binding
   and gains nothing; the reconnect runs as that actor. Who may call `recover`
-  is decided by the guardrail, like any action.
+  is decided by the guardrail, like any action. An explicit `recover` acts only
+  where its caller already could: it reconnects only sessions the caller may
+  reconnect through `reconnect_session` (the existing source-control
+  authorisation), and reconciles only sessions the caller may stop. Others are
+  listed under `not_authorised` and left exactly as they were. The automatic
+  run at server start acts as the trusted runtime on what the policy selects.
 - **Reconciliation.** Sessions that cannot reconnect are certainly gone after a
   hard restart. The server reconciles them at start, whatever the policy: they
   become `disconnected`, or `unknown` for a start that was in flight. The
