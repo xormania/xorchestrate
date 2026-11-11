@@ -18,6 +18,7 @@ import signal
 import subprocess
 import sys
 import threading
+import time
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -269,6 +270,8 @@ def _overrides(tracked):
 
 
 SERVER_TERMINAL = "server"
+SERVER_EXIT_WAIT = 5.0
+"""How long ``down`` lets a stopped server's process end on its own before closing its terminal."""
 
 
 class ServerTerminals:
@@ -326,12 +329,25 @@ class ServerTerminals:
 
     def finish(self):
         """After the server stopped: close its terminal, sweep exited ones and forget the record. Return whether closed."""
-        closed = self.adopt() is not None
+        terminal = self.adopt()
+        deadline = time.monotonic() + SERVER_EXIT_WAIT
+        while terminal is not None and terminal.running and time.monotonic() < deadline:
+            # The server released its instance lock just before its process ends: let it finish on its own.
+            time.sleep(0.05)
+            terminal = next((item for item in self.active.host.terminals() if item.name == SERVER_TERMINAL), None)
+        if terminal is not None and not terminal.running:
+            terminal = self._readopt()
+        closed = terminal is not None
         if closed:
             self.active.host.close_terminal(SERVER_TERMINAL)
         self.sweep()
         self.files.remove_terminal_record()
         return closed
+
+    def _readopt(self):
+        """Adopt the server's terminal afresh, so a host that keeps no exited process reports nothing to close."""
+        self.close()
+        return self.adopt()
 
     def placement(self):
         """The recorded placement, else the one the launcher would compute: where this project's host is."""
