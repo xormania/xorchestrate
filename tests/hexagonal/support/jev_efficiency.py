@@ -13,22 +13,30 @@ CRITERIA = {"concern": "Concrete concern", "no_concern": "No supported concern",
 
 @contextmanager
 def http_choices():
-    state = {"requests": [], "choices": {}, "response": None, "status": 200}
+    state = {"requests": [], "request_bytes": [], "choices": {}, "response": None, "status": 200, "reply": None}
 
     class Handler(BaseHTTPRequestHandler):
         def do_POST(self):
-            payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            raw = self.rfile.read(int(self.headers["Content-Length"]))
+            payload = json.loads(raw)
             state["requests"].append(payload)
+            state["request_bytes"].append(len(raw))
             answers = {}
             for key, question in payload["questions"].items():
                 choice = state["choices"].get(key, "no_concern")
                 answers[key] = {"type": "choice", "choice": choice, "confidence": .8,
                                 "probabilities": {outcome: int(outcome == choice) for outcome in question["criteria"]}}
             response = state["response"]
+            status, headers = state["status"], {}
+            if state["reply"] is not None:
+                reply = state["reply"](payload, len(state["requests"]))
+                response, status, headers = reply.get("body"), reply.get("status", 200), reply.get("headers", {})
             if response is None:
                 response = {"model": payload["model"], "answers": answers,
                             "usage": {"input_tokens": 13, "output_tokens": 5}}
-            self.send_response(state["status"])
+            self.send_response(status)
+            for key, value in headers.items():
+                self.send_header(key, value)
             self.end_headers()
             self.wfile.write(json.dumps(response).encode())
 

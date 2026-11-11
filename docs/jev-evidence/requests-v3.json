@@ -1,0 +1,1681 @@
+{
+  "schema_version": 1,
+  "source_summary_sha256": "9ba313cccee72f47b317d201447e788b3b1775620879b4b79a63d26e51809f2e",
+  "candidate": {
+    "commit": "dde6bcdf31302292543322b45ff5028454352a9f",
+    "content_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770"
+  },
+  "passed": true,
+  "totals": {
+    "witnesses": 24,
+    "detected": 24,
+    "passing_controls": 24,
+    "deliberate_faults": 19,
+    "actual_review_predecessors": 5
+  },
+  "mutations": {
+    "b991feb4027bfe1938b9d4ec887af0a00027604eab8216baf3c58e44ea553b11": {
+      "path": "scripts/architecture/requests.py",
+      "healthy_source_sha256": "c95eb42b1a02ced2e4a82b737afb4ae5a430805c5c9efba6dc4e5d0a5b4cdf9a",
+      "defective_source_sha256": "37992c22232b4712e447e7067cfaa1fe3ed7c98e3080608ed81f7c2b1e62992c",
+      "patch_sha256": "5dab30f3cb548f7d483a53f7b232c431357da9f95dd59d096c6f13e34043f21e",
+      "patch": "--- a/scripts/architecture/requests.py\n+++ b/scripts/architecture/requests.py\n@@ -57,8 +57,7 @@\n \n     @staticmethod\n     def fits(estimate):\n-        return (estimate[\"estimated_request_tokens\"] <= estimate[\"request_token_budget\"]\n-                and estimate[\"estimated_question_tokens\"] <= estimate[\"question_token_budget\"])\n+        return True\n \n \n def provider_context(context, candidate_ids=None):\n"
+    },
+    "087a8010d5e399210f470e0a7310bd411d276bc6eeac6466aecabca3a2a4ef8f": {
+      "path": "scripts/architecture/requests.py",
+      "healthy_source_sha256": "b0f4418a9938eb339c8122758e1a035a8d99c63c85a0ca21f446f9707a694165",
+      "defective_source_sha256": "05819e90a1112cae5efa166179fbf56bb08089bdfde5b4b0e632e6f8da0423f6",
+      "patch_sha256": "f87ad45fc747f37ad2a1157321c4ffc4ec162c8ff00ae47f5da673bdb5703add",
+      "patch": "--- a/scripts/architecture/requests.py\n+++ b/scripts/architecture/requests.py\n@@ -268,4 +268,4 @@\n                                    \"groups\": groups, \"groups_sha256\": hashlib.sha256(canonical(groups)).hexdigest()})\n         except (OSError, ValueError):\n             plan_status = \"write_unavailable\"\n-    return [completed[task[\"task_id\"]] for task in tasks], metadata()\n+    return [completed[task[\"task_id\"]] for task in reversed(tasks)], metadata()\n"
+    },
+    "8b023dd98dbf0b443e3d776deb59cd18f1d656c6372c2d0d75acc71908cac7c8": {
+      "path": "scripts/architecture/requests.py",
+      "healthy_source_sha256": "84e3e7b06291fce4dc98fa762e802002a73797fabb047f8b4d838f6adba20f76",
+      "defective_source_sha256": "259e27b6841c2a0cdc27432754fe34c741356fb68b612d5238a3c32a1f83a8c7",
+      "patch_sha256": "ab8fdb877f5aa7e1177021cd328a56bff082d978cab8067762015062d1111896",
+      "patch": "--- a/scripts/architecture/requests.py\n+++ b/scripts/architecture/requests.py\n@@ -77,7 +77,7 @@\n         result[\"candidates\"] = [c for c in result.get(\"candidates\", []) if c[\"candidate_id\"] in selected]\n         for key in (\"sources\", \"before_sources\"):\n             if key in result:\n-                result[key] = [s for s in result[key] if not s.get(\"support_for\") or selected.intersection(s[\"support_for\"])]\n+                result[key] = [s for s in result[key] if True]\n         if \"missing_inputs\" in result:\n             result[\"missing_inputs\"] = [m for m in result[\"missing_inputs\"] if m.get(\"candidate_id\") in selected]\n     sources = [*result.get(\"sources\", []), *result.get(\"before_sources\", [])]\n"
+    },
+    "b0655ee7ede21741f2deee9f214f9531477895f0631e6c5779d9ad686334668d": {
+      "path": "xorchestrate/adapters/evaluation.py",
+      "healthy_source_sha256": "a922792b4f6f5b8555847eb72ab137e263930cce38b185d41bd3698412d11167",
+      "defective_source_sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9",
+      "patch_sha256": "875eefbff19cf6f94e256881556c056204ffe6d93767efdd1a0e2fbf9cb6aa49",
+      "patch": "--- a/xorchestrate/adapters/evaluation.py\n+++ b/xorchestrate/adapters/evaluation.py\n@@ -222,7 +222,7 @@\n         timeout = options.get(\"timeout\", 30)\n         if not _number(timeout, 0, float(\"inf\")) or timeout == 0:\n             raise OrchestrationError(\"TypeSafe timeout must be a positive finite number.\", \"invalid_configuration\")\n-        self.max_retries, self.retry_backoff = options.get(\"max_retries\", 0), options.get(\"retry_backoff\", .25)\n+        self.max_retries, self.retry_backoff = 0, options.get(\"retry_backoff\", .25)\n         if (type(self.max_retries) is not int or not 0 <= self.max_retries <= 5\n                 or not _number(self.retry_backoff, 0, 60)):\n             raise OrchestrationError(\"TypeSafe retry settings are invalid.\", \"invalid_configuration\")\n"
+    },
+    "2ff55255a3079004d5fc23a74a4a71eb379a159516eb00626a3614fd63e4fc2c": {
+      "path": "xorchestrate/adapters/evaluation.py",
+      "healthy_source_sha256": "1ca875bf462527d5bdbe2a56064a18f720e6c4620374eda7547d88b0c63ae9fb",
+      "defective_source_sha256": "7dbab98d87db21917ceaad502a29bf914bed75f83159a71b79326e23a4754301",
+      "patch_sha256": "3dc930ae8dbeca10cc188792d4787aad4fa4b5c111abbea05cb09c4e90e38a8c",
+      "patch": "--- a/xorchestrate/adapters/evaluation.py\n+++ b/xorchestrate/adapters/evaluation.py\n@@ -415,7 +415,7 @@\n                 details.update({\"usage_scope\": \"batch\", \"batch_question_ids\": list(questions)})\n             results[key] = checked_assessment({\"outcome\": answer[\"choice\"], \"confidence\": answer[\"confidence\"], \"details\": details})\n         first = results[next(iter(questions))]\n-        first.details[\"provider_calls\"] = attempts\n+        first.details[\"provider_calls\"] = 1\n         if attempts > 1:\n             first.details[\"usage_unmeasured_attempts\"] = attempts - 1\n         if \"usage\" in value:\n"
+    },
+    "1123926963c394d7916d328f2a5b5f7e7d45fcda23f02215ebf7eabcc2df5061": {
+      "path": "xorchestrate/adapters/evaluation.py",
+      "healthy_source_sha256": "3f4a62fd91cab705a9469830fa849b4f7d5e2189023f67332ab605940e826ba2",
+      "defective_source_sha256": "2ff08a9b709b638acc9cf164d24de80efd1807f599593c1560f2aac003dfc62f",
+      "patch_sha256": "8baedcd254f23c098cedc33e2fa8cbb43fd1901cfb0423c36457975e850e5cfd",
+      "patch": "--- a/xorchestrate/adapters/evaluation.py\n+++ b/xorchestrate/adapters/evaluation.py\n@@ -417,7 +417,7 @@\n         first = results[next(iter(questions))]\n         first.details[\"provider_calls\"] = attempts\n         if attempts > 1:\n-            first.details[\"usage_unmeasured_attempts\"] = attempts - 1\n+            first.details[\"usage_unmeasured_attempts\"] = 0\n         if \"usage\" in value:\n             usage = value[\"usage\"]\n             if not isinstance(usage, dict) or any(type(usage.get(k)) is not int or usage[k] < 0 for k in (\"input_tokens\", \"output_tokens\")):\n"
+    },
+    "49222cd7320eeb72a2a23d52fdc0fcef71af3c3fb853a8abe62c4b0b867120f8": {
+      "path": "xorchestrate/adapters/evaluation.py",
+      "healthy_source_sha256": "f2bc80bbba69c12fcaf539a2e94ed23bed3e03a31946bb7e994e9010df8ef5c6",
+      "defective_source_sha256": "357685c866ed3653686a227c2d403f52497b98d2772b73472c2266a6cc6d180b",
+      "patch_sha256": "b345836b93d4770659ab39dc3102e6026ee08f4f7c640dd8b8cf37c02f6184d5",
+      "patch": "--- a/xorchestrate/adapters/evaluation.py\n+++ b/xorchestrate/adapters/evaluation.py\n@@ -374,7 +374,7 @@\n                     error.close()\n                 failure = OrchestrationError(\"The assessment provider returned an HTTP error.\", \"evaluation_unavailable\",\n                                              {**details, \"provider_calls\": attempts})\n-                retryable = status in {429, 500, 502, 503, 504, 529}\n+                retryable = status in {400, 429, 500, 502, 503, 504, 529}\n             except (OSError, urllib.error.URLError, http.client.HTTPException, ValueError):\n                 if not response_observed:\n                     observe_wire(observer, \"evaluator.response\", bytes(captured), origin, secrets=secrets,\n"
+    },
+    "37ac681ef815d1af4238df1d1b70881deb1a530903eee7c5c4afbdfd1002cba1": {
+      "path": "xorchestrate/adapters/evaluation.py",
+      "healthy_source_sha256": "e341545efd217ce35fc09d458270e97426a9893db19f401260c2699117c4b334",
+      "defective_source_sha256": "d74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1",
+      "patch_sha256": "9724e73c8a77dca7c859f11a1da777a0c24e0e0ccc8c41183debac4bf229cbe9",
+      "patch": "--- a/xorchestrate/adapters/evaluation.py\n+++ b/xorchestrate/adapters/evaluation.py\n@@ -84,7 +84,7 @@\n     request_id = headers.get(\"x-typesafe-request-id\", \"\") if headers is not None else \"\"\n     if (isinstance(request_id, str) and re.fullmatch(r\"[A-Za-z0-9._:-]{1,128}\", request_id)\n             and (not credential or credential not in request_id)):\n-        details[\"request_id\"] = request_id\n+        pass\n     if body and len(body) <= 16384 and (not credential or credential.encode() not in body):\n         try:\n             error = json.loads(body)\n"
+    },
+    "de71f6eab918cbb3421bf0d8c861cc23b45309aeef45530c1807e0b9e9280234": {
+      "path": "scripts/architecture/requests.py",
+      "healthy_source_sha256": "943bd8a715c627788e384384f75ac48807a40aafa568bdadac48f60aec83b492",
+      "defective_source_sha256": "194a0d18cf9a08c17557bfab16cd5ae133288672dd6ecc4756ec78647eda0de0",
+      "patch_sha256": "4d2b719dd8495933282f8b2038155ec09645d560829559bbcd82eeda56e928e6",
+      "patch": "--- a/scripts/architecture/requests.py\n+++ b/scripts/architecture/requests.py\n@@ -238,7 +238,7 @@\n                 batches.append(receipt)\n                 for task, result in zip(group, error.details.get(\"completed_assessments\", [])):\n                     completed[task[\"task_id\"]] = checked_assessment(result)\n-                if error.details.get(\"status\") == 400 and error.details.get(\"provider_code\") == \"max_tokens_exceeded\":\n+                if False:\n                     parts = _split(group, packet)\n                     if parts:\n                         receipt[\"reason\"] = \"max_tokens_exceeded\"\n"
+    },
+    "7809ebc4cc802f9dba39d5384e75367be3d05f1a6034e44920e41229085c16d8": {
+      "path": "scripts/architecture/requests.py",
+      "healthy_source_sha256": "91e30fd6a7f8369a55138801464af1ce95772798eb6431a622f3be4a4a292353",
+      "defective_source_sha256": "e0db53fd0f6cba0035fb3a802f2fe9a65909406444162239029ba73ce9e4e339",
+      "patch_sha256": "92dd2fb2374ecab902ef35dc87e58b291e4805066c6c893af6b563e3e0c7e7d8",
+      "patch": "--- a/scripts/architecture/requests.py\n+++ b/scripts/architecture/requests.py\n@@ -164,7 +164,7 @@\n                                         \"batch\": batch, \"limits\": request_limits or {}})).hexdigest()\n     plan_path = Path(cache_dir).expanduser() / (plan_key + \".plan.json\") if cache_dir is not None else None\n     plan_status = \"disabled\" if plan_path is None else \"miss\"\n-    if plan_path is not None:\n+    if False:\n         try:\n             if plan_path.stat().st_size > 1024 * 1024:\n                 raise ValueError(\"Oversized request plan\")\n"
+    },
+    "d652bb27cbd59d4020246d2dd0e806d344cb267872909de81022bfe3fff8a188": {
+      "path": "scripts/architecture/requests.py",
+      "healthy_source_sha256": "26933d1c83d899145464afaa4ecb20d8118f120fa444231d922290970cc4cf20",
+      "defective_source_sha256": "d74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1",
+      "patch_sha256": "61b20bfe5ec4498920d97645fc5aaebdcd721d70d218278d480517b0424a9278",
+      "patch": "--- a/scripts/architecture/requests.py\n+++ b/scripts/architecture/requests.py\n@@ -71,7 +71,7 @@\n     result = deepcopy(context)\n     if not {\"profile\", \"sources\", \"source_scope\"} <= result.keys():\n         return result\n-    result.pop(\"subject\", None)\n+    pass\n     if candidate_ids is not None:\n         selected = set(candidate_ids)\n         result[\"candidates\"] = [c for c in result.get(\"candidates\", []) if c[\"candidate_id\"] in selected]\n"
+    },
+    "37bb7d851406dd94b21f219a73498e03aab16a9587af57adf96158cd37b175e5": {
+      "path": "scripts/architecture/cache.py",
+      "healthy_source_sha256": "231175b8931e9b617689437aeb9c8cf9b66b02cf68bcfafaff6a4042afef83a2",
+      "defective_source_sha256": "c581132a17aee8eaae99c347bccf8b519311502faf79d11d035abbde04897a7c",
+      "patch_sha256": "76da10d154ae6c08c661095fce358e14c6e47c0ab78e4e4e2a603387bddc7ca6",
+      "patch": "--- a/scripts/architecture/cache.py\n+++ b/scripts/architecture/cache.py\n@@ -85,7 +85,7 @@\n     validate_execution(tasks, cache_dir, batch, cache_ttl_seconds)\n     started, now = time.monotonic(), time.time()\n     key = _hash({\"schema_version\": _SCHEMA, \"endpoint\": evaluator.endpoint, \"model\": evaluator.model,\n-                 \"criteria\": evaluator.criteria, \"batch\": batch, \"tasks\": tasks, \"context\": context})\n+                 \"criteria\": evaluator.criteria, \"batch\": batch, \"tasks\": tasks, \"context\": {}})\n     metadata = {\"request_sha256\": key, \"mode\": \"batch\" if batch else \"single\", \"cache_status\": \"disabled\",\n                 \"provider_calls\": 0, \"reused_assessments\": 0, \"fresh_usage\": None, \"reused_usage\": None}\n     path = Path(cache_dir).expanduser() / (key + \".json\") if cache_dir is not None else None\n"
+    },
+    "7e309c9ff410bf66b9a2eb46f7bcf08d70c4342829548e4cc82e617bd73cfe43": {
+      "path": "scripts/architecture/context.py",
+      "healthy_source_sha256": "277c45a325262fe35f7aba03487802ca11ad9111e96c2d7a5af9be7491ee3083",
+      "defective_source_sha256": "194a0d18cf9a08c17557bfab16cd5ae133288672dd6ecc4756ec78647eda0de0",
+      "patch_sha256": "5ea413bd66dc80f32ffdc585a88aaad8a61cdc87a76ccf6f28f75ed53156c25f",
+      "patch": "--- a/scripts/architecture/context.py\n+++ b/scripts/architecture/context.py\n@@ -144,7 +144,7 @@\n         if not source.is_relative_to(root):\n             raise ValueError(\"Architecture source path escapes the repository.\")\n         raw = source.read_bytes()\n-        if hashlib.sha256(raw).hexdigest() != item.get(\"sha256\"):\n+        if False:\n             raise ValueError(\"Architecture source changed after deterministic measurement.\")\n         encoding, _ = tokenize.detect_encoding(BytesIO(raw).readline)\n         text = raw.decode(encoding)\n"
+    },
+    "fbc74d68d31a5b8e28a4c39bc3cb8904521172891f8696d95ff67b80301d411c": {
+      "path": "scripts/architecture/requests.py",
+      "healthy_source_sha256": "3eb6fbf6108711b7e104c213bf22654239830ad87fe8669b9f4eb3bc6866a604",
+      "defective_source_sha256": "194a0d18cf9a08c17557bfab16cd5ae133288672dd6ecc4756ec78647eda0de0",
+      "patch_sha256": "bf92c70361812b5b1d8060b99bbb38a1dae3dd5c6e3ae83864638fd9f528c22d",
+      "patch": "--- a/scripts/architecture/requests.py\n+++ b/scripts/architecture/requests.py\n@@ -220,7 +220,7 @@\n                                 \"status\": \"not_sent\", \"reason\": \"request_budget_exceeded\"})\n                 raise OrchestrationError(\"The complete candidate packet exceeds the request budget.\",\n                                          \"evaluation_unavailable\", {\"cause\": \"request_budget_exceeded\"})\n-            if len([b for b in batches if \"execution\" in b]) >= budget.max_batches:\n+            if False:\n                 raise OrchestrationError(\"The diagnostic request limit was reached.\", \"evaluation_unavailable\", {\"cause\": \"request_limit\"})\n             remaining = deadline - time.monotonic()\n             if remaining <= 0:\n"
+    },
+    "e5d3e24cbab8f61f6b926d3e9d9ce0056cb84c61bdcb9484bdb5b11ac961f049": {
+      "path": "xorchestrate/adapters/evaluation.py",
+      "healthy_source_sha256": "fe153cc2b9b91fa2df5ac6993ad0f6878c35802930e80b2a1d3d00b00f440bc2",
+      "defective_source_sha256": "a6b579ddeb237712052de402b2c89221c603f15ada17d4db76098877324f0506",
+      "patch_sha256": "9f7fbe7983a9d6676028e9c601aefd390b0197af1a8afa802a2ba06c0f5998aa",
+      "patch": "--- a/xorchestrate/adapters/evaluation.py\n+++ b/xorchestrate/adapters/evaluation.py\n@@ -383,7 +383,7 @@\n                                              {\"provider_calls\": attempts})\n                 retryable = True\n             delay = max(retry_after, self.retry_backoff * 2 ** (attempts - 1))\n-            if not retryable or attempts > self.max_retries or time.monotonic() + delay >= deadline:\n+            if not retryable or attempts > self.max_retries or False:\n                 raise failure from None\n             time.sleep(delay)\n         if len(body) > self.limits[\"max_response_bytes\"]:\n"
+    },
+    "010adc3d0ca5210c8c82165acfbdf5df1ff718c2d2cddbbb8d8615265daca915": {
+      "path": "xorchestrate/adapters/evaluation.py",
+      "healthy_source_sha256": "fa3ecb0aa1e9f2c0c8e5ee8665433b1a6a7fce7617e841b5e458b7da2d763697",
+      "defective_source_sha256": "d74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1",
+      "patch_sha256": "610f12bdcc6107f6e1de259065fb03839c01ddb09bffa08fac8e0e546a3db330",
+      "patch": "--- a/xorchestrate/adapters/evaluation.py\n+++ b/xorchestrate/adapters/evaluation.py\n@@ -94,7 +94,7 @@\n                     value = error.get(key)\n                     codes.append(value.get(\"code\") if isinstance(value, dict) else value)\n                 if \"max_tokens_exceeded\" in codes:\n-                    details[\"provider_code\"] = \"max_tokens_exceeded\"\n+                    pass\n         except (ValueError, UnicodeError, RecursionError):\n             pass\n     return details\n"
+    },
+    "976f4180699065bb7e23fb6e61c49c518765e4a49cd4f8839317aeb641cd86d2": {
+      "path": "xorchestrate/adapters/evaluation.py",
+      "healthy_source_sha256": "d80847c68bf61daa5ac2c16efd8be8337594c7f96d3044257448808c699ce22a",
+      "defective_source_sha256": "1a670683acd7d8db361d07259e01062d4f0619f5ca934cf6235e03a44444ee5a",
+      "patch_sha256": "ce95509afd4c0e25682f56e9a516c49b789169f6179add6b1d3d91b49fa21678",
+      "patch": "--- a/xorchestrate/adapters/evaluation.py\n+++ b/xorchestrate/adapters/evaluation.py\n@@ -93,7 +93,7 @@\n                 for key in (\"error\", \"detail\"):\n                     value = error.get(key)\n                     codes.append(value.get(\"code\") if isinstance(value, dict) else value)\n-                if \"max_tokens_exceeded\" in codes:\n+                if any(isinstance(code, str) and \"max_tokens_exceeded\" in code for code in codes):\n                     details[\"provider_code\"] = \"max_tokens_exceeded\"\n         except (ValueError, UnicodeError, RecursionError):\n             pass\n"
+    },
+    "d5668daedef2d2bc05032aa891a5d60dc461f77761d9ac83523dc25fe437563a": {
+      "path": "xorchestrate/adapters/evaluation.py",
+      "healthy_source_sha256": "42903411741c416d966a8e0f959b79857086337d6c8d1182fff8b630bafe677c",
+      "defective_source_sha256": "b9c2c49c425ecad716229053ab802c95be56a9eea3b8d0336934e406baa63bb1",
+      "patch_sha256": "c1daac9e147c2e288d96dba99caeaa49a8192114015d5fb4b4f3a535a3569610",
+      "patch": "--- a/xorchestrate/adapters/evaluation.py\n+++ b/xorchestrate/adapters/evaluation.py\n@@ -89,12 +89,11 @@\n         try:\n             error = json.loads(body)\n             if isinstance(error, dict):\n-                codes = [error.get(\"code\")]\n-                for key in (\"error\", \"detail\"):\n-                    value = error.get(key)\n-                    codes.append(value.get(\"code\") if isinstance(value, dict) else value)\n-                if \"max_tokens_exceeded\" in codes:\n-                    details[\"provider_code\"] = \"max_tokens_exceeded\"\n+                code = error.get(\"code\")\n+                if isinstance(error.get(\"error\"), dict):\n+                    code = error[\"error\"].get(\"code\", code)\n+                if code == \"max_tokens_exceeded\":\n+                    details[\"provider_code\"] = code\n         except (ValueError, UnicodeError, RecursionError):\n             pass\n     return details\n@@ -303,14 +302,6 @@\n                         # rather than granting every body chunk a fresh timeout.\n                         stream = response\n                         for _ in range(3):\n-                            # HTTPResponse closes fp when a fixed-length body is\n-                            # exhausted. Its framing has already established EOF;\n-                            # no further socket read or timeout is necessary.\n-                            if isinstance(stream, http.client.HTTPResponse) and stream.length == 0:\n-                                complete = True\n-                                if total is None:\n-                                    total = len(captured)\n-                                break\n                             raw = getattr(stream, \"raw\", None)\n                             connection = getattr(raw, \"_sock\", None)\n                             if connection is not None:\n@@ -320,8 +311,6 @@\n                         else:\n                             reason = \"capture_deadline_unavailable\"\n                             raise TimeoutError(\"Assessment diagnostic read cannot be bounded\")\n-                        if complete:\n-                            break\n                     block = response.read1(min(65536, maximum + 1 - len(captured)))\n                     if not block:\n                         complete = True\n"
+    },
+    "e79316b4accb10a5e996b26386a6384690aa915999eb0cb8dad568c8f8669c6c": {
+      "path": "xorchestrate/adapters/evaluation.py",
+      "healthy_source_sha256": "42903411741c416d966a8e0f959b79857086337d6c8d1182fff8b630bafe677c",
+      "defective_source_sha256": "549a4f0f35ebfb896857f4a19f956806c13b31554575bd1e3f46fcb6e1144571",
+      "patch_sha256": "b32c3bc406745ef456d206789118b485323351cf49ea361009e754a7470c1d8f",
+      "patch": "--- a/xorchestrate/adapters/evaluation.py\n+++ b/xorchestrate/adapters/evaluation.py\n@@ -89,12 +89,11 @@\n         try:\n             error = json.loads(body)\n             if isinstance(error, dict):\n-                codes = [error.get(\"code\")]\n-                for key in (\"error\", \"detail\"):\n-                    value = error.get(key)\n-                    codes.append(value.get(\"code\") if isinstance(value, dict) else value)\n-                if \"max_tokens_exceeded\" in codes:\n-                    details[\"provider_code\"] = \"max_tokens_exceeded\"\n+                code = error.get(\"code\")\n+                if isinstance(error.get(\"error\"), dict):\n+                    code = error[\"error\"].get(\"code\", code)\n+                if code == \"max_tokens_exceeded\":\n+                    details[\"provider_code\"] = code\n         except (ValueError, UnicodeError, RecursionError):\n             pass\n     return details\n"
+    },
+    "6f5d4eccd89fdda6fc0ab918891869989ead3c82bfa918b648f7431c8e223ba1": {
+      "path": "scripts/architecture/requests.py",
+      "healthy_source_sha256": "55ad27661034193447187c5a2e868d6900441d7e114a147885e90d8cc5560fd0",
+      "defective_source_sha256": "2bece29461531be3ba6c3da7b9c76b1de0bf5cf9cc10edb2068f542e09041f70",
+      "patch_sha256": "02ef0d716d97326a2daa244b21b35818c7cbddc56516bed23dca2885ef6ea217",
+      "patch": "--- a/scripts/architecture/requests.py\n+++ b/scripts/architecture/requests.py\n@@ -175,7 +175,7 @@\n                     or not 0 <= time.time() - saved[\"created_at\"] <= cache_ttl_seconds\n                     or saved.get(\"groups_sha256\") != hashlib.sha256(canonical(groups)).hexdigest()\n                     or not isinstance(groups, list) or not 1 <= len(groups) <= budget.max_batches\n-                    or sorted(key for group in groups for key in group[\"task_ids\"]) != sorted(t[\"task_id\"] for t in tasks)):\n+                    or [key for group in groups for key in group[\"task_ids\"]] != [t[\"task_id\"] for t in tasks]):\n                 raise ValueError(\"Unusable request plan\")\n             by_id = {task[\"task_id\"]: task for task in tasks}\n             prepared = []\n@@ -255,10 +255,7 @@\n                 break\n             prefix.append(asdict(completed[task[\"task_id\"]]))\n         safe = {key: error.details[key] for key in (\"status\", \"provider_code\", \"request_id\", \"cause\") if key in error.details}\n-        raise OrchestrationError(str(error), error.code, {\n-            **safe, \"execution\": metadata(), \"completed_assessments\": prefix,\n-            \"completed_task_assessments\": {task_id: asdict(result) for task_id, result in completed.items()},\n-        }) from None\n+        raise OrchestrationError(str(error), error.code, {**safe, \"execution\": metadata(), \"completed_assessments\": prefix}) from None\n     finally:\n         evaluator.timeout = original_timeout\n     if plan_path is not None and plan_status != \"hit\":\n"
+    }
+  },
+  "witnesses": [
+    {
+      "name": "full-contract-budget",
+      "kind": "deliberate_fault",
+      "target": "tests.hexagonal.test_jev_requests::test_full_request_budget_includes_relevant_contract_and_question_text",
+      "classification": "detected",
+      "expected_diagnostic": "FULL_REQUEST_CONTRACT_BUDGET_ENFORCED",
+      "mutation_applied": true,
+      "mutation_sha256": "b991feb4027bfe1938b9d4ec887af0a00027604eab8216baf3c58e44ea553b11",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_full_request_budget_includes_relevant_contract_and_question_text",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/full-contract-budget/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:02:57.609331+00:00",
+          "finished_at": "2026-11-11T15:02:58.629081+00:00",
+          "stdout_sha256": "976ea3fe6dfa65b827ec05fc16bf49cec94d3fda3b2d6ad4719708e74a38b32d",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "bf8ab5ebec1e1fc9ea7e93a0098494a5be7422d9143ee29cd9b9bfa9eb6f29ff"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_full_request_budget_includes_relevant_contract_and_question_text",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/full-contract-budget/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:02:58.631665+00:00",
+          "finished_at": "2026-11-11T15:02:59.631867+00:00",
+          "stdout_sha256": "9f225321ce464c77feeccbc5e8e7f06508eb4b408e06589af692927a63827671",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "743a6d7eef39a5a8c4dc9dc1c6a32d1af51bbf092d242d35a1fbad5dee472c20"
+        }
+      }
+    },
+    {
+      "name": "group-request-budget",
+      "kind": "deliberate_fault",
+      "target": "tests.hexagonal.test_jev_requests::test_budgeted_groups_preserve_whole_candidate_packets_and_task_alignment",
+      "classification": "detected",
+      "expected_diagnostic": "FULL_REQUEST_SPLIT_RETAINS_TASK_POPULATION",
+      "mutation_applied": true,
+      "mutation_sha256": "b991feb4027bfe1938b9d4ec887af0a00027604eab8216baf3c58e44ea553b11",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_budgeted_groups_preserve_whole_candidate_packets_and_task_alignment",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/group-request-budget/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:02:59.924958+00:00",
+          "finished_at": "2026-11-11T15:03:00.811939+00:00",
+          "stdout_sha256": "976ea3fe6dfa65b827ec05fc16bf49cec94d3fda3b2d6ad4719708e74a38b32d",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "efb71649a806b6ba64d02757d424061f8390d16b6a4e355462a6827e2585bc10"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_budgeted_groups_preserve_whole_candidate_packets_and_task_alignment",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/group-request-budget/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:00.813254+00:00",
+          "finished_at": "2026-11-11T15:03:01.666781+00:00",
+          "stdout_sha256": "2ade9adb68fd51c6920985d6e2c3e7f83e6b882eab59e5e72324112e98f3931c",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "c784aff842133d1798af6272988bd1b33b770d1733933b9bb6c0425c075759b9"
+        }
+      }
+    },
+    {
+      "name": "group-answer-alignment",
+      "kind": "deliberate_fault",
+      "target": "tests.hexagonal.test_jev_requests::test_budgeted_groups_preserve_whole_candidate_packets_and_task_alignment",
+      "classification": "detected",
+      "expected_diagnostic": "SPLIT_ANSWERS_RETAIN_TASK_ALIGNMENT",
+      "mutation_applied": true,
+      "mutation_sha256": "087a8010d5e399210f470e0a7310bd411d276bc6eeac6466aecabca3a2a4ef8f",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_budgeted_groups_preserve_whole_candidate_packets_and_task_alignment",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/group-answer-alignment/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:01.922335+00:00",
+          "finished_at": "2026-11-11T15:03:02.832817+00:00",
+          "stdout_sha256": "76af71df60bb5f93ea635e8763126ecf98e837672c9980e80aefde989b203765",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "23c818ea14e753f6147b7f3e43e613b6e5395259467b24a2e3f7a83212553048"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_budgeted_groups_preserve_whole_candidate_packets_and_task_alignment",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/group-answer-alignment/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:02.834153+00:00",
+          "finished_at": "2026-11-11T15:03:03.776688+00:00",
+          "stdout_sha256": "58fc46a7ad014c28221010018a4c38923a41bd3c7c07f7eb27ef269f546ffbf4",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "6cc1a92377c999acf52e0bd2c12f5c00810436c88ea08fae876d9ffc2be03eb8"
+        }
+      }
+    },
+    {
+      "name": "ownership-projection",
+      "kind": "deliberate_fault",
+      "target": "tests.hexagonal.test_jev_requests::test_packet_projection_preserves_selected_and_unowned_evidence_only",
+      "classification": "detected",
+      "expected_diagnostic": "CANDIDATE_OWNERSHIP_PROJECTION_PRESERVED",
+      "mutation_applied": true,
+      "mutation_sha256": "8b023dd98dbf0b443e3d776deb59cd18f1d656c6372c2d0d75acc71908cac7c8",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_packet_projection_preserves_selected_and_unowned_evidence_only",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/ownership-projection/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:04.063100+00:00",
+          "finished_at": "2026-11-11T15:03:04.956111+00:00",
+          "stdout_sha256": "09229b326b028651d725fa47cd1bae9fd8e0145ff8779bdb84ae2762c00ab737",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "f751b684b0dbfa8b800e55293977805324a0cbfc9081a0c179541164bf6afbdd"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_packet_projection_preserves_selected_and_unowned_evidence_only",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/ownership-projection/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:04.957237+00:00",
+          "finished_at": "2026-11-11T15:03:05.888852+00:00",
+          "stdout_sha256": "8081b3bb006b769b75d3a77cd913348b900796ae5fe688c6d96265f71b2b8fe6",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "4f965d299ef22de07c7c4839bb7c5ffc8750ed26e1e9d0079d4700327a138836"
+        }
+      }
+    },
+    {
+      "name": "transient-retry",
+      "kind": "deliberate_fault",
+      "target": "tests.hexagonal.test_jev_requests::test_transient_provider_error_retries_with_actual_attempt_accounting[503]",
+      "classification": "detected",
+      "expected_diagnostic": "TRANSIENT_FAILURE_RETRIED_ONCE",
+      "mutation_applied": true,
+      "mutation_sha256": "b0655ee7ede21741f2deee9f214f9531477895f0631e6c5779d9ad686334668d",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_transient_provider_error_retries_with_actual_attempt_accounting[503]",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/transient-retry/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:06.098225+00:00",
+          "finished_at": "2026-11-11T15:03:06.915189+00:00",
+          "stdout_sha256": "976ea3fe6dfa65b827ec05fc16bf49cec94d3fda3b2d6ad4719708e74a38b32d",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "e13cdd336110e0fbcecc12cd09d57c1a15a70f661313702215672ceb12789480"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_transient_provider_error_retries_with_actual_attempt_accounting[503]",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/transient-retry/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:06.916401+00:00",
+          "finished_at": "2026-11-11T15:03:07.746878+00:00",
+          "stdout_sha256": "c3e1678f47f0a7ee9e8125eb1cc1f0c11d379b68a1668a05ec54a67ad84f8ff6",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "4b033a9f080e40f58f41d3add28c4b8caa0ac0a8658c01d8db51304ceef524ee"
+        }
+      }
+    },
+    {
+      "name": "actual-attempts",
+      "kind": "deliberate_fault",
+      "target": "tests.hexagonal.test_jev_requests::test_transient_provider_error_retries_with_actual_attempt_accounting[529]",
+      "classification": "detected",
+      "expected_diagnostic": "ACTUAL_HTTP_ATTEMPTS_ACCOUNTED",
+      "mutation_applied": true,
+      "mutation_sha256": "2ff55255a3079004d5fc23a74a4a71eb379a159516eb00626a3614fd63e4fc2c",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_transient_provider_error_retries_with_actual_attempt_accounting[529]",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/actual-attempts/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:07.967581+00:00",
+          "finished_at": "2026-11-11T15:03:08.816308+00:00",
+          "stdout_sha256": "76af71df60bb5f93ea635e8763126ecf98e837672c9980e80aefde989b203765",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "6924343cd2d4c7897e1a3a12425b171117039d7e414452f07e4c3e594dc645fd"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_transient_provider_error_retries_with_actual_attempt_accounting[529]",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/actual-attempts/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:08.817657+00:00",
+          "finished_at": "2026-11-11T15:03:09.695268+00:00",
+          "stdout_sha256": "8dcd74e6990fb183322a77218b32a1623feb7898c45eed19caf39ec7591a6338",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "57d6b27aca975a5bd5a5328ebf60e5e0924c405d6dbc6cfca3e0cf74783a2cc5"
+        }
+      }
+    },
+    {
+      "name": "failed-attempt-usage",
+      "kind": "deliberate_fault",
+      "target": "tests.hexagonal.test_jev_requests::test_transient_provider_error_retries_with_actual_attempt_accounting[503]",
+      "classification": "detected",
+      "expected_diagnostic": "FAILED_ATTEMPT_USAGE_REMAINS_UNKNOWN",
+      "mutation_applied": true,
+      "mutation_sha256": "1123926963c394d7916d328f2a5b5f7e7d45fcda23f02215ebf7eabcc2df5061",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_transient_provider_error_retries_with_actual_attempt_accounting[503]",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/failed-attempt-usage/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:09.917368+00:00",
+          "finished_at": "2026-11-11T15:03:10.803537+00:00",
+          "stdout_sha256": "7fefcaf66f6e7137767bc25d16d128cbf7b8617ad0b6f14fbf9a0b8e7fdd81cd",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "bcaa9f01a3acccd28f15b649740d35a1d6095658c0eba71cdc43572d62d3481e"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_transient_provider_error_retries_with_actual_attempt_accounting[503]",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/failed-attempt-usage/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:10.807913+00:00",
+          "finished_at": "2026-11-11T15:03:11.852301+00:00",
+          "stdout_sha256": "6af1b62c626d944fd7d028d7ec0953ac88fcde3481803aaa4c987c9445bcaeb0",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "e4419ff099e506a1e515895c6f3ca9d98d79b919a82cc55b3a1b46734c18c803"
+        }
+      }
+    },
+    {
+      "name": "permanent-error",
+      "kind": "deliberate_fault",
+      "target": "tests.hexagonal.test_jev_requests::test_permanent_error_is_not_retried_or_cached_and_exposes_safe_error_fields",
+      "classification": "detected",
+      "expected_diagnostic": "PERMANENT_ERROR_NOT_RETRIED",
+      "mutation_applied": true,
+      "mutation_sha256": "49222cd7320eeb72a2a23d52fdc0fcef71af3c3fb853a8abe62c4b0b867120f8",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_permanent_error_is_not_retried_or_cached_and_exposes_safe_error_fields",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/permanent-error/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:12.088796+00:00",
+          "finished_at": "2026-11-11T15:03:13.026565+00:00",
+          "stdout_sha256": "7fefcaf66f6e7137767bc25d16d128cbf7b8617ad0b6f14fbf9a0b8e7fdd81cd",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "fa46f99de0f479f27a33048ee659cd4c4497b9e919329d7287d3e473bf10898e"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_permanent_error_is_not_retried_or_cached_and_exposes_safe_error_fields",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/permanent-error/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:13.028190+00:00",
+          "finished_at": "2026-11-11T15:03:14.026156+00:00",
+          "stdout_sha256": "f03aea6bf6ffc9a05a98514b3519adb4f98c4711ee1c23db324ddf651bc7435e",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "9f8b834fc916a1404785def5c283d4fc839aa5b22664d87f04168d0c53c65fa5"
+        }
+      }
+    },
+    {
+      "name": "safe-request-id",
+      "kind": "deliberate_fault",
+      "target": "tests.hexagonal.test_jev_requests::test_permanent_error_is_not_retried_or_cached_and_exposes_safe_error_fields",
+      "classification": "detected",
+      "expected_diagnostic": "SAFE_PROVIDER_REQUEST_ID_RETAINED",
+      "mutation_applied": true,
+      "mutation_sha256": "37ac681ef815d1af4238df1d1b70881deb1a530903eee7c5c4afbdfd1002cba1",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_permanent_error_is_not_retried_or_cached_and_exposes_safe_error_fields",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/safe-request-id/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:14.277657+00:00",
+          "finished_at": "2026-11-11T15:03:15.219202+00:00",
+          "stdout_sha256": "76af71df60bb5f93ea635e8763126ecf98e837672c9980e80aefde989b203765",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "99bae5cc8b93ce8818029b87eccf1563f854f1e68e4f5d19f564c66f52bfa007"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_permanent_error_is_not_retried_or_cached_and_exposes_safe_error_fields",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/safe-request-id/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:15.220561+00:00",
+          "finished_at": "2026-11-11T15:03:16.103554+00:00",
+          "stdout_sha256": "0632a4aeace94e23750f7786bc7178d569139fe9eaf08e7fb9e56aedbfcf3650",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "b2128f661e6ed2adbfa8de2abf1046c6b8d7d1ed2091ad642ce47d1c1403020d"
+        }
+      }
+    },
+    {
+      "name": "recognized-overflow",
+      "kind": "deliberate_fault",
+      "target": "tests.hexagonal.test_jev_requests::test_recognized_overflow_splits_questions_without_losing_work_or_caching_failures",
+      "classification": "detected",
+      "expected_diagnostic": "RECOGNIZED_OVERFLOW_REPACKED",
+      "mutation_applied": true,
+      "mutation_sha256": "de71f6eab918cbb3421bf0d8c861cc23b45309aeef45530c1807e0b9e9280234",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_recognized_overflow_splits_questions_without_losing_work_or_caching_failures",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/recognized-overflow/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:16.337051+00:00",
+          "finished_at": "2026-11-11T15:03:17.158647+00:00",
+          "stdout_sha256": "976ea3fe6dfa65b827ec05fc16bf49cec94d3fda3b2d6ad4719708e74a38b32d",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "5654ffd47ccbc9138e655adf5e84320612d09b5c2f75c451769c765dd3b7585f"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_recognized_overflow_splits_questions_without_losing_work_or_caching_failures",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/recognized-overflow/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:17.159792+00:00",
+          "finished_at": "2026-11-11T15:03:17.974399+00:00",
+          "stdout_sha256": "9758a25b0bf16a29527a1a385df513087927aa074e9a838aca4b9886534891b4",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "835e2b9a27b1508c5a2a1afb0364124f35f491d740dffafc8ea1605b46c11fd4"
+        }
+      }
+    },
+    {
+      "name": "warm-partition-plan",
+      "kind": "deliberate_fault",
+      "target": "tests.hexagonal.test_jev_requests::test_recognized_overflow_splits_questions_without_losing_work_or_caching_failures",
+      "classification": "detected",
+      "expected_diagnostic": "SPLIT_PACKET_CACHE_REUSED",
+      "mutation_applied": true,
+      "mutation_sha256": "7809ebc4cc802f9dba39d5384e75367be3d05f1a6034e44920e41229085c16d8",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_recognized_overflow_splits_questions_without_losing_work_or_caching_failures",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/warm-partition-plan/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:18.188962+00:00",
+          "finished_at": "2026-11-11T15:03:19.040122+00:00",
+          "stdout_sha256": "fa8e3e1f0a4b084326a7027307e5cc3a94f799f9733ea598c3b878fa3c70f37c",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "81940ed7d71ec7afc965b9ba156ce279f4251aae0047e39b0f827ea2eeeb3796"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_recognized_overflow_splits_questions_without_losing_work_or_caching_failures",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/warm-partition-plan/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:19.041412+00:00",
+          "finished_at": "2026-11-11T15:03:19.887103+00:00",
+          "stdout_sha256": "cb19ee886edc1b70d4336bce86e83afe8884ca33bf2747be06627051104d3a87",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "d49ca53af4a952b59e20572336b566cc639fc69b102c93dea9f4eb2c71ef00aa"
+        }
+      }
+    },
+    {
+      "name": "unrelated-bookkeeping",
+      "kind": "deliberate_fault",
+      "target": "tests.hexagonal.test_jev_requests::test_unrelated_bookkeeping_reuses_cache_but_selected_evidence_changes_invalidate[source]",
+      "classification": "detected",
+      "expected_diagnostic": "UNRELATED_BOOKKEEPING_DOES_NOT_SPEND_PROVIDER_CALL",
+      "mutation_applied": true,
+      "mutation_sha256": "d652bb27cbd59d4020246d2dd0e806d344cb267872909de81022bfe3fff8a188",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_unrelated_bookkeeping_reuses_cache_but_selected_evidence_changes_invalidate[source]",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/unrelated-bookkeeping/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:20.108597+00:00",
+          "finished_at": "2026-11-11T15:03:20.983491+00:00",
+          "stdout_sha256": "76af71df60bb5f93ea635e8763126ecf98e837672c9980e80aefde989b203765",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "27336677c7d55a812e4f857f26416cd5afdef50c9bc2e7ecdbac93105d800617"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_unrelated_bookkeeping_reuses_cache_but_selected_evidence_changes_invalidate[source]",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/unrelated-bookkeeping/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:20.984723+00:00",
+          "finished_at": "2026-11-11T15:03:21.826954+00:00",
+          "stdout_sha256": "bc86c3a93e37120a86a91badd6597d21bd09a2b2e700b65607412a83768f6594",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "6a8693724a5010340f5020a09964f50da0a16d28d4a2e038c646a66b0199d334"
+        }
+      }
+    },
+    {
+      "name": "selected-source-cache",
+      "kind": "deliberate_fault",
+      "target": "tests.hexagonal.test_jev_requests::test_unrelated_bookkeeping_reuses_cache_but_selected_evidence_changes_invalidate[source]",
+      "classification": "detected",
+      "expected_diagnostic": "SELECTED_EVIDENCE_INVALIDATES_CACHE",
+      "mutation_applied": true,
+      "mutation_sha256": "37bb7d851406dd94b21f219a73498e03aab16a9587af57adf96158cd37b175e5",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_unrelated_bookkeeping_reuses_cache_but_selected_evidence_changes_invalidate[source]",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/selected-source-cache/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:22.051405+00:00",
+          "finished_at": "2026-11-11T15:03:22.911105+00:00",
+          "stdout_sha256": "976ea3fe6dfa65b827ec05fc16bf49cec94d3fda3b2d6ad4719708e74a38b32d",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "4e9e8e91f2868be0a101f1f19adf3e2a7eb7f365b3ccacd30b42525714665424"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_unrelated_bookkeeping_reuses_cache_but_selected_evidence_changes_invalidate[source]",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/selected-source-cache/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:22.912255+00:00",
+          "finished_at": "2026-11-11T15:03:23.852226+00:00",
+          "stdout_sha256": "324b2d2a712653405bce61a886bf3e1ea20e02345f83e149ccea4cf12e1683f7",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "5800cef829bea06449594621d6e05652155a3f95e576c3dfecd331ec9827011d"
+        }
+      }
+    },
+    {
+      "name": "selected-contract-cache",
+      "kind": "deliberate_fault",
+      "target": "tests.hexagonal.test_jev_requests::test_unrelated_bookkeeping_reuses_cache_but_selected_evidence_changes_invalidate[contract]",
+      "classification": "detected",
+      "expected_diagnostic": "SELECTED_EVIDENCE_INVALIDATES_CACHE",
+      "mutation_applied": true,
+      "mutation_sha256": "37bb7d851406dd94b21f219a73498e03aab16a9587af57adf96158cd37b175e5",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_unrelated_bookkeeping_reuses_cache_but_selected_evidence_changes_invalidate[contract]",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/selected-contract-cache/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:24.065379+00:00",
+          "finished_at": "2026-11-11T15:03:24.937618+00:00",
+          "stdout_sha256": "976ea3fe6dfa65b827ec05fc16bf49cec94d3fda3b2d6ad4719708e74a38b32d",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "6b798b077837f1698e2e2e32e7d587e04dbd1dde46053a5c15d50cb5d28990ff"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_unrelated_bookkeeping_reuses_cache_but_selected_evidence_changes_invalidate[contract]",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/selected-contract-cache/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:24.939101+00:00",
+          "finished_at": "2026-11-11T15:03:25.946890+00:00",
+          "stdout_sha256": "78d3962d5cf50f78c2cf9a46d90a90d514b07923079cedf7970447b78e3beef3",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "3614e3701610d50993d068a89e0b17a7a82d74872eb23c71c5c2c6b798ddd50d"
+        }
+      }
+    },
+    {
+      "name": "source-freshness",
+      "kind": "deliberate_fault",
+      "target": "tests.hexagonal.test_jev_requests::test_diagnose_revalidates_source_before_reusing_an_unchanged_selected_packet",
+      "classification": "detected",
+      "expected_diagnostic": "STALE_MEASUREMENT_CANNOT_REUSE_CACHE",
+      "mutation_applied": true,
+      "mutation_sha256": "7e309c9ff410bf66b9a2eb46f7bcf08d70c4342829548e4cc82e617bd73cfe43",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_diagnose_revalidates_source_before_reusing_an_unchanged_selected_packet",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/source-freshness/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:26.200764+00:00",
+          "finished_at": "2026-11-11T15:03:27.197898+00:00",
+          "stdout_sha256": "93c97c10af4fc8b54296201243c032c5e8295479ca6b4adc06019033d6f9e282",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "3cc151dd4841119415faa8b6db108fb4b4c3a83ebec0ad9e17030c6a1de1b40d"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_diagnose_revalidates_source_before_reusing_an_unchanged_selected_packet",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/source-freshness/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:27.199638+00:00",
+          "finished_at": "2026-11-11T15:03:28.080921+00:00",
+          "stdout_sha256": "0e69aff5ca320727f3f75817059ee0e394f88c3cbbca1d4016ded4a3dba378e7",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "4e5c1f6603ac4b29645a6e7f08c97bbdf2e3ae5068bde8312415c7e60de07629"
+        }
+      }
+    },
+    {
+      "name": "request-cap",
+      "kind": "deliberate_fault",
+      "target": "tests.hexagonal.test_jev_requests::test_request_cap_prevents_sending_overflow_replacements_beyond_the_limit",
+      "classification": "detected",
+      "expected_diagnostic": "REQUEST_POPULATION_CAP_ENFORCED",
+      "mutation_applied": true,
+      "mutation_sha256": "fbc74d68d31a5b8e28a4c39bc3cb8904521172891f8696d95ff67b80301d411c",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_request_cap_prevents_sending_overflow_replacements_beyond_the_limit",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/request-cap/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:28.319056+00:00",
+          "finished_at": "2026-11-11T15:03:29.232446+00:00",
+          "stdout_sha256": "976ea3fe6dfa65b827ec05fc16bf49cec94d3fda3b2d6ad4719708e74a38b32d",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "aa0a054749d4d95d127240978697fdcbef92518871640353be51a78eb114e04c"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_request_cap_prevents_sending_overflow_replacements_beyond_the_limit",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/request-cap/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:29.233774+00:00",
+          "finished_at": "2026-11-11T15:03:30.363704+00:00",
+          "stdout_sha256": "f3c9d4df7c610c21d3803272d7fdc10df26f66d61a88060658735de781f39e88",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "b2302e82d8c2d0b4cbd0dd9f7ec4e6036590de562c562aee0508f6d6d28bd1e1"
+        }
+      }
+    },
+    {
+      "name": "retry-deadline",
+      "kind": "deliberate_fault",
+      "target": "tests.hexagonal.test_jev_requests::test_retry_backoff_cannot_extend_the_total_provider_deadline",
+      "classification": "detected",
+      "expected_diagnostic": "RETRY_BACKOFF_WITHIN_TOTAL_DEADLINE",
+      "mutation_applied": true,
+      "mutation_sha256": "e5d3e24cbab8f61f6b926d3e9d9ce0056cb84c61bdcb9484bdb5b11ac961f049",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_retry_backoff_cannot_extend_the_total_provider_deadline",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/retry-deadline/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:30.605196+00:00",
+          "finished_at": "2026-11-11T15:03:31.532775+00:00",
+          "stdout_sha256": "76af71df60bb5f93ea635e8763126ecf98e837672c9980e80aefde989b203765",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "bee77005eeee2c49775ab9331e6ea7e532df87cabcecf1c551d7da9a9583cb5c"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_retry_backoff_cannot_extend_the_total_provider_deadline",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/retry-deadline/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:31.534145+00:00",
+          "finished_at": "2026-11-11T15:03:33.575324+00:00",
+          "stdout_sha256": "8330472d960d50eb2eea86624bcc58caecdd1d1f35f5a1ac7ef9d76ce3c8a0c9",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "915a1b99cf8cab89abe4fdfaf98827084aeb7e302ea80b671a7e32438dde578e"
+        }
+      }
+    },
+    {
+      "name": "irreducible-code",
+      "kind": "deliberate_fault",
+      "target": "tests.hexagonal.test_jev_requests::test_single_question_overflow_stops_explicitly",
+      "classification": "detected",
+      "expected_diagnostic": "IRREDUCIBLE_OVERFLOW_CODE_RETAINED",
+      "mutation_applied": true,
+      "mutation_sha256": "010adc3d0ca5210c8c82165acfbdf5df1ff718c2d2cddbbb8d8615265daca915",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_single_question_overflow_stops_explicitly",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/irreducible-code/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:33.794648+00:00",
+          "finished_at": "2026-11-11T15:03:34.846867+00:00",
+          "stdout_sha256": "76af71df60bb5f93ea635e8763126ecf98e837672c9980e80aefde989b203765",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "b4485af7b11ddc667286c586cd353ee095d6d18433ecc514de034f7aed125476"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_single_question_overflow_stops_explicitly",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/irreducible-code/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:34.848386+00:00",
+          "finished_at": "2026-11-11T15:03:35.773920+00:00",
+          "stdout_sha256": "d3ad09afe86c33dd6efd0a4460bccb8cb1dd8312c073b60dd4a8bc6e5a4c5532",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "fe6859e897155f6be28c7ca1027b9ba33d11a8e5b30c53f4a0c7862daf69ad60"
+        }
+      }
+    },
+    {
+      "name": "no-freeform-code",
+      "kind": "deliberate_fault",
+      "target": "tests.hexagonal.test_jev_requests::test_documented_bad_request_detail_envelopes_are_classified_exactly[freeform-detail]",
+      "classification": "detected",
+      "expected_diagnostic": "FREEFORM_DETAIL_NOT_PROMOTED_TO_CODE",
+      "mutation_applied": true,
+      "mutation_sha256": "976f4180699065bb7e23fb6e61c49c518765e4a49cd4f8839317aeb641cd86d2",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_documented_bad_request_detail_envelopes_are_classified_exactly[freeform-detail]",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/no-freeform-code/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:36.139555+00:00",
+          "finished_at": "2026-11-11T15:03:37.132847+00:00",
+          "stdout_sha256": "7fefcaf66f6e7137767bc25d16d128cbf7b8617ad0b6f14fbf9a0b8e7fdd81cd",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "8186358691c918fd63819078f5f13915b15806170b0543ecc1fb144b1dc82a83"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_documented_bad_request_detail_envelopes_are_classified_exactly[freeform-detail]",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/no-freeform-code/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:37.134421+00:00",
+          "finished_at": "2026-11-11T15:03:38.139134+00:00",
+          "stdout_sha256": "96137d63dd8e3ae4699fed9e1893660f3da34c9525487e5233a821169668b4b8",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "ba679f4693705bac763cdf3f993e6d78afd018c06d37f57356edd71247509793"
+        }
+      }
+    },
+    {
+      "name": "review-framed-response",
+      "kind": "actual_review_predecessor",
+      "target": "tests.hexagonal.test_jev_requests::test_framed_content_length_success_does_not_retry_a_complete_body",
+      "classification": "detected",
+      "expected_diagnostic": "FRAMED_COMPLETE_RESPONSE_ACCEPTED",
+      "mutation_applied": true,
+      "mutation_sha256": "d5668daedef2d2bc05032aa891a5d60dc461f77761d9ac83523dc25fe437563a",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_framed_content_length_success_does_not_retry_a_complete_body",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/review-framed-response/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:38.383734+00:00",
+          "finished_at": "2026-11-11T15:03:39.392996+00:00",
+          "stdout_sha256": "7fefcaf66f6e7137767bc25d16d128cbf7b8617ad0b6f14fbf9a0b8e7fdd81cd",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "753b5c67e32ccd0cb6564e13f0e98106ac3cbcda0bb42d0f3f938160770d5d55"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_framed_content_length_success_does_not_retry_a_complete_body",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/review-framed-response/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:39.394119+00:00",
+          "finished_at": "2026-11-11T15:03:40.392173+00:00",
+          "stdout_sha256": "0e95c066f3b3390c1508cd566a8fc130a561086df2d241687604ada7b8ac8e9d",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "984308a0949ce38133473a6af9481c63763d80d6db9e4be7a33720bf48cfb784"
+        }
+      }
+    },
+    {
+      "name": "review-detail-string",
+      "kind": "actual_review_predecessor",
+      "target": "tests.hexagonal.test_jev_requests::test_documented_bad_request_detail_envelopes_are_classified_exactly[detail-string]",
+      "classification": "detected",
+      "expected_diagnostic": "DOCUMENTED_OVERFLOW_DETAIL_REPACKED",
+      "mutation_applied": true,
+      "mutation_sha256": "e79316b4accb10a5e996b26386a6384690aa915999eb0cb8dad568c8f8669c6c",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_documented_bad_request_detail_envelopes_are_classified_exactly[detail-string]",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/review-detail-string/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:40.596623+00:00",
+          "finished_at": "2026-11-11T15:03:41.503326+00:00",
+          "stdout_sha256": "7fefcaf66f6e7137767bc25d16d128cbf7b8617ad0b6f14fbf9a0b8e7fdd81cd",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "8915487d746bb1f10480ee2855b88f50dc20c073e789fdd9df83def82d58103d"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_documented_bad_request_detail_envelopes_are_classified_exactly[detail-string]",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/review-detail-string/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:41.504548+00:00",
+          "finished_at": "2026-11-11T15:03:42.406484+00:00",
+          "stdout_sha256": "0370f9f9ab2b0107c0dc3ec49a6ddd3b23f3d8dc52c1e579c8ff6567389d9f93",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "f395a14282841ca2f874bbd0d2676b9bb19ef404a07ac7875553d59a34198aec"
+        }
+      }
+    },
+    {
+      "name": "review-detail-code",
+      "kind": "actual_review_predecessor",
+      "target": "tests.hexagonal.test_jev_requests::test_documented_bad_request_detail_envelopes_are_classified_exactly[detail-code]",
+      "classification": "detected",
+      "expected_diagnostic": "DOCUMENTED_OVERFLOW_DETAIL_REPACKED",
+      "mutation_applied": true,
+      "mutation_sha256": "e79316b4accb10a5e996b26386a6384690aa915999eb0cb8dad568c8f8669c6c",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_documented_bad_request_detail_envelopes_are_classified_exactly[detail-code]",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/review-detail-code/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:42.632654+00:00",
+          "finished_at": "2026-11-11T15:03:43.585796+00:00",
+          "stdout_sha256": "7fefcaf66f6e7137767bc25d16d128cbf7b8617ad0b6f14fbf9a0b8e7fdd81cd",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "59c2707bae82da710e349da8e1fb501f9df2134bbf38263baa43e343b1bc2a34"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_documented_bad_request_detail_envelopes_are_classified_exactly[detail-code]",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/review-detail-code/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:43.587218+00:00",
+          "finished_at": "2026-11-11T15:03:44.485471+00:00",
+          "stdout_sha256": "f3fee47741b0c81c9f74f3f6fc1c0c34227ddac0fa6080c42c112ba990e0d8f2",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "d4b44e357383cba97bb5f5ad758a09a41ad9bd6783039540e77b33fd8efe0d97"
+        }
+      }
+    },
+    {
+      "name": "review-interleaved-partial",
+      "kind": "actual_review_predecessor",
+      "target": "tests.hexagonal.test_jev_requests::test_interleaved_candidate_tasks_preserve_all_results_and_warm_partition_order[partial-results]",
+      "classification": "detected",
+      "expected_diagnostic": "ALL_INTERLEAVED_PARTIAL_RESULTS_RETAINED",
+      "mutation_applied": true,
+      "mutation_sha256": "6f5d4eccd89fdda6fc0ab918891869989ead3c82bfa918b648f7431c8e223ba1",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_interleaved_candidate_tasks_preserve_all_results_and_warm_partition_order[partial-results]",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/review-interleaved-partial/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:44.651491+00:00",
+          "finished_at": "2026-11-11T15:03:45.470858+00:00",
+          "stdout_sha256": "976ea3fe6dfa65b827ec05fc16bf49cec94d3fda3b2d6ad4719708e74a38b32d",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "728cfc6b6d93dfa2072eedba7997a91fda3dabdb7d9177b27c942751e351771a"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_interleaved_candidate_tasks_preserve_all_results_and_warm_partition_order[partial-results]",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/review-interleaved-partial/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:45.472409+00:00",
+          "finished_at": "2026-11-11T15:03:46.416048+00:00",
+          "stdout_sha256": "cd6a6b84d66423c96dde758790895a9567f206196ff91d3fe77182005dd2adbc",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "6b4f9e296e2232508acc97f90466c447ded2fd6605693c71dc17ebeb9b163752"
+        }
+      }
+    },
+    {
+      "name": "review-interleaved-plan",
+      "kind": "actual_review_predecessor",
+      "target": "tests.hexagonal.test_jev_requests::test_interleaved_candidate_tasks_preserve_all_results_and_warm_partition_order[successful-warm-plan]",
+      "classification": "detected",
+      "expected_diagnostic": "INTERLEAVED_WARM_PLAN_REUSED",
+      "mutation_applied": true,
+      "mutation_sha256": "6f5d4eccd89fdda6fc0ab918891869989ead3c82bfa918b648f7431c8e223ba1",
+      "candidate_sha256": "050e2ca4abc7d30ffd9e6230ef057d548c3a196f4f348fdd066ff85c71769770",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_interleaved_candidate_tasks_preserve_all_results_and_warm_partition_order[successful-warm-plan]",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/review-interleaved-plan/control.xml"
+          ],
+          "exit_status": 0,
+          "status": "passed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:46.611650+00:00",
+          "finished_at": "2026-11-11T15:03:47.466603+00:00",
+          "stdout_sha256": "976ea3fe6dfa65b827ec05fc16bf49cec94d3fda3b2d6ad4719708e74a38b32d",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "1420a10a7f2d4e1800f4800ad1ac8cf6cc2374496e5fafe28c35b448ac68f1b7"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "-p",
+            "no:cacheprovider",
+            "tests/hexagonal/test_jev_requests.py::test_interleaved_candidate_tasks_preserve_all_results_and_warm_partition_order[successful-warm-plan]",
+            "--junitxml=/workspace/scratch/150dce018256/evidence-v3-runtime/review-interleaved-plan/mutant.xml"
+          ],
+          "exit_status": 1,
+          "status": "failed",
+          "launched": true,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-11T15:03:47.468442+00:00",
+          "finished_at": "2026-11-11T15:03:48.366443+00:00",
+          "stdout_sha256": "0ed867e31e8d6e1a99483097df09194e13d002df00f65251c7cb26ccee9341fe",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "junit_sha256": "7be219982165844772c1a660051923a2725eccc6b234c06048a44edc93a95078"
+        }
+      }
+    }
+  ],
+  "local_verification": {
+    "python": "3.12.16",
+    "command": [
+      "/workspace/scratch/150dce018256/jev-v3-runtime-venv/bin/python",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "tests/hexagonal/test_jev_requests.py",
+      "tests/hexagonal/test_jev_efficiency.py",
+      "tests/hexagonal/test_architecture_diagnostics.py",
+      "tests/hexagonal/test_producer_capture.py",
+      "-q"
+    ],
+    "exit_status": 0,
+    "passed": 109,
+    "observed_summary": "109 passed in 4.68s",
+    "independent_request_cases": 19,
+    "scope": "Focused new request scenarios plus existing diagnostic, cache and producer contracts. Passing outcomes are execution evidence, not semantic evaluator quality."
+  },
+  "archived_pr71_packet_replay": {
+    "scope": "offline real HTTP protocol replay; not a live TypeSafe success",
+    "archive": "/workspace/scratch/150dce018256/ci-jev-recheck/43027628065.zip",
+    "archive_sha256": "84a4d5158687879c35e22f940b12dc7569b074565c7ce90188cb527cf662af91",
+    "original_state_bytes": 93234,
+    "projected_state_bytes": 48744,
+    "source_units_unchanged": 56,
+    "candidates": 3,
+    "tasks_completed": 9,
+    "provider_calls": 1,
+    "wire_request_bytes": [
+      58334
+    ],
+    "estimates": [
+      {
+        "method": "utf8_bytes_with_headroom",
+        "exact": false,
+        "bytes_per_token_estimate": 2.0,
+        "token_headroom": 0.2,
+        "request_bytes": 58334,
+        "largest_question_bytes": 49893,
+        "estimated_request_tokens": 29295,
+        "estimated_question_tokens": 25075,
+        "request_token_budget": 51200,
+        "question_token_budget": 25600
+      }
+    ],
+    "source_sha256": {
+      "scripts/architecture/requests.py": "55ad27661034193447187c5a2e868d6900441d7e114a147885e90d8cc5560fd0",
+      "scripts/architecture/cache.py": "008c0400f2e59430fd0485120aa61d295e8e99cc42be9a00c7ffe2a09023a161",
+      "scripts/architecture/diagnostics.py": "4645fd9f0b6edcfff9c2da71a53822cd29574726e9c6bf9a725d0c7c69ed9ea6",
+      "xorchestrate/adapters/evaluation.py": "42903411741c416d966a8e0f959b79857086337d6c8d1182fff8b630bafe677c"
+    },
+    "receipt_sha256": "cac2dd8c445257b770751a48dc44e6947fa44c2d0f7999a81b1835760bae9be3",
+    "script_sha256": "3256ba9023b569ee4cd8ff633997ca9244e8e4f353ca5475c94ff59c14e504e7",
+    "limitation": "Earlier local HTTP protocol receipt at its recorded source hashes. It does not establish a live provider success or semantic usefulness; later focused transport and interleaving repairs have separate witnesses here."
+  }
+}

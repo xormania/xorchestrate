@@ -9,6 +9,11 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- Jev diagnostics budget the complete serialized request, preserve complete
+  evidence while splitting oversized candidate batches, and reuse successful
+  partitions. Bounded transient retries share the request deadline; recognized
+  provider errors retain safe codes and actual HTTP attempt counts. See
+  [Jev execution](docs/jev-execution.md).
 - Jev diagnostics select changed behavior across configured architecture roles,
   retain complete before/after source and deletions, and connect contract wrappers
   to statically declared fixtures and subjects. Packets identify missing inputs

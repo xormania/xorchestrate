@@ -82,11 +82,14 @@ def test_real_http_diagnostics_run_on_pass_and_preserve_exact_evidence(tmp_path,
     wire = provider["requests"][0]
     assert wire["headers"]["Authorization"] == "Bearer private-fixture-credential"
     context = wire["payload"]["state"]
-    assert context["profile"] == report["profile"]
-    assert context["subject"] == report["subject"]
-    assert context["deterministic"]["coverage"] == report["coverage"]
+    relevant_roles = {item["role"] for item in context["sources"] + context["candidates"]}
+    assert context["profile"]["roles"] == {key: report["profile"]["roles"][key] for key in relevant_roles}
+    assert "subject" not in context and result["subject"] == report["subject"]
+    assert context["deterministic"]["limitations"] == report["coverage"]["limitations"]
     assert context["sources"][0]["path"] == "app/core.py"
     assert context["sources"][0]["source"] == (tmp_path / "app/core.py").read_text()
+    source_file = next(item for item in context["source_files"] if item["path"] == "app/core.py")
+    assert source_file["sha256"] == next(item["sha256"] for item in report["files"] if item["path"] == "app/core.py")
     assert "private-fixture-credential" not in json.dumps(result)
     assert "private-fixture-credential" not in json.dumps(wire["payload"])
 

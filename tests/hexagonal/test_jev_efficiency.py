@@ -4,7 +4,6 @@ from __future__ import annotations
 import hashlib
 import json
 import sys
-from collections import Counter
 from copy import deepcopy
 from pathlib import Path
 
@@ -214,13 +213,14 @@ def test_diagnose_retains_bounded_http_status_without_error_body_or_failed_cache
         result = diagnose(source_report(sources), source_root, options)
         assert result.get("provider_status") == http_status, "PROVIDER_HTTP_STATUS_RETAINED"
         assert result["status"] == "unavailable" and result["reason"] == "evaluation_unavailable"
-        assert result["assessments"] == [] and len(provider["requests"]) == 1
-        assert result["execution"]["provider_calls"] == 1
+        attempts = 3 if http_status == 529 else 1
+        assert result["assessments"] == [] and len(provider["requests"]) == attempts
+        assert result["execution"]["provider_calls"] == attempts
         assert marker not in json.dumps(result), "RAW_PROVIDER_BODY_NOT_RETAINED"
         assert list(cache_root.glob("*.json")) == [], "FAILED_HTTP_ATTEMPT_NOT_CACHED"
 
 
-def test_diagnose_compacts_omission_ledger_only_in_exact_provider_state(tmp_path):
+def test_diagnose_projects_relevant_evidence_and_retains_full_report_scope(tmp_path):
     sources, line, changed = measured_sources(tmp_path)
     report = source_report(sources)
     with http_choices() as provider:
@@ -231,22 +231,22 @@ def test_diagnose_compacts_omission_ledger_only_in_exact_provider_state(tmp_path
         assert result["status"] == "complete" and len(provider["requests"]) == 1
         wire = provider["requests"][0]["state"]
         compact, full = wire["source_scope"], result["source_scope"]
-        assert "omitted" not in compact and "excluded" not in compact and "omitted_count" in compact, "OMISSION_LEDGER_COMPACT_ON_WIRE"
+        assert not {"omitted", "excluded", "omitted_count", "omitted_sha256", "excluded_sha256"}.intersection(compact), "GLOBAL_BOOKKEEPING_ABSENT_FROM_MODEL_STATE"
         assert full["omitted"] and full["excluded"], "FULL_OMISSION_LEDGER_RETAINED"
-        for key in ("omitted", "excluded"):
-            encoded = json.dumps(full[key], ensure_ascii=False, sort_keys=True, allow_nan=False).encode()
-            assert compact[key + "_count"] == len(full[key])
-            assert compact[key + "_sha256"] == hashlib.sha256(encoded).hexdigest(), "OMISSION_LEDGER_DIGEST_BOUND"
-        assert compact["excluded_reasons"] == dict(Counter(item["reason"] for item in full["excluded"]))
-        assert {key: value for key, value in compact.items() if key not in {
-            "omitted_count", "omitted_sha256", "excluded_count", "excluded_sha256", "excluded_reasons"
-        }} == {key: value for key, value in full.items() if key not in {"omitted", "excluded"}}
+        assert compact["selected"] == full["selected"]
+        assert compact["source_bytes"] == sum(len(item["source"].encode()) for item in wire["sources"])
         assert wire["sources"][0]["source"] == changed
         assert all(item["path"] == "pkg/work.py" and item["truncated"] is False for item in wire["sources"])
         assert len(wire["candidates"]) == 1
         assert wire["candidates"][0]["path"] == "pkg/work.py" and wire["candidates"][0]["start_line"] == line
-        assert wire["profile"] == report["profile"] and wire["subject"] == report["subject"]
-        assert wire["deterministic"] == {key: report[key] for key in ("status", "summary", "findings", "coverage")}
+        represented = {item["role"] for item in wire["sources"] + wire["candidates"]}
+        assert wire["profile"]["roles"] == {key: report["profile"]["roles"][key] for key in represented}
+        assert "subject" not in wire and result["subject"] == report["subject"]
+        assert wire["deterministic"] == {"findings": report["findings"], "limitations": report["coverage"]["limitations"]}
+        source_files = {item["path"]: item for item in wire["source_files"]}
+        assert set(source_files) == set(compact["selected"]), "RELEVANT_FILE_IDENTITIES_BOUND"
+        for path, item in source_files.items():
+            assert item["sha256"] == next(row["sha256"] for row in report["files"] if row["path"] == path), "SOURCE_FILE_IDENTITY_RETAINED"
         assert result["evidence_context"] == wire, "EXACT_PROVIDER_STATE_RETAINED"
         encoded = json.dumps(wire, ensure_ascii=False, sort_keys=True, allow_nan=False).encode()
         assert result["context_sha256"] == hashlib.sha256(encoded).hexdigest(), "PROVIDER_STATE_DIGEST_BOUND"
