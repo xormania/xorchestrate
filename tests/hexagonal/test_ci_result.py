@@ -546,6 +546,29 @@ def test_ci_diagnostic_context_uses_the_actual_change_base():
     assert "git rev-parse" in command["run"] and "HEAD^" in command["run"]
 
 
+@pytest.mark.parametrize("malformed", ("judgment_list", "details_list"))
+def test_malformed_atomic_judgments_remain_invalid_advice_without_failing_ci(tmp_path, malformed):
+    needs, workflow, catalog = _complete_receipts(tmp_path)
+    document = _jev_report()
+    row = document["diagnostics"]["assessments"][0]
+    row.update(evidence_ids=["source-1"], supporting_evidence_ids=["source-1"], claim="A bounded source claim.",
+               applicable=True, sufficient_evidence=True,
+               judgments={"claim": {"details": {"probabilities": {"yes": 1, "no": 0, "insufficient_evidence": 0}}}})
+    path = tmp_path / "architecture-evidence/diagnostics.json"
+    _write(path, document)
+    assert _evaluate_complete(tmp_path, needs, workflow, catalog)["jev"]["status"] == "complete"
+    row["judgments"]["claim"] = [] if malformed == "judgment_list" else {"details": []}
+    _write(path, document)
+    escaped = None
+    try:
+        result = _evaluate_complete(tmp_path, needs, workflow, catalog)
+    except Exception as error:
+        escaped = type(error).__name__
+        result = None
+    assert escaped is None, "MALFORMED_ADVISORY_DATA_CANNOT_FAIL_REQUIRED_CI"
+    assert result["jev"]["status"] == "invalid" and result["status"] == "passed"
+
+
 @pytest.mark.parametrize("candidate_count", (11, 100))
 def test_supported_grounded_task_populations_survive_advisory_reporting(tmp_path, candidate_count):
     from scripts.architecture.context import build_context

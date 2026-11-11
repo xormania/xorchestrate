@@ -82,6 +82,12 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Added
 
+- Jev now asks evidence-addressed atomic questions at the source stage and adds
+  optional post-test guarantee support and failure triage. Current candidate and
+  lane identity, executed inventories and exact failure cases bind the advice;
+  missing evidence abstains, source spans remain reviewable, and deterministic
+  CI qualification stays unchanged when a lane or the provider fails.
+
 - `hosted` session adapter: a native session runs in a bridge host that
   Xorchestrate opens in the project's terminal host. It survives the server,
   can be attached to, and is reconnected (or resumed in a fresh terminal from

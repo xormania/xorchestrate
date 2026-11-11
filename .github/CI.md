@@ -192,6 +192,16 @@ selected/omitted source scope, and do not override deterministic violations or
 create requirements from findings. See
 [architecture enforcement](../docs/architecture-enforcement.md).
 
+The source stage asks separate applicability, sufficiency and contract questions
+against complete source packets. After deterministic qualification, `CI result`
+optionally installs the diagnostic dependencies and runs candidate-bound test
+evidence triage, including after failed test lanes. Selected assertions, their
+concrete bindings and matching execution details support advisory judgments;
+omitted cases and unscored evidence remain explicit. Setup or provider failure
+cannot change the deterministic result. Reports are retained with the aggregate
+evidence and summarized alongside it. See
+[test evidence triage](../docs/testing-framework.md) for selection limits.
+
 CI neither requests reviews nor merges branches. xor controls those decisions.
 
 ## Release workflow
