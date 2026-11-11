@@ -156,18 +156,28 @@ def send_signal(expected, number):
             os.close(descriptor)
 
 
-def stop_session(leader, grace, *, poll=0.02):
-    """Stop every member of ``leader``'s session: TERM, wait ``grace``, then KILL. Return whether none remain."""
+def stop_session(leader, grace, *, poll=0.02, straggler_grace=1.0):
+    """Stop ``leader``'s session in order. Return whether none of its members remain.
+
+    The terminal's own command gets the whole grace period first: TERM to the
+    leader alone, so it can stop its children itself. Members still left once
+    the leader has gone (or the grace has passed) get TERM, a short wait, then
+    KILL.
+    """
     current = _stat(leader.pid)
     if current is not None and current[2] != leader.started:
         return False  # The leader's pid was reused; its session id now names someone else's work.
-    for number in (signal.SIGTERM, signal.SIGKILL):
+    if send_signal(leader, signal.SIGTERM):
+        deadline = time.monotonic() + grace
+        while time.monotonic() < deadline and alive(leader):
+            time.sleep(poll)
+    for number, wait in ((signal.SIGTERM, straggler_grace), (signal.SIGKILL, 2.0)):
         members = session_members(leader)
         if not members:
             return True
         for member in members:
             send_signal(member, number)
-        deadline = time.monotonic() + (grace if number == signal.SIGTERM else 2.0)
+        deadline = time.monotonic() + wait
         while time.monotonic() < deadline and session_members(leader):
             time.sleep(poll)
     return not session_members(leader)

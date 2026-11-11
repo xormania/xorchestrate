@@ -283,6 +283,11 @@ class TerminalHost(Protocol):
     def close_terminal(self, name: str, grace: float | None = None) -> TerminalClosure:
         """Stop and forget one terminal, allowing ``grace`` seconds (adapter default when ``None``) before forcing.
 
+        Orderly: the terminal's own command is asked to stop first and gets
+        the whole grace to stop its own work. As soon as it is gone, or the
+        grace ends, whatever remains is terminated, given a short wait, then
+        forced. ``cleanup_verified`` is true only when everything is gone.
+
         Idempotent for a known name until forgotten.
         """
         ...
