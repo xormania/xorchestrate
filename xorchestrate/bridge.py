@@ -1,6 +1,7 @@
 """Run an operator-owned native conversation for later application attachment."""
 import argparse
 import json
+import os
 import signal
 import threading
 from copy import deepcopy
@@ -25,6 +26,18 @@ def host_configuration(config, driver):
     return host_config
 
 
+def _specification(args):
+    """The native start specification: from the private file when given, else the command-line JSON."""
+    if args.specification_file is None:
+        return json.loads(args.specification)
+    descriptor = os.open(args.specification_file, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    with os.fdopen(descriptor, encoding="utf-8") as stream:
+        metadata = os.fstat(stream.fileno())
+        if metadata.st_uid != os.getuid() or metadata.st_mode & 0o077:
+            raise SystemExit("The specification file must be private to this user (mode 0600).")
+        return json.loads(stream.read(1_048_576))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", required=True)
@@ -33,6 +46,9 @@ def main():
     parser.add_argument("--transport", choices=("unix", "fifo"), default="unix")
     parser.add_argument("--state", help="Private host state file; enables durable effect recovery and native resume after host restart.")
     parser.add_argument("--specification", default="{}", help="Native start specification as JSON.")
+    parser.add_argument("--specification-file",
+                        help="A private file (this user's, mode 0600) holding the native start specification as "
+                             "JSON; keeps it off the command line. Takes precedence over --specification.")
     parser.add_argument("--application-tools", action="store_true", help="Expose the active application's tool catalog to this native conversation.")
     args = parser.parse_args()
     config, base = load_config(args.config)
@@ -46,7 +62,7 @@ def main():
     with build(host_config, base) as runtime:
         capabilities = runtime.application.describe() if args.application_tools else ()
         host = SessionBridgeHost(runtime.application.sessions[args.driver], args.endpoint,
-            json.loads(args.specification), capabilities, {"transport": args.transport, "state_path": args.state},
+            _specification(args), capabilities, {"transport": args.transport, "state_path": args.state},
             state_engine=runtime.application.state_engine)
         try:
             print(json.dumps({"ready": True, "endpoint": str(host.endpoint), "host_id": host.host_id,

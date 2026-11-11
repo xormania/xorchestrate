@@ -205,7 +205,9 @@ are unchanged.
   host's socket.
 - **Start.** The driver opens the terminal and retries attaching while it runs,
   up to `attach_timeout` (default 30 seconds). A failed or timed-out start
-  returns the terminal's recent output and the log location. A `hosted_terminal`
+  returns a safe summary and the location of the session's private log; what
+  the terminal printed stays in that log. The command line carries only paths
+  and names: the native specification is passed in a private file. A `hosted_terminal`
   observation records whether the session survives the server, and gives the
   attach command when the host is interactive.
 - **`stop_session`** detaches and closes the terminal. If cleanup cannot be

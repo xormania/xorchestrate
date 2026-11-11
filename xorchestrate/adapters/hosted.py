@@ -45,31 +45,42 @@ from .process import positive_number, resolve_repo
 
 NATIVE = "native"
 MAX_SOCKET_PATH_BYTES = 107
-OUTPUT_LINES = 40
+ENDPOINT_RELEASE_WAIT = 5.0
+"""How long a just-killed bridge host's endpoint may stay bound before a reopen refuses."""
 
 
-def _remove_stale_endpoint(endpoint):
-    """Remove ``endpoint`` only if it is a socket of this user that nothing listens on (its host is gone)."""
-    try:
-        metadata = os.lstat(endpoint)
-    except FileNotFoundError:
-        return
-    if not stat.S_ISSOCK(metadata.st_mode) or metadata.st_uid != os.getuid():
-        raise OrchestrationError("The hosted session's endpoint path is occupied by something else.",
-                                 "terminal_host_unavailable", {"outcome": "not_started"})
-    probe = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    probe.settimeout(1)
-    try:
-        probe.connect(str(endpoint))
-    except (ConnectionRefusedError, FileNotFoundError):
-        Path(endpoint).unlink(missing_ok=True)
-        return
-    except OSError:
-        pass
-    finally:
-        probe.close()
-    raise OrchestrationError("Something still listens on the hosted session's endpoint.", "terminal_host_unavailable",
-                             {"outcome": "not_started"})
+def _remove_stale_endpoint(endpoint, release_wait=ENDPOINT_RELEASE_WAIT):
+    """Remove ``endpoint`` once it is a socket of this user that nothing listens on (its host is gone).
+
+    Called only after the session's terminal is verified gone. A bridge host
+    that was just killed can still hold its listening socket for a moment
+    while the kernel tears the process down, so a socket that still answers
+    is given up to ``release_wait`` seconds to be released before refusing.
+    """
+    deadline = time.monotonic() + release_wait
+    while True:
+        try:
+            metadata = os.lstat(endpoint)
+        except FileNotFoundError:
+            return
+        if not stat.S_ISSOCK(metadata.st_mode) or metadata.st_uid != os.getuid():
+            raise OrchestrationError("The hosted session's endpoint path is occupied by something else.",
+                                     "terminal_host_unavailable", {"outcome": "not_started"})
+        probe = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        probe.settimeout(1)
+        try:
+            probe.connect(str(endpoint))
+        except (ConnectionRefusedError, FileNotFoundError):
+            Path(endpoint).unlink(missing_ok=True)
+            return
+        except OSError:
+            pass
+        finally:
+            probe.close()
+        if time.monotonic() >= deadline:
+            raise OrchestrationError("Something still listens on the hosted session's endpoint.",
+                                     "terminal_host_unavailable", {"outcome": "not_started"})
+        time.sleep(0.05)
 
 
 def _terminal_name(entry, key):
@@ -249,9 +260,12 @@ class HostedSessionDriver:
         host = self._require_host()
         directory, endpoint = self._prepare(key)
         name = _terminal_name(self.entry, key)
+        # Only paths and names on the command line (readable by other local users); the native specification,
+        # which can carry a work goal, goes in a private file the bridge host reads.
+        self._write_private(directory / "specification.json", native_specification)
         argv = [sys.executable, "-P", "-m", "xorchestrate.bridge", "--config", str(directory / "config.json"),
                 "--driver", NATIVE, "--endpoint", str(endpoint), "--state", str(directory / "state.json"),
-                "--specification", json.dumps(native_specification)]
+                "--specification-file", str(directory / "specification.json")]
         if self.application_tools:
             argv.append("--application-tools")
         terminal = host.open_terminal(name, TerminalCommand(tuple(argv), str(directory), tuple(os.environ.items())),
@@ -284,12 +298,10 @@ class HostedSessionDriver:
                     raise
             current = next((item for item in host.terminals() if item.name == terminal.name), None)
             if current is None or not current.running or time.monotonic() >= deadline:
+                # A safe summary and where the private log is: what the terminal printed stays in that log
+                # (it is not provider error data, so it never enters the public response or preserved outcome).
                 details = {"outcome": "not_started", "log": str(directory / "terminal.log"),
                            "terminal_running": bool(current and current.running)}
-                try:
-                    details["recent_output"] = host.recent_output(terminal.name, OUTPUT_LINES)
-                except OrchestrationError:
-                    pass
                 if current is not None:
                     host.close_terminal(terminal.name)
                 reason = "exited" if current is None or not current.running else "did not accept a connection in time"
