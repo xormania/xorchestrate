@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import select
@@ -44,6 +45,23 @@ ENDPOINT_PREFIX = "xa-"
 PLACEMENT_NAME = "acceptance"
 
 
+def run_endpoint(run_directory, prefix=ENDPOINT_PREFIX):
+    """The private endpoint directory of a run's terminal host, derived from the run's own directory.
+
+    Short (Unix socket paths are capped near 107 bytes) and re-derived wherever it is used, so a run's files,
+    which its harness can rewrite, cannot point attach or close at another run's endpoint.
+    """
+    digest = hashlib.sha256(os.fsencode(str(Path(run_directory).resolve()))).hexdigest()[:24]
+    return Path(tempfile.gettempdir()) / f"{prefix}{digest}"
+
+
+def create_endpoint(run_directory, prefix=ENDPOINT_PREFIX):
+    """Create the run's endpoint directory, private; anything already at that path is refused."""
+    path = run_endpoint(run_directory, prefix)
+    os.mkdir(path, 0o700)
+    return path
+
+
 def _private_directory(path):
     try:
         info = Path(path).lstat()
@@ -56,8 +74,9 @@ def placement_problem(descriptor):
     """Why a recorded placement is not this run's own private location (``None`` when it is).
 
     The host lives at ``<run>/terminal-host`` beside the descriptor and its
-    endpoint in a private ``xa-*`` directory of the temporary root, as the
-    acceptance runner creates them. Anything else is refused before a host is built.
+    endpoint in the private directory derived from the run's own directory
+    (``run_endpoint``), as the acceptance runner creates them. Anything else,
+    another run's endpoint included, is refused before a host is built.
     """
     try:
         placement = descriptor["host"]["placement"]
@@ -69,8 +88,7 @@ def placement_problem(descriptor):
     if name != PLACEMENT_NAME or location != run / "terminal-host":
         return "the host location is not this run's own"
     endpoint = socket.parent
-    if (endpoint.parent != Path(tempfile.gettempdir()) or not endpoint.name.startswith(ENDPOINT_PREFIX)
-            or socket.name != "host.sock" or not _private_directory(endpoint)):
+    if endpoint != run_endpoint(run) or socket.name != "host.sock" or not _private_directory(endpoint):
         return "the host endpoint is not this run's private directory"
     return None
 

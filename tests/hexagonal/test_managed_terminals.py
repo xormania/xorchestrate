@@ -170,6 +170,7 @@ def test_public_attach_reaches_nested_native_prompt_and_detaches_without_stoppin
 
 
 def _descriptor(directory, endpoint, **fields):
+    endpoint = endpoint(directory) if callable(endpoint) else endpoint
     from scripts.testkit.adapters.ownership import processes
 
     me = processes()[os.getpid()][0]
@@ -188,12 +189,21 @@ def _descriptor(directory, endpoint, **fields):
 
 @pytest.fixture
 def endpoint():
+    """The private endpoint a run's directory derives, created as the acceptance runner creates it."""
     import shutil as files
-    import tempfile
 
-    path = Path(tempfile.mkdtemp(prefix="xa-"))
-    yield path
-    files.rmtree(path, ignore_errors=True)
+    made = []
+
+    def derive(run, prefix=terminals.ENDPOINT_PREFIX):
+        path = terminals.run_endpoint(run, prefix)
+        if path not in made:
+            path.mkdir(mode=0o700)
+            made.append(path)
+        return path
+
+    yield derive
+    for path in made:
+        files.rmtree(path, ignore_errors=True)
 
 
 def test_host_descriptors_are_schema_two_and_older_ones_are_refused_with_a_reason(tmp_path, endpoint):
@@ -229,7 +239,7 @@ def test_a_planted_descriptor_is_neither_offered_nor_run(tmp_path, endpoint):
         terminals.attach(planted, host_for=host_for)
     assert not marker.exists(), "an argv read from a descriptor was executed"
     assert calls and calls[0][1]["location"] == str(run / "terminal-host"), "attach asks the host, never the file"
-    for placement in ({"name": "acceptance", "location": str(tmp_path / "elsewhere"), "socket": str(endpoint / "host.sock")},
+    for placement in ({"name": "acceptance", "location": str(tmp_path / "elsewhere"), "socket": str(endpoint(run) / "host.sock")},
                       {"name": "acceptance", "location": str(run / "terminal-host"), "socket": str(tmp_path / "host.sock")},
                       {"name": "acceptance", "location": str(run / "terminal-host"), "socket": "/tmp/host.sock"}):
         moved = _descriptor(run, endpoint, host={"selection": None, "placement": placement})
@@ -243,9 +253,6 @@ def test_a_planted_descriptor_is_neither_offered_nor_run(tmp_path, endpoint):
 def test_a_rewritten_host_selection_is_refused_before_anything_is_imported_or_run(tmp_path, endpoint, monkeypatch,
                                                                                planted):
     """The harness can rewrite the run's files: attach and ownerless close take only a built-in host name from them."""
-    import shutil as files
-    import tempfile
-
     from scripts.testkit import operator_cli
     from scripts.testkit.operator_composition import ENDPOINT_PREFIX, close_without_supervisor
 
@@ -269,13 +276,42 @@ def test_a_rewritten_host_selection_is_refused_before_anything_is_imported_or_ru
 
     closing = tmp_path / "closing"
     closing.mkdir(mode=0o700)
-    closing_endpoint = Path(tempfile.mkdtemp(prefix=ENDPOINT_PREFIX))
-    try:
-        (closing / "plan.json").write_text(json.dumps({"terminal_host": selection,
-                                                       "terminal_endpoint": str(closing_endpoint)}))
-        result = close_without_supervisor(closing, {})
-    finally:
-        files.rmtree(closing_endpoint, ignore_errors=True)
+    endpoint(closing, ENDPOINT_PREFIX)
+    (closing / "plan.json").write_text(json.dumps({"terminal_host": selection,
+                                                   "terminal_endpoint": str(terminals.run_endpoint(closing,
+                                                                                                   ENDPOINT_PREFIX))}))
+    result = close_without_supervisor(closing, {})
     assert not marker.exists() and "planted_host" not in sys.modules, "ownerless close built a host the file chose"
     if planted == "factory":
         assert not result["cleanup"]["verified"] and result["cleanup"].get("errors"), result
+
+
+@pytest.mark.parametrize("entry", ["attach", "close"])
+def test_a_rewritten_placement_naming_another_runs_endpoint_is_refused(tmp_path, endpoint, monkeypatch, entry):
+    """The placement is re-derived from the run's own directory: another run's endpoint is neither attached nor closed."""
+    from scripts.testkit import operator_cli
+    from scripts.testkit.adapters import terminal_selection
+    from scripts.testkit.operator_composition import ENDPOINT_PREFIX, close_without_supervisor
+
+    built = []
+    monkeypatch.setattr(terminal_selection, "build", lambda *args, **options: built.append(options))
+    run, other = tmp_path / "run", tmp_path / "other"
+    for directory in (run, other):
+        directory.mkdir(mode=0o700)
+    if entry == "attach":
+        foreign = endpoint(other)
+        (foreign / "kept").write_text("another run's")
+        endpoint(run)  # this run's own endpoint exists too
+        descriptor = _descriptor(run, foreign)
+        assert not terminals.validate(descriptor) and terminals.discover(run) == []
+        with pytest.raises(ValueError):
+            terminals.attach(descriptor, host_for=operator_cli._attach_host)
+    else:
+        foreign = endpoint(other, ENDPOINT_PREFIX)
+        (foreign / "kept").write_text("another run's")
+        (run / "plan.json").write_text(json.dumps({"terminal_host": {"adapter": "tmux"},
+                                                   "terminal_endpoint": str(foreign)}))
+        result = close_without_supervisor(run, {})
+        assert "endpoint_not_owned" in result["cleanup"].get("errors", []), result
+    assert built == [], "no host was built at another run's placement"
+    assert (foreign / "kept").exists(), "nothing at another run's endpoint was touched"

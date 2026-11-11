@@ -6,7 +6,6 @@ import math
 import os
 import shutil
 import sys
-import tempfile
 from pathlib import Path
 
 from scripts.testkit.adapters import terminal_selection, terminals
@@ -65,8 +64,8 @@ def main(argv=None):
     if args.config is not None:
         command.extend(("--config", str(args.config.expanduser().resolve()), "--driver", args.driver))
     root = Path(__file__).resolve().parents[2]
-    # A short private directory for the host's endpoint: Unix socket paths are capped near 107 bytes.
-    endpoint = tempfile.mkdtemp(prefix="xa-")
+    # A short private directory for the host's endpoint, derived from the run (attach re-derives it).
+    endpoint = terminals.create_endpoint(run_dir)
     try:
         placement = {"name": terminals.PLACEMENT_NAME, "location": run_dir / "terminal-host", "socket": Path(endpoint) / "host.sock"}
         selected = terminal_selection.build(selection, owned=True, **placement)

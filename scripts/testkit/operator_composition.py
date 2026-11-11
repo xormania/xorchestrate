@@ -17,7 +17,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from .adapters import terminal_selection
+from .adapters import terminal_selection, terminals
 from .adapters.configuration import isolated_config
 from .adapters.diagnostics import failure_lines
 from .adapters.evidence import candidate_identity, digest, now, write_json
@@ -80,8 +80,8 @@ def prepare_run(settings, *, parent=None):
                     parent_run_id=Path(parent).name if parent else None,
                     selected_check_ids=[check.name for check in checks], created_at=now(),
                     keep_after_run=bool(settings.get("keep_after_run")),
-                    # Short and private: the host's Unix socket path is capped near 107 bytes.
-                    terminal_endpoint=tempfile.mkdtemp(prefix=ENDPOINT_PREFIX))
+                    # Short and private, derived from the run directory; close re-derives it.
+                    terminal_endpoint=str(terminals.create_endpoint(directory, ENDPOINT_PREFIX)))
     dependencies = {}
     for package in ("jsonschema", "pytest", "ruff"):
         try:
@@ -262,16 +262,16 @@ def remove_endpoint(path):
     return True
 
 
-def endpoint_problem(directory, socket):
-    """Why a recorded endpoint is not this run's own private one (``None`` when it is), read without following links.
+def endpoint_problem(directory, plan):
+    """Why the run's endpoint cannot be used (``None`` when it can), read without following links.
 
-    A managed run's endpoint is a private ``xp-*`` directory of the temporary root (or, before that, the run's
-    ``terminal-endpoint``); its socket, if any is left, is a socket and no link to another one.
+    The endpoint is derived from the run's own directory; a ``plan.json`` naming any other (the run's harness
+    can rewrite it) is refused. If anything is left there, it is a private directory of this user and its
+    socket is a socket, no link to another one.
     """
+    socket = host_placement(directory, plan)["socket"]
     endpoint = socket.parent
-    if socket.name != "host.sock" or not (
-            endpoint == Path(directory) / "terminal-endpoint"
-            or (endpoint.parent == Path(tempfile.gettempdir()) and endpoint.name.startswith(ENDPOINT_PREFIX))):
+    if plan.get("terminal_endpoint") not in (None, str(endpoint)):
         return "endpoint_not_owned"
     try:
         info = endpoint.lstat()
@@ -288,9 +288,10 @@ def endpoint_problem(directory, socket):
 
 
 def host_placement(directory, plan):
-    """Where a managed run's terminal host lives: its state under the run, its endpoint in a short private directory."""
-    endpoint = Path(plan.get("terminal_endpoint") or directory / "terminal-endpoint")
-    return {"name": "proof", "location": directory / "terminal-host", "socket": endpoint / "host.sock"}
+    """Where a managed run's terminal host lives: its state under the run, its endpoint in a short private
+    directory derived from the run directory (never read from ``plan.json``)."""
+    endpoint = terminals.run_endpoint(directory, ENDPOINT_PREFIX)
+    return {"name": "proof", "location": Path(directory) / "terminal-host", "socket": endpoint / "host.sock"}
 
 
 def managed_worker(directory, plan):
@@ -323,7 +324,7 @@ def close_without_supervisor(directory, state):
     # The run's harness can rewrite plan.json: a built-in host name only, at an endpoint that is still the run's own.
     try:
         selection = terminal_selection.recorded(plan.get("terminal_host"))
-        problem = endpoint_problem(directory, placement["socket"])
+        problem = endpoint_problem(directory, plan)
     except ValueError:
         selection, problem = None, "terminal_host_refused"
     selected = None if problem else terminal_selection.build(selection, owned=not keep, **placement)
@@ -357,7 +358,7 @@ def close_without_supervisor(directory, state):
         if not survivors:
             break
     remaining = processes_naming(directory)
-    if not remove_endpoint(placement["socket"].parent):
+    if not remove_endpoint(placement["socket"].parent):  # the derived one: never what the plan names
         errors.append("endpoint_not_owned")
     cleanup = {"verified": not remaining and not errors and not placement["socket"].exists(),
                "stopped_processes": len(before), "remaining_processes": len(remaining)}
