@@ -198,6 +198,45 @@ are unchanged.
 - **`detached-process`** keeps processes running past the controller, but
   there is no terminal to attach to.
 
+## Recovering after a container or machine failure
+
+A container failure or a reboot loses every process at once: the server, the
+terminal host (a multiplexer server, detached processes), each hosted session's
+bridge host, and the harnesses they run. Treat it as total loss of processes.
+
+**What survives** is the Xorchestrate home, which must be on persistent storage:
+
+- the project's store (sessions, work, the effect journal);
+- each hosted session's private directory (`hosted` under the project's data
+  directory), with its bridge state file, its generated host configuration and
+  its terminal log;
+- the server's records under `<home>/servers` (discovery, terminal placement
+  and receipt) and its log.
+
+**What does not survive:** processes, terminals and their unsaved output,
+sockets, and anything a harness held only in memory. Files in the runtime or
+socket location may or may not survive. Stale sockets, lock files and records
+whose process no longer exists are normal starting states.
+
+**To recover:**
+
+1. Run `xorchestrate up` (or connect). A stale socket the host owns is removed
+   once nothing answers on it. A record whose process is gone is set aside, and
+   the server starts in a fresh terminal.
+2. Run `xorchestrate status`. Under `sessions_needing_reconnect` it lists the
+   sessions that were live and that the new server does not hold, each with the
+   call to make.
+3. Make that call. For a hosted session it is `reconnect_session` with
+   `resume_session_id`. The hosted adapter checks that the old terminal is
+   gone, removes its own stale endpoint, reopens the terminal with the same
+   state so the bridge resumes the native conversation, and reconnects.
+   Nothing is reconnected automatically.
+
+**What stays uncertain:** effects that were in flight at the failure. Their
+outcome is unknown; they are not replayed or re-sent, and they stay in the
+effect journal for reconciliation (`resolve_operation`). A native driver
+without resume cannot continue its conversation: start a fresh session.
+
 ## Known limitations
 
 - `doctor` probes readiness at a placement under the home's server directory,
