@@ -3,8 +3,10 @@
 Each terminal is one command started in a new session with its output appended
 to a private log. By default it outlives the controller and a later controller
 adopts it by process identity (pid, start time, boot, owner); with the
-``owned`` option every terminal stops when the controller closes, and on
-Linux also when the controller dies.
+``owned`` option an orderly close stops and verifies everything. If the
+controller is killed outright, each terminal's leader is killed through the
+Linux parent-death signal, but a member that detached from its session can
+survive.
 
 Options: ``name`` (the host name, required), ``location`` (private directory
 for logs of terminals opened without one, required), ``socket`` (accepted
@@ -24,7 +26,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ..model import OrchestrationError
-from ..ports import HostedTerminal, TerminalClosure
+from ..ports import HostedTerminal, InventoryItem, TerminalClosure
 from . import terminal_support as support
 from .local_socket import open_private_file
 from .process import positive_integer, positive_number
@@ -142,6 +144,9 @@ class DetachedProcessHost:
             self._known(name)
         raise OrchestrationError("Detached-process terminals cannot be attached to.", "terminal_operation_unsupported")
 
+    def attach_instruction_for(self, receipt):
+        raise OrchestrationError("Detached-process terminals cannot be attached to.", "terminal_operation_unsupported")
+
     def close_terminal(self, name, grace=None):
         terminal = self._known(name)
         grace = support.check_grace(grace, self.grace)
@@ -149,7 +154,7 @@ class DetachedProcessHost:
         observation = self._observe(terminal)
         del self._terminals[name]
         if (self._recorded(name) or (None,))[0] == terminal.leader:
-            (self.location / "terminals" / f"{name}.json").unlink(missing_ok=True)
+            self._forget_record(name, terminal.log)
         return TerminalClosure(observation, verified and not support.alive(terminal.leader))
 
     def adopt(self, receipt):
@@ -189,21 +194,69 @@ class DetachedProcessHost:
         self._terminals[name] = terminal
         return self._observe(terminal)
 
+    def inventory(self):
+        items = []
+        for name in self._record_names():
+            recorded = self._recorded(name)
+            if recorded is None:
+                continue
+            held = self._terminals.get(name)
+            items.append(InventoryItem(name, support.alive(recorded[0]),
+                                       held is not None and held.leader == recorded[0]))
+        return items
+
+    def sweep(self):
+        swept = []
+        for name in self._record_names():
+            recorded = self._recorded(name)
+            if recorded is None or support.alive(recorded[0]):
+                continue
+            held = self._terminals.get(name)
+            if held is not None and held.leader == recorded[0]:
+                continue
+            self._forget_record(name, recorded[1])
+            swept.append(name)
+        if not self._record_names():
+            self._remove_empty_location()  # Nothing left: the host ends, like the multiplexer's server.
+        return swept
+
+    def _remove_empty_location(self):
+        for directory in (self.location / "terminals", self.location):
+            try:
+                directory.rmdir()  # Only when empty: a caller's own files are never removed.
+            except OSError:
+                pass
+
+    def _record_names(self):
+        records = self.location / "terminals"
+        if not records.is_dir():
+            return []
+        return sorted(path.stem for path in records.glob("*.json") if support.NAME.fullmatch(path.stem))
+
+    def _forget_record(self, name, log):
+        """Remove the host's record of ``name`` and the log the host itself chose for it (a caller's log is kept)."""
+        (self.location / "terminals" / f"{name}.json").unlink(missing_ok=True)
+        if Path(log) == self.location / f"{name}.log":
+            Path(log).unlink(missing_ok=True)
+
     def shutdown(self):
         for name in list(self._terminals):
             self.close_terminal(name)
-        records = self.location / "terminals"
-        if records.is_dir():
-            # Terminals other controllers opened here: stop each recorded process, fenced by its identity.
-            for path in records.glob("*.json"):
-                leader = (self._recorded(path.stem) or (None,))[0]
-                if leader is not None and leader.boot_id == support.boot_id():
-                    support.stop_session(leader, self.grace)
-                path.unlink(missing_ok=True)
+        # Terminals other controllers opened here: stop each recorded process, fenced by its identity.
+        for name in self._record_names():
+            recorded = self._recorded(name)
+            if recorded is None:
+                continue
+            if recorded[0].boot_id == support.boot_id():
+                support.stop_session(recorded[0], self.grace)
+            self._forget_record(name, recorded[1])
+        self._remove_empty_location()
 
     def close(self):
+        """Release this controller. Owned: stop only this controller's own terminals, never other controllers'."""
         if self.owned:
-            self.shutdown()
+            for name in list(self._terminals):
+                self.close_terminal(name)
         else:
             for terminal in self._terminals.values():
                 if terminal.process is not None:

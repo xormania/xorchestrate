@@ -33,7 +33,7 @@ INTERNAL_KINDS = {"state_engine", "telemetry"} | NESTED
 # Driving-side client transport, the new pull request delivery ports and the new terminal host port stay in
 # xorchestrate: they are still evolving and not yet published.
 LOCAL_PORTS = {"PeerIdentity", "ClientConnection", "ClientTransport", "PullRequestHost", "PullRequestWorkspace",
-               "AttachInstruction", "HostedTerminal", "TerminalClosure", "TerminalCommand", "TerminalHost"}
+               "AttachInstruction", "HostedTerminal", "InventoryItem", "TerminalClosure", "TerminalCommand", "TerminalHost"}
 # Selectable, defined locally, not yet published: a kind whose port is one of LOCAL_PORTS.
 LOCAL_KINDS = {"terminal_host"}
 

@@ -18,6 +18,7 @@ import signal
 import subprocess
 import sys
 import threading
+import time
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -269,6 +270,8 @@ def _overrides(tracked):
 
 
 SERVER_TERMINAL = "server"
+SERVER_EXIT_WAIT = 5.0
+"""How long ``down`` lets a stopped server's process end on its own before closing its terminal."""
 
 
 class ServerTerminals:
@@ -283,10 +286,14 @@ class ServerTerminals:
     def __init__(self, files, environ=None):
         self.files, self.environ = files, environ
         self.active = None
+        self._placement = None
 
     def _open_host(self, placement):
+        if self.active is not None and self._placement != placement:
+            self.close()  # Another placement is another host: never act on one through the other.
         if self.active is None:
             self.active = Services(Home.locate(self.environ)).terminal_host(placement)
+            self._placement = dict(placement)
         return self.active.host
 
     def adopt(self):
@@ -307,26 +314,49 @@ class ServerTerminals:
             raise
 
     def __call__(self, command, log, cwd):
+        """Launch the server (``ensure_server`` calls this holding the start lock, with the instance lock free)."""
         if self.adopt() is not None:
             # No server holds the instance lock, so whatever is left in the terminal is finished or stuck.
             self.active.host.close_terminal(SERVER_TERMINAL)
             self.files.remove_terminal_record()
+        self.sweep()  # Exited terminals no server holds (the instance lock is free under the start lock).
         placement = self.files.ensure().terminal_placement(self.environ)
-        if self.active is not None and self.active.host.name != placement["name"]:
-            self.close()
-        host = self._open_host(placement)
+        host = self._open_host(placement)  # Reopens the host when the placement changed since the last launch.
         terminal = host.open_terminal(SERVER_TERMINAL, TerminalCommand(tuple(command), cwd or os.getcwd(),
                                                               tuple(os.environ.items())), log=str(log))
         self.files.write_terminal_record(placement, terminal.receipt)
         return _ServerLaunch(host)
 
     def finish(self):
-        """After the server stopped: close its terminal and forget the record. Return whether one was closed."""
-        closed = self.adopt() is not None
+        """After the server stopped: close its terminal, sweep exited ones and forget the record. Return whether closed."""
+        terminal = self.adopt()
+        deadline = time.monotonic() + SERVER_EXIT_WAIT
+        while terminal is not None and terminal.running and time.monotonic() < deadline:
+            # The server released its instance lock just before its process ends: let it finish on its own.
+            time.sleep(0.05)
+            terminal = next((item for item in self.active.host.terminals() if item.name == SERVER_TERMINAL), None)
+        if terminal is not None and not terminal.running:
+            terminal = self._readopt()
+        closed = terminal is not None
         if closed:
             self.active.host.close_terminal(SERVER_TERMINAL)
+        self.sweep()
         self.files.remove_terminal_record()
         return closed
+
+    def _readopt(self):
+        """Adopt the server's terminal afresh, so a host that keeps no exited process reports nothing to close."""
+        self.close()
+        return self.adopt()
+
+    def placement(self):
+        """The recorded placement, else the one the launcher would compute: where this project's host is."""
+        record = self.files.read_terminal_record()
+        return record["placement"] if record is not None else self.files.ensure().terminal_placement(self.environ)
+
+    def sweep(self):
+        """Remove exited terminals at the project's host that no controller here holds (call with no server running)."""
+        return self._open_host(self.placement()).sweep()
 
     def report(self):
         terminal = self.adopt()
@@ -339,6 +369,7 @@ class ServerTerminals:
         if self.active is not None:
             self.active.host.close()
             self.active = None
+            self._placement = None
 
 
 class _ServerLaunch:
@@ -352,11 +383,19 @@ class _ServerLaunch:
         return {"exit_code": terminal.exit_status, "exit_signal": terminal.exit_signal}
 
 
-def _server_terminal_report(files):
-    """``status``: the active terminal host and the server's terminal; a host problem is reported, not raised."""
+def _server_terminal_report(files, *, sweep=False):
+    """``status``: the active terminal host and the server's terminal; a host problem is reported, not raised.
+
+    With ``sweep`` (no server answered), exited terminals are swept first, under the start lock and only while no
+    server holds the instance lock, so nothing a live server holds is touched.
+    """
     terminals = ServerTerminals(files)
     try:
-        return terminals.report()
+        report = terminals.report()  # Adopts the server's own terminal, so the sweep leaves it for up or down.
+        swept = _sweep_under_start_lock(files, terminals) if sweep else None
+        if swept:
+            report["swept"] = swept
+        return report
     except OrchestrationError as error:
         return {**(terminals.active.report() if terminals.active else {}),
                 "error": {"code": error.code, "message": str(error)}}
@@ -377,17 +416,55 @@ def _server_attach(files):
         terminals.close()
 
 
-def _finish_server_terminal(files, reply):
-    """``down``: close the stopped server's terminal; mention it only when one was closed or could not be.
+def _finish_under_start_lock(files, terminals):
+    """Close the stopped server's terminal: ``True`` closed, ``False`` none, ``None`` not now (a server is up or starting).
 
-    Never while a server still holds the instance lock: its terminal is live work, even if its socket is gone.
+    Holds the start lock across the instance-lock check and the cleanup, as
+    ``ensure_server`` holds it across its own check and launch, so a
+    replacement server can never start in between and lose its terminal.
     """
-    if lock_is_held(files.lock):
-        return reply
+    starting = InstanceLock(files.ensure().start_lock)
+    if not starting.acquire(wait=SERVER_LOCK_WAIT):
+        return None
+    try:
+        if lock_is_held(files.lock):
+            return None  # A live server's terminal is its work, even if its socket is gone.
+        return terminals.finish()
+    finally:
+        starting.release()
+
+
+def _project_terminal_placement(instance_id):
+    """Where a project's terminal host is: its recorded placement, else the one the launcher would compute."""
+    files = ServerFiles.locate(server_identity(instance_id))
+    record = files.read_terminal_record()
+    if record is None:
+        return {"placement": files.ensure().terminal_placement(), "tracked": []}
+    return {"placement": record["placement"], "tracked": [SERVER_TERMINAL] if record.get("receipt") else []}
+
+
+def _sweep_under_start_lock(files, terminals):
+    """Sweep the project's host while no server runs or starts; ``None`` when that cannot be ensured now."""
+    starting = InstanceLock(files.ensure().start_lock)
+    if not starting.acquire(wait=SERVER_LOCK_WAIT):
+        return None
+    try:
+        if lock_is_held(files.lock):
+            return None
+        return terminals.sweep()
+    finally:
+        starting.release()
+
+
+def _finish_server_terminal(files, reply):
+    """``down``: close the stopped server's terminal; mention it only when one was closed, kept or could not be."""
     terminals = ServerTerminals(files)
     try:
-        if terminals.finish():
+        closed = _finish_under_start_lock(files, terminals)
+        if closed:
             reply["terminal"] = {"closed": True}
+        elif closed is None:
+            reply["terminal"] = {"closed": False, "reason": "a server is running or starting"}
     except OrchestrationError as error:
         reply["terminal"] = {"error": {"code": error.code, "message": str(error)}}
     finally:
@@ -414,7 +491,8 @@ def _server_command(args, tracked):
                                             cwd=str(instance.data_dir))
         except OrchestrationError as error:
             if error.code == "server_unavailable" and "exit_code" in error.details:
-                terminals.finish()  # The server's output is in its log; leave no exited terminal behind.
+                # The server's output is in its log; leave no exited terminal behind (unless a client restarted it).
+                _finish_under_start_lock(files, terminals)
             raise
         finally:
             terminals.close()
@@ -439,7 +517,7 @@ def _server_command(args, tracked):
         reply = {"running": False, "socket": None if target is None else str(target)}
         if args.command == "status":
             reply["overrides"] = _overrides(tracked)
-            reply["terminal_host"] = _server_terminal_report(files)
+            reply["terminal_host"] = _server_terminal_report(files, sweep=True)
         elif lock_is_held(files.lock):
             # A live server that cannot be reached: never stop it without its drain.
             _write({"error": {"code": "server_unreachable", "message":
@@ -552,7 +630,7 @@ def _operator_command(args):
     elif args.command == "approve":
         report = operations.approve(args.path or args.project)
     else:
-        report = doctor(args.project)
+        report = doctor(args.project, terminal_placement=_project_terminal_placement)
         _write(report, sys.stdout)
         return 0 if report["ok"] else 1
     _write(report, sys.stdout)

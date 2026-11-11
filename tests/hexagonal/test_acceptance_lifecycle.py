@@ -220,7 +220,8 @@ def test_pass_requires_worker_exit_and_scenario_receipt(tmp_path, receipt, exit_
     assert (tmp_path / "pane.txt").exists()
     descriptor = json.loads((tmp_path / "terminal.json").read_text())
     assert descriptor["schema_version"] == 2 and descriptor["kind"] == "terminal_host", descriptor
-    assert descriptor["attach"]["argv"] and descriptor["receipt"], descriptor
+    assert descriptor["receipt"] and "placement" in descriptor["host"], descriptor
+    assert "attach" not in descriptor, "nothing executable is recorded"
 
 
 @real_tmux

@@ -18,6 +18,8 @@ Every check receives a ``subject`` (see ``tests.hexagonal.support.terminal_host`
   of identity evidence changed.
 - ``subject.run_attach(argv, text)`` runs an attach command as an operator's
   terminal would, until ``text`` is seen, then ends that client; true if seen.
+- ``subject.look(host_name, receipt)`` calls ``attach_instruction_for`` from a
+  separate controller process and returns the argv, or the refusal's code.
 - ``subject.additions`` names the variables the adapter declares it adds.
 - ``subject.crash(host_name, terminal_name, command)`` opens a terminal from a
   separate controller process that is then killed outright, and returns the
@@ -243,6 +245,39 @@ def orderly_close_lets_the_command_stop_its_children(subject):
         lines = [line.strip() for line in subject.read_log(log).splitlines()]
         assert "term:child-signalled=False" in lines, f"the host signalled the command's children itself: {lines}"
     finally:
+        host.shutdown()
+
+
+def attach_by_receipt_takes_no_control(subject):
+    """Another process gets a working attach from a verified receipt; the terminal stays with its controller."""
+    host = subject.host("look")
+    other = subject.host("look-elsewhere")
+    victim = subject.unrelated()
+    try:
+        work = host.open_terminal("work", subject.programs.waits())
+        shows(subject, host, "work", "ready")
+        if not host.interactive:
+            assert subject.look("look", work.receipt) == "terminal_operation_unsupported"
+            return
+        argv = subject.look("look", work.receipt)
+        assert isinstance(argv, list) and argv, argv
+        assert subject.run_attach(argv, "ready"), "the looked-up attach shows the terminal"
+        assert observe(host, "work").running, "the terminal stays running under its controller"
+        assert [item.name for item in host.terminals()] == ["work"]
+        host.interrupt("work")  # still controlled by the controller that opened it
+        assert exited(subject, host, "work").exit_signal is not None
+        stale = work.receipt
+        host.close_terminal("work")
+        host.open_terminal("work", subject.programs.waits())
+        assert subject.look("look", stale) in ("terminal_identity_mismatch", "terminal_not_recoverable")
+        assert subject.look("look", subject.forge(stale, victim)) in ("terminal_identity_mismatch",
+                                                                     "terminal_not_recoverable")
+        foreign = other.open_terminal("work", subject.programs.waits()).receipt
+        assert subject.look("look", foreign) == "terminal_identity_mismatch"
+        assert victim.alive()
+    finally:
+        victim.stop()
+        other.shutdown()
         host.shutdown()
 
 
@@ -483,4 +518,4 @@ CHECKS =(readiness_never_raises, names_and_listing, exit_codes_and_output, input
           log_outlives_the_terminal, survives_a_killed_controller, an_empty_host_ends, shutdown_stops_everything,
           shutdown_reaches_terminals_of_other_controllers, adopt_refuses_a_process_the_host_did_not_launch,
           names_are_reusable_once_exited, an_unsafe_location_is_reported,
-          orderly_close_lets_the_command_stop_its_children)
+          orderly_close_lets_the_command_stop_its_children, attach_by_receipt_takes_no_control)

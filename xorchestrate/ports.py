@@ -52,7 +52,7 @@ __all__ = [
     "DeliveryScheduling", "Evaluator", "Guardrail", "HostingVisibility", "Identifier", "PeerIdentity",
     "PullRequestHost", "PullRequestWorkspace", "ReceiptPolicy", "RepositoryHosting", "ResumableSessionDriver", "RoutingPolicy", "SessionDriver",
     "SessionSelection", "StateStore", "TelemetrySink", "Transaction", "VersionControl", "WorktreeLocation",
-    "AttachInstruction", "HostedTerminal", "TerminalClosure", "TerminalCommand", "TerminalHost",
+    "AttachInstruction", "HostedTerminal", "InventoryItem", "TerminalClosure", "TerminalCommand", "TerminalHost",
 ]
 
 
@@ -201,6 +201,15 @@ class TerminalClosure:
 
 
 @dataclass(frozen=True)
+class InventoryItem:
+    """One terminal found at a host's location: its name, whether it runs, and whether this controller holds it."""
+
+    name: str
+    running: bool
+    held: bool
+
+
+@dataclass(frozen=True)
 class AttachInstruction:
     """How an operator joins a terminal interactively: a command and a human sentence."""
 
@@ -218,6 +227,11 @@ class TerminalHost(Protocol):
     terminal's identity first and refuses a terminal that is no longer the one
     it opened or adopted.
 
+    Lifecycle: a host has no process or endpoint before its first terminal
+    opens and ends when its last terminal is closed or swept (``shutdown`` ends
+    it at once). Exited terminals keep their status and output until closed,
+    swept or replaced. See ``docs/terminal-host.md`` (Lifecycle).
+
     Terminal names are letters, digits, ``.``, ``_`` and ``-`` (else
     ``invalid_arguments``). Other failures are ``OrchestrationError`` coded
     ``terminal_host_unavailable``, ``terminal_operation_unsupported`` (the
@@ -228,7 +242,13 @@ class TerminalHost(Protocol):
 
     name: str
     survives_controller: bool
-    """Whether terminals outlive the process that opened them (and so can be adopted)."""
+    """Whether terminals outlive the process that opened them (and so can be adopted).
+
+    When false, an orderly ``close``/``shutdown`` stops everything and
+    verifies it. If the controller is killed outright, the host and each
+    terminal's command are stopped, but a process that detached or ignores
+    hangup can survive.
+    """
     interactive: bool
     """Whether terminals accept ``send_input`` and have an ``attach_instruction``."""
 
@@ -280,6 +300,18 @@ class TerminalHost(Protocol):
         """
         ...
 
+    def attach_instruction_for(self, receipt: JSON) -> AttachInstruction:
+        """How to attach to the terminal ``receipt`` names, for a process that is not its controller.
+
+        The receipt is verified exactly as ``adopt`` verifies it, with the same
+        error codes for forged, stale, foreign or vanished receipts, but no
+        control is taken: the terminal is not added to ``terminals()`` and
+        stays with its controller. It works whatever ``survives_controller``
+        is (an owned host is alive while its controller is) and needs
+        ``interactive`` (else ``terminal_operation_unsupported``).
+        """
+        ...
+
     def close_terminal(self, name: str, grace: float | None = None) -> TerminalClosure:
         """Stop and forget one terminal, allowing ``grace`` seconds (adapter default when ``None``) before forcing.
 
@@ -304,10 +336,27 @@ class TerminalHost(Protocol):
         """
         ...
 
+    def inventory(self) -> list[InventoryItem]:
+        """Everything at the host's location, sorted by name, read only: no control is taken, no identifiers given."""
+        ...
+
+    def sweep(self) -> list[str]:
+        """Remove every exited terminal at the host that this controller does not hold; return their names.
+
+        Running terminals are never touched. The host ends when nothing is left.
+        Another live controller's holdings cannot be seen, so an exited terminal
+        it still holds is removed too; callers sweep when no such controller runs.
+        """
+        ...
+
     def shutdown(self) -> None:
         """Stop every terminal of this host and remove its private state."""
         ...
 
     def close(self) -> None:
-        """Release this controller's resources. Terminals survive iff ``survives_controller``."""
+        """Release this controller's resources. Terminals survive iff ``survives_controller``.
+
+        Only what this controller started or controls is ended; a controller
+        that merely asked ``attach_instruction_for`` leaves the host alone.
+        """
         ...
