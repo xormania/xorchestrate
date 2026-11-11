@@ -9,6 +9,11 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- Jev operational evaluation replays pinned engineering incidents and healthy
+  controls with separate tuning and heldout groups. Reports distinguish known
+  fault matches, independently supported findings, unknown costs and reviewer
+  time. CI runs full evaluations when their inputs change and a small fresh
+  health control otherwise. See [operational evaluation](docs/jev-operational.md).
 - Jev diagnostics budget the complete serialized request, preserve complete
   evidence while splitting oversized candidate batches, and reuse successful
   partitions. Bounded transient retries share the request deadline; recognized

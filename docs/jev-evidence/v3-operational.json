@@ -1,0 +1,303 @@
+{
+  "schema_version": 1,
+  "purpose": "Independent assertion detection for source/evidence binding and advisory interpretation.",
+  "original_cases": 28,
+  "deliberate_faults": 18,
+  "distinct_fault_detecting_cases": 28,
+  "calibration_method": "Existing test-kit RecordingRunner plus JUnit case/failure records; each source fault is applied only in a disposable snapshot. One full healthy run covers each target; the dirty-checkout supplement has its own healthy control. Fresh external bytecode caches are used per invocation.",
+  "faults": [
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_operational::test_pinned_fault_pairs_preserve_static_comparator_without_inventing_confirmation": "AssertionError: KNOWN_FAULT_MATCH_IS_NOT_CONFIRMATION\nassert 2 == 0"
+      },
+      "fault": "known_labels_promoted_to_confirmation",
+      "fault_exit": 1,
+      "file": "scripts/architecture/operational.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "b9bf70f751f9e18fee98d63445777821588c71d1b4e33689ee0f787e48d58f09",
+      "original_sha256": "c221a951031bb3d22d371feac7a610fd3657649ebd1f98599883a044e8eb2e9d",
+      "selector": "test_pinned_fault_pairs",
+      "patch": "--- scripts/architecture/operational.py\n\n+++ scripts/architecture/operational.py\n\n@@ -348,5 +348,5 @@\n\n                 confirmed |= mode == \"live\"\n     return {\"outcome\": outcome, \"grounded\": grounded, \"known_fault_match\": bool(match),\n-            \"confirmed\": bool(confirmed), \"unconfirmed\": bool(concerns) and not confirmed,\n+            \"confirmed\": bool(match), \"unconfirmed\": bool(concerns) and not confirmed,\n             \"disposition_status\": disposition, \"reviewer_minutes\": minutes, \"review_records\": review_records,\n             \"witnesses\": witnesses}"
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_operational::test_heldout_packets_withhold_labels_discovery_and_dispositions": "AssertionError: OPERATIONAL_LABELS_WITHHELD"
+      },
+      "fault": "oracle_leaked_to_provider",
+      "fault_exit": 1,
+      "file": "scripts/architecture/operational.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "7f326b705e2221e054da47dcdf3fe0e798a17020b5462b9a529a3459ebc73f9f",
+      "original_sha256": "c221a951031bb3d22d371feac7a610fd3657649ebd1f98599883a044e8eb2e9d",
+      "selector": "test_heldout_packets",
+      "patch": "--- scripts/architecture/operational.py\n\n+++ scripts/architecture/operational.py\n\n@@ -480,4 +480,5 @@\n\n                                         max_files=options.get(\"max_files\", 16), max_candidates=options.get(\"max_candidates\", 1))\n                 subjects = operational_subjects(context, case[\"requirements\"])\n+                if subjects: subjects[0][\"oracle\"] = case[\"oracle\"]\n                 packet_hash = _hash(subjects)\n                 complete = bool(subjects) and all(any("
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_operational::test_case_identity_errors_cannot_reach_provider[oracle_requirement]": "Failed: DID NOT RAISE ValueError",
+        "tests.hexagonal.test_jev_operational::test_case_identity_errors_cannot_reach_provider[split_crossing]": "Failed: DID NOT RAISE ValueError"
+      },
+      "fault": "catalog_validation_removed",
+      "fault_exit": 1,
+      "file": "scripts/architecture/operational.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "36a40925669422de52a6a50bafdfed462d115087506300f98cf0075b5449c8d8",
+      "original_sha256": "c221a951031bb3d22d371feac7a610fd3657649ebd1f98599883a044e8eb2e9d",
+      "selector": "test_case_identity_errors and (split_crossing or oracle_requirement)",
+      "patch": "--- scripts/architecture/operational.py\n\n+++ scripts/architecture/operational.py\n\n@@ -65,23 +65,23 @@\n\n             or not isinstance(catalog.get(\"id\"), str) or not isinstance(catalog.get(\"cases\"), list)\n             or not catalog[\"cases\"]):\n-        raise ValueError(\"Invalid operational catalog.\")\n+        pass\n     ids, groups = set(), {}\n     for case in catalog[\"cases\"]:\n         if not isinstance(case, dict) or not isinstance(case.get(\"id\"), str) or not case[\"id\"] or case[\"id\"] in ids:\n-            raise ValueError(\"Case IDs must be nonempty and unique.\")\n+            pass\n         ids.add(case[\"id\"])\n         if not _hex(case.get(\"source_ref\"), 40) or case.get(\"split\") not in {\"tuning\", \"heldout\"}:\n-            raise ValueError(\"Cases need immutable source refs and an explicit split.\")\n+            pass\n         _relative(case.get(\"profile_path\"))\n         pins, requirements, selection = case.get(\"pins\"), case.get(\"requirements\"), case.get(\"selection\")\n         if not isinstance(pins, list) or not pins or not isinstance(requirements, list) or not requirements:\n-            raise ValueError(\"Cases need source pins and explicit operational requirements.\")\n+            pass\n         paths = set()\n         for pin in pins:\n             if not isinstance(pin, dict) or not _hex(pin.get(\"sha256\"), 64) or _relative(pin.get(\"path\")) in paths:\n-                raise ValueError(\"Source pins must be distinct and hash-bound.\")\n+                pass\n             paths.add(pin[\"path\"])\n         if case[\"profile_path\"] not in paths:\n-            raise ValueError(\"The architecture profile must also be pinned.\")\n+            pass\n         requirement_ids = set()\n         for requirement in requirements:\n@@ -89,17 +89,17 @@\n\n                     or not requirement[\"id\"] or requirement[\"id\"] in requirement_ids\n                     or not isinstance(requirement.get(\"statement\"), str) or not requirement[\"statement\"].strip()):\n-                raise ValueError(\"Requirements need distinct IDs and nonempty statements.\")\n+                pass\n             requirement_ids.add(requirement[\"id\"])\n         if not isinstance(selection, list) or not selection:\n-            raise ValueError(\"A case must select source spans.\")\n+            pass\n         for span in selection:\n             if (not isinstance(span, dict) or span.get(\"path\") not in paths\n                     or type(span.get(\"start_line\")) is not int or type(span.get(\"end_line\")) is not int\n                     or not 1 <= span[\"start_line\"] <= span[\"end_line\"]):\n-                raise ValueError(\"Invalid selected source span.\")\n+                pass\n         oracle = case.get(\"oracle\")\n         if (not isinstance(oracle, dict) or type(oracle.get(\"fault\")) is not bool\n                 or not isinstance(oracle.get(\"findings\"), list) or oracle[\"fault\"] != bool(oracle[\"findings\"])):\n-            raise ValueError(\"Independent fault labels need matching source witnesses.\")\n+            pass\n         for finding in oracle[\"findings\"]:\n             if (not isinstance(finding, dict) or finding.get(\"path\") not in paths\n@@ -109,16 +109,16 @@\n\n                     or any(not isinstance(value, str) or value not in requirement_ids for value in finding[\"requirements\"])\n                     or len(finding[\"requirements\"]) != len(set(finding[\"requirements\"]))):\n-                raise ValueError(\"Oracle findings need exact requirement IDs and spans.\")\n+                pass\n         if case.get(\"fixture_outcome\") not in OUTCOMES or not isinstance(case.get(\"provenance\"), dict):\n-            raise ValueError(\"Fixture predictions and historical provenance must be explicit.\")\n+            pass\n         group = case.get(\"group\")\n         if not isinstance(group, str) or not group:\n-            raise ValueError(\"Cases need a dependency group.\")\n+            pass\n         previous = groups.setdefault(group, {\"split\": case[\"split\"], \"requirements\": requirements, \"faults\": set()})\n         if previous[\"split\"] != case[\"split\"] or previous[\"requirements\"] != requirements:\n-            raise ValueError(\"A dependency group cannot cross splits or change its requirements.\")\n+            pass\n         previous[\"faults\"].add(oracle[\"fault\"])\n     if any(group[\"faults\"] != {False, True} for group in groups.values()):\n-        raise ValueError(\"Each group needs a faulty revision and a healthy control.\")\n+        pass\n \n "
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_operational::test_case_identity_errors_cannot_reach_provider[source_pin]": "Failed: DID NOT RAISE ValueError"
+      },
+      "fault": "source_pin_not_verified",
+      "fault_exit": 1,
+      "file": "scripts/architecture/operational.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "24a43137bae8d27823dbef04cff05de6da744c9f5984885ed8245478ca29663a",
+      "original_sha256": "c221a951031bb3d22d371feac7a610fd3657649ebd1f98599883a044e8eb2e9d",
+      "selector": "test_case_identity_errors and source_pin",
+      "patch": "--- scripts/architecture/operational.py\n\n+++ scripts/architecture/operational.py\n\n@@ -167,8 +167,8 @@\n\n         path = root / pin[\"path\"]\n         if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != pin[\"sha256\"]:\n-            raise ValueError(\"Pinned source bytes do not match the catalog.\")\n+            pass\n     for span in [*case[\"selection\"], *case[\"oracle\"][\"findings\"]]:\n         if span[\"end_line\"] > len((root / span[\"path\"]).read_text().splitlines()):\n-            raise ValueError(\"Catalog source span exceeds its pinned file.\")\n+            pass\n \n "
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_operational::test_case_identity_errors_cannot_reach_provider[source_ref]": "AssertionError: assert [{'subjects':...imeout': 15}}] == []\n  \n  Left contains one more item: {'subjects': [{'subject_id': '9f4d9aee30c8d5a8a474ce12267052e6fcdb04868f354df03a3a466185e80f6b', 'check_id': 'neutral_...fd72af86ddf605c0c9f9a47f8c0bdb72fa885ad08696947a7', 'start_line': 1, 'end_line': 2}, ...}], 'options': {'timeout': 15}}\n  Use -v to get more diff"
+      },
+      "fault": "missing_ref_replaced_by_other_ref",
+      "fault_exit": 1,
+      "file": "scripts/architecture/operational.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "1a93834052f5cc1f891c7ed1c53b088c20c68d746305d9860160bfd546d9f428",
+      "original_sha256": "c221a951031bb3d22d371feac7a610fd3657649ebd1f98599883a044e8eb2e9d",
+      "selector": "test_case_identity_errors and source_ref",
+      "patch": "--- scripts/architecture/operational.py\n\n+++ scripts/architecture/operational.py\n\n@@ -143,5 +143,5 @@\n\n     \"\"\"Read immutable source bytes; never import or execute a historical module.\"\"\"\n     destination.mkdir()\n-    result = subprocess.run([\"git\", \"archive\", \"--format=tar\", case[\"source_ref\"]], cwd=root,\n+    result = subprocess.run([\"git\", \"archive\", \"--format=tar\", case[\"provenance\"][\"reviewed_ref\"]], cwd=root,\n                             capture_output=True, check=False, timeout=30)\n     if result.returncode or len(result.stdout) > 128 * 1024 * 1024:"
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_operational::test_unmatched_provider_answers_do_not_clear_or_confirm_operational_cases[duplicate_subject]": "AssertionError: UNBOUND_PROVIDER_ANSWER_IS_NOT_A_CLEAR\nassert 2 == 0",
+        "tests.hexagonal.test_jev_operational::test_unmatched_provider_answers_do_not_clear_or_confirm_operational_cases[missing_subject]": "AssertionError: INVALID_POPULATION_IS_AN_EXPLICIT_PROVIDER_ERROR\nassert 0 == 4",
+        "tests.hexagonal.test_jev_operational::test_unmatched_provider_answers_do_not_clear_or_confirm_operational_cases[unknown_outcome]": "AssertionError: INVALID_POPULATION_IS_AN_EXPLICIT_PROVIDER_ERROR\nassert 0 == 4",
+        "tests.hexagonal.test_jev_operational::test_unmatched_provider_answers_do_not_clear_or_confirm_operational_cases[unknown_subject]": "AssertionError: UNBOUND_PROVIDER_ANSWER_IS_NOT_A_CLEAR\nassert 2 == 0"
+      },
+      "fault": "provider_population_unchecked",
+      "fault_exit": 1,
+      "file": "scripts/architecture/operational.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "6f89dfda6736d5f4e7054d17db700c6255112918662324dfdf13f231464826cc",
+      "original_sha256": "c221a951031bb3d22d371feac7a610fd3657649ebd1f98599883a044e8eb2e9d",
+      "selector": "test_unmatched_provider_answers",
+      "patch": "--- scripts/architecture/operational.py\n\n+++ scripts/architecture/operational.py\n\n@@ -255,4 +255,5 @@\n\n \n def _checked_result(value, subjects):\n+    return value\n     if not isinstance(value, dict):\n         return {\"status\": \"error\", \"reason\": \"invalid_provider_result\", \"assessments\": []}"
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_operational::test_cache_replays_keep_historical_usage_out_of_fresh_cost_and_stability": "AssertionError: assert {'input_token...t_tokens': 40} == {'input_token...ut_tokens': 0}\n  \n  Differing items:\n  {'input_tokens': 104} != {'input_tokens': 0}\n  {'output_tokens': 40} != {'output_tokens': 0}\n  Use -v to get more diff"
+      },
+      "fault": "historical_usage_counted_fresh",
+      "fault_exit": 1,
+      "file": "scripts/architecture/operational.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "61f2712f1ca89a68bbceda52a78ae3667c266d60caf389802f7d1caad51d7103",
+      "original_sha256": "c221a951031bb3d22d371feac7a610fd3657649ebd1f98599883a044e8eb2e9d",
+      "selector": "test_cache_replays",
+      "patch": "--- scripts/architecture/operational.py\n\n+++ scripts/architecture/operational.py\n\n@@ -354,5 +354,5 @@\n\n \n def _usage(rows, key):\n-    values = [row[\"diagnostics\"].get(\"execution\", {}).get(key) for row in rows]\n+    values = [row[\"diagnostics\"].get(\"execution\", {}).get(\"reused_usage\" if key == \"fresh_usage\" else key) for row in rows]\n     if any(value is None for value in values):\n         return None"
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_operational::test_fresh_repeated_outputs_compare_only_matching_source_and_model": "AssertionError: assert {'compared_ca..._excluded': 0} == {'compared_ca..._excluded': 0}\n  \n  Omitting 2 identical items, use -vv to show\n  Differing items:\n  {'changed_cases': 0} != {'changed_cases': 4}\n  {'identical_cases': 4} != {'identical_cases': 0}\n  Use -v to get more diff"
+      },
+      "fault": "changing_outputs_marked_identical",
+      "fault_exit": 1,
+      "file": "scripts/architecture/operational.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "bfba04973a63063c6915b6a3b6c7af6b9350a7ff014de7e5d6efc8fb03a7175b",
+      "original_sha256": "c221a951031bb3d22d371feac7a610fd3657649ebd1f98599883a044e8eb2e9d",
+      "selector": "test_fresh_repeated_outputs",
+      "patch": "--- scripts/architecture/operational.py\n\n+++ scripts/architecture/operational.py\n\n@@ -427,5 +427,5 @@\n\n             continue\n         stable[\"compared_cases\"] += 1\n-        changed = len({row[\"observed\"][\"outcome\"] for row in fresh}) > 1\n+        changed = False\n         stable[\"changed_cases\" if changed else \"identical_cases\"] += 1\n     summary[\"stability\"] = stable"
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_operational::test_missing_target_source_stays_unknown_without_spending_provider_calls": "AssertionError: OMITTED_SOURCE_MUST_NOT_BE_ASSESSED\nassert [{'subjects':...imeout': 15}}] == []\n  \n  Left contains 4 more items, first extra item: {'subjects': [], 'options': {'max_source_bytes': 1, 'timeout': 15}}\n  Use -v to get more diff"
+      },
+      "fault": "missing_source_marked_complete",
+      "fault_exit": 1,
+      "file": "scripts/architecture/operational.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "1de9a33fbc0a6cde5edf00a32b9eda1373875dff4cdb0eccd65a5a5c55b612f0",
+      "original_sha256": "c221a951031bb3d22d371feac7a610fd3657649ebd1f98599883a044e8eb2e9d",
+      "selector": "test_missing_target_source",
+      "patch": "--- scripts/architecture/operational.py\n\n+++ scripts/architecture/operational.py\n\n@@ -481,7 +481,5 @@\n\n                 subjects = operational_subjects(context, case[\"requirements\"])\n                 packet_hash = _hash(subjects)\n-                complete = bool(subjects) and all(any(\n-                    subject[\"source\"][\"path\"] == span[\"path\"] and subject[\"source\"][\"start_line\"] <= span[\"start_line\"]\n-                    and subject[\"source\"][\"end_line\"] >= span[\"end_line\"] for subject in subjects) for span in case[\"selection\"])\n+                complete = True\n                 remaining = max_seconds - (time.monotonic() - started)\n                 tick = time.monotonic()"
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_operational::test_only_bound_live_disposition_counts_declared_confirmation": "AssertionError: BOUND_DISPOSITION_REQUIRED_FOR_CONFIRMATION\nassert 0 == 1"
+      },
+      "fault": "live_disposition_never_confirms",
+      "fault_exit": 1,
+      "file": "scripts/architecture/operational.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "5ec4d99bb833e9a24d72eaca5825c4d4a5490a86f17643e7e8d7dd2a238d89b2",
+      "original_sha256": "c221a951031bb3d22d371feac7a610fd3657649ebd1f98599883a044e8eb2e9d",
+      "selector": "test_only_bound_live_disposition",
+      "patch": "--- scripts/architecture/operational.py\n\n+++ scripts/architecture/operational.py\n\n@@ -346,5 +346,5 @@\n\n                     raise ValueError(\"Confirmation contradicts the selected historical fault oracle.\")\n                 witnesses.append(proof)\n-                confirmed |= mode == \"live\"\n+                confirmed |= False\n     return {\"outcome\": outcome, \"grounded\": grounded, \"known_fault_match\": bool(match),\n             \"confirmed\": bool(confirmed), \"unconfirmed\": bool(concerns) and not confirmed,"
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_operational::test_disposition_cannot_transfer_confirmation_to_other_inputs[different_source]": "Failed: DID NOT RAISE ValueError"
+      },
+      "fault": "disposition_source_unchecked",
+      "fault_exit": 1,
+      "file": "scripts/architecture/operational.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "aab646917132a6aed31822a71570626d3f14b63a1021f7f5ba9835a8ee632e8b",
+      "original_sha256": "c221a951031bb3d22d371feac7a610fd3657649ebd1f98599883a044e8eb2e9d",
+      "selector": "test_disposition_cannot_transfer and different_source",
+      "patch": "--- scripts/architecture/operational.py\n\n+++ scripts/architecture/operational.py\n\n@@ -273,5 +273,5 @@\n\n         return []\n     if not isinstance(value, dict) or value.get(\"schema_version\") != 1 or not isinstance(value.get(\"entries\"), list):\n-        raise ValueError(\"Invalid disposition ledger.\")\n+        pass\n     cases = {case[\"id\"]: case for case in catalog[\"cases\"]}\n     seen = set()\n@@ -282,13 +282,13 @@\n\n                 or entry.get(\"status\") not in {\"confirmed\", \"dismissed\", \"unconfirmed\"}\n                 or (entry.get(\"reviewer_minutes\") is not None and not _finite(entry[\"reviewer_minutes\"]))):\n-            raise ValueError(\"Disposition identity or measured review time is invalid.\")\n+            pass\n         key = (entry[\"case_id\"], entry[\"packet_sha256\"], entry[\"subject_id\"])\n         if key in seen:\n-            raise ValueError(\"Duplicate disposition binding.\")\n+            pass\n         seen.add(key)\n         if entry[\"status\"] == \"confirmed\":\n             witness = entry.get(\"witness\")\n             if not isinstance(witness, dict) or not _hex(witness.get(\"sha256\"), 64) or not isinstance(witness.get(\"path\"), str):\n-                raise ValueError(\"Confirmation requires a hash-bound independent witness file.\")\n+                pass\n     return value[\"entries\"]\n "
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_operational::test_disposition_cannot_transfer_confirmation_to_other_inputs[changed_witness]": "Failed: DID NOT RAISE ValueError"
+      },
+      "fault": "witness_hash_unchecked",
+      "fault_exit": 1,
+      "file": "scripts/architecture/operational.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "7d0d2eccb1d8e22272f45a15c27ded87c7e4a97b423ddb84460fac7303209f9a",
+      "original_sha256": "c221a951031bb3d22d371feac7a610fd3657649ebd1f98599883a044e8eb2e9d",
+      "selector": "test_disposition_cannot_transfer and changed_witness",
+      "patch": "--- scripts/architecture/operational.py\n\n+++ scripts/architecture/operational.py\n\n@@ -298,5 +298,5 @@\n\n     path = Path(witness[\"path\"])\n     raw = path.read_bytes()\n-    if hashlib.sha256(raw).hexdigest() != witness[\"sha256\"]:\n+    if False:\n         raise ValueError(\"Independent witness bytes changed.\")\n     value = json.loads(raw)"
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_operational::test_disposition_cannot_transfer_confirmation_to_other_inputs[unmatched_packet]": "assert 1 == 0"
+      },
+      "fault": "disposition_packet_unchecked",
+      "fault_exit": 1,
+      "file": "scripts/architecture/operational.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "4911648fdf550b547e763d932e474329aef7081e059a0dfc04b1cedc3213d038",
+      "original_sha256": "c221a951031bb3d22d371feac7a610fd3657649ebd1f98599883a044e8eb2e9d",
+      "selector": "test_disposition_cannot_transfer and unmatched_packet",
+      "patch": "--- scripts/architecture/operational.py\n\n+++ scripts/architecture/operational.py\n\n@@ -336,5 +336,5 @@\n\n         match |= known\n         entry = next((entry for entry in entries if entry[\"case_id\"] == case[\"id\"]\n-                      and entry[\"packet_sha256\"] == packet_hash and entry[\"subject_id\"] == subject[\"subject_id\"]), None)\n+                      and entry[\"subject_id\"] == subject[\"subject_id\"]), None)\n         if entry is not None:\n             disposition, minutes = entry[\"status\"], entry.get(\"reviewer_minutes\")"
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_operational::test_full_pilot_runs_when_its_inputs_change_and_other_runs_are_health_only[None-full]": "AssertionError: PILOT_SCOPE_MATCHES_CHANGED_INPUTS\nassert 'health' == 'full'\n  \n  - full\n  + health",
+        "tests.hexagonal.test_jev_operational::test_full_pilot_runs_when_its_inputs_change_and_other_runs_are_health_only[paths1-health]": "AssertionError: PILOT_SCOPE_MATCHES_CHANGED_INPUTS\nassert 'full' == 'health'\n  \n  - health\n  + full",
+        "tests.hexagonal.test_jev_operational::test_full_pilot_runs_when_its_inputs_change_and_other_runs_are_health_only[paths2-health]": "AssertionError: PILOT_SCOPE_MATCHES_CHANGED_INPUTS\nassert 'full' == 'health'\n  \n  - health\n  + full",
+        "tests.hexagonal.test_jev_operational::test_full_pilot_runs_when_its_inputs_change_and_other_runs_are_health_only[paths3-full]": "AssertionError: PILOT_SCOPE_MATCHES_CHANGED_INPUTS\nassert 'health' == 'full'\n  \n  - full\n  + health",
+        "tests.hexagonal.test_jev_operational::test_full_pilot_runs_when_its_inputs_change_and_other_runs_are_health_only[paths4-full]": "AssertionError: PILOT_SCOPE_MATCHES_CHANGED_INPUTS\nassert 'health' == 'full'\n  \n  - full\n  + health",
+        "tests.hexagonal.test_jev_operational::test_full_pilot_runs_when_its_inputs_change_and_other_runs_are_health_only[paths5-full]": "AssertionError: PILOT_SCOPE_MATCHES_CHANGED_INPUTS\nassert 'health' == 'full'\n  \n  - full\n  + health",
+        "tests.hexagonal.test_jev_operational::test_full_pilot_runs_when_its_inputs_change_and_other_runs_are_health_only[paths6-full]": "AssertionError: PILOT_SCOPE_MATCHES_CHANGED_INPUTS\nassert 'health' == 'full'\n  \n  - full\n  + health"
+      },
+      "fault": "pilot_scope_inverted",
+      "fault_exit": 1,
+      "file": "scripts/architecture/operational.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "08bf6cf7aef79afe88e62f2e42454b77c15a3ab2bce32158540f6d01f0cad7b7",
+      "original_sha256": "c221a951031bb3d22d371feac7a610fd3657649ebd1f98599883a044e8eb2e9d",
+      "selector": "test_full_pilot_runs",
+      "patch": "--- scripts/architecture/operational.py\n\n+++ scripts/architecture/operational.py\n\n@@ -131,10 +131,10 @@\n\n def classify_evaluation_changes(paths):\n     if paths is None:\n-        return {\"mode\": \"full\", \"reason\": \"change_scope_unavailable\", \"paths\": []}\n+        return {\"mode\": \"health\", \"reason\": \"change_scope_unavailable\", \"paths\": []}\n     if not isinstance(paths, (list, tuple)) or any(not isinstance(path, str) for path in paths):\n         raise ValueError(\"Changed paths must be a list of paths or null.\")\n     selected = sorted(set(paths))\n     relevant = [path for path in selected if any(path.startswith(prefix) for prefix in FULL_INPUTS)]\n-    return {\"mode\": \"full\" if relevant else \"health\", \"reason\": \"evaluation_inputs_changed\" if relevant else \"live_health_only\",\n+    return {\"mode\": \"health\" if relevant else \"full\", \"reason\": \"evaluation_inputs_changed\" if relevant else \"live_health_only\",\n             \"paths\": selected, \"evaluation_paths\": relevant}\n "
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_operational::test_routine_health_is_one_fresh_control_without_engineering_benefit_claim": "AssertionError: CACHED_ANSWER_IS_NOT_LIVE_HEALTH\nassert 'cache_dir' not in {'cache_dir': '/unused/fixture-cache'}"
+      },
+      "fault": "health_reuses_cached_answer",
+      "fault_exit": 1,
+      "file": "scripts/architecture/operational.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "4ecd6fa9c551c81a8b6d2ce0de0bda7f2fd7b7ae82901966d0c6e3428368d889",
+      "original_sha256": "c221a951031bb3d22d371feac7a610fd3657649ebd1f98599883a044e8eb2e9d",
+      "selector": "test_routine_health",
+      "patch": "--- scripts/architecture/operational.py\n\n+++ scripts/architecture/operational.py\n\n@@ -242,5 +242,5 @@\n\n     tick = time.monotonic()\n     health_options = dict(options or {})\n-    health_options.pop(\"cache_dir\", None)  # A copied answer cannot establish current transport health.\n+    health_options.get(\"cache_dir\", None)  # A copied answer cannot establish current transport health.\n     diagnostic = (_fixture_provider(subjects, {\"fixture_outcome\": \"no_concern\"}) if mode == \"fixture\"\n                   else (provider_fn or _live_provider)(subjects, health_options))"
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_operational::test_retained_report_can_be_adjudicated_without_repeating_provider_work": "AssertionError: ADJUDICATION_DOES_NOT_MUTATE_RETAINED_REPORT\nassert 1 == 0"
+      },
+      "fault": "adjudication_mutates_original",
+      "fault_exit": 1,
+      "file": "scripts/architecture/operational.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "3c8548deaf0c00210dd38857309ce7102f07b7f051a595891e641e32a8d535b4",
+      "original_sha256": "c221a951031bb3d22d371feac7a610fd3657649ebd1f98599883a044e8eb2e9d",
+      "selector": "test_retained_report_can_be_adjudicated",
+      "patch": "--- scripts/architecture/operational.py\n\n+++ scripts/architecture/operational.py\n\n@@ -437,5 +437,5 @@\n\n     if not isinstance(report, dict) or report.get(\"schema_version\") != 1 or not isinstance(report.get(\"cases\"), list):\n         raise ValueError(\"Adjudication requires an operational replay report.\")\n-    result = deepcopy(report)\n+    result = report\n     entries = _dispositions(dispositions, {\"cases\": result[\"cases\"]})\n     for row in result[\"cases\"]:"
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_operational::test_adjudication_rejects_a_changed_retained_question_packet": "Failed: DID NOT RAISE ValueError"
+      },
+      "fault": "retained_packet_unchecked",
+      "fault_exit": 1,
+      "file": "scripts/architecture/operational.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "73caaafb6596bbfd0e77a5529bf044636966397b95923b68dc3dbee3a37343ad",
+      "original_sha256": "c221a951031bb3d22d371feac7a610fd3657649ebd1f98599883a044e8eb2e9d",
+      "selector": "test_adjudication_rejects",
+      "patch": "--- scripts/architecture/operational.py\n\n+++ scripts/architecture/operational.py\n\n@@ -440,5 +440,5 @@\n\n     entries = _dispositions(dispositions, {\"cases\": result[\"cases\"]})\n     for row in result[\"cases\"]:\n-        if row[\"packet_sha256\"] != _hash(row[\"subjects\"]):\n+        if False:\n             raise ValueError(\"Retained subject packet changed before adjudication.\")\n         row[\"observed\"] = _observed(row[\"diagnostics\"], row[\"subjects\"], row, row[\"packet_sha256\"], entries, result[\"mode\"])"
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_operational::test_ci_separates_changed_input_pilots_from_one_fresh_health_control": "AssertionError: CI_PILOT_SCOPE_IS_EXPLICIT\nassert None is not None"
+      },
+      "fault": "ci_pilot_scope_missing",
+      "fault_exit": 1,
+      "file": ".github/workflows/ci.yml",
+      "healthy_exit": 0,
+      "mutant_sha256": "cc6cd13fc40f05669ee916177a0efe8db5cf485ad412afd04196bb15a83e62d9",
+      "original_sha256": "aa07fa2d872e24b5a7ffc1f04e52e2cf3faf56b46f92ef4df4d32db6b6d420a3",
+      "selector": "test_ci_separates",
+      "patch": "--- .github/workflows/ci.yml\n\n+++ .github/workflows/ci.yml\n\n@@ -562,14 +562,4 @@\n\n         },\n         {\n-          \"name\": \"Select Jev evaluation scope\",\n-          \"id\": \"evaluation-scope\",\n-          \"continue-on-error\": true,\n-          \"if\": \"!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'\",\n-          \"env\": {\n-            \"JEV_BASE_REF\": \"${{ github.event.pull_request.base.sha || github.event.before }}\"\n-          },\n-          \"run\": \"python3 -m scripts.architecture.operational --select-base \\\"$JEV_BASE_REF\\\" --github-output \\\"$GITHUB_OUTPUT\\\" --output \\\"$RUNNER_TEMP/architecture/evaluation-selection.json\\\"\"\n-        },\n-        {\n           \"name\": \"Measure Jev effectiveness on paired architecture controls\",\n           \"continue-on-error\": true,"
+    }
+  ],
+  "review_regressions": {
+    "cases": 2,
+    "red_failures": 2,
+    "red_errors": 0,
+    "source_before_revision": null,
+    "source_before_sha256": {
+      "scripts/architecture/operational.py": "c221a951031bb3d22d371feac7a610fd3657649ebd1f98599883a044e8eb2e9d"
+    },
+    "interpretation": "Actual pre-repair working bytes, not missing APIs or setup failures. Caught product exceptions are converted to explicit assertion sentinels."
+  },
+  "green": {
+    "passed": 30,
+    "failed": 0,
+    "errors": 0,
+    "python": "3.12.16",
+    "modules": [
+      "tests/hexagonal/test_jev_operational.py"
+    ],
+    "source_sha256": {
+      "scripts/architecture/operational.py": "1ac586092f9cc08f0cdd1b20f33e827dff1cf308d866ce06d61f94af6bc3f0cd"
+    },
+    "test_sha256": {
+      "tests/hexagonal/test_jev_operational.py": "3e636b871c080f65c68fb169507b585f94dbadcbc7996aed7dccec42a3ab4c83"
+    },
+    "command": "python -m pytest -p no:cacheprovider tests/hexagonal/test_jev_operational.py -q"
+  },
+  "limits": [
+    "Controlled provider answers verify composition and evidence rules, not live model accuracy.",
+    "Operational witness JSON records supplied dispositions; it does not attest remote execution.",
+    "No paid provider calls are included in this evidence."
+  ]
+}

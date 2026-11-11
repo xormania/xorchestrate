@@ -173,7 +173,8 @@
         "tests/hexagonal/test_jev_efficiency.py": "adapter",
         "tests/hexagonal/test_architecture_packets.py": "composition",
         "tests/hexagonal/test_jev_requests.py": "adapter",
-        "tests/hexagonal/test_jev_post_test_triage.py": "composition"
+        "tests/hexagonal/test_jev_post_test_triage.py": "composition",
+        "tests/hexagonal/test_jev_operational.py": "calibration"
       }
     },
     "live-acceptance": {
