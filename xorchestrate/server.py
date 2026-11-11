@@ -62,6 +62,7 @@ class ProjectServer:
             if type(value) is not int or value < 1:
                 raise OrchestrationError(f"{name} must be a positive integer.", "invalid_configuration")
         self.application = application
+        self._recovery_detected = None
         self.transport = transport
         self.dispatcher = dispatcher
         self.limits = {"mcp": max_connections, "control": max_control_connections}
@@ -139,7 +140,42 @@ class ProjectServer:
                 "worktrees": sorted(root for root in worktrees if isinstance(root, str)),
                 "in_flight": self.dispatcher.in_flight, "draining": self.dispatcher.draining or self._stop_decided,
                 "live_sessions": self.live_sessions(),
-                "sessions_needing_reconnect": self.sessions_needing_reconnect()}
+                "sessions_needing_reconnect": self.sessions_needing_reconnect(),
+                "recovery": self.recovery()}
+
+    def recovery(self):
+        """Whether recovery is running, the last report, and what the policy left for an explicit ``recover``."""
+        status = getattr(self.application, "recovery_status", None)
+        if not callable(status):
+            return None
+        return {**status(), "detected": self._recovery_detected}
+
+    def start_recovery(self, unclean_stop, *, timeout=None):
+        """After a hard restart, ask the recovery policy which interrupted sessions to recover and recover them.
+
+        Runs in the background so the server serves meanwhile; calls on a
+        session not yet recovered fail as for any session this runtime does not
+        hold. Returns the thread, or ``None`` when nothing was interrupted.
+        """
+        interrupted = self.application.interrupted_sessions()
+        if not unclean_stop and not interrupted:
+            return None
+        policy = getattr(self.application, "recovery_policy", None)
+        selected = list(policy.select(list(interrupted))) if policy is not None and interrupted else []
+        self._recovery_detected = {"unclean_stop": unclean_stop,
+                                   "interrupted": [session.session_id for session in interrupted],
+                                   "selected": selected}
+        if not selected:
+            return None
+        thread = threading.Thread(target=self._run_recovery, args=(selected,), daemon=True, name="recovery")
+        thread.start()
+        return thread
+
+    def _run_recovery(self, selected):
+        try:
+            self.application.recover(selected)
+        except Exception:
+            pass  # recover reports per session; a failure here must not stop the server.
 
     def sessions_needing_reconnect(self):
         query = getattr(self.application, "sessions_needing_reconnect", None)
@@ -230,6 +266,10 @@ class ProjectServer:
                     command = request.get("command") if isinstance(request, dict) else None
                     if command == "status":
                         reply = self.status()
+                    elif command == "recover":
+                        # An application action: the guardrail decides whether this caller may recover.
+                        arguments = {k: v for k, v in request.items() if k == "session_ids"}
+                        reply = self.application.call("recover", arguments, connection.peer.actor)
                     elif command == "down":
                         detach = request.get("detach", False)
                         if type(detach) is not bool:

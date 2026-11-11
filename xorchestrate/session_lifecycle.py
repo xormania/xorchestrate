@@ -203,7 +203,7 @@ class SessionLifecycleMixin:
     def _superseded(session):
         replacement = session.data.get("replacement_session_id")
         return OrchestrationError(f"The session was replaced by session {replacement}; use that session.",
-                                  "session_superseded", {"session_id": session.key,
+                                  "stale_session", {"session_id": session.key,
                                                          "replacement_session_id": replacement})
 
     # -- recovery after a hard restart ---------------------------------------------------
@@ -225,14 +225,18 @@ class SessionLifecycleMixin:
                 for r in sorted(records, key=lambda r: r.key)]
 
     def recovery_status(self) -> JSON:
-        """Whether a recovery is running and the last report, from the store (``None`` before any)."""
+        """Whether a recovery is running and the last report that changed anything (``None`` before any)."""
         with self.store.transaction() as tx:
             record = tx.get("recovery", "current")
-        return {"running": False, "report": None} if record is None else deepcopy(record.data)
+        data = {"running": 0, "report": None} if record is None else deepcopy(record.data)
+        return {"running": data["running"] > 0, "report": data["report"]}
 
-    def _set_recovery(self, data):
+    def _update_recovery(self, change):
+        """Apply ``change(data)`` to the stored recovery state in one transaction (concurrent runs are counted)."""
         with self.store.transaction() as tx:
             record = tx.get("recovery", "current")
+            data = {"running": 0, "report": None} if record is None else deepcopy(record.data)
+            change(data)
             tx.put("recovery", "current", data, None if record is None else record.version)
 
     def recover(self, session_ids=None, *, reason="hard_restart") -> JSON:
@@ -247,10 +251,9 @@ class SessionLifecycleMixin:
         was in flight is marked unknown for reconciliation; effects pending at
         the failure stay unresolved; nothing is replayed or re-sent.
         """
-        previous = self.recovery_status()
         report = {"reason": reason, "started_at": self.clock(), "recovered": [], "disconnected": [],
                   "uncertain": [], "failed": [], "skipped": []}
-        self._set_recovery({"running": True, "report": previous.get("report")})
+        self._update_recovery(lambda data: data.update(running=data["running"] + 1))
         try:
             wanted = None if session_ids is None else set(session_ids)
             for found in self.interrupted_sessions():
@@ -261,6 +264,10 @@ class SessionLifecycleMixin:
                 except Conflict as error:
                     report["skipped"].append({"session_id": found.session_id, "reason": str(error)})
                 except OrchestrationError as error:
+                    if error.code == "operation_unresolved":
+                        # The same recovery key is in flight from a concurrent recover: exactly one reconnect.
+                        report["skipped"].append({"session_id": found.session_id, "reason": "recovery in progress"})
+                        continue
                     report["failed"].append({"session_id": found.session_id, "code": error.code, "message": str(error)})
                 except Exception as error:  # One session never blocks the others or the server.
                     report["failed"].append({"session_id": found.session_id, "code": type(error).__name__})
@@ -269,7 +276,13 @@ class SessionLifecycleMixin:
                 self._event(tx, "recovery.completed", "runtime", reason=reason, recovered=len(report["recovered"]),
                             disconnected=len(report["disconnected"]), failed=len(report["failed"]))
         finally:
-            self._set_recovery({"running": False, "report": report})
+            changed = any(report[key] for key in ("recovered", "disconnected", "uncertain", "failed"))
+
+            def finish(data):
+                data["running"] = max(0, data["running"] - 1)
+                if changed or data["report"] is None:
+                    data["report"] = report  # A run that found nothing to do keeps the last meaningful report.
+            self._update_recovery(finish)
         return report
 
     def _recover_one(self, found, report, reason):
@@ -284,8 +297,7 @@ class SessionLifecycleMixin:
                          "idempotency_key": f"recover:{found.session_id}:{backend.get('incarnation', '')}"}
             if found.work_id:
                 arguments["work_id"] = found.work_id
-            if found.actor_id:
-                arguments["actor_id"] = found.actor_id
+            # As the session's own actor: the replacement keeps that actor and its work binding, and gains nothing.
             result = self.call("reconnect_session", arguments, found.actor_id or "owner")
             report["recovered"].append({"session_id": found.session_id,
                                         "replacement_session_id": result["session"]["id"]})

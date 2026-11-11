@@ -258,14 +258,42 @@ whose process no longer exists are normal starting states.
 1. Run `xorchestrate up` (or connect). A stale socket the host owns is removed
    once nothing answers on it. A record whose process is gone is set aside, and
    the server starts in a fresh terminal.
-2. Run `xorchestrate status`. Under `sessions_needing_reconnect` it lists the
-   sessions that were live and that the new server does not hold, each with the
-   call to make.
-3. Make that call. For a hosted session it is `reconnect_session` with
-   `resume_session_id`. The hosted adapter checks that the old terminal is
-   gone, removes its own stale endpoint, reopens the terminal with the same
-   state so the bridge resumes the native conversation, and reconnects.
-   Nothing is reconnected automatically.
+2. The server detects the hard restart from durable state: a discovery record
+   left by a server that did not stop cleanly, or sessions persisted as live
+   that it does not hold. It asks the project's `recovery_policy` which of these
+   interrupted sessions to recover, and recovers them in the background while it
+   serves. With the default `reconnect` policy, every session whose driver can
+   reconnect comes back without a call. With `manual`, nothing is recovered
+   automatically.
+3. `xorchestrate status` shows `recovery` (`running`, the last `report`, and
+   what was `detected` and `selected`) and `sessions_needing_reconnect`.
+   `xorchestrate recover` (or the `recover` action) recovers the rest; it is
+   idempotent.
+
+Recovering a session reconnects it through its driver. For a hosted session,
+the adapter checks that the old terminal is gone, removes its own stale
+endpoint, reopens the terminal with the same state so the bridge resumes the
+native conversation, and reconnects. A session whose driver cannot reconnect is
+marked `disconnected` (reason `hard_restart`); resume it later with
+`start_session` and `resume_session_id` if its driver resumes. A start that was
+in flight is marked unknown for reconciliation.
+
+- **Identity.** Reconnecting creates a new session. The report maps each old
+  session to its replacement. The old record is `superseded` and names its
+  replacement, and a call on the old identifier fails with `stale_session`,
+  naming the replacement.
+- **Concurrency.** The automatic run, an explicit `recover` and a client's own
+  `reconnect_session` can overlap. They make exactly one reconnect per session,
+  and the others report it as in progress or refused. Until a session is
+  recovered, calls on it fail as for any session the server does not hold.
+- **Authority.** A recovered session keeps its original actor and work binding
+  and gains nothing; the reconnect runs as that actor. Who may call `recover`
+  is decided by the guardrail, like any action.
+- **Policy.** `recovery_policy` is a project configuration section, like
+  `retry_policy`: `{"adapter": "reconnect"}` (the default) or
+  `{"adapter": "manual"}`. It answers one question: which interrupted sessions
+  to recover automatically. Recovery runs only in the server, never in one-shot
+  commands.
 
 **What stays uncertain:** effects that were in flight at the failure. Their
 outcome is unknown; they are not replayed or re-sent, and they stay in the
