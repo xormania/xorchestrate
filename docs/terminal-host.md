@@ -68,9 +68,15 @@ Both take the placement the operator layer supplies (`name`, `location`,
 `socket`) and these options:
 
 - `owned` (default false): the host's mechanism runs as the controller's
-  child, and everything stops when the controller closes. On Linux it also
-  stops when the controller dies. Adoption is refused. The test kit uses this
-  mode for its leak checks.
+  child, and adoption is refused. The test kit uses this mode for its leak
+  checks.
+  - An orderly close (`close` or `shutdown`) stops everything and verifies it.
+  - If the controller is killed outright (Linux, through the parent-death
+    signal), the host is stopped. Each terminal's command is also stopped: the
+    `detached-process` leader is killed, and under `tmux` it is hung up when
+    the server dies. A process that detached from its terminal's session, or
+    that ignores hangup, can survive. A caller that must prove nothing is left
+    behind should track descendants itself, as the test kit does.
 - `output_lines` (default 2000) and `grace` (default 10 seconds).
 
 `tmux` also takes `binary`, `rows`, `columns` (default 48×160),
@@ -156,5 +162,6 @@ refusal `terminal_host_unavailable`.
   not at each project's placement.
 - `recent_output` for `tmux` reads the pane's history. The log written through
   `log` is the raw terminal stream.
-- Owned mode's die-with-controller guarantee for a crashed controller relies on
-  Linux's parent-death signal.
+- When an owned host's controller is killed outright, only the host and each
+  terminal's command are stopped (through Linux's parent-death signal). A
+  process that detached or ignores hangup can survive; see `owned` above.

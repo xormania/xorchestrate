@@ -4,8 +4,10 @@ One host is one tmux server on its own socket, started with ``-f /dev/null``
 so no user configuration is loaded. Each terminal is one tmux session holding
 one pane. By default the server is a daemon that outlives the controller, and
 a restarted controller adopts terminals from their receipts; with ``owned``
-the server runs as this controller's child (``-D``) and everything stops when
-the controller closes or dies.
+the server runs as this controller's child (``-D``). An orderly close stops and
+verifies everything. If the controller is killed outright, the server is
+killed through the Linux parent-death signal and each pane's command is hung
+up, but a process that ignores hangup or detached can survive.
 
 Identity: the server is fenced by process identity (pid, start time, boot,
 owner); a pane by its pane and session ids on that server (tmux never reuses

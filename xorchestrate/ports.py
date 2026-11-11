@@ -228,7 +228,13 @@ class TerminalHost(Protocol):
 
     name: str
     survives_controller: bool
-    """Whether terminals outlive the process that opened them (and so can be adopted)."""
+    """Whether terminals outlive the process that opened them (and so can be adopted).
+
+    When false, an orderly ``close``/``shutdown`` stops everything and
+    verifies it. If the controller is killed outright, the host and each
+    terminal's command are stopped, but a process that detached or ignores
+    hangup can survive.
+    """
     interactive: bool
     """Whether terminals accept ``send_input`` and have an ``attach_instruction``."""
 

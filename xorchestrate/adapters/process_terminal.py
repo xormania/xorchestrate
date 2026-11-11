@@ -3,8 +3,10 @@
 Each terminal is one command started in a new session with its output appended
 to a private log. By default it outlives the controller and a later controller
 adopts it by process identity (pid, start time, boot, owner); with the
-``owned`` option every terminal stops when the controller closes, and on
-Linux also when the controller dies.
+``owned`` option an orderly close stops and verifies everything. If the
+controller is killed outright, each terminal's leader is killed through the
+Linux parent-death signal, but a member that detached from its session can
+survive.
 
 Options: ``name`` (the host name, required), ``location`` (private directory
 for logs of terminals opened without one, required), ``socket`` (accepted
