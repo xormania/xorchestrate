@@ -1,8 +1,11 @@
 """Observe bounded full requests, provider retries and exact packet reuse."""
 from __future__ import annotations
 
+import hashlib
 import json
 import time
+from collections import Counter
+from copy import deepcopy
 
 import pytest
 
@@ -12,6 +15,7 @@ from tests.hexagonal.support.architecture_context import measured_sources, sourc
 from tests.hexagonal.support.jev_efficiency import http_choices
 from tests.hexagonal.support.jev_requests import (
     aligned_choices,
+    missing_ledger_population,
     overflow_unless_single,
     population,
     transient_then_success,
@@ -35,6 +39,90 @@ def test_full_request_budget_includes_relevant_contract_and_question_text():
         assert caught is not None and caught.code == "evaluation_unavailable", "FULL_REQUEST_CONTRACT_BUDGET_ENFORCED"
         assert caught.details.get("cause") == "request_budget_exceeded"
         assert provider["requests"] == []
+
+
+def test_large_missing_ledger_reaches_http_without_truncating_candidate_sources():
+    tasks, context = missing_ledger_population()
+    expected = {item["unit_id"]: item["source"] for item in context["sources"]}
+    with http_choices() as provider:
+        evaluator = TypeSafeEvaluator(provider["options"])
+        caught, answers = None, []
+        try:
+            answers, execution = run_budgeted_tasks(evaluator, tasks, context, batch=True)
+        except OrchestrationError as error:
+            caught = error
+        assert caught is None and len(answers) == len(tasks) and provider["requests"], "MISSING_LEDGER_DOES_NOT_BLOCK_DEFAULT_REQUESTS"
+        observed = {item["unit_id"]: item["source"] for request in provider["requests"] for item in request["state"]["sources"]}
+        assert observed == expected, "LEDGER_COMPACTION_PRESERVES_COMPLETE_SOURCE"
+        assert execution["completed_tasks"] == len(tasks)
+
+
+def test_missing_ledger_summary_retains_exact_counts_reasons_digest_and_bounded_examples():
+    _, context = missing_ledger_population()
+    context["missing_inputs"].append(deepcopy(context["missing_inputs"][0]))
+    original = deepcopy(context)
+    compact = provider_context(context)
+    summaries = compact["missing_inputs"]
+    assert len(summaries) == 3 and all(row.get("reason") == "incomplete_candidate_evidence" for row in summaries), "MISSING_LEDGER_SUMMARIZED_BY_CANDIDATE"
+    for summary in summaries:
+        rows = [row for row in original["missing_inputs"] if row["candidate_id"] == summary["candidate_id"]]
+        assert summary["count"] == len(rows), "MISSING_LEDGER_COUNTS_EXACT"
+        assert summary["reasons"] == dict(Counter(row["reason"] for row in rows))
+        rows = sorted(rows, key=lambda row: json.dumps(row, sort_keys=True, separators=(",", ":"), allow_nan=False).encode())
+        encoded = json.dumps(rows, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+        assert summary["sha256"] == hashlib.sha256(encoded).hexdigest(), "COMPLETE_MISSING_SET_DIGEST_BOUND"
+        assert len(summary["representative"]) <= 3
+        assert all(row in rows for row in summary["representative"])
+        assert len(json.dumps(summary["representative"], sort_keys=True, separators=(",", ":")).encode()) <= 1024
+        assert summary["omitted_count"] == summary["count"] - len(summary["representative"])
+    assert context == original, "MISSING_LEDGER_PROJECTION_PRESERVES_FULL_INPUT"
+    reordered = deepcopy(original)
+    reordered["missing_inputs"].reverse()
+    assert provider_context(reordered)["missing_inputs"] == summaries, "MISSING_LEDGER_ORDER_INVARIANT"
+
+
+def test_missing_ledger_projection_is_idempotent_and_preserves_candidate_filtering():
+    _, context = missing_ledger_population()
+    context["missing_inputs"].append({"reason": "source_budget", "path": "shared/unowned.py"})
+    compact = provider_context(context)
+    assert provider_context(compact) == compact, "MISSING_LEDGER_PROJECTION_IDEMPOTENT"
+    selected = {"candidate-0"}
+    direct, projected = provider_context(context, selected), provider_context(compact, selected)
+    assert direct == projected, "MISSING_LEDGER_FILTER_COMMUTES_WITH_PROJECTION"
+    assert {row.get("candidate_id") for row in direct["missing_inputs"]} == {"candidate-0", None}, "UNOWNED_MISSING_EVIDENCE_PRESERVED"
+
+
+def test_missing_set_change_outside_representative_examples_invalidates_cached_packet(tmp_path):
+    tasks, context = missing_ledger_population()
+    before_summary = provider_context(context)["missing_inputs"]
+    with http_choices() as provider:
+        evaluator = TypeSafeEvaluator(provider["options"])
+        _, cold = run_budgeted_tasks(evaluator, tasks, context, batch=True, cache_dir=tmp_path)
+        sent = len(provider["requests"])
+        assert sent > 0
+        context["missing_inputs"][-1]["symbol"] = "ChangedRequirementOutsideRepresentativeExamples"
+        after_summary = provider_context(context)["missing_inputs"]
+        assert [row["representative"] for row in before_summary] == [row["representative"] for row in after_summary]
+        _, changed = run_budgeted_tasks(evaluator, tasks, context, batch=True, cache_dir=tmp_path)
+        assert changed["request_sha256"] != cold["request_sha256"] and len(provider["requests"]) > sent, "HIDDEN_MISSING_SET_CHANGE_INVALIDATES_CACHE"
+        count = len(provider["requests"])
+        _, warm = run_budgeted_tasks(evaluator, tasks, context, batch=True, cache_dir=tmp_path)
+        assert len(provider["requests"]) == count and warm["provider_calls"] == 0
+
+
+def test_diagnose_retains_full_missing_ledger_outside_compact_provider_state(tmp_path, monkeypatch):
+    _, context = missing_ledger_population()
+    for index, candidate in enumerate(context["candidates"]):
+        candidate.update(symbol=f"work_{index}", start_line=1, end_line=2)
+    original = deepcopy(context["missing_inputs"])
+    monkeypatch.setattr("scripts.architecture.diagnostics.build_context", lambda *args, **kwargs: deepcopy(context))
+    report = {"status": "pass", "subject": {"source_sha256": "fixture-full-report"}}
+    with http_choices() as provider:
+        options = {key: value for key, value in provider["options"].items() if key != "criteria"}
+        result = diagnose(report, tmp_path, {**options, "batch": True, "checks": ["semantic_boundaries"]})
+        assert result["status"] == "complete" and result.get("missing_inputs") == original, "FULL_MISSING_LEDGER_RETAINED_IN_REPORT"
+        assert len(result["evidence_context"]["missing_inputs"]) == 3
+        assert all(len(request["state"]["missing_inputs"]) <= 3 for request in provider["requests"])
 
 
 def test_budgeted_groups_preserve_whole_candidate_packets_and_task_alignment():

@@ -154,6 +154,7 @@ def diagnose(report: dict, root: Path, options: dict | None = None) -> dict:
         evaluator.close()
         return {**base, "status": "inconclusive", "reason": "source_evidence_unavailable_or_changed"}
     scope = context["source_scope"]
+    base["missing_inputs"] = context.get("missing_inputs", [])
     context = _provider_context(context)
     base.update({"context_sha256": hashlib.sha256(_json_bytes(context)).hexdigest(),
                  "source_scope": scope, "model": transport["model"],

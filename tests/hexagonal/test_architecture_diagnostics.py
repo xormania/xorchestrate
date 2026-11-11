@@ -82,7 +82,7 @@ def test_real_http_diagnostics_run_on_pass_and_preserve_exact_evidence(tmp_path,
     wire = provider["requests"][0]
     assert wire["headers"]["Authorization"] == "Bearer private-fixture-credential"
     context = wire["payload"]["state"]
-    relevant_roles = {item["role"] for item in context["sources"] + context["candidates"]}
+    relevant_roles = {item["role"] for item in context["source_files"] + context["candidates"]}
     assert context["profile"]["roles"] == {key: report["profile"]["roles"][key] for key in relevant_roles}
     assert "subject" not in context and result["subject"] == report["subject"]
     assert context["deterministic"]["limitations"] == report["coverage"]["limitations"]

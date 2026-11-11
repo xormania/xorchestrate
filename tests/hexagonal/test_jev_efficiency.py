@@ -233,18 +233,18 @@ def test_diagnose_projects_relevant_evidence_and_retains_full_report_scope(tmp_p
         compact, full = wire["source_scope"], result["source_scope"]
         assert not {"omitted", "excluded", "omitted_count", "omitted_sha256", "excluded_sha256"}.intersection(compact), "GLOBAL_BOOKKEEPING_ABSENT_FROM_MODEL_STATE"
         assert full["omitted"] and full["excluded"], "FULL_OMISSION_LEDGER_RETAINED"
-        assert compact["selected"] == full["selected"]
-        assert compact["source_bytes"] == sum(len(item["source"].encode()) for item in wire["sources"])
+        assert full["source_bytes"] == sum(len(item["source"].encode()) for item in wire["sources"])
         assert wire["sources"][0]["source"] == changed
-        assert all(item["path"] == "pkg/work.py" and item["truncated"] is False for item in wire["sources"])
+        assert all(item["path"] == "pkg/work.py" for item in wire["sources"])
+        assert full["truncated"] == []
         assert len(wire["candidates"]) == 1
         assert wire["candidates"][0]["path"] == "pkg/work.py" and wire["candidates"][0]["start_line"] == line
-        represented = {item["role"] for item in wire["sources"] + wire["candidates"]}
+        represented = {item["role"] for item in wire["source_files"] + wire["candidates"]}
         assert wire["profile"]["roles"] == {key: report["profile"]["roles"][key] for key in represented}
         assert "subject" not in wire and result["subject"] == report["subject"]
         assert wire["deterministic"] == {"findings": report["findings"], "limitations": report["coverage"]["limitations"]}
         source_files = {item["path"]: item for item in wire["source_files"]}
-        assert set(source_files) == set(compact["selected"]), "RELEVANT_FILE_IDENTITIES_BOUND"
+        assert set(source_files) == set(full["selected"]), "RELEVANT_FILE_IDENTITIES_BOUND"
         for path, item in source_files.items():
             assert item["sha256"] == next(row["sha256"] for row in report["files"] if row["path"] == path), "SOURCE_FILE_IDENTITY_RETAINED"
         assert result["evidence_context"] == wire, "EXACT_PROVIDER_STATE_RETAINED"

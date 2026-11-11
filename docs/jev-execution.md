@@ -32,11 +32,24 @@ The complete omission/exclusion ledger and repository identity stay in the retai
 report. The model packet carries selected candidates, complete current and before
 source units, their applicable role contracts and explicit missing inputs. It
 omits unrelated roles, repository-wide inventory digests and omission bookkeeping.
-Repeated source-file hashes and module identities live once in `source_files`,
-keyed by path and revision; units retain their identity, location and full text.
+Repeated source-file hashes, module identities, roles and revisions live once in
+`source_files`, keyed by path and before/after side. The source collection supplies
+the side; units retain their identity, location, symbol and full text. The common
+supporting-candidate list is stored once in `source_support_default`, with unit
+exceptions retained. `source_units` expands both forms for report consumers.
+AST node kinds and always-false unit truncation flags are omitted from model state;
+complete source and the outer scope still establish what was supplied.
 Each packet has an exact context hash. An unrelated repository change can reuse a
 packet only after current source measurements have been revalidated; changes to
 selected source, supporting evidence or applicable contracts still invalidate it.
+
+Large missing-input ledgers stay complete in `diagnostics.missing_inputs`. Model
+state contains one explicit uncertainty summary per candidate: total rows, reason
+counts, the SHA-256 of canonically sorted complete rows, and at most three complete
+representative rows occupying at most 1024 canonical JSON bytes. The omitted-row
+count makes the examples' limited scope explicit. Duplicate counts are preserved;
+incidental ledger ordering does not affect reuse. Summaries remain candidate-bound
+when packets split, and a changed unshown missing fact changes the cache identity.
 
 ## Complete request budgets
 

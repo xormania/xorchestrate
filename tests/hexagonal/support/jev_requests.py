@@ -20,6 +20,18 @@ def population(count=4, *, source_size=100):
     return tasks, context
 
 
+def missing_ledger_population():
+    tasks, context = population(3, source_size=4)
+    context["missing_inputs"] = [
+        {"candidate_id": f"candidate-{index % 3}",
+         "module": "sample.dependencies.protocol_boundary_" + str(index % 31),
+         "symbol": "UnmeasuredRuntimeContractRequirement" + str(index),
+         "reason": "dependency_not_measured" if index % 4 else "source_budget"}
+        for index in range(1050)
+    ]
+    return tasks, context
+
+
 def aligned_choices(payload, attempt):
     outcomes = ("concern", "no_concern", "insufficient_evidence", "concern")
     answers = {}

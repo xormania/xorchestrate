@@ -10,6 +10,7 @@ import hashlib
 import json
 import math
 import time
+from collections import Counter
 from copy import deepcopy
 from dataclasses import asdict
 from pathlib import Path
@@ -21,6 +22,41 @@ from xorchestrate.model import OrchestrationError
 from .cache import run_tasks, validate_execution
 
 BUDGET_OPTIONS = {"max_request_tokens", "max_question_tokens", "bytes_per_token_estimate", "token_headroom", "max_batches"}
+
+
+def source_units(context, key="sources"):
+    """Expand file metadata for consumers of full or compact source packets."""
+    side = "before" if key == "before_sources" else "after"
+    files = {(item["path"], item.get("side", "after")): item for item in context.get("source_files", [])}
+    owners = {"support_for": context["source_support_default"]} if "source_support_default" in context else {}
+    return [{**files.get((unit["path"], unit.get("side", side)), {}), **owners, **unit, "side": unit.get("side", side)}
+            for unit in context.get(key, [])]
+
+
+def _missing_summaries(rows):
+    """Bind every missing row while exposing bounded, explicit uncertainty."""
+    groups = {}
+    for row in rows:
+        groups.setdefault(row.get("candidate_id"), []).append(row)
+    summaries = []
+    for candidate_id, members in sorted(groups.items(), key=lambda item: item[0] or ""):
+        if len(members) == 1 and members[0].get("summary") is True:
+            summaries.append(members[0])
+            continue
+        members = sorted(members, key=canonical)
+        reasons = dict(sorted(Counter(row["reason"] for row in members).items()))
+        representative, represented, used_bytes = [], set(), 0
+        for row in members:
+            size = len(canonical(row))
+            if row["reason"] not in represented and len(representative) < 3 and used_bytes + size <= 1024:
+                representative.append(row)
+                represented.add(row["reason"])
+                used_bytes += size
+        summaries.append({"candidate_id": candidate_id, "summary": True, "reason": "incomplete_candidate_evidence",
+                          "count": len(members), "reasons": reasons,
+                          "sha256": hashlib.sha256(canonical(members)).hexdigest(),
+                          "representative": representative, "omitted_count": len(members) - len(representative)})
+    return summaries
 
 
 class RequestBudget:
@@ -72,6 +108,9 @@ not model evidence and must not invalidate otherwise identical packet reuse.
     if not {"profile", "sources", "source_scope"} <= result.keys():
         return result
     result.pop("subject", None)
+    for key in ("sources", "before_sources"):
+        if key in result:
+            result[key] = source_units(result, key)
     if candidate_ids is not None:
         selected = set(candidate_ids)
         result["candidates"] = [c for c in result.get("candidates", []) if c["candidate_id"] in selected]
@@ -79,23 +118,39 @@ not model evidence and must not invalidate otherwise identical packet reuse.
             if key in result:
                 result[key] = [s for s in result[key] if not s.get("support_for") or selected.intersection(s["support_for"])]
         if "missing_inputs" in result:
-            result["missing_inputs"] = [m for m in result["missing_inputs"] if m.get("candidate_id") in selected]
+            result["missing_inputs"] = [m for m in result["missing_inputs"]
+                                        if m.get("candidate_id") is None or m["candidate_id"] in selected]
+        for key in ("sources", "before_sources"):
+            for source in result.get(key, []):
+                if source.get("support_for"):
+                    source["support_for"] = [owner for owner in source["support_for"] if owner in selected]
+    if "missing_inputs" in result:
+        result["missing_inputs"] = _missing_summaries(result["missing_inputs"])
     sources = [*result.get("sources", []), *result.get("before_sources", [])]
     # A file can supply dozens of complete units. Keep its measured identity
     # once, keyed by path and revision, instead of repeating it for every import.
-    files = {canonical(item): item for item in result.get("source_files", [])}
+    files = {}
+    roles = {item.get("role") for item in [*sources, *result.get("candidates", [])]}
+    owners = Counter(tuple(source["support_for"]) for source in sources if source.get("support_for"))
+    default = list(owners.most_common(1)[0][0]) if owners else None
+    result.pop("source_support_default", None)
+    if default is not None:
+        result["source_support_default"] = default
     for source in sources:
-        if "sha256" in source:
-            item = {key: source[key] for key in ("path", "module", "sha256", "side", "git_commit") if key in source}
-            files[canonical(item)] = item
-            source.pop("sha256")
-            source.pop("module", None)
-    paths = {(s["path"], s.get("side"), s.get("git_commit")) for s in sources}
+        item = {key: source[key] for key in ("path", "module", "sha256", "role", "side", "git_commit") if key in source}
+        files[canonical(item)] = item
+        for key in ("sha256", "module", "role", "side", "git_commit", "kind"):
+            source.pop(key, None)
+        if source.get("truncated") is False:
+            source.pop("truncated")
+        if default is not None:
+            if source.get("support_for") == default:
+                source.pop("support_for")
+            else:
+                source.setdefault("support_for", [])
     if files:
-        result["source_files"] = [item for _, item in sorted(files.items())
-                                  if (item["path"], item.get("side"), item.get("git_commit")) in paths]
+        result["source_files"] = [item for _, item in sorted(files.items())]
     candidates = result.get("candidates", [])
-    roles = {item.get("role") for item in [*sources, *candidates]}
     profile = result.get("profile")
     if isinstance(profile, dict) and isinstance(profile.get("roles"), dict):
         profile["roles"] = {key: value for key, value in profile["roles"].items() if key in roles}
@@ -106,9 +161,7 @@ not model evidence and must not invalidate otherwise identical packet reuse.
     # Omitted/excluded/global range ledgers remain in diagnostics.source_scope.
     # Only the selected spans and per-candidate missing inputs inform this call.
     if "source_scope" in result:
-        result["source_scope"] = {"selection": scope.get("selection"), "selected": sorted({s["path"] for s in sources}),
-                                  "source_bytes": sum(len(s["source"].encode("utf-8")) for s in sources),
-                                  "changed_ranges": ranges, "truncated": []}
+        result["source_scope"] = {"selection": scope.get("selection"), "changed_ranges": ranges}
     deterministic = result.get("deterministic")
     if isinstance(deterministic, dict):
         paths = {s["path"] for s in sources}

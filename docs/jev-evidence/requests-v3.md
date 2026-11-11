@@ -29,3 +29,28 @@ archive and source hashes and labels token figures as estimates. This is protoco
 and sizing evidence at those inputs, not authenticated TypeSafe behavior,
 provider-tokenizer accuracy or semantic effectiveness. Later review repairs have
 separate focused witnesses above.
+
+## Hosted PR #77 missing-evidence ledger repair
+
+The published predecessor (`3c7e0c4`) could exhaust its request estimate before
+sending any HTTP call: its packet contained 1,050 missing-evidence rows. The
+model state now carries bounded per-candidate summaries with full counts, reason
+counts, canonical full-set digests, representative rows and explicit omissions.
+The outer diagnostic retains the complete raw ledger. Unshown missing-set changes
+invalidate packet reuse; row ordering and repeated projection do not change the
+summary. Complete source bodies remain intact, with repeated file/ownership
+metadata represented separately.
+
+Five independent ledger scenarios and the inherited wire contracts passed in an
+83-case focused run. Eight meaningful red-to-green witnesses passed their healthy
+controls, including two against the actual published request implementation and
+faults for counts, hidden-set cache invalidation, idempotence, unowned evidence,
+full report retention and forbidden source cutting. The JSON ledger retains their
+input hashes, commands, native exits and intended assertion markers.
+
+The actual archived PR #77 state was replayed with its `jev-1.14.0` model label and
+the production diagnostic rubric under the default request limits: all nine tasks
+completed through three local HTTP requests (43,189, 34,581 and 51,412 bytes). All
+114 current/before source-unit bodies were preserved, while the 1,050 missing rows
+remained bound by the compact summaries. This proves protocol sizing and evidence
+preservation for that packet; it is not a live-provider or semantic-quality claim.
