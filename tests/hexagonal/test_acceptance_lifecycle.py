@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 from scripts.testkit.adapters import ownership
+from scripts.testkit.adapters.managed_process import ManagedWorker
 from scripts.testkit.adapters.supervised_run import supervise
 from tests.hexagonal.support.terminal_host import MULTIPLEXER, owned_host, requires_host
 
@@ -359,3 +360,56 @@ def test_an_unready_default_host_is_a_setup_error_never_a_silent_fallback(tmp_pa
     assert json.loads(report.read_text())["failure"] == "terminal_host_unavailable", "the CI lane cannot pass on it"
     explicit = terminal_selection.parse('{"adapter": "detached-process"}')
     assert explicit == {"adapter": "detached-process"}, "an explicitly selected host is used as selected"
+
+
+DETACHED = {"adapter": "detached-process"}
+ENDINGS = {"exit-7": ("exit 7", 7, 7), "signal": ("kill -TERM $$", -signal.SIGTERM, -1)}
+
+
+class SlowToAnswer:
+    """The host, with its first answer about its terminals returning late: the worker ends meanwhile."""
+
+    def __init__(self, host):
+        self.host, self.answered = host, False
+
+    def terminals(self):
+        found = self.host.terminals()
+        if not self.answered:
+            self.answered = True
+            time.sleep(1)
+        return found
+
+    def __getattr__(self, name):
+        return getattr(self.host, name)
+
+
+@pytest.mark.parametrize("ending", sorted(ENDINGS))
+@pytest.mark.parametrize("caller", ["supervisor", "managed"])
+def test_the_host_alone_reaps_what_it_spawned_so_a_failed_worker_is_never_reported_as_zero(tmp_path, caller, ending):
+    """The worker writes a passing scenario receipt, then fails while the kit is between looks at the host."""
+    command, supervised_exit, managed_exit = ENDINGS[ending]
+    script = tmp_path / "worker.sh"
+    script.write_text("#!/bin/sh\n"
+                      f"printf '{{\"status\": \"passed\"}}' > {tmp_path / 'scenario.json'}\n"
+                      f'[ "$3" = _dashboard ] && exec sleep 30\nsleep 0.5\n{command}\n')
+    script.chmod(0o700)
+    if caller == "supervisor":
+        with owned_host(DETACHED) as selected:
+            report = supervise([str(script)], tmp_path, host=SlowToAnswer(selected.host),
+                               host_report=selected.report(), timeout=10, grace=0.5)
+        assert report["worker_exit"] == supervised_exit, report
+        assert report["status"] == "failed", f"a passed receipt from a worker that then fails is not accepted: {report}"
+        assert report["cleanup"]["verified"], report
+        return
+    with owned_host(DETACHED, name="managed") as selected, ownership.subreaper():
+        worker = ManagedWorker(tmp_path, host=selected.host, root=tmp_path, interpreter=str(script), grace=0.5)
+        try:
+            worker.start()
+            deadline, status = time.monotonic() + 10, None
+            while status is None and time.monotonic() < deadline:
+                status = worker.poll()
+                time.sleep(0.05)
+            assert status == managed_exit, f"the worker's own ending, never a stolen 0: {status}"
+            assert worker.cleanup_work()["verified"]
+        finally:
+            worker.close()

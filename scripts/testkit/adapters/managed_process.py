@@ -32,6 +32,8 @@ class ManagedWorker:
     belong to their existing check adapters. Descendant observation and
     identity-fenced signalling are the test kit's ownership primitives: whatever
     exists after the dashboard opened is presentation, everything later is work.
+    The host alone waits for the children it spawned; the kit reaps only what the
+    host never waits for, and everything only once the host has shut down.
     """
 
     def __init__(self, directory, *, host, root, interpreter, grace=10, host_report=None, keep_after_run=False):
@@ -47,14 +49,18 @@ class ManagedWorker:
         env = dict(os.environ)
         env.update(XORCHESTRATE_PROOF_DIRECTORY=str(self.directory), PYTHONUNBUFFERED="1")
         environment = tuple(env.items())
+        before = self.tracker.children()
         dashboard = self.host.open_terminal(DASHBOARD, TerminalCommand(
             (self.interpreter, "-m", "scripts.testkit", "_dashboard", str(self.directory)), str(self.root),
             environment, ROWS, COLUMNS))
         self.opened = True
+        self.tracker.hand_to_host(before)
         self.retained = set(self.tracker.observe())  # the host and the dashboard: presentation, not work
+        before = self.tracker.children()
         worker = self.host.open_terminal(WORKER, TerminalCommand(
             (self.interpreter, "-m", "scripts.testkit", "_worker", str(self.directory)), str(self.root),
             environment, ROWS, COLUMNS))
+        self.tracker.hand_to_host(before)
         self.tracker.observe()
         self.receipts = {DASHBOARD: dashboard.receipt, WORKER: worker.receipt}
         attach = None
@@ -125,6 +131,7 @@ class ManagedWorker:
         with contextlib.suppress(OSError, ValueError):
             self.host.shutdown()
         self.host.close()
+        self.tracker.release_host()
         for item in self.tracker.observe():
             send_signal(item, signal.SIGKILL)
         self.tracker.reap()

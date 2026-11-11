@@ -93,6 +93,7 @@ class OwnedProcesses:
         self.parent = os.getpid()
         self.baseline = set()
         self.known = set()
+        self.hosted = set()  # the terminal host's own children: it alone waits for them
         self._exclude_descendants(processes(), {self.parent})
 
     def _exclude_descendants(self, snapshot, roots):
@@ -123,9 +124,26 @@ class OwnedProcesses:
                     changed = True
         return [identity for identity in self.known if snapshot.get(identity.pid, (None,))[0] == identity and snapshot[identity.pid][2] != "Z"]
 
+    def children(self):
+        """This process's direct children now: taken before a host call, then handed to ``hand_to_host``."""
+        return {identity for identity, parent, _ in processes().values() if parent == self.parent}
+
+    def hand_to_host(self, before):
+        """Children that appeared across a host call are the host's: it alone waits for them and reads their status.
+
+        Waiting for one here would take its exit status, and the host would then see a failed worker as exit 0.
+        """
+        self.hosted.update(self.children() - set(before))
+
+    def release_host(self):
+        """The host has shut down and waits for nothing more: what it left unreaped is ours to reap."""
+        self.hosted.clear()
+
     def reap(self, exclude=()):
         snapshot = processes()
         for identity in self.known:
+            if identity in self.hosted:
+                continue
             if identity.pid not in exclude and snapshot.get(identity.pid, (None,))[0] == identity:
                 try:
                     os.waitpid(identity.pid, os.WNOHANG)

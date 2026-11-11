@@ -116,6 +116,8 @@ def supervise(command, run_dir, *, host, host_report=None, profile="fixture", ti
                 host.shutdown()
             except (OSError, ValueError) as error:
                 errors.append(getattr(error, "code", "terminal_host_shutdown"))
+            if tracker:
+                tracker.release_host()
         if tracker:
             for number in (signal.SIGTERM, signal.SIGKILL):
                 survivors = tracker.observe()
@@ -154,10 +156,12 @@ def supervise(command, run_dir, *, host, host_report=None, profile="fixture", ti
             tracker = OwnedProcesses()
             try:
                 deadline = started + timeout
+                before = tracker.children()
                 terminal = host.open_terminal(TERMINAL, TerminalCommand(
                     tuple(command), str(cwd or Path.cwd()), tuple(env.items()), ROWS, COLUMNS),
                     log=str(run_dir / "terminal.log"))  # everything the worker prints, beyond the capture
                 opened = True
+                tracker.hand_to_host(before)
                 tracker.observe()
                 owner = processes()[os.getpid()][0]
                 write_json(run_dir / "terminal.json", {
