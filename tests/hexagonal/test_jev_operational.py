@@ -11,6 +11,7 @@ import pytest
 from scripts.architecture import operational as subject
 from tests.hexagonal.contracts.jev_operational import comparison_stays_advisory, labels_are_withheld
 from tests.hexagonal.support.jev_operational import SubjectProvider, declared_disposition, operational_catalog
+from tests.hexagonal.support.jev_triage import AtomicProvider
 
 
 @pytest.fixture
@@ -253,3 +254,34 @@ def test_repeated_trials_do_not_multiply_unique_disposition_findings(catalog, tm
     assert report["summary"]["confirmed_findings"] == 1, "REPEATED_TRIAL_IS_NOT_A_NEW_FINDING"
     assert report["summary"]["known_fault_matches"] == 2
     assert report["summary"]["observed_review_minutes"] == 2.5
+
+
+@pytest.mark.parametrize("entrypoint", ("replay", "health"))
+def test_live_entrypoints_preserve_configured_support_question_limit(catalog, monkeypatch, entrypoint):
+    from scripts.architecture import atomic
+
+    provider = AtomicProvider()
+    evaluate = atomic.evaluate_subjects
+    observed = []
+
+    def bounded_evaluator(subjects, options):
+        observed.append(deepcopy(options))
+        return evaluate(subjects, options, evaluator_factory=provider)
+
+    monkeypatch.setattr(atomic, "evaluate_subjects", bounded_evaluator)
+    options = {"endpoint": "https://fixture.invalid", "model": "fixture", "max_support_evidence": 2}
+    if entrypoint == "health":
+        report = subject.health(mode="live", options=options)
+        diagnostics = [report["diagnostics"]]
+    else:
+        value, root = catalog
+        report = subject.replay(value, root=root, mode="live", split="heldout", options=options)
+        diagnostics = [row["diagnostics"] for row in report["cases"]]
+
+    assert observed and all(item.get("max_support_evidence") == 2 for item in observed), "LIVE_SUPPORT_LIMIT_REACHES_ATOMIC_EVALUATOR"
+    assert all(item["status"] == "complete" for item in diagnostics)
+    assessments = [assessment for item in diagnostics for assessment in item["assessments"]]
+    assert assessments and all(len(item["support_scored_ids"]) == 2 for item in assessments)
+    support_questions = [question for call in provider.calls for question in call["questions"].values()
+                         if "concretely support this subject's claim" in question]
+    assert len(support_questions) == 2 * len(assessments), "CONFIGURED_SUPPORT_QUESTION_COUNT_IS_RETAINED"
