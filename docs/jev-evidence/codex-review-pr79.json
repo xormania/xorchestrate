@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "pr": 79,
+  "review_thread": "PRRT_kwDOVUInEM62X9nX",
+  "review_url": "https://github.com/xormania/xorchestrate/pull/79#discussion_r4543664927",
+  "repair": "Operational replay and live health forward max_support_evidence to the atomic evaluator. Both public entrypoints are exercised with a non-default limit of two, including actual support-question construction.",
+  "red_source_sha": "bb2e3f7af59499d05474d8098d8fea23494c8e62",
+  "red_tested_sha": "4ee3de70165f2ce7459a19da2c74daca5a5c5f7b",
+  "red_run_id": 43139665992,
+  "red_artifact_id": 13908209372,
+  "artifact_sha256": "c2ef6d6fe896fdeec59f969931716c5bcf9a1e166885f9b4304a2d4ef5cca3cd",
+  "proof_extraction_run": 43140450554,
+  "proof_extraction_job": 130925877973,
+  "assertion_witness": "LIVE_SUPPORT_LIMIT_REACHES_ATOMIC_EVALUATOR",
+  "cases": [
+    {
+      "test": "test_live_entrypoints_preserve_configured_support_question_limit[replay]",
+      "classname": "tests.hexagonal.test_jev_operational",
+      "failures": 1,
+      "errors": 0,
+      "witness_found": true,
+      "detail": "AssertionError: LIVE_SUPPORT_LIMIT_REACHES_ATOMIC_EVALUATOR\nassert ([{'endpoint': 'https://fixture.invalid', 'model': 'fixture', 'timeout': 15}, {'endpoint': 'https://fixture.invalid', 'model': 'fixture', 'timeout': 15}] and False)\n +  where False = all(<generator object test_live_entrypoints_preserve_configured_support_question_limit.<locals>.<genexpr> at 0x7f29f44efc60>)\ncatalog = ({'schema_version': 1, 'id': 'operational-source-controls', 'cases': [{'id': 'storage-before', 'group': 'storage', 'sp...feca4e184a26be1651cff', ...}]}, PosixPath('/tmp/pytest-of-runner/pytest-0/test_live_entrypoints_preserve0/repository'))\nmonkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f29f4527140>\nentrypoint = 'replay'\n\n    @pytest.mark.parametrize(\"entrypoint\", (\"replay\", \"health\"))\n    def test_live_entrypoints_preserve_configured_support_question_limit(catalog, monkeypatch, entrypoint):"
+    },
+    {
+      "test": "test_live_entrypoints_preserve_configured_support_question_limit[health]",
+      "classname": "tests.hexagonal.test_jev_operational",
+      "failures": 1,
+      "errors": 0,
+      "witness_found": true,
+      "detail": "AssertionError: LIVE_SUPPORT_LIMIT_REACHES_ATOMIC_EVALUATOR\nassert ([{'endpoint': 'https://fixture.invalid', 'model': 'fixture'}] and False)\n +  where False = all(<generator object test_live_entrypoints_preserve_configured_support_question_limit.<locals>.<genexpr> at 0x7f29f44ee330>)\ncatalog = ({'schema_version': 1, 'id': 'operational-source-controls', 'cases': [{'id': 'storage-before', 'group': 'storage', 'sp...feca4e184a26be1651cff', ...}]}, PosixPath('/tmp/pytest-of-runner/pytest-0/test_live_entrypoints_preserve1/repository'))\nmonkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f29f45255e0>\nentrypoint = 'health'\n\n    @pytest.mark.parametrize(\"entrypoint\", (\"replay\", \"health\"))\n    def test_live_entrypoints_preserve_configured_support_question_limit(catalog, monkeypatch, entrypoint):"
+    }
+  ],
+  "test_command": "python -m pytest -q -p no:cacheprovider tests/hexagonal/test_jev_operational.py",
+  "execution_note": "Observed RED came from the repository's full hosted test-kit suite, not a local execution. The targeted command is supplied for reproduction. Subsequent repair-head GitHub Checks retain GREEN execution evidence.",
+  "temporary_workflow": "A read-only reporting workflow exposed the retained ZIP assertions because the managed executor was unavailable. It is removed from the final branch tree."
+}

@@ -201,7 +201,8 @@ def _live_provider(subjects, options):
     from .atomic import TRANSPORT, evaluate_subjects, execution_summary
     from .requests import BUDGET_OPTIONS
 
-    allowed = TRANSPORT | BUDGET_OPTIONS | {"threshold", "cache_dir", "cache_ttl_seconds", "request_limits"}
+    allowed = TRANSPORT | BUDGET_OPTIONS | {"threshold", "cache_dir", "cache_ttl_seconds", "request_limits",
+                                             "max_support_evidence"}
     transport = {key: value for key, value in options.items() if key in allowed}
     try:
         assessments, executions = evaluate_subjects(subjects, transport)

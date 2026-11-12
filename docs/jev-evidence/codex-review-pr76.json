@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "pr": 76,
+  "review_thread": "PRRT_kwDOVUInEM62X1O6",
+  "review_url": "https://github.com/xormania/xorchestrate/pull/76#discussion_r4543608051",
+  "repair": "Module declarations now pair by private AST target identity and occurrence ordinal, independently of source line numbers. Repeated targets retain their own previous values; changed multiplicity stays unpaired instead of asserting a false match. Public symbols and source identities are preserved.",
+  "red_source_sha": "350ee53be06988add9b5a72908e073633161ba5d",
+  "red_tested_sha": "f90f1dbbaf9e7c41312ca3aeb59de0e8a6ebdcba",
+  "red_run_id": 43139540796,
+  "red_artifact_id": 13909555948,
+  "artifact_sha256": "078fbeaa85127f5d1ce940c9d33db82f0021c21c5a5852b826ec32340bcb207d",
+  "proof_extraction_run": 43140450554,
+  "proof_extraction_job": 130925877973,
+  "assertion_witness": "MOVED_DECLARATION_BEFORE_SOURCE_RETAINED",
+  "cases": [
+    {
+      "test": "test_moved_module_declaration_keeps_its_exact_before_after_pair[assignment]",
+      "classname": "tests.hexagonal.test_architecture_packets",
+      "failures": 1,
+      "errors": 0,
+      "witness_found": true,
+      "detail": "AssertionError: MOVED_DECLARATION_BEFORE_SOURCE_RETAINED\nassert [] == ['LIMIT = 10\\n']\n  \n  Right contains one more item: 'LIMIT = 10\\n'\n  \n  Full diff: (-: missing in left side, +: extra in left side)\n  + []\n  - [\n  -     'LIMIT = 10\\n',"
+    },
+    {
+      "test": "test_moved_module_declaration_keeps_its_exact_before_after_pair[annotated-assignment]",
+      "classname": "tests.hexagonal.test_architecture_packets",
+      "failures": 1,
+      "errors": 0,
+      "witness_found": true,
+      "detail": "AssertionError: MOVED_DECLARATION_BEFORE_SOURCE_RETAINED\nassert [] == ['LIMIT: int = 10\\n']\n  \n  Right contains one more item: 'LIMIT: int = 10\\n'\n  \n  Full diff: (-: missing in left side, +: extra in left side)\n  + []\n  - [\n  -     'LIMIT: int = 10\\n',"
+    },
+    {
+      "test": "test_moved_module_declaration_keeps_its_exact_before_after_pair[duplicate-target]",
+      "classname": "tests.hexagonal.test_architecture_packets",
+      "failures": 1,
+      "errors": 0,
+      "witness_found": true,
+      "detail": "AssertionError: MOVED_DECLARATION_BEFORE_SOURCE_RETAINED\nassert ['LIMIT = 30\\n'] == ['LIMIT = 10\\n']\n  \n  At index 0 diff: 'LIMIT = 30\\n' != 'LIMIT = 10\\n'\n  \n  Full diff: (-: missing in left side, +: extra in left side)\n    [\n  -     'LIMIT = 10\\n',\n  ?              ^"
+    }
+  ],
+  "test_command": "python -m pytest -q -p no:cacheprovider tests/hexagonal/test_architecture_packets.py",
+  "execution_note": "Observed RED came from the repository's full hosted test-kit suite, not a local execution. The targeted command is supplied for reproduction. Subsequent repair-head GitHub Checks retain GREEN execution evidence.",
+  "temporary_workflow": "A read-only reporting workflow exposed the retained ZIP assertions because the managed executor was unavailable. It is removed from the final branch tree."
+}

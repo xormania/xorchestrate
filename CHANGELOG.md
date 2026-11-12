@@ -9,6 +9,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- Jev change packets retain moved assignment before-state using stable target identities and distinguish repeated targets.
+- CI summaries retain valid mixed-cache Jev assessments and separate fresh from reused usage.
+- Post-test Jev observation IDs distinguish modules that share a test family.
+- Jev operational replay and live health honor the configured support-evidence question limit.
 - Jev operational evaluation replays pinned engineering incidents and healthy
   controls with separate tuning and heldout groups. Reports distinguish known
   fault matches, independently supported findings, unknown costs and reviewer
