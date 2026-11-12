@@ -19,6 +19,7 @@ from tests.hexagonal.contracts.ci_reuse import (
     assert_reused,
     replace_path,
 )
+from tests.hexagonal.support.ci_lifecycle import ReplacementAPI
 from tests.hexagonal.support.ci_receipts import write_json
 from tests.hexagonal.support.ci_reuse import (
     TEST_LANE,
@@ -149,6 +150,47 @@ def test_observation_action_run_and_attempt_do_not_change_candidate_identity(evi
     original = candidate_context(101, action="synchronize")
     original["producer"]["run_attempt"] = 2
     assert compatible_context(evidence.current, original), "CI_REUSE_OBSERVATIONS_ARE_NOT_INPUTS"
+
+
+@pytest.mark.parametrize("status,conclusion", (("queued", None), ("in_progress", None),
+    ("completed", "success"), ("completed", "failure")))
+def test_known_old_source_is_suppressed_only_when_current_source_has_surviving_ci(evidence, monkeypatch, tmp_path,
+                                                                               status, conclusion):
+    peer = ReplacementAPI(evidence.current)
+    peer.run.update(status=status, conclusion=conclusion)
+    monkeypatch.setattr(subject, "_get", peer)
+    plan, bundle = subject.prepare(evidence.current, {}, "fixture-token", {}, tmp_path / "plan", aggregate.evaluate)
+    assert plan["decision"] == "superseded", "CI_STALE_SOURCE_DOES_NOT_EXECUTE_WITH_PROVED_REPLACEMENT"
+    assert bundle is None and plan["replacement_run"]["id"] == 302
+    assert "producer" not in plan and "lanes" not in plan, "SUPPRESSION_IS_NOT_SUCCESSFUL_EVIDENCE_REUSE"
+    assert any(path == "/actions/runs/302" for _, path in peer.requests)
+
+
+@pytest.mark.parametrize("fault", ("cancelled", "missing", "other_pr", "metadata", "old_run", "changed_after_lookup",
+                                  "canonical_source_changed", "base_only"))
+def test_unproved_replacement_never_discards_the_remaining_validation(evidence, monkeypatch, tmp_path, fault):
+    peer = ReplacementAPI(evidence.current)
+    if fault == "cancelled":
+        peer.run.update(status="completed", conclusion="cancelled")
+    elif fault == "missing":
+        peer.listing = []
+    elif fault == "other_pr":
+        peer.listing[0]["pull_requests"][0]["number"] = 18
+    elif fault == "metadata":
+        peer.listing[0]["display_title"] = peer.listing[0]["display_title"].replace(":synchronize:", ":edited:")
+    elif fault == "old_run":
+        peer.listing[0]["id"] = 300
+    elif fault == "changed_after_lookup":
+        peer.change_after_lookup = "1" * 40
+    elif fault == "canonical_source_changed":
+        peer.refs[peer.source_key]["object"]["sha"] = "1" * 40
+    else:
+        peer.pr["head"]["sha"] = evidence.current["source_sha"]
+        peer.pr["base"]["sha"] = "1" * 40
+    monkeypatch.setattr(subject, "_get", peer)
+    plan, bundle = subject.prepare(evidence.current, {}, "fixture-token", {}, tmp_path / "plan", aggregate.evaluate)
+    assert plan["decision"] == "execute", "CI_UNPROVED_REPLACEMENT_CANNOT_SUPPRESS_VALIDATION"
+    assert bundle is None and "replacement_run" not in plan
 
 
 @pytest.mark.parametrize("path", IDENTITY_CHANGES)

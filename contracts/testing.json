@@ -210,7 +210,8 @@
         "tests/hexagonal/test_ci_dependencies.py": "adapter",
         "tests/hexagonal/test_ci_reuse.py": "contract",
         "tests/hexagonal/test_ci_result.py": "contract",
-        "tests/hexagonal/test_candidate_evidence.py": "contract"
+        "tests/hexagonal/test_candidate_evidence.py": "contract",
+        "tests/hexagonal/test_ci_lifecycle.py": "contract"
       }
     },
     "telemetry": {

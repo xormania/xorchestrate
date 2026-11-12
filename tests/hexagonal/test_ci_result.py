@@ -396,7 +396,7 @@ def test_ci_summary_waits_for_advisory_artifact_without_requiring_jev_success():
     workflow = json.loads((Path(__file__).parents[2] / ".github/workflows/ci.yml").read_text())
     aggregate = workflow["jobs"]["ci-result"]
     assert "architecture" in aggregate["needs"]
-    assert aggregate["if"] == "${{ always() }}"
+    assert "always()" in aggregate["if"]
     docs, errors = subject.job_verdict(_needs(), event="pull_request")
     assert docs is False and errors == []
 

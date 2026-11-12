@@ -9,6 +9,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- PR title/body edits use a small metadata observation and marking a draft ready
+  preserves existing checks. Source and base changes still validate; obsolete
+  source work can stop when a surviving current-head run is verified. See
+  [PR lifecycle validation](docs/pr-lifecycle-ci.md).
 - Jev change packets retain moved assignment before-state using stable target identities and distinguish repeated targets.
 - CI summaries retain valid mixed-cache Jev assessments and separate fresh from reused usage.
 - Post-test Jev observation IDs distinguish modules that share a test family.

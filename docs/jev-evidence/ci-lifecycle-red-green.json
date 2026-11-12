@@ -1,0 +1,481 @@
+{
+  "purpose": "Independent event-routing and surviving-replacement regression evidence; no setup failures counted as RED.",
+  "python": "3.12.16",
+  "production_commit": "309a1428d92c6f96b18504c305ee79ac088b7c0c",
+  "predecessor_red": {
+    "commit": "66390e749c6c630ff8716c17b742de6ad9b60a26",
+    "command": "PYTHONPYCACHEPREFIX=/tmp/jev-routing-test-author-red /workspace/scratch/150dce018256/ci-jev-test-env/bin/python -m pytest -p no:cacheprovider tests/hexagonal/test_ci_lifecycle.py -q",
+    "result": "4 failed, 6 passed",
+    "observed_assertions": [
+      "CI_METADATA_DOES_NOT_START_paths (three known metadata-edit cases)",
+      "CI_READINESS_REUSES_EXISTING_VERIFICATION"
+    ],
+    "note": "Observed before implementation with the original ten routing scenarios; six material-event controls passed."
+  },
+  "fault_witnesses": [
+    {
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "candidate_sha256": "7dfdff38f10cdc6c7efa3a176100049d95a69b2f2f9722212f245fe335c5ae16",
+      "classification": "detected",
+      "commands": {
+        "control": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_lifecycle.py::test_metadata_edits_do_not_start_validation_or_replace_required_check_names[changes0]",
+            "--junitxml=/workspace/scratch/150dce018256/jev-routing-redproof/required-name/control.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-routing-redproof/required-name/control",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-routing-redproof/required-name/control-run-observer:/workspace/scratch/150dce018256/jev-routing-redproof/required-name/control"
+          },
+          "exit_status": 0,
+          "finished_at": "2026-11-12T11:00:46.517745+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:00:45.596999+00:00",
+          "status": "passed",
+          "stderr": "/workspace/scratch/150dce018256/jev-routing-redproof/required-name/control-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-routing-redproof/required-name/control-run/stdout.log",
+          "stdout_sha256": "5b19689a97d618d5cdfce632de67285a8efa3c57100a80350a5bb7ca9e05ae34",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-routing-redproof/required-name/control.xml",
+          "stdout_text": ".                                                                        [100%]\n1 passed in 0.05s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"0\" skipped=\"0\" tests=\"1\" time=\"0.054\" timestamp=\"2026-11-12T06:00:46.345041-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_lifecycle\" name=\"test_metadata_edits_do_not_start_validation_or_replace_required_check_names[changes0]\" time=\"0.002\" /></testsuite></testsuites>"
+        },
+        "mutant": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_lifecycle.py::test_metadata_edits_do_not_start_validation_or_replace_required_check_names[changes0]",
+            "--junitxml=/workspace/scratch/150dce018256/jev-routing-redproof/required-name/mutant.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-routing-redproof/required-name/mutant",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-routing-redproof/required-name/mutant-run-observer:/workspace/scratch/150dce018256/jev-routing-redproof/required-name/mutant"
+          },
+          "exit_status": 1,
+          "finished_at": "2026-11-12T11:00:47.404612+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:00:46.518964+00:00",
+          "status": "failed",
+          "stderr": "/workspace/scratch/150dce018256/jev-routing-redproof/required-name/mutant-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-routing-redproof/required-name/mutant-run/stdout.log",
+          "stdout_sha256": "174074cbe25f686c01b34257ee8cc4fb2ca8d6b09bf7734ecace3b712b8968e3",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-routing-redproof/required-name/mutant.xml",
+          "stdout_text": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_ test_metadata_edits_do_not_start_validation_or_replace_required_check_names[changes0] _\ntests/hexagonal/test_ci_lifecycle.py:29: in test_metadata_edits_do_not_start_validation_or_replace_required_check_names\n    assert expression(job.get(\"name\", name), context) not in REQUIRED_NAMES, \\\nE   AssertionError: CI_METADATA_CANNOT_REPLACE_REQUIRED_CHECK_WITH_SKIPPED_GREEN\nE   assert 'CI result' not in {'CI result', 'Hexagonal architecture'}\nE    +  where 'CI result' = expression('CI result', {'github': {'event_name': 'pull_request', 'repository_id': 77, 'ref': 'refs/pull/17/merge', 'event': {'action': 'edite...s': {'code': 'true', 'reuse': 'false'}}, 'changes': {'result': 'success'}, 'application-tests': {'result': 'success'}}})\nE    +    where 'CI result' = <built-in method get of dict object at 0x7f3afe4f1000>('name', 'ci-result')\nE    +      where <built-in method get of dict object at 0x7f3afe4f1000> = {'name': 'CI result', 'runs-on': 'ubuntu-24.04', 'timeout-minutes': 10, 'needs': ['paths', 'changes', 'application-tests', 'application', 'verification', 'tmux-acceptance', ...], ...}.get\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_ci_lifecycle.py::test_metadata_edits_do_not_start_validation_or_replace_required_check_names[changes0]\n1 failed in 0.05s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"1\" skipped=\"0\" tests=\"1\" time=\"0.057\" timestamp=\"2026-11-12T06:00:47.290679-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_lifecycle\" name=\"test_metadata_edits_do_not_start_validation_or_replace_required_check_names[changes0]\" time=\"0.002\"><properties><property name=\"calibration.attribution\" value=\"{&quot;assertion_span&quot;: [29, 8, 30, 74], &quot;exception_type&quot;: &quot;AssertionError&quot;, &quot;file&quot;: &quot;/workspace/scratch/150dce018256/jev-routing-redproof/required-name/mutant/tests/hexagonal/test_ci_lifecycle.py&quot;, &quot;function&quot;: &quot;test_metadata_edits_do_not_start_validation_or_replace_required_check_names&quot;, &quot;instruction&quot;: &quot;RAISE_VARARGS&quot;, &quot;instruction_offset&quot;: 2154, &quot;instruction_span&quot;: [29, 8, 30, 74], &quot;line&quot;: 29, &quot;phase&quot;: &quot;call&quot;, &quot;target_assertion&quot;: true, &quot;test_name&quot;: &quot;test_metadata_edits_do_not_start_validation_or_replace_required_check_names[changes0]&quot;}\" /></properties><failure message=\"AssertionError: CI_METADATA_CANNOT_REPLACE_REQUIRED_CHECK_WITH_SKIPPED_GREEN&#10;assert 'CI result' not in {'CI result', 'Hexagonal architecture'}&#10; +  where 'CI result' = expression('CI result', {'github': {'event_name': 'pull_request', 'repository_id': 77, 'ref': 'refs/pull/17/merge', 'event': {'action': 'edite...s': {'code': 'true', 'reuse': 'false'}}, 'changes': {'result': 'success'}, 'application-tests': {'result': 'success'}}})&#10;[+2 more lines; full report in element text]\">tests/hexagonal/test_ci_lifecycle.py:29: in test_metadata_edits_do_not_start_validation_or_replace_required_check_names\n    assert expression(job.get(\"name\", name), context) not in REQUIRED_NAMES, \\\nE   AssertionError: CI_METADATA_CANNOT_REPLACE_REQUIRED_CHECK_WITH_SKIPPED_GREEN\nE   assert 'CI result' not in {'CI result', 'Hexagonal architecture'}\nE    +  where 'CI result' = expression('CI result', {'github': {'event_name': 'pull_request', 'repository_id': 77, 'ref': 'refs/pull/17/merge', 'event': {'action': 'edite...s': {'code': 'true', 'reuse': 'false'}}, 'changes': {'result': 'success'}, 'application-tests': {'result': 'success'}}})\nE    +    where 'CI result' = &lt;built-in method get of dict object at 0x7f3afe4f1000&gt;('name', 'ci-result')\nE    +      where &lt;built-in method get of dict object at 0x7f3afe4f1000&gt; = {'name': 'CI result', 'runs-on': 'ubuntu-24.04', 'timeout-minutes': 10, 'needs': ['paths', 'changes', 'application-tests', 'application', 'verification', 'tmux-acceptance', ...], ...}.get</failure></testcase></testsuite></testsuites>"
+        }
+      },
+      "expected_diagnostic": "CI_METADATA_CANNOT_REPLACE_REQUIRED_CHECK_WITH_SKIPPED_GREEN",
+      "finished_at": "2026-11-12T11:00:47.405981+00:00",
+      "mutation_applied": true,
+      "mutation_sha256": "295954eadd7749bbe7e99ec27ffa32691d80e7cace89f889c30c8bd721f0e9c3",
+      "target": "tests.hexagonal.test_ci_lifecycle::test_metadata_edits_do_not_start_validation_or_replace_required_check_names[changes0]",
+      "unaffected": [],
+      "fault": {
+        "new": "\"name\": \"CI result\"",
+        "old": "\"name\": \"${{ github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && 'PR metadata (no CI result)' || 'CI result' }}\"",
+        "path": ".github/workflows/ci.yml"
+      },
+      "patch": "--- a/.github/workflows/ci.yml\n+++ b/.github/workflows/ci.yml\n@@ -700,7 +700,7 @@\n       }\n     },\n     \"ci-result\": {\n-      \"name\": \"${{ github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && 'PR metadata (no CI result)' || 'CI result' }}\",\n+      \"name\": \"CI result\",\n       \"runs-on\": \"ubuntu-24.04\",\n       \"timeout-minutes\": 10,\n       \"needs\": [\n"
+    },
+    {
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "candidate_sha256": "7dfdff38f10cdc6c7efa3a176100049d95a69b2f2f9722212f245fe335c5ae16",
+      "classification": "detected",
+      "commands": {
+        "control": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_lifecycle.py::test_new_source_supersedes_old_validation_but_metadata_cannot_cancel_it",
+            "--junitxml=/workspace/scratch/150dce018256/jev-routing-redproof/obsolete-head-cancellation/control.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-routing-redproof/obsolete-head-cancellation/control",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-routing-redproof/obsolete-head-cancellation/control-run-observer:/workspace/scratch/150dce018256/jev-routing-redproof/obsolete-head-cancellation/control"
+          },
+          "exit_status": 0,
+          "finished_at": "2026-11-12T11:00:48.566797+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:00:47.718490+00:00",
+          "status": "passed",
+          "stderr": "/workspace/scratch/150dce018256/jev-routing-redproof/obsolete-head-cancellation/control-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-routing-redproof/obsolete-head-cancellation/control-run/stdout.log",
+          "stdout_sha256": "f4c77b58e2280613a49ba18da1c4a02d440e862c49a6c8fe5daaf277333ff99d",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-routing-redproof/obsolete-head-cancellation/control.xml",
+          "stdout_text": ".                                                                        [100%]\n1 passed in 0.04s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"0\" skipped=\"0\" tests=\"1\" time=\"0.043\" timestamp=\"2026-11-12T06:00:48.453995-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_lifecycle\" name=\"test_new_source_supersedes_old_validation_but_metadata_cannot_cancel_it\" time=\"0.001\" /></testsuite></testsuites>"
+        },
+        "mutant": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_lifecycle.py::test_new_source_supersedes_old_validation_but_metadata_cannot_cancel_it",
+            "--junitxml=/workspace/scratch/150dce018256/jev-routing-redproof/obsolete-head-cancellation/mutant.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-routing-redproof/obsolete-head-cancellation/mutant",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-routing-redproof/obsolete-head-cancellation/mutant-run-observer:/workspace/scratch/150dce018256/jev-routing-redproof/obsolete-head-cancellation/mutant"
+          },
+          "exit_status": 1,
+          "finished_at": "2026-11-12T11:00:49.338714+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:00:48.567981+00:00",
+          "status": "failed",
+          "stderr": "/workspace/scratch/150dce018256/jev-routing-redproof/obsolete-head-cancellation/mutant-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-routing-redproof/obsolete-head-cancellation/mutant-run/stdout.log",
+          "stdout_sha256": "d003e7ff6893120b17c562b9c9678cf446c0b818284870fee6a798d6907b8e51",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-routing-redproof/obsolete-head-cancellation/mutant.xml",
+          "stdout_text": "F                                                                        [100%]\n=================================== FAILURES ===================================\n___ test_new_source_supersedes_old_validation_but_metadata_cannot_cancel_it ____\ntests/hexagonal/test_ci_lifecycle.py:62: in test_new_source_supersedes_old_validation_but_metadata_cannot_cancel_it\n    assert expression(concurrency[\"cancel-in-progress\"], current), \"CI_OLD_HEAD_WORK_IS_CANCELLED\"\nE   AssertionError: CI_OLD_HEAD_WORK_IS_CANCELLED\nE   assert False\nE    +  where False = expression(False, {'github': {'event_name': 'pull_request', 'repository_id': 77, 'ref': 'refs/pull/17/merge', 'event': {'action': 'synch...s': {'code': 'true', 'reuse': 'false'}}, 'changes': {'result': 'success'}, 'application-tests': {'result': 'success'}}})\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_ci_lifecycle.py::test_new_source_supersedes_old_validation_but_metadata_cannot_cancel_it\n1 failed in 0.06s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"1\" skipped=\"0\" tests=\"1\" time=\"0.061\" timestamp=\"2026-11-12T06:00:49.208105-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_lifecycle\" name=\"test_new_source_supersedes_old_validation_but_metadata_cannot_cancel_it\" time=\"0.001\"><properties><property name=\"calibration.attribution\" value=\"{&quot;assertion_span&quot;: [62, 4, 62, 98], &quot;exception_type&quot;: &quot;AssertionError&quot;, &quot;file&quot;: &quot;/workspace/scratch/150dce018256/jev-routing-redproof/obsolete-head-cancellation/mutant/tests/hexagonal/test_ci_lifecycle.py&quot;, &quot;function&quot;: &quot;test_new_source_supersedes_old_validation_but_metadata_cannot_cancel_it&quot;, &quot;instruction&quot;: &quot;RAISE_VARARGS&quot;, &quot;instruction_offset&quot;: 3588, &quot;instruction_span&quot;: [62, 4, 62, 98], &quot;line&quot;: 62, &quot;phase&quot;: &quot;call&quot;, &quot;target_assertion&quot;: true, &quot;test_name&quot;: &quot;test_new_source_supersedes_old_validation_but_metadata_cannot_cancel_it&quot;}\" /></properties><failure message=\"AssertionError: CI_OLD_HEAD_WORK_IS_CANCELLED&#10;assert False&#10; +  where False = expression(False, {'github': {'event_name': 'pull_request', 'repository_id': 77, 'ref': 'refs/pull/17/merge', 'event': {'action': 'synch...s': {'code': 'true', 'reuse': 'false'}}, 'changes': {'result': 'success'}, 'application-tests': {'result': 'success'}}})\">tests/hexagonal/test_ci_lifecycle.py:62: in test_new_source_supersedes_old_validation_but_metadata_cannot_cancel_it\n    assert expression(concurrency[\"cancel-in-progress\"], current), \"CI_OLD_HEAD_WORK_IS_CANCELLED\"\nE   AssertionError: CI_OLD_HEAD_WORK_IS_CANCELLED\nE   assert False\nE    +  where False = expression(False, {'github': {'event_name': 'pull_request', 'repository_id': 77, 'ref': 'refs/pull/17/merge', 'event': {'action': 'synch...s': {'code': 'true', 'reuse': 'false'}}, 'changes': {'result': 'success'}, 'application-tests': {'result': 'success'}}})</failure></testcase></testsuite></testsuites>"
+        }
+      },
+      "expected_diagnostic": "CI_OLD_HEAD_WORK_IS_CANCELLED",
+      "finished_at": "2026-11-12T11:00:49.339623+00:00",
+      "mutation_applied": true,
+      "mutation_sha256": "8471ed5181a0506a31684a8827595769d27fcb97609b6ff790d27dcf86cd0963",
+      "target": "tests.hexagonal.test_ci_lifecycle::test_new_source_supersedes_old_validation_but_metadata_cannot_cancel_it",
+      "unaffected": [],
+      "fault": {
+        "new": "\"cancel-in-progress\": false",
+        "old": "\"cancel-in-progress\": true",
+        "path": ".github/workflows/ci.yml"
+      },
+      "patch": "--- a/.github/workflows/ci.yml\n+++ b/.github/workflows/ci.yml\n@@ -21,7 +21,7 @@\n   },\n   \"concurrency\": {\n     \"group\": \"ci-${{ github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && format('metadata-{0}-{1}', github.repository_id, github.event.pull_request.number) || (github.event_name == 'pull_request' && format('pr-{0}-{1}', github.repository_id, github.event.pull_request.number) || github.ref) }}\",\n-    \"cancel-in-progress\": true\n+    \"cancel-in-progress\": false\n   },\n   \"jobs\": {\n     \"metadata\": {\n",
+      "coverage_status": "Historical proof for the former PR-wide cancellation policy, superseded by adversarial review. It does not establish safe current cancellation semantics; see adversarial_amendment."
+    },
+    {
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "candidate_sha256": "24f47d4c4765b5906c21f6b731a2a2a4fa660d8b26086bfaa03de6a218184142",
+      "classification": "detected",
+      "commands": {
+        "control": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_reuse.py::test_known_old_source_is_suppressed_only_when_current_source_has_surviving_ci[queued-None]",
+            "--junitxml=/workspace/scratch/150dce018256/jev-routing-redproof/stale-work-execution-v3/control.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-routing-redproof/stale-work-execution-v3/control",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-routing-redproof/stale-work-execution-v3/control-run-observer:/workspace/scratch/150dce018256/jev-routing-redproof/stale-work-execution-v3/control"
+          },
+          "exit_status": 0,
+          "finished_at": "2026-11-12T11:03:40.534518+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:03:39.625755+00:00",
+          "status": "passed",
+          "stderr": "/workspace/scratch/150dce018256/jev-routing-redproof/stale-work-execution-v3/control-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-routing-redproof/stale-work-execution-v3/control-run/stdout.log",
+          "stdout_sha256": "7fefcaf66f6e7137767bc25d16d128cbf7b8617ad0b6f14fbf9a0b8e7fdd81cd",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-routing-redproof/stale-work-execution-v3/control.xml",
+          "stdout_text": ".                                                                        [100%]\n1 passed in 0.17s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"0\" skipped=\"0\" tests=\"1\" time=\"0.171\" timestamp=\"2026-11-12T06:03:40.312301-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_reuse\" name=\"test_known_old_source_is_suppressed_only_when_current_source_has_surviving_ci[queued-None]\" time=\"0.003\" /></testsuite></testsuites>"
+        },
+        "mutant": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_reuse.py::test_known_old_source_is_suppressed_only_when_current_source_has_surviving_ci[queued-None]",
+            "--junitxml=/workspace/scratch/150dce018256/jev-routing-redproof/stale-work-execution-v3/mutant.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-routing-redproof/stale-work-execution-v3/mutant",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-routing-redproof/stale-work-execution-v3/mutant-run-observer:/workspace/scratch/150dce018256/jev-routing-redproof/stale-work-execution-v3/mutant"
+          },
+          "exit_status": 1,
+          "finished_at": "2026-11-12T11:03:41.492654+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:03:40.535918+00:00",
+          "status": "failed",
+          "stderr": "/workspace/scratch/150dce018256/jev-routing-redproof/stale-work-execution-v3/mutant-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-routing-redproof/stale-work-execution-v3/mutant-run/stdout.log",
+          "stdout_sha256": "5d8b479afc83751dc6c6f29ef0b5fd1182a73b47dbb0bc550fab4eba9158270c",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-routing-redproof/stale-work-execution-v3/mutant.xml",
+          "stdout_text": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_ test_known_old_source_is_suppressed_only_when_current_source_has_surviving_ci[queued-None] _\ntests/hexagonal/test_ci_reuse.py:163: in test_known_old_source_is_suppressed_only_when_current_source_has_surviving_ci\n    assert plan[\"decision\"] == \"superseded\", \"CI_STALE_SOURCE_DOES_NOT_EXECUTE_WITH_PROVED_REPLACEMENT\"\nE   AssertionError: CI_STALE_SOURCE_DOES_NOT_EXECUTE_WITH_PROVED_REPLACEMENT\nE   assert 'execute' == 'superseded'\nE     \nE     - superseded\nE     + execute\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_ci_reuse.py::test_known_old_source_is_suppressed_only_when_current_source_has_surviving_ci[queued-None]\n1 failed in 0.24s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"1\" skipped=\"0\" tests=\"1\" time=\"0.207\" timestamp=\"2026-11-12T06:03:41.196467-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_reuse\" name=\"test_known_old_source_is_suppressed_only_when_current_source_has_surviving_ci[queued-None]\" time=\"0.003\"><properties><property name=\"calibration.attribution\" value=\"{&quot;assertion_span&quot;: [163, 4, 163, 103], &quot;exception_type&quot;: &quot;AssertionError&quot;, &quot;file&quot;: &quot;/workspace/scratch/150dce018256/jev-routing-redproof/stale-work-execution-v3/mutant/tests/hexagonal/test_ci_reuse.py&quot;, &quot;function&quot;: &quot;test_known_old_source_is_suppressed_only_when_current_source_has_surviving_ci&quot;, &quot;instruction&quot;: &quot;RAISE_VARARGS&quot;, &quot;instruction_offset&quot;: 546, &quot;instruction_span&quot;: [163, 4, 163, 103], &quot;line&quot;: 163, &quot;phase&quot;: &quot;call&quot;, &quot;target_assertion&quot;: true, &quot;test_name&quot;: &quot;test_known_old_source_is_suppressed_only_when_current_source_has_surviving_ci[queued-None]&quot;}\" /></properties><failure message=\"AssertionError: CI_STALE_SOURCE_DOES_NOT_EXECUTE_WITH_PROVED_REPLACEMENT&#10;assert 'execute' == 'superseded'&#10;  &#10;  - superseded&#10;  + execute\">tests/hexagonal/test_ci_reuse.py:163: in test_known_old_source_is_suppressed_only_when_current_source_has_surviving_ci\n    assert plan[\"decision\"] == \"superseded\", \"CI_STALE_SOURCE_DOES_NOT_EXECUTE_WITH_PROVED_REPLACEMENT\"\nE   AssertionError: CI_STALE_SOURCE_DOES_NOT_EXECUTE_WITH_PROVED_REPLACEMENT\nE   assert 'execute' == 'superseded'\nE     \nE     - superseded\nE     + execute</failure></testcase></testsuite></testsuites>"
+        }
+      },
+      "expected_diagnostic": "CI_STALE_SOURCE_DOES_NOT_EXECUTE_WITH_PROVED_REPLACEMENT",
+      "finished_at": "2026-11-12T11:03:41.493683+00:00",
+      "mutation_applied": true,
+      "mutation_sha256": "745feac513435c78b46fc634e6234a3db63e952d1549c1055c17c263a714b62d",
+      "target": "tests.hexagonal.test_ci_reuse::test_known_old_source_is_suppressed_only_when_current_source_has_surviving_ci[queued-None]",
+      "unaffected": [],
+      "fault": {
+        "new": "plan.update(reason=\"superseded_candidate\", current_pr=observation)\n            if replacement is not None:\n                plan.update(decision=\"execute\", replacement_run=replacement)",
+        "old": "plan.update(reason=\"superseded_candidate\", current_pr=observation)\n            if replacement is not None:\n                plan.update(decision=\"superseded\", replacement_run=replacement)",
+        "path": "scripts/ci/reuse.py"
+      },
+      "patch": "--- a/scripts/ci/reuse.py\n+++ b/scripts/ci/reuse.py\n@@ -470,7 +470,7 @@\n             replacement = replacement_run(context, observation, token)\n             plan.update(reason=\"superseded_candidate\", current_pr=observation)\n             if replacement is not None:\n-                plan.update(decision=\"superseded\", replacement_run=replacement)\n+                plan.update(decision=\"execute\", replacement_run=replacement)\n             return plan, None\n         if not enabled:\n             plan.update(reason=\"reuse_disabled\", current_pr=observation)\n"
+    },
+    {
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "candidate_sha256": "24f47d4c4765b5906c21f6b731a2a2a4fa660d8b26086bfaa03de6a218184142",
+      "classification": "detected",
+      "commands": {
+        "control": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_reuse.py::test_unproved_replacement_never_discards_the_remaining_validation[cancelled]",
+            "--junitxml=/workspace/scratch/150dce018256/jev-routing-redproof/cancelled-replacement/control.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-routing-redproof/cancelled-replacement/control",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-routing-redproof/cancelled-replacement/control-run-observer:/workspace/scratch/150dce018256/jev-routing-redproof/cancelled-replacement/control"
+          },
+          "exit_status": 0,
+          "finished_at": "2026-11-12T11:03:42.495835+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:03:41.697907+00:00",
+          "status": "passed",
+          "stderr": "/workspace/scratch/150dce018256/jev-routing-redproof/cancelled-replacement/control-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-routing-redproof/cancelled-replacement/control-run/stdout.log",
+          "stdout_sha256": "976ea3fe6dfa65b827ec05fc16bf49cec94d3fda3b2d6ad4719708e74a38b32d",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-routing-redproof/cancelled-replacement/control.xml",
+          "stdout_text": ".                                                                        [100%]\n1 passed in 0.15s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"0\" skipped=\"0\" tests=\"1\" time=\"0.151\" timestamp=\"2026-11-12T06:03:42.290486-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_reuse\" name=\"test_unproved_replacement_never_discards_the_remaining_validation[cancelled]\" time=\"0.002\" /></testsuite></testsuites>"
+        },
+        "mutant": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_reuse.py::test_unproved_replacement_never_discards_the_remaining_validation[cancelled]",
+            "--junitxml=/workspace/scratch/150dce018256/jev-routing-redproof/cancelled-replacement/mutant.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-routing-redproof/cancelled-replacement/mutant",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-routing-redproof/cancelled-replacement/mutant-run-observer:/workspace/scratch/150dce018256/jev-routing-redproof/cancelled-replacement/mutant"
+          },
+          "exit_status": 1,
+          "finished_at": "2026-11-12T11:03:43.407180+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:03:42.497204+00:00",
+          "status": "failed",
+          "stderr": "/workspace/scratch/150dce018256/jev-routing-redproof/cancelled-replacement/mutant-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-routing-redproof/cancelled-replacement/mutant-run/stdout.log",
+          "stdout_sha256": "a0c82722efed0392ebe75ca78d87fd72626a2211e78aa4177e845077428db204",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-routing-redproof/cancelled-replacement/mutant.xml",
+          "stdout_text": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_ test_unproved_replacement_never_discards_the_remaining_validation[cancelled] _\ntests/hexagonal/test_ci_reuse.py:192: in test_unproved_replacement_never_discards_the_remaining_validation\n    assert plan[\"decision\"] == \"execute\", \"CI_UNPROVED_REPLACEMENT_CANNOT_SUPPRESS_VALIDATION\"\nE   AssertionError: CI_UNPROVED_REPLACEMENT_CANNOT_SUPPRESS_VALIDATION\nE   assert 'superseded' == 'execute'\nE     \nE     - execute\nE     + superseded\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_ci_reuse.py::test_unproved_replacement_never_discards_the_remaining_validation[cancelled]\n1 failed in 0.24s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"1\" skipped=\"0\" tests=\"1\" time=\"0.239\" timestamp=\"2026-11-12T06:03:43.112959-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_reuse\" name=\"test_unproved_replacement_never_discards_the_remaining_validation[cancelled]\" time=\"0.004\"><properties><property name=\"calibration.attribution\" value=\"{&quot;assertion_span&quot;: [192, 4, 192, 94], &quot;exception_type&quot;: &quot;AssertionError&quot;, &quot;file&quot;: &quot;/workspace/scratch/150dce018256/jev-routing-redproof/cancelled-replacement/mutant/tests/hexagonal/test_ci_reuse.py&quot;, &quot;function&quot;: &quot;test_unproved_replacement_never_discards_the_remaining_validation&quot;, &quot;instruction&quot;: &quot;RAISE_VARARGS&quot;, &quot;instruction_offset&quot;: 1002, &quot;instruction_span&quot;: [192, 4, 192, 94], &quot;line&quot;: 192, &quot;phase&quot;: &quot;call&quot;, &quot;target_assertion&quot;: true, &quot;test_name&quot;: &quot;test_unproved_replacement_never_discards_the_remaining_validation[cancelled]&quot;}\" /></properties><failure message=\"AssertionError: CI_UNPROVED_REPLACEMENT_CANNOT_SUPPRESS_VALIDATION&#10;assert 'superseded' == 'execute'&#10;  &#10;  - execute&#10;  + superseded\">tests/hexagonal/test_ci_reuse.py:192: in test_unproved_replacement_never_discards_the_remaining_validation\n    assert plan[\"decision\"] == \"execute\", \"CI_UNPROVED_REPLACEMENT_CANNOT_SUPPRESS_VALIDATION\"\nE   AssertionError: CI_UNPROVED_REPLACEMENT_CANNOT_SUPPRESS_VALIDATION\nE   assert 'superseded' == 'execute'\nE     \nE     - execute\nE     + superseded</failure></testcase></testsuite></testsuites>"
+        }
+      },
+      "expected_diagnostic": "CI_UNPROVED_REPLACEMENT_CANNOT_SUPPRESS_VALIDATION",
+      "finished_at": "2026-11-12T11:03:43.408120+00:00",
+      "mutation_applied": true,
+      "mutation_sha256": "2b2aa8ca0b8d7acbeb61cde8b92014013633cde5d97389c86601d5b322703085",
+      "target": "tests.hexagonal.test_ci_reuse::test_unproved_replacement_never_discards_the_remaining_validation[cancelled]",
+      "unaffected": [],
+      "fault": {
+        "new": "if False:",
+        "old": "if not active and not finished:",
+        "path": "scripts/ci/reuse.py"
+      },
+      "patch": "--- a/scripts/ci/reuse.py\n+++ b/scripts/ci/reuse.py\n@@ -289,7 +289,7 @@\n         active = actual.get(\"status\") in {\"queued\", \"in_progress\", \"waiting\", \"pending\", \"requested\"}\n         finished = (actual.get(\"status\") == \"completed\"\n                     and actual.get(\"conclusion\") in {\"success\", \"failure\", \"timed_out\", \"action_required\"})\n-        if not active and not finished:\n+        if False:\n             continue\n         latest = observe_current(context, token)\n         source = _get({**context, \"repository\": context[\"source_repository\"]}, token,\n"
+    }
+  ],
+  "green": {
+    "command": "PYTHONPYCACHEPREFIX=/tmp/jev-routing-final-green /workspace/scratch/150dce018256/ci-jev-test-env/bin/python -m pytest -p no:cacheprovider tests/hexagonal/test_ci_lifecycle.py tests/hexagonal/test_ci_changes.py tests/hexagonal/test_ci_reuse.py tests/hexagonal/test_ci_result.py -q",
+    "result": "374 passed in 2.62s",
+    "ruff": "All changed Python test/support/contract files passed ruff check."
+  },
+  "adversarial_amendment": {
+    "production_commit": "abeb085c2301d6ded4e7ce227fe00ad92ee19f43",
+    "finding": "Delayed older GitHub events could enter the PR-wide group after a newer source and cancel its only validation. Delivery order must not select the candidate.",
+    "current_contract": "Different source heads or tested bases have distinct concurrency groups; repeated events for the identical candidate can cancel. Metadata remains separate. Obsolete expensive work is suppressed only through authenticated surviving-replacement evidence.",
+    "test_rename": {
+      "previous": "test_new_source_supersedes_old_validation_but_metadata_cannot_cancel_it",
+      "current": "test_delayed_old_source_and_metadata_cannot_cancel_current_validation"
+    },
+    "red": {
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "candidate_sha256": "f98306df26787f7f7a643df496001135e0567c6ccb4ba3086cf845cdce2fccc0",
+      "classification": "detected",
+      "commands": {
+        "control": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_lifecycle.py::test_delayed_old_source_and_metadata_cannot_cancel_current_validation",
+            "--junitxml=/workspace/scratch/150dce018256/jev-routing-redproof/delayed-event-cancellation/control.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-routing-redproof/delayed-event-cancellation/control",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-routing-redproof/delayed-event-cancellation/control-run-observer:/workspace/scratch/150dce018256/jev-routing-redproof/delayed-event-cancellation/control"
+          },
+          "exit_status": 0,
+          "finished_at": "2026-11-12T11:08:26.405813+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:08:25.637028+00:00",
+          "status": "passed",
+          "stderr": "/workspace/scratch/150dce018256/jev-routing-redproof/delayed-event-cancellation/control-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-routing-redproof/delayed-event-cancellation/control-run/stdout.log",
+          "stdout_sha256": "f4c77b58e2280613a49ba18da1c4a02d440e862c49a6c8fe5daaf277333ff99d",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-routing-redproof/delayed-event-cancellation/control.xml",
+          "stdout_text": ".                                                                        [100%]\n1 passed in 0.04s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"0\" skipped=\"0\" tests=\"1\" time=\"0.043\" timestamp=\"2026-11-12T06:08:26.317381-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_lifecycle\" name=\"test_delayed_old_source_and_metadata_cannot_cancel_current_validation\" time=\"0.001\" /></testsuite></testsuites>"
+        },
+        "mutant": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_lifecycle.py::test_delayed_old_source_and_metadata_cannot_cancel_current_validation",
+            "--junitxml=/workspace/scratch/150dce018256/jev-routing-redproof/delayed-event-cancellation/mutant.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-routing-redproof/delayed-event-cancellation/mutant",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-routing-redproof/delayed-event-cancellation/mutant-run-observer:/workspace/scratch/150dce018256/jev-routing-redproof/delayed-event-cancellation/mutant"
+          },
+          "exit_status": 1,
+          "finished_at": "2026-11-12T11:08:27.265766+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:08:26.407138+00:00",
+          "status": "failed",
+          "stderr": "/workspace/scratch/150dce018256/jev-routing-redproof/delayed-event-cancellation/mutant-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-routing-redproof/delayed-event-cancellation/mutant-run/stdout.log",
+          "stdout_sha256": "8d92666b7ae33ae8f75ee8c5a0dfc7830ac4b21aa00d70d1b91a0728bd2ed7bc",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-routing-redproof/delayed-event-cancellation/mutant.xml",
+          "stdout_text": "F                                                                        [100%]\n=================================== FAILURES ===================================\n____ test_delayed_old_source_and_metadata_cannot_cancel_current_validation _____\ntests/hexagonal/test_ci_lifecycle.py:60: in test_delayed_old_source_and_metadata_cannot_cancel_current_validation\n    assert group != expression(concurrency[\"group\"], new_head), \"CI_DELAYED_OLD_HEAD_CANNOT_CANCEL_CURRENT_HEAD\"\nE   AssertionError: CI_DELAYED_OLD_HEAD_CANNOT_CANCEL_CURRENT_HEAD\nE   assert 'ci-pr-77-17' != 'ci-pr-77-17'\nE    +  where 'ci-pr-77-17' = expression(\"ci-${{ github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (githu...me == 'pull_request' && format('pr-{0}-{1}', github.repository_id, github.event.pull_request.number) || github.ref) }}\", {'github': {'event_name': 'pull_request', 'repository_id': 77, 'ref': 'refs/pull/17/merge', 'event': {'action': 'synch...s': {'code': 'true', 'reuse': 'false'}}, 'changes': {'result': 'success'}, 'application-tests': {'result': 'success'}}})\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_ci_lifecycle.py::test_delayed_old_source_and_metadata_cannot_cancel_current_validation\n1 failed in 0.07s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"1\" skipped=\"0\" tests=\"1\" time=\"0.074\" timestamp=\"2026-11-12T06:08:27.122673-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_lifecycle\" name=\"test_delayed_old_source_and_metadata_cannot_cancel_current_validation\" time=\"0.001\"><properties><property name=\"calibration.attribution\" value=\"{&quot;assertion_span&quot;: [60, 4, 60, 112], &quot;exception_type&quot;: &quot;AssertionError&quot;, &quot;file&quot;: &quot;/workspace/scratch/150dce018256/jev-routing-redproof/delayed-event-cancellation/mutant/tests/hexagonal/test_ci_lifecycle.py&quot;, &quot;function&quot;: &quot;test_delayed_old_source_and_metadata_cannot_cancel_current_validation&quot;, &quot;instruction&quot;: &quot;RAISE_VARARGS&quot;, &quot;instruction_offset&quot;: 936, &quot;instruction_span&quot;: [60, 4, 60, 112], &quot;line&quot;: 60, &quot;phase&quot;: &quot;call&quot;, &quot;target_assertion&quot;: true, &quot;test_name&quot;: &quot;test_delayed_old_source_and_metadata_cannot_cancel_current_validation&quot;}\" /></properties><failure message=\"AssertionError: CI_DELAYED_OLD_HEAD_CANNOT_CANCEL_CURRENT_HEAD&#10;assert 'ci-pr-77-17' != 'ci-pr-77-17'&#10;[+1 more line; full report in element text]\">tests/hexagonal/test_ci_lifecycle.py:60: in test_delayed_old_source_and_metadata_cannot_cancel_current_validation\n    assert group != expression(concurrency[\"group\"], new_head), \"CI_DELAYED_OLD_HEAD_CANNOT_CANCEL_CURRENT_HEAD\"\nE   AssertionError: CI_DELAYED_OLD_HEAD_CANNOT_CANCEL_CURRENT_HEAD\nE   assert 'ci-pr-77-17' != 'ci-pr-77-17'\nE    +  where 'ci-pr-77-17' = expression(\"ci-${{ github.event_name == 'pull_request' &amp;&amp; github.event.action == 'edited' &amp;&amp; !github.event.changes.base &amp;&amp; (githu...me == 'pull_request' &amp;&amp; format('pr-{0}-{1}', github.repository_id, github.event.pull_request.number) || github.ref) }}\", {'github': {'event_name': 'pull_request', 'repository_id': 77, 'ref': 'refs/pull/17/merge', 'event': {'action': 'synch...s': {'code': 'true', 'reuse': 'false'}}, 'changes': {'result': 'success'}, 'application-tests': {'result': 'success'}}})</failure></testcase></testsuite></testsuites>"
+        }
+      },
+      "expected_diagnostic": "CI_DELAYED_OLD_HEAD_CANNOT_CANCEL_CURRENT_HEAD",
+      "finished_at": "2026-11-12T11:08:27.267209+00:00",
+      "mutation_applied": true,
+      "mutation_sha256": "1619c890fd46059863a6f3631f945c1d77dd21add481b26afd058f5e1c0a9f20",
+      "target": "tests.hexagonal.test_ci_lifecycle::test_delayed_old_source_and_metadata_cannot_cancel_current_validation",
+      "unaffected": [],
+      "fault": {
+        "new": "format('pr-{0}-{1}', github.repository_id, github.event.pull_request.number)",
+        "old": "format('pr-{0}-{1}-{2}-{3}', github.repository_id, github.event.pull_request.number, github.event.pull_request.head.sha, github.event.pull_request.base.sha)",
+        "path": ".github/workflows/ci.yml"
+      },
+      "patch": "--- a/.github/workflows/ci.yml\n+++ b/.github/workflows/ci.yml\n@@ -20,7 +20,7 @@\n     \"contents\": \"read\"\n   },\n   \"concurrency\": {\n-    \"group\": \"ci-${{ github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && format('metadata-{0}-{1}', github.repository_id, github.event.pull_request.number) || (github.event_name == 'pull_request' && format('pr-{0}-{1}-{2}-{3}', github.repository_id, github.event.pull_request.number, github.event.pull_request.head.sha, github.event.pull_request.base.sha) || github.ref) }}\",\n+    \"group\": \"ci-${{ github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && format('metadata-{0}-{1}', github.repository_id, github.event.pull_request.number) || (github.event_name == 'pull_request' && format('pr-{0}-{1}', github.repository_id, github.event.pull_request.number) || github.ref) }}\",\n     \"cancel-in-progress\": true\n   },\n   \"jobs\": {\n"
+    },
+    "green": {
+      "command": "PYTHONPYCACHEPREFIX=/tmp/jev-routing-adversarial-fix-green /workspace/scratch/150dce018256/ci-jev-test-env/bin/python -m pytest -p no:cacheprovider tests/hexagonal/test_ci_lifecycle.py tests/hexagonal/test_ci_reuse.py -q",
+      "result": "209 passed in 1.05s"
+    }
+  }
+}

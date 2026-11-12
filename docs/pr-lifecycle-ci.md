@@ -1,31 +1,58 @@
 # PR lifecycle validation
 
-PR activity receives a current candidate observation while deterministic behavior
-can reuse a qualified execution of that exact candidate. GitHub remains the
-authority for checks and PR state; this does not mark a draft ready or merge it.
+Source changes receive validation while ordinary PR metadata changes receive a
+small observation. Deterministic behavior can reuse a qualified execution of the
+exact candidate. GitHub remains the authority for checks and PR state; this does
+not mark a draft ready or merge it.
 
 ## Events and surviving validation
 
-The CI workflow handles `opened`, `synchronize`, `reopened`, `edited` and
-`ready_for_review`. Master pushes and manual runs execute full validation.
-The existing independently guarded documentation-only classification remains.
+The CI workflow handles `opened`, `synchronize`, `reopened` and `edited`.
+Opening a draft and pushing source changes retain the full verification path;
+the existing independently guarded documentation-only classification remains.
+Marking a draft ready does not rerun CI: the checks for its existing candidate
+remain authoritative. Full green verification still precedes owner handoff.
+Master pushes and manual runs execute full validation.
 
-PR concurrency is scoped to repository, PR number, source head and event base.
-PR runs do not cancel an active run. Metadata observations for the same event
-candidate wait behind useful validation; pending observations may replace each
-other. Different candidates have separate groups, so a delayed old event cannot
-cancel the current source candidate. This can leave obsolete work running.
-A finite burst leaves its last pending observation eligible to run.
-Non-PR runs retain cancellation by ref.
+A positively identified title/body edit with no base-retarget change in its event
+payload runs one short metadata summary, without checkout, dependency setup,
+tests or Jev. Explicit base-retarget changes and unknown edit payloads use the
+ordinary validation path. On metadata events,
+the skipped aggregate jobs have distinct names, not `CI result` or `Hexagonal
+architecture`: a skipped job must not publish a successful required check over
+an earlier failed candidate. Metadata observations do not certify current-base
+freshness or change the existing validation verdict. The target branch may have
+advanced independently: a title/body event still preserves the source's existing
+checks and does not certify its new merge candidate. Strict up-to-date checking
+remains disabled; master-push integration validation remains enabled.
+
+Validation concurrency is scoped to repository, PR number, source head and event
+base. A new run may cancel the same candidate's older run; a delayed old-source
+event or manual rerun cannot cancel a newer source or base candidate. Metadata
+events have their own group, so editing a description cannot cancel validation.
+Non-PR runs retain cancellation by ref. Already-running work for an older
+candidate can finish. The supersession check below avoids starting its costly
+lanes when a surviving replacement can be proved; there is no custom cancellation
+service.
 
 The actual checkout stays bound to the event's GitHub check association. Queue
 startup observes the live PR before selecting reuse; collection ends with another
 observation. A changed source, target, tested base or merge makes reuse unavailable.
 The workflow never checks out newer code under an older event's check. These are
-timestamped observations, not a continuing atomic view of GitHub. A known stale
-event currently executes ordinary validation of its identified old checkout;
-its lifecycle evidence says `superseded_candidate`. This preserves truthful
-evidence and current-candidate liveness, but does not eliminate all obsolete work.
+timestamped observations, not a continuing atomic view of GitHub.
+
+When the source head has advanced, the planner can mark the old event
+`superseded` only after finding a newer run for the same PR's current head. That
+run must be an opened/source/reopen validation, still active or completed with a
+non-cancelled material outcome when reread. The PR and canonical source branch
+are checked again. Static and behavioral lanes then skip; the old aggregate
+remains unsuccessful rather than asserting a pass without verification. The
+plan retains the replacement run identity. No successful result is manufactured
+for the new candidate.
+
+A base-only advance, missing or cancelled replacement, unavailable API evidence
+or a changing observation keeps ordinary execution. There is no automatic base
+refresh service here; the repository's merge-freshness policy is unchanged.
 
 An older head’s receipts cannot clear a newer source head.
 
@@ -78,7 +105,7 @@ original lane. A cycle, a substituted original context/artifact, or a second reu
 hop is rejected. Each new summary points directly to the full original producer,
 so repeated metadata edits keep the chain flat and retain original identities.
 
-Static checks and the architecture jobs still execute for the current event.
+For validation events, static checks and the architecture jobs still execute.
 Behavioral jobs, including the application shard aggregate, explicitly skip only
 when the planner chose reuse. The final aggregate authenticates current static
 evidence and rechecks the original producer and current PR. It then qualifies the
@@ -100,8 +127,9 @@ cancellation or failed artifact upload remains a failure even if local JSON pass
 
 ## Operating and measuring it
 
-Set repository variable **`CI_REUSE_ENABLED=false`** to disable reuse. Events and
-fresh observations remain, and behavioral validation executes normally. Remove
+Set repository variable **`CI_REUSE_ENABLED=false`** to disable receipt reuse.
+Metadata routing and proved source supersession remain independent of reuse.
+Otherwise behavioral validation executes normally. Remove
 the variable or set it to `true` to enable qualified selection again.
 
 The `ci-reuse-plan--attempt-N` artifact records the decision, bounded reason,
@@ -109,8 +137,8 @@ attempt history, observed current PR and lookup time. Final `CI result` evidence
 records current and original attempts, lane decisions and links to original
 artifacts. Its summary shows planning/requalification overhead, fresh/reused lane
 counts and historical shard command time. Historical work is not a measured net
-saving: edited/readiness events add useful observations that the old event set
-did not run. Compare their cost separately from genuinely avoided duplicate work.
+saving. Compare lookup cost separately from avoided duplicate execution. Ordinary
+title/body events now retain their small summary without invoking the planner.
 
 The initial policy is exact and conservative. A new merge object, changed
 base/runtime, old schema, expired evidence, incomplete history or deeper reuse
