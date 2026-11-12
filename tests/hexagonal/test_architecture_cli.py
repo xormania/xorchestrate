@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from scripts.testkit.composition import plan
+from tests.hexagonal.support.github_actions import expression, pr_context
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -61,13 +62,17 @@ def test_ci_retains_blocking_gate_and_independent_diagnostics(tmp_path):
     assert not any(re.search(r"-m\s+scripts\.architecture(?:\s|$)", step.get("run", ""))
                    and "--diagnostics-only" not in step["run"]
                    for job in workflow["jobs"].values() for step in job["steps"])
-    job = workflow["jobs"]["architecture"]
-    assert job.get("needs", []) in ([], ["paths"]), "Diagnostics must not depend on the static gate"
-    diagnostic = next(step for step in job["steps"] if step.get("name") == "Jev architecture diagnostics")
-    assert "!cancelled()" in diagnostic["if"]
-    assert "steps.dependencies.outcome == 'success'" in diagnostic["if"]
-    assert "--jev-config contracts/hexagonal-jev.json" in diagnostic["run"]
-    assert "--diagnostics-only" in diagnostic["run"]
+    advisory = json.loads((ROOT / ".github/workflows/jev.yml").read_text())
+    assert advisory["on"]["workflow_run"] == {"workflows": [workflow["name"]], "types": ["completed"]}
+    job = advisory["jobs"]["advice"]
+    assert not job.get("needs"), "ADVICE_HAS_NO_REQUIRED_JOB_DEPENDENCY"
+    assert "conclusion" not in job["if"], "FAILED_CI_CAN_SUPPLY_ADVICE"
+    diagnostic = next(step for step in job["steps"] if "-m scripts.ci.advice assess" in step.get("run", ""))
+    assert "steps.gate.outputs.provider_needed == 'true'" in diagnostic["if"]
+    assert "steps.reserve.outcome == 'success'" in diagnostic["if"]
+    assert diagnostic["run"].startswith("cd trusted\n"), "ADVICE_RUNS_TRUSTED_COLLECTOR"
+    assert '--source-root "$GITHUB_WORKSPACE/source"' in diagnostic["run"]
+    assert diagnostic.get("continue-on-error") is True, "ADVICE_DOES_NOT_CHANGE_CI_VERDICT"
     assert "TYPESAFE_API_KEY" in diagnostic["env"]
 
 
@@ -75,8 +80,11 @@ def test_ci_retains_blocking_gate_and_independent_diagnostics(tmp_path):
 def test_required_architecture_status_reflects_the_shared_static_result(tmp_path, static_result):
     workflow = json.loads((ROOT / ".github/workflows/ci.yml").read_text())
     status = workflow["jobs"]["architecture-status"]
-    assert status["name"] == "Hexagonal architecture"
-    assert status["needs"] == ["changes"] and status["if"] == "always()"
+    context = pr_context("synchronize")
+    context["needs"]["changes"]["result"] = static_result
+    assert expression(status["name"], context) == "Hexagonal architecture", "SOURCE_VALIDATION_RETAINS_REQUIRED_ARCHITECTURE_NAME"
+    assert status["needs"] == ["changes"]
+    assert expression(status["if"], context), "ARCHITECTURE_STATUS_RUNS_AFTER_EVERY_STATIC_OUTCOME"
     assert not status.get("continue-on-error")
     step, = status["steps"]
     assert step["env"]["STATIC_RESULT"] == "${{ needs.changes.result }}"

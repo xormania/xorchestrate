@@ -1,0 +1,298 @@
+{
+  "purpose": "Relocated workflow behavior checks: external cache, trusted execution, bounded optional calibration.",
+  "production_commit": "7ee56787a8374e604105182cad37550f3bf3166d",
+  "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+  "scope": "Controlled workflow faults only; no live inference or hosted execution claimed.",
+  "fault_witnesses": [
+    {
+      "target": "tests.hexagonal.test_jev_efficiency::test_ci_restores_external_advisory_cache_and_invokes_it",
+      "expected_diagnostic": "CI_CACHE_OUTSIDE_CANDIDATE",
+      "unaffected": [
+        "tests.hexagonal.test_architecture_cli::test_ci_retains_blocking_gate_and_independent_diagnostics",
+        "tests.hexagonal.test_architecture_effectiveness::test_optional_live_pilot_is_bounded_and_retains_provider_availability"
+      ],
+      "mutation_applied": true,
+      "classification": "detected",
+      "candidate_sha256": "b2a7ac6766767d5ec07ff33d7e2724100cb039f1f44c62e014a12ba7717b4835",
+      "mutation_sha256": "2719457b88b8523542ba78f305027a03c48898f601b9d781c71bbf0c9ecb1344",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_jev_efficiency.py::test_ci_restores_external_advisory_cache_and_invokes_it",
+            "tests/hexagonal/test_architecture_cli.py::test_ci_retains_blocking_gate_and_independent_diagnostics",
+            "tests/hexagonal/test_architecture_effectiveness.py::test_optional_live_pilot_is_bounded_and_retains_provider_availability",
+            "--junitxml=/workspace/scratch/150dce018256/pr84-workflow-compat-proof/external-cache/control.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/external-cache/control",
+          "environment": {
+            "PYTHONPATH": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/external-cache/control-run-observer:/workspace/scratch/150dce018256/pr84-workflow-compat-proof/external-cache/control",
+            "PYTHONDONTWRITEBYTECODE": "1"
+          },
+          "started_at": "2026-11-12T11:22:36.161555+00:00",
+          "timeout_seconds": 120,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "terminal": "capture",
+          "status": "passed",
+          "exit_status": 0,
+          "launched": true,
+          "finished_at": "2026-11-12T11:22:37.419121+00:00",
+          "stdout_sha256": "09fe4441627f625ef92c265990f13e7b462b863c5c79a8b5dc18c887f0020ca0",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "xml": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/external-cache/control.xml",
+          "stdout": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/external-cache/control-run/stdout.log",
+          "stderr": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/external-cache/control-run/stderr.log",
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "stdout_text": "...                                                                      [100%]\n3 passed in 0.27s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"0\" skipped=\"0\" tests=\"3\" time=\"0.282\" timestamp=\"2026-11-12T06:22:37.044288-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_jev_efficiency\" name=\"test_ci_restores_external_advisory_cache_and_invokes_it\" time=\"0.001\" /><testcase classname=\"tests.hexagonal.test_architecture_cli\" name=\"test_ci_retains_blocking_gate_and_independent_diagnostics\" time=\"0.002\" /><testcase classname=\"tests.hexagonal.test_architecture_effectiveness\" name=\"test_optional_live_pilot_is_bounded_and_retains_provider_availability\" time=\"0.000\" /></testsuite></testsuites>"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_jev_efficiency.py::test_ci_restores_external_advisory_cache_and_invokes_it",
+            "tests/hexagonal/test_architecture_cli.py::test_ci_retains_blocking_gate_and_independent_diagnostics",
+            "tests/hexagonal/test_architecture_effectiveness.py::test_optional_live_pilot_is_bounded_and_retains_provider_availability",
+            "--junitxml=/workspace/scratch/150dce018256/pr84-workflow-compat-proof/external-cache/mutant.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/external-cache/mutant",
+          "environment": {
+            "PYTHONPATH": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/external-cache/mutant-run-observer:/workspace/scratch/150dce018256/pr84-workflow-compat-proof/external-cache/mutant",
+            "PYTHONDONTWRITEBYTECODE": "1"
+          },
+          "started_at": "2026-11-12T11:22:37.420667+00:00",
+          "timeout_seconds": 120,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "terminal": "capture",
+          "status": "failed",
+          "exit_status": 1,
+          "launched": true,
+          "finished_at": "2026-11-12T11:22:38.570735+00:00",
+          "stdout_sha256": "fa2815fdcfa70c2b74a5aacdf5f012bb1264d057cf2c9015c27d983904bfe5db",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "xml": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/external-cache/mutant.xml",
+          "stdout": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/external-cache/mutant-run/stdout.log",
+          "stderr": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/external-cache/mutant-run/stderr.log",
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "stdout_text": "F..                                                                      [100%]\n=================================== FAILURES ===================================\n___________ test_ci_restores_external_advisory_cache_and_invokes_it ____________\ntests/hexagonal/test_jev_efficiency.py:301: in test_ci_restores_external_advisory_cache_and_invokes_it\n    assert step[\"with\"][\"path\"] == \"${{ runner.temp }}/jev-assessment-cache\", \"CI_CACHE_OUTSIDE_CANDIDATE\"\nE   AssertionError: CI_CACHE_OUTSIDE_CANDIDATE\nE   assert '${{ github.w...ce/.jev-cache' == '${{ runner.t...essment-cache'\nE     \nE     - ${{ runner.temp }}/jev-assessment-cache\nE     + ${{ github.workspace }}/source/.jev-cache\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_jev_efficiency.py::test_ci_restores_external_advisory_cache_and_invokes_it\n1 failed, 2 passed in 0.27s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"1\" skipped=\"0\" tests=\"3\" time=\"0.270\" timestamp=\"2026-11-12T06:22:38.242813-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_jev_efficiency\" name=\"test_ci_restores_external_advisory_cache_and_invokes_it\" time=\"0.001\"><properties><property name=\"calibration.attribution\" value=\"{&quot;assertion_span&quot;: [301, 4, 301, 106], &quot;exception_type&quot;: &quot;AssertionError&quot;, &quot;file&quot;: &quot;/workspace/scratch/150dce018256/pr84-workflow-compat-proof/external-cache/mutant/tests/hexagonal/test_jev_efficiency.py&quot;, &quot;function&quot;: &quot;test_ci_restores_external_advisory_cache_and_invokes_it&quot;, &quot;instruction&quot;: &quot;RAISE_VARARGS&quot;, &quot;instruction_offset&quot;: 1102, &quot;instruction_span&quot;: [301, 4, 301, 106], &quot;line&quot;: 301, &quot;phase&quot;: &quot;call&quot;, &quot;target_assertion&quot;: true, &quot;test_name&quot;: &quot;test_ci_restores_external_advisory_cache_and_invokes_it&quot;}\" /></properties><failure message=\"AssertionError: CI_CACHE_OUTSIDE_CANDIDATE&#10;assert '${{ github.w...ce/.jev-cache' == '${{ runner.t...essment-cache'&#10;  &#10;  - ${{ runner.temp }}/jev-assessment-cache&#10;  + ${{ github.workspace }}/source/.jev-cache\">tests/hexagonal/test_jev_efficiency.py:301: in test_ci_restores_external_advisory_cache_and_invokes_it\n    assert step[\"with\"][\"path\"] == \"${{ runner.temp }}/jev-assessment-cache\", \"CI_CACHE_OUTSIDE_CANDIDATE\"\nE   AssertionError: CI_CACHE_OUTSIDE_CANDIDATE\nE   assert '${{ github.w...ce/.jev-cache' == '${{ runner.t...essment-cache'\nE     \nE     - ${{ runner.temp }}/jev-assessment-cache\nE     + ${{ github.workspace }}/source/.jev-cache</failure></testcase><testcase classname=\"tests.hexagonal.test_architecture_cli\" name=\"test_ci_retains_blocking_gate_and_independent_diagnostics\" time=\"0.003\" /><testcase classname=\"tests.hexagonal.test_architecture_effectiveness\" name=\"test_optional_live_pilot_is_bounded_and_retains_provider_availability\" time=\"0.000\" /></testsuite></testsuites>"
+        }
+      },
+      "finished_at": "2026-11-12T11:22:38.571734+00:00",
+      "mutation": {
+        "path": ".github/workflows/jev.yml",
+        "old": "\"path\": \"${{ runner.temp }}/jev-assessment-cache\"",
+        "new": "\"path\": \"${{ github.workspace }}/source/.jev-cache\""
+      }
+    },
+    {
+      "target": "tests.hexagonal.test_architecture_cli::test_ci_retains_blocking_gate_and_independent_diagnostics",
+      "expected_diagnostic": "ADVICE_RUNS_TRUSTED_COLLECTOR",
+      "unaffected": [
+        "tests.hexagonal.test_jev_efficiency::test_ci_restores_external_advisory_cache_and_invokes_it",
+        "tests.hexagonal.test_architecture_effectiveness::test_optional_live_pilot_is_bounded_and_retains_provider_availability"
+      ],
+      "mutation_applied": true,
+      "classification": "detected",
+      "candidate_sha256": "b2a7ac6766767d5ec07ff33d7e2724100cb039f1f44c62e014a12ba7717b4835",
+      "mutation_sha256": "7ec4171251ce02b4dc244c3bbc9e920af6364febf5e2aa7807172044b268825f",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_jev_efficiency.py::test_ci_restores_external_advisory_cache_and_invokes_it",
+            "tests/hexagonal/test_architecture_cli.py::test_ci_retains_blocking_gate_and_independent_diagnostics",
+            "tests/hexagonal/test_architecture_effectiveness.py::test_optional_live_pilot_is_bounded_and_retains_provider_availability",
+            "--junitxml=/workspace/scratch/150dce018256/pr84-workflow-compat-proof/trusted-execution/control.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/trusted-execution/control",
+          "environment": {
+            "PYTHONPATH": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/trusted-execution/control-run-observer:/workspace/scratch/150dce018256/pr84-workflow-compat-proof/trusted-execution/control",
+            "PYTHONDONTWRITEBYTECODE": "1"
+          },
+          "started_at": "2026-11-12T11:22:36.211137+00:00",
+          "timeout_seconds": 120,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "terminal": "capture",
+          "status": "passed",
+          "exit_status": 0,
+          "launched": true,
+          "finished_at": "2026-11-12T11:22:37.376304+00:00",
+          "stdout_sha256": "4a6070b078e8713685bb7d423b62e85d6415f822c5c557fbcd20f48e88981629",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "xml": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/trusted-execution/control.xml",
+          "stdout": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/trusted-execution/control-run/stdout.log",
+          "stderr": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/trusted-execution/control-run/stderr.log",
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "stdout_text": "...                                                                      [100%]\n3 passed in 0.21s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"0\" skipped=\"0\" tests=\"3\" time=\"0.216\" timestamp=\"2026-11-12T06:22:37.100821-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_jev_efficiency\" name=\"test_ci_restores_external_advisory_cache_and_invokes_it\" time=\"0.001\" /><testcase classname=\"tests.hexagonal.test_architecture_cli\" name=\"test_ci_retains_blocking_gate_and_independent_diagnostics\" time=\"0.003\" /><testcase classname=\"tests.hexagonal.test_architecture_effectiveness\" name=\"test_optional_live_pilot_is_bounded_and_retains_provider_availability\" time=\"0.000\" /></testsuite></testsuites>"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_jev_efficiency.py::test_ci_restores_external_advisory_cache_and_invokes_it",
+            "tests/hexagonal/test_architecture_cli.py::test_ci_retains_blocking_gate_and_independent_diagnostics",
+            "tests/hexagonal/test_architecture_effectiveness.py::test_optional_live_pilot_is_bounded_and_retains_provider_availability",
+            "--junitxml=/workspace/scratch/150dce018256/pr84-workflow-compat-proof/trusted-execution/mutant.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/trusted-execution/mutant",
+          "environment": {
+            "PYTHONPATH": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/trusted-execution/mutant-run-observer:/workspace/scratch/150dce018256/pr84-workflow-compat-proof/trusted-execution/mutant",
+            "PYTHONDONTWRITEBYTECODE": "1"
+          },
+          "started_at": "2026-11-12T11:22:37.377821+00:00",
+          "timeout_seconds": 120,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "terminal": "capture",
+          "status": "failed",
+          "exit_status": 1,
+          "launched": true,
+          "finished_at": "2026-11-12T11:22:38.466380+00:00",
+          "stdout_sha256": "434e200362d7b0ff4c3ceeead611d89395d18e232bcc0c5a5e5fa844257c02a2",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "xml": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/trusted-execution/mutant.xml",
+          "stdout": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/trusted-execution/mutant-run/stdout.log",
+          "stderr": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/trusted-execution/mutant-run/stderr.log",
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "stdout_text": ".F.                                                                      [100%]\n=================================== FAILURES ===================================\n__________ test_ci_retains_blocking_gate_and_independent_diagnostics ___________\ntests/hexagonal/test_architecture_cli.py:72: in test_ci_retains_blocking_gate_and_independent_diagnostics\n    assert diagnostic[\"run\"].startswith(\"cd trusted\\n\"), \"ADVICE_RUNS_TRUSTED_COLLECTOR\"\nE   AssertionError: ADVICE_RUNS_TRUSTED_COLLECTOR\nE   assert False\nE    +  where False = <built-in method startswith of str object at 0x7f36bb378b70>('cd trusted\\n')\nE    +    where <built-in method startswith of str object at 0x7f36bb378b70> = 'cd source\\n\"$UV_PROJECT_ENVIRONMENT/bin/python\" -m scripts.ci.advice assess --work \"$RUNNER_TEMP/jev-advice\" --source-root \"$GITHUB_WORKSPACE/source\" --cache-dir \"$RUNNER_TEMP/jev-assessment-cache\"'.startswith\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_architecture_cli.py::test_ci_retains_blocking_gate_and_independent_diagnostics\n1 failed, 2 passed in 0.30s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"1\" skipped=\"0\" tests=\"3\" time=\"0.307\" timestamp=\"2026-11-12T06:22:38.087384-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_jev_efficiency\" name=\"test_ci_restores_external_advisory_cache_and_invokes_it\" time=\"0.001\" /><testcase classname=\"tests.hexagonal.test_architecture_cli\" name=\"test_ci_retains_blocking_gate_and_independent_diagnostics\" time=\"0.004\"><properties><property name=\"calibration.attribution\" value=\"{&quot;assertion_span&quot;: [72, 4, 72, 88], &quot;exception_type&quot;: &quot;AssertionError&quot;, &quot;file&quot;: &quot;/workspace/scratch/150dce018256/pr84-workflow-compat-proof/trusted-execution/mutant/tests/hexagonal/test_architecture_cli.py&quot;, &quot;function&quot;: &quot;test_ci_retains_blocking_gate_and_independent_diagnostics&quot;, &quot;instruction&quot;: &quot;RAISE_VARARGS&quot;, &quot;instruction_offset&quot;: 4682, &quot;instruction_span&quot;: [72, 4, 72, 88], &quot;line&quot;: 72, &quot;phase&quot;: &quot;call&quot;, &quot;target_assertion&quot;: true, &quot;test_name&quot;: &quot;test_ci_retains_blocking_gate_and_independent_diagnostics&quot;}\" /></properties><failure message=\"AssertionError: ADVICE_RUNS_TRUSTED_COLLECTOR&#10;assert False&#10; +  where False = &lt;built-in method startswith of str object at 0x7f36bb378b70&gt;('cd trusted\\n')&#10; +    where &lt;built-in method startswith of str object at 0x7f36bb378b70&gt; = 'cd source\\n&quot;$UV_PROJECT_ENVIRONMENT/bin/python&quot; -m scripts.ci.advice assess --work &quot;$RUNNER_TEMP/jev-advice&quot; --source-root &quot;$GITHUB_WORKSPACE/source&quot; --cache-dir &quot;$RUNNER_TEMP/jev-assessment-cache&quot;'.startswith\">tests/hexagonal/test_architecture_cli.py:72: in test_ci_retains_blocking_gate_and_independent_diagnostics\n    assert diagnostic[\"run\"].startswith(\"cd trusted\\n\"), \"ADVICE_RUNS_TRUSTED_COLLECTOR\"\nE   AssertionError: ADVICE_RUNS_TRUSTED_COLLECTOR\nE   assert False\nE    +  where False = &lt;built-in method startswith of str object at 0x7f36bb378b70&gt;('cd trusted\\n')\nE    +    where &lt;built-in method startswith of str object at 0x7f36bb378b70&gt; = 'cd source\\n\"$UV_PROJECT_ENVIRONMENT/bin/python\" -m scripts.ci.advice assess --work \"$RUNNER_TEMP/jev-advice\" --source-root \"$GITHUB_WORKSPACE/source\" --cache-dir \"$RUNNER_TEMP/jev-assessment-cache\"'.startswith</failure></testcase><testcase classname=\"tests.hexagonal.test_architecture_effectiveness\" name=\"test_optional_live_pilot_is_bounded_and_retains_provider_availability\" time=\"0.000\" /></testsuite></testsuites>"
+        }
+      },
+      "finished_at": "2026-11-12T11:22:38.467387+00:00",
+      "mutation": {
+        "path": ".github/workflows/jev.yml",
+        "old": "\"run\": \"cd trusted\\n\\\"$UV_PROJECT_ENVIRONMENT/bin/python\\\" -m scripts.ci.advice assess --work \\\"$RUNNER_TEMP/jev-advice\\\" --source-root \\\"$GITHUB_WORKSPACE/source\\\" --cache-dir \\\"$RUNNER_TEMP/jev-assessment-cache\\\"\"",
+        "new": "\"run\": \"cd source\\n\\\"$UV_PROJECT_ENVIRONMENT/bin/python\\\" -m scripts.ci.advice assess --work \\\"$RUNNER_TEMP/jev-advice\\\" --source-root \\\"$GITHUB_WORKSPACE/source\\\" --cache-dir \\\"$RUNNER_TEMP/jev-assessment-cache\\\"\""
+      }
+    },
+    {
+      "target": "tests.hexagonal.test_architecture_effectiveness::test_optional_live_pilot_is_bounded_and_retains_provider_availability",
+      "expected_diagnostic": "LIVE_PILOT_BOUNDED",
+      "unaffected": [
+        "tests.hexagonal.test_jev_efficiency::test_ci_restores_external_advisory_cache_and_invokes_it",
+        "tests.hexagonal.test_architecture_cli::test_ci_retains_blocking_gate_and_independent_diagnostics"
+      ],
+      "mutation_applied": true,
+      "classification": "detected",
+      "candidate_sha256": "b2a7ac6766767d5ec07ff33d7e2724100cb039f1f44c62e014a12ba7717b4835",
+      "mutation_sha256": "7f14b912272dd07cc07cfe4b0dba3eb538087eda02a6574f40c2ea55ee33517b",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "commands": {
+        "control": {
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_jev_efficiency.py::test_ci_restores_external_advisory_cache_and_invokes_it",
+            "tests/hexagonal/test_architecture_cli.py::test_ci_retains_blocking_gate_and_independent_diagnostics",
+            "tests/hexagonal/test_architecture_effectiveness.py::test_optional_live_pilot_is_bounded_and_retains_provider_availability",
+            "--junitxml=/workspace/scratch/150dce018256/pr84-workflow-compat-proof/bounded-calibration/control.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/bounded-calibration/control",
+          "environment": {
+            "PYTHONPATH": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/bounded-calibration/control-run-observer:/workspace/scratch/150dce018256/pr84-workflow-compat-proof/bounded-calibration/control",
+            "PYTHONDONTWRITEBYTECODE": "1"
+          },
+          "started_at": "2026-11-12T11:22:36.210177+00:00",
+          "timeout_seconds": 120,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "terminal": "capture",
+          "status": "passed",
+          "exit_status": 0,
+          "launched": true,
+          "finished_at": "2026-11-12T11:22:37.421417+00:00",
+          "stdout_sha256": "f5aab43e509b7fff016e95e624da6235a18ad1fa37a90094151935748355af71",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "xml": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/bounded-calibration/control.xml",
+          "stdout": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/bounded-calibration/control-run/stdout.log",
+          "stderr": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/bounded-calibration/control-run/stderr.log",
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "stdout_text": "...                                                                      [100%]\n3 passed in 0.29s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"0\" skipped=\"0\" tests=\"3\" time=\"0.292\" timestamp=\"2026-11-12T06:22:37.033566-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_jev_efficiency\" name=\"test_ci_restores_external_advisory_cache_and_invokes_it\" time=\"0.001\" /><testcase classname=\"tests.hexagonal.test_architecture_cli\" name=\"test_ci_retains_blocking_gate_and_independent_diagnostics\" time=\"0.004\" /><testcase classname=\"tests.hexagonal.test_architecture_effectiveness\" name=\"test_optional_live_pilot_is_bounded_and_retains_provider_availability\" time=\"0.000\" /></testsuite></testsuites>"
+        },
+        "mutant": {
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_jev_efficiency.py::test_ci_restores_external_advisory_cache_and_invokes_it",
+            "tests/hexagonal/test_architecture_cli.py::test_ci_retains_blocking_gate_and_independent_diagnostics",
+            "tests/hexagonal/test_architecture_effectiveness.py::test_optional_live_pilot_is_bounded_and_retains_provider_availability",
+            "--junitxml=/workspace/scratch/150dce018256/pr84-workflow-compat-proof/bounded-calibration/mutant.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/bounded-calibration/mutant",
+          "environment": {
+            "PYTHONPATH": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/bounded-calibration/mutant-run-observer:/workspace/scratch/150dce018256/pr84-workflow-compat-proof/bounded-calibration/mutant",
+            "PYTHONDONTWRITEBYTECODE": "1"
+          },
+          "started_at": "2026-11-12T11:22:37.423168+00:00",
+          "timeout_seconds": 120,
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "terminal": "capture",
+          "status": "failed",
+          "exit_status": 1,
+          "launched": true,
+          "finished_at": "2026-11-12T11:22:38.325229+00:00",
+          "stdout_sha256": "d9e83cbb86833d6c3735f967e7ef031a276df9d313595a88b0426fd25aa2244a",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "xml": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/bounded-calibration/mutant.xml",
+          "stdout": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/bounded-calibration/mutant-run/stdout.log",
+          "stderr": "/workspace/scratch/150dce018256/pr84-workflow-compat-proof/bounded-calibration/mutant-run/stderr.log",
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "stdout_text": "..F                                                                      [100%]\n=================================== FAILURES ===================================\n____ test_optional_live_pilot_is_bounded_and_retains_provider_availability _____\ntests/hexagonal/test_architecture_effectiveness.py:211: in test_optional_live_pilot_is_bounded_and_retains_provider_availability\n    assert \"--mode live\" in command and \"--max-seconds 120\" in command, \"LIVE_PILOT_BOUNDED\"\nE   AssertionError: LIVE_PILOT_BOUNDED\nE   assert ('--mode live' in '\"$UV_PROJECT_ENVIRONMENT/bin/python\" -m scripts.architecture.effectiveness --mode live --jev-config contracts/hexagonal-jev.json --max-seconds 7200 --output \"$RUNNER_TEMP/jev-advice/output/effectiveness.json\"' and '--max-seconds 120' in '\"$UV_PROJECT_ENVIRONMENT/bin/python\" -m scripts.architecture.effectiveness --mode live --jev-config contracts/hexagonal-jev.json --max-seconds 7200 --output \"$RUNNER_TEMP/jev-advice/output/effectiveness.json\"')\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_architecture_effectiveness.py::test_optional_live_pilot_is_bounded_and_retains_provider_availability\n1 failed, 2 passed in 0.22s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"1\" skipped=\"0\" tests=\"3\" time=\"0.228\" timestamp=\"2026-11-12T06:22:38.043824-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_jev_efficiency\" name=\"test_ci_restores_external_advisory_cache_and_invokes_it\" time=\"0.001\" /><testcase classname=\"tests.hexagonal.test_architecture_cli\" name=\"test_ci_retains_blocking_gate_and_independent_diagnostics\" time=\"0.003\" /><testcase classname=\"tests.hexagonal.test_architecture_effectiveness\" name=\"test_optional_live_pilot_is_bounded_and_retains_provider_availability\" time=\"0.000\"><properties><property name=\"calibration.attribution\" value=\"{&quot;assertion_span&quot;: [211, 4, 211, 92], &quot;exception_type&quot;: &quot;AssertionError&quot;, &quot;file&quot;: &quot;/workspace/scratch/150dce018256/pr84-workflow-compat-proof/bounded-calibration/mutant/tests/hexagonal/test_architecture_effectiveness.py&quot;, &quot;function&quot;: &quot;test_optional_live_pilot_is_bounded_and_retains_provider_availability&quot;, &quot;instruction&quot;: &quot;RAISE_VARARGS&quot;, &quot;instruction_offset&quot;: 3312, &quot;instruction_span&quot;: [211, 4, 211, 92], &quot;line&quot;: 211, &quot;phase&quot;: &quot;call&quot;, &quot;target_assertion&quot;: true, &quot;test_name&quot;: &quot;test_optional_live_pilot_is_bounded_and_retains_provider_availability&quot;}\" /></properties><failure message=\"AssertionError: LIVE_PILOT_BOUNDED&#10;[+1 more line; full report in element text]\">tests/hexagonal/test_architecture_effectiveness.py:211: in test_optional_live_pilot_is_bounded_and_retains_provider_availability\n    assert \"--mode live\" in command and \"--max-seconds 120\" in command, \"LIVE_PILOT_BOUNDED\"\nE   AssertionError: LIVE_PILOT_BOUNDED\nE   assert ('--mode live' in '\"$UV_PROJECT_ENVIRONMENT/bin/python\" -m scripts.architecture.effectiveness --mode live --jev-config contracts/hexagonal-jev.json --max-seconds 7200 --output \"$RUNNER_TEMP/jev-advice/output/effectiveness.json\"' and '--max-seconds 120' in '\"$UV_PROJECT_ENVIRONMENT/bin/python\" -m scripts.architecture.effectiveness --mode live --jev-config contracts/hexagonal-jev.json --max-seconds 7200 --output \"$RUNNER_TEMP/jev-advice/output/effectiveness.json\"')</failure></testcase></testsuite></testsuites>"
+        }
+      },
+      "finished_at": "2026-11-12T11:22:38.326237+00:00",
+      "mutation": {
+        "path": ".github/workflows/jev.yml",
+        "old": "scripts.architecture.effectiveness --mode live --jev-config contracts/hexagonal-jev.json --max-seconds 120",
+        "new": "scripts.architecture.effectiveness --mode live --jev-config contracts/hexagonal-jev.json --max-seconds 7200"
+      }
+    }
+  ],
+  "focused_suite": {
+    "command": "PYTHONPYCACHEPREFIX=/tmp/jev-pr84-wiring-suite /workspace/scratch/150dce018256/ci-jev-test-env/bin/python -m pytest -p no:cacheprovider tests/hexagonal/test_jev_efficiency.py tests/hexagonal/test_architecture_cli.py tests/hexagonal/test_architecture_effectiveness.py -k \"not test_required_architecture_status_reflects_the_shared_static_result\" -q",
+    "result": "63 passed, 4 deselected in 1.60s",
+    "exclusion_reason": "Four required-static-job display-name cases are independently fixed by PR1 commit f2c7e39 and will be validated after stack merge."
+  }
+}
