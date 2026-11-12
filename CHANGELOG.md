@@ -74,6 +74,12 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   telemetry no longer copy an arbitrary exception's `code` or `details`
   attribute (or its class name, where that was the fallback). They record a
   typed failure's code, or `external_error` / the site's existing default.
+- Session recovery reports, adapter cleanup errors, native-call and delivery
+  recording errors, ACP native observations and telemetry construction status
+  no longer record an untyped exception's class name; they record its public
+  code (`external_error` for untyped failures). `application.failed` telemetry
+  drops its `type` field. Terminal hosts report local OS failures by errno name
+  (for example `EACCES`) instead of the exception class.
 
 ### Added
 
@@ -330,6 +336,12 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   bridge host records store `external_error` where they previously stored the
   exception's `code` attribute or class name. Existing records are unchanged;
   no migration.
+- **Failure names in reports and telemetry:** `recover` reports, `cleanup_failed`
+  details, `result_unapplied` `recording_error`, ACP `native_completion_unknown`
+  observations and telemetry construction details now carry `external_error`
+  (or a typed code) instead of an exception class name; terminal host errors
+  and readiness reasons carry an errno name. `application.failed` telemetry no
+  longer has `error.type`. Consumers matching class names should match codes.
 - **Adapter options and custom adapters:** None changed. Third-party adapters
   that import from `xorchestrate.ports` or `xorchestrate.model` keep working;
   new adapters should depend on `xcontracts>=0.1,<0.2` instead. `xcontracts`

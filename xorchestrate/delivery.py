@@ -183,7 +183,7 @@ class DeliveryMixin:
                         "incarnation": incarnation, "attempt_id": attempt.key, "message_id": message.key,
                         "outcome": outcome, "result": deepcopy(raw), "error": deepcopy(failure)})
             except Exception as retained_error:
-                recording_error = type(retained_error).__name__
+                recording_error = public_error_code(retained_error)
             raise OrchestrationError("The adapter outcome could not be applied; inspect retained evidence before reconciliation.",
                 "result_unapplied", {"delivery_id": delivery_id, "attempt_id": attempt.key, "outcome": outcome,
                 "external_result": deepcopy(raw), "observation_id": observation["id"] if observation else None,
@@ -362,9 +362,9 @@ class DeliveryMixin:
                     self._transition(tx, row, event, {**row.data, **changes}, context["actor"])
             except Exception as recording_error:
                 if isinstance(error, OrchestrationError):
-                    error.details = {**error.details, "recording_error": type(recording_error).__name__}
+                    error.details = {**error.details, "recording_error": public_error_code(recording_error)}
                 else:
-                    error.add_note(f"Native call outcome retention failed: {type(recording_error).__name__}")
+                    error.add_note(f"Native call outcome retention failed: {public_error_code(recording_error)}")
             if completed:
                 raise error from original_error
             raise

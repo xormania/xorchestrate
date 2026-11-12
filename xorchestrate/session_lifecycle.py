@@ -8,7 +8,7 @@ from copy import deepcopy
 from typing import Any
 
 from .actions import SESSION_CREATIONS
-from .model import JSON, Conflict, OrchestrationError, Record, record_view
+from .model import JSON, Conflict, OrchestrationError, Record, public_error_code, record_view
 from .outcomes import before_effect
 from .ports import InterruptedSession, Transaction
 from .worktrees import current_worktree, session_workspace, session_worktree
@@ -323,7 +323,7 @@ class SessionLifecycleMixin:
                         continue
                     report["failed"].append({"session_id": found.session_id, "code": error.code, "message": str(error)})
                 except Exception as error:  # One session never blocks the others or the server.
-                    report["failed"].append({"session_id": found.session_id, "code": type(error).__name__})
+                    report["failed"].append({"session_id": found.session_id, "code": public_error_code(error)})
             report["needs_reconciliation"] = self.interrupted_operations(
                 {item["session_id"] for key in ("recovered", "disconnected", "uncertain") for item in report[key]})
             report["finished_at"] = self.clock()

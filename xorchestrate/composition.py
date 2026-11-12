@@ -14,7 +14,7 @@ from uuid import uuid4
 
 from . import __version__
 from .application import Application
-from .model import OrchestrationError, canonical_digest, unique_keys
+from .model import OrchestrationError, canonical_digest, public_error_code, unique_keys
 from .ports import ApplicationToolSessionDriver, SessionDriver
 from .worktrees import bound_worktree, session_worktree
 
@@ -180,7 +180,7 @@ class Runtime:
                 if close:
                     close()
             except Exception as exc:
-                errors.append(type(exc).__name__)
+                errors.append(public_error_code(exc))
         if errors:
             raise OrchestrationError("One or more adapters failed to close.", "cleanup_failed", {"errors": errors})
 

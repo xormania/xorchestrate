@@ -102,7 +102,7 @@ class DetachedProcessHost:
                                        preexec_fn=_die_with_parent if self.owned else None)
         except OSError as error:
             raise OrchestrationError("The terminal command could not be started.", "terminal_host_unavailable",
-                                     {"name": name, "error": type(error).__name__}) from None
+                                     {"name": name, "error": support.os_error_code(error)}) from None
         finally:
             os.close(descriptor)
         leader = support.identity(process.pid)

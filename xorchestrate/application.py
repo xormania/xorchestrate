@@ -176,7 +176,7 @@ class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
                                 replay_only=replay_only, capture_context=scope)
         except BaseException as error:
             self.record_observation("application.failed", {"action": action, "arguments": arguments,
-                "error": {"type": type(error).__name__, "code": public_error_code(error, None)}},
+                "error": {"code": public_error_code(error, None)}},
                 self._capture_context(scope, arguments, actor))
             raise
         self.record_observation("application.completed", {"action": action, "arguments": arguments, "result": result},

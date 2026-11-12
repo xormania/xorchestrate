@@ -71,7 +71,7 @@ def construction_cause(error):
         root = root.__cause__
     if root is error and isinstance(error, OrchestrationError):
         return {"code": error.code, "detail": _bounded(str(error))}
-    return {"code": "construction_failed", "detail": type(root).__name__}
+    return {"code": "construction_failed", "detail": public_error_code(root, None)}
 
 
 def _text(value, name):

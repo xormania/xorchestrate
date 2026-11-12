@@ -14,7 +14,8 @@ from xcontracts.model import JSON, Assessment, Capability, Conflict, Orchestrati
 
 __all__ = [
     "JSON", "Assessment", "Capability", "Conflict", "OrchestrationError", "Record", "Verdict", "action_spec",
-    "canonical_digest", "project_operation_errors", "public_error", "public_error_message", "record_view",
+    "canonical_digest", "project_operation_errors", "public_error", "public_error_code",
+    "public_error_message", "record_view",
     "unique_keys",
 ]
 
@@ -89,6 +90,7 @@ def public_error_code(error: BaseException, default: str | None = "external_erro
         return default
     # public_error's fallback code would describe a malformed typed error, not this one.
     return code if isinstance(code, str) and code else default
+
 
 
 def project_operation_errors(value: JSON) -> JSON:
