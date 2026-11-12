@@ -21,6 +21,8 @@ def _hash(value):
 
 
 def _usage(assessments):
+    if any(item.details.get("usage_unmeasured_attempts", 0) for item in assessments):
+        return None
     values = [item.details.get("usage") for item in assessments]
     if not values or any(value is None and item.details.get("usage_scope") != "batch"
                          for item, value in zip(assessments, values)):
@@ -61,13 +63,8 @@ def _valid_ttl(value):
         return False
 
 
-def run_tasks(evaluator, tasks, context, *, cache_dir=None, batch=False, cache_ttl_seconds=86400):
-    """Return aligned assessments and execution facts; cached usage is never fresh.
-
-    Reuse is scoped to a trusted local cache. The digest detects corruption; it
-    does not attest a writer. Errors and partial batches are never cached. Batch
-    mode is explicit because joint questions can change provider judgments.
-    """
+def validate_execution(tasks, cache_dir, batch, cache_ttl_seconds):
+    """Validate execution policy before any cache read or provider request."""
     if ((cache_dir is not None and (not isinstance(cache_dir, (str, Path)) or not str(cache_dir) or "\0" in str(cache_dir)))
             or type(batch) is not bool or not _valid_ttl(cache_ttl_seconds)
             or not isinstance(tasks, list) or not tasks
@@ -76,6 +73,16 @@ def run_tasks(evaluator, tasks, context, *, cache_dir=None, batch=False, cache_t
                    or not task["question"].strip() for task in tasks)
             or len({task["task_id"] for task in tasks}) != len(tasks)):
         raise OrchestrationError("Invalid advisory execution options or tasks.", "invalid_configuration")
+
+
+def run_tasks(evaluator, tasks, context, *, cache_dir=None, batch=False, cache_ttl_seconds=86400):
+    """Return aligned assessments and execution facts; cached usage is never fresh.
+
+    Reuse is scoped to a trusted local cache. The digest detects corruption; it
+    does not attest a writer. Errors and partial batches are never cached. Batch
+    mode is explicit because joint questions can change provider judgments.
+    """
+    validate_execution(tasks, cache_dir, batch, cache_ttl_seconds)
     started, now = time.monotonic(), time.time()
     key = _hash({"schema_version": _SCHEMA, "endpoint": evaluator.endpoint, "model": evaluator.model,
                  "criteria": evaluator.criteria, "batch": batch, "tasks": tasks, "context": context})
@@ -113,15 +120,25 @@ def run_tasks(evaluator, tasks, context, *, cache_dir=None, batch=False, cache_t
             if not isinstance(answers, dict) or answers.keys() != questions.keys():
                 raise OrchestrationError("The provider did not return the complete batch.", "evaluation_invalid")
             results = [answers[key] for key in questions]
+            metadata["provider_calls"] = sum(item.details.get("provider_calls", 0) for item in results) or 1
         else:
             for task in tasks:
                 metadata["provider_calls"] += 1
-                results.append(evaluator.assess(task["question"], context))
+                result = evaluator.assess(task["question"], context)
+                metadata["provider_calls"] += max(0, result.details.get("provider_calls", 1) - 1)
+                results.append(result)
     except OrchestrationError as error:
         status = error.details.get("status")
         provider = {"status": status} if type(status) is int and 100 <= status <= 599 else {}
+        for name in ("provider_code", "request_id", "cause"):
+            if name in error.details:
+                provider[name] = error.details[name]
+        attempts = error.details.get("provider_calls", 1)
+        if type(attempts) is int and attempts >= 0:
+            metadata["provider_calls"] += attempts - 1
         raise OrchestrationError(str(error), error.code, {**provider,
-            "execution": {**metadata, "fresh_usage": _usage(results), "elapsed_seconds": time.monotonic() - started},
+            "execution": {**metadata, "fresh_usage": None if attempts else _usage(results),
+                          "elapsed_seconds": time.monotonic() - started},
             "completed_assessments": json.loads(canonical([asdict(item) for item in results])),
         }) from None
     # Keep the same independent validation on writes as on reads.

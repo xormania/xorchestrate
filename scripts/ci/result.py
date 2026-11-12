@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import html
 import importlib.util
 import json
 import math
@@ -99,7 +100,8 @@ def _diagnostic_assessments(values):
             if not isinstance(usage, dict) or any(type(usage.get(key)) is not int or usage[key] < 0 for key in ("input_tokens", "output_tokens")):
                 raise ValueError("Invalid diagnostic usage")
             kept["usage"] = {key: usage[key] for key in ("input_tokens", "output_tokens")}
-        result.append({"check_id": check_id, "outcome": outcome, "confidence": confidence, "details": kept, **located})
+        result.append({"check_id": check_id, "outcome": outcome, "confidence": confidence, "details": kept, **located,
+                       **(_atomic_fields(value) if "judgments" in value else {})})
         identities.add(identity)
         if "task_id" in located:
             task_ids.add(located["task_id"])
@@ -107,9 +109,113 @@ def _diagnostic_assessments(values):
 
 
 
+def _atomic_fields(value):
+    """Validate the small typed advisory extension without importing a provider."""
+    ids, selected = value.get("evidence_ids"), value.get("supporting_evidence_ids")
+    if (not _bounded_paths(ids) or len(ids) > 128 or not _bounded_paths(selected) or not set(selected).issubset(ids)
+            or (value.get("applicable") is not None and type(value.get("applicable")) is not bool) or type(value.get("sufficient_evidence")) is not bool
+            or not isinstance(value.get("claim"), str) or len(value["claim"]) > 4000
+            or not isinstance(value.get("judgments"), dict)):
+        raise ValueError("Invalid atomic advisory fields")
+    judgments = {}
+    for key, judgment in value["judgments"].items():
+        if key not in {"applicable", "sufficient", "claim"} and key not in {"supports:" + item for item in ids}:
+            raise ValueError("Unbound atomic judgment")
+        if not isinstance(judgment, dict) or not isinstance(judgment.get("details"), dict):
+            raise ValueError("Invalid atomic judgment")
+        probabilities = judgment["details"].get("probabilities")
+        if (not isinstance(probabilities, dict) or set(probabilities) != {"yes", "no", "insufficient_evidence"}
+                or any(type(p) not in (int, float) or not math.isfinite(p) or not 0 <= p <= 1 for p in probabilities.values())
+                or abs(sum(probabilities.values()) - 1) > .01):
+            raise ValueError("Invalid atomic probabilities")
+        judgments[key] = {"details": {"probabilities": probabilities}}
+    candidates = value.get("support_candidate_ids", ids)
+    scored = [identifier for identifier in candidates if "supports:" + identifier in judgments] if isinstance(candidates, list) else []
+    if (not _bounded_paths(candidates) or not set(candidates).issubset(ids)
+            or any(key.startswith("supports:") and key.removeprefix("supports:") not in candidates for key in judgments)
+            or value.get("support_scored_ids", scored) != scored):
+        raise ValueError("Invalid support-question scope")
+    source = {"support_candidate_ids": candidates, "support_scored_ids": scored,
+              "unscored_evidence_ids": [identifier for identifier in ids if identifier not in scored]}
+    if "side" in value or "change" in value or "focal_evidence_ids" in value:
+        change, focal = value.get("change"), value.get("focal_evidence_ids")
+        if (value.get("side") not in {"before", "after"} or not isinstance(change, dict)
+                or change.get("kind") not in {"added", "modified", "deleted", "uncompared"}
+                or not _bounded_paths(focal) or any(identifier not in ids and (
+                    value.get("outcome") != "insufficient_evidence"
+                    or "evidence:" + identifier not in value.get("missing_evidence", [])) for identifier in focal)):
+            raise ValueError("Invalid atomic source change identity")
+        source.update(side=value["side"], change=change, focal_evidence_ids=focal)
+    return {**source, "claim": value["claim"], "applicable": value["applicable"], "sufficient_evidence": value["sufficient_evidence"],
+            "evidence_ids": ids, "supporting_evidence_ids": selected, "judgments": judgments}
+
+
+def _atomic_evidence(values, assessments):
+    if not isinstance(values, list) or len(values) > 128:
+        raise ValueError("Invalid advisory evidence")
+    evidence = {}
+    for row in values:
+        if (not isinstance(row, dict) or not isinstance(row.get("id"), str) or row["id"] in evidence
+                or not isinstance(row.get("kind"), str) or not _sha(row.get("sha256"))):
+            raise ValueError("Invalid advisory evidence identity")
+        if row["kind"] in {"source", "test_source", "binding_source", "contract_source"} and (
+                not isinstance(row.get("content"), str) or not isinstance(row.get("path"), str)
+                or type(row.get("start_line")) is not int or type(row.get("end_line")) is not int
+                or not 1 <= row["start_line"] <= row["end_line"]):
+            raise ValueError("Invalid advisory source span")
+        evidence[row["id"]] = row
+    if any(not set(row.get("evidence_ids", [])).issubset(evidence) for row in assessments):
+        raise ValueError("Unknown advisory evidence reference")
+    return list(evidence.values())
+
+
+def jev_triage_markdown(report):
+    """Render supplied spans and typed advisory judgments; never alter a gate."""
+    def text(value):
+        return html.escape(str(value), quote=True).replace("|", "&#124;").replace("\n", " ").replace("`", "&#96;")
+    rows = ["", "## Jev " + text(report.get("stage", "post_test")) + " advisory", "",
+            "Status: **" + text(report.get("status", "inconclusive")) + "**. Deterministic result: **"
+            + text(report.get("deterministic_status", "unchanged")) + "**.",
+            "Concerns are investigation candidates. Model probabilities are uncalibrated; advisory results do not qualify CI.", ""]
+    if report.get("reason"):
+        rows.append("Reason: " + text(report["reason"]) + ".")
+    rows.extend(["| Subject / check | Claim | Applicable | Sufficient evidence | Outcome | Supporting evidence IDs |",
+                 "|---|---|---|---|---|---|"])
+    distributions = []
+    for row in report.get("assessments", []):
+        rows.append("| " + " | ".join(text(value) for value in (
+            row.get("subject_id", row.get("candidate_id", "unknown")) + " / " + row["check_id"]
+            + (" / " + row["side"] + " / " + row["change"]["kind"] if "side" in row else ""), row.get("claim", ""),
+            row.get("applicable"), row.get("sufficient_evidence"), row["outcome"], ", ".join(row.get("supporting_evidence_ids", [])))) + " |")
+        if "selected_case_ids" in row:
+            distributions.extend(["", "Selected executed cases: " + text(", ".join(row["selected_case_ids"]))
+                                  + ". Unselected cases: " + text(row.get("unselected_case_count", 0)) + "."])
+        if "support_candidate_ids" in row:
+            distributions.extend(["", "Support-question shortlist: " + text(", ".join(row["support_candidate_ids"])) + ". "
+                + "Returned support judgments: " + text(", ".join(row.get("support_scored_ids", [])) or "none") + ". "
+                + "Evidence without a returned support judgment: " + text(", ".join(row.get("unscored_evidence_ids", [])) or "none") + "."])
+        for key in ("applicable", "sufficient", "claim"):
+            probabilities = row.get("judgments", {}).get(key, {}).get("details", {}).get("probabilities")
+            if probabilities:
+                distributions.extend(["", text(row["check_id"] + " / " + key) + ": " + text(json.dumps(probabilities, sort_keys=True)) + "."])
+    rows.extend(distributions)
+    missing = report.get("missing_evidence", [])
+    if missing:
+        rows.extend(["", "Missing / excluded evidence: " + text(json.dumps(missing)) + "."])
+    for item in report.get("evidence", []):
+        if item.get("kind") not in {"source", "test_source", "binding_source", "contract_source"}:
+            continue
+        rows.extend(["", "<details><summary>" + text(item["id"] + " — " + item["path"] + ":"
+            + str(item["start_line"]) + "-" + str(item["end_line"])
+            + (" / " + item["side"] if "side" in item else "")
+            + (" / commit " + item["git_commit"] if "git_commit" in item else "")) + "</summary>", "",
+            "<pre>" + html.escape(item["content"]) + "</pre>", "", "</details>"])
+    return "\n".join(rows) + "\n"
+
+
 def _diagnostic_execution(value):
     if (not isinstance(value, dict) or value.get("mode") not in {"single", "batch"}
-            or value.get("cache_status") not in {"disabled", "miss", "unusable", "hit", "write_unavailable"}
+            or value.get("cache_status") not in {"disabled", "miss", "unusable", "hit", "mixed", "write_unavailable"}
             or not _sha(value.get("request_sha256"))
             or any(type(value.get(key)) is not int or value[key] < 0
                    for key in ("provider_calls", "reused_assessments"))):
@@ -164,6 +270,9 @@ def jev_evidence(artifacts, needs, *, tested_sha):
         if status == "complete" and not assessments:
             raise ValueError("A complete diagnostic needs assessments")
         base.update(current=True, status=status, assessments=assessments)
+        if "evidence" in diagnostic:
+            base["evidence"] = _atomic_evidence(diagnostic["evidence"], assessments)
+            base["stage"] = "source"
         if "model" in diagnostic:
             if not isinstance(diagnostic["model"], str) or len(diagnostic["model"]) > 128:
                 raise ValueError("Invalid diagnostic model")
@@ -504,6 +613,8 @@ def markdown(result, run_url):
                          "Truncated: " + (", ".join(text(path) for path in scope["truncated"]) or "none") + "."])
         if diagnostic.get("context_sha256"):
             rows.append(f"Context SHA-256: `{diagnostic['context_sha256']}`.")
+    if diagnostic.get("current") and "evidence" in diagnostic:
+        rows.append(jev_triage_markdown(diagnostic))
     if diagnostic.get("report_sha256"):
         rows.append(f"Report SHA-256: `{diagnostic['report_sha256']}`.")
     job = result["jobs"].get("architecture", {})

@@ -318,19 +318,24 @@ def test_durable_host_recovery_preserves_uncertain_effect_and_native_identity(tm
     native = MemoryNative()
     host = SessionBridgeHost(native, endpoint, {"private_marker": "retained-before-crash"},
         options={"transport": "fifo", "state_path": str(state)})
-    client = BridgeSessionDriver({"endpoint": str(endpoint), "transport": "fifo", "timeout": 0.1})
+    client = BridgeSessionDriver({"endpoint": str(endpoint), "transport": "fifo", "timeout": 2})
     backend = client.attach({})
     snapshot = tmp_path / "at-crash.json"
     try:
-        with pytest.raises(OrchestrationError) as error:
-            client.send(backend, {"hold": True})
-        assert error.value.code == "bridge_timeout"
-        assert native.entered.is_set()
-        # Capture the persisted state at the actual outstanding-effect boundary;
-        # clean up the fixture separately, then recover exactly that snapshot.
-        shutil.copy2(state, snapshot)
-        saved = json.loads(snapshot.read_text())
-        assert any(item["status"] == "pending" for item in saved["effects"].values())
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            pending = pool.submit(client.send, backend, {"hold": True})
+            try:
+                assert native.entered.wait(2), "NATIVE_EFFECT_BOUNDARY_REACHED"
+                assert not pending.done(), "NATIVE_EFFECT_REMAINS_IN_FLIGHT"
+                # Snapshot the acknowledged native-entry boundary, independently
+                # of scheduling or persistence latency. RPC timeouts are covered
+                # by test_lost_response_preserves_host_effect_and_control_progress.
+                shutil.copy2(state, snapshot)
+                saved = json.loads(snapshot.read_text())
+                assert any(item["status"] == "pending" for item in saved["effects"].values()), "HOST_EFFECT_PENDING_AT_NATIVE_BOUNDARY"
+            finally:
+                native.release.set()
+            pending.result(2)
     finally:
         native.release.set()
         client.close()

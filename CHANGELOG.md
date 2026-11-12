@@ -9,6 +9,25 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- Jev change packets retain moved assignment before-state using stable target identities and distinguish repeated targets.
+- CI summaries retain valid mixed-cache Jev assessments and separate fresh from reused usage.
+- Post-test Jev observation IDs distinguish modules that share a test family.
+- Jev operational replay and live health honor the configured support-evidence question limit.
+- Jev operational evaluation replays pinned engineering incidents and healthy
+  controls with separate tuning and heldout groups. Reports distinguish known
+  fault matches, independently supported findings, unknown costs and reviewer
+  time. CI runs full evaluations when their inputs change and a small fresh
+  health control otherwise. See [operational evaluation](docs/jev-operational.md).
+- Jev diagnostics budget the complete serialized request, preserve complete
+  evidence while splitting oversized candidate batches, and reuse successful
+  partitions. Bounded transient retries share the request deadline; recognized
+  provider errors retain safe codes and actual HTTP attempt counts. See
+  [Jev execution](docs/jev-execution.md).
+- Jev diagnostics select changed behavior across configured architecture roles,
+  retain complete before/after source and deletions, and connect contract wrappers
+  to statically declared fixtures and subjects. Packets identify missing inputs
+  and preserve whole-change source budgets; static relationships do not claim
+  behavioral coverage. See [architecture diagnostics](docs/architecture-enforcement.md#jev-diagnostics).
 - The project server now runs in a terminal host, selected in `settings.json`
   as `terminal_host`. It defaults to a private multiplexer server (`tmux`),
   so the server's terminal survives its client and an operator can attach to
@@ -82,6 +101,12 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   (for example `EACCES`) instead of the exception class.
 
 ### Added
+
+- Jev now asks evidence-addressed atomic questions at the source stage and adds
+  optional post-test guarantee support and failure triage. Current candidate and
+  lane identity, executed inventories and exact failure cases bind the advice;
+  missing evidence abstains, source spans remain reviewable, and deterministic
+  CI qualification stays unchanged when a lane or the provider fails.
 
 - `hosted` session adapter: a native session runs in a bridge host that
   Xorchestrate opens in the project's terminal host. It survives the server,

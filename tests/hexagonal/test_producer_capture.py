@@ -210,6 +210,13 @@ class EvaluatorProducerCaptureTests(unittest.TestCase):
             status = 200
             headers = {}
 
+            def __init__(self):
+                self.raw = self
+                self._sock = self
+
+            def settimeout(self, remaining):
+                self.remaining_timeout = remaining
+
             def __enter__(self):
                 return self
 

@@ -30,7 +30,7 @@ def commit(root, files, message):
     return git(root, "rev-parse", "HEAD")
 
 
-def candidate_repository(root):
+def candidate_repository(root, *, extra_files=None):
     """Create a real two-parent integration, with observable source/base identities."""
     root.mkdir()
     git(root, "init", "--quiet", "--initial-branch=master")
@@ -44,6 +44,7 @@ def candidate_repository(root):
         "pyproject.toml": '[project]\nname = "candidate-fixture"\nversion = "0.1.0"\n',
         "scripts/ci/checker.py": '"""Fixture checker input."""\n',
         "source.py": "VALUE = 1\n",
+        **(extra_files or {}),
     }, "initial")
     git(root, "checkout", "--quiet", "-b", "feature")
     source = commit(root, {"source.py": "VALUE = 2\n"}, "source")

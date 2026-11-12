@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "pr": 77,
+  "review_thread": "PRRT_kwDOVUInEM62X2vf",
+  "review_url": "https://github.com/xormania/xorchestrate/pull/77#discussion_r4543618630",
+  "repair": "The CI evidence consumer accepts the producer's mixed cache status while retaining strict validation of unknown statuses and fresh/reused usage. The regression runs through complete evidence consumption and Markdown rendering.",
+  "red_source_sha": "04ba91c7ecd02ac4cdef5daec587f26ab75e6f85",
+  "red_tested_sha": "6b1543e405962b9cc579246b3f71d338f62ce5ef",
+  "red_run_id": 43139561494,
+  "red_artifact_id": 13908369784,
+  "artifact_sha256": "9fe3c2fa85468f0010a7918b891e588f0353b41de42b513201a61f36cbaef98b",
+  "proof_extraction_run": 43140450554,
+  "proof_extraction_job": 130925877973,
+  "assertion_witness": "MIXED_CACHE_ADVICE_REMAINS_VISIBLE",
+  "cases": [
+    {
+      "test": "test_advisory_execution_distinguishes_new_provider_usage_from_reused_history[mixed_single]",
+      "classname": "tests.hexagonal.test_ci_result",
+      "failures": 1,
+      "errors": 0,
+      "witness_found": true,
+      "detail": "AssertionError: MIXED_CACHE_ADVICE_REMAINS_VISIBLE\nassert 'invalid' == 'complete'\n  \n  - complete\n  + invalid\ntmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_advisory_execution_distin3')\nscenario = 'mixed_single'\n\n    @pytest.mark.parametrize(\"scenario\", (\"single_fresh\", \"batch_fresh\", \"cache_hit\", \"mixed_single\", \"mixed_batch\", \"invalid_usage\"))"
+    },
+    {
+      "test": "test_advisory_execution_distinguishes_new_provider_usage_from_reused_history[mixed_batch]",
+      "classname": "tests.hexagonal.test_ci_result",
+      "failures": 1,
+      "errors": 0,
+      "witness_found": true,
+      "detail": "AssertionError: MIXED_CACHE_ADVICE_REMAINS_VISIBLE\nassert 'invalid' == 'complete'\n  \n  - complete\n  + invalid\ntmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_advisory_execution_distin4')\nscenario = 'mixed_batch'\n\n    @pytest.mark.parametrize(\"scenario\", (\"single_fresh\", \"batch_fresh\", \"cache_hit\", \"mixed_single\", \"mixed_batch\", \"invalid_usage\"))"
+    }
+  ],
+  "test_command": "python -m pytest -q -p no:cacheprovider tests/hexagonal/test_ci_result.py",
+  "execution_note": "Observed RED came from the repository's full hosted test-kit suite, not a local execution. The targeted command is supplied for reproduction. Subsequent repair-head GitHub Checks retain GREEN execution evidence.",
+  "temporary_workflow": "A read-only reporting workflow exposed the retained ZIP assertions because the managed executor was unavailable. It is removed from the final branch tree."
+}
