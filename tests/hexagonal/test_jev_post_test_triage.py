@@ -7,7 +7,11 @@ from pathlib import Path
 
 import pytest
 
-from tests.hexagonal.contracts.jev_triage import post_test_advice_is_bound, provider_did_not_run
+from tests.hexagonal.contracts.jev_triage import (
+    post_test_advice_is_bound,
+    provider_did_not_run,
+    subject_observations_are_unambiguous,
+)
 from tests.hexagonal.support.ci_candidate import write_json
 from tests.hexagonal.support.jev_triage import (
     AtomicProvider,
@@ -311,3 +315,24 @@ def test_many_case_receipts_are_validated_then_explicitly_bounded_for_provider(e
     assert all(len(row.get("selected_case_ids", [])) == 2 for row in report["assessments"]), "CASE_SUBJECT_LIMIT_IS_EXPLICIT"
     assert all(row.get("unselected_case_count") == 8 for row in report["assessments"])
     assert any(row.get("reason") == "case_subject_limit" for row in report["missing_evidence"])
+
+
+def test_same_family_subjects_resolve_distinct_observations_and_support(tmp_path):
+    inputs = triage_evidence(tmp_path, same_family_failures=True)
+    expected = {}
+    for index, module, case in (
+        (1, "tests/hexagonal/test_work.py", "test_value"),
+        (2, "tests/hexagonal/test_other.py", "test_other"),
+    ):
+        lane = f"framework-tests-python-3.12-shard-{index}-of-2"
+        directory = inputs["artifacts"] / (lane + "--attempt-1") / "run"
+        expected[module] = {
+            "case_id": module + "::" + case, "lane": lane,
+            "report_sha256": hashlib.sha256((directory / "report.json").read_bytes()).hexdigest(),
+            "inventory_sha256": hashlib.sha256((directory / "inventory.json").read_bytes()).hexdigest(),
+        }
+    provider = AtomicProvider()
+    report = observe_triage(inputs, provider)
+    assert report["status"] == "complete" and provider.calls, "SAME_FAMILY_TRIAGE_EXECUTES"
+    post_test_advice_is_bound(report, inputs["context"], inputs["result"])
+    subject_observations_are_unambiguous(report, expected)

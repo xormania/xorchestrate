@@ -17,7 +17,7 @@ from tests.hexagonal.support.ci_candidate import (
 from xorchestrate.model import Assessment
 
 
-def triage_evidence(directory):
+def triage_evidence(directory, *, same_family_failures=False):
     workflow = {"jobs": {
         "changes": {"name": "Static checks"},
         "application-tests": {"name": "Application tests shard ${{ matrix.shard }}/${{ matrix.shards }} (Python 3.12)",
@@ -35,7 +35,11 @@ def triage_evidence(directory):
         "tests/hexagonal/test_work.py": ("from pkg.work import persist\n\nclass FakePort:\n"
                                          "    def save(self, value):\n        return 'changed'\n\n"
                                          "def test_value():\n    assert persist(FakePort(), 'value') == 'value'\n"),
-        "tests/hexagonal/test_other.py": "def test_other():\n    assert True\n",
+        "tests/hexagonal/test_other.py": (
+            "from pkg.work import persist\n\nclass OtherPort:\n"
+            "    def save(self, value):\n        return 'other'\n\n"
+            "def test_other():\n    assert persist(OtherPort(), 'other-value') == 'other-value'\n"
+            if same_family_failures else "def test_other():\n    assert True\n"),
     })
     event, env = github_observation(repository)
     context = capture_context(repository["root"], event, env)
@@ -55,7 +59,8 @@ def triage_evidence(directory):
     catalog_sha = hashlib.sha256(json.dumps(catalog, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     job_names = {}
     for index, (lane, job, suite) in enumerate(lanes, 1):
-        failed = "shard-1-of-2" in lane
+        first_shard = "shard-1-of-2" in lane
+        failed = first_shard or (same_family_failures and "shard-2-of-2" in lane)
         artifact_name = lane + "--attempt-1"
         target = artifacts / artifact_name / "run"
         if job not in job_names:
@@ -71,22 +76,23 @@ def triage_evidence(directory):
         write_json(target / "candidate.json", {**context["checkout"], "status": ""})
         checks = [{"name": suite, "status": "failed" if failed else "passed", "exit_status": 1 if failed else 0}]
         if suite == "tests":
-            module = "tests/hexagonal/test_work.py" if failed else "tests/hexagonal/test_other.py"
+            module = "tests/hexagonal/test_work.py" if first_shard else "tests/hexagonal/test_other.py"
+            case_name = "test_other" if same_family_failures and not first_shard else "test_value"
             inventory = {"schema_version": 1, "catalog_id": catalog["id"], "catalog_sha256": catalog_sha,
                          "selected": 1, "exit_status": 1 if failed else 0, "status": "failed" if failed else "passed",
-                         "cases": [{"id": module + "::test_value", "path": module, "family": "work",
+                         "cases": [{"id": module + "::" + case_name, "path": module, "family": "work",
                                     "selected": True, "outcome": "failed" if failed else "passed"}]}
-            inventory["shard"] = {"index": 1 if failed else 2, "count": 2, "modules": [module]}
+            inventory["shard"] = {"index": 1 if first_shard else 2, "count": 2, "modules": [module]}
             write_json(target / "inventory.json", inventory)
             checks[0]["tool_report"] = {"sha256": hashlib.sha256((target / "inventory.json").read_bytes()).hexdigest(), "selected": 1}
             if failed:
                 (target / "tests.xml").write_text(
-                    '<testsuite><testcase classname="tests.hexagonal.test_work" name="test_value">'
+                    '<testsuite><testcase classname="' + module.removesuffix(".py").replace("/", ".") + '" name="' + case_name + '">'
                     '<failure message="AssertionError: value mismatch">Expected value but got changed.</failure>'
                     '</testcase></testsuite>')
         report = {"schema_version": 2, "suite": suite, "status": "failed" if failed else "passed", "checks": checks}
         if suite == "tests":
-            report["shard"] = "1/2" if failed else "2/2"
+            report["shard"] = "1/2" if first_shard else "2/2"
         write_json(target / "report.json", report)
     result = {"schema_version": 2, "status": "failed", "source_sha": context["source_sha"],
               "tested_sha": context["checkout"]["commit"], "candidate_context": context,
