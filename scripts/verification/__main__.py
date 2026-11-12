@@ -97,8 +97,15 @@ def run_trial(root, output):
     """
     def trial(case, case_id):
         mutation = {"path": case.mutation.path, "old": case.mutation.old, "new": case.mutation.new}
-        record = _trial(root, Path(output) / case_id, mutation, list(case.selectors))
-        write_json(Path(output) / case_id / "trial.json", {**record, "finished_at": now()})
+        directory = Path(output) / case_id
+        try:
+            record = _trial(root, directory, mutation, list(case.selectors))
+        except Exception as error:
+            # Private evidence of why the case could not run; the report keeps only a typed reason.
+            directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+            (directory / "trial-error.log").write_text(str(error) + "\n", encoding="utf-8")
+            raise
+        write_json(directory / "trial.json", {**record, "finished_at": now()})
         return record
     return trial
 

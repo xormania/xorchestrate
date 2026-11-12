@@ -657,7 +657,7 @@
         "stdlib:*",
         "pytest"
       ],
-      "allow_dynamic": true
+      "allow_dynamic": false
     },
     "verification_inventory": {
       "modules": [

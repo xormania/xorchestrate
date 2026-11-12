@@ -243,7 +243,9 @@ python3 -m scripts.verification.calibrate_suite --candidate . --out <new directo
 python3 -m scripts.verification.calibrate_suite --candidate . --out <new directory outside the tree> --inventory native
 ```
 
-With neither option, the inventories registered at `ci` run. A case passes when it
+With neither option, the inventories registered at `ci` run. A selection that names
+no inventory (today only `native` is registered, at `ci`) exits 2 with
+`no_inventory_selected` before anything runs. A case passes when it
 classifies as its expectation: `detected` by default, or `unrelated_failure` for a
 negative control.
 

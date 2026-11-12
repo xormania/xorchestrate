@@ -9,6 +9,7 @@ composition root.
 """
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 
@@ -62,9 +63,13 @@ def _judge(case: FaultCase, raw: Mapping) -> str:
                     mutant_exit=raw["mutant_exit"])["classification"]
 
 
+TYPED_CODE = re.compile(r"[a-z][a-z0-9_]{0,63}")
+
+
 def _reason(error: Exception) -> str:
+    """A typed code only; free text, a message or a class name never reaches the report."""
     code = getattr(error, "code", None)
-    return code if isinstance(code, str) and code else "trial_failed"
+    return code if isinstance(code, str) and TYPED_CODE.fullmatch(code) else "trial_failed"
 
 
 def calibrate_inventory(inventory: Inventory, *, trial: Trial, sink: ResultSink, candidate_sha256: str) -> dict:

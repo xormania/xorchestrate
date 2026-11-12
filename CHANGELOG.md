@@ -106,6 +106,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   under `scripts/verification/inventories/`, selected by name or by stage (`ci`,
   `pre-draft`, `manual`). The native faults moved there unchanged. See
   [the testing framework](docs/testing-framework.md#adding-or-changing-coverage).
+  `python -m scripts.verification.calibrate_suite --inventory` now takes a
+  registered inventory name instead of a file path, and
+  `scripts/verification/faults.json` is gone: register a new inventory file in
+  `scripts/verification/inventories/registry.json` and pass its name.
 - Jev now asks evidence-addressed atomic questions at the source stage and adds
   optional post-test guarantee support and failure triage. Current candidate and
   lane identity, executed inventories and exact failure cases bind the advice;

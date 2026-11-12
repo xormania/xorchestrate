@@ -3,7 +3,7 @@
 Selects inventories by name or by stage (default: those registered at ci),
 runs each case through the calibration service with the isolated trial
 adapter, and writes one suite report. Exits 2 for an unknown or unregistered
-inventory before any case runs.
+inventory, or for a selection that names no inventory, before any case runs.
 """
 import argparse
 import json
@@ -37,15 +37,19 @@ def main(argv=None):
     except InventoryError as error:
         print(error.code, file=sys.stderr)
         return 2
+    if not inventories:
+        print("no_inventory_selected", file=sys.stderr)
+        return 2
     output.mkdir(parents=True, exist_ok=False)
     candidate = candidate_identity(root)
     reports = {}
     for inventory in inventories:
-        events = output / (inventory.name + ".events.jsonl")
+        progress, events = output / (inventory.name + ".progress.json"), []
 
-        def sink(event, events=events):
-            with events.open("a", encoding="utf-8") as stream:
-                stream.write(json.dumps(event, sort_keys=True) + "\n")
+        def sink(event, progress=progress, events=events):
+            # Rewritten after every case, so a run cut short still leaves each finished verdict.
+            events.append(event)
+            write_json(progress, events)
 
         reports[inventory.name] = calibrate_inventory(
             inventory, trial=run_trial(root, output / inventory.name), sink=sink,

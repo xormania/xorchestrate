@@ -1,8 +1,8 @@
 """Read registered fault inventories from a directory of JSON files.
 
 An edge adapter for the calibration service: it validates the registry and
-inventory files against ``schema.json`` in the same directory and builds
-inventory values. It never reads the source tree a case mutates.
+inventory files against this package's own ``inventories/schema.json`` (a
+registry directory cannot supply a weaker schema) and builds inventory values. It never reads the source tree a case mutates.
 """
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from .fault_calibration import FaultCase, Inventory, Mutation
 
 REGISTRY = "registry.json"
 SCHEMA = "schema.json"
+TRUSTED_SCHEMA = Path(__file__).with_name("inventories") / SCHEMA
 DEFAULT_STAGE = "ci"
 
 
@@ -34,8 +35,8 @@ def _read(path: Path, code: str):
         raise InventoryError(code, path.name) from error
 
 
-def _validate(directory: Path, value, definition: str, code: str, name: str) -> None:
-    schema = _read(directory / SCHEMA, code)
+def _validate(value, definition: str, code: str, name: str) -> None:
+    schema = _read(TRUSTED_SCHEMA, code)
     validator = Draft202012Validator({**schema, "$ref": "#/$defs/" + definition})
     problem = next(iter(sorted(validator.iter_errors(value), key=lambda error: list(error.path))), None)
     if problem is not None:
@@ -46,7 +47,7 @@ def _validate(directory: Path, value, definition: str, code: str, name: str) -> 
 def _registered(directory: Path) -> dict:
     directory = Path(directory)
     value = _read(directory / REGISTRY, "invalid_registry")
-    _validate(directory, value, "registry", "invalid_registry", REGISTRY)
+    _validate(value, "registry", "invalid_registry", REGISTRY)
     entries = value["inventories"]
     for name, entry in entries.items():
         if not (directory / entry["file"]).is_file():
@@ -66,8 +67,9 @@ def load_registry(directory: Path) -> dict[str, tuple[str, ...]]:
 
 
 def _module_form(selector: str) -> str:
-    path, _, test = selector.partition("::")
-    return path.removesuffix(".py").replace("/", ".") + "::" + test
+    """The JUnit identity of a selected test: a test class joins the module, as ``junit_cases`` keys it."""
+    path, *scopes, test = selector.split("::")
+    return ".".join([path.removesuffix(".py").replace("/", "."), *scopes]) + "::" + test
 
 
 def load_inventory(directory: Path, name: str) -> Inventory:
@@ -76,7 +78,7 @@ def load_inventory(directory: Path, name: str) -> Inventory:
     if name not in entries:
         raise InventoryError("unknown_inventory", name)
     value = _read(directory / entries[name]["file"], "invalid_inventory")
-    _validate(directory, value, "inventory", "invalid_inventory", name)
+    _validate(value, "inventory", "invalid_inventory", name)
     names = [case["name"] for case in value["cases"]]
     if len(names) != len(set(names)):
         raise InventoryError("invalid_inventory", name + " repeats a case name")
@@ -85,6 +87,8 @@ def load_inventory(directory: Path, name: str) -> Inventory:
         selected = {_module_form(selector) for selector in case["selectors"]}
         if case["target"] not in selected or not set(case["unaffected"]) <= selected:
             raise InventoryError("target_not_selected", name + "/" + case["name"])
+        if case["target"] in case["unaffected"]:
+            raise InventoryError("invalid_inventory", name + "/" + case["name"] + " lists its target as unaffected")
         cases.append(FaultCase(name=case["name"], mutation=Mutation(**case["mutation"]),
                                selectors=tuple(case["selectors"]), target=case["target"],
                                diagnostic=case["diagnostic"], unaffected=tuple(case["unaffected"]),
@@ -99,6 +103,6 @@ def select(registry: Mapping[str, Sequence[str]], *, names: Sequence[str] = (), 
         unknown = [name for name in names if name not in registry]
         if unknown:
             raise InventoryError("unknown_inventory", ", ".join(unknown))
-        return tuple(names)
+        return tuple(dict.fromkeys(names))
     wanted = stage or DEFAULT_STAGE
     return tuple(name for name, stages in registry.items() if wanted in stages)
