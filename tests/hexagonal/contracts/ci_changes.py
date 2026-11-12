@@ -10,7 +10,7 @@ CODE_PATHS = (
     "xorchestrate/README.md", "pyproject.toml", "ruff.toml", ".gitignore", "docs/implementation/owner-brief.md",
     "README.txt", "docs", "/README.md", "docs/../xorchestrate/model.py", "",
 )
-HEAVY_JOBS = ("application-tests", "application", "verification", "tmux-acceptance", "architecture", "package")
+HEAVY_JOBS = ("application-tests", "application", "verification", "tmux-acceptance", "package")
 ALWAYS_JOBS = ("changes", "architecture-status", "ci-result")
 CLASSIFIER_JOB = "paths"
 # Heavy jobs that aggregate other heavy jobs. They still depend on the classifier,

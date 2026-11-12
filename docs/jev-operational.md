@@ -119,12 +119,13 @@ repeated trials. No time saving, billing total or monetary benefit is inferred.
 
 ## Economical CI selection
 
-The existing advisory job selects a full evaluation when model/contract,
-question, source-packet, request/evaluation code, corpus or evaluation-test inputs
-change. Unknown comparison scope also selects full. The full path runs the
-existing synthetic pilot and the operational heldout population. Other code PRs
-run one small intentional live control through the same atomic evaluator, without
-historical snapshot reconstruction or cache reuse:
+The independent `Jev advisory` workflow runs full synthetic and operational
+heldout calibration only when explicitly dispatched with `calibration=true` on
+the default branch. This makes calibration a deliberate measurement after model,
+question, corpus or evaluator changes, rather than recurring overhead on every PR
+metadata event. The reusable changed-path selector remains available locally.
+Routine CI completions assess source/test evidence without a separate health call.
+A small intentional live control can still be requested locally:
 
 ```bash
 python -m scripts.architecture.operational --mode live --health \
@@ -135,7 +136,7 @@ The health report identifies its explicit control and retains availability and
 the answer. It makes no operational-effectiveness claim. Selecting a deployment
 through repository variables without changing a tracked model configuration
 requires an explicit full evaluation (for example the live command above);
-changed-path classification cannot observe a variable edit.
+a variable edit is not itself a calibration request.
 
 All evaluation/health steps remain advisory and retain artifacts after failure.
 The existing deterministic qualification and repository merge decision are

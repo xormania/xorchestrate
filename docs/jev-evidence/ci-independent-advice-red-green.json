@@ -1,0 +1,917 @@
+{
+  "purpose": "Independent post-CI advice boundaries; only assertion-observed source/workflow faults count as RED.",
+  "python": "3.12.16",
+  "production_commit": "649a0d9c25ba0add30a9f410170e3b6a509bb01b",
+  "predecessor_red": {
+    "commit": "66390e749c6c630ff8716c17b742de6ad9b60a26",
+    "command": "PYTHONPYCACHEPREFIX=/tmp/jev-advice-test-author-red /workspace/scratch/150dce018256/ci-jev-test-env/bin/python -m pytest -p no:cacheprovider tests/hexagonal/test_ci_advice.py tests/hexagonal/test_ci_result.py::test_ci_summary_finishes_without_waiting_for_advisory_work -q",
+    "result": "3 failed in 0.20s",
+    "observed_assertions": [
+      "CI_REQUIRED_GRAPH_HAS_NO_PROVIDER_WORK",
+      "CI_CANDIDATE_VALIDATION_HAS_NO_MODEL_CREDENTIAL",
+      "CI_RESULT_DOES_NOT_WAIT_FOR_ADVISORY_JEV"
+    ],
+    "note": "Original workflow-graph scenarios ran before implementation. No collection, import or setup failure counted as RED."
+  },
+  "fault_witnesses": [
+    {
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "candidate_sha256": "0ccdd1238e4be7c155d04de38b965c739e832d585be926b2abb1543d0ef957e2",
+      "classification": "detected",
+      "commands": {
+        "control": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_advice.py::test_advisory_artifact_intake_reuses_bounded_identity_and_archive_validation[artifact_name]",
+            "--junitxml=/workspace/scratch/150dce018256/jev-advice-redproof/artifact-name/control.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-advice-redproof/artifact-name/control",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-advice-redproof/artifact-name/control-run-observer:/workspace/scratch/150dce018256/jev-advice-redproof/artifact-name/control"
+          },
+          "exit_status": 0,
+          "finished_at": "2026-11-12T11:06:52.215315+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:06:51.467248+00:00",
+          "status": "passed",
+          "stderr": "/workspace/scratch/150dce018256/jev-advice-redproof/artifact-name/control-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-advice-redproof/artifact-name/control-run/stdout.log",
+          "stdout_sha256": "e596cce97643441f2f2c7ef01ee068b6705ce1e028a07a32ba3bd3b3d35d7353",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-advice-redproof/artifact-name/control.xml",
+          "stdout_text": ".                                                                        [100%]\n1 passed in 0.13s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"0\" skipped=\"0\" tests=\"1\" time=\"0.130\" timestamp=\"2026-11-12T06:06:52.040247-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_advice\" name=\"test_advisory_artifact_intake_reuses_bounded_identity_and_archive_validation[artifact_name]\" time=\"0.009\" /></testsuite></testsuites>"
+        },
+        "mutant": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_advice.py::test_advisory_artifact_intake_reuses_bounded_identity_and_archive_validation[artifact_name]",
+            "--junitxml=/workspace/scratch/150dce018256/jev-advice-redproof/artifact-name/mutant.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-advice-redproof/artifact-name/mutant",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-advice-redproof/artifact-name/mutant-run-observer:/workspace/scratch/150dce018256/jev-advice-redproof/artifact-name/mutant"
+          },
+          "exit_status": 1,
+          "finished_at": "2026-11-12T11:06:53.121737+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:06:52.216467+00:00",
+          "status": "failed",
+          "stderr": "/workspace/scratch/150dce018256/jev-advice-redproof/artifact-name/mutant-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-advice-redproof/artifact-name/mutant-run/stdout.log",
+          "stdout_sha256": "060f8a3e301d0db5f62a8bd11c37fd1115af00b98028becec7be71b3e2358ca1",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-advice-redproof/artifact-name/mutant.xml",
+          "stdout_text": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_ test_advisory_artifact_intake_reuses_bounded_identity_and_archive_validation[artifact_name] _\ntests/hexagonal/test_ci_advice.py:145: in test_advisory_artifact_intake_reuses_bounded_identity_and_archive_validation\n    assert rejected, \"ADVICE_UNTRUSTED_ARTIFACT_INTAKE_IS_REFUSED\"\nE   AssertionError: ADVICE_UNTRUSTED_ARTIFACT_INTAKE_IS_REFUSED\nE   assert False\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_ci_advice.py::test_advisory_artifact_intake_reuses_bounded_identity_and_archive_validation[artifact_name]\n1 failed in 0.15s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"1\" skipped=\"0\" tests=\"1\" time=\"0.156\" timestamp=\"2026-11-12T06:06:52.909288-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_advice\" name=\"test_advisory_artifact_intake_reuses_bounded_identity_and_archive_validation[artifact_name]\" time=\"0.012\"><properties><property name=\"calibration.attribution\" value=\"{&quot;assertion_span&quot;: [145, 4, 145, 66], &quot;exception_type&quot;: &quot;AssertionError&quot;, &quot;file&quot;: &quot;/workspace/scratch/150dce018256/jev-advice-redproof/artifact-name/mutant/tests/hexagonal/test_ci_advice.py&quot;, &quot;function&quot;: &quot;test_advisory_artifact_intake_reuses_bounded_identity_and_archive_validation&quot;, &quot;instruction&quot;: &quot;RAISE_VARARGS&quot;, &quot;instruction_offset&quot;: 914, &quot;instruction_span&quot;: [145, 4, 145, 66], &quot;line&quot;: 145, &quot;phase&quot;: &quot;call&quot;, &quot;target_assertion&quot;: true, &quot;test_name&quot;: &quot;test_advisory_artifact_intake_reuses_bounded_identity_and_archive_validation[artifact_name]&quot;}\" /></properties><failure message=\"AssertionError: ADVICE_UNTRUSTED_ARTIFACT_INTAKE_IS_REFUSED&#10;assert False\">tests/hexagonal/test_ci_advice.py:145: in test_advisory_artifact_intake_reuses_bounded_identity_and_archive_validation\n    assert rejected, \"ADVICE_UNTRUSTED_ARTIFACT_INTAKE_IS_REFUSED\"\nE   AssertionError: ADVICE_UNTRUSTED_ARTIFACT_INTAKE_IS_REFUSED\nE   assert False</failure></testcase></testsuite></testsuites>"
+        }
+      },
+      "expected_diagnostic": "ADVICE_UNTRUSTED_ARTIFACT_INTAKE_IS_REFUSED",
+      "finished_at": "2026-11-12T11:06:53.123532+00:00",
+      "mutation_applied": true,
+      "mutation_sha256": "c121c6cd575ef98e71ce7eab5eaf7793a491036c600bc5c28de56792391b7cdb",
+      "target": "tests.hexagonal.test_ci_advice::test_advisory_artifact_intake_reuses_bounded_identity_and_archive_validation[artifact_name]",
+      "unaffected": [],
+      "fault": {
+        "new": "if False:",
+        "old": "if not isinstance(name, str) or not re.fullmatch(r\"[a-z0-9.-]{1,180}--attempt-[1-9][0-9]*\", name):",
+        "path": "scripts/ci/advice.py"
+      },
+      "patch": "--- a/scripts/ci/advice.py\n+++ b/scripts/ci/advice.py\n@@ -76,7 +76,7 @@\n \n def download_artifact(source, listing, name, token, directory, budget):\n     \"\"\"Bound the complete selected intake, in addition to each ZIP's limits.\"\"\"\n-    if not isinstance(name, str) or not re.fullmatch(r\"[a-z0-9.-]{1,180}--attempt-[1-9][0-9]*\", name):\n+    if False:\n         raise ValueError(\"Invalid advice artifact name\")\n     rows = [item for item in listing if item.get(\"name\") == name]\n     if len(rows) != 1:\n"
+    },
+    {
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "candidate_sha256": "0ccdd1238e4be7c155d04de38b965c739e832d585be926b2abb1543d0ef957e2",
+      "classification": "detected",
+      "commands": {
+        "control": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_advice.py::test_a_trusted_reservation_suppresses_duplicate_provider_work_even_after_expiry[True]",
+            "--junitxml=/workspace/scratch/150dce018256/jev-advice-redproof/durable-reservation/control.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-advice-redproof/durable-reservation/control",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-advice-redproof/durable-reservation/control-run-observer:/workspace/scratch/150dce018256/jev-advice-redproof/durable-reservation/control"
+          },
+          "exit_status": 0,
+          "finished_at": "2026-11-12T11:06:43.844203+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:06:43.090137+00:00",
+          "status": "passed",
+          "stderr": "/workspace/scratch/150dce018256/jev-advice-redproof/durable-reservation/control-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-advice-redproof/durable-reservation/control-run/stdout.log",
+          "stdout_sha256": "3be6ffcaecf85b5bd3eef3693ab214b0e7c9eb4e36d117fcf1825652de5eb298",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-advice-redproof/durable-reservation/control.xml",
+          "stdout_text": ".                                                                        [100%]\n1 passed in 0.12s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"0\" skipped=\"0\" tests=\"1\" time=\"0.123\" timestamp=\"2026-11-12T06:06:43.674780-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_advice\" name=\"test_a_trusted_reservation_suppresses_duplicate_provider_work_even_after_expiry[True]\" time=\"0.013\" /></testsuite></testsuites>"
+        },
+        "mutant": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_advice.py::test_a_trusted_reservation_suppresses_duplicate_provider_work_even_after_expiry[True]",
+            "--junitxml=/workspace/scratch/150dce018256/jev-advice-redproof/durable-reservation/mutant.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-advice-redproof/durable-reservation/mutant",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-advice-redproof/durable-reservation/mutant-run-observer:/workspace/scratch/150dce018256/jev-advice-redproof/durable-reservation/mutant"
+          },
+          "exit_status": 1,
+          "finished_at": "2026-11-12T11:06:44.802259+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:06:43.845320+00:00",
+          "status": "failed",
+          "stderr": "/workspace/scratch/150dce018256/jev-advice-redproof/durable-reservation/mutant-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-advice-redproof/durable-reservation/mutant-run/stdout.log",
+          "stdout_sha256": "25bbead1a4d39eff75b088c8fd69429b5e3897a99a7a85a540db92ea5ae47a94",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-advice-redproof/durable-reservation/mutant.xml",
+          "stdout_text": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_ test_a_trusted_reservation_suppresses_duplicate_provider_work_even_after_expiry[True] _\ntests/hexagonal/test_ci_advice.py:84: in test_a_trusted_reservation_suppresses_duplicate_provider_work_even_after_expiry\n    assert plan[\"status\"] == \"duplicate_suppressed\" and plan[\"provider_needed\"] is False, \\\nE   AssertionError: ADVICE_DURABLE_RESERVATION_PREVENTS_DUPLICATE_PROVIDER_CALL\nE   assert ('reservation_required' == 'duplicate_suppressed'\nE     \nE     - duplicate_suppressed\nE     + reservation_required)\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_ci_advice.py::test_a_trusted_reservation_suppresses_duplicate_provider_work_even_after_expiry[True]\n1 failed in 0.15s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"1\" skipped=\"0\" tests=\"1\" time=\"0.152\" timestamp=\"2026-11-12T06:06:44.596141-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_advice\" name=\"test_a_trusted_reservation_suppresses_duplicate_provider_work_even_after_expiry[True]\" time=\"0.016\"><properties><property name=\"calibration.attribution\" value=\"{&quot;assertion_span&quot;: [84, 4, 85, 69], &quot;exception_type&quot;: &quot;AssertionError&quot;, &quot;file&quot;: &quot;/workspace/scratch/150dce018256/jev-advice-redproof/durable-reservation/mutant/tests/hexagonal/test_ci_advice.py&quot;, &quot;function&quot;: &quot;test_a_trusted_reservation_suppresses_duplicate_provider_work_even_after_expiry&quot;, &quot;instruction&quot;: &quot;RAISE_VARARGS&quot;, &quot;instruction_offset&quot;: 774, &quot;instruction_span&quot;: [84, 4, 85, 69], &quot;line&quot;: 84, &quot;phase&quot;: &quot;call&quot;, &quot;target_assertion&quot;: true, &quot;test_name&quot;: &quot;test_a_trusted_reservation_suppresses_duplicate_provider_work_even_after_expiry[True]&quot;}\" /></properties><failure message=\"AssertionError: ADVICE_DURABLE_RESERVATION_PREVENTS_DUPLICATE_PROVIDER_CALL&#10;assert ('reservation_required' == 'duplicate_suppressed'&#10;  &#10;  - duplicate_suppressed&#10;  + reservation_required)\">tests/hexagonal/test_ci_advice.py:84: in test_a_trusted_reservation_suppresses_duplicate_provider_work_even_after_expiry\n    assert plan[\"status\"] == \"duplicate_suppressed\" and plan[\"provider_needed\"] is False, \\\nE   AssertionError: ADVICE_DURABLE_RESERVATION_PREVENTS_DUPLICATE_PROVIDER_CALL\nE   assert ('reservation_required' == 'duplicate_suppressed'\nE     \nE     - duplicate_suppressed\nE     + reservation_required)</failure></testcase></testsuite></testsuites>"
+        }
+      },
+      "expected_diagnostic": "ADVICE_DURABLE_RESERVATION_PREVENTS_DUPLICATE_PROVIDER_CALL",
+      "finished_at": "2026-11-12T11:06:44.803353+00:00",
+      "mutation_applied": true,
+      "mutation_sha256": "e88d5e4d1fcd192bd9cebbe746dcc242815e97077895893c94319213c2c5b761",
+      "target": "tests.hexagonal.test_ci_advice::test_a_trusted_reservation_suppresses_duplicate_provider_work_even_after_expiry[True]",
+      "unaffected": [],
+      "fault": {
+        "new": "if False:\n        return {**record, \"status\": \"duplicate_suppressed\", \"prior_reservation\": previous}",
+        "old": "if previous:\n        return {**record, \"status\": \"duplicate_suppressed\", \"prior_reservation\": previous}",
+        "path": "scripts/ci/advice.py"
+      },
+      "patch": "--- a/scripts/ci/advice.py\n+++ b/scripts/ci/advice.py\n@@ -183,7 +183,7 @@\n         raise ValueError(\"Unsupported advice event\")\n     previous = prior_reservation(repo, name, default, token, get=get)\n     record[\"reservation_name\"] = name\n-    if previous:\n+    if False:\n         return {**record, \"status\": \"duplicate_suppressed\", \"prior_reservation\": previous}\n     record.update(status=\"reservation_required\", provider_needed=True)\n     candidate.write_json(work / \"reservation\" / \"reservation.json\", record)\n"
+    },
+    {
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "candidate_sha256": "0ccdd1238e4be7c155d04de38b965c739e832d585be926b2abb1543d0ef957e2",
+      "classification": "detected",
+      "commands": {
+        "control": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_advice.py::test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[after]",
+            "--junitxml=/workspace/scratch/150dce018256/jev-advice-redproof/historical-advice/control.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-advice-redproof/historical-advice/control",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-advice-redproof/historical-advice/control-run-observer:/workspace/scratch/150dce018256/jev-advice-redproof/historical-advice/control"
+          },
+          "exit_status": 0,
+          "finished_at": "2026-11-12T11:06:50.388427+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:06:49.438391+00:00",
+          "status": "passed",
+          "stderr": "/workspace/scratch/150dce018256/jev-advice-redproof/historical-advice/control-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-advice-redproof/historical-advice/control-run/stdout.log",
+          "stdout_sha256": "364fae48cbe8f4ef8e995f8fb3224d43792e784eb9919ceefea2fe0106918edf",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-advice-redproof/historical-advice/control.xml",
+          "stdout_text": ".                                                                        [100%]\n1 passed in 0.26s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"0\" skipped=\"0\" tests=\"1\" time=\"0.259\" timestamp=\"2026-11-12T06:06:50.075395-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_advice\" name=\"test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[after]\" time=\"0.140\" /></testsuite></testsuites>"
+        },
+        "mutant": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_advice.py::test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[after]",
+            "--junitxml=/workspace/scratch/150dce018256/jev-advice-redproof/historical-advice/mutant.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-advice-redproof/historical-advice/mutant",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-advice-redproof/historical-advice/mutant-run-observer:/workspace/scratch/150dce018256/jev-advice-redproof/historical-advice/mutant"
+          },
+          "exit_status": 1,
+          "finished_at": "2026-11-12T11:06:51.291122+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:06:50.389857+00:00",
+          "status": "failed",
+          "stderr": "/workspace/scratch/150dce018256/jev-advice-redproof/historical-advice/mutant-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-advice-redproof/historical-advice/mutant-run/stdout.log",
+          "stdout_sha256": "369a2dd7dc5f3dea7a96a65e0d57a942613558a664b071e2cf50058a46b2ba3f",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-advice-redproof/historical-advice/mutant.xml",
+          "stdout_text": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_ test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[after] _\ntests/hexagonal/test_ci_advice.py:214: in test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base\n    assert result[\"status\"] == (\"superseded_after_assessment\" if timing == \"after\" else \"complete\"), \\\nE   AssertionError: ADVICE_CANNOT_PUBLISH_HISTORICAL_ASSESSMENT_AS_CURRENT\nE   assert 'complete' == 'superseded_after_assessment'\nE     \nE     - superseded_after_assessment\nE     + complete\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_ci_advice.py::test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[after]\n1 failed in 0.26s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"1\" skipped=\"0\" tests=\"1\" time=\"0.263\" timestamp=\"2026-11-12T06:06:50.976743-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_advice\" name=\"test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[after]\" time=\"0.129\"><properties><property name=\"calibration.attribution\" value=\"{&quot;assertion_span&quot;: [214, 4, 215, 64], &quot;exception_type&quot;: &quot;AssertionError&quot;, &quot;file&quot;: &quot;/workspace/scratch/150dce018256/jev-advice-redproof/historical-advice/mutant/tests/hexagonal/test_ci_advice.py&quot;, &quot;function&quot;: &quot;test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base&quot;, &quot;instruction&quot;: &quot;RAISE_VARARGS&quot;, &quot;instruction_offset&quot;: 4622, &quot;instruction_span&quot;: [214, 4, 215, 64], &quot;line&quot;: 214, &quot;phase&quot;: &quot;call&quot;, &quot;target_assertion&quot;: true, &quot;test_name&quot;: &quot;test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[after]&quot;}\" /></properties><failure message=\"AssertionError: ADVICE_CANNOT_PUBLISH_HISTORICAL_ASSESSMENT_AS_CURRENT&#10;assert 'complete' == 'superseded_after_assessment'&#10;  &#10;  - superseded_after_assessment&#10;  + complete\">tests/hexagonal/test_ci_advice.py:214: in test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base\n    assert result[\"status\"] == (\"superseded_after_assessment\" if timing == \"after\" else \"complete\"), \\\nE   AssertionError: ADVICE_CANNOT_PUBLISH_HISTORICAL_ASSESSMENT_AS_CURRENT\nE   assert 'complete' == 'superseded_after_assessment'\nE     \nE     - superseded_after_assessment\nE     + complete</failure></testcase></testsuite></testsuites>"
+        }
+      },
+      "expected_diagnostic": "ADVICE_CANNOT_PUBLISH_HISTORICAL_ASSESSMENT_AS_CURRENT",
+      "finished_at": "2026-11-12T11:06:51.292007+00:00",
+      "mutation_applied": true,
+      "mutation_sha256": "bbf8f95354e41e7af52d6a02f331fc0dd9db7a4ee9f42b6d192b14afb6d7a7aa",
+      "target": "tests.hexagonal.test_ci_advice::test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[after]",
+      "unaffected": [],
+      "fault": {
+        "new": "\"status\": \"complete\"",
+        "old": "\"status\": \"complete\" if after[\"status\"] != \"superseded\" else \"superseded_after_assessment\"",
+        "path": "scripts/ci/advice.py"
+      },
+      "patch": "--- a/scripts/ci/advice.py\n+++ b/scripts/ci/advice.py\n@@ -232,7 +232,7 @@\n     # Evidence is retained even if the branch advances during inference. It is\n     # explicitly historical and cannot be presented as advice on the new head.\n     after = reuse.observe_current(context, token)\n-    return {\"schema_version\": 1, \"advisory\": True, \"status\": \"complete\" if after[\"status\"] != \"superseded\" else \"superseded_after_assessment\",\n+    return {\"schema_version\": 1, \"advisory\": True, \"status\": \"complete\",\n             \"source_currentness\": after, **provenance,\n             \"source_status\": report[\"diagnostics\"][\"status\"], \"triage_status\": triage_report[\"status\"]}\n \n"
+    },
+    {
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "candidate_sha256": "0ccdd1238e4be7c155d04de38b965c739e832d585be926b2abb1543d0ef957e2",
+      "classification": "detected",
+      "commands": {
+        "control": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_advice.py::test_advice_source_must_match_the_completed_ci_event[path2-dddddddddddddddddddddddddddddddddddddddd]",
+            "--junitxml=/workspace/scratch/150dce018256/jev-advice-redproof/source-binding/control.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-advice-redproof/source-binding/control",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-advice-redproof/source-binding/control-run-observer:/workspace/scratch/150dce018256/jev-advice-redproof/source-binding/control"
+          },
+          "exit_status": 0,
+          "finished_at": "2026-11-12T11:06:42.067431+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:06:41.247398+00:00",
+          "status": "passed",
+          "stderr": "/workspace/scratch/150dce018256/jev-advice-redproof/source-binding/control-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-advice-redproof/source-binding/control-run/stdout.log",
+          "stdout_sha256": "e596cce97643441f2f2c7ef01ee068b6705ce1e028a07a32ba3bd3b3d35d7353",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-advice-redproof/source-binding/control.xml",
+          "stdout_text": ".                                                                        [100%]\n1 passed in 0.13s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"0\" skipped=\"0\" tests=\"1\" time=\"0.135\" timestamp=\"2026-11-12T06:06:41.881552-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_advice\" name=\"test_advice_source_must_match_the_completed_ci_event[path2-dddddddddddddddddddddddddddddddddddddddd]\" time=\"0.010\" /></testsuite></testsuites>"
+        },
+        "mutant": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_advice.py::test_advice_source_must_match_the_completed_ci_event[path2-dddddddddddddddddddddddddddddddddddddddd]",
+            "--junitxml=/workspace/scratch/150dce018256/jev-advice-redproof/source-binding/mutant.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-advice-redproof/source-binding/mutant",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-advice-redproof/source-binding/mutant-run-observer:/workspace/scratch/150dce018256/jev-advice-redproof/source-binding/mutant"
+          },
+          "exit_status": 1,
+          "finished_at": "2026-11-12T11:06:42.898420+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:06:42.069126+00:00",
+          "status": "failed",
+          "stderr": "/workspace/scratch/150dce018256/jev-advice-redproof/source-binding/mutant-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-advice-redproof/source-binding/mutant-run/stdout.log",
+          "stdout_sha256": "7118b4c6678d6e3e78785e101f15d3140aebf7ab567e2915ee8131c9495f7040",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-advice-redproof/source-binding/mutant.xml",
+          "stdout_text": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_ test_advice_source_must_match_the_completed_ci_event[path2-dddddddddddddddddddddddddddddddddddddddd] _\ntests/hexagonal/test_ci_advice.py:65: in test_advice_source_must_match_the_completed_ci_event\n    assert rejected, \"ADVICE_COMPLETED_SOURCE_MUST_MATCH_EVENT_IDENTITY\"\nE   AssertionError: ADVICE_COMPLETED_SOURCE_MUST_MATCH_EVENT_IDENTITY\nE   assert False\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_ci_advice.py::test_advice_source_must_match_the_completed_ci_event[path2-dddddddddddddddddddddddddddddddddddddddd]\n1 failed in 0.14s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"1\" skipped=\"0\" tests=\"1\" time=\"0.143\" timestamp=\"2026-11-12T06:06:42.706297-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_advice\" name=\"test_advice_source_must_match_the_completed_ci_event[path2-dddddddddddddddddddddddddddddddddddddddd]\" time=\"0.010\"><properties><property name=\"calibration.attribution\" value=\"{&quot;assertion_span&quot;: [65, 4, 65, 72], &quot;exception_type&quot;: &quot;AssertionError&quot;, &quot;file&quot;: &quot;/workspace/scratch/150dce018256/jev-advice-redproof/source-binding/mutant/tests/hexagonal/test_ci_advice.py&quot;, &quot;function&quot;: &quot;test_advice_source_must_match_the_completed_ci_event&quot;, &quot;instruction&quot;: &quot;RAISE_VARARGS&quot;, &quot;instruction_offset&quot;: 1076, &quot;instruction_span&quot;: [65, 4, 65, 72], &quot;line&quot;: 65, &quot;phase&quot;: &quot;call&quot;, &quot;target_assertion&quot;: true, &quot;test_name&quot;: &quot;test_advice_source_must_match_the_completed_ci_event[path2-dddddddddddddddddddddddddddddddddddddddd]&quot;}\" /></properties><failure message=\"AssertionError: ADVICE_COMPLETED_SOURCE_MUST_MATCH_EVENT_IDENTITY&#10;assert False\">tests/hexagonal/test_ci_advice.py:65: in test_advice_source_must_match_the_completed_ci_event\n    assert rejected, \"ADVICE_COMPLETED_SOURCE_MUST_MATCH_EVENT_IDENTITY\"\nE   AssertionError: ADVICE_COMPLETED_SOURCE_MUST_MATCH_EVENT_IDENTITY\nE   assert False</failure></testcase></testsuite></testsuites>"
+        }
+      },
+      "expected_diagnostic": "ADVICE_COMPLETED_SOURCE_MUST_MATCH_EVENT_IDENTITY",
+      "finished_at": "2026-11-12T11:06:42.899467+00:00",
+      "mutation_applied": true,
+      "mutation_sha256": "0e95845463de86b6924b6b5b6b09d7899bf449a7ea67e4135ba6ff13d1265637",
+      "target": "tests.hexagonal.test_ci_advice::test_advice_source_must_match_the_completed_ci_event[path2-dddddddddddddddddddddddddddddddddddddddd]",
+      "unaffected": [],
+      "fault": {
+        "new": "for key in (\"id\", \"run_attempt\")",
+        "old": "for key in (\"id\", \"run_attempt\", \"head_sha\")",
+        "path": "scripts/ci/advice.py"
+      },
+      "patch": "--- a/scripts/ci/advice.py\n+++ b/scripts/ci/advice.py\n@@ -42,7 +42,7 @@\n             or run.get(\"event\") not in {\"pull_request\", \"push\", \"workflow_dispatch\"}\n             or not candidate._positive(run.get(\"id\")) or not candidate._positive(run.get(\"run_attempt\"))\n             or run[\"run_attempt\"] > candidate.MAX_ATTEMPTS or not candidate._sha(run.get(\"head_sha\"))\n-            or any(run.get(key) != source.get(key) for key in (\"id\", \"run_attempt\", \"head_sha\"))\n+            or any(run.get(key) != source.get(key) for key in (\"id\", \"run_attempt\"))\n             or any(run.get(side, {}).get(key) != repository.get(key)\n                    for side in (\"repository\", \"head_repository\") for key in (\"id\", \"full_name\"))):\n         raise ValueError(\"Source event is not the identified same-repository CI attempt\")\n"
+    },
+    {
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "candidate_sha256": "0ccdd1238e4be7c155d04de38b965c739e832d585be926b2abb1543d0ef957e2",
+      "classification": "detected",
+      "commands": {
+        "control": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_advice.py::test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[current]",
+            "--junitxml=/workspace/scratch/150dce018256/jev-advice-redproof/tested-base/control.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-advice-redproof/tested-base/control",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-advice-redproof/tested-base/control-run-observer:/workspace/scratch/150dce018256/jev-advice-redproof/tested-base/control"
+          },
+          "exit_status": 0,
+          "finished_at": "2026-11-12T11:06:48.253844+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:06:47.243193+00:00",
+          "status": "passed",
+          "stderr": "/workspace/scratch/150dce018256/jev-advice-redproof/tested-base/control-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-advice-redproof/tested-base/control-run/stdout.log",
+          "stdout_sha256": "a132c74d7b7c74739e7571fb00cd0a8be848d9686b936586ce31a93451c151b2",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-advice-redproof/tested-base/control.xml",
+          "stdout_text": ".                                                                        [100%]\n1 passed in 0.29s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"0\" skipped=\"0\" tests=\"1\" time=\"0.293\" timestamp=\"2026-11-12T06:06:47.883368-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_advice\" name=\"test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[current]\" time=\"0.137\" /></testsuite></testsuites>"
+        },
+        "mutant": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_advice.py::test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[current]",
+            "--junitxml=/workspace/scratch/150dce018256/jev-advice-redproof/tested-base/mutant.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-advice-redproof/tested-base/mutant",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-advice-redproof/tested-base/mutant-run-observer:/workspace/scratch/150dce018256/jev-advice-redproof/tested-base/mutant"
+          },
+          "exit_status": 1,
+          "finished_at": "2026-11-12T11:06:49.222490+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:06:48.255021+00:00",
+          "status": "failed",
+          "stderr": "/workspace/scratch/150dce018256/jev-advice-redproof/tested-base/mutant-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-advice-redproof/tested-base/mutant-run/stdout.log",
+          "stdout_sha256": "23ea2245f9178315bbd3b06b4370e703a30551b7ada3cb86c6c70f48df911b0a",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-advice-redproof/tested-base/mutant.xml",
+          "stdout_text": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_ test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[current] _\ntests/hexagonal/test_ci_advice.py:210: in test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base\n    assert call[2][\"base_ref\"] == fixture.plan[\"candidate_context\"][\"tested_base_sha\"], \\\nE   AssertionError: ADVICE_CONTEXT_USES_ACTUALLY_TESTED_BASE\nE   assert 'HEAD^' == 'c10804707b4c...8607a4a4faeef'\nE     \nE     - c10804707b4c1a2e421d852246e8607a4a4faeef\nE     + HEAD^\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_ci_advice.py::test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[current]\n1 failed in 0.27s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"1\" skipped=\"0\" tests=\"1\" time=\"0.267\" timestamp=\"2026-11-12T06:06:48.903820-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_advice\" name=\"test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[current]\" time=\"0.133\"><properties><property name=\"calibration.attribution\" value=\"{&quot;assertion_span&quot;: [210, 8, 211, 54], &quot;exception_type&quot;: &quot;AssertionError&quot;, &quot;file&quot;: &quot;/workspace/scratch/150dce018256/jev-advice-redproof/tested-base/mutant/tests/hexagonal/test_ci_advice.py&quot;, &quot;function&quot;: &quot;test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base&quot;, &quot;instruction&quot;: &quot;RAISE_VARARGS&quot;, &quot;instruction_offset&quot;: 3196, &quot;instruction_span&quot;: [210, 8, 211, 54], &quot;line&quot;: 210, &quot;phase&quot;: &quot;call&quot;, &quot;target_assertion&quot;: true, &quot;test_name&quot;: &quot;test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[current]&quot;}\" /></properties><failure message=\"AssertionError: ADVICE_CONTEXT_USES_ACTUALLY_TESTED_BASE&#10;assert 'HEAD^' == 'c10804707b4c...8607a4a4faeef'&#10;  &#10;  - c10804707b4c1a2e421d852246e8607a4a4faeef&#10;  + HEAD^\">tests/hexagonal/test_ci_advice.py:210: in test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base\n    assert call[2][\"base_ref\"] == fixture.plan[\"candidate_context\"][\"tested_base_sha\"], \\\nE   AssertionError: ADVICE_CONTEXT_USES_ACTUALLY_TESTED_BASE\nE   assert 'HEAD^' == 'c10804707b4c...8607a4a4faeef'\nE     \nE     - c10804707b4c1a2e421d852246e8607a4a4faeef\nE     + HEAD^</failure></testcase></testsuite></testsuites>"
+        }
+      },
+      "expected_diagnostic": "ADVICE_CONTEXT_USES_ACTUALLY_TESTED_BASE",
+      "finished_at": "2026-11-12T11:06:49.223441+00:00",
+      "mutation_applied": true,
+      "mutation_sha256": "b68ea85e2d49531f7ca890eef9d593da95090b32185a90673b769198819ccf12",
+      "target": "tests.hexagonal.test_ci_advice::test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[current]",
+      "unaffected": [],
+      "fault": {
+        "new": "options[\"base_ref\"] = \"HEAD^\"",
+        "old": "options[\"base_ref\"] = context.get(\"tested_base_sha\") or \"HEAD^\"",
+        "path": "scripts/ci/advice.py"
+      },
+      "patch": "--- a/scripts/ci/advice.py\n+++ b/scripts/ci/advice.py\n@@ -212,7 +212,7 @@\n     for key, variable in ((\"endpoint\", \"JEV_ENDPOINT\"), (\"model\", \"JEV_MODEL\")):\n         if os.environ.get(variable):\n             options[key] = os.environ[variable]\n-    options[\"base_ref\"] = context.get(\"tested_base_sha\") or \"HEAD^\"\n+    options[\"base_ref\"] = \"HEAD^\"\n     if cache_dir:\n         options[\"cache_dir\"] = str(cache_dir)\n     profile = read_json(trusted_root / \"contracts/hexagonal.json\")\n"
+    },
+    {
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "candidate_sha256": "0ccdd1238e4be7c155d04de38b965c739e832d585be926b2abb1543d0ef957e2",
+      "classification": "detected",
+      "commands": {
+        "control": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_advice.py::test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[current]",
+            "--junitxml=/workspace/scratch/150dce018256/jev-advice-redproof/trusted-policy/control.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-advice-redproof/trusted-policy/control",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-advice-redproof/trusted-policy/control-run-observer:/workspace/scratch/150dce018256/jev-advice-redproof/trusted-policy/control"
+          },
+          "exit_status": 0,
+          "finished_at": "2026-11-12T11:06:45.964994+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:06:45.016869+00:00",
+          "status": "passed",
+          "stderr": "/workspace/scratch/150dce018256/jev-advice-redproof/trusted-policy/control-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-advice-redproof/trusted-policy/control-run/stdout.log",
+          "stdout_sha256": "d2d744b6b2df2bbb0d73cb7a43f6675bd03881bc2a2c2a74e54ecf18667789e2",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-advice-redproof/trusted-policy/control.xml",
+          "stdout_text": ".                                                                        [100%]\n1 passed in 0.25s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"0\" skipped=\"0\" tests=\"1\" time=\"0.255\" timestamp=\"2026-11-12T06:06:45.651654-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_advice\" name=\"test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[current]\" time=\"0.135\" /></testsuite></testsuites>"
+        },
+        "mutant": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_advice.py::test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[current]",
+            "--junitxml=/workspace/scratch/150dce018256/jev-advice-redproof/trusted-policy/mutant.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-advice-redproof/trusted-policy/mutant",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-advice-redproof/trusted-policy/mutant-run-observer:/workspace/scratch/150dce018256/jev-advice-redproof/trusted-policy/mutant"
+          },
+          "exit_status": 1,
+          "finished_at": "2026-11-12T11:06:46.960924+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:06:45.966161+00:00",
+          "status": "failed",
+          "stderr": "/workspace/scratch/150dce018256/jev-advice-redproof/trusted-policy/mutant-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-advice-redproof/trusted-policy/mutant-run/stdout.log",
+          "stdout_sha256": "389766491f92ea1cd6585dc068696311bdbc486c55365b63aedc46895f0e470d",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-advice-redproof/trusted-policy/mutant.xml",
+          "stdout_text": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_ test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[current] _\ntests/hexagonal/test_ci_advice.py:206: in test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base\n    assert calls[0] == (\"check\", fixture.source, fixture.profile), \"ADVICE_POLICY_COMES_FROM_TRUSTED_CHECKOUT\"\nE   AssertionError: ADVICE_POLICY_COMES_FROM_TRUSTED_CHECKOUT\nE   assert ('check', Pos...['pkg'], ...}) == ('check', Pos...['pkg'], ...})\nE     \nE     At index 2 diff: {'schema_version': 1, 'id': 'candidate-policy', 'version': 1, 'source_roots': ['pkg'], 'roles': {'core': {'modules': ['pkg.*'], 'allowed_roles': ['core'], 'allowed_external': [], 'allow_dynamic': False}}} != {'schema_version': 1, 'id': 'trusted-policy', 'version': 1, 'source_roots': ['pkg'], 'roles': {'core': {'modules': ['pkg.*'], 'allowed_roles': ['core'], 'allowed_external': [], 'allow_dynamic': False}}}\nE     Use -v to get more diff\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_ci_advice.py::test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[current]\n1 failed in 0.28s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"1\" skipped=\"0\" tests=\"1\" time=\"0.284\" timestamp=\"2026-11-12T06:06:46.613194-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_advice\" name=\"test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[current]\" time=\"0.149\"><properties><property name=\"calibration.attribution\" value=\"{&quot;assertion_span&quot;: [206, 4, 206, 110], &quot;exception_type&quot;: &quot;AssertionError&quot;, &quot;file&quot;: &quot;/workspace/scratch/150dce018256/jev-advice-redproof/trusted-policy/mutant/tests/hexagonal/test_ci_advice.py&quot;, &quot;function&quot;: &quot;test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base&quot;, &quot;instruction&quot;: &quot;RAISE_VARARGS&quot;, &quot;instruction_offset&quot;: 1884, &quot;instruction_span&quot;: [206, 4, 206, 110], &quot;line&quot;: 206, &quot;phase&quot;: &quot;call&quot;, &quot;target_assertion&quot;: true, &quot;test_name&quot;: &quot;test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[current]&quot;}\" /></properties><failure message=\"AssertionError: ADVICE_POLICY_COMES_FROM_TRUSTED_CHECKOUT&#10;assert ('check', Pos...['pkg'], ...}) == ('check', Pos...['pkg'], ...})&#10;  &#10;[+2 more lines; full report in element text]\">tests/hexagonal/test_ci_advice.py:206: in test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base\n    assert calls[0] == (\"check\", fixture.source, fixture.profile), \"ADVICE_POLICY_COMES_FROM_TRUSTED_CHECKOUT\"\nE   AssertionError: ADVICE_POLICY_COMES_FROM_TRUSTED_CHECKOUT\nE   assert ('check', Pos...['pkg'], ...}) == ('check', Pos...['pkg'], ...})\nE     \nE     At index 2 diff: {'schema_version': 1, 'id': 'candidate-policy', 'version': 1, 'source_roots': ['pkg'], 'roles': {'core': {'modules': ['pkg.*'], 'allowed_roles': ['core'], 'allowed_external': [], 'allow_dynamic': False}}} != {'schema_version': 1, 'id': 'trusted-policy', 'version': 1, 'source_roots': ['pkg'], 'roles': {'core': {'modules': ['pkg.*'], 'allowed_roles': ['core'], 'allowed_external': [], 'allow_dynamic': False}}}\nE     Use -v to get more diff</failure></testcase></testsuite></testsuites>"
+        }
+      },
+      "expected_diagnostic": "ADVICE_POLICY_COMES_FROM_TRUSTED_CHECKOUT",
+      "finished_at": "2026-11-12T11:06:46.962120+00:00",
+      "mutation_applied": true,
+      "mutation_sha256": "df5e11ca5ab0daec0564b254299cd0e71babccc441672f3785468f214e7dc143",
+      "target": "tests.hexagonal.test_ci_advice::test_assessment_uses_trusted_policy_and_collectors_on_source_data_with_exact_base[current]",
+      "unaffected": [],
+      "fault": {
+        "new": "profile = read_json(source_root / \"contracts/hexagonal.json\")",
+        "old": "profile = read_json(trusted_root / \"contracts/hexagonal.json\")",
+        "path": "scripts/ci/advice.py"
+      },
+      "patch": "--- a/scripts/ci/advice.py\n+++ b/scripts/ci/advice.py\n@@ -215,7 +215,7 @@\n     options[\"base_ref\"] = context.get(\"tested_base_sha\") or \"HEAD^\"\n     if cache_dir:\n         options[\"cache_dir\"] = str(cache_dir)\n-    profile = read_json(trusted_root / \"contracts/hexagonal.json\")\n+    profile = read_json(source_root / \"contracts/hexagonal.json\")\n     report = check(source_root, profile)\n     report[\"diagnostics\"] = diagnose(report, source_root, options)\n     provenance = {\"trusted_sha\": plan[\"trusted_sha\"], \"source\": plan[\"source\"],\n"
+    },
+    {
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "candidate_sha256": "ab9999377f0b6a56766d3322be2afc1a73b1187eb2e6c1f0e3a4718d1092969c",
+      "classification": "detected",
+      "commands": {
+        "control": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_result.py::test_independent_advice_checks_out_authenticated_tested_source_with_change_history",
+            "--junitxml=/workspace/scratch/150dce018256/jev-advice-wiring-redproof/comparison-history/control.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/comparison-history/control",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/comparison-history/control-run-observer:/workspace/scratch/150dce018256/jev-advice-wiring-redproof/comparison-history/control"
+          },
+          "exit_status": 0,
+          "finished_at": "2026-11-12T11:06:27.407463+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:06:26.538065+00:00",
+          "status": "passed",
+          "stderr": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/comparison-history/control-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/comparison-history/control-run/stdout.log",
+          "stdout_sha256": "09229b326b028651d725fa47cd1bae9fd8e0145ff8779bdb84ae2762c00ab737",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/comparison-history/control.xml",
+          "stdout_text": ".                                                                        [100%]\n1 passed in 0.14s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"0\" skipped=\"0\" tests=\"1\" time=\"0.147\" timestamp=\"2026-11-12T06:06:27.213678-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_result\" name=\"test_independent_advice_checks_out_authenticated_tested_source_with_change_history\" time=\"0.000\" /></testsuite></testsuites>"
+        },
+        "mutant": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_result.py::test_independent_advice_checks_out_authenticated_tested_source_with_change_history",
+            "--junitxml=/workspace/scratch/150dce018256/jev-advice-wiring-redproof/comparison-history/mutant.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/comparison-history/mutant",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/comparison-history/mutant-run-observer:/workspace/scratch/150dce018256/jev-advice-wiring-redproof/comparison-history/mutant"
+          },
+          "exit_status": 1,
+          "finished_at": "2026-11-12T11:06:28.283521+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:06:27.408701+00:00",
+          "status": "failed",
+          "stderr": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/comparison-history/mutant-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/comparison-history/mutant-run/stdout.log",
+          "stdout_sha256": "4079900225d2bad2fc90b502b577a482b34e82b1d3a578127ae4cdfc94081957",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/comparison-history/mutant.xml",
+          "stdout_text": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_ test_independent_advice_checks_out_authenticated_tested_source_with_change_history _\ntests/hexagonal/test_ci_result.py:565: in test_independent_advice_checks_out_authenticated_tested_source_with_change_history\n    assert source[\"with\"][\"fetch-depth\"] == 0, \"ADVICE_RETAINS_ACTUAL_COMPARISON_HISTORY\"\nE   AssertionError: ADVICE_RETAINS_ACTUAL_COMPARISON_HISTORY\nE   assert 1 == 0\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_ci_result.py::test_independent_advice_checks_out_authenticated_tested_source_with_change_history\n1 failed in 0.17s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"1\" skipped=\"0\" tests=\"1\" time=\"0.176\" timestamp=\"2026-11-12T06:06:28.051901-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_result\" name=\"test_independent_advice_checks_out_authenticated_tested_source_with_change_history\" time=\"0.001\"><properties><property name=\"calibration.attribution\" value=\"{&quot;assertion_span&quot;: [565, 4, 565, 89], &quot;exception_type&quot;: &quot;AssertionError&quot;, &quot;file&quot;: &quot;/workspace/scratch/150dce018256/jev-advice-wiring-redproof/comparison-history/mutant/tests/hexagonal/test_ci_result.py&quot;, &quot;function&quot;: &quot;test_independent_advice_checks_out_authenticated_tested_source_with_change_history&quot;, &quot;instruction&quot;: &quot;RAISE_VARARGS&quot;, &quot;instruction_offset&quot;: 782, &quot;instruction_span&quot;: [565, 4, 565, 89], &quot;line&quot;: 565, &quot;phase&quot;: &quot;call&quot;, &quot;target_assertion&quot;: true, &quot;test_name&quot;: &quot;test_independent_advice_checks_out_authenticated_tested_source_with_change_history&quot;}\" /></properties><failure message=\"AssertionError: ADVICE_RETAINS_ACTUAL_COMPARISON_HISTORY&#10;assert 1 == 0\">tests/hexagonal/test_ci_result.py:565: in test_independent_advice_checks_out_authenticated_tested_source_with_change_history\n    assert source[\"with\"][\"fetch-depth\"] == 0, \"ADVICE_RETAINS_ACTUAL_COMPARISON_HISTORY\"\nE   AssertionError: ADVICE_RETAINS_ACTUAL_COMPARISON_HISTORY\nE   assert 1 == 0</failure></testcase></testsuite></testsuites>"
+        }
+      },
+      "expected_diagnostic": "ADVICE_RETAINS_ACTUAL_COMPARISON_HISTORY",
+      "finished_at": "2026-11-12T11:06:28.284841+00:00",
+      "mutation_applied": true,
+      "mutation_sha256": "b68c923fd69bd9b695816516ac0b9b96071b1faa2a5a58f3e0d71b4e3b3d3944",
+      "target": "tests.hexagonal.test_ci_result::test_independent_advice_checks_out_authenticated_tested_source_with_change_history",
+      "unaffected": [],
+      "fault": {
+        "new": "\"path\": \"source\",\n            \"persist-credentials\": false,\n            \"fetch-depth\": 1",
+        "old": "\"path\": \"source\",\n            \"persist-credentials\": false,\n            \"fetch-depth\": 0",
+        "path": ".github/workflows/jev.yml"
+      },
+      "patch": "--- a/.github/workflows/jev.yml\n+++ b/.github/workflows/jev.yml\n@@ -83,7 +83,7 @@\n             \"ref\": \"${{ steps.gate.outputs.tested_sha }}\",\n             \"path\": \"source\",\n             \"persist-credentials\": false,\n-            \"fetch-depth\": 0\n+            \"fetch-depth\": 1\n           }\n         },\n         {\n"
+    },
+    {
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "candidate_sha256": "ab9999377f0b6a56766d3322be2afc1a73b1187eb2e6c1f0e3a4718d1092969c",
+      "classification": "detected",
+      "commands": {
+        "control": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_jev_post_test_triage.py::test_post_failure_triage_runs_independently_and_retains_its_evidence",
+            "--junitxml=/workspace/scratch/150dce018256/jev-advice-wiring-redproof/optional-triage/control.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/optional-triage/control",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/optional-triage/control-run-observer:/workspace/scratch/150dce018256/jev-advice-wiring-redproof/optional-triage/control"
+          },
+          "exit_status": 0,
+          "finished_at": "2026-11-12T11:06:29.267257+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:06:28.482342+00:00",
+          "status": "passed",
+          "stderr": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/optional-triage/control-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/optional-triage/control-run/stdout.log",
+          "stdout_sha256": "4e8b6c5a89da44bf05d17100903172be04033067c113a6831bdfafbd42b7da52",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/optional-triage/control.xml",
+          "stdout_text": ".                                                                        [100%]\n1 passed in 0.10s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"0\" skipped=\"0\" tests=\"1\" time=\"0.109\" timestamp=\"2026-11-12T06:06:29.103427-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_jev_post_test_triage\" name=\"test_post_failure_triage_runs_independently_and_retains_its_evidence\" time=\"0.000\" /></testsuite></testsuites>"
+        },
+        "mutant": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_jev_post_test_triage.py::test_post_failure_triage_runs_independently_and_retains_its_evidence",
+            "--junitxml=/workspace/scratch/150dce018256/jev-advice-wiring-redproof/optional-triage/mutant.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/optional-triage/mutant",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/optional-triage/mutant-run-observer:/workspace/scratch/150dce018256/jev-advice-wiring-redproof/optional-triage/mutant"
+          },
+          "exit_status": 1,
+          "finished_at": "2026-11-12T11:06:30.117605+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:06:29.268710+00:00",
+          "status": "failed",
+          "stderr": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/optional-triage/mutant-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/optional-triage/mutant-run/stdout.log",
+          "stdout_sha256": "70506b3693916d5d17c44806f94342cbbce0f6cf7e38d9c99c798780e4c984c5",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/optional-triage/mutant.xml",
+          "stdout_text": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_____ test_post_failure_triage_runs_independently_and_retains_its_evidence _____\ntests/hexagonal/test_jev_post_test_triage.py:175: in test_post_failure_triage_runs_independently_and_retains_its_evidence\n    assert triage.get(\"continue-on-error\") is True, \"POST_TEST_TRIAGE_REMAINS_OPTIONAL\"\nE   AssertionError: POST_TEST_TRIAGE_REMAINS_OPTIONAL\nE   assert False is True\nE    +  where False = <built-in method get of dict object at 0x7f05d05828c0>('continue-on-error')\nE    +    where <built-in method get of dict object at 0x7f05d05828c0> = {'name': 'Assess source and executed tests using trusted code', 'if': \"steps.gate.outputs.provider_needed == 'true' &&...ve.outcome == 'success' && steps.gate.outputs.kind == 'source'\", 'continue-on-error': False, 'timeout-minutes': 3, ...}.get\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_jev_post_test_triage.py::test_post_failure_triage_runs_independently_and_retains_its_evidence\n1 failed in 0.13s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"1\" skipped=\"0\" tests=\"1\" time=\"0.138\" timestamp=\"2026-11-12T06:06:29.925554-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_jev_post_test_triage\" name=\"test_post_failure_triage_runs_independently_and_retains_its_evidence\" time=\"0.001\"><properties><property name=\"calibration.attribution\" value=\"{&quot;assertion_span&quot;: [175, 4, 175, 87], &quot;exception_type&quot;: &quot;AssertionError&quot;, &quot;file&quot;: &quot;/workspace/scratch/150dce018256/jev-advice-wiring-redproof/optional-triage/mutant/tests/hexagonal/test_jev_post_test_triage.py&quot;, &quot;function&quot;: &quot;test_post_failure_triage_runs_independently_and_retains_its_evidence&quot;, &quot;instruction&quot;: &quot;RAISE_VARARGS&quot;, &quot;instruction_offset&quot;: 988, &quot;instruction_span&quot;: [175, 4, 175, 87], &quot;line&quot;: 175, &quot;phase&quot;: &quot;call&quot;, &quot;target_assertion&quot;: true, &quot;test_name&quot;: &quot;test_post_failure_triage_runs_independently_and_retains_its_evidence&quot;}\" /></properties><failure message=\"AssertionError: POST_TEST_TRIAGE_REMAINS_OPTIONAL&#10;assert False is True&#10; +  where False = &lt;built-in method get of dict object at 0x7f05d05828c0&gt;('continue-on-error')&#10; +    where &lt;built-in method get of dict object at 0x7f05d05828c0&gt; = {'name': 'Assess source and executed tests using trusted code', 'if': &quot;steps.gate.outputs.provider_needed == 'true' &amp;&amp;...ve.outcome == 'success' &amp;&amp; steps.gate.outputs.kind == 'source'&quot;, 'continue-on-error': False, 'timeout-minutes': 3, ...}.get\">tests/hexagonal/test_jev_post_test_triage.py:175: in test_post_failure_triage_runs_independently_and_retains_its_evidence\n    assert triage.get(\"continue-on-error\") is True, \"POST_TEST_TRIAGE_REMAINS_OPTIONAL\"\nE   AssertionError: POST_TEST_TRIAGE_REMAINS_OPTIONAL\nE   assert False is True\nE    +  where False = &lt;built-in method get of dict object at 0x7f05d05828c0&gt;('continue-on-error')\nE    +    where &lt;built-in method get of dict object at 0x7f05d05828c0&gt; = {'name': 'Assess source and executed tests using trusted code', 'if': \"steps.gate.outputs.provider_needed == 'true' &amp;&amp;...ve.outcome == 'success' &amp;&amp; steps.gate.outputs.kind == 'source'\", 'continue-on-error': False, 'timeout-minutes': 3, ...}.get</failure></testcase></testsuite></testsuites>"
+        }
+      },
+      "expected_diagnostic": "POST_TEST_TRIAGE_REMAINS_OPTIONAL",
+      "finished_at": "2026-11-12T11:06:30.118526+00:00",
+      "mutation_applied": true,
+      "mutation_sha256": "3ff75ea4906b71811d8cff3da645783f3672b5e2ed7d40bab6d6f7082c885edf",
+      "target": "tests.hexagonal.test_jev_post_test_triage::test_post_failure_triage_runs_independently_and_retains_its_evidence",
+      "unaffected": [],
+      "fault": {
+        "new": "\"continue-on-error\": false,\n          \"timeout-minutes\": 3,",
+        "old": "\"continue-on-error\": true,\n          \"timeout-minutes\": 3,",
+        "path": ".github/workflows/jev.yml"
+      },
+      "patch": "--- a/.github/workflows/jev.yml\n+++ b/.github/workflows/jev.yml\n@@ -114,7 +114,7 @@\n         {\n           \"name\": \"Assess source and executed tests using trusted code\",\n           \"if\": \"steps.gate.outputs.provider_needed == 'true' && steps.reserve.outcome == 'success' && steps.gate.outputs.kind == 'source'\",\n-          \"continue-on-error\": true,\n+          \"continue-on-error\": false,\n           \"timeout-minutes\": 3,\n           \"env\": {\n             \"GITHUB_TOKEN\": \"${{ github.token }}\",\n"
+    },
+    {
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "candidate_sha256": "ab9999377f0b6a56766d3322be2afc1a73b1187eb2e6c1f0e3a4718d1092969c",
+      "classification": "detected",
+      "commands": {
+        "control": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_result.py::test_independent_advice_retains_artifacts_under_their_source_and_consumer_identity",
+            "--junitxml=/workspace/scratch/150dce018256/jev-advice-wiring-redproof/retain-on-failure/control.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/retain-on-failure/control",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/retain-on-failure/control-run-observer:/workspace/scratch/150dce018256/jev-advice-wiring-redproof/retain-on-failure/control"
+          },
+          "exit_status": 0,
+          "finished_at": "2026-11-12T11:06:25.539198+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:06:24.746202+00:00",
+          "status": "passed",
+          "stderr": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/retain-on-failure/control-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/retain-on-failure/control-run/stdout.log",
+          "stdout_sha256": "09229b326b028651d725fa47cd1bae9fd8e0145ff8779bdb84ae2762c00ab737",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/retain-on-failure/control.xml",
+          "stdout_text": ".                                                                        [100%]\n1 passed in 0.14s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"0\" skipped=\"0\" tests=\"1\" time=\"0.139\" timestamp=\"2026-11-12T06:06:25.353183-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_result\" name=\"test_independent_advice_retains_artifacts_under_their_source_and_consumer_identity\" time=\"0.000\" /></testsuite></testsuites>"
+        },
+        "mutant": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_ci_result.py::test_independent_advice_retains_artifacts_under_their_source_and_consumer_identity",
+            "--junitxml=/workspace/scratch/150dce018256/jev-advice-wiring-redproof/retain-on-failure/mutant.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/retain-on-failure/mutant",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/retain-on-failure/mutant-run-observer:/workspace/scratch/150dce018256/jev-advice-wiring-redproof/retain-on-failure/mutant"
+          },
+          "exit_status": 1,
+          "finished_at": "2026-11-12T11:06:26.351757+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:06:25.540415+00:00",
+          "status": "failed",
+          "stderr": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/retain-on-failure/mutant-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/retain-on-failure/mutant-run/stdout.log",
+          "stdout_sha256": "a7570e621898e20cc8e600eb77459158abb11f34fcd147ef817505d87a4278cc",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/retain-on-failure/mutant.xml",
+          "stdout_text": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_ test_independent_advice_retains_artifacts_under_their_source_and_consumer_identity _\ntests/hexagonal/test_ci_result.py:410: in test_independent_advice_retains_artifacts_under_their_source_and_consumer_identity\n    assert upload[\"if\"] == \"always()\", \"ADVICE_EVIDENCE_SURVIVES_PROVIDER_FAILURE\"\nE   AssertionError: ADVICE_EVIDENCE_SURVIVES_PROVIDER_FAILURE\nE   assert 'success()' == 'always()'\nE     \nE     - always()\nE     + success()\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_ci_result.py::test_independent_advice_retains_artifacts_under_their_source_and_consumer_identity\n1 failed in 0.16s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"1\" skipped=\"0\" tests=\"1\" time=\"0.167\" timestamp=\"2026-11-12T06:06:26.138226-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_ci_result\" name=\"test_independent_advice_retains_artifacts_under_their_source_and_consumer_identity\" time=\"0.001\"><properties><property name=\"calibration.attribution\" value=\"{&quot;assertion_span&quot;: [410, 4, 410, 82], &quot;exception_type&quot;: &quot;AssertionError&quot;, &quot;file&quot;: &quot;/workspace/scratch/150dce018256/jev-advice-wiring-redproof/retain-on-failure/mutant/tests/hexagonal/test_ci_result.py&quot;, &quot;function&quot;: &quot;test_independent_advice_retains_artifacts_under_their_source_and_consumer_identity&quot;, &quot;instruction&quot;: &quot;RAISE_VARARGS&quot;, &quot;instruction_offset&quot;: 470, &quot;instruction_span&quot;: [410, 4, 410, 82], &quot;line&quot;: 410, &quot;phase&quot;: &quot;call&quot;, &quot;target_assertion&quot;: true, &quot;test_name&quot;: &quot;test_independent_advice_retains_artifacts_under_their_source_and_consumer_identity&quot;}\" /></properties><failure message=\"AssertionError: ADVICE_EVIDENCE_SURVIVES_PROVIDER_FAILURE&#10;assert 'success()' == 'always()'&#10;  &#10;  - always()&#10;  + success()\">tests/hexagonal/test_ci_result.py:410: in test_independent_advice_retains_artifacts_under_their_source_and_consumer_identity\n    assert upload[\"if\"] == \"always()\", \"ADVICE_EVIDENCE_SURVIVES_PROVIDER_FAILURE\"\nE   AssertionError: ADVICE_EVIDENCE_SURVIVES_PROVIDER_FAILURE\nE   assert 'success()' == 'always()'\nE     \nE     - always()\nE     + success()</failure></testcase></testsuite></testsuites>"
+        }
+      },
+      "expected_diagnostic": "ADVICE_EVIDENCE_SURVIVES_PROVIDER_FAILURE",
+      "finished_at": "2026-11-12T11:06:26.352679+00:00",
+      "mutation_applied": true,
+      "mutation_sha256": "5c5d2d4a7045d91075de124b5e8675febeb325b7996f1df0f37fcfcd3f22d395",
+      "target": "tests.hexagonal.test_ci_result::test_independent_advice_retains_artifacts_under_their_source_and_consumer_identity",
+      "unaffected": [],
+      "fault": {
+        "new": "\"name\": \"Retain advice and its source identity\",\n          \"if\": \"success()\"",
+        "old": "\"name\": \"Retain advice and its source identity\",\n          \"if\": \"always()\"",
+        "path": ".github/workflows/jev.yml"
+      },
+      "patch": "--- a/.github/workflows/jev.yml\n+++ b/.github/workflows/jev.yml\n@@ -138,7 +138,7 @@\n         },\n         {\n           \"name\": \"Retain advice and its source identity\",\n-          \"if\": \"always()\",\n+          \"if\": \"success()\",\n           \"uses\": \"actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9\",\n           \"with\": {\n             \"name\": \"jev-advice-${{ github.event.workflow_run.id || github.run_id }}-${{ github.event.workflow_run.run_attempt || github.run_attempt }}-consumer-${{ github.run_id }}-${{ github.run_attempt }}\",\n"
+    },
+    {
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "candidate_sha256": "ab9999377f0b6a56766d3322be2afc1a73b1187eb2e6c1f0e3a4718d1092969c",
+      "classification": "detected",
+      "commands": {
+        "control": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_jev_operational.py::test_live_calibration_is_explicit_default_branch_work_separate_from_source_advice",
+            "--junitxml=/workspace/scratch/150dce018256/jev-advice-wiring-redproof/source-triggered-calibration/control.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/source-triggered-calibration/control",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/source-triggered-calibration/control-run-observer:/workspace/scratch/150dce018256/jev-advice-wiring-redproof/source-triggered-calibration/control"
+          },
+          "exit_status": 0,
+          "finished_at": "2026-11-12T11:06:31.174847+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:06:30.308200+00:00",
+          "status": "passed",
+          "stderr": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/source-triggered-calibration/control-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/source-triggered-calibration/control-run/stdout.log",
+          "stdout_sha256": "76af71df60bb5f93ea635e8763126ecf98e837672c9980e80aefde989b203765",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/source-triggered-calibration/control.xml",
+          "stdout_text": ".                                                                        [100%]\n1 passed in 0.16s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"0\" skipped=\"0\" tests=\"1\" time=\"0.162\" timestamp=\"2026-11-12T06:06:30.962222-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_jev_operational\" name=\"test_live_calibration_is_explicit_default_branch_work_separate_from_source_advice\" time=\"0.000\" /></testsuite></testsuites>"
+        },
+        "mutant": {
+          "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+          "command": [
+            "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+            "-m",
+            "pytest",
+            "-p",
+            "_xorchestrate_calibration_observer",
+            "-q",
+            "--tb=short",
+            "tests/hexagonal/test_jev_operational.py::test_live_calibration_is_explicit_default_branch_work_separate_from_source_advice",
+            "--junitxml=/workspace/scratch/150dce018256/jev-advice-wiring-redproof/source-triggered-calibration/mutant.xml"
+          ],
+          "cwd": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/source-triggered-calibration/mutant",
+          "environment": {
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "PYTHONPATH": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/source-triggered-calibration/mutant-run-observer:/workspace/scratch/150dce018256/jev-advice-wiring-redproof/source-triggered-calibration/mutant"
+          },
+          "exit_status": 1,
+          "finished_at": "2026-11-12T11:06:32.037118+00:00",
+          "launched": true,
+          "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+          "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+          "started_at": "2026-11-12T11:06:31.176094+00:00",
+          "status": "failed",
+          "stderr": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/source-triggered-calibration/mutant-run/stderr.log",
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/source-triggered-calibration/mutant-run/stdout.log",
+          "stdout_sha256": "1f48e29a8b3d424c376b03ad67582dc606d7feabd2f970ca85e915c7bb415ad2",
+          "terminal": "capture",
+          "timeout_seconds": 120,
+          "xml": "/workspace/scratch/150dce018256/jev-advice-wiring-redproof/source-triggered-calibration/mutant.xml",
+          "stdout_text": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_ test_live_calibration_is_explicit_default_branch_work_separate_from_source_advice _\ntests/hexagonal/test_jev_operational.py:223: in test_live_calibration_is_explicit_default_branch_work_separate_from_source_advice\n    assert \"steps.gate.outputs.kind == 'calibration'\" in pilot[\"if\"], \"SOURCE_EVENTS_DO_NOT_RUN_CALIBRATION\"\nE   AssertionError: SOURCE_EVENTS_DO_NOT_RUN_CALIBRATION\nE   assert \"steps.gate.outputs.kind == 'calibration'\" in \"steps.gate.outputs.provider_needed == 'true' && steps.reserve.outcome == 'success' && steps.gate.outputs.kind == 'source'\"\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_jev_operational.py::test_live_calibration_is_explicit_default_branch_work_separate_from_source_advice\n1 failed in 0.17s\n",
+          "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"1\" skipped=\"0\" tests=\"1\" time=\"0.174\" timestamp=\"2026-11-12T06:06:31.814355-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_jev_operational\" name=\"test_live_calibration_is_explicit_default_branch_work_separate_from_source_advice\" time=\"0.001\"><properties><property name=\"calibration.attribution\" value=\"{&quot;assertion_span&quot;: [223, 4, 223, 108], &quot;exception_type&quot;: &quot;AssertionError&quot;, &quot;file&quot;: &quot;/workspace/scratch/150dce018256/jev-advice-wiring-redproof/source-triggered-calibration/mutant/tests/hexagonal/test_jev_operational.py&quot;, &quot;function&quot;: &quot;test_live_calibration_is_explicit_default_branch_work_separate_from_source_advice&quot;, &quot;instruction&quot;: &quot;RAISE_VARARGS&quot;, &quot;instruction_offset&quot;: 2696, &quot;instruction_span&quot;: [223, 4, 223, 108], &quot;line&quot;: 223, &quot;phase&quot;: &quot;call&quot;, &quot;target_assertion&quot;: true, &quot;test_name&quot;: &quot;test_live_calibration_is_explicit_default_branch_work_separate_from_source_advice&quot;}\" /></properties><failure message=\"AssertionError: SOURCE_EVENTS_DO_NOT_RUN_CALIBRATION&#10;assert &quot;steps.gate.outputs.kind == 'calibration'&quot; in &quot;steps.gate.outputs.provider_needed == 'true' &amp;&amp; steps.reserve.outcome == 'success' &amp;&amp; steps.gate.outputs.kind == 'source'&quot;\">tests/hexagonal/test_jev_operational.py:223: in test_live_calibration_is_explicit_default_branch_work_separate_from_source_advice\n    assert \"steps.gate.outputs.kind == 'calibration'\" in pilot[\"if\"], \"SOURCE_EVENTS_DO_NOT_RUN_CALIBRATION\"\nE   AssertionError: SOURCE_EVENTS_DO_NOT_RUN_CALIBRATION\nE   assert \"steps.gate.outputs.kind == 'calibration'\" in \"steps.gate.outputs.provider_needed == 'true' &amp;&amp; steps.reserve.outcome == 'success' &amp;&amp; steps.gate.outputs.kind == 'source'\"</failure></testcase></testsuite></testsuites>"
+        }
+      },
+      "expected_diagnostic": "SOURCE_EVENTS_DO_NOT_RUN_CALIBRATION",
+      "finished_at": "2026-11-12T11:06:32.038045+00:00",
+      "mutation_applied": true,
+      "mutation_sha256": "915486cfe711ebbfef363c3393489ad3e53bb94bc5a786bfe93ccc969c2e58dc",
+      "target": "tests.hexagonal.test_jev_operational::test_live_calibration_is_explicit_default_branch_work_separate_from_source_advice",
+      "unaffected": [],
+      "fault": {
+        "new": "steps.gate.outputs.kind == 'source'",
+        "old": "steps.gate.outputs.kind == 'calibration'",
+        "path": ".github/workflows/jev.yml"
+      },
+      "patch": "--- a/.github/workflows/jev.yml\n+++ b/.github/workflows/jev.yml\n@@ -126,7 +126,7 @@\n         },\n         {\n           \"name\": \"Explicit live effectiveness and heldout calibration\",\n-          \"if\": \"steps.gate.outputs.provider_needed == 'true' && steps.reserve.outcome == 'success' && steps.gate.outputs.kind == 'calibration'\",\n+          \"if\": \"steps.gate.outputs.provider_needed == 'true' && steps.reserve.outcome == 'success' && steps.gate.outputs.kind == 'source'\",\n           \"continue-on-error\": true,\n           \"timeout-minutes\": 5,\n           \"env\": {\n"
+    }
+  ],
+  "green": {
+    "command": "PYTHONPYCACHEPREFIX=/tmp/jev-advice-final-green /workspace/scratch/150dce018256/ci-jev-test-env/bin/python -m pytest -p no:cacheprovider tests/hexagonal/test_ci_advice.py tests/hexagonal/test_ci_changes.py tests/hexagonal/test_ci_reuse.py tests/hexagonal/test_ci_result.py tests/hexagonal/test_jev_post_test_triage.py tests/hexagonal/test_jev_operational.py -q",
+    "result": "443 passed in 6.80s",
+    "ruff": "All changed Python test/support/contract files passed ruff check."
+  },
+  "limits": [
+    "Provider calls are replaced by controlled collector-boundary spies; tests do not claim live model quality or hosted workflow activation.",
+    "The assessment witness uses real separate Git checkouts and real static parsing of candidate Python; policy, options and executable imports remain trusted."
+  ]
+}
