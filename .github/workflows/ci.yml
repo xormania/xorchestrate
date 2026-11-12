@@ -20,22 +20,10 @@
     "contents": "read"
   },
   "concurrency": {
-    "group": "ci-${{ github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && format('metadata-{0}-{1}', github.repository_id, github.event.pull_request.number) || (github.event_name == 'pull_request' && format('pr-{0}-{1}-{2}-{3}', github.repository_id, github.event.pull_request.number, github.event.pull_request.head.sha, github.event.pull_request.base.sha) || github.ref) }}",
+    "group": "ci-${{ github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && format('metadata-{0}-{1}-{2}-{3}', github.repository_id, github.event.pull_request.number, github.event.pull_request.head.sha, github.event.pull_request.base.sha) || (github.event_name == 'pull_request' && format('pr-{0}-{1}-{2}-{3}', github.repository_id, github.event.pull_request.number, github.event.pull_request.head.sha, github.event.pull_request.base.sha) || github.ref) }}",
     "cancel-in-progress": true
   },
   "jobs": {
-    "metadata": {
-      "name": "PR metadata observation",
-      "runs-on": "ubuntu-24.04",
-      "timeout-minutes": 1,
-      "if": "${{ github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) }}",
-      "steps": [
-        {
-          "name": "Retain the current validation verdict",
-          "run": "printf '%s\\n' 'Title/body changed without a base change. Existing candidate checks remain authoritative; no validation or Jev evaluation was repeated.' >> \"$GITHUB_STEP_SUMMARY\""
-        }
-      ]
-    },
     "paths": {
       "name": "Classify changed paths",
       "runs-on": "ubuntu-24.04",
@@ -136,7 +124,7 @@
         "checks": "read",
         "pull-requests": "read"
       },
-      "if": "${{ always() && !(github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body)) }}"
+      "if": "${{ always() }}"
     },
     "changes": {
       "name": "Static checks",
@@ -209,7 +197,7 @@
       "env": {
         "CI_CANDIDATE_CONTEXT": "${{ needs.paths.outputs.context }}"
       },
-      "if": "${{ always() && !(github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body)) && needs.paths.outputs.superseded != 'true' }}"
+      "if": "${{ always() && needs.paths.outputs.superseded != 'true' }}"
     },
     "application-tests": {
       "name": "Application tests shard ${{ matrix.shard }}/${{ matrix.shards }} (Python 3.12)",
@@ -218,7 +206,7 @@
       "needs": [
         "paths"
       ],
-      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' && !(github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body)) && needs.paths.outputs.superseded != 'true' }}",
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' && needs.paths.outputs.superseded != 'true' }}",
       "strategy": {
         "fail-fast": false,
         "matrix": {
@@ -306,7 +294,7 @@
         "paths",
         "application-tests"
       ],
-      "if": "${{ always() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' && !(github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body)) && needs.paths.outputs.superseded != 'true' }}",
+      "if": "${{ always() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' && needs.paths.outputs.superseded != 'true' }}",
       "steps": [
         {
           "name": "Require every tests shard",
@@ -322,7 +310,7 @@
       "needs": [
         "paths"
       ],
-      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' && !(github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body)) && needs.paths.outputs.superseded != 'true' }}",
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' && needs.paths.outputs.superseded != 'true' }}",
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 15,
       "steps": [
@@ -417,7 +405,7 @@
       "needs": [
         "paths"
       ],
-      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' && !(github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body)) && needs.paths.outputs.superseded != 'true' }}",
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' && needs.paths.outputs.superseded != 'true' }}",
       "steps": [
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
@@ -489,13 +477,13 @@
       }
     },
     "architecture-status": {
-      "name": "${{ github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && 'PR metadata (no Hexagonal architecture)' || 'Hexagonal architecture' }}",
+      "name": "Hexagonal architecture",
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 2,
       "needs": [
         "changes"
       ],
-      "if": "${{ always() && !(github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body)) }}",
+      "if": "${{ always() }}",
       "steps": [
         {
           "name": "Report shared static result",
@@ -513,7 +501,7 @@
       "needs": [
         "paths"
       ],
-      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' && !(github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body)) && needs.paths.outputs.superseded != 'true' }}",
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' && needs.paths.outputs.superseded != 'true' }}",
       "steps": [
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
@@ -572,7 +560,7 @@
       }
     },
     "ci-result": {
-      "name": "${{ github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && 'PR metadata (no CI result)' || 'CI result' }}",
+      "name": "CI result",
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 10,
       "needs": [
@@ -585,7 +573,7 @@
         "architecture-status",
         "package"
       ],
-      "if": "${{ always() && !(github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body)) }}",
+      "if": "${{ always() }}",
       "steps": [
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",

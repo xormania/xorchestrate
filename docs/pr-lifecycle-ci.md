@@ -1,8 +1,8 @@
 # PR lifecycle validation
 
-Source changes receive validation while ordinary PR metadata changes receive a
-small observation. Deterministic behavior can reuse a qualified execution of the
-exact candidate. GitHub remains the authority for checks and PR state; this does
+Source and metadata edits enter the same validation path. Deterministic behavior
+can reuse a qualified execution of the exact candidate; static checks and both
+required verdict jobs still run. GitHub remains the authority for checks and PR state; this does
 not mark a draft ready or merge it.
 
 ## Events and surviving validation
@@ -14,22 +14,25 @@ Marking a draft ready does not rerun CI: the checks for its existing candidate
 remain authoritative. Full green verification still precedes owner handoff.
 Master pushes and manual runs execute full validation.
 
-A positively identified title/body edit with no base-retarget change in its event
-payload runs one short metadata summary, without checkout, dependency setup,
-tests or Jev. Explicit base-retarget changes and unknown edit payloads use the
-ordinary validation path. On metadata events,
-the skipped aggregate jobs have distinct names, not `CI result` or `Hexagonal
-architecture`: a skipped job must not publish a successful required check over
-an earlier failed candidate. Metadata observations do not certify current-base
-freshness or change the existing validation verdict. The target branch may have
-advanced independently: a title/body event still preserves the source's existing
-checks and does not certify its new merge candidate. Strict up-to-date checking
-remains disabled; master-push integration validation remains enabled.
+Title/body edits, explicit base-retarget changes and unknown edit payloads use
+ordinary candidate capture and qualified evidence reuse. Every selected CI run
+publishes the stable `CI result` and `Hexagonal architecture` names. GitHub selects
+the latest workflow run for the commit rollup; renaming and skipping required jobs
+on metadata runs leaves those checks waiting even when an older run passed.
+
+Metadata edits therefore run static checks and required verdict qualification.
+Behavioral lanes skip only when existing evidence qualifies or the independently
+guarded documentation-only decision applies. Missing, failed, stale or unavailable
+evidence falls back to execution; it never becomes a skipped required success.
+This bounded repair accepts that overhead rather than introducing a new verdict
+carry-forward mechanism. Strict up-to-date checking remains disabled, and
+master-push integration validation remains enabled.
 
 Validation concurrency is scoped to repository, PR number, source head and event
 base. A new run may cancel the same candidate's older run; a delayed old-source
 event or manual rerun cannot cancel a newer source or base candidate. Metadata
-events have their own group, so editing a description cannot cancel validation.
+events have a separate head/base-scoped group, so editing a description cannot
+cancel source validation or another candidate’s metadata validation.
 Non-PR runs retain cancellation by ref. Already-running work for an older
 candidate can finish. The supersession check below avoids starting its costly
 lanes when a surviving replacement can be proved; there is no custom cancellation
@@ -128,7 +131,7 @@ cancellation or failed artifact upload remains a failure even if local JSON pass
 ## Operating and measuring it
 
 Set repository variable **`CI_REUSE_ENABLED=false`** to disable receipt reuse.
-Metadata routing and proved source supersession remain independent of reuse.
+Proved source supersession remains independent of reuse.
 Otherwise behavioral validation executes normally. Remove
 the variable or set it to `true` to enable qualified selection again.
 
@@ -137,8 +140,7 @@ attempt history, observed current PR and lookup time. Final `CI result` evidence
 records current and original attempts, lane decisions and links to original
 artifacts. Its summary shows planning/requalification overhead, fresh/reused lane
 counts and historical shard command time. Historical work is not a measured net
-saving. Compare lookup cost separately from avoided duplicate execution. Ordinary
-title/body events now retain their small summary without invoking the planner.
+saving. Compare lookup cost separately from avoided duplicate execution. Title/body events use this same planner and retain the same evidence summary.
 
 The initial policy is exact and conservative. A new merge object, changed
 base/runtime, old schema, expired evidence, incomplete history or deeper reuse

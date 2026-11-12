@@ -47,11 +47,11 @@ a local git tag and a source directory, and `uv tool run --from <wheel>`) and
 checks the `install_source` each reports, through both `xo` and `xorchestrate`.
 
 CI runs on GitHub-hosted Ubuntu. Pinned actions have read-only repository
-permissions. PR open/source/reopen and explicit base-retarget edits receive validation;
-eligible deterministic lanes may reuse exact qualified evidence. Title/body-only
-edits receive a small observation with distinct non-required check names; marking
-a draft ready preserves its existing candidate checks. These metadata transitions
-do not refresh validation when the target branch advances independently.
+permissions. PR open/source/reopen and all edits receive candidate validation;
+eligible deterministic lanes may reuse exact qualified evidence. Static checks
+and both stable required verdicts run even for title/body edits, so the newest
+workflow run can satisfy branch protection. Marking a draft ready preserves its
+existing candidate checks without starting a new run.
 Pushes to master and manual runs execute full validation. See
 [PR lifecycle validation](../docs/pr-lifecycle-ci.md) for event handling, original
 evidence links and the `CI_REUSE_ENABLED=false` recovery switch. Selected jobs are:
@@ -239,8 +239,8 @@ effect, receipt or acceptance recording. See [the active guide](../docs/telemetr
 
 ## Aggregate result and reviewer summary
 
-`CI result` is an always-running final job on validation events. Metadata-only
-events never publish this required check name. It requires successful path
+`CI result` is an always-running final job on all selected events, including
+metadata edits. It requires successful path
 classification, static checks, every application shard and its aggregate,
 calibration/multi-harness verification, tmux acceptance, and installed-package
 acceptance when that job is present, either executed now or independently
