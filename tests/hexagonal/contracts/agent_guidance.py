@@ -12,17 +12,21 @@ SKILLS = ".agents/skills"
 MIRROR = ".claude/skills"
 WORKFLOW = "docs/agent-workflow.md"
 SERENA = ".serena/project.yml"
-SERENA_IGNORED = (".serena/cache/", ".serena/memories/")
+SERENA_IGNORED = (".serena/cache/", ".serena/memories/", ".serena/project.local.yml")
+SERENA_GITIGNORE = ".serena/.gitignore"
 RULES = "AGENTS.md"
 IMPORTER = "CLAUDE.md"
 SECTION = "Agent workflow"
 
 BEHAVIOURS = {
-    "B1": "every skill folder holds a SKILL.md whose front matter names the folder and has a one-line description",
+    "B1": "every skill folder holds a SKILL.md whose strict-YAML front matter names the folder and has a one-line "
+          "description",
     "B2": "every skill is mirrored by a relative symlink to the same folder, and the mirror has nothing else",
-    "B3": "every repository path the skills and the workflow guidance point at exists",
-    "B4": "the skills and the workflow guidance contain no local paths, session identifiers or foreign emails",
-    "B5": "the Serena project selects the python language server, the tools interface and .gitignore; its caches are ignored",
+    "B3": "every repository path and section anchor the skills and the workflow guidance point at exists",
+    "B4": "the skills, the workflow guidance and the Serena project contain no local paths, session identifiers or "
+          "foreign emails",
+    "B5": "the Serena project selects the python language server, the tools interface and .gitignore; Serena's own "
+          ".gitignore is present and its cache, memories and local overrides are ignored",
     "B6": "the importing instruction file loads the rules, and the rules' Agent workflow section points at the skills",
 }
 
@@ -33,6 +37,10 @@ FAULTS = {
     "name-mismatch": ("B1", ".agents/skills/beta"),
     "empty-description": ("B1", ".agents/skills/beta"),
     "multi-line-description": ("B1", ".agents/skills/beta"),
+    "description-with-unquoted-colon": ("B1", "strict YAML"),
+    "description-starts-with-indicator": ("B1", "strict YAML"),
+    "name-not-lowercase": ("B1", "lowercase"),
+    "description-too-long": ("B1", "1024"),
     "missing-mirror": ("B2", ".claude/skills/beta"),
     "copy-instead-of-symlink": ("B2", ".claude/skills/beta"),
     "absolute-symlink": ("B2", ".claude/skills/beta"),
@@ -43,17 +51,21 @@ FAULTS = {
     "dead-backtick-pointer": ("B3", "scripts/missing.py"),
     "renamed-document": ("B3", "docs/guide.md", ("B6",)),
     "workflow-guidance-missing": ("B3", WORKFLOW, ("B6",)),
+    "dead-anchor": ("B3", "guide.md#first"),
     "home-path": ("B4", "/home/"),
     "temp-path": ("B4", "/tmp/"),
     "windows-mount-path": ("B4", "/mnt/c/"),
     "session-identifier": ("B4", "session"),
     "session-line": ("B4", "session"),
     "foreign-email": ("B4", "someone@example.com"),
+    "local-path-in-serena-project": ("B4", SERENA),
     "broken-project-yml": ("B5", SERENA),
     "wrong-language": ("B5", "python"),
     "gitignore-not-honoured": ("B5", "ignore_all_files_in_gitignore"),
     "cache-not-ignored": ("B5", ".serena/cache/"),
     "memories-not-ignored": ("B5", ".serena/memories/"),
+    "local-overrides-not-ignored": ("B5", ".serena/project.local.yml"),
+    "serena-gitignore-missing": ("B5", SERENA_GITIGNORE),
     "agent-interface-missing": ("B5", "agent_interface"),
     "agent-interface-not-tools": ("B5", "agent_interface"),
     "link-but-no-import": ("B6", IMPORTER),
@@ -99,6 +111,27 @@ def _unquote(value):
     return value
 
 
+PLAIN_START = re.compile(r"[\[\]{}>|*&!%@`#,'\"]|[-?:](?:\s|$)")
+NAME = re.compile(r"[a-z0-9-]{1,64}")
+
+
+def strict_scalar_problem(value):
+    """Why a strict YAML reader would refuse this one-line value, or None."""
+    if not value:
+        return None
+    if value[0] in "\"'":
+        if len(value) < 2 or value[-1] != value[0] or value[0] in value[1:-1].replace(value[0] * 2, ""):
+            return "an unterminated or broken quoted value"
+        return None
+    if PLAIN_START.match(value):
+        return f"an unquoted value starting with the YAML indicator {value[0]!r}"
+    if ": " in value or value.endswith(":"):
+        return "an unquoted value containing ': '"
+    if " #" in value:
+        return "an unquoted value containing ' #', which starts a comment"
+    return None
+
+
 def well_formed_skills(view):
     names = view.listdir(SKILLS)
     if names is None:
@@ -119,12 +152,22 @@ def well_formed_skills(view):
         if fields is None:
             found.append(f"{folder}/SKILL.md has no front matter block")
             continue
+        for key, (value, single) in sorted(fields.items()):
+            problem = strict_scalar_problem(value) if single else None
+            if problem:
+                found.append(f"{folder}/SKILL.md {key} is {problem}; strict YAML readers refuse it")
         declared = _unquote(fields.get("name", ("", True))[0])
         if declared != name:
             found.append(f"{folder}/SKILL.md declares name {declared!r}, not its folder name {name!r}")
+        if not NAME.fullmatch(declared):
+            found.append(f"{folder}/SKILL.md name {declared!r} must be lowercase letters, digits and hyphens, "
+                         "at most 64 characters")
         description, single = fields.get("description", ("", True))
         if not _unquote(description).strip() or not single:
             found.append(f"{folder}/SKILL.md needs a non-empty one-line description")
+        elif len(_unquote(description)) > 1024:
+            found.append(f"{folder}/SKILL.md description has {len(_unquote(description))} characters; "
+                         "at most 1024")
     return found
 
 
@@ -198,30 +241,79 @@ def _ignored(path, ignored):
 
 
 def references(text, source):
-    """``(written, candidates)`` for each markdown link and backticked repository path in ``text``."""
+    """``(written, candidates, fragment)`` for each markdown link and backticked repository path in ``text``.
+
+    A same-page link (``#anchor``) refers to ``source`` itself; backticked paths carry no fragment.
+    """
     base = _directory(source)
-    for match in LINK.finditer(text):
-        target = match.group(1)
-        if re.match(r"[A-Za-z][A-Za-z0-9+.-]*:", target) or target.startswith("#"):
-            continue  # a URL or a same-page anchor
-        target = re.split(r"[#?]", target, maxsplit=1)[0]
-        if target:
-            joined = target.lstrip("/") if target.startswith("/") else f"{base}/{target}"
-            yield target, [normalise(joined)]
+    for match in LINK.finditer(_without_code_blocks(text)):
+        written = match.group(1)
+        if re.match(r"[A-Za-z][A-Za-z0-9+.-]*:", written):
+            continue  # a URL
+        target, _, fragment = written.partition("#")
+        target = target.split("?", 1)[0]
+        if not target:
+            yield written, [source], fragment or None
+            continue
+        joined = target.lstrip("/") if target.startswith("/") else f"{base}/{target}"
+        yield written, [normalise(joined)], fragment or None
     for match in TICKED.finditer(text):
         written = match.group(1).strip()
         if not PATHLIKE.fullmatch(written) or written.startswith(("~", "/", "-", "@")) or "/" not in written:
             continue  # not a repository path: a command, a glob, a placeholder or a bare file name
-        yield written, [normalise(written), normalise(f"{base}/{written}")]
+        yield written, [normalise(written), normalise(f"{base}/{written}")], None
+
+
+FENCE = re.compile(r"^(```|~~~)")
+
+
+def _without_code_blocks(text):
+    kept, fenced = [], False
+    for line in text.splitlines():
+        if FENCE.match(line.strip()):
+            fenced = not fenced
+            continue
+        if not fenced:
+            kept.append(line)
+    return "\n".join(kept)
+
+
+def slug(heading):
+    """The anchor GitHub gives a heading: rendered text, lowercased, punctuation dropped, spaces as hyphens."""
+    text = re.sub(r"!?\[([^\]]*)\]\([^)]*\)", r"\1", heading)
+    text = re.sub(r"<[^>]+>", "", text).strip().lower()
+    text = re.sub(r"[^\w\- ]", "", text)
+    return text.replace(" ", "-")
+
+
+def anchors(text):
+    """Every anchor a markdown file offers: heading slugs (with GitHub's -1, -2 for repeats) and explicit ids."""
+    found, seen = set(), {}
+    for line in _without_code_blocks(text).splitlines():
+        match = re.match(r" {0,3}#{1,6}\s+(.*?)\s*#*\s*$", line)
+        if match:
+            base = slug(match.group(1))
+            count = seen.get(base, 0)
+            seen[base] = count + 1
+            found.add(base if count == 0 else f"{base}-{count}")
+    found.update(re.findall(r"<a\s+(?:name|id)=\"([^\"]+)\"", text))
+    found.update(re.findall(r"\sid=\"([^\"]+)\"", text))
+    return found
 
 
 def dead_pointers(view, text, source, ignored):
     found = []
-    for written, candidates in references(text, source):
+    for written, candidates, fragment in references(text, source):
         if _ignored(written.lstrip("/"), ignored):
             continue  # names something .gitignore keeps out of the repository
-        if not any(candidate is not None and view.exists(candidate) for candidate in candidates):
+        existing = [candidate for candidate in candidates if candidate is not None and view.exists(candidate)]
+        if not existing:
             found.append(f"{source} points at {written}, which does not exist in the repository")
+        elif fragment and existing[0].endswith(".md"):
+            target = view.text(existing[0])
+            if target is not None and fragment.lower() not in anchors(target):
+                found.append(f"{source} points at {written}, but {existing[0]} has no heading or anchor "
+                             f"#{fragment}")
     return found
 
 
@@ -254,13 +346,13 @@ EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-
 
 
 def published_files(view):
-    return [path for path in [*view.files_under(SKILLS), WORKFLOW] if view.text(path) is not None]
+    return [path for path in [*view.files_under(SKILLS), WORKFLOW, SERENA] if view.text(path) is not None]
 
 
 def nothing_local(view):
     sources = published_files(view)
     if not sources:
-        return [f"nothing to check: no files under {SKILLS} and no {WORKFLOW}"]
+        return [f"nothing to check: no files under {SKILLS}, no {WORKFLOW} and no {SERENA}"]
     allowed = {email for email in EMAIL.findall(view.text(RULES) or "") if "noreply" in email}
     found = []
     for source in sources:
@@ -391,11 +483,25 @@ def serena_project(view):
             if settings.get("agent_interface") != "tools":
                 found.append(f"{SERENA} does not set agent_interface: tools "
                              f"(found: {settings.get('agent_interface')!r}); other interfaces hide the symbol tools")
-    ignored = ignored_lines(view)
+    if view.text(SERENA_GITIGNORE) is None:
+        found.append(f"{SERENA_GITIGNORE} is missing; Serena writes it on first start, leaving an untracked file")
     for path in SERENA_IGNORED:
-        if not any(line.rstrip("/") == path.rstrip("/") for line in ignored):
-            found.append(f".gitignore does not ignore {path}")
+        if not serena_path_ignored(view, path):
+            found.append(f"neither .gitignore nor {SERENA_GITIGNORE} ignores {path}")
     return found
+
+
+def serena_path_ignored(view, path):
+    """Whether the root .gitignore, or Serena's own .gitignore (relative to .serena/), names ``path``."""
+    wanted = path.rstrip("/")
+    if any(line.rstrip("/") == wanted for line in ignored_lines(view)):
+        return True
+    inner = wanted[len(_directory(SERENA_GITIGNORE)) + 1:]
+    for line in (view.text(SERENA_GITIGNORE) or "").splitlines():
+        line = line.strip()
+        if line and not line.startswith(("#", "!")) and line.lstrip("/").rstrip("/") == inner:
+            return True
+    return False
 
 
 # B6 -------------------------------------------------------------------------------------------------
@@ -433,7 +539,7 @@ def rules_reach_every_harness(view):
         return found
     if SKILLS not in body:
         found.append(f"{RULES} '{SECTION}' section does not name {SKILLS} as where the skills live")
-    written = [target for target, _ in references(body, RULES)]
+    written = [target for target, _, _ in references(body, RULES)]
     if WORKFLOW not in [target.lstrip("/") for target in written]:
         found.append(f"{RULES} '{SECTION}' section does not point at {WORKFLOW}")
     found.extend(dead_pointers(view, body, RULES, ignored_lines(view)))

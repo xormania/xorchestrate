@@ -84,7 +84,7 @@ Keep this folder's `SKILL.md` short; the testing guide is `docs/guide.md`. Never
 WORKFLOW = f"""# Agent workflow
 
 Skills live in `.agents/skills`; each has a `SKILL.md`. Read [the guide](guide.md),
-[its first section](guide.md#first) and [the rules](../AGENTS.md#rules). See also
+[its first section](guide.md#first) and [the rules](../AGENTS.md#working-here). See also
 [upstream](https://example.org/docs) and [above](#agent-workflow).
 Python writes `__pycache__/`, which is not tracked. Run `python -m pytest -q` and
 `tests/**` globs; placeholders like `.agents/skills/<name>/SKILL.md` are not paths.
@@ -151,6 +151,7 @@ project_name: "fixture"
 """
 
 GITIGNORE = "__pycache__/\n.serena/cache/\n.serena/memories/\n"
+SERENA_GITIGNORE = "/cache\n/project.local.yml\n"
 
 
 def _write(root, relative, text):
@@ -173,6 +174,7 @@ def healthy_tree(root):
     _write(root, contract.IMPORTER, IMPORTER)
     _write(root, contract.SERENA, PROJECT)
     _write(root, ".gitignore", GITIGNORE)
+    _write(root, contract.SERENA_GITIGNORE, SERENA_GITIGNORE)
     return root
 
 
@@ -209,12 +211,31 @@ def _escape(root):
 
 BETA = f"{contract.SKILLS}/beta/SKILL.md"
 
+
+def _uppercase_name(root):
+    (root / contract.SKILLS / "beta").rename(root / contract.SKILLS / "Beta")
+    _replace(root, f"{contract.SKILLS}/Beta/SKILL.md", "name: beta", "name: Beta")
+    (root / contract.MIRROR / "beta").unlink()
+    (root / contract.MIRROR / "Beta").symlink_to(f"../../{contract.SKILLS}/Beta")
+
+
+def _unignore_cache(root):
+    _replace(root, ".gitignore", ".serena/cache/\n", "")
+    _replace(root, contract.SERENA_GITIGNORE, "/cache\n", "")
+
 PLANTS = {
     "missing-skill-file": lambda root: (root / BETA).unlink(),
     "name-mismatch": lambda root: _replace(root, BETA, "name: beta", "name: gamma"),
     "empty-description": lambda root: _replace(root, BETA, "description: Prove tests red first.", "description:"),
     "multi-line-description": lambda root: _replace(
         root, BETA, "description: Prove tests red first.", "description: >\n  Prove tests\n  red first."),
+    "description-with-unquoted-colon": lambda root: _replace(
+        root, BETA, "description: Prove tests red first.", "description: Prove tests red first: always."),
+    "description-starts-with-indicator": lambda root: _replace(
+        root, BETA, "description: Prove tests red first.", "description: `beta` proves tests red first."),
+    "name-not-lowercase": _uppercase_name,
+    "description-too-long": lambda root: _replace(
+        root, BETA, "description: Prove tests red first.", "description: " + "Prove tests red first. " * 50),
     "missing-mirror": lambda root: (root / contract.MIRROR / "beta").unlink(),
     "copy-instead-of-symlink": _copy_instead,
     "absolute-symlink": lambda root: _relink(root, f"{contract.MIRROR}/beta", root / contract.SKILLS / "beta"),
@@ -225,6 +246,7 @@ PLANTS = {
     "dead-backtick-pointer": lambda root: _append(root, contract.WORKFLOW, "\nThe runner is `scripts/missing.py`.\n"),
     "renamed-document": lambda root: (root / "docs/guide.md").rename(root / "docs/handbook.md"),
     "workflow-guidance-missing": lambda root: (root / contract.WORKFLOW).unlink(),
+    "dead-anchor": lambda root: _replace(root, "docs/guide.md", "## First", "## Opening"),
     "home-path": lambda root: _append(root, BETA, "\nNotes are in /home/someone/notes.md.\n"),
     "temp-path": lambda root: _append(root, contract.WORKFLOW, "\nEvidence goes to /tmp/run-1/evidence.json.\n"),
     "windows-mount-path": lambda root: _append(root, BETA, "\nThe checkout is /mnt/c/Users/someone/project.\n"),
@@ -232,6 +254,8 @@ PLANTS = {
         root, BETA, "\nThis came from 9a50996e-2f97-42d3-9bba-ce28047e1daa.\n"),
     "session-line": lambda root: _append(root, contract.WORKFLOW, "\nClaude-Session: https://example.org/code/session_01ABC\n"),
     "foreign-email": lambda root: _append(root, BETA, "\nAsk someone@example.com.\n"),
+    "local-path-in-serena-project": lambda root: _replace(
+        root, contract.SERENA, "Read AGENTS.md first.", "Read /home/someone/project/AGENTS.md first."),
     "broken-project-yml": lambda root: _replace(root, contract.SERENA, "ignored_paths: []", "ignored_paths: [one, two"),
     "wrong-language": lambda root: _replace(root, contract.SERENA, "\n- python\n", "\n- typescript\n"),
     "agent-interface-missing": lambda root: _replace(root, contract.SERENA, "agent_interface: tools\n", ""),
@@ -239,8 +263,10 @@ PLANTS = {
         root, contract.SERENA, "agent_interface: tools", "agent_interface: repl"),
     "gitignore-not-honoured": lambda root: _replace(
         root, contract.SERENA, "ignore_all_files_in_gitignore: true", "ignore_all_files_in_gitignore: false"),
-    "cache-not-ignored": lambda root: _replace(root, ".gitignore", ".serena/cache/\n", ""),
+    "cache-not-ignored": _unignore_cache,
     "memories-not-ignored": lambda root: _replace(root, ".gitignore", ".serena/memories/\n", ""),
+    "local-overrides-not-ignored": lambda root: _replace(root, contract.SERENA_GITIGNORE, "/project.local.yml\n", ""),
+    "serena-gitignore-missing": lambda root: (root / contract.SERENA_GITIGNORE).unlink(),
     "link-but-no-import": lambda root: _replace(root, contract.IMPORTER, "@AGENTS.md\n", ""),
     "section-missing": lambda root: _replace(root, contract.RULES, "## Agent workflow", "## Agent notes"),
     "section-without-skills": lambda root: _replace(
