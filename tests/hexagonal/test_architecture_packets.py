@@ -43,6 +43,26 @@ def test_modified_function_has_coherent_before_after_source_and_git_identity(tmp
     assert context["source_scope"]["source_bytes"] == sum(len(item["source"].encode()) for item in context["sources"] + context["before_sources"])
 
 
+
+@pytest.mark.parametrize("before_file,after_file,before_unit,after_unit", [
+    ("LIMIT = 10\n", "\nLIMIT = 20\n", "LIMIT = 10\n", "LIMIT = 20\n"),
+    ("LIMIT: int = 10\n", "\nLIMIT: int = 20\n", "LIMIT: int = 10\n", "LIMIT: int = 20\n"),
+    ("LIMIT = 10\nLIMIT = 30\n", "\nLIMIT = 20\nLIMIT = 30\n", "LIMIT = 10\n", "LIMIT = 20\n"),
+], ids=["assignment", "annotated-assignment", "duplicate-target"])
+def test_moved_module_declaration_keeps_its_exact_before_after_pair(
+        tmp_path, before_file, after_file, before_unit, after_unit):
+    path = "sample/settings.py"
+    commit = baseline(tmp_path, {path: before_file})
+    report = measure(tmp_path, {path: after_file})
+    context = build_context(report, tmp_path, base_ref="HEAD")
+    assert len(context["candidates"]) == 1, "DEFAULT_CANDIDATE_LIMIT_RETAINS_ONE_CHANGE"
+    candidate = context["candidates"][0]
+    previous = [item for item in context["before_sources"]
+                if item["unit_id"] == candidate["change"]["before_unit_id"]]
+    assert [item["source"] for item in previous] == [before_unit], "MOVED_DECLARATION_BEFORE_SOURCE_RETAINED"
+    coherent_change(context, before=before_unit, after=after_unit, before_file=before_file,
+                    base_commit=commit, path=path)
+
 def test_deleting_only_an_authority_guard_keeps_the_surviving_behavior_visible(tmp_path):
     before = "def execute(user):\n    if not user.authorized:\n        raise ValueError('denied')\n    return 'accepted'\n"
     after = "def execute(user):\n    return 'accepted'\n"
