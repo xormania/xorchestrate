@@ -1,0 +1,31 @@
+{
+  "name": "Retained review regression evidence",
+  "on": {
+    "pull_request": {
+      "types": [
+        "synchronize"
+      ]
+    }
+  },
+  "permissions": {
+    "contents": "read",
+    "actions": "read"
+  },
+  "jobs": {
+    "report": {
+      "if": "github.event.pull_request.number == 79",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 5,
+      "steps": [
+        {
+          "name": "Read exact retained assertion failures",
+          "env": {
+            "GH_TOKEN": "${{ github.token }}",
+            "GH_REPO": "xormania/xorchestrate"
+          },
+          "run": "python3 - <<'PY'\nimport hashlib\nimport io\nimport json\nimport subprocess\nimport zipfile\nfrom xml.etree import ElementTree\ncases = json.loads(\"[{\\\"pr\\\":76,\\\"artifact\\\":13909555948,\\\"run\\\":43139540796,\\\"head\\\":\\\"350ee53be06988add9b5a72908e073633161ba5d\\\",\\\"tested\\\":\\\"f90f1dbbaf9e7c41312ca3aeb59de0e8a6ebdcba\\\",\\\"test\\\":\\\"test_moved_module_declaration_keeps_its_exact_before_after_pair\\\",\\\"count\\\":3,\\\"witness\\\":\\\"MOVED_DECLARATION_BEFORE_SOURCE_RETAINED\\\"},{\\\"pr\\\":77,\\\"artifact\\\":13908369784,\\\"run\\\":43139561494,\\\"head\\\":\\\"04ba91c7ecd02ac4cdef5daec587f26ab75e6f85\\\",\\\"tested\\\":\\\"6b1543e405962b9cc579246b3f71d338f62ce5ef\\\",\\\"test\\\":\\\"test_advisory_execution_distinguishes_new_provider_usage_from_reused_history\\\",\\\"params\\\":[\\\"mixed_single\\\",\\\"mixed_batch\\\"],\\\"count\\\":2,\\\"witness\\\":\\\"MIXED_CACHE_ADVICE_REMAINS_VISIBLE\\\"},{\\\"pr\\\":78,\\\"artifact\\\":13909371357,\\\"run\\\":43139657849,\\\"head\\\":\\\"1e32b2e30a8b20baee2116d3f03d22398c256c00\\\",\\\"tested\\\":\\\"55dcbab83894ef65af52e2f028b99727100f94cb\\\",\\\"test\\\":\\\"test_same_family_subjects_resolve_distinct_observations_and_support\\\",\\\"count\\\":1,\\\"witness\\\":\\\"SUBJECT_OBSERVATION_IDS_ARE_UNIQUE\\\"},{\\\"pr\\\":79,\\\"artifact\\\":13908209372,\\\"run\\\":43139665992,\\\"head\\\":\\\"bb2e3f7af59499d05474d8098d8fea23494c8e62\\\",\\\"tested\\\":\\\"4ee3de70165f2ce7459a19da2c74daca5a5c5f7b\\\",\\\"test\\\":\\\"test_live_entrypoints_preserve_configured_support_question_limit\\\",\\\"count\\\":2,\\\"witness\\\":\\\"LIVE_SUPPORT_LIMIT_REACHES_ATOMIC_EVALUATOR\\\"}]\")\nfor expected in cases:\n    endpoint = f\"repos/xormania/xorchestrate/actions/artifacts/{expected['artifact']}\"\n    metadata = json.loads(subprocess.check_output([\"gh\", \"api\", endpoint]))\n    assert metadata[\"workflow_run\"][\"id\"] == expected[\"run\"]\n    assert metadata[\"workflow_run\"][\"head_sha\"] == expected[\"head\"]\n    archive = subprocess.check_output([\"gh\", \"api\", endpoint + \"/zip\"])\n    archive_sha256 = hashlib.sha256(archive).hexdigest()\n    if metadata.get(\"digest\"):\n        assert metadata[\"digest\"] == \"sha256:\" + archive_sha256\n    matched = {}\n    with zipfile.ZipFile(io.BytesIO(archive)) as bundle:\n        for path in bundle.namelist():\n            if not path.endswith(\".xml\"):\n                continue\n            for case in ElementTree.fromstring(bundle.read(path)).iter(\"testcase\"):\n                name = case.get(\"name\", \"\")\n                if not name.startswith(expected[\"test\"]):\n                    continue\n                if expected.get(\"params\") and not any(\"[\" + parameter + \"]\" in name for parameter in expected[\"params\"]):\n                    continue\n                failures = case.findall(\"failure\")\n                details = \"\\n\".join((failure.get(\"message\", \"\") + \"\\n\" + (failure.text or \"\")) for failure in failures)\n                item = {\"pr\": expected[\"pr\"], \"artifact\": expected[\"artifact\"],\n                        \"archive_sha256\": archive_sha256, \"run\": expected[\"run\"],\n                        \"head\": expected[\"head\"], \"tested\": expected[\"tested\"],\n                        \"test\": name, \"classname\": case.get(\"classname\"), \"xml\": path,\n                        \"failures\": len(failures), \"errors\": len(case.findall(\"error\")),\n                        \"witness_found\": expected[\"witness\"] in details, \"detail\": details[:6000]}\n                matched[name] = item\n    print(json.dumps({\"pr\": expected[\"pr\"], \"matches\": list(matched.values())}), flush=True)\n    assert len(matched) == expected[\"count\"], \"Expected exact regression population\"\n    assert all(item[\"failures\"] and not item[\"errors\"] and item[\"witness_found\"] for item in matched.values()), \"Expected assertion witness\"\nprint(\"ALL_EIGHT_REVIEW_REGRESSIONS_PROVED_RED\", flush=True)\nPY"
+        }
+      ]
+    }
+  }
+}
