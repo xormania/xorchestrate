@@ -63,4 +63,5 @@ def independent_guard(step):
 
 def always_running(job, *, needs):
     assert job.get("needs", []) == needs
-    assert "needs.paths" not in job.get("if", "")
+    assert "always()" in job.get("if", "")
+    assert "needs.paths.outputs.code" not in job.get("if", "")

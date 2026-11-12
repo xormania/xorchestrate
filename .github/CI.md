@@ -47,8 +47,11 @@ a local git tag and a source directory, and `uv tool run --from <wheel>`) and
 checks the `install_source` each reports, through both `xo` and `xorchestrate`.
 
 CI runs on GitHub-hosted Ubuntu. Pinned actions have read-only repository
-permissions. PR open/source/reopen/edit/readiness events receive candidate
-observations; eligible deterministic lanes may reuse exact qualified evidence.
+permissions. PR open/source/reopen and all edits receive candidate validation;
+eligible deterministic lanes may reuse exact qualified evidence. Static checks
+and both stable required verdicts run even for title/body edits, so the newest
+workflow run can satisfy branch protection. Marking a draft ready preserves its
+existing candidate checks without starting a new run.
 Pushes to master and manual runs execute full validation. See
 [PR lifecycle validation](../docs/pr-lifecycle-ci.md) for event handling, original
 evidence links and the `CI_REUSE_ENABLED=false` recovery switch. Selected jobs are:
@@ -96,11 +99,14 @@ launching dependent validation. Available evidence uploads even on failure.
 
 ### Documentation-only changes
 
-Only pull requests can omit fresh behavioral execution through the independently
-guarded documentation decision or qualified reuse. Pushes (including every push
+Validation runs can omit fresh behavioral execution through the independently
+guarded documentation decision or qualified reuse. Known obsolete source runs
+can also stop after proving a surviving replacement, without qualifying a pass.
+Pushes (including every push
 to `master`) and manual runs always run the full pipeline. Non-PR concurrency
-cancels older work on the same ref; PR concurrency preserves active validation
-and separates source/base candidates. A documentation-only master merge still
+cancels older work on the same ref; PR validation concurrency separates source
+head/base candidates and metadata has a separate group. A delayed older event
+cannot cancel a newer candidate's validation. A documentation-only master merge still
 receives full validation of the integrated tree.
 
 For a pull request, the `paths` job (Classify changed paths) checks out full
@@ -140,12 +146,14 @@ the documentation condition `!cancelled() && needs.paths.outputs.code != 'false'
 (the application aggregate also needs the shard matrix). The deterministic
 behavioral jobs additionally require `needs.paths.outputs.reuse != 'true'`;
 the advisory Jev job remains fresh for code-bearing candidates. An unavailable
-classifier or reuse planner cannot skip validation. On a documentation-only or
+classifier or reuse planner cannot skip validation. An explicit supersession
+decision can skip old static and behavioral lanes, but cannot qualify a pass.
+On a documentation-only or
 qualified-reuse PR the shards and application aggregate skip together. Otherwise
 the application aggregate uses `always()` and fails unless the whole matrix
 succeeded. The final `CI result` always authenticates the explicit applicability
 or reuse decision. Static checks wait for `paths` to receive the candidate context,
-use an always-running condition, and are never gated on either decision. The
+use an always-running condition, and are never gated on documentation or reuse. The
 `Hexagonal architecture` status always reports their result. The static suite backs
 the required status. It does not lint Markdown, so no documentation check is
 lost by skipping the other jobs.
@@ -232,7 +240,8 @@ effect, receipt or acceptance recording. See [the active guide](../docs/telemetr
 
 ## Aggregate result and reviewer summary
 
-`CI result` is an always-running final job. It requires successful path
+`CI result` is an always-running final job on all selected events, including
+metadata edits. It requires successful path
 classification, static checks, every application shard and its aggregate,
 calibration/multi-harness verification, tmux acceptance, and installed-package
 acceptance when that job is present, either executed now or independently
@@ -240,7 +249,7 @@ qualified from the same candidate. Jev remains advisory. Heavy jobs can skip for
 an explicit successful documentation-only decision, or an authenticated reuse
 plan whose original receipts are requalified. An absent decision, failed
 classifier, missing proof or cancellation cannot establish a pass. Static checks
-remain required on every selected run.
+remain required to qualify every selected validation run.
 
 The aggregate authenticates this run's original per-lane producers through
 GitHub jobs, attempts, artifact metadata, check association and immutable Git

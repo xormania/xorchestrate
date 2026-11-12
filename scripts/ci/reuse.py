@@ -1,4 +1,4 @@
-"""Exact-candidate behavioral reuse; unavailable proof always means execution.
+"""Exact-candidate reuse and bounded suppression of replaced source candidates.
 
 Candidate capture and bounded artifact retrieval are shared with the ordinary
 full-validation path. Prior receipts retain their original producer identity.
@@ -250,6 +250,58 @@ def observe_current(context, token):
             "observed_at": datetime.now(timezone.utc).isoformat()}
 
 
+def replacement_run(context, observation, token):
+    """Suppress an old source only when its current source has surviving CI work.
+
+    A base-only advance, missing observation or cancelled replacement does not
+    establish a surviving validation. Nothing here grants a successful verdict.
+    """
+    identity = observation.get("candidate", {})
+    if (observation.get("status") != "superseded" or identity.get("state") != "open"
+            or identity.get("head") == context["source_sha"]
+            or identity.get("number") != context["pr"]["number"]
+            or identity.get("head_ref") != context["pr"]["source_ref"]
+            or identity.get("source_repository") != context["source_repository"]
+            or not candidate._sha(identity.get("head"))):
+        return None
+    runs = _pages(context, token, "/actions/workflows/ci.yml/runs?event=pull_request&head_sha=" + identity["head"], "workflow_runs")
+    if len(runs) > MAX_RUNS:
+        return None
+    for run in sorted(runs, key=lambda row: row.get("id", 0), reverse=True):
+        if (type(run.get("id")) is not int or run["id"] <= context["producer"]["run_id"]
+                or run.get("event") != "pull_request" or run.get("path") != WORKFLOW
+                or run.get("head_sha") != identity["head"]):
+            continue
+        title_prefix = f"CI:pull_request:{{}}:{identity['number']}:{identity['head']}:"
+        if not any(str(run.get("display_title", "")).startswith(title_prefix.format(action))
+                   for action in ("opened", "synchronize", "reopened")):
+            continue
+        associations = run.get("pull_requests", [])
+        if not isinstance(associations, list) or not any(
+                isinstance(pr, dict) and pr.get("number") == identity["number"]
+                and pr.get("head", {}).get("sha") == identity["head"] for pr in associations):
+            continue
+        # Re-read status instead of trusting a listing which can predate cancellation.
+        actual = _get(context, token, f"/actions/runs/{run['id']}")
+        if (any(actual.get(key) != run.get(key) for key in ("id", "head_sha", "event", "path", "display_title"))
+                or type(actual.get("run_attempt")) is not int or actual["run_attempt"] < 1):
+            continue
+        active = actual.get("status") in {"queued", "in_progress", "waiting", "pending", "requested"}
+        finished = (actual.get("status") == "completed"
+                    and actual.get("conclusion") in {"success", "failure", "timed_out", "action_required"})
+        if not active and not finished:
+            continue
+        latest = observe_current(context, token)
+        source = _get({**context, "repository": context["source_repository"]}, token,
+                      "/git/ref/heads/" + quote(identity["head_ref"], safe="/"))
+        if (latest.get("candidate") != identity or source.get("ref") != "refs/heads/" + identity["head_ref"]
+                or source.get("object", {}).get("type") != "commit"
+                or source.get("object", {}).get("sha") != identity["head"]):
+            return None
+        return {key: actual.get(key) for key in ("id", "run_attempt", "head_sha", "status", "conclusion", "html_url")}
+    return None
+
+
 def _artifact(context, metadata, name, token, destination):
     matches = [row for row in metadata["artifacts"] if row.get("name") == name]
     if len(matches) != 1:
@@ -414,11 +466,14 @@ def prepare(context, workflow, token, env, directory, qualifier, *, enabled=True
             plan["reason"] = "full_validation_event"
             return plan, None
         observation = observe_current(context, token)
+        if observation["status"] != "current":
+            replacement = replacement_run(context, observation, token)
+            plan.update(reason="superseded_candidate", current_pr=observation)
+            if replacement is not None:
+                plan.update(decision="superseded", replacement_run=replacement)
+            return plan, None
         if not enabled:
             plan.update(reason="reuse_disabled", current_pr=observation)
-            return plan, None
-        if observation["status"] != "current":
-            plan.update(reason="superseded_candidate", current_pr=observation)
             return plan, None
         catalog = _read(Path.cwd() / "contracts/testing.json") if catalog is None else catalog
         runs = _pages(context, token, "/actions/workflows/ci.yml/runs?event=pull_request&head_sha=" + context["source_sha"], "workflow_runs")
@@ -443,6 +498,9 @@ def prepare(context, workflow, token, env, directory, qualifier, *, enabled=True
         plan["current_pr"] = observe_current(context, token)
         if plan["current_pr"]["status"] != "current":
             plan["reason"] = "superseded_candidate"
+            replacement = replacement_run(context, plan["current_pr"], token)
+            if replacement is not None:
+                plan.update(decision="superseded", replacement_run=replacement)
             return plan, None
         bundle = None
         if selected["decision"] == "reuse":
@@ -491,6 +549,7 @@ def main(argv=None):
     if args.github_output:
         with args.github_output.open("a") as stream:
             stream.write("reuse=" + str(plan["decision"] == "reuse").lower() + "\n")
+            stream.write("superseded=" + str(plan["decision"] == "superseded").lower() + "\n")
             stream.write("reuse_plan=" + json.dumps(plan, separators=(",", ":"), allow_nan=False) + "\n")
     return 0
 

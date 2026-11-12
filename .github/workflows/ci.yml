@@ -6,8 +6,7 @@
         "opened",
         "synchronize",
         "reopened",
-        "edited",
-        "ready_for_review"
+        "edited"
       ]
     },
     "push": {
@@ -21,8 +20,8 @@
     "contents": "read"
   },
   "concurrency": {
-    "group": "ci-${{ github.event_name == 'pull_request' && format('{0}-{1}-{2}-{3}', github.repository_id, github.event.pull_request.number, github.event.pull_request.head.sha, github.event.pull_request.base.sha) || github.ref }}",
-    "cancel-in-progress": "${{ github.event_name != 'pull_request' }}"
+    "group": "ci-${{ github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && format('metadata-{0}-{1}-{2}-{3}', github.repository_id, github.event.pull_request.number, github.event.pull_request.head.sha, github.event.pull_request.base.sha) || (github.event_name == 'pull_request' && format('pr-{0}-{1}-{2}-{3}', github.repository_id, github.event.pull_request.number, github.event.pull_request.head.sha, github.event.pull_request.base.sha) || github.ref) }}",
+    "cancel-in-progress": true
   },
   "jobs": {
     "paths": {
@@ -33,7 +32,8 @@
         "code": "${{ steps.guard.outputs.force == 'false' && steps.classify.outputs.code || 'true' }}",
         "context": "${{ steps.candidate.outputs.context }}",
         "reuse": "${{ steps.reuse.outputs.reuse || 'false' }}",
-        "reuse_plan": "${{ steps.reuse.outputs.reuse_plan }}"
+        "reuse_plan": "${{ steps.reuse.outputs.reuse_plan }}",
+        "superseded": "${{ steps.reuse.outputs.superseded || 'false' }}"
       },
       "steps": [
         {
@@ -123,7 +123,8 @@
         "actions": "read",
         "checks": "read",
         "pull-requests": "read"
-      }
+      },
+      "if": "${{ always() }}"
     },
     "changes": {
       "name": "Static checks",
@@ -196,7 +197,7 @@
       "env": {
         "CI_CANDIDATE_CONTEXT": "${{ needs.paths.outputs.context }}"
       },
-      "if": "${{ always() }}"
+      "if": "${{ always() && needs.paths.outputs.superseded != 'true' }}"
     },
     "application-tests": {
       "name": "Application tests shard ${{ matrix.shard }}/${{ matrix.shards }} (Python 3.12)",
@@ -205,7 +206,7 @@
       "needs": [
         "paths"
       ],
-      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' }}",
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' && needs.paths.outputs.superseded != 'true' }}",
       "strategy": {
         "fail-fast": false,
         "matrix": {
@@ -293,7 +294,7 @@
         "paths",
         "application-tests"
       ],
-      "if": "${{ always() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' }}",
+      "if": "${{ always() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' && needs.paths.outputs.superseded != 'true' }}",
       "steps": [
         {
           "name": "Require every tests shard",
@@ -309,7 +310,7 @@
       "needs": [
         "paths"
       ],
-      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' }}",
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' && needs.paths.outputs.superseded != 'true' }}",
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 15,
       "steps": [
@@ -404,7 +405,7 @@
       "needs": [
         "paths"
       ],
-      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' }}",
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' && needs.paths.outputs.superseded != 'true' }}",
       "steps": [
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
@@ -482,7 +483,7 @@
       "needs": [
         "changes"
       ],
-      "if": "always()",
+      "if": "${{ always() }}",
       "steps": [
         {
           "name": "Report shared static result",
@@ -503,7 +504,7 @@
       "needs": [
         "paths"
       ],
-      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' }}",
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' && !(github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body)) && needs.paths.outputs.superseded != 'true' }}",
       "steps": [
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
@@ -628,7 +629,7 @@
       "needs": [
         "paths"
       ],
-      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' }}",
+      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' && needs.paths.outputs.reuse != 'true' && needs.paths.outputs.superseded != 'true' }}",
       "steps": [
         {
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
