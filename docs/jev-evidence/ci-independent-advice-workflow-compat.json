@@ -294,5 +294,54 @@
     "command": "PYTHONPYCACHEPREFIX=/tmp/jev-pr84-wiring-suite /workspace/scratch/150dce018256/ci-jev-test-env/bin/python -m pytest -p no:cacheprovider tests/hexagonal/test_jev_efficiency.py tests/hexagonal/test_architecture_cli.py tests/hexagonal/test_architecture_effectiveness.py -k \"not test_required_architecture_status_reflects_the_shared_static_result\" -q",
     "result": "63 passed, 4 deselected in 1.60s",
     "exclusion_reason": "Four required-static-job display-name cases are independently fixed by PR1 commit f2c7e39 and will be validated after stack merge."
+  },
+  "runtime_path_initialization": {
+    "production_commit": "a5edbbd",
+    "scope": "Execute the initializer shell with a spaced RUNNER_TEMP; verify two isolated runtime paths, valid expression scope, and ordering before Python/uv consumers.",
+    "green": {
+      "command": "python -m pytest -p no:cacheprovider tests/hexagonal/test_ci_advice.py -q",
+      "passed": 34,
+      "failed": 0,
+      "files_sha256": {
+        ".github/workflows/jev.yml": "ec785ac08034af8e52cbcfda4a28113968b27f9fd4f3bbfc1210173244bc04bb",
+        "tests/hexagonal/test_ci_advice.py": "c4dea0094bddf24da5b63f00e36c1f536f57f5000aa73d294837370202265235"
+      }
+    },
+    "fault_witnesses": [
+      {
+        "name": "invalid_job_scope",
+        "mutation": {
+          "path": ".github/workflows/jev.yml",
+          "old": "\"steps\": [",
+          "new": "\"env\": {\"PYTHONPYCACHEPREFIX\": \"${{ runner.temp }}/jev-advice-pycache\", \"UV_PROJECT_ENVIRONMENT\": \"${{ runner.temp }}/jev-advice-python\"},\n      \"steps\": ["
+        },
+        "target": "tests.hexagonal.test_ci_advice::test_advice_runtime_paths_are_initialized_before_use_in_valid_context",
+        "expected_diagnostic": "ADVICE_JOB_ENV_CANNOT_USE_RUNNER_CONTEXT",
+        "classification": "detected",
+        "candidate_sha256": "e4d16722b59c770eb1dff3d1843131f783070acb227d88fbebbde792b95fa4d7",
+        "mutation_sha256": "2c97e22bc23062ee489f4d519402676601d16dbfdb7d9e10f7d5ec5803cfc3af",
+        "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+        "control_exit": 0,
+        "mutant_exit": 1
+      },
+      {
+        "name": "initialization_removed",
+        "mutation": {
+          "path": ".github/workflows/jev.yml",
+          "old": "\"printf '%s\\\\n' \\\"PYTHONPYCACHEPREFIX=$RUNNER_TEMP/jev-advice-pycache\\\" \\\"UV_PROJECT_ENVIRONMENT=$RUNNER_TEMP/jev-advice-python\\\" >> \\\"$GITHUB_ENV\\\"\"",
+          "new": "\":\""
+        },
+        "target": "tests.hexagonal.test_ci_advice::test_advice_runtime_paths_are_initialized_before_use_in_valid_context",
+        "expected_diagnostic": "ADVICE_RUNTIME_PATHS_REQUIRE_INITIALIZATION",
+        "classification": "detected",
+        "candidate_sha256": "e4d16722b59c770eb1dff3d1843131f783070acb227d88fbebbde792b95fa4d7",
+        "mutation_sha256": "cf2d79d60fcdf2021f4c6caa22c5282c11710259dfe45c28948111d4e40b67ac",
+        "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+        "control_exit": 0,
+        "mutant_exit": 1
+      }
+    ],
+    "reproduce": "python -m scripts.verification calibrate --candidate . --out <fresh-external-directory> --mutation <row-mutation.json> --selector tests/hexagonal/test_ci_advice.py::test_advice_runtime_paths_are_initialized_before_use_in_valid_context --target tests.hexagonal.test_ci_advice::test_advice_runtime_paths_are_initialized_before_use_in_valid_context --diagnostic <row-expected_diagnostic>",
+    "limitation": "Local shell execution and specific workflow scope regression; hosted GitHub workflow acceptance is verified by the PR run."
   }
 }

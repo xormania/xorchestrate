@@ -14,6 +14,10 @@ services retain their responsibilities.
 
 ## Execution and evidence
 
+The first runner step exports the Python bytecode cache and virtual environment
+paths under `$RUNNER_TEMP` through `$GITHUB_ENV`, before checking out or running
+code. Both directories remain outside the trusted and source checkouts.
+
 1. Check out the default branch into `trusted`, with no persisted Git credential.
    Record the actual trusted commit. This code and its locked dependencies are
    the only executable diagnostic implementation.

@@ -36,11 +36,11 @@
       "if": "(github.event_name == 'workflow_run' && github.event.workflow_run.head_repository.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch && inputs.calibration)",
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 10,
-      "env": {
-        "PYTHONPYCACHEPREFIX": "${{ runner.temp }}/jev-advice-pycache",
-        "UV_PROJECT_ENVIRONMENT": "${{ runner.temp }}/jev-advice-python"
-      },
       "steps": [
+        {
+          "name": "Initialize isolated runtime paths",
+          "run": "printf '%s\\n' \"PYTHONPYCACHEPREFIX=$RUNNER_TEMP/jev-advice-pycache\" \"UV_PROJECT_ENVIRONMENT=$RUNNER_TEMP/jev-advice-python\" >> \"$GITHUB_ENV\""
+        },
         {
           "name": "Checkout trusted default-branch advice",
           "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
