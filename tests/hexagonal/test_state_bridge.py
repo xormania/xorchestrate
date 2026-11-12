@@ -162,7 +162,7 @@ def test_returned_result_is_carried_outward_when_host_persistence_fails(tmp_path
         with pytest.raises(OrchestrationError) as rejected:
             request(host, peer, receipt, message={"value": 7})
         assert rejected.value.code == "completed_unapplied"
-        assert rejected.value.details == {"outcome": "completed", "result": {"accepted": {"value": 7}}, "cause": "OSError"}
+        assert rejected.value.details == {"outcome": "completed", "result": {"accepted": {"value": 7}}, "cause": "external_error"}
         with pytest.raises(OrchestrationError) as replay:
             request(host, peer, receipt, message={"value": 7})
         assert replay.value.details["outcome"] == "completed"

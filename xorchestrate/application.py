@@ -22,7 +22,16 @@ from .delivery import DeliveryMixin
 from .effects import EffectJournalMixin
 from .inspection import InspectionProjector
 from .lifecycles import DURABLE_LIFECYCLES, default_definitions
-from .model import JSON, Capability, Conflict, OrchestrationError, Record, canonical_digest, record_view
+from .model import (
+    JSON,
+    Capability,
+    Conflict,
+    OrchestrationError,
+    Record,
+    canonical_digest,
+    public_error_code,
+    record_view,
+)
 from .outcomes import before_effect
 from .ports import (
     AcceptancePolicy,
@@ -167,7 +176,7 @@ class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
                                 replay_only=replay_only, capture_context=scope)
         except BaseException as error:
             self.record_observation("application.failed", {"action": action, "arguments": arguments,
-                "error": {"type": type(error).__name__, "code": getattr(error, "code", None)}},
+                "error": {"type": type(error).__name__, "code": public_error_code(error, None)}},
                 self._capture_context(scope, arguments, actor))
             raise
         self.record_observation("application.completed", {"action": action, "arguments": arguments, "result": result},

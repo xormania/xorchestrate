@@ -1,6 +1,8 @@
+import ast
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
+from pathlib import Path
 
 import pytest
 
@@ -24,9 +26,9 @@ from tests.hexagonal.support.application import (
     invoke,
     resume_setup,
 )
-from tests.hexagonal.support.effect_errors import EffectErrors
+from tests.hexagonal.support.effect_errors import PRIVATE_ERROR_TYPE, EffectErrors
 from xorchestrate.adapters.policies import RuleGuardrail
-from xorchestrate.model import Assessment, Capability, Conflict, OrchestrationError, Verdict
+from xorchestrate.model import Assessment, Capability, Conflict, OrchestrationError, Verdict, public_error_code
 
 
 def test_work_lifecycle_has_free_form_roles_context_and_optimistic_updates(store):
@@ -846,3 +848,46 @@ def test_effect_error_sqlite_reopen_retains_safe_recoverable_diagnostic(tmp_path
         assert_private_absent(reopened.raw(operation_id))
         assert reopened.invoke()["error"]["code"] == "operation_unresolved"
         assert reopened.effect_calls == 0
+
+
+def _private_failure():
+    error = PRIVATE_ERROR_TYPE("PRIVATE_ERROR_MESSAGE")
+    error.code, error.details = "PRIVATE_ERROR_CODE", {"private": "PRIVATE_ERROR_DETAILS"}
+    return error
+
+
+@pytest.mark.parametrize("error,default,expected", [
+    (OrchestrationError("Public.", "remote_changed"), "external_error", "remote_changed"),
+    (Conflict(), None, "conflict"),
+    (_private_failure(), "external_error", "external_error"),
+    (_private_failure(), "evaluation_unavailable", "evaluation_unavailable"),
+    (_private_failure(), None, None),
+])
+def test_public_error_code_reports_only_typed_codes(error, default, expected):
+    assert public_error_code(error, default) == expected, "PUBLIC_ERROR_CODE_TYPED_ONLY"
+
+
+def test_public_error_code_replaces_malformed_typed_code():
+    error = OrchestrationError("Public.")
+    error.code = {"PRIVATE_ERROR_CODE": True}
+    assert public_error_code(error) == "external_error", "PUBLIC_ERROR_CODE_TYPED_ONLY"
+
+
+def _copied_error_attributes(source, origin="<sample>"):
+    """Calls that read an object's ``code`` or ``details`` by name instead of through public_error."""
+    return [f"{origin}:{node.lineno}" for node in ast.walk(ast.parse(source))
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "getattr"
+            and len(node.args) >= 2 and isinstance(node.args[1], ast.Constant) and node.args[1].value in {"code", "details"}]
+
+
+def test_error_attribute_scan_detects_copies_and_accepts_public_helpers():
+    assert _copied_error_attributes('code = getattr(error, "code", type(error).__name__)\n'), "control: copy detected"
+    assert _copied_error_attributes('details = getattr(exc, "details", {})\n'), "control: copy detected"
+    assert _copied_error_attributes('code = public_error_code(error)\nname = getattr(error, "name", None)\n') == []
+
+
+def test_only_public_error_helpers_read_exception_code_or_details():
+    package = Path(__file__).resolve().parents[2] / "xorchestrate"
+    copies = [hit for path in sorted(package.rglob("*.py")) if path.name != "model.py" or path.parent != package
+              for hit in _copied_error_attributes(path.read_text(encoding="utf-8"), path.relative_to(package.parent))]
+    assert copies == [], "PUBLIC_ERROR_ATTRIBUTE_COPIES"

@@ -11,7 +11,7 @@ from dataclasses import asdict
 from typing import Callable
 
 from .acceptance import assessment_input_binding, assessment_work_input
-from .model import JSON, Assessment, OrchestrationError, Record, public_error_message, record_view
+from .model import JSON, Assessment, OrchestrationError, Record, public_error_code, public_error_message, record_view
 from .ports import Evaluator, StateStore
 
 _UNCERTAIN_OUTCOMES = ["uncertain", "borderline", "review"]
@@ -72,7 +72,7 @@ class WorkAssessment:
                 evaluations.append({"evaluator": heavier, **asdict(assessment), "evidence": list(deepcopy(assessment.evidence))})
                 unresolved = self._unresolved(assessment, threshold)
             except Exception as error:
-                escalation_error = {"code": getattr(error, "code", "evaluation_unavailable"), "message": public_error_message(error)}
+                escalation_error = {"code": public_error_code(error, "evaluation_unavailable"), "message": public_error_message(error)}
         data = {"question": args["question"], "work_id": args.get("work_id"), "evaluations": evaluations,
                 "conclusion": deepcopy(evaluations[-1]), "unresolved": unresolved, "escalation_error": escalation_error}
         with self.store.transaction() as tx:

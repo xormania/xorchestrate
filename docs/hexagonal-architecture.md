@@ -363,6 +363,16 @@ known completion from being recorded as `completed_unapplied`. Only typed,
 JSON-valid completion metadata supplies an exception-carried external result;
 normal successful provider results keep their existing contract.
 
+The same rule applies to every retained record and observation that names a
+failure: delivery attempts, native-call settlement, acceptance measurements,
+assessment escalation, bridge host evidence, adapter settlement causes and
+telemetry. They take a failure's code from `public_error_code`, which returns a
+typed failure's code and otherwise the site's documented default
+(`external_error`, or a specific one such as `evaluation_unavailable`). An
+exception-carried delivery result is read only through the typed completion
+metadata above. A source check (`test_only_public_error_helpers_read_exception_code_or_details`)
+rejects reading `code` or `details` from an exception by name outside `model.py`.
+
 New journal diagnostic fields are versioned. Inspection, replay and reconciliation
 project unversioned historical diagnostics conservatively, reporting
 `legacy_error_retained` when a diagnostic was replaced. This projection does not

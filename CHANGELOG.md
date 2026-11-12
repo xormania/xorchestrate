@@ -69,6 +69,11 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   attributes and class names. Legacy diagnostics are projected conservatively
   without deleting stored history; malformed completion metadata preserves the
   known completion and its reconciliation requirement.
+- Delivery attempts, native-call settlement, acceptance measurements,
+  assessment escalation, bridge host evidence, adapter settlement causes and
+  telemetry no longer copy an arbitrary exception's `code` or `details`
+  attribute (or its class name, where that was the fallback). They record a
+  typed failure's code, or `external_error` / the site's existing default.
 
 ### Added
 
@@ -320,6 +325,11 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 - **Journal diagnostics:** existing operation diagnostics remain stored. Public
   projection hides unversioned diagnostic content; this is not a historical-data
   purge and needs no data-version migration.
+- **Failure codes in retained records:** for failures that are not typed
+  `OrchestrationError`s, new delivery-attempt, native-call, measurement and
+  bridge host records store `external_error` where they previously stored the
+  exception's `code` attribute or class name. Existing records are unchanged;
+  no migration.
 - **Adapter options and custom adapters:** None changed. Third-party adapters
   that import from `xorchestrate.ports` or `xorchestrate.model` keep working;
   new adapters should depend on `xcontracts>=0.1,<0.2` instead. `xcontracts`
