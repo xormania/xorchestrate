@@ -81,9 +81,14 @@ def public_error_code(error: BaseException, default: str | None = "external_erro
     An arbitrary exception's ``code`` attribute and class name are not public,
     so retained records and observations use the caller's documented default.
     """
-    code = public_error(error)["code"] if isinstance(error, OrchestrationError) else None
-    # public_error replaces a malformed typed code with its fallback; that is not this error's code.
-    return code if code is not None and code == getattr(error, "code", None) else default
+    if not isinstance(error, OrchestrationError):
+        return default
+    try:
+        code = error.code
+    except Exception:
+        return default
+    # public_error's fallback code would describe a malformed typed error, not this one.
+    return code if isinstance(code, str) and code else default
 
 
 def project_operation_errors(value: JSON) -> JSON:

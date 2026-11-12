@@ -363,15 +363,17 @@ known completion from being recorded as `completed_unapplied`. Only typed,
 JSON-valid completion metadata supplies an exception-carried external result;
 normal successful provider results keep their existing contract.
 
-The same rule applies to every retained record and observation that names a
-failure: delivery attempts, native-call settlement, acceptance measurements,
-assessment escalation, bridge host evidence, adapter settlement causes and
-telemetry. They take a failure's code from `public_error_code`, which returns a
-typed failure's code and otherwise the site's documented default
-(`external_error`, or a specific one such as `evaluation_unavailable`). An
-exception-carried delivery result is read only through the typed completion
-metadata above. A source check (`test_only_public_error_helpers_read_exception_code_or_details`)
-rejects reading `code` or `details` from an exception by name outside `model.py`.
+Delivery attempts, native-call settlement, acceptance measurements, assessment
+escalation, bridge host settlement, Claude/Codex/Grok settlement causes and the
+evaluator, subprocess and capture telemetry take a failure's code from
+`public_error_code`: a typed failure's code, otherwise the site's documented
+default (`external_error`, or a specific one such as `evaluation_unavailable`).
+Native delivery reads an exception-carried result only through the typed
+completion metadata above. A source check
+(`test_only_public_error_helpers_read_exception_code_or_details`) rejects
+`getattr(..., "code")` and `getattr(..., "details")` calls outside `model.py`; it
+does not cover other spellings. Some records still name an exception's class
+(for example ACP native observations and `application.failed` telemetry).
 
 New journal diagnostic fields are versioned. Inspection, replay and reconciliation
 project unversioned historical diagnostics conservatively, reporting

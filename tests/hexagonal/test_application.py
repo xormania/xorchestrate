@@ -891,3 +891,16 @@ def test_only_public_error_helpers_read_exception_code_or_details():
     copies = [hit for path in sorted(package.rglob("*.py")) if path.name != "model.py" or path.parent != package
               for hit in _copied_error_attributes(path.read_text(encoding="utf-8"), path.relative_to(package.parent))]
     assert copies == [], "PUBLIC_ERROR_ATTRIBUTE_COPIES"
+
+
+def test_public_error_code_survives_a_failing_typed_code():
+    class UnreadableCode(OrchestrationError):
+        @property
+        def code(self):
+            raise PRIVATE_ERROR_TYPE("PRIVATE_ERROR_MESSAGE")
+
+        @code.setter
+        def code(self, value):
+            pass
+
+    assert public_error_code(UnreadableCode("Public."), "evaluation_unavailable") == "evaluation_unavailable"
