@@ -109,7 +109,7 @@ def _diagnostic_assessments(values):
 
 def _diagnostic_execution(value):
     if (not isinstance(value, dict) or value.get("mode") not in {"single", "batch"}
-            or value.get("cache_status") not in {"disabled", "miss", "unusable", "hit", "write_unavailable"}
+            or value.get("cache_status") not in {"disabled", "miss", "unusable", "hit", "mixed", "write_unavailable"}
             or not _sha(value.get("request_sha256"))
             or any(type(value.get(key)) is not int or value[key] < 0
                    for key in ("provider_calls", "reused_assessments"))):

@@ -9,15 +9,14 @@ from __future__ import annotations
 import hashlib
 import json
 import subprocess
-from collections import Counter
 from dataclasses import asdict
 from pathlib import Path
 
 from xorchestrate.adapters.evaluation import TypeSafeEvaluator
 from xorchestrate.model import OrchestrationError
 
-from .cache import run_tasks
 from .context import build_context
+from .requests import BUDGET_OPTIONS, RequestBudget, provider_context, run_budgeted_tasks
 
 CHECKS = {
     "semantic_boundaries": (
@@ -44,7 +43,7 @@ CRITERIA = {
     "insufficient_evidence": "The supplied evidence cannot establish an answer to this question.",
 }
 _CONTEXT_OPTIONS = {"max_source_bytes", "max_files", "source_paths", "checks", "max_candidates", "changed_ranges", "base_ref",
-                    "cache_dir", "batch", "cache_ttl_seconds", "role_priorities"}
+                    "cache_dir", "batch", "cache_ttl_seconds", "role_priorities"} | BUDGET_OPTIONS
 
 
 def _json_bytes(value: object) -> bytes:
@@ -88,6 +87,8 @@ def _configuration(options: dict) -> tuple[dict, dict, list[str]]:
             or len(set(role_priorities)) != len(role_priorities)):
         raise ValueError("role_priorities must be a list of distinct role names.")
     transport = {key: value for key, value in options.items() if key not in _CONTEXT_OPTIONS}
+    RequestBudget({key: options[key] for key in BUDGET_OPTIONS if key in options})
+    transport.setdefault("max_retries", 2)
     transport["criteria"] = CRITERIA
     selection = {"max_source_bytes": max_source_bytes, "max_files": max_files, "source_paths": paths,
                  "changed_ranges": ranges, "base_ref": base_ref, "max_candidates": max_candidates,
@@ -126,15 +127,8 @@ def evaluation_tasks(context: dict, checks=None) -> list[dict]:
 
 
 def _provider_context(context):
-    """Keep full evidence but summarize bookkeeping ledgers in the model packet."""
-    scope = dict(context["source_scope"])
-    for name in ("omitted", "excluded"):
-        ledger = scope.pop(name, [])
-        scope[name + "_count"] = len(ledger)
-        scope[name + "_sha256"] = hashlib.sha256(_json_bytes(ledger)).hexdigest()
-        if name == "excluded":
-            scope["excluded_reasons"] = dict(Counter(item["reason"] for item in ledger))
-    return {**context, "source_scope": scope}
+    """Keep full report provenance outside the focused, reusable model state."""
+    return provider_context(context)
 
 def diagnose(report: dict, root: Path, options: dict | None = None) -> dict:
     """Return Jev diagnostics without changing the deterministic report.
@@ -150,7 +144,7 @@ def diagnose(report: dict, root: Path, options: dict | None = None) -> dict:
     try:
         transport, selection, checks = _configuration(options)
         evaluator = TypeSafeEvaluator(transport)
-    except (ValueError, TypeError, OrchestrationError):
+    except (ValueError, TypeError, OverflowError, OrchestrationError):
         return {**base, "status": "error", "reason": "invalid_configuration"}
     try:
         context = build_context(report, root, **selection)
@@ -160,6 +154,7 @@ def diagnose(report: dict, root: Path, options: dict | None = None) -> dict:
         evaluator.close()
         return {**base, "status": "inconclusive", "reason": "source_evidence_unavailable_or_changed"}
     scope = context["source_scope"]
+    base["missing_inputs"] = context.get("missing_inputs", [])
     context = _provider_context(context)
     base.update({"context_sha256": hashlib.sha256(_json_bytes(context)).hexdigest(),
                  "source_scope": scope, "model": transport["model"],
@@ -169,9 +164,10 @@ def diagnose(report: dict, root: Path, options: dict | None = None) -> dict:
         evaluator.close()
         return {**base, "status": "inconclusive", "reason": "no_complete_candidate"}
     try:
-        assessments, execution = run_tasks(evaluator, tasks, context, cache_dir=options.get("cache_dir"),
-                                           batch=options.get("batch", False),
-                                           cache_ttl_seconds=options.get("cache_ttl_seconds", 86400))
+        assessments, execution = run_budgeted_tasks(
+            evaluator, tasks, context, cache_dir=options.get("cache_dir"), batch=options.get("batch", False),
+            cache_ttl_seconds=options.get("cache_ttl_seconds", 86400),
+            request_limits={key: options[key] for key in BUDGET_OPTIONS if key in options})
         base["execution"] = execution
         for task, assessment in zip(tasks, assessments):
             base["assessments"].append({**task,
@@ -181,9 +177,19 @@ def diagnose(report: dict, root: Path, options: dict | None = None) -> dict:
         status = error.details.get("status")
         if type(status) is int and 100 <= status <= 599:
             base["provider_status"] = status
+        for name in ("provider_code", "request_id", "cause"):
+            if name in error.details:
+                base[name] = error.details[name]
         if isinstance(error.details.get("execution"), dict):
             base["execution"] = error.details["execution"]
-        for task, completed in zip(tasks, error.details.get("completed_assessments", [])):
+        completed_by_id = error.details.get("completed_task_assessments")
+        if completed_by_id is None:
+            completed_by_id = {task["task_id"]: completed for task, completed in zip(
+                tasks, error.details.get("completed_assessments", []))}
+        for task in tasks:
+            if task["task_id"] not in completed_by_id:
+                continue
+            completed = completed_by_id[task["task_id"]]
             base["assessments"].append({**task, **completed,
                                         "evidence_scope": scope["selected"]})
         return {**base, "status": "unavailable" if error.code == "evaluation_unavailable" else "error",
