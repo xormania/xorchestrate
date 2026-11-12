@@ -13,7 +13,7 @@ import uuid
 from collections import deque
 from copy import deepcopy
 
-from ..model import OrchestrationError
+from ..model import OrchestrationError, public_error_code
 from ..outcomes import before_effect, effect_outcome
 from .acp import ACPSessionDriver
 from .native_calls import NativeCallLedger, call_fingerprint
@@ -253,7 +253,7 @@ class GrokSessionDriver(ACPSessionDriver, ApplicationToolDriver):
                 live.grok["mcp_requests"].succeed(request_key)
         except Exception as error:
             raise OrchestrationError("Callback completed but local settlement was refused.", "operation_unresolved",
-                {"outcome": "completed", "result": deepcopy(result), "cause": getattr(error, "code", type(error).__name__)}) from error
+                {"outcome": "completed", "result": deepcopy(result), "cause": public_error_code(error)}) from error
         return result
 
     def _launch(self, specification, resume):

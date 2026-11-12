@@ -1,0 +1,392 @@
+{
+  "schema_version": 1,
+  "purpose": "Independent assertion detection for source/evidence binding and advisory interpretation.",
+  "original_cases": 18,
+  "deliberate_faults": 12,
+  "distinct_fault_detecting_cases": 18,
+  "calibration_method": "Existing test-kit RecordingRunner plus JUnit case/failure records; each source fault is applied only in a disposable snapshot. One full healthy run covers each target; the dirty-checkout supplement has its own healthy control. Fresh external bytecode caches are used per invocation.",
+  "faults": [
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_post_test_triage::test_failed_execution_and_current_binding_reach_advisory_atomic_questions": "AssertionError: POST_TEST_ADVICE_REMAINS_ADVISORY"
+      },
+      "fault": "advisory_flag_removed",
+      "fault_exit": 1,
+      "file": "scripts/architecture/triage.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "0c3251c0d94c1eb84e2fe0c2873c814a3b13ba207ff4bd9849e07aeab9b3a4ef",
+      "original_sha256": "a743a9768f46a8df917335b960494065aa1e223784b356ec03604bbaf087b24d",
+      "selector": "test_failed_execution_and_current_binding",
+      "patch": "--- scripts/architecture/triage.py\n\n+++ scripts/architecture/triage.py\n\n@@ -222,5 +222,5 @@\n\n     \"\"\"Read authenticated executed lanes; retain missing evidence as uncertainty.\"\"\"\n     root, artifacts = Path(root).resolve(), Path(artifacts)\n-    base = {\"schema_version\": 1, \"stage\": \"post_test\", \"advisory\": True, \"status\": \"inconclusive\",\n+    base = {\"schema_version\": 1, \"stage\": \"post_test\", \"advisory\": False, \"status\": \"inconclusive\",\n             \"assessments\": [], \"execution\": [], \"evidence\": [], \"missing_evidence\": [],\n             \"deterministic_status\": result.get(\"status\")}"
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_post_test_triage::test_foreign_candidate_observations_stop_before_provider[captured_context]": "AssertionError: UNBOUND_TRIAGE_STAYS_INCONCLUSIVE",
+        "tests.hexagonal.test_jev_post_test_triage::test_foreign_candidate_observations_stop_before_provider[result_head]": "AssertionError: UNBOUND_TRIAGE_STAYS_INCONCLUSIVE"
+      },
+      "fault": "candidate_identity_ignored",
+      "fault_exit": 1,
+      "file": "scripts/architecture/triage.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "93d270216142bc003034210d84f4500be064032ae0362c5287410716ad0dd16a",
+      "original_sha256": "a743a9768f46a8df917335b960494065aa1e223784b356ec03604bbaf087b24d",
+      "selector": "test_foreign_candidate and not metadata_head",
+      "patch": "--- scripts/architecture/triage.py\n\n+++ scripts/architecture/triage.py\n\n@@ -232,13 +232,5 @@\n\n             raise ValueError(\"Invalid triage configuration\")\n         context = candidate.validate_context(result[\"candidate_context\"])\n-        if (result.get(\"schema_version\") != 2 or result.get(\"tested_sha\") != context[\"checkout\"][\"commit\"]\n-                or result.get(\"source_sha\") != context[\"source_sha\"]\n-                or candidate._git(root, \"rev-parse\", \"HEAD\") != context[\"checkout\"][\"commit\"]\n-                or candidate._git(root, \"rev-parse\", \"HEAD^{tree}\") != context[\"checkout\"][\"tree\"]\n-                or candidate._git(root, \"status\", \"--porcelain=v1\", \"--untracked-files=all\") != \"\"\n-                or candidate._inputs(root) != context[\"inputs\"]\n-                or _read(root / \"contracts/testing.json\") != catalog\n-                or _read(root / \".github/workflows/ci.yml\") != workflow\n-                or _read(artifacts / f\"candidate-context--attempt-{context['producer']['run_attempt']}\" / \"context.json\") != context):\n+        if (False):\n             raise ValueError(\"Candidate evidence is not current\")\n         # Validate the complete run association even when it has no usable lanes."
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_post_test_triage::test_foreign_candidate_observations_stop_before_provider[metadata_head]": "AssertionError: UNBOUND_TRIAGE_STAYS_INCONCLUSIVE"
+      },
+      "fault": "foreign_metadata_repaired",
+      "fault_exit": 1,
+      "file": "scripts/architecture/triage.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "e0f66cd8fecdc01aee7a4f1ef8b999c5bea06945e778edf77f5a1b4cc1a5952c",
+      "original_sha256": "a743a9768f46a8df917335b960494065aa1e223784b356ec03604bbaf087b24d",
+      "selector": "test_foreign_candidate and metadata_head",
+      "patch": "--- scripts/architecture/triage.py\n\n+++ scripts/architecture/triage.py\n\n@@ -243,4 +243,5 @@\n\n             raise ValueError(\"Candidate evidence is not current\")\n         # Validate the complete run association even when it has no usable lanes.\n+        metadata = {**metadata, \"run\": {**metadata[\"run\"], \"head_sha\": context[\"source_sha\"]}}\n         candidate.qualify_lineage(context, {}, metadata, {}, allow_failed=True)\n         base[\"candidate\"] = {\"source_sha\": context[\"source_sha\"], \"tested_sha\": context[\"checkout\"][\"commit\"],"
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_post_test_triage::test_one_unqualified_lane_does_not_erase_other_current_failures[foreign_healthy_manifest]": "AssertionError: CURRENT_PARTIAL_LANES_REMAIN_USABLE\nassert ('inconclusive' == 'complete'\n  \n  - complete\n  + inconclusive)",
+        "tests.hexagonal.test_jev_post_test_triage::test_one_unqualified_lane_does_not_erase_other_current_failures[missing_healthy_lane]": "AssertionError: CURRENT_PARTIAL_LANES_REMAIN_USABLE\nassert ('inconclusive' == 'complete'\n  \n  - complete\n  + inconclusive)"
+      },
+      "fault": "partial_lanes_discarded",
+      "fault_exit": 1,
+      "file": "scripts/architecture/triage.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "6be9543b58b67c096988416be6523a6aa2cc06adbf6830695e8f44b169b5b908",
+      "original_sha256": "a743a9768f46a8df917335b960494065aa1e223784b356ec03604bbaf087b24d",
+      "selector": "test_one_unqualified_lane",
+      "patch": "--- scripts/architecture/triage.py\n\n+++ scripts/architecture/triage.py\n\n@@ -262,4 +262,6 @@\n\n             except (OSError, ValueError, TypeError, KeyError, ElementTree.ParseError):\n                 base[\"missing_evidence\"].append({\"lane\": lane, \"reason\": \"unqualified_or_missing_lane\"})\n+        if base[\"missing_evidence\"]:\n+            return base\n         changed = {span[\"path\"] for span in changed_lines(root, context.get(\"tested_base_sha\") or \"HEAD^\")}\n         related = {path for path in {row[\"path\"] for row in rows} if _touches(root, path, changed)}"
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_post_test_triage::test_failure_regression_requires_its_own_executed_assertion_detail[different_case]": "AssertionError: FAILURE_DETAIL_MUST_MATCH_CASE\nassert ([{'subject_id': 'tests/hexagonal/test_work.py', 'check_id': 'failure_regression', 'claim': 'At least one supplied asse...37', 'source:9b1258798444fe4b5ff290a0', 'source:d4997870488a76732ce8a419', 'contract:work', 'observations:work'], ...}] and False)\n +  where False = all(<generator object test_failure_regression_requires_its_own_executed_assertion_detail.<locals>.<genexpr> at 0x7f621a0d0e10>)",
+        "tests.hexagonal.test_jev_post_test_triage::test_failure_regression_requires_its_own_executed_assertion_detail[missing_junit]": "AssertionError: FAILURE_DETAIL_MUST_MATCH_CASE\nassert ([{'subject_id': 'tests/hexagonal/test_work.py', 'check_id': 'failure_regression', 'claim': 'At least one supplied asse...37', 'source:9b1258798444fe4b5ff290a0', 'source:d4997870488a76732ce8a419', 'contract:work', 'observations:work'], ...}] and False)\n +  where False = all(<generator object test_failure_regression_requires_its_own_executed_assertion_detail.<locals>.<genexpr> at 0x7f621a203e00>)"
+      },
+      "fault": "failure_detail_optional",
+      "fault_exit": 1,
+      "file": "scripts/architecture/triage.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "88098dfcf5d7ef9ef57a57afca776fe65600a1388f14d12cb9b4566cec22632b",
+      "original_sha256": "a743a9768f46a8df917335b960494065aa1e223784b356ec03604bbaf087b24d",
+      "selector": "test_failure_regression_requires",
+      "patch": "--- scripts/architecture/triage.py\n\n+++ scripts/architecture/triage.py\n\n@@ -295,5 +295,5 @@\n\n                     \"evidence\": evidence, \"required_evidence\": [\"contract\", \"test_source\", \"binding_source\", \"test_observation\"]\n                     + ([] if executed else [\"executed_test\"])\n-                    + ([\"failure_detail\"] if check == \"failure_regression\" else []), \"limitations\": omitted})\n+                    + [], \"limitations\": omitted})\n         base[\"unselected_modules\"] = modules[maximum:]\n         if not subjects:"
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_post_test_triage::test_unexecuted_case_cannot_turn_a_lane_failure_into_a_behavioral_defect": "AssertionError: UNRUN_CASE_IS_NOT_A_REGRESSION\nassert not True\n +  where True = any(<generator object test_unexecuted_case_cannot_turn_a_lane_failure_into_a_behavioral_defect.<locals>.<genexpr> at 0x7fbe15603b90>)"
+      },
+      "fault": "unrun_treated_as_failed",
+      "fault_exit": 1,
+      "file": "scripts/architecture/triage.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "d3423eed037ef454bf0e84ebdfed5dbe5f2bd7cb3504ccd0597fd1bc502312f4",
+      "original_sha256": "a743a9768f46a8df917335b960494065aa1e223784b356ec03604bbaf087b24d",
+      "selector": "test_unexecuted_case",
+      "patch": "--- scripts/architecture/triage.py\n\n+++ scripts/architecture/triage.py\n\n@@ -264,6 +264,6 @@\n\n         changed = {span[\"path\"] for span in changed_lines(root, context.get(\"tested_base_sha\") or \"HEAD^\")}\n         related = {path for path in {row[\"path\"] for row in rows} if _touches(root, path, changed)}\n-        modules = sorted({row[\"path\"] for row in rows if row[\"outcome\"] == \"failed\" or row[\"path\"] in related},\n-                         key=lambda path: (not any(row[\"path\"] == path and row[\"outcome\"] == \"failed\" for row in rows), path))\n+        modules = sorted({row[\"path\"] for row in rows if row[\"outcome\"] in {\"failed\", \"not_run\"} or row[\"path\"] in related},\n+                         key=lambda path: (not any(row[\"path\"] == path and row[\"outcome\"] in {\"failed\", \"not_run\"} for row in rows), path))\n         subjects = []\n         for module in modules[:maximum]:\n@@ -280,7 +280,7 @@\n\n                             for row in cases]\n             failure_details = [{\"case_id\": row[\"id\"], \"failures\": row[\"failures\"], \"reference\": row[\"reference\"]}\n-                               for row in cases if row[\"outcome\"] == \"failed\" and row[\"failures\"]]\n+                               for row in cases if row[\"outcome\"] in {\"failed\", \"not_run\"} and row[\"failures\"]]\n             base[\"missing_evidence\"].extend({\"case_id\": row[\"id\"], \"reason\": \"matching_failure_detail_unavailable\"}\n-                                           for row in cases if row[\"outcome\"] == \"failed\" and not row[\"failures\"])\n+                                           for row in cases if row[\"outcome\"] in {\"failed\", \"not_run\"} and not row[\"failures\"])\n             if failure_details:\n                 evidence[\"failures:\" + module] = {\"kind\": \"failure_detail\", \"sha256\": digest(failure_details), \"content\": failure_details}\n@@ -290,5 +290,5 @@\n\n             executed = any(row[\"outcome\"] in {\"passed\", \"failed\"} for row in cases)\n             for check in checks:\n-                if check == \"failure_regression\" and not any(row[\"outcome\"] == \"failed\" for row in cases):\n+                if check == \"failure_regression\" and not any(row[\"outcome\"] in {\"failed\", \"not_run\"} for row in cases):\n                     continue\n                 subjects.append({\"subject_id\": module, \"check_id\": check, \"claim\": CHECKS[check],"
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_post_test_triage::test_source_budget_exposes_missing_binding_without_forced_concern": "AssertionError: assert ([{'subject_id': 'tests/hexagonal/test_work.py', 'check_id': 'guarantee_gap', 'claim': 'The supplied assertions check a...source:d4997870488a76732ce8a419', 'contract:work', 'failures:tests/hexagonal/test_work.py', 'observations:work'], ...}] and [])"
+      },
+      "fault": "source_budget_ignored",
+      "fault_exit": 1,
+      "file": "scripts/architecture/triage.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "d17889cc1f124c2b7195582dcea85b774f4815f32bbc1d4dc35a669540e4784d",
+      "original_sha256": "a743a9768f46a8df917335b960494065aa1e223784b356ec03604bbaf087b24d",
+      "selector": "test_source_budget",
+      "patch": "--- scripts/architecture/triage.py\n\n+++ scripts/architecture/triage.py\n\n@@ -84,5 +84,5 @@\n\n             content = \"\".join(lines[start - 1:node.end_lineno])\n             size = len(content.encode())\n-            if used + size > max_bytes:\n+            if False:\n                 omitted.append({\"path\": relative, \"symbol\": node.name, \"reason\": \"source_budget\"})\n                 continue"
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_post_test_triage::test_unbound_inventory_is_excluded_even_when_the_lane_and_candidate_match[changed_bytes]": "assert False\n +  where False = any(<generator object test_unbound_inventory_is_excluded_even_when_the_lane_and_candidate_match.<locals>.<genexpr> at 0x7f1bd714fe00>)",
+        "tests.hexagonal.test_jev_post_test_triage::test_unbound_inventory_is_excluded_even_when_the_lane_and_candidate_match[duplicate_report]": "AssertionError: INVENTORY_BYTES_MUST_BE_QUALIFIED\nassert not True\n +  where True = any(<generator object test_unbound_inventory_is_excluded_even_when_the_lane_and_candidate_match.<locals>.<genexpr> at 0x7f1bd6e5fc60>)",
+        "tests.hexagonal.test_jev_post_test_triage::test_unbound_inventory_is_excluded_even_when_the_lane_and_candidate_match[swapped_shard]": "AssertionError: INVENTORY_BYTES_MUST_BE_QUALIFIED\nassert not True\n +  where True = any(<generator object test_unbound_inventory_is_excluded_even_when_the_lane_and_candidate_match.<locals>.<genexpr> at 0x7f1bd6e65a40>)",
+        "tests.hexagonal.test_jev_post_test_triage::test_unbound_inventory_is_excluded_even_when_the_lane_and_candidate_match[wrong_count]": "AssertionError: INVENTORY_BYTES_MUST_BE_QUALIFIED\nassert not True\n +  where True = any(<generator object test_unbound_inventory_is_excluded_even_when_the_lane_and_candidate_match.<locals>.<genexpr> at 0x7f1bd6e66670>)"
+      },
+      "fault": "inventory_validation_removed",
+      "fault_exit": 1,
+      "file": "scripts/architecture/triage.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "b0400f1a590f46eb2bb979b0c7e6ad925a19566960d15eb63234d0862b9d5612",
+      "original_sha256": "a743a9768f46a8df917335b960494065aa1e223784b356ec03604bbaf087b24d",
+      "selector": "test_unbound_inventory",
+      "patch": "--- scripts/architecture/triage.py\n\n+++ scripts/architecture/triage.py\n\n@@ -172,5 +172,5 @@\n\n     reports = [(path, report) for path, report in reports if report.get(\"suite\") == \"tests\"]\n     if len(reports) != 1:\n-        raise ValueError(\"Expected one test report per lane\")\n+        pass\n     index, total = map(int, lane.rsplit(\"shard-\", 1)[1].split(\"-of-\"))\n     for path, report in reports:\n@@ -180,13 +180,13 @@\n\n         if (identity.get(\"commit\") != context[\"checkout\"][\"commit\"] or identity.get(\"tree\") != context[\"checkout\"][\"tree\"]\n                 or identity.get(\"status\") != \"\" or report.get(\"status\") not in {\"passed\", \"failed\"}):\n-            raise ValueError(\"Foreign or unexecuted test evidence\")\n+            pass\n         inventory_path = path.parent / \"inventory.json\"\n         inventory = _read(inventory_path)\n         if (inventory.get(\"schema_version\") != 1 or inventory.get(\"catalog_id\") != catalog[\"id\"]\n                 or inventory.get(\"catalog_sha256\") != catalog_hash):\n-            raise ValueError(\"Foreign test inventory\")\n+            pass\n         checks = [check for check in report.get(\"checks\", []) if check.get(\"name\") == \"tests\"]\n         if len(checks) != 1 or checks[0].get(\"tool_report\", {}).get(\"sha256\") != hashlib.sha256(inventory_path.read_bytes()).hexdigest():\n-            raise ValueError(\"Unbound test inventory\")\n+            pass\n         selected = [case for case in inventory.get(\"cases\", []) if case.get(\"selected\") is True]\n         ids = [case.get(\"id\") for case in selected]\n@@ -195,5 +195,5 @@\n\n                 or not isinstance(shard.get(\"modules\"), list) or len(shard[\"modules\"]) != len(set(shard[\"modules\"]))\n                 or set(shard[\"modules\"]) != {case.get(\"path\") for case in selected}):\n-            raise ValueError(\"Test inventory does not belong to this shard\")\n+            pass\n         failed = any(case.get(\"outcome\") == \"failed\" for case in selected)\n         passed = report[\"status\"] == \"passed\"\n@@ -204,5 +204,5 @@\n\n                 or (passed and (inventory[\"exit_status\"] != 0 or failed or any(case.get(\"outcome\") == \"not_run\" for case in selected)))\n                 or (not passed and inventory[\"exit_status\"] == 0)):\n-            raise ValueError(\"Contradictory inventory execution\")\n+            pass\n         for case in selected:\n             if case.get(\"selected\") is not True:\n@@ -212,5 +212,5 @@\n\n                     or case.get(\"outcome\") not in {\"passed\", \"failed\", \"skipped\", \"not_run\"}\n                     or not case[\"id\"].startswith(case[\"path\"] + \"::\")):\n-                raise ValueError(\"Unclassified or contradictory test case\")\n+                pass\n             rows.append({**case, \"report_sha256\": hashlib.sha256(path.read_bytes()).hexdigest(),\n                          \"inventory_sha256\": hashlib.sha256(inventory_path.read_bytes()).hexdigest(),"
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_post_test_triage::test_source_stage_opt_in_asks_bound_atomic_questions_before_test_evidence": "AssertionError: SOURCE_CI_SELECTS_ATOMIC_PATH\nassert False is True\n +  where False = <built-in method get of dict object at 0x7fdbb3df54c0>('source_atomic')\n +    where <built-in method get of dict object at 0x7fdbb3df54c0> = {'endpoint': 'https://api.typesafe.ai/v1/systemone', 'model': 'jev-1.14.0', 'credential_env': 'TYPESAFE_API_KEY', 'timeout': 15, ...}.get"
+      },
+      "fault": "source_atomic_disabled",
+      "fault_exit": 1,
+      "file": "contracts/hexagonal-jev.json",
+      "healthy_exit": 0,
+      "mutant_sha256": "e97f75ec2dd7a7e1e4477b2b296fbf9178c79b86a95f49faad746419976490cb",
+      "original_sha256": "83cc545dc16c19e7f7370ee363ded002964d6171440f4c0b98785ad982e5b93a",
+      "selector": "test_source_stage_opt_in",
+      "patch": "--- contracts/hexagonal-jev.json\n\n+++ contracts/hexagonal-jev.json\n\n@@ -8,5 +8,5 @@\n\n   \"max_candidates\": 3,\n   \"batch\": true,\n-  \"source_atomic\": true,\n+  \"source_atomic\": false,\n   \"threshold\": 0.7,\n   \"post_test\": {"
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_post_test_triage::test_stdlib_summary_exposes_stage_evidence_and_uncertainty_without_html_execution": "assert ('<script>' not in '\\n## Jev po...</details>\\n'\n  \n  '<script>' is contained here:\n    tee_gap | <script>untrusted</script> &#124; claim | True | True | concern | source:71464303eb8c1d2fdbde7637, source:9b1258798444fe4b5ff290a0, source:d4997870488a76732ce8a419, contract:work, failures:tests/hexagonal/test_work.py, observations:work |\n  ?           ++++++++\n    \n    guarantee_gap / applicable: {\"insufficient_evidence\": 0, \"no\": 0, \"yes\": 1}.\n    ...\n  \n[+1 more line; full report in element text]"
+      },
+      "fault": "summary_html_not_escaped",
+      "fault_exit": 1,
+      "file": "scripts/ci/result.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "bb708ada0c5482fc2b4ebe3f80ec205df04cff4e9597a7b069d9d268e82d832a",
+      "original_sha256": "af577d0b0615ff6e427105917c4760aa668c29ea99da93f4ca3a1fdc67a05cd3",
+      "selector": "test_stdlib_summary",
+      "patch": "--- scripts/ci/result.py\n\n+++ scripts/ci/result.py\n\n@@ -154,5 +154,5 @@\n\n     \"\"\"Render supplied spans and typed advisory judgments; never alter a gate.\"\"\"\n     def text(value):\n-        return html.escape(str(value), quote=True).replace(\"|\", \"&#124;\").replace(\"\\n\", \" \").replace(\"`\", \"&#96;\")\n+        return str(value).replace(\"|\", \"&#124;\").replace(\"\\n\", \" \").replace(\"`\", \"&#96;\")\n     rows = [\"\", \"## Jev \" + text(report.get(\"stage\", \"post_test\")) + \" advisory\", \"\",\n             \"Status: **\" + text(report.get(\"status\", \"inconclusive\")) + \"**. Deterministic result: **\""
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_post_test_triage::test_post_failure_ci_triage_remains_optional_and_retains_its_evidence": "assert (False is True)\n +  where False = <built-in method get of dict object at 0x7fc477c51d00>('continue-on-error')\n +    where <built-in method get of dict object at 0x7fc477c51d00> = {'name': 'Jev candidate-bound test evidence triage', 'id': 'triage', 'if': \"!cancelled() && needs.paths.outputs.code =...' && steps.uv.outcome == 'success' && steps.triage-dependencies.outcome == 'success'\", 'continue-on-error': False, ...}.get"
+      },
+      "fault": "triage_became_blocking",
+      "fault_exit": 1,
+      "file": ".github/workflows/ci.yml",
+      "healthy_exit": 0,
+      "mutant_sha256": "d7a22ad79f773514d69db9330694653a1c31233253cb96cea5d0a218e469860d",
+      "original_sha256": "ea8ea127bbbf6eab09e45958c487fc3b5f0f7a82a7953a6612e8b8ec16c2aa63",
+      "selector": "test_post_failure_ci_triage",
+      "patch": "--- .github/workflows/ci.yml\n\n+++ .github/workflows/ci.yml\n\n@@ -728,5 +728,5 @@\n\n           \"id\": \"triage\",\n           \"if\": \"!cancelled() && needs.paths.outputs.code == 'true' && needs.paths.outputs.reuse != 'true' && steps.checkout.outcome == 'success' && steps.python.outcome == 'success' && steps.uv.outcome == 'success' && steps.triage-dependencies.outcome == 'success'\",\n-          \"continue-on-error\": true,\n+          \"continue-on-error\": false,\n           \"timeout-minutes\": 3,\n           \"env\": {"
+    },
+    {
+      "applied": true,
+      "failed_cases": {
+        "tests.hexagonal.test_jev_post_test_triage::test_foreign_candidate_observations_stop_before_provider[dirty_source]": "AssertionError: UNBOUND_TRIAGE_STAYS_INCONCLUSIVE"
+      },
+      "fault": "all_checkout_checks_ignored",
+      "fault_exit": 1,
+      "file": "scripts/architecture/triage.py",
+      "healthy_exit": 0,
+      "mutant_sha256": "1293be4b184888d2482b02b396e2409c707b4e198f457bd9fb27dcc1f3919a5e",
+      "original_sha256": "a743a9768f46a8df917335b960494065aa1e223784b356ec03604bbaf087b24d",
+      "selector": "test_foreign_candidate and dirty_source",
+      "patch": "--- scripts/architecture/triage.py\n\n+++ scripts/architecture/triage.py\n\n@@ -232,13 +232,5 @@\n\n             raise ValueError(\"Invalid triage configuration\")\n         context = candidate.validate_context(result[\"candidate_context\"])\n-        if (result.get(\"schema_version\") != 2 or result.get(\"tested_sha\") != context[\"checkout\"][\"commit\"]\n-                or result.get(\"source_sha\") != context[\"source_sha\"]\n-                or candidate._git(root, \"rev-parse\", \"HEAD\") != context[\"checkout\"][\"commit\"]\n-                or candidate._git(root, \"rev-parse\", \"HEAD^{tree}\") != context[\"checkout\"][\"tree\"]\n-                or candidate._git(root, \"status\", \"--porcelain=v1\", \"--untracked-files=all\") != \"\"\n-                or candidate._inputs(root) != context[\"inputs\"]\n-                or _read(root / \"contracts/testing.json\") != catalog\n-                or _read(root / \".github/workflows/ci.yml\") != workflow\n-                or _read(artifacts / f\"candidate-context--attempt-{context['producer']['run_attempt']}\" / \"context.json\") != context):\n+        if (False):\n             raise ValueError(\"Candidate evidence is not current\")\n         # Validate the complete run association even when it has no usable lanes.\n@@ -299,5 +291,5 @@\n\n         if not subjects:\n             return {**base, \"reason\": \"no_changed_or_failed_test_subject\"}\n-        if candidate._git(root, \"status\", \"--porcelain=v1\", \"--untracked-files=all\") != \"\":\n+        if False:\n             raise ValueError(\"Source changed while collecting evidence\")\n         base[\"assessments\"], base[\"execution\"] = evaluate_subjects(subjects, options, evaluator_factory=evaluator_factory)"
+    }
+  ],
+  "review_regressions": {
+    "cases": 8,
+    "red_failures": 8,
+    "red_errors": 0,
+    "source_before_revision": "a326f59",
+    "source_before_sha256": {
+      "scripts/architecture/atomic.py": "bd3aa1d04572fd166a2202ab9f09ce0fb027a8b98d565c635f6c16ff420c5a20",
+      "scripts/architecture/triage.py": "a743a9768f46a8df917335b960494065aa1e223784b356ec03604bbaf087b24d",
+      "scripts/ci/result.py": "af577d0b0615ff6e427105917c4760aa668c29ea99da93f4ca3a1fdc67a05cd3"
+    },
+    "interpretation": "Actual pre-repair working bytes, not missing APIs or setup failures. Caught product exceptions are converted to explicit assertion sentinels."
+  },
+  "green": {
+    "passed": 136,
+    "failed": 0,
+    "errors": 0,
+    "python": "3.12.16",
+    "modules": [
+      "tests/hexagonal/test_jev_post_test_triage.py",
+      "tests/hexagonal/test_ci_result.py"
+    ],
+    "source_sha256": {
+      "scripts/architecture/atomic.py": "2269caab9a84aab74c58dede0e80eb7388842ea89debce6af4eabc06f648b20a",
+      "scripts/architecture/triage.py": "cedb8db8393c1378e2673d18cf36088283f4d6554f0e42b1c98e6988f8ded8f4",
+      "scripts/ci/result.py": "fa40c7e28528781e2c902128a9c7b555dafc825e80a07b93c9039e0365414941"
+    },
+    "test_sha256": {
+      "tests/hexagonal/test_jev_post_test_triage.py": "3d5382cdfdff41f58d0a8f49efca8d2c0308f4c2d583d1a47769b2eb41aaf472",
+      "tests/hexagonal/test_ci_result.py": "b806ba2eab914018933433c2ce745fecbdf7aede874d4803ede3069f54b9d9c9"
+    },
+    "command": "python -m pytest -p no:cacheprovider tests/hexagonal/test_jev_post_test_triage.py tests/hexagonal/test_ci_result.py -q"
+  },
+  "limits": [
+    "Controlled provider answers verify composition and evidence rules, not live model accuracy.",
+    "Operational witness JSON records supplied dispositions; it does not attest remote execution.",
+    "No paid provider calls are included in this evidence."
+  ],
+  "excluded_smoke_attempts": "Two initial smoke runs found missing temporary upstream requests/evaluation dependencies. They were setup failures and are not red evidence.",
+  "projected_source_integration": {
+    "red_revision": "81ceeb04aca752832e4362c91b95295fbda5b207",
+    "red_cases": 2,
+    "red_errors": 0,
+    "assertion": "PROJECTED_SOURCE_FILE_IDENTITY_RETAINED",
+    "fixture": "Real before/after Git commits and SHA-256 hashes of complete source files; deleted and modified variants.",
+    "properties": [
+      "sha256",
+      "module",
+      "role",
+      "side",
+      "git_commit",
+      "support_for",
+      "focal_evidence_ids",
+      "change.base_commit"
+    ],
+    "red_input_sha256": {
+      "scripts/architecture/requests.py": "32b4f7972f4a326482c3ea8ab82efdce64a4d19eb8be64235b0b7d3621d2c2ca",
+      "scripts/architecture/atomic.py": "2269caab9a84aab74c58dede0e80eb7388842ea89debce6af4eabc06f648b20a",
+      "tests/hexagonal/test_jev_post_test_triage.py": "0d6bcca7921997d102cecf945609dfd67a05cdb99cc46e50e87bcd69bfe85c94"
+    },
+    "green_input_sha256": {
+      "scripts/architecture/requests.py": "32b4f7972f4a326482c3ea8ab82efdce64a4d19eb8be64235b0b7d3621d2c2ca",
+      "scripts/architecture/atomic.py": "920a62f93f66e394535ea9efe98a643cd3c287a8d6ec24fbfeb576bffc1de1b2",
+      "tests/hexagonal/test_jev_post_test_triage.py": "0d6bcca7921997d102cecf945609dfd67a05cdb99cc46e50e87bcd69bfe85c94"
+    },
+    "green_cases": 5,
+    "green_errors": 0,
+    "scope": "Two new projected-source cases plus existing raw before/after and missing-old-unit controls.",
+    "green_identity": "Atomic implementation was an identified working-tree change; exact byte hashes above bind this local check.",
+    "command": "python -m pytest -p no:cacheprovider tests/hexagonal/test_jev_post_test_triage.py -k 'projected_source_revisions or source_revision_subjects or missing_old_side' -q"
+  },
+  "many_complete_units_packing": {
+    "source_bytes": 18012,
+    "units": 114,
+    "subjects": 9,
+    "provider_calls": 3,
+    "complete_rows": 9,
+    "red_revision": "59ab69a6791b6b25163327d92a28e6071f2f842f",
+    "red_source_sha256": {
+      "scripts/architecture/atomic.py": "920a62f93f66e394535ea9efe98a643cd3c287a8d6ec24fbfeb576bffc1de1b2",
+      "scripts/architecture/requests.py": "32b4f7972f4a326482c3ea8ab82efdce64a4d19eb8be64235b0b7d3621d2c2ca"
+    },
+    "green_input_sha256": {
+      "scripts/architecture/atomic.py": "5b5f7b6a177bf56493880e1ccc39af7cac744e5235b8538721488bb2cd9d1337",
+      "scripts/architecture/requests.py": "32b4f7972f4a326482c3ea8ab82efdce64a4d19eb8be64235b0b7d3621d2c2ca",
+      "tests/hexagonal/support/jev_triage.py": "da8c3ed6b0fe7209f505f7f8c38a817f84e238ec3e7c814eb0dbda699b8c40e3",
+      "tests/hexagonal/test_jev_post_test_triage.py": "01ebaac390906375d28e070204c6943c2e20c5446e15c6ccb99ed067e134a88e"
+    },
+    "projection_packet_bytes": [
+      44658,
+      44658,
+      44658
+    ],
+    "test": "tests/hexagonal/test_jev_post_test_triage.py::test_many_complete_units_finish_all_facets_without_repeating_selected_ownership",
+    "red_execution_revision": "d1a62f2e8ee9503a45259ff94f6f0abebcf8e367",
+    "red_source_identity": "Atomic and requests bytes equal 59ab69a; intervening commit contains only tests/docs.",
+    "red": {
+      "failed": 1,
+      "errors": 0,
+      "deselected": 26,
+      "assertion": "ALL_MANY_UNIT_ATOMIC_FACETS_COMPLETE",
+      "log_sha256": "4d4af7cc0ce9d07cf64ffa2ed78b21c8716a784a8e7abe47e03178f5c0a5d2e6"
+    },
+    "green": {
+      "passed": 27,
+      "failed": 0,
+      "errors": 0,
+      "scope": "Entire post-test triage module including existing raw, compacted before/after, missing-input, transport and bounded metadata controls.",
+      "ruff": "passed",
+      "log_sha256": "08aedd2fed4004f88eb31e2d93df40c17f3cc64f73e6fe746ffe294eb63e1724"
+    },
+    "properties": [
+      "All 9 atomic subjects finish applicability/sufficiency/claim under unchanged default planner limits.",
+      "Every provider source body equals the complete retained body, with no truncation.",
+      "Role metadata remains recoverable from each provider source file identity.",
+      "Retained evidence and three-owner support_for lists remain unchanged by provider projection."
+    ],
+    "red_command": "python -m pytest -p no:cacheprovider tests/hexagonal/test_jev_post_test_triage.py -k many_complete_units_finish -q",
+    "green_command": "python -m pytest -p no:cacheprovider tests/hexagonal/test_jev_post_test_triage.py -q",
+    "interpretation": "Controlled typed provider answers exercise the real request planner under default budgets, without network calls or live-quality claims. Source hashes bind the targeted working-tree production repair."
+  },
+  "hosted_launcher_fixture_repair": {
+    "red_source": "c2a6a4f50f85e399a6bc492fc958302bfbe03aa1",
+    "hosted_red_run": 43052026182,
+    "hosted_tested_sha": "951e310c87b782fab4e881eba7d95c05db93eedb",
+    "selector": "tests/hexagonal/test_static_checks.py::test_documented_launcher_keeps_cold_and_warm_cache_outputs_external",
+    "red_assertion": "assert cold.returncode == 0",
+    "diagnostic": "Ruff I001 in scripts/architecture/triage.py: copied fixture omitted new scripts.ci dependency",
+    "red_test_sha256": "19c977c1b868dbc75ba951824380d57d57da3b00166176b95a488a5701399dd4",
+    "green_test_sha256": "5e2c8a9c0e8f22da98025aab7a00a64f4e57bfe2729f0f2c7d347bc9eef9d590",
+    "repair": "Include scripts/ci in the isolated launcher candidate; preserve lint and cold/warm assertions",
+    "green_command": "python -m pytest -q -p no:cacheprovider tests/hexagonal/test_static_checks.py",
+    "green_exit": 0,
+    "green_passed": 17,
+    "runtime": "CPython 3.12.16, Ruff 0.16.8",
+    "excluded_attempt": "First local green assertions used explicit --basetemp. The process-leak hook matched sandbox PID 1 command arguments and returned exit 1; rerunning without explicit basetemp passed cleanly."
+  },
+  "initial_hosted_post_test": {
+    "78": {
+      "run_id": 43052026182,
+      "triage_sha256": "6396d92935f955e2487bac55405bc9b33462ae11f41949305d66d8f4f827e87c",
+      "status": "complete",
+      "deterministic_status": "failed",
+      "candidate": {
+        "source_sha": "73f3991c47240d9909473faac57b4c3ab06787d1",
+        "tested_sha": "951e310c87b782fab4e881eba7d95c05db93eedb",
+        "tree": "05cf952735663c84c5c4b1e8b108f4cbe8eadc08"
+      },
+      "outcomes": {
+        "insufficient_evidence": 5
+      },
+      "provider_calls": 3,
+      "failed_case_prioritized": true,
+      "concerns": 0
+    },
+    "79": {
+      "run_id": 43052078315,
+      "triage_sha256": "4760eecb9ab63640bf28d5b9cd0d8c71a353655843c951f3c245c6d62f938121",
+      "status": "complete",
+      "deterministic_status": "failed",
+      "candidate": {
+        "source_sha": "1d706854f152b11bdc3e4e6318b810a91d5dd418",
+        "tested_sha": "778c631d2251c25b3aaafde85a248a26ef206d34",
+        "tree": "5ff939105f385e2f2f47c337a31cce6d1ee042c2"
+      },
+      "outcomes": {
+        "insufficient_evidence": 3
+      },
+      "provider_calls": 2,
+      "failed_case_prioritized": true,
+      "concerns": 0
+    }
+  },
+  "hosted_bridge_snapshot_repair": {
+    "candidate_sha256": "e741e86d2539a385724067a96ec15f19012ddabdf8bb7e5fc1a3d11fb0fab6e7",
+    "mutation_sha256": "fada2b4c1be2d82120d7c197572ee3171f6e730cd96b89f30292e092f37e14c1",
+    "mutation_applied": true,
+    "classification": "detected",
+    "target": "tests.hexagonal.test_external_bridge::test_durable_host_recovery_preserves_uncertain_effect_and_native_identity",
+    "expected_diagnostic": "HOST_EFFECT_PENDING_AT_NATIVE_BOUNDARY",
+    "hosted_red_run": 43052026182,
+    "red_source_sha": "73f3991c47240d9909473faac57b4c3ab06787d1",
+    "red_assertion": "assert native.entered.is_set()",
+    "cause": "100ms RPC timeout could fire before the native effect entered under hosted load",
+    "repair": "Wait for native entry, assert request remains in flight, then capture pending durable state before releasing native completion",
+    "mutation_patch": "--- a/xorchestrate/adapters/bridge_host.py\n+++ b/xorchestrate/adapters/bridge_host.py\n@@ -301,6 +301,7 @@\n                 if not callable(function):\n                     raise bridge_error(\"Native driver does not implement this operation.\", \"unsupported_operation\")\n                 self._transition_effect(key, \"reserve\", {\"identity\": identity, \"incarnation\": lease})\n+                self._effects[key][\"status\"] = \"completed\"\n                 if message.get(\"attempt_id\"):\n                     self._bindings[(\"attempt_id\", message[\"attempt_id\"])] = lease\n                 self._save_state()\n",
+    "test_sha256": "4666ba7f932dda38b2e808bf95bad123b9e6c2b037ad1d00cc3daa9a8e9098a3",
+    "command": "python -m pytest -q -p no:cacheprovider tests/hexagonal/test_external_bridge.py::test_durable_host_recovery_preserves_uncertain_effect_and_native_identity",
+    "red_exit": 1,
+    "green_exit": 0,
+    "preserved_guarantees": [
+      "pending state at native entry",
+      "restart turns pending effect unknown",
+      "native identity preserved",
+      "no automatic replay",
+      "private snapshot mode"
+    ],
+    "separate_timeout_test": "test_lost_response_preserves_host_effect_and_control_progress",
+    "excluded_attempt": "An initially guessed second module selector did not exist; that setup error is not a detection witness.",
+    "affected_verification": {
+      "command": "python -m pytest -q -p no:cacheprovider tests/hexagonal/test_external_bridge.py tests/hexagonal/test_bridge_turn_contracts.py",
+      "passed": 17,
+      "blocked_setup": 2,
+      "blocked_reason": "Managed host rejects AF_UNIX socket creation with EPERM in turn_id-unix and prompt_id-unix. These setup failures are not RED proof; hosted CI covers this boundary.",
+      "external_bridge_cases_passed": 15,
+      "fifo_turn_cases_passed": 2,
+      "shared_static": "Ruff, syntax and architecture passed"
+    }
+  }
+}

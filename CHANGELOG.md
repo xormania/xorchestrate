@@ -10,6 +10,19 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 ### Changed
 
 - Jev change packets retain moved assignment before-state using stable target identities and distinguish repeated targets.
+- CI summaries retain valid mixed-cache Jev assessments and separate fresh from reused usage.
+- Post-test Jev observation IDs distinguish modules that share a test family.
+- Jev operational replay and live health honor the configured support-evidence question limit.
+- Jev operational evaluation replays pinned engineering incidents and healthy
+  controls with separate tuning and heldout groups. Reports distinguish known
+  fault matches, independently supported findings, unknown costs and reviewer
+  time. CI runs full evaluations when their inputs change and a small fresh
+  health control otherwise. See [operational evaluation](docs/jev-operational.md).
+- Jev diagnostics budget the complete serialized request, preserve complete
+  evidence while splitting oversized candidate batches, and reuse successful
+  partitions. Bounded transient retries share the request deadline; recognized
+  provider errors retain safe codes and actual HTTP attempt counts. See
+  [Jev execution](docs/jev-execution.md).
 - Jev diagnostics select changed behavior across configured architecture roles,
   retain complete before/after source and deletions, and connect contract wrappers
   to statically declared fixtures and subjects. Packets identify missing inputs
@@ -75,8 +88,19 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   attributes and class names. Legacy diagnostics are projected conservatively
   without deleting stored history; malformed completion metadata preserves the
   known completion and its reconciliation requirement.
+- Delivery attempts, native-call settlement, acceptance measurements,
+  assessment escalation, bridge host evidence, adapter settlement causes and
+  telemetry no longer copy an arbitrary exception's `code` or `details`
+  attribute (or its class name, where that was the fallback). They record a
+  typed failure's code, or `external_error` / the site's existing default.
 
 ### Added
+
+- Jev now asks evidence-addressed atomic questions at the source stage and adds
+  optional post-test guarantee support and failure triage. Current candidate and
+  lane identity, executed inventories and exact failure cases bind the advice;
+  missing evidence abstains, source spans remain reviewable, and deterministic
+  CI qualification stays unchanged when a lane or the provider fails.
 
 - Shared development skills for agents working on this repository (run-checks,
   red-first, pr-ready, crash-recovery, team-roles, serena) in `.agents/skills`,
@@ -334,6 +358,11 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 - **Journal diagnostics:** existing operation diagnostics remain stored. Public
   projection hides unversioned diagnostic content; this is not a historical-data
   purge and needs no data-version migration.
+- **Failure codes in retained records:** for failures that are not typed
+  `OrchestrationError`s, new delivery-attempt, native-call, measurement and
+  bridge host records store `external_error` where they previously stored the
+  exception's `code` attribute or class name. Existing records are unchanged;
+  no migration.
 - **Adapter options and custom adapters:** None changed. Third-party adapters
   that import from `xorchestrate.ports` or `xorchestrate.model` keep working;
   new adapters should depend on `xcontracts>=0.1,<0.2` instead. `xcontracts`

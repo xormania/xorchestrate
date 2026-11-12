@@ -4,8 +4,10 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
+from tests.hexagonal.contracts.effect_errors import assert_private_absent
 from tests.hexagonal.support.application import application
 from tests.hexagonal.support.delivery import Native, dispatch
+from tests.hexagonal.support.effect_errors import PRIVATE_ERROR_TYPE
 from xorchestrate.adapters.delivery import DefiniteFailureRetry, DeliverySchedule, LatestSessionSelection
 from xorchestrate.adapters.policies import RuleGuardrail
 from xorchestrate.model import Conflict, OrchestrationError
@@ -181,3 +183,20 @@ def test_latest_session_policy_is_independent_of_store_key_order():
     policy = LatestSessionSelection()
     assert policy.select({}, 'bob', [old, new]) == 'a-new'
     assert policy.select({}, 'bob', [new, old]) == 'a-new'
+
+
+@pytest.mark.parametrize("known_outcome", [None, "completed"])
+def test_native_delivery_failure_retains_only_public_diagnostics(setup, known_outcome):
+    app, driver, session, message = setup
+    error = PRIVATE_ERROR_TYPE("PRIVATE_ERROR_MESSAGE")
+    error.code = "PRIVATE_ERROR_CODE"
+    error.details = {"outcome": "completed", "external_result": {"private": "PRIVATE_ERROR_DETAILS"}}
+    if known_outcome:
+        error._xorchestrate_effect_outcome = known_outcome
+    driver.failure = error
+    result = dispatch(app, message)
+    assert result["attempt"]["error"]["code"] == "external_error", "DELIVERY_PUBLIC_FAILURE_CODE"
+    assert_private_absent(result)
+    assert_private_absent(app.call("get_delivery", {"message_id": message["id"]}))
+    with app.store.transaction() as tx:
+        assert_private_absent([row.data for row in tx.list("delivery_attempt")])

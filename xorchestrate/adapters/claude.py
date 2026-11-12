@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from ..activity import ActivityState, NativeConnection
-from ..model import OrchestrationError
+from ..model import OrchestrationError, public_error_code
 from ..outcomes import before_effect, effect_outcome
 from ..schema import check_schema, validate
 from .claude_transcript import ClaudeTranscriptReader
@@ -304,7 +304,7 @@ class ClaudeSessionDriver(ApplicationToolDriver):
         except Exception as error:
             if returned:
                 error = OrchestrationError("Callback completed but local settlement was refused.", "operation_unresolved",
-                    {"outcome": "completed", "result": deepcopy(result), "cause": getattr(error, "code", type(error).__name__)})
+                    {"outcome": "completed", "result": deepcopy(result), "cause": public_error_code(error)})
             with live.lock:
                 live.active_tools.discard(matched)
                 if effect_outcome(error) not in {"not_started", "failed"}:

@@ -17,7 +17,7 @@ from dataclasses import asdict
 from pathlib import Path
 from uuid import uuid4
 
-from ..model import OrchestrationError
+from ..model import OrchestrationError, public_error_code
 from ..telemetry import canonical, protect, snapshot_policy
 from .telemetry_capture import TelemetryDispatch
 from .telemetry_collector import config
@@ -364,7 +364,7 @@ class LocalTelemetry:
         except Exception as error:
             self._health({})
             response = {"status": "unavailable", "receipt": None,
-                    "reason": getattr(error, "code", "capture_error") if isinstance(getattr(error, "code", None), str) else "capture_error"}
+                    "reason": public_error_code(error, "capture_error")}
             return response
         finally:
             if repository is not None:

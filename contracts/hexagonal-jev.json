@@ -22,5 +22,17 @@
     "testkit_core",
     "testkit_adapters",
     "acceptance_runner"
-  ]
+  ],
+  "source_atomic": true,
+  "threshold": 0.7,
+  "post_test": {
+    "checks": [
+      "guarantee_gap",
+      "failure_regression"
+    ],
+    "max_subjects": 3,
+    "max_source_bytes": 24000,
+    "max_cases_per_subject": 4
+  },
+  "max_support_evidence": 12
 }

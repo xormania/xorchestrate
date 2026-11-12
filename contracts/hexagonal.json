@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "xorchestrate.hexagonal",
-  "version": "11",
+  "version": "14",
   "description": "Current application-owned ports, infrastructure-independent core and replaceable adapters. Composition is the trusted factory boundary. Source dependencies are distinct from runtime calls through ports. Active live-test infrastructure follows the same dependency direction: generic test-kit ports/core, concrete execution adapters, independent evidence predicates and explicit runner composition. Shared test contracts remain independent of their subjects; support adapters own fixtures, and collected tests cannot import other collected tests. The public ports, their values and errors and the adapter factory convention come from the external, stdlib-only xcontracts package (Apache-2.0), which the foundation re-exports. Roles that reach the foundation allow only xcontracts.ports and xcontracts.model; the conformance kit (xcontracts.testing) and the factory types are allowed only in test support and collected tests; xcontracts never imports xorchestrate, which its own tests and tests/hexagonal/test_xcontracts.py check.",
   "source_roots": [
     "xorchestrate",
@@ -973,7 +973,9 @@
         "scripts.architecture.context",
         "scripts.architecture.context_changes",
         "scripts.architecture.context_relations",
-        "scripts.architecture.cache"
+        "scripts.architecture.cache",
+        "scripts.architecture.requests",
+        "scripts.architecture.atomic"
       ],
       "allowed_roles": [
         "architecture_foundation",
@@ -1002,7 +1004,9 @@
     "architecture_entrypoints": {
       "modules": [
         "scripts.architecture.__main__",
-        "scripts.architecture.effectiveness"
+        "scripts.architecture.effectiveness",
+        "scripts.architecture.triage",
+        "scripts.architecture.operational"
       ],
       "allowed_roles": [
         "architecture_foundation",
@@ -1018,7 +1022,8 @@
         "adapters",
         "testkit_adapters",
         "testkit_foundation",
-        "testkit_core"
+        "testkit_core",
+        "ci_tooling"
       ],
       "allowed_external": [
         "stdlib:*",

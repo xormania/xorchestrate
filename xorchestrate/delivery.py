@@ -6,8 +6,8 @@ are separate records; a successful queue write or RPC never creates a receipt.
 from copy import deepcopy
 
 from .inspection import DELIVERY_RECORDS
-from .model import Conflict, OrchestrationError, action_spec, canonical_digest, record_view
-from .outcomes import before_effect, effect_outcome
+from .model import Conflict, OrchestrationError, action_spec, canonical_digest, public_error_code, record_view
+from .outcomes import before_effect, completed_effect_result, effect_outcome
 
 S = {"type": "string", "minLength": 1}
 DELIVERY_ACTIONS = {
@@ -148,13 +148,9 @@ class DeliveryMixin:
         except Exception as error:
             known_outcome = effect_outcome(error)
             status = "failed" if known_outcome in {"failed", "not_started"} else "unknown"
-            details = getattr(error, "details", {})
             if known_outcome == "completed":
-                if "external_result" in details:
-                    raw = deepcopy(details["external_result"])
-                elif "result" in details:
-                    raw = deepcopy(details["result"])
-            failure = {"code": getattr(error, "code", type(error).__name__), "outcome": known_outcome,
+                raw = completed_effect_result(error).get("external_result", raw)
+            failure = {"code": public_error_code(error), "outcome": known_outcome,
                 "message": str(error) if isinstance(error, OrchestrationError) else "Native submission outcome is unknown."}
         try:
             with self.store.transaction() as tx:
@@ -348,7 +344,7 @@ class DeliveryMixin:
             if completed:
                 error = OrchestrationError("The application completed, but native-call settlement needs reconciliation.",
                     "result_unapplied", {"outcome": "completed", "external_result": deepcopy(result),
-                    "cause": getattr(original_error, "code", type(original_error).__name__)})
+                    "cause": public_error_code(original_error)})
             try:
                 with self.store.transaction() as tx:
                     row = self._require(tx, "native_call", identity)
@@ -356,12 +352,12 @@ class DeliveryMixin:
                     if row.data["status"] == "pending":
                         event = "fail" if definite else "uncertain"
                         changes = {"status": "failed" if definite else "unknown", "effect_outcome": outcome,
-                            "error": getattr(error, "code", type(error).__name__)}
+                            "error": public_error_code(error)}
                     else:
                         # Concurrent evidence-based reconciliation wins. Retain
                         # the late fact without reopening its settled lifecycle.
                         event = "retain_late"
-                        changes = {"late_error": getattr(error, "code", type(error).__name__),
+                        changes = {"late_error": public_error_code(error),
                             "late_effect_outcome": outcome}
                     self._transition(tx, row, event, {**row.data, **changes}, context["actor"])
             except Exception as recording_error:

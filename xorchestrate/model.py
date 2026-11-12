@@ -75,6 +75,22 @@ def public_error_message(error: Exception) -> str:
     return public_error(error)["message"]
 
 
+def public_error_code(error: BaseException, default: str | None = "external_error") -> str | None:
+    """The code of a typed failure; ``default`` for any other exception.
+
+    An arbitrary exception's ``code`` attribute and class name are not public,
+    so retained records and observations use the caller's documented default.
+    """
+    if not isinstance(error, OrchestrationError):
+        return default
+    try:
+        code = error.code
+    except Exception:
+        return default
+    # public_error's fallback code would describe a malformed typed error, not this one.
+    return code if isinstance(code, str) and code else default
+
+
 def project_operation_errors(value: JSON) -> JSON:
     """Project legacy diagnostics conservatively; do not purge stored history.
 

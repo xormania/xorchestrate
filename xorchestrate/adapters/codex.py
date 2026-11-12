@@ -6,7 +6,7 @@ import uuid
 from copy import deepcopy
 from typing import Any
 
-from ..model import JSON, Capability, OrchestrationError
+from ..model import JSON, Capability, OrchestrationError, public_error_code
 from ..outcomes import before_effect, effect_outcome
 from ..ports import ApplicationToolCallback
 from .native_calls import call_fingerprint
@@ -158,7 +158,7 @@ class CodexSessionDriver(NativeSessions):
                         live.calls.succeed(call_id)
                     except Exception as error:
                         raise OrchestrationError("Callback completed but local settlement was refused.", "operation_unresolved",
-                            {"outcome": "completed", "result": deepcopy(result), "cause": getattr(error, "code", type(error).__name__)}) from error
+                            {"outcome": "completed", "result": deepcopy(result), "cause": public_error_code(error)}) from error
             completed = True
             return response
         except OrchestrationError as exc:

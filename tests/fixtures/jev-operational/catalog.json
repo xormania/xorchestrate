@@ -1,0 +1,292 @@
+{
+  "schema_version": 1,
+  "id": "xorchestrate-operational-replay-v1",
+  "description": "Known real PR source defects and their repaired controls. Splits are frozen by mechanism before this evaluator is run; all historical sources are public and these are not newly discovered incidents. Labels and discovery records never enter provider subjects.",
+  "cases": [
+    {
+      "id": "terminal-exit-status-before",
+      "group": "terminal-exit-status",
+      "split": "tuning",
+      "source_ref": "a4fbc482f05faf3f83b02e17a45324f100793a51",
+      "profile_path": "contracts/hexagonal.json",
+      "pins": [
+        {
+          "path": "scripts/testkit/adapters/managed_process.py",
+          "sha256": "08b17458c3e468044c9b688583cbc7fe96171f7ad1a42fb0c1b9e232f9a5215b"
+        },
+        {
+          "path": "contracts/hexagonal.json",
+          "sha256": "b9b576c75ff00cb14cebe7e5f318ec0a62ffe221841e8f5f41db222407364f83"
+        }
+      ],
+      "selection": [
+        {
+          "path": "scripts/testkit/adapters/managed_process.py",
+          "start_line": 27,
+          "end_line": 130
+        }
+      ],
+      "requirements": [
+        {
+          "id": "terminal-exit-status",
+          "statement": "Only the terminal host may wait for or reap the direct children it opened while it is active. Managed polling must preserve a worker exit code such as 7 or a signal instead of reporting success after another component consumes its wait status."
+        }
+      ],
+      "oracle": {
+        "fault": true,
+        "findings": [
+          {
+            "path": "scripts/testkit/adapters/managed_process.py",
+            "start_line": 27,
+            "end_line": 130,
+            "requirements": [
+              "terminal-exit-status"
+            ]
+          }
+        ]
+      },
+      "fixture_outcome": "concern",
+      "provenance": {
+        "pr_url": "https://github.com/xormania/xorchestrate/pull/71",
+        "finding_url": "https://github.com/xormania/xorchestrate/pull/71#discussion_r4535898775",
+        "reviewed_ref": "a4fbc482f05faf3f83b02e17a45324f100793a51",
+        "fixed_ref": "15e936c82961c1703f987f87a8d453877b6fb3d8",
+        "regression_selector": "tests/hexagonal/test_acceptance_lifecycle.py::test_the_host_alone_reaps_what_it_spawned_so_a_failed_worker_is_never_reported_as_zero",
+        "witness_url": "https://github.com/xormania/xorchestrate/blob/15e936c82961c1703f987f87a8d453877b6fb3d8/tests/hexagonal/test_acceptance_lifecycle.py"
+      }
+    },
+    {
+      "id": "terminal-exit-status-after",
+      "group": "terminal-exit-status",
+      "split": "tuning",
+      "source_ref": "15e936c82961c1703f987f87a8d453877b6fb3d8",
+      "profile_path": "contracts/hexagonal.json",
+      "pins": [
+        {
+          "path": "scripts/testkit/adapters/managed_process.py",
+          "sha256": "46af573664db93c08f9c70bb933f3dbf5323900a315199e5b1223575fa5323f5"
+        },
+        {
+          "path": "contracts/hexagonal.json",
+          "sha256": "b9b576c75ff00cb14cebe7e5f318ec0a62ffe221841e8f5f41db222407364f83"
+        }
+      ],
+      "selection": [
+        {
+          "path": "scripts/testkit/adapters/managed_process.py",
+          "start_line": 27,
+          "end_line": 137
+        }
+      ],
+      "requirements": [
+        {
+          "id": "terminal-exit-status",
+          "statement": "Only the terminal host may wait for or reap the direct children it opened while it is active. Managed polling must preserve a worker exit code such as 7 or a signal instead of reporting success after another component consumes its wait status."
+        }
+      ],
+      "oracle": {
+        "fault": false,
+        "findings": []
+      },
+      "fixture_outcome": "no_concern",
+      "provenance": {
+        "pr_url": "https://github.com/xormania/xorchestrate/pull/71",
+        "finding_url": "https://github.com/xormania/xorchestrate/pull/71#discussion_r4535898775",
+        "reviewed_ref": "a4fbc482f05faf3f83b02e17a45324f100793a51",
+        "fixed_ref": "15e936c82961c1703f987f87a8d453877b6fb3d8",
+        "regression_selector": "tests/hexagonal/test_acceptance_lifecycle.py::test_the_host_alone_reaps_what_it_spawned_so_a_failed_worker_is_never_reported_as_zero",
+        "witness_url": "https://github.com/xormania/xorchestrate/blob/15e936c82961c1703f987f87a8d453877b6fb3d8/tests/hexagonal/test_acceptance_lifecycle.py"
+      }
+    },
+    {
+      "id": "hosted-capacity-before",
+      "group": "hosted-capacity",
+      "split": "heldout",
+      "source_ref": "19df4c79f2218486574cb9dae44ed2b6e8d17cc0",
+      "profile_path": "contracts/hexagonal.json",
+      "pins": [
+        {
+          "path": "xorchestrate/adapters/hosted.py",
+          "sha256": "9d27991d0d9b640d036e8dc09a791ebc58c1ad9ff4b9a7b3b7b29162756dc26b"
+        },
+        {
+          "path": "contracts/hexagonal.json",
+          "sha256": "ae94b6f8b77e6440395f0174045e27052fbb287d73165c66c83f87cf500f7ac2"
+        }
+      ],
+      "selection": [
+        {
+          "path": "xorchestrate/adapters/hosted.py",
+          "start_line": 91,
+          "end_line": 403
+        }
+      ],
+      "requirements": [
+        {
+          "id": "hosted-capacity",
+          "statement": "A hosted session adapter must enforce one atomic max_sessions limit across its active sessions, starts in flight and still-running terminals detached by an earlier runtime. A new start beyond the limit is refused with session_capacity before opening a terminal; reconnecting to an already-running terminal does not allocate another slot."
+        }
+      ],
+      "oracle": {
+        "fault": true,
+        "findings": [
+          {
+            "path": "xorchestrate/adapters/hosted.py",
+            "start_line": 91,
+            "end_line": 403,
+            "requirements": [
+              "hosted-capacity"
+            ]
+          }
+        ]
+      },
+      "fixture_outcome": "concern",
+      "provenance": {
+        "pr_url": "https://github.com/xormania/xorchestrate/pull/73",
+        "finding_url": "https://github.com/xormania/xorchestrate/pull/73#discussion_r4535926434",
+        "reviewed_ref": "19df4c79f2218486574cb9dae44ed2b6e8d17cc0",
+        "fixed_ref": "a7f4bb16294c36afe1c62ba5ca656f686e7f83a1",
+        "regression_selector": "tests/hexagonal/test_hosted_sessions.py::test_hosted_sessions_are_bounded_by_max_sessions_counting_detached_terminals",
+        "witness_url": "https://github.com/xormania/xorchestrate/blob/a7f4bb16294c36afe1c62ba5ca656f686e7f83a1/tests/hexagonal/test_hosted_sessions.py"
+      }
+    },
+    {
+      "id": "hosted-capacity-after",
+      "group": "hosted-capacity",
+      "split": "heldout",
+      "source_ref": "a7f4bb16294c36afe1c62ba5ca656f686e7f83a1",
+      "profile_path": "contracts/hexagonal.json",
+      "pins": [
+        {
+          "path": "xorchestrate/adapters/hosted.py",
+          "sha256": "6fc2255e5be489927efdc8284b36539b4e804083a09b7fc69eaa62cf0456a1cf"
+        },
+        {
+          "path": "contracts/hexagonal.json",
+          "sha256": "ae94b6f8b77e6440395f0174045e27052fbb287d73165c66c83f87cf500f7ac2"
+        }
+      ],
+      "selection": [
+        {
+          "path": "xorchestrate/adapters/hosted.py",
+          "start_line": 98,
+          "end_line": 478
+        }
+      ],
+      "requirements": [
+        {
+          "id": "hosted-capacity",
+          "statement": "A hosted session adapter must enforce one atomic max_sessions limit across its active sessions, starts in flight and still-running terminals detached by an earlier runtime. A new start beyond the limit is refused with session_capacity before opening a terminal; reconnecting to an already-running terminal does not allocate another slot."
+        }
+      ],
+      "oracle": {
+        "fault": false,
+        "findings": []
+      },
+      "fixture_outcome": "no_concern",
+      "provenance": {
+        "pr_url": "https://github.com/xormania/xorchestrate/pull/73",
+        "finding_url": "https://github.com/xormania/xorchestrate/pull/73#discussion_r4535926434",
+        "reviewed_ref": "19df4c79f2218486574cb9dae44ed2b6e8d17cc0",
+        "fixed_ref": "a7f4bb16294c36afe1c62ba5ca656f686e7f83a1",
+        "regression_selector": "tests/hexagonal/test_hosted_sessions.py::test_hosted_sessions_are_bounded_by_max_sessions_counting_detached_terminals",
+        "witness_url": "https://github.com/xormania/xorchestrate/blob/a7f4bb16294c36afe1c62ba5ca656f686e7f83a1/tests/hexagonal/test_hosted_sessions.py"
+      }
+    },
+    {
+      "id": "recovery-work-authority-before",
+      "group": "recovery-work-authority",
+      "split": "heldout",
+      "source_ref": "1361a588d6034baf1f3002a4d94e32e76cc94506",
+      "profile_path": "contracts/hexagonal.json",
+      "pins": [
+        {
+          "path": "xorchestrate/session_lifecycle.py",
+          "sha256": "c85371ff3876dd8d72efdb1ef6f1548c2b23cb63d3588a51a9c681c43d92a8d5"
+        },
+        {
+          "path": "contracts/hexagonal.json",
+          "sha256": "ae94b6f8b77e6440395f0174045e27052fbb287d73165c66c83f87cf500f7ac2"
+        }
+      ],
+      "selection": [
+        {
+          "path": "xorchestrate/session_lifecycle.py",
+          "start_line": 309,
+          "end_line": 329
+        }
+      ],
+      "requirements": [
+        {
+          "id": "recovery-work-authority",
+          "statement": "Before explicit recovery reconnects a work-bound session, authorize reconnect_session for the original caller using the session actor and that session work_id. A work-specific deny rule for the caller must prevent recovery even when source send access is allowed and the later reconnect executes as the session owner."
+        }
+      ],
+      "oracle": {
+        "fault": true,
+        "findings": [
+          {
+            "path": "xorchestrate/session_lifecycle.py",
+            "start_line": 309,
+            "end_line": 329,
+            "requirements": [
+              "recovery-work-authority"
+            ]
+          }
+        ]
+      },
+      "fixture_outcome": "concern",
+      "provenance": {
+        "pr_url": "https://github.com/xormania/xorchestrate/pull/74",
+        "finding_url": "https://github.com/xormania/xorchestrate/pull/74#discussion_r4535905292",
+        "reviewed_ref": "1361a588d6034baf1f3002a4d94e32e76cc94506",
+        "fixed_ref": "ddbe9f37f82b01d05782224ac8b8e0897db4b2f1",
+        "regression_selector": "tests/hexagonal/test_recovery.py::test_an_explicit_recover_weighs_the_sessions_work_binding_for_the_caller",
+        "witness_url": "https://github.com/xormania/xorchestrate/blob/ddbe9f37f82b01d05782224ac8b8e0897db4b2f1/tests/hexagonal/test_recovery.py"
+      }
+    },
+    {
+      "id": "recovery-work-authority-after",
+      "group": "recovery-work-authority",
+      "split": "heldout",
+      "source_ref": "ddbe9f37f82b01d05782224ac8b8e0897db4b2f1",
+      "profile_path": "contracts/hexagonal.json",
+      "pins": [
+        {
+          "path": "xorchestrate/session_lifecycle.py",
+          "sha256": "3fbc033c3c7bd2a034690f14f2dc2d426b8519e7ed4d6204bbc6b06ec0adbb2c"
+        },
+        {
+          "path": "contracts/hexagonal.json",
+          "sha256": "ae94b6f8b77e6440395f0174045e27052fbb287d73165c66c83f87cf500f7ac2"
+        }
+      ],
+      "selection": [
+        {
+          "path": "xorchestrate/session_lifecycle.py",
+          "start_line": 341,
+          "end_line": 365
+        }
+      ],
+      "requirements": [
+        {
+          "id": "recovery-work-authority",
+          "statement": "Before explicit recovery reconnects a work-bound session, authorize reconnect_session for the original caller using the session actor and that session work_id. A work-specific deny rule for the caller must prevent recovery even when source send access is allowed and the later reconnect executes as the session owner."
+        }
+      ],
+      "oracle": {
+        "fault": false,
+        "findings": []
+      },
+      "fixture_outcome": "no_concern",
+      "provenance": {
+        "pr_url": "https://github.com/xormania/xorchestrate/pull/74",
+        "finding_url": "https://github.com/xormania/xorchestrate/pull/74#discussion_r4535905292",
+        "reviewed_ref": "1361a588d6034baf1f3002a4d94e32e76cc94506",
+        "fixed_ref": "ddbe9f37f82b01d05782224ac8b8e0897db4b2f1",
+        "regression_selector": "tests/hexagonal/test_recovery.py::test_an_explicit_recover_weighs_the_sessions_work_binding_for_the_caller",
+        "witness_url": "https://github.com/xormania/xorchestrate/blob/ddbe9f37f82b01d05782224ac8b8e0897db4b2f1/tests/hexagonal/test_recovery.py"
+      }
+    }
+  ]
+}

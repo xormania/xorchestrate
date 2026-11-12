@@ -10,7 +10,17 @@ import json
 from copy import deepcopy
 from typing import Callable
 
-from .model import JSON, Conflict, OrchestrationError, Record, action_spec, canonical_digest, record_view, unique_keys
+from .model import (
+    JSON,
+    Conflict,
+    OrchestrationError,
+    Record,
+    action_spec,
+    canonical_digest,
+    public_error_code,
+    record_view,
+    unique_keys,
+)
 from .ports import AcceptancePolicy, Clock, StateStore, Transaction
 
 
@@ -424,7 +434,7 @@ class WorkAcceptance:
                 uncertain = operation is not None and operation.data["status"] in {"pending", "unknown", "completed_unapplied"}
                 self._transition(tx, current, "uncertain" if uncertain else "fail",
                     {**current.data, "status": "unknown" if uncertain else "failed",
-                    "error": {"code": getattr(error, "code", type(error).__name__)}, "finished_at": self.clock()}, actor)
+                    "error": {"code": public_error_code(error)}, "finished_at": self.clock()}, actor)
                 self._event(tx, "measurement.unresolved" if uncertain else "measurement.failed", actor, work_id=args["work_id"], measurement_id=key)
             raise
         try:

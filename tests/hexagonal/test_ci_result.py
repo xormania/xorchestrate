@@ -464,7 +464,7 @@ def test_architecture_producer_retains_actual_working_tree_identity(tmp_path, di
     assert receipt["git_commit"] == expected_commit
 
 
-@pytest.mark.parametrize("scenario", ("single_fresh", "batch_fresh", "cache_hit", "invalid_usage"))
+@pytest.mark.parametrize("scenario", ("single_fresh", "batch_fresh", "cache_hit", "mixed_single", "mixed_batch", "invalid_usage"))
 def test_advisory_execution_distinguishes_new_provider_usage_from_reused_history(tmp_path, scenario):
     needs, workflow, catalog = _complete_receipts(tmp_path)
     document = _jev_report()
@@ -475,31 +475,49 @@ def test_advisory_execution_distinguishes_new_provider_usage_from_reused_history
         for name in ("evidence_coverage", "semantic_boundaries", "port_abstraction")
     ]
     hit = scenario == "cache_hit"
+    mixed = scenario in {"mixed_single", "mixed_batch"}
     metadata = {
-        "request_sha256": "4" * 64, "mode": "single" if scenario == "single_fresh" else "batch",
-        "cache_status": "hit" if hit else "disabled" if scenario == "single_fresh" else "miss",
-        "provider_calls": 0 if hit else 3 if scenario == "single_fresh" else 1,
-        "reused_assessments": 3 if hit else 0,
-        "fresh_usage": {"input_tokens": 0 if hit else 60, "output_tokens": 0 if hit else 9},
-        "reused_usage": {"input_tokens": 60, "output_tokens": 9} if hit else None,
+        "request_sha256": "4" * 64, "mode": "single" if scenario in {"single_fresh", "mixed_single"} else "batch",
+        "cache_status": "mixed" if mixed else "hit" if hit else "disabled" if scenario == "single_fresh" else "miss",
+        "provider_calls": 0 if hit else 2 if mixed else 3 if scenario == "single_fresh" else 1,
+        "reused_assessments": 3 if hit else 1 if mixed else 0,
+        "fresh_usage": {"input_tokens": 0 if hit else 40 if mixed else 60,
+                        "output_tokens": 0 if hit else 6 if mixed else 9},
+        "reused_usage": {"input_tokens": 20, "output_tokens": 3} if mixed else
+                        {"input_tokens": 60, "output_tokens": 9} if hit else None,
     }
     if scenario == "invalid_usage":
         metadata["fresh_usage"]["input_tokens"] = -1
     document["diagnostics"]["execution"] = metadata
-    _write(tmp_path / "architecture-evidence/diagnostics.json", document)
+    path = tmp_path / "architecture-evidence/diagnostics.json"
+    _write(path, document)
     result = _evaluate_complete(tmp_path, needs, workflow, catalog)
     assert result["status"] == "passed" and result["errors"] == []
     if scenario == "invalid_usage":
         assert result.get("jev", {}).get("status") == "invalid"
         assert result["jev"]["current"] is False
         return
-    assert result.get("jev", {}).get("execution") == metadata
+    assert result.get("jev", {}).get("status") == "complete", "MIXED_CACHE_ADVICE_REMAINS_VISIBLE"
+    assert result["jev"]["current"] is True
+    assert len(result["jev"]["assessments"]) == 3
+    assert result["jev"].get("execution") == metadata
     rendered = subject.markdown(result, "https://example.invalid/run/1")
+    assert all(name in rendered for name in ("evidence_coverage", "semantic_boundaries", "port_abstraction"))
     assert f"Assessment execution: {metadata['mode']}; cache {metadata['cache_status']}" in rendered
     assert f"provider calls {metadata['provider_calls']}; reused assessments {metadata['reused_assessments']}" in rendered
     fresh = metadata["fresh_usage"]
     assert f"Fresh provider usage: {fresh['input_tokens']} input / {fresh['output_tokens']} output tokens" in rendered
-    assert ("Historical reused usage: 60 input / 9 output tokens" if hit else "Historical reused usage: unknown") in rendered
+    reused = metadata["reused_usage"]
+    assert ("Historical reused usage: " + (f"{reused['input_tokens']} input / {reused['output_tokens']} output tokens"
+                                           if reused is not None else "unknown")) in rendered
+    if mixed:
+        metadata["cache_status"] = "unrecognized-cache-state"
+        _write(path, document)
+        invalid = _evaluate_complete(tmp_path, needs, workflow, catalog)
+        assert invalid["jev"]["status"] == "invalid" and invalid["jev"]["current"] is False
+        assert invalid["jev"]["assessments"] == []
+        assert "evidence_coverage" not in subject.markdown(invalid, "https://example.invalid/run/1")
+        assert invalid["status"] == "passed" and invalid["errors"] == []
 
 
 @pytest.mark.parametrize("explicit_task_ids", (True, False))
@@ -544,6 +562,29 @@ def test_ci_diagnostic_context_uses_the_actual_change_base():
     assert command.get("env", {}).get("JEV_BASE_REF") == "${{ github.event.pull_request.base.sha || github.event.before }}"
     assert '--base-ref "$jev_base_ref"' in command["run"]
     assert "git rev-parse" in command["run"] and "HEAD^" in command["run"]
+
+
+@pytest.mark.parametrize("malformed", ("judgment_list", "details_list"))
+def test_malformed_atomic_judgments_remain_invalid_advice_without_failing_ci(tmp_path, malformed):
+    needs, workflow, catalog = _complete_receipts(tmp_path)
+    document = _jev_report()
+    row = document["diagnostics"]["assessments"][0]
+    row.update(evidence_ids=["source-1"], supporting_evidence_ids=["source-1"], claim="A bounded source claim.",
+               applicable=True, sufficient_evidence=True,
+               judgments={"claim": {"details": {"probabilities": {"yes": 1, "no": 0, "insufficient_evidence": 0}}}})
+    path = tmp_path / "architecture-evidence/diagnostics.json"
+    _write(path, document)
+    assert _evaluate_complete(tmp_path, needs, workflow, catalog)["jev"]["status"] == "complete"
+    row["judgments"]["claim"] = [] if malformed == "judgment_list" else {"details": []}
+    _write(path, document)
+    escaped = None
+    try:
+        result = _evaluate_complete(tmp_path, needs, workflow, catalog)
+    except Exception as error:
+        escaped = type(error).__name__
+        result = None
+    assert escaped is None, "MALFORMED_ADVISORY_DATA_CANNOT_FAIL_REQUIRED_CI"
+    assert result["jev"]["status"] == "invalid" and result["status"] == "passed"
 
 
 @pytest.mark.parametrize("candidate_count", (11, 100))

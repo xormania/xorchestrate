@@ -6,13 +6,14 @@ import http.client
 import json
 import math
 import os
+import re
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import asdict
 
-from ..model import JSON, Assessment, OrchestrationError
+from ..model import JSON, Assessment, OrchestrationError, public_error_code
 from ..ports import CapabilityProvider
 from .telemetry_capture import TelemetryDispatch, TelemetrySource, capture_origin, observe_telemetry, observe_wire
 
@@ -41,7 +42,7 @@ class _TelemetryEvaluator(TelemetrySource):
             try:
                 result = operation(observer, origin, secrets)
             except BaseException as error:
-                code = getattr(error, "code", "evaluation_unavailable")
+                code = public_error_code(error, "evaluation_unavailable")
                 status = "unavailable" if code == "evaluation_unavailable" else "invalid"
                 observe_telemetry(observer, "evaluator.validation", {"status": status, "code": code}, origin, secrets=secrets)
                 raise
@@ -54,8 +55,9 @@ class _TelemetryEvaluator(TelemetrySource):
                 observer.drain()
 
 
-def _invalid(message: str) -> OrchestrationError:
-    return OrchestrationError(message, "evaluation_invalid")
+def _invalid(message: str, provider_calls=None) -> OrchestrationError:
+    details = {} if provider_calls is None else {"provider_calls": provider_calls}
+    return OrchestrationError(message, "evaluation_invalid", details)
 
 
 def _json(value: object, code: str = "invalid_request") -> bytes:
@@ -67,6 +69,35 @@ def _json(value: object, code: str = "invalid_request") -> bytes:
 
 def _number(value: object, low: float = 0, high: float = 1) -> bool:
     return type(value) in {int, float} and math.isfinite(value) and low <= value <= high
+
+
+def choice_payload(model, criteria, questions, context):
+    """Serialize the actual packet for transport and caller-side budget planning."""
+    return _json({"model": model, "state": context,
+                  "questions": {key: {"type": "choice", "instructions": question, "criteria": criteria}
+                                for key, question in questions.items()}})
+
+
+def _safe_provider_error(status, body, headers, credential):
+    """Keep recognized diagnostics, never arbitrary provider bodies or messages."""
+    details = {"status": status}
+    request_id = headers.get("x-typesafe-request-id", "") if headers is not None else ""
+    if (isinstance(request_id, str) and re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", request_id)
+            and (not credential or credential not in request_id)):
+        details["request_id"] = request_id
+    if body and len(body) <= 16384 and (not credential or credential.encode() not in body):
+        try:
+            error = json.loads(body)
+            if isinstance(error, dict):
+                codes = [error.get("code")]
+                for key in ("error", "detail"):
+                    value = error.get(key)
+                    codes.append(value.get("code") if isinstance(value, dict) else value)
+                if "max_tokens_exceeded" in codes:
+                    details["provider_code"] = "max_tokens_exceeded"
+        except (ValueError, UnicodeError, RecursionError):
+            pass
+    return details
 
 
 def checked_assessment(value: object) -> Assessment:
@@ -155,12 +186,15 @@ class TypeSafeEvaluator(_TelemetryEvaluator):
     """TypeSafe choice assessment using an explicitly configured model and rubric.
 
     The wire format follows the reusable TypeSafe integration in the historical
-    Agentscient runtime. No imported defaults, role policy, retries, model
+    Agentscient runtime. No imported defaults, role policy, model
     naming restrictions or credential machinery are retained.
+
+    Retries are opt-in and share the original timeout with body reads and backoff.
     """
 
     def __init__(self, options: JSON):
-        allowed = {"endpoint", "model", "criteria", "credential_env", "timeout", "max_request_bytes", "max_response_bytes", "allow_http"}
+        allowed = {"endpoint", "model", "criteria", "credential_env", "timeout", "max_request_bytes", "max_response_bytes", "allow_http",
+                   "max_retries", "retry_backoff"}
         if not isinstance(options, dict) or options.keys() - allowed:
             raise OrchestrationError("TypeSafe evaluator contains an unknown configuration field.", "invalid_configuration")
         endpoint = options.get("endpoint")
@@ -188,6 +222,10 @@ class TypeSafeEvaluator(_TelemetryEvaluator):
         timeout = options.get("timeout", 30)
         if not _number(timeout, 0, float("inf")) or timeout == 0:
             raise OrchestrationError("TypeSafe timeout must be a positive finite number.", "invalid_configuration")
+        self.max_retries, self.retry_backoff = options.get("max_retries", 0), options.get("retry_backoff", .25)
+        if (type(self.max_retries) is not int or not 0 <= self.max_retries <= 5
+                or not _number(self.retry_backoff, 0, 60)):
+            raise OrchestrationError("TypeSafe retry settings are invalid.", "invalid_configuration")
         self.limits = {}
         for name, default in (("max_request_bytes", 1048576), ("max_response_bytes", 1048576)):
             value = options.get(name, default)
@@ -213,33 +251,35 @@ class TypeSafeEvaluator(_TelemetryEvaluator):
         if (not isinstance(questions, dict) or not questions or not isinstance(context, dict)
                 or any(not isinstance(key, str) or not key.strip() or not isinstance(question, str)
                        or not question.strip() for key, question in questions.items())):
-            raise OrchestrationError("Assessment requires named questions and an object context.")
+            raise OrchestrationError("Assessment requires named questions and an object context.", "invalid_request", {"provider_calls": 0})
         credential = os.environ.get(self.credential_env, "") if self.credential_env else ""
         if self.credential_env and not credential:
-            raise OrchestrationError("The configured assessment credential is unavailable.", "evaluation_unavailable", {"cause": "credentials_unavailable"})
-        payload = _json({"model": self.model, "state": context,
-                         "questions": {key: {"type": "choice", "instructions": question, "criteria": self.criteria}
-                                       for key, question in questions.items()}})
+            raise OrchestrationError("The configured assessment credential is unavailable.", "evaluation_unavailable",
+                                     {"cause": "credentials_unavailable", "provider_calls": 0})
+        try:
+            payload = choice_payload(self.model, self.criteria, questions, context)
+        except OrchestrationError as error:
+            raise OrchestrationError(str(error), error.code, {"provider_calls": 0}) from None
         observe_wire(observer, "evaluator.request", payload[:self.limits["max_request_bytes"] + 1], origin, secrets=secrets,
                      complete=len(payload) <= self.limits["max_request_bytes"] + 1, total_bytes=len(payload),
                      phase="serialized", model=self.model)
         # Never echo credentials into model inputs, evidence or error details.
         if credential and credential in payload.decode("utf-8"):
-            raise OrchestrationError("Assessment input contains the configured credential.", "invalid_request")
+            raise OrchestrationError("Assessment input contains the configured credential.", "invalid_request", {"provider_calls": 0})
         if len(payload) > self.limits["max_request_bytes"]:
-            raise OrchestrationError("Assessment exceeds the configured request budget.", "invalid_request")
+            raise OrchestrationError("Assessment exceeds the configured request budget.", "invalid_request", {"provider_calls": 0})
         headers = {"Content-Type": "application/json", "Accept": "application/json", "User-Agent": "Xorchestrate"}
         if credential:
             if "\r" in credential or "\n" in credential:
-                raise OrchestrationError("The configured assessment credential is invalid.", "evaluation_unavailable")
+                raise OrchestrationError("The configured assessment credential is invalid.", "evaluation_unavailable", {"provider_calls": 0})
             headers["Authorization"] = "Bearer " + credential
         request = urllib.request.Request(self.endpoint, data=payload, headers=headers, method="POST")
         captured = bytearray()
         response_observed = False
 
-        def read_response(response, deadline=None):
+        def read_response(response, deadline=None, capture_limit=None):
             nonlocal response_observed
-            maximum = self.limits["max_response_bytes"]
+            maximum = self.limits["max_response_bytes"] if capture_limit is None else capture_limit
             status = response.status
             total = None
             try:
@@ -263,6 +303,14 @@ class TypeSafeEvaluator(_TelemetryEvaluator):
                         # rather than granting every body chunk a fresh timeout.
                         stream = response
                         for _ in range(3):
+                            # HTTPResponse closes fp when a fixed-length body is
+                            # exhausted. Its framing has already established EOF;
+                            # no further socket read or timeout is necessary.
+                            if isinstance(stream, http.client.HTTPResponse) and stream.length == 0:
+                                complete = True
+                                if total is None:
+                                    total = len(captured)
+                                break
                             raw = getattr(stream, "raw", None)
                             connection = getattr(raw, "_sock", None)
                             if connection is not None:
@@ -272,6 +320,8 @@ class TypeSafeEvaluator(_TelemetryEvaluator):
                         else:
                             reason = "capture_deadline_unavailable"
                             raise TimeoutError("Assessment diagnostic read cannot be bounded")
+                        if complete:
+                            break
                     block = response.read1(min(65536, maximum + 1 - len(captured)))
                     if not block:
                         complete = True
@@ -296,56 +346,82 @@ class TypeSafeEvaluator(_TelemetryEvaluator):
             return bytes(captured)
 
         deadline = time.monotonic() + self.timeout
-        try:
-            with urllib.request.build_opener(_NoRedirect()).open(request, timeout=self.timeout) as response:
-                body = read_response(response)
-        except urllib.error.HTTPError as error:
-            status = error.code
+        attempts = 0
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise OrchestrationError("The assessment request deadline was reached.", "evaluation_unavailable",
+                                         {"cause": "request_deadline", "provider_calls": attempts})
+            attempts += 1
+            captured.clear()
+            response_observed = False
+            retry_after = 0
             try:
-                if observer is not None:
-                    read_response(error, deadline)
+                with urllib.request.build_opener(_NoRedirect()).open(request, timeout=remaining) as response:
+                    body = read_response(response, deadline)
+                break
+            except urllib.error.HTTPError as error:
+                status = error.code
+                try:
+                    read_response(error, deadline, self.limits["max_response_bytes"] if observer is not None else 16384)
+                except (OSError, urllib.error.URLError, http.client.HTTPException, ValueError):
+                    pass
+                finally:
+                    details = _safe_provider_error(status, bytes(captured), error.headers, credential)
+                    header = error.headers.get("Retry-After", "") if error.headers is not None else ""
+                    if isinstance(header, str) and re.fullmatch(r"[0-9]+(?:\.[0-9]+)?", header[:32]):
+                        retry_after = float(header[:32])
+                    error.close()
+                failure = OrchestrationError("The assessment provider returned an HTTP error.", "evaluation_unavailable",
+                                             {**details, "provider_calls": attempts})
+                retryable = status in {429, 500, 502, 503, 504, 529}
             except (OSError, urllib.error.URLError, http.client.HTTPException, ValueError):
-                pass
-            finally:
-                error.close()
-            raise OrchestrationError("The assessment provider returned an HTTP error.", "evaluation_unavailable", {"status": status}) from None
-        except (OSError, urllib.error.URLError, http.client.HTTPException, ValueError):
-            if not response_observed:
-                observe_wire(observer, "evaluator.response", bytes(captured), origin, secrets=secrets,
-                             complete=False, reason="connection_unavailable", model=self.model)
-            raise OrchestrationError("The assessment provider could not be reached.", "evaluation_unavailable") from None
+                if not response_observed:
+                    observe_wire(observer, "evaluator.response", bytes(captured), origin, secrets=secrets,
+                                 complete=False, reason="connection_unavailable", model=self.model)
+                failure = OrchestrationError("The assessment provider could not be reached.", "evaluation_unavailable",
+                                             {"provider_calls": attempts})
+                retryable = True
+            delay = max(retry_after, self.retry_backoff * 2 ** (attempts - 1))
+            if not retryable or attempts > self.max_retries or time.monotonic() + delay >= deadline:
+                raise failure from None
+            time.sleep(delay)
         if len(body) > self.limits["max_response_bytes"]:
-            raise _invalid("Assessment response exceeds the configured response budget.")
+            raise _invalid("Assessment response exceeds the configured response budget.", attempts)
         if credential and credential.encode() in body:
-            raise _invalid("Assessment provider returned credential material.")
+            raise _invalid("Assessment provider returned credential material.", attempts)
         try:
             value = json.loads(body)
         except (ValueError, UnicodeError, RecursionError):
-            raise _invalid("Assessment provider returned invalid JSON.") from None
+            raise _invalid("Assessment provider returned invalid JSON.", attempts) from None
         if not isinstance(value, dict) or value.get("model") != self.model:
-            raise _invalid("Assessment provider returned an unexpected model.")
+            raise _invalid("Assessment provider returned an unexpected model.", attempts)
         answers = value.get("answers")
         if not isinstance(answers, dict) or answers.keys() != questions.keys():
-            raise _invalid("Assessment provider returned an incomplete answer set.")
+            raise _invalid("Assessment provider returned an incomplete answer set.", attempts)
         results = {}
         for key in questions:
             answer = answers[key]
             if not isinstance(answer, dict) or answer.get("type") != "choice":
-                raise _invalid("Assessment provider returned an invalid answer type.")
+                raise _invalid("Assessment provider returned an invalid answer type.", attempts)
             probabilities = answer.get("probabilities")
             if (not isinstance(probabilities, dict) or probabilities.keys() != self.criteria.keys()
                     or not all(_number(v) for v in probabilities.values()) or abs(sum(probabilities.values()) - 1) > 0.01
                     or not isinstance(answer.get("choice"), str) or answer["choice"] not in self.criteria
                     or not _number(answer.get("confidence"))):
-                raise _invalid("Assessment provider returned an invalid choice distribution.")
+                raise _invalid("Assessment provider returned an invalid choice distribution.", attempts)
             details = {"model": self.model, "probabilities": probabilities}
             if batch:
                 details.update({"usage_scope": "batch", "batch_question_ids": list(questions)})
             results[key] = checked_assessment({"outcome": answer["choice"], "confidence": answer["confidence"], "details": details})
+        first = results[next(iter(questions))]
+        first.details["provider_calls"] = attempts
+        if attempts > 1:
+            first.details["usage_unmeasured_attempts"] = attempts - 1
         if "usage" in value:
             usage = value["usage"]
             if not isinstance(usage, dict) or any(type(usage.get(k)) is not int or usage[k] < 0 for k in ("input_tokens", "output_tokens")):
-                raise _invalid("Assessment provider returned invalid usage data.")
+                raise _invalid("Assessment provider returned invalid usage data.", attempts)
             results[next(iter(questions))].details["usage"] = {key: usage[key] for key in ("input_tokens", "output_tokens")}
             observe_telemetry(observer, "evaluator.usage", {"usage": usage, "counter_semantics": "incremental",
                               "usage_stream_id": origin["attempt_id"], "source_version": "typesafe-choice-v1"},
