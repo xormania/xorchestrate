@@ -304,7 +304,7 @@ def triage(root, artifacts, result, metadata, workflow, catalog, options, *, eva
                                            for row in cases if row["outcome"] == "failed" and not row["failures"])
             if failure_details:
                 evidence["failures:" + module] = {"kind": "failure_detail", "sha256": digest(failure_details), "content": failure_details}
-            evidence["observations:" + family] = {"kind": "test_observation", "sha256": digest(observation_packet), "content": observation_packet}
+            evidence["observations:" + family + ":" + module] = {"kind": "test_observation", "sha256": digest(observation_packet), "content": observation_packet}
             base["missing_evidence"].extend(omitted)
             base["evidence"].extend({"id": key, **value} for key, value in evidence.items())
             executed = any(row["outcome"] in {"passed", "failed"} for row in cases)

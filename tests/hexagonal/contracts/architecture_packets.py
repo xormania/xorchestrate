@@ -4,7 +4,7 @@ from __future__ import annotations
 import hashlib
 
 
-def coherent_change(context, *, before, after, base_commit, path):
+def coherent_change(context, *, before, after, base_commit, path, before_file=None):
     candidates = [item for item in context["candidates"] if item["path"] == path]
     assert len(candidates) == 1
     candidate = candidates[0]
@@ -17,7 +17,7 @@ def coherent_change(context, *, before, after, base_commit, path):
     assert previous["git_commit"] == base_commit
     assert previous["contract_basis"] == "current_profile"
     assert previous["unit_id"] != current["unit_id"]
-    assert previous["sha256"] == hashlib.sha256(before.encode()).hexdigest()
+    assert previous["sha256"] == hashlib.sha256((before if before_file is None else before_file).encode()).hexdigest()
     assert candidate["candidate_id"] in previous["support_for"]
     assert candidate["candidate_id"] in current["support_for"]
 
