@@ -197,7 +197,7 @@ def test_workflow_gates_only_heavy_jobs_on_the_classifier():
     contract.always_running(jobs["changes"], needs=["paths"])
     assert expression(jobs["changes"]["if"], pr_context("synchronize"))
     contract.always_running(jobs["architecture-status"], needs=["changes"])
-    assert set(jobs) == {contract.CLASSIFIER_JOB, *contract.HEAVY_JOBS, *contract.ALWAYS_JOBS, "metadata"}
+    assert set(jobs) == {contract.CLASSIFIER_JOB, *contract.HEAVY_JOBS, *contract.ALWAYS_JOBS}
 
 
 def _guard(root, output, **env):
