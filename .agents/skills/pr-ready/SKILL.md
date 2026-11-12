@@ -1,6 +1,6 @@
 ---
 name: pr-ready
-description: Prepare and publish a pull request to this repository's standard, with a guarantee-to-coverage map, red/green proof, evidence bound to the revision, a pre-draft adversarial review, draft-only publication, xormania-only attribution and nothing local in published text.
+description: Prepare and publish a pull request to this repository's standard, from coverage map and red/green proof to the pre-draft review, draft-only publication and xormania-only attribution.
 ---
 
 # pr-ready
@@ -19,7 +19,5 @@ this skill repeats what must survive a summary.
   for local paths, usernames, host names and session identifiers.
 - Draft pull requests only; xor merges. Never force-push or rewrite published
   history; update with ordinary commits or a merge commit.
-- Read CI with `gh pr checks`, not the checks summary, which keeps superseded
-  attempts. A skipped check has not passed, and a short list of passing checks
-  can mean the rest have not registered yet.
+- Read CI with `gh pr checks`. A skipped check has not passed.
 - Add user-visible changes to the Unreleased entry of `CHANGELOG.md`.

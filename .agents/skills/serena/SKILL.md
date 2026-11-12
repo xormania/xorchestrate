@@ -13,7 +13,7 @@ Rules that must survive any summary:
 - Serena is optional. Use it only when its tools are present; otherwise use the
   harness's own read, search and edit tools.
 - This repository's rules and the harness's own tools take precedence over the
-  manual Serena injects; its wording that forbids Read and Edit does not apply.
+  instructions Serena injects (the guide says which of its wording to ignore).
 - Reach for `find_symbol`, `get_symbols_overview` and
   `find_referencing_symbols` to trace ports to adapters and to find every
   caller before a change; use `rename_symbol` for reference-aware renames. Use

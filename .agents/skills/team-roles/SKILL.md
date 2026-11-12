@@ -1,23 +1,26 @@
 ---
 name: team-roles
-description: How a team of agent sessions works on this repository, covering the coordinator, test writer, implementer and lookup roles, default path ownership, routing design and scope through the coordinator, and one committer per branch.
+description: How work is split across a team of agent sessions on this repository, with coordinator, test writer, implementer and lookup roles, default path ownership and one committer per branch.
 ---
 
 # team-roles
 
-Read and follow [team roles](../../../docs/agent-workflow.md#team-roles).
+Read and follow [team roles](../../../docs/agent-workflow.md#team-roles). These
+rules apply when work is split across sessions; a single contributor follows
+the PR quality standard alone.
 
 Rules that must survive any summary:
 
-- The coordinator decides design and scope and is the only role that talks to
-  xor about them. A direct message between sessions never settles either.
-- The test writer writes every test and proves it red first; the implementer
-  never writes or edits tests.
+- The coordinator decides design and scope and takes those questions to xor. A
+  direct message between sessions never settles either.
+- The test writer writes the tests and proves them red first; the implementer
+  does not edit them, as the PR quality standard asks for separate authors when
+  work is delegated.
 - Path ownership in the guide is the default; the coordinator may change it per
   task.
 - One committer per branch, tests committed first and unchanged. One writer per
   file.
-- Commit and push work in progress at every checkpoint. Draft pull requests
-  only; xor merges; never force-push.
+- For everyone: commit and push work in progress at every checkpoint, draft pull
+  requests only, xor merges, never force-push.
 - Nothing in the repository names sessions, models or harness assignments; the
   coordinator holds the current roster.
