@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "enabled": true,
+  "review_authorization": {"allowed_actor_ids": [127287135, 199175422]},
   "connection": {
     "endpoint": "https://api.typesafe.ai/v1/systemone",
     "model": "jev-1.14.0",

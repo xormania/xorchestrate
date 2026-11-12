@@ -51,10 +51,31 @@ GitHub queries, runner queues and environment setup.
 fetched as bounded API data, never checked out or executed. The submitted-review
 workflow is an unprivileged data relay; the trusted consumer verifies its workflow
 and PR association and re-fetches the review data. Same-repository PRs only.
+
+Submitted reviews can spend provider quota only when the GitHub reviewer ID is
+listed in trusted `review_authorization.allowed_actor_ids`. The checked-in policy
+allows xor (`127287135`) and the Codex connector (`199175422`); add or remove
+GitHub account IDs there to change who may trigger paid review advice. The
+consumer re-fetches the review from its PR, verifies its review and PR identity,
+and binds its author to the relay workflow's authenticated actor. Artifact author
+claims cannot grant access or substitute a trusted review for an untrusted actor.
+Missing identity or policy fails closed; an empty list disables review-triggered
+inference. Denied submissions produce a skipped receipt before fetching findings
+or source text. The unprivileged relay and trusted intake still use runner time;
+this is authorization, not an aggregate quota for authorized reviewers.
+A review submitted against an older commit can still be assessed against the
+complete current source; reviewer authorization does not change source freshness.
+
 Known credentials and explicit secret fields are protected with the existing
 telemetry protector before retention or inference. The source head is checked
 before spending and again before publishing; a stale result retains a stale
 receipt without presenting its assessments as current advice.
+
+Review source digests are validated before protection. The retained packet and
+provider evidence identify the protected text by its own digest;
+`source_content_identity` separately retains the validated original digest and
+the protected inference digest. Raw source text is not retained, and original
+digests do not prevent cache reuse when protected evidence is identical.
 
 The workflow writes one summary and a 30-day artifact containing source identity,
 trusted code identity, selected packet, policy, validated answers, full probability

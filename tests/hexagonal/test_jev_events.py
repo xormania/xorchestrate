@@ -20,6 +20,7 @@ from tests.hexagonal.support.jev_events import (
     HEAD,
     ROOT,
     GitHubEventFixture,
+    credential_review_packet,
     event_case,
     policy,
     provider_factory,
@@ -40,6 +41,37 @@ def test_review_probe_sends_complete_source_without_oracle_and_retains_current_i
         assert packet["evidence"]["source"]["text"] in json.dumps(sent["state"], ensure_ascii=False).replace("\\n", "\n"), "COMPLETE_CHANGED_UNIT_REACHES_PROVIDER"
         labels_are_not_provider_evidence(sent)
         unchanged_input(before, packet)
+
+
+@pytest.mark.parametrize("kind", ("assignment", "configured_value"))
+def test_review_redaction_preserves_verified_identity_and_reuses_protected_inference(tmp_path, monkeypatch, kind):
+    credentials = ("fixture-private-value-71386", "fixture-private-value-95174")
+    reports = []
+    with http_choices() as provider:
+        provider["reply"] = scripted_response("yes")
+        factory = provider_factory(provider)
+        for credential in credentials:
+            if kind == "configured_value":
+                monkeypatch.setenv("EVENT_REVIEW_SECRET", credential)
+            packet, expected_text = credential_review_packet(kind, credential)
+            before = deepcopy(packet)
+            report = run_probe(packet, policy(), cache_dir=tmp_path, evaluator_factory=factory)
+            assert report["status"] == "complete", "REDACTED_VERIFIED_REVIEW_SOURCE_IS_ASSESSED"
+            protected = report["packet"]["evidence"]["source"]
+            inference_sha = hashlib.sha256(expected_text.encode()).hexdigest()
+            assert protected["text"] == expected_text and protected["sha256"] == inference_sha, \
+                "PROTECTED_SOURCE_IDENTITY_MATCHES_INFERENCE_TEXT"
+            assert report["source_content_identity"] == {
+                "path": protected["path"], "source_sha256": before["evidence"]["source"]["sha256"],
+                "inference_sha256": inference_sha}, "ORIGINAL_AND_PROTECTED_SOURCE_IDENTITIES_REMAIN_DISTINCT"
+            unchanged_input(before, packet)
+            reports.append(report)
+        assert len(provider["requests"]) == 1, "IDENTICAL_PROTECTED_EVIDENCE_REUSES_INFERENCE"
+        assert reports[0]["request_sha256"] == reports[1]["request_sha256"]
+        assert reports[0]["source_content_identity"]["source_sha256"] != reports[1]["source_content_identity"]["source_sha256"]
+        retained = json.dumps(reports) + json.dumps(provider["requests"])
+        retained += "".join(path.read_text() for path in tmp_path.rglob("*") if path.is_file())
+        assert all(credential not in retained for credential in credentials), "REVIEW_SECRETS_ABSENT_FROM_PROVIDER_REPORT_AND_CACHE"
 
 
 @pytest.mark.parametrize("action", ("opened", "ready_for_review"))
@@ -143,9 +175,11 @@ def test_uncertain_probability_is_visible_without_promoting_high_native_confiden
         assert report["assessments"][0]["assessment"]["outcome"] == "yes", "ORIGINAL_PROVIDER_JUDGMENT_IS_RETAINED"
 
 
-@pytest.mark.parametrize("fault", ("incomplete", "oversized", "wrong_digest"))
+@pytest.mark.parametrize("fault", ("incomplete", "oversized", "wrong_digest", "wrong_digest_with_redaction"))
 def test_incomplete_or_unbound_source_never_reaches_inference(tmp_path, fault):
     packet, _ = event_case("review-failure-still-present")
+    if fault == "wrong_digest_with_redaction":
+        packet, _ = credential_review_packet("assignment", "fixture-invalid-source-71386")
     if fault == "incomplete":
         packet["evidence"]["complete"] = False
     elif fault == "oversized":
@@ -193,6 +227,69 @@ def test_review_collector_reads_the_finding_and_complete_source_at_the_observed_
     assert packet["evidence"]["source"]["text"] == github.source, "REVIEW_COLLECTOR_RETAINS_COMPLETE_UNIT"
     assert packet["evidence"]["finding"]["id"] == "41"
     assert not any("/actions/runs" in path for path in github.calls), "REVIEW_EVENT_DOES_NOT_LAUNCH_CI"
+
+
+@pytest.mark.parametrize("case", (
+    "owner", "codex", "configured_actor", "untrusted", "forged_payload", "review_substitution",
+    "missing_review_user", "missing_review_url", "wrong_review_id", "empty_policy", "invalid_policy", "historical_review",
+))
+def test_review_command_authorizes_refetched_identity_before_evidence_or_provider_use(tmp_path, monkeypatch, case):
+    github = GitHubEventFixture()
+    selected_policy = policy()
+    selected_policy["review_authorization"] = {"allowed_actor_ids": [127287135, 199175422]}
+    actor = 199175422 if case == "codex" else 987654321 if case in {
+        "configured_actor", "untrusted", "forged_payload", "review_substitution"} else 127287135
+    github.review["user"]["id"] = actor
+    relay = github.event("submitted")
+    relay["sender"] = {"id": actor}
+    source = github.failure_event()
+    source["workflow_run"].update(path=".github/workflows/jev-review-events.yml", conclusion="success", actor={"id": actor})
+    if case == "configured_actor":
+        selected_policy["review_authorization"]["allowed_actor_ids"].append(actor)
+    elif case == "forged_payload":
+        relay["sender"] = {"id": 127287135}
+        relay["review"]["user"] = {"id": 127287135}
+        relay["review"]["author_association"] = "OWNER"
+    elif case == "review_substitution":
+        github.review["user"]["id"] = 127287135
+        relay["sender"] = {"id": 127287135}
+        relay["review"]["user"] = {"id": 127287135}
+    elif case == "missing_review_user":
+        github.review.pop("user")
+    elif case == "missing_review_url":
+        github.review.pop("pull_request_url")
+    elif case == "wrong_review_id":
+        github.review["id"] = 99
+    elif case == "empty_policy":
+        selected_policy["review_authorization"]["allowed_actor_ids"] = []
+    elif case == "invalid_policy":
+        selected_policy["review_authorization"]["allowed_actor_ids"] = "all"
+    elif case == "historical_review":
+        github.review["commit_id"] = "d" * 40
+    event_path, relay_path, policy_path = (tmp_path / name for name in ("event.json", "relay.json", "policy.json"))
+    for path, value in ((event_path, source), (relay_path, relay), (policy_path, selected_policy)):
+        path.write_text(json.dumps(value))
+    output = tmp_path / "assessment"
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    monkeypatch.setattr(jev_events, "api_bytes", lambda url, *_: json.dumps(
+        github.api(url.removeprefix("https://api.github.com"))).encode())
+    with http_choices() as provider:
+        provider["reply"] = scripted_response("yes")
+        real_probe = jev_events.run_probe
+        monkeypatch.setattr(jev_events, "run_probe", lambda packet, configured, **options: real_probe(
+            packet, configured, **options, evaluator_factory=provider_factory(provider)))
+        assert jev_events.main(["--event", str(event_path), "--event-name", "workflow_run", "--relay", str(relay_path),
+                                "--policy", str(policy_path), "--output", str(output)]) == 0
+        report = json.loads((output / "assessment.json").read_text())
+        allowed = case in {"owner", "codex", "configured_actor", "historical_review"}
+        if allowed:
+            assert report["status"] == "complete" and len(provider["requests"]) == 1, \
+                "AUTHORIZED_REVIEWER_RETAINS_FOCUSED_ADVICE"
+            assert "/repos/example/project/pulls/12/reviews/51" in github.calls, "REVIEW_AUTHORIZATION_REFETCHES_AUTHORITATIVE_REVIEW"
+        else:
+            assert no_provider_work(report, provider), "UNAUTHORIZED_OR_UNBOUND_REVIEW_MAKES_ZERO_PROVIDER_CALLS"
+            assert not any("/contents/" in path or path.endswith("/files?per_page=100") or "/comments?" in path
+                           for path in github.calls), "REVIEW_AUTHORIZATION_PRECEDES_EVIDENCE_READS"
 
 
 def test_irrelevant_metadata_edits_do_not_collect_or_assess_code():
@@ -309,6 +406,8 @@ def test_review_relay_is_bound_to_its_producer_pr(fault):
 def test_event_workflows_keep_credentials_on_trusted_code_and_relays_as_data():
     workflow = json.loads((ROOT / ".github/workflows/jev-events.yml").read_text())
     relay = json.loads((ROOT / ".github/workflows/jev-review-events.yml").read_text())
+    allowed = policy().get("review_authorization", {}).get("allowed_actor_ids", [])
+    assert {127287135, 199175422} <= set(allowed), "DEFAULT_REVIEW_POLICY_AUTHORIZES_XOR_AND_CODEX_IDENTITIES"
     assert set(workflow["on"]) == {"pull_request_target", "workflow_run"}, "SECRET_CONSUMER_USES_TRUSTED_EVENTS"
     assert relay["on"]["pull_request_review"]["types"] == ["submitted"]
     steps = workflow["jobs"]["advise"]["steps"]

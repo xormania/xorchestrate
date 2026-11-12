@@ -109,12 +109,21 @@ def run_probe(packet, policy, *, cache_dir=None, evaluator_factory=TypeSafeEvalu
     policy = deepcopy(policy)
     secrets = tuple(value for key, value in os.environ.items() if value and re.search(
         r"(?i)token|secret|password|credential|api.?key", key))
-    packet = protect(packet, secrets=secrets)
     report = {"schema_version": 1, "status": "unavailable", "advisory": True,
-              "source": packet.get("source") if isinstance(packet, dict) else None,
+              "source": protect(packet.get("source"), secrets=secrets) if isinstance(packet, dict) else None,
               "assessments": [], "execution": {"provider_calls": 0, "fresh_usage": {"input_tokens": 0, "output_tokens": 0}}}
     try:
         limits = _policy(policy)
+        kind, _ = _packet(packet, limits)
+        original_sha256 = packet["evidence"]["source"]["sha256"] if kind == "review" else None
+        packet = protect(packet, secrets=secrets)
+        if kind == "review":
+            unit = packet["evidence"]["source"]
+            unit["sha256"] = hashlib.sha256(unit["text"].encode()).hexdigest()
+            # The original identity is provenance, not part of protected model
+            # evidence: redacted-equivalent sources can reuse the same inference.
+            report["source_content_identity"] = {"path": unit["path"], "source_sha256": original_sha256,
+                                                 "inference_sha256": unit["sha256"]}
         kind, evidence = _packet(packet, limits)
         if not policy["enabled"]:
             return {**report, "status": "disabled", "reason": "policy_disabled"}
@@ -179,6 +188,27 @@ def _content(api, repository, path, sha, limit):
     return {"path": path, "text": raw.decode("utf-8"), "sha256": hashlib.sha256(raw).hexdigest()}
 
 
+def _review_access(event, api, policy, repository, number):
+    """Authorize the actual submitted reviewer, not claims in a relay artifact."""
+    allowed = policy["review_authorization"]["allowed_actor_ids"]
+    if (not isinstance(allowed, list) or any(type(actor) is not int or actor <= 0 for actor in allowed)
+            or len(set(allowed)) != len(allowed)):
+        raise ValueError("invalid_review_authorization")
+    review_id = event["review"]["id"]
+    if type(review_id) is not int or review_id <= 0:
+        raise ValueError("invalid_review")
+    endpoint = f"/repos/{repository}/pulls/{number}"
+    review = api(f"{endpoint}/reviews/{review_id}")
+    author, sender = review["user"]["id"], event["sender"]["id"]
+    if (type(author) is not int or author <= 0 or type(sender) is not int or sender <= 0
+            or type(review["id"]) is not int or review["id"] != review_id
+            or review["pull_request_url"] != "https://api.github.com" + endpoint):
+        raise ValueError("invalid_review_identity")
+    if author != sender or author not in allowed:
+        return "reviewer_not_authorized"
+    return None
+
+
 def collect_event(event_name, event, api, policy):
     """Fetch source as data at a verified head; never check out or execute it."""
     skipped = {"schema_version": 1, "status": "skipped"}
@@ -205,14 +235,16 @@ def collect_event(event_name, event, api, policy):
             return {**skipped, "reason": "ineligible_pr"}
         if event["pull_request"]["head"]["sha"] != sha:
             return {**skipped, "reason": "stale_event"}
+        if event_name == "pull_request_review":
+            reason = _review_access(event, api, policy, repository, number)
+            if reason:
+                return {**skipped, "reason": reason}
         source = {"repository": repository, "pr_number": number, "head_sha": sha}
         files = api(f"/repos/{repository}/pulls/{number}/files?per_page=100")
         paths = {row["filename"] for row in files if row.get("status") != "removed"}
         comments = []
         if event_name == "pull_request_review":
             review_id = event["review"]["id"]
-            if type(review_id) is not int or review_id <= 0:
-                raise ValueError("invalid_review")
             comments = api(f"/repos/{repository}/pulls/{number}/reviews/{review_id}/comments?per_page=100")
         elif action == "synchronize":
             comments = api(f"/repos/{repository}/pulls/{number}/comments?per_page=100")
@@ -295,14 +327,18 @@ def relay_event(event, payload):
     """Authenticate a review relay's PR association before reading review data."""
     run = event["workflow_run"]
     repository = event["repository"]["full_name"]
+    actor = run["actor"]["id"]
     if (run["path"] != ".github/workflows/jev-review-events.yml"
+            or type(actor) is not int or actor <= 0
             or run["head_repository"]["full_name"] != repository or run["conclusion"] != "success"
             or payload["repository"]["full_name"] != repository
             or not any(pr["number"] == payload["pull_request"]["number"]
                        and pr["head"]["sha"] == payload["pull_request"]["head"]["sha"]
                        for pr in run.get("pull_requests", []))):
         raise ValueError("unidentified_review_relay")
-    return payload
+    authenticated = deepcopy(payload)
+    authenticated["sender"] = {"id": actor}
+    return authenticated
 
 
 def summary(report):
