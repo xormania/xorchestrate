@@ -2,6 +2,7 @@
 
 import contextlib
 import errno
+import importlib
 import json
 import shutil
 import subprocess
@@ -281,10 +282,11 @@ def test_location_problem_reports_errno_not_class(monkeypatch, tmp_path):
 
 
 def _multiplexer(tmp_path):
-    from xorchestrate.adapters.tmux import TmuxTerminalHost
-
+    # Collected tests reach the multiplexer adapter only through its factory reference.
+    module, _, name = ADAPTERS["multiplexer"][0].partition(":")
     base = track(tempfile.mkdtemp(prefix="xth-"))
-    return TmuxTerminalHost({"name": "probe", "socket": f"{base}/probe.sock", "binary": sys.executable})
+    return getattr(importlib.import_module(module), name)(
+        {"name": "probe", "socket": f"{base}/probe.sock", "binary": sys.executable})
 
 
 @pytest.mark.parametrize("raised,expected", [
@@ -292,13 +294,11 @@ def _multiplexer(tmp_path):
     (PermissionError(errno.EACCES, PRIVATE), "EACCES"),
 ])
 def test_multiplexer_control_failure_reports_public_reason(monkeypatch, tmp_path, raised, expected):
-    from xorchestrate.adapters import tmux
-
     host = _multiplexer(tmp_path)
 
     def failing(*args, **kwargs):
         raise raised
-    monkeypatch.setattr(tmux.subprocess, "run", failing)
+    monkeypatch.setattr(subprocess, "run", failing)
     with pytest.raises(OrchestrationError) as unanswered:
         host._control("list-sessions", start=True)
     assert unanswered.value.details == {"error": expected}, "TERMINAL_PUBLIC_REASON"
