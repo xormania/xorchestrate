@@ -13,7 +13,7 @@ import urllib.parse
 import urllib.request
 from dataclasses import asdict
 
-from ..model import JSON, Assessment, OrchestrationError
+from ..model import JSON, Assessment, OrchestrationError, public_error_code
 from ..ports import CapabilityProvider
 from .telemetry_capture import TelemetryDispatch, TelemetrySource, capture_origin, observe_telemetry, observe_wire
 
@@ -42,7 +42,7 @@ class _TelemetryEvaluator(TelemetrySource):
             try:
                 result = operation(observer, origin, secrets)
             except BaseException as error:
-                code = getattr(error, "code", "evaluation_unavailable")
+                code = public_error_code(error, "evaluation_unavailable")
                 status = "unavailable" if code == "evaluation_unavailable" else "invalid"
                 observe_telemetry(observer, "evaluator.validation", {"status": status, "code": code}, origin, secrets=secrets)
                 raise

@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import cast
 
 from ..activity import activity_engine
-from ..model import OrchestrationError, canonical_digest, public_error
+from ..model import OrchestrationError, canonical_digest, public_error, public_error_code
 from ..outcomes import before_effect, effect_outcome
 from ..ports import ApplicationToolSessionDriver, SessionDriver
 from .bridge_transport import FifoListener, Peer, bridge_error, copy_json, positive_option
@@ -349,14 +349,14 @@ class SessionBridgeHost:
                             self._bindings[(field, result[field])] = lease
                 self._save_state()
             except Exception as settlement:
-                self._effects[key]["recording_error"] = getattr(settlement, "code", type(settlement).__name__)
+                self._effects[key]["recording_error"] = public_error_code(settlement)
                 try:
                     self._save_state()
                 except Exception:
                     pass  # The original returned result is also carried outward.
                 raise OrchestrationError("Native effect completed but host settlement could not be retained.",
                     "completed_unapplied", {"outcome": "completed", "result": deepcopy(result),
-                        "cause": getattr(settlement, "code", type(settlement).__name__)}) from settlement
+                        "cause": public_error_code(settlement)}) from settlement
         return result
 
     def _replay_callback(self, action, arguments, native_context, idempotency_key=None):

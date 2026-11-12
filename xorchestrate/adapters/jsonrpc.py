@@ -16,7 +16,7 @@ from concurrent.futures import Future
 from copy import deepcopy
 from typing import Any
 
-from ..model import OrchestrationError
+from ..model import OrchestrationError, public_error, public_error_code
 from .process import close_process, command_options, decode_json, encode_json, positive_integer, positive_number
 from .telemetry_capture import (
     StderrCapture,
@@ -134,8 +134,8 @@ def run_json_process(options: dict, payload: dict, command_key: str = "command",
             raise OrchestrationError("Subprocess result must be a JSON object.", "provider_protocol", {"outcome": "unknown"})
         return result
     except BaseException as error:
-        observe_telemetry(telemetry_observer, "process.error", {"code": getattr(error, "code", "provider_unavailable"),
-                          "outcome": getattr(error, "details", {}).get("outcome", "unknown")}, origin, secrets=secrets)
+        observe_telemetry(telemetry_observer, "process.error", {"code": public_error_code(error, "provider_unavailable"),
+                          "outcome": public_error(error)["details"].get("outcome", "unknown")}, origin, secrets=secrets)
         raise
     finally:
         close_process(process, shutdown_timeout)
@@ -240,7 +240,7 @@ class JsonLineProcess(TelemetrySource):
             else:
                 origins = []
         for identifier, origin in origins:
-            observe_telemetry(self._telemetry_observer, "process.error", {"code": getattr(error, "code", "provider_unavailable"),
+            observe_telemetry(self._telemetry_observer, "process.error", {"code": public_error_code(error, "provider_unavailable"),
                               "outcome": "unknown", "request_id": identifier}, origin, secrets=self.telemetry_secrets)
         self.close()
 
