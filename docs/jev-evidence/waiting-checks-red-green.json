@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "guarantee": "Every selected CI run emits stable required verdicts and retains failure semantics on metadata edits. Qualified reuse skips behavioral lanes while retaining static validation and verdict reporting.",
+  "command": "python -m pytest -q tests/hexagonal/test_ci_lifecycle.py tests/hexagonal/test_architecture_cli.py tests/hexagonal/test_ci_changes.py",
+  "red": {
+    "result": "20 failed, 66 passed",
+    "workflow_sha256": "0760ee5d7733d48acb3765db46edd26475aaf05bddc6cd4a985540d78bc544d8",
+    "meaningful_regression_failures": 19,
+    "workflow_inventory_adjustment_failures": 1,
+    "diagnostics": [
+      "CI_SELECTED_RUN_OWNS_BOTH_STABLE_REQUIRED_NAMES",
+      "CI_METADATA_REUSE_RETAINS_CURRENT_paths",
+      "EVERY_SELECTED_RUN_RETAINS_REQUIRED_ARCHITECTURE_NAME"
+    ]
+  },
+  "test_sha256": {
+    "tests/hexagonal/test_ci_lifecycle.py": "952c3d288242b6ef3e9eac8d15e72599bab990b82df117ba70ad142c32d2cb82",
+    "tests/hexagonal/test_architecture_cli.py": "31ef0734b0e5ae77c30c020840dee11bd6d26be976fa76e7e0bcf1471b581417",
+    "tests/hexagonal/test_ci_changes.py": "4559e5b4c4764e69857d695fb2e179155bbfc8a70419c746ed6751a6d2af5ddf"
+  },
+  "baseline_commit": "f2c7e39d09aaef4b9709cae032b7ee6757a6d8de",
+  "green": {
+    "result": "86 passed",
+    "workflow_sha256": "2ff3b40fa5b7f802696b0cf78ff5ad6d645c7b5fb2a0056394d5cc6442e795a9",
+    "same_test_bytes_as_red": true
+  },
+  "affected": {
+    "command": "python -m pytest -q tests/hexagonal/test_ci*.py tests/hexagonal/test_architecture*.py tests/hexagonal/test_jev*.py",
+    "result": "645 passed"
+  },
+  "validation_boundary": "Local workflow routing and actual architecture verdict shell execution; GitHub selected-run behavior requires hosted confirmation after publishing.",
+  "concurrency_repair": {
+    "guarantee": "Metadata validation concurrency is isolated by repository, PR, head and base; delayed metadata cannot cancel validation for a different candidate.",
+    "command": "python -m pytest -q tests/hexagonal/test_ci_lifecycle.py -k delayed_old_source",
+    "red": {
+      "result": "1 failed, 23 deselected",
+      "diagnostic": "CI_DELAYED_OLD_METADATA_CANNOT_CANCEL_CURRENT_HEAD",
+      "workflow_sha256": "2ff3b40fa5b7f802696b0cf78ff5ad6d645c7b5fb2a0056394d5cc6442e795a9"
+    },
+    "test_sha256": "098cbb1270e10a72b359664b82c4e9f998beda95030c051695f2569b2fa3376b",
+    "green": {
+      "result": "86 passed (complete focused set)",
+      "workflow_sha256": "ede214731257ca79e1535c62184c48988f291bf9dd4297179395723d25f07ce3",
+      "same_test_bytes_as_red": true
+    }
+  },
+  "final_test_sha256": {
+    "tests/hexagonal/test_ci_lifecycle.py": "098cbb1270e10a72b359664b82c4e9f998beda95030c051695f2569b2fa3376b",
+    "tests/hexagonal/test_architecture_cli.py": "31ef0734b0e5ae77c30c020840dee11bd6d26be976fa76e7e0bcf1471b581417",
+    "tests/hexagonal/test_ci_changes.py": "4559e5b4c4764e69857d695fb2e179155bbfc8a70419c746ed6751a6d2af5ddf"
+  }
+}

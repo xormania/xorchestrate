@@ -1,4 +1,4 @@
-"""Workflow event scenarios preserve required checks while removing metadata churn."""
+"""Every selected CI run preserves required verdicts and qualifies behavioral reuse."""
 
 import json
 from pathlib import Path
@@ -21,16 +21,29 @@ def workflow():
 
 
 @pytest.mark.parametrize("changes", METADATA_CHANGES)
-def test_metadata_edits_do_not_start_validation_or_replace_required_check_names(changes):
+@pytest.mark.parametrize("dependency_result", ("success", "failure", "cancelled", "skipped"))
+def test_metadata_edits_report_required_checks_in_the_selected_run(changes, dependency_result):
     jobs, context = workflow()["jobs"], pr_context("edited", changes)
-    for name in VALIDATION_JOBS:
-        job = jobs[name]
-        assert expression(job.get("if", True), context) is False, "CI_METADATA_DOES_NOT_START_" + name
-        assert expression(job.get("name", name), context) not in REQUIRED_NAMES, \
-            "CI_METADATA_CANNOT_REPLACE_REQUIRED_CHECK_WITH_SKIPPED_GREEN"
-    active = [name for name, job in jobs.items() if expression(job.get("if", True), context)]
-    assert len(active) == 1, "CI_METADATA_HAS_ONE_LIGHTWEIGHT_OBSERVER"
-    assert not any("scripts.testkit" in step.get("run", "") for step in jobs[active[0]].get("steps", []))
+    for dependency in context["needs"].values():
+        dependency["result"] = dependency_result
+    # GitHub selects the latest CI run, not a union of same-head run histories.
+    # Each selected run must produce both required verdicts, even after failure.
+    required = {job["name"]: job for job in jobs.values() if job.get("name") in REQUIRED_NAMES}
+    assert set(required) == REQUIRED_NAMES, "CI_SELECTED_RUN_OWNS_BOTH_STABLE_REQUIRED_NAMES"
+    for name, job in required.items():
+        assert expression(job.get("if", True), context), "CI_METADATA_REPORTS_REQUIRED_VERDICT_" + name
+        assert not job.get("continue-on-error"), "CI_REQUIRED_FAILURE_CANNOT_BE_IGNORED"
+    assert expression(jobs["paths"].get("if", True), context), "CI_METADATA_QUALIFIES_CURRENT_EVIDENCE"
+
+
+@pytest.mark.parametrize("changes", METADATA_CHANGES)
+def test_metadata_reuse_keeps_static_and_verdicts_without_repeating_behavior(changes):
+    jobs, context = workflow()["jobs"], pr_context("edited", changes)
+    context["needs"]["paths"]["outputs"]["reuse"] = "true"
+    for name in ("application-tests", "application", "verification", "tmux-acceptance", "package"):
+        assert not expression(jobs[name]["if"], context), "CI_QUALIFIED_METADATA_REUSES_" + name
+    for name in ("paths", "changes", "architecture-status", "ci-result"):
+        assert expression(jobs[name]["if"], context), "CI_METADATA_REUSE_RETAINS_CURRENT_" + name
 
 
 @pytest.mark.parametrize("action,changes", VALIDATION_EVENTS)
@@ -56,12 +69,19 @@ def test_delayed_old_source_and_metadata_cannot_cancel_current_validation():
     repeated = pr_context("reopened")
     metadata = pr_context("edited", {"body": {"from": "old"}})
     other_pr = pr_context("synchronize", number=18)
+    metadata_new_head = pr_context("edited", {"body": {"from": "old"}}, head="c" * 40)
+    metadata_new_base = pr_context("edited", {"body": {"from": "old"}}, base="d" * 40)
     group = expression(concurrency["group"], previous)
     assert group != expression(concurrency["group"], new_head), "CI_DELAYED_OLD_HEAD_CANNOT_CANCEL_CURRENT_HEAD"
     assert group != expression(concurrency["group"], new_base), "CI_DELAYED_OLD_BASE_CANNOT_CANCEL_CURRENT_BASE"
     assert group == expression(concurrency["group"], repeated), "CI_IDENTICAL_CANDIDATE_EVENTS_SHARE_CANCELLATION"
     assert group != expression(concurrency["group"], metadata), "CI_METADATA_CANNOT_CANCEL_VERIFICATION"
     assert group != expression(concurrency["group"], other_pr)
+    metadata_group = expression(concurrency["group"], metadata)
+    assert metadata_group != expression(concurrency["group"], metadata_new_head), \
+        "CI_DELAYED_OLD_METADATA_CANNOT_CANCEL_CURRENT_HEAD"
+    assert metadata_group != expression(concurrency["group"], metadata_new_base), \
+        "CI_DELAYED_OLD_METADATA_CANNOT_CANCEL_CURRENT_BASE"
     assert expression(concurrency["cancel-in-progress"], repeated), "CI_IDENTICAL_CANDIDATE_WORK_IS_CANCELLED"
 
 

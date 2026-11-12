@@ -77,12 +77,13 @@ def test_ci_retains_blocking_gate_and_independent_diagnostics(tmp_path):
 
 
 @pytest.mark.parametrize("static_result", ["success", "failure", "cancelled", "skipped"])
-def test_required_architecture_status_reflects_the_shared_static_result(tmp_path, static_result):
+@pytest.mark.parametrize("action,changes", [("synchronize", {}), ("edited", {"body": {"from": "old"}})])
+def test_required_architecture_status_reflects_the_shared_static_result(tmp_path, static_result, action, changes):
     workflow = json.loads((ROOT / ".github/workflows/ci.yml").read_text())
     status = workflow["jobs"]["architecture-status"]
-    context = pr_context("synchronize")
+    context = pr_context(action, changes)
     context["needs"]["changes"]["result"] = static_result
-    assert expression(status["name"], context) == "Hexagonal architecture", "SOURCE_VALIDATION_RETAINS_REQUIRED_ARCHITECTURE_NAME"
+    assert expression(status["name"], context) == "Hexagonal architecture", "EVERY_SELECTED_RUN_RETAINS_REQUIRED_ARCHITECTURE_NAME"
     assert status["needs"] == ["changes"]
     assert expression(status["if"], context), "ARCHITECTURE_STATUS_RUNS_AFTER_EVERY_STATIC_OUTCOME"
     assert not status.get("continue-on-error")
