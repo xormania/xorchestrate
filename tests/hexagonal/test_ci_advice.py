@@ -2,6 +2,8 @@
 
 import hashlib
 import json
+import re
+import subprocess
 from copy import deepcopy
 from pathlib import Path
 
@@ -37,6 +39,34 @@ def test_provider_credentials_are_absent_from_the_candidate_validation_workflow(
     document = json.dumps(workflow("ci.yml"))
     assert "secrets.TYPESAFE_API_KEY" not in document and "secrets.JEV_API_KEY" not in document, \
         "CI_CANDIDATE_VALIDATION_HAS_NO_MODEL_CREDENTIAL"
+
+
+def test_advice_runtime_paths_are_initialized_before_use_in_valid_context(tmp_path):
+    job = workflow("jev.yml")["jobs"]["advice"]
+    assert not re.search(r"\$\{\{\s*runner\.", json.dumps(job.get("env", {}))), \
+        "ADVICE_JOB_ENV_CANNOT_USE_RUNNER_CONTEXT"
+    steps = job["steps"]
+    variables = ("PYTHONPYCACHEPREFIX", "UV_PROJECT_ENVIRONMENT")
+    initializers = [(index, step) for index, step in enumerate(steps)
+                    if "GITHUB_ENV" in step.get("run", "") and all(key in step["run"] for key in variables)]
+    assert len(initializers) == 1, "ADVICE_RUNTIME_PATHS_REQUIRE_INITIALIZATION"
+    index, initializer = initializers[0]
+    consumers = [position for position, step in enumerate(steps) if position != index
+                 and ("python" in step.get("run", "") or "uv sync" in step.get("run", "")
+                      or "setup-uv@" in step.get("uses", ""))]
+    assert consumers and index < min(consumers) and not initializer.get("if"), \
+        "ADVICE_RUNTIME_PATHS_EXIST_BEFORE_ANY_PYTHON_OR_UV_USE"
+    runner_temp, checkout = tmp_path / "runner temp", tmp_path / "checkout"
+    runner_temp.mkdir()
+    checkout.mkdir()
+    env_file = runner_temp / "github-env"
+    command = subprocess.run(["bash", "-euo", "pipefail", "-c", initializer["run"]], cwd=checkout,
+        env={"RUNNER_TEMP": str(runner_temp), "GITHUB_ENV": str(env_file)}, capture_output=True, text=True)
+    assert command.returncode == 0 and env_file.is_file(), "ADVICE_RUNTIME_INITIALIZER_EXECUTES"
+    paths = dict(line.split("=", 1) for line in env_file.read_text().splitlines())
+    assert paths == {"PYTHONPYCACHEPREFIX": str(runner_temp / "jev-advice-pycache"),
+                     "UV_PROJECT_ENVIRONMENT": str(runner_temp / "jev-advice-python")}, \
+        "ADVICE_RUNTIME_PATHS_ARE_DISTINCT_AND_OUTSIDE_CHECKOUT"
 
 
 @pytest.fixture
