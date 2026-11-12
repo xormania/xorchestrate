@@ -45,6 +45,7 @@ def composed_overlap(protocol, order, tmp_path, force_idle=False):
         peers = {protocol: {"session_id": session["id"], "native_id": session["backend"]["native_id"],
                             "incarnation": session["backend"]["incarnation"]}}
         case = {"id": "completion-" + protocol, "kind": "completion", "peer": protocol}
+        injected = []  # One entry per idle record the fault has finished writing.
         if force_idle:
             original = adapter._notification
 
@@ -54,6 +55,7 @@ def composed_overlap(protocol, order, tmp_path, force_idle=False):
                     with live.lock:
                         live.activity = "idle"
                         adapter._observation(live, "activity", state="idle")
+                        injected.append(params.get("turn", {}).get("id"))
             adapter._notification = faulty
 
         def measured(label, remaining):
@@ -81,8 +83,11 @@ def composed_overlap(protocol, order, tmp_path, force_idle=False):
             assert initial["verdict"]["status"] == "failed"
             for index, label in enumerate(order):
                 old = len([r for r in snapshot(app)["observations"] if r["observation"].get("kind") in {"turn_completed", "native_completion"}])
+                faults = len(injected)
                 holds.release[label].set()
                 wait(lambda: len([r for r in snapshot(app)["observations"] if r["observation"].get("kind") in {"turn_completed", "native_completion"}]) > old)
+                if force_idle:  # Measure only once the fault's idle record is stored, not between the two writes.
+                    wait(lambda: len(injected) > faults)
                 remaining = list(order[index + 1:])
                 if not remaining:
                     wait(lambda: adapter.status(session["backend"])["activity"] == "idle")
