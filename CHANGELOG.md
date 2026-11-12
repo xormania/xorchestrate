@@ -9,6 +9,8 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- Jev change packets retain moved assignment before-state using stable target identities and distinguish repeated targets.
+- CI summaries retain valid mixed-cache Jev assessments and separate fresh from reused usage.
 - Jev diagnostics budget the complete serialized request, preserve complete
   evidence while splitting oversized candidate batches, and reuse successful
   partitions. Bounded transient retries share the request deadline; recognized

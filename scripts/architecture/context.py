@@ -28,8 +28,24 @@ def _start(node):
     return min([node.lineno, *(item.lineno for item in getattr(node, "decorator_list", ()))])
 
 
+def _declaration_targets(node):
+    if isinstance(node, ast.Assign):
+        targets = node.targets
+    elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
+        targets = [node.target]
+    else:
+        return None
+    return type(node).__name__, tuple(ast.dump(target) for target in targets)
+
+
+def _unit_key(unit):
+    return unit["path"], unit.get("_pair_key", unit["symbol"]), unit["kind"]
+
+
 def _units(item, text, tree):
     lines, units = text.splitlines(keepends=True), []
+    declaration_counts = Counter(_declaration_targets(node) for node in tree.body)
+    declaration_occurrences = Counter()
 
     def add(node, symbol):
         start, end = _start(node), node.end_lineno
@@ -39,6 +55,13 @@ def _units(item, text, tree):
                       "kind": type(node).__name__, "start_line": start, "end_line": end,
                       "source": "".join(lines[start - 1:end]), "truncated": False,
                       "_node": node})
+        targets = _declaration_targets(node)
+        if targets is not None:
+            declaration_occurrences[targets] += 1
+            # Preserve source labels while pairing declarations independently of
+            # line shifts. Ordinals distinguish repeated targets; a changed
+            # multiplicity stays unpaired rather than claiming a false match.
+            units[-1]["_pair_key"] = (targets, declaration_occurrences[targets], declaration_counts[targets])
 
     for node in tree.body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
@@ -208,15 +231,14 @@ def build_context(report: dict, root: Path, *, max_source_bytes=24000, max_files
             candidate_units.extend(leaves)
             if not leaves:
                 excluded.append({**span, "reason": "no_source_unit"})
-        current_symbols = {(unit["path"], unit["symbol"], unit["kind"]): unit for unit in all_units}
+        current_symbols = {_unit_key(unit): unit for unit in all_units}
         for change in changes:
             for span in change["before"]:
                 # A pure statement deletion has no nonempty new-side span.
                 # Select its surviving behavior unit, or the deleted old unit,
                 # so removed guards remain reviewable as complete pairs.
                 for unit in _matching(old_units, span):
-                    candidate_units.append(current_symbols.get(
-                        (unit["path"], unit["symbol"], unit["kind"]), unit))
+                    candidate_units.append(current_symbols.get(_unit_key(unit), unit))
     else:
         finding_paths = [finding.get("path") for finding in report.get("findings", [])]
         priorities = list(dict.fromkeys([*source_paths, *finding_paths]))
@@ -268,7 +290,7 @@ def build_context(report: dict, root: Path, *, max_source_bytes=24000, max_files
         (before_selected if unit.get("side") == "before" else selected).append(record)
         return True
 
-    old_by_symbol = {(unit["path"], unit["symbol"], unit["kind"]): unit for unit in old_units}
+    old_by_symbol = {_unit_key(unit): unit for unit in old_units}
     for unit in candidate_units:
         if len(candidates) >= max_candidates:
             if targeted:
@@ -276,7 +298,7 @@ def build_context(report: dict, root: Path, *, max_source_bytes=24000, max_files
                                  "start_line": unit["start_line"], "end_line": unit["end_line"],
                                  "reason": "candidate_limit"})
             continue
-        before = unit if unit.get("side") == "before" else old_by_symbol.get((unit["path"], unit["symbol"], unit["kind"]))
+        before = unit if unit.get("side") == "before" else old_by_symbol.get(_unit_key(unit))
         pair = [unit] if before is None or before is unit else [unit, before]
         size = sum(len(item["source"].encode("utf-8")) for item in pair if item["unit_id"] not in used)
         reason = "file_limit" if unit["path"] not in paths and len(paths) >= max_files else (
