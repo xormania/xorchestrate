@@ -28,6 +28,15 @@ def event_case(identifier):
     return packet, case["expected"]
 
 
+def credential_review_packet(kind, credential):
+    packet, _ = event_case("review-failure-still-present")
+    declaration = f'password = "{credential}"\n' if kind == "assignment" else f'# configured value: {credential}\n'
+    unit = packet["evidence"]["source"]
+    unit["text"] = declaration + unit["text"]
+    unit["sha256"] = hashlib.sha256(unit["text"].encode()).hexdigest()
+    return packet, unit["text"].replace(credential, "[REDACTED]")
+
+
 def scripted_response(choices):
     """Return a provider-shaped answer selected independently by a test."""
     def reply(payload, attempt):
@@ -74,15 +83,17 @@ class GitHubEventFixture:
         self.comments = [{"id": 41, "pull_request_review_id": 51, "path": self.path,
                           "body": "The receipt is not persisted before reporting success.",
                           "commit_id": HEAD, "original_commit_id": HEAD, "line": 2}]
+        self.review = {"id": 51, "state": "changes_requested", "commit_id": HEAD,
+                       "body": "Receipt persistence is missing.", "user": {"id": 127287135},
+                       "pull_request_url": f"https://api.github.com/repos/{REPOSITORY}/pulls/12"}
         self.jobs = [{"id": 71, "name": "Application tests", "conclusion": "failure",
                       "steps": [{"name": "Run tests", "conclusion": "failure"}]}]
         self.calls = []
 
     def event(self, action="opened"):
         return {"action": action, "number": 12, "repository": {"full_name": REPOSITORY},
-                "pull_request": deepcopy(self.pr),
-                "review": {"id": 51, "state": "changes_requested", "commit_id": HEAD,
-                           "body": "Receipt persistence is missing."}}
+                "pull_request": deepcopy(self.pr), "sender": {"id": 127287135},
+                "review": deepcopy(self.review)}
 
     def api(self, path):
         self.calls.append(path)
@@ -91,6 +102,8 @@ class GitHubEventFixture:
             return deepcopy(self.pr)
         if endpoint.endswith("/pulls/12/files"):
             return deepcopy(self.files)
+        if endpoint.endswith("/reviews/51"):
+            return deepcopy(self.review)
         if endpoint.endswith("/comments"):
             return deepcopy(self.comments)
         if endpoint.endswith("/attempts/2/jobs"):
@@ -105,5 +118,6 @@ class GitHubEventFixture:
     def failure_event(self):
         return {"repository": {"full_name": REPOSITORY}, "workflow_run": {
             "id": 61, "run_attempt": 2, "head_sha": HEAD, "path": ".github/workflows/ci.yml",
+            "actor": {"id": 127287135},
             "conclusion": "failure", "head_repository": {"full_name": REPOSITORY},
             "pull_requests": [{"number": 12, "head": {"sha": HEAD}}]}}

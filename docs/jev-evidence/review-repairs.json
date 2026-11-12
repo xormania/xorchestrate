@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "scope": "PR85 source-redaction correctness and review-triggered provider authorization",
+  "findings": [
+    "https://github.com/xormania/xorchestrate/pull/85#discussion_r4557067218",
+    "https://github.com/xormania/xorchestrate/pull/85#discussion_r4557112715"
+  ],
+  "runtime": {
+    "python": "3.12.16",
+    "pytest": "9.2.0",
+    "provider": "local scripted HTTP Choice service through the TypeSafe adapter; no live Jev inference"
+  },
+  "defective_source_commit": "c247b40015ef34b082e8869bb7441c521e0f01e0",
+  "repaired_source_commit": "4ba4b1b6c54fab1b8698e18e88d8312717f99ac0",
+  "test_input_basis": "The same final independent test/support bytes overlay git archive c247b40 in an isolated directory and run against the repaired integration tree.",
+  "current_input_sha256": {
+    "scripts/ci/jev_events.py": "9b7108e5638d4bd0ab2283d4a645d1e910d5a865001ed71d0e2673d613834afc",
+    "contracts/jev-events.json": "e60ef142a844def343ec73ebbc939ae561763745b7689b376054ac4113cd25e4",
+    "tests/hexagonal/test_jev_events.py": "95bec188b1901794c7d2598155d41fe1e360be4ffb165ae78dff8cf43c2b6c5a",
+    "tests/hexagonal/support/jev_events.py": "8a2cebad6b947843c27be3804df6c59b5098d9aa21d61e26eca4733495475367"
+  },
+  "red": {
+    "command": "python -m pytest -q tests/hexagonal/test_jev_events.py -k 'redaction_preserves or review_command_authorizes or incomplete_or_unbound_source or event_workflows_keep'",
+    "exit_code": 1,
+    "tests": 19,
+    "failures": 15,
+    "errors": 0,
+    "skipped": 0,
+    "assertions": [
+      {
+        "case": "test_review_redaction_preserves_verified_identity_and_reuses_protected_inference[assignment]",
+        "assertion": "AssertionError: REDACTED_VERIFIED_REVIEW_SOURCE_IS_ASSESSED"
+      },
+      {
+        "case": "test_review_redaction_preserves_verified_identity_and_reuses_protected_inference[configured_value]",
+        "assertion": "AssertionError: REDACTED_VERIFIED_REVIEW_SOURCE_IS_ASSESSED"
+      },
+      {
+        "case": "test_review_command_authorizes_refetched_identity_before_evidence_or_provider_use[owner]",
+        "assertion": "AssertionError: REVIEW_AUTHORIZATION_REFETCHES_AUTHORITATIVE_REVIEW"
+      },
+      {
+        "case": "test_review_command_authorizes_refetched_identity_before_evidence_or_provider_use[codex]",
+        "assertion": "AssertionError: REVIEW_AUTHORIZATION_REFETCHES_AUTHORITATIVE_REVIEW"
+      },
+      {
+        "case": "test_review_command_authorizes_refetched_identity_before_evidence_or_provider_use[configured_actor]",
+        "assertion": "AssertionError: REVIEW_AUTHORIZATION_REFETCHES_AUTHORITATIVE_REVIEW"
+      },
+      {
+        "case": "test_review_command_authorizes_refetched_identity_before_evidence_or_provider_use[untrusted]",
+        "assertion": "AssertionError: UNAUTHORIZED_OR_UNBOUND_REVIEW_MAKES_ZERO_PROVIDER_CALLS"
+      },
+      {
+        "case": "test_review_command_authorizes_refetched_identity_before_evidence_or_provider_use[forged_payload]",
+        "assertion": "AssertionError: UNAUTHORIZED_OR_UNBOUND_REVIEW_MAKES_ZERO_PROVIDER_CALLS"
+      },
+      {
+        "case": "test_review_command_authorizes_refetched_identity_before_evidence_or_provider_use[review_substitution]",
+        "assertion": "AssertionError: UNAUTHORIZED_OR_UNBOUND_REVIEW_MAKES_ZERO_PROVIDER_CALLS"
+      },
+      {
+        "case": "test_review_command_authorizes_refetched_identity_before_evidence_or_provider_use[missing_review_user]",
+        "assertion": "AssertionError: UNAUTHORIZED_OR_UNBOUND_REVIEW_MAKES_ZERO_PROVIDER_CALLS"
+      },
+      {
+        "case": "test_review_command_authorizes_refetched_identity_before_evidence_or_provider_use[missing_review_url]",
+        "assertion": "AssertionError: UNAUTHORIZED_OR_UNBOUND_REVIEW_MAKES_ZERO_PROVIDER_CALLS"
+      },
+      {
+        "case": "test_review_command_authorizes_refetched_identity_before_evidence_or_provider_use[wrong_review_id]",
+        "assertion": "AssertionError: UNAUTHORIZED_OR_UNBOUND_REVIEW_MAKES_ZERO_PROVIDER_CALLS"
+      },
+      {
+        "case": "test_review_command_authorizes_refetched_identity_before_evidence_or_provider_use[empty_policy]",
+        "assertion": "AssertionError: UNAUTHORIZED_OR_UNBOUND_REVIEW_MAKES_ZERO_PROVIDER_CALLS"
+      },
+      {
+        "case": "test_review_command_authorizes_refetched_identity_before_evidence_or_provider_use[invalid_policy]",
+        "assertion": "AssertionError: UNAUTHORIZED_OR_UNBOUND_REVIEW_MAKES_ZERO_PROVIDER_CALLS"
+      },
+      {
+        "case": "test_review_command_authorizes_refetched_identity_before_evidence_or_provider_use[historical_review]",
+        "assertion": "AssertionError: REVIEW_AUTHORIZATION_REFETCHES_AUTHORITATIVE_REVIEW"
+      },
+      {
+        "case": "test_event_workflows_keep_credentials_on_trusted_code_and_relays_as_data",
+        "assertion": "AssertionError: DEFAULT_REVIEW_POLICY_AUTHORIZES_XOR_AND_CODEX_IDENTITIES"
+      }
+    ]
+  },
+  "green": {
+    "command": "python -m pytest -q tests/hexagonal/test_jev_events.py",
+    "exit_code": 0,
+    "tests": 44,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "assertions": []
+  },
+  "controls": [
+    "Four incomplete, oversized, or invalid-original-digest cases make zero provider calls on both versions.",
+    "Allowed xor, Codex and configured actor identities retain advice; historical review findings use complete current source.",
+    "Two different original credentials yielding identical protected source reuse one inference while original and protected digests remain distinct.",
+    "Secrets are absent from retained report, provider requests and cache; original input remains unchanged."
+  ],
+  "reproduce": [
+    "Create a disposable checkout/archive of the defective_source_commit.",
+    "Overlay the current test_jev_events.py and support/jev_events.py bytes identified above, retaining the predecessor production and policy.",
+    "Use the pinned validation runtime with a fresh external PYTHONPYCACHEPREFIX and run the red command.",
+    "Run the green command on the repaired candidate using a separate external bytecode cache."
+  ],
+  "raw_artifacts": {
+    "red-final.xml": {
+      "path": "/workspace/scratch/150dce018256/jev-review-repair-proof/red-final.xml",
+      "sha256": "47b1c067149631046caa55230e1c6e46d9647f4a325f4ef65f3c2713ca5de979"
+    },
+    "red-final.log": {
+      "path": "/workspace/scratch/150dce018256/jev-review-repair-proof/red-final.log",
+      "sha256": "3224d9e32f4f9ea8a90653d76915645777f4baa03230525eac5ce24c594f2fba"
+    },
+    "green.xml": {
+      "path": "/workspace/scratch/150dce018256/jev-review-repair-proof/green.xml",
+      "sha256": "98c07999c976b3a961b917917db7645802986ddcd950eeac6715779e2398570f"
+    },
+    "green.log": {
+      "path": "/workspace/scratch/150dce018256/jev-review-repair-proof/green.log",
+      "sha256": "f3286d7d05c3eb490996fda04a4eb00e126e92fe7a26aadc2a1499b22fd47337"
+    }
+  },
+  "superseded_attempt": {
+    "paths": [
+      "/workspace/scratch/150dce018256/jev-review-repair-proof/predecessor.xml",
+      "/workspace/scratch/150dce018256/jev-review-repair-proof/predecessor.log"
+    ],
+    "credited": false,
+    "reason": "The initial test matrix unnecessarily denied historical review commits. That expectation was replaced with positive current-source coverage before the credited identical-input RED/GREEN pair."
+  },
+  "limits": "Controlled transport and GitHub fixtures establish these boundary guarantees; they do not establish hosted activation or live model usefulness.",
+  "original_identity_fault": {
+    "mutation": "Replace only the original _packet validation with kind = packet[\"kind\"], leaving protection, inference digest recomputation and protected packet validation intact.",
+    "command": "python -m pytest -q tests/hexagonal/test_jev_events.py::test_incomplete_or_unbound_source_never_reaches_inference[wrong_digest_with_redaction]",
+    "control": {
+      "exit_code": 0,
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "log": "/workspace/scratch/150dce018256/jev-review-repair-proof/control-original-validation.log",
+      "log_sha256": "7fefcaf66f6e7137767bc25d16d128cbf7b8617ad0b6f14fbf9a0b8e7fdd81cd",
+      "xml": "/workspace/scratch/150dce018256/jev-review-repair-proof/control-original-validation.xml",
+      "xml_sha256": "de8154026660933750ca6ca59428053a3a64bedde46e2fbeb8a2cd247868426c"
+    },
+    "mutant": {
+      "exit_code": 1,
+      "tests": 1,
+      "failures": 1,
+      "errors": 0,
+      "log": "/workspace/scratch/150dce018256/jev-review-repair-proof/mutant-original-validation.log",
+      "log_sha256": "09f8483fbae5e452d178fb76679df09a304a9fe1aefaee886dbe8cef1f928e7d",
+      "xml": "/workspace/scratch/150dce018256/jev-review-repair-proof/mutant-original-validation.xml",
+      "xml_sha256": "e406cc12aaff4cb7d7febec8063abf58136169830d57effddadf900103e21bae",
+      "assertions": [
+        "AssertionError: INCOMPLETE_EVENT_EVIDENCE_IS_NOT_SENT"
+      ]
+    }
+  }
+}
