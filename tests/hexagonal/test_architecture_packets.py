@@ -63,6 +63,7 @@ def test_moved_module_declaration_keeps_its_exact_before_after_pair(
     coherent_change(context, before=before_unit, after=after_unit, before_file=before_file,
                     base_commit=commit, path=path)
 
+
 def test_deleting_only_an_authority_guard_keeps_the_surviving_behavior_visible(tmp_path):
     before = "def execute(user):\n    if not user.authorized:\n        raise ValueError('denied')\n    return 'accepted'\n"
     after = "def execute(user):\n    return 'accepted'\n"

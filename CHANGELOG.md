@@ -9,6 +9,7 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- Jev change packets retain moved assignment before-state using stable target identities and distinguish repeated targets.
 - Jev diagnostics select changed behavior across configured architecture roles,
   retain complete before/after source and deletions, and connect contract wrappers
   to statically declared fixtures and subjects. Packets identify missing inputs
