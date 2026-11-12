@@ -59,7 +59,7 @@ the profile's deployment values.
 
 Three typed checks examine semantic boundary leaks, concrete coupling in ports,
 and coverage/composition gaps for each selected candidate. `--base-ref` identifies
-new-side changed lines through Git; an unavailable base is inconclusive rather
+both sides of changed behavior through Git; an unavailable base is inconclusive rather
 than silently reviewing unrelated source. JSON configuration may instead supply
 `changed_ranges`: objects with `path`, `start_line` and `end_line`. Paths must
 belong to the measured inventory. Changes outside that inventory remain explicit
@@ -67,12 +67,33 @@ exclusions. Without a change selection, inventory selection prioritizes configur
 `source_paths`, deterministic findings, and constrained roles. The shipped profile
 has no fixed source list and permits at most three candidates; the reusable default
 is one. `max_candidates`, `max_files`, `max_source_bytes` and `checks` bound the work.
+Optional `role_priorities` lists distinct roles from the architecture profile.
+Selection takes one candidate from each changed role in that order before taking
+a second from any role; unlisted roles follow. The shipped list puts application
+roles before test scaffolding. This is selection policy, not a new architecture
+constraint. Reports retain eligible and selected counts by role.
 
 Candidates contain complete Python AST units, including decorators and complete
 function/method bodies. Related imports, imported definitions, callers and test
-callers come from the measured import inventory and source AST. They are static
+callers come from the measured import inventory and source AST. Static reference
+selection follows up to two caller/registration hops and three dependency hops,
+including parametrized contract lists, fixture arguments and imported subjects.
+Imports and lexical references identify possibilities; arbitrary dynamic dispatch,
+fixture names selected at runtime and external dependency internals remain unknown.
+They are static
 relationships, not proof of execution or behavioral coverage. Candidate units get
-the budget before related evidence. A unit that cannot fit is omitted whole;
+the budget before related evidence. A modified candidate and its complete old unit
+must fit together; a pair that cannot fit is omitted whole. `before_sources` holds
+old units from the resolved, immutable Git base with file hashes and commit identity.
+Removed functions and deleted files remain candidates when their path and role
+belong to the current declared source scope. Old source is explicitly judged against
+the supplied **current** contract, not an invented historical contract. Renames are
+represented as deletion/addition; no semantic rename matching is claimed.
+Current source stays in `sources`; `change` links each candidate's old/new unit IDs,
+and each source's `support_for` records which candidates need it. The byte budget
+counts both old and new source. Missing or excluded inputs are recorded explicitly;
+an unreadable old unit never silently becomes a claim that the function was added.
+A unit that cannot fit is omitted whole;
 reports expose excluded units, oversize candidates, omitted files and the budget.
 They never turn a clipped prefix into a complete function. No fitting candidate
 is `inconclusive` and makes no provider call. Source bytes are revalidated against

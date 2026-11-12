@@ -230,6 +230,7 @@ def evaluate(corpus: dict, *, mode="fixture", options=None, diagnose_fn=None, ma
             case_options = {**options, "source_paths": list(sources), "changed_ranges": case["selection"],
                             "checks": case.get("checks", ["semantic_boundaries"])}
             case_options.pop("base_ref", None)
+            case_options["role_priorities"] = []  # The synthetic corpus declares its own roles.
             started = time.monotonic()
             remaining = max_seconds - (started - run_started)
             if mode == "fixture":

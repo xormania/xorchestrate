@@ -6,5 +6,21 @@
   "max_source_bytes": 24000,
   "max_files": 8,
   "max_candidates": 3,
-  "batch": true
+  "batch": true,
+  "role_priorities": [
+    "core",
+    "work_acceptance",
+    "inspection",
+    "adapters",
+    "terminal_multiplexer",
+    "composition",
+    "operator",
+    "entrypoints",
+    "foundation",
+    "telemetry",
+    "telemetry_views",
+    "testkit_core",
+    "testkit_adapters",
+    "acceptance_runner"
+  ]
 }

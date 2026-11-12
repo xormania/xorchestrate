@@ -44,7 +44,7 @@ CRITERIA = {
     "insufficient_evidence": "The supplied evidence cannot establish an answer to this question.",
 }
 _CONTEXT_OPTIONS = {"max_source_bytes", "max_files", "source_paths", "checks", "max_candidates", "changed_ranges", "base_ref",
-                    "cache_dir", "batch", "cache_ttl_seconds"}
+                    "cache_dir", "batch", "cache_ttl_seconds", "role_priorities"}
 
 
 def _json_bytes(value: object) -> bytes:
@@ -83,10 +83,15 @@ def _configuration(options: dict) -> tuple[dict, dict, list[str]]:
     base_ref = options.get("base_ref")
     if base_ref is not None and (not isinstance(base_ref, str) or not base_ref or base_ref.startswith("-")):
         raise ValueError("base_ref must be a Git reference.")
+    role_priorities = options.get("role_priorities", [])
+    if (not isinstance(role_priorities, list) or any(not isinstance(role, str) or not role for role in role_priorities)
+            or len(set(role_priorities)) != len(role_priorities)):
+        raise ValueError("role_priorities must be a list of distinct role names.")
     transport = {key: value for key, value in options.items() if key not in _CONTEXT_OPTIONS}
     transport["criteria"] = CRITERIA
     selection = {"max_source_bytes": max_source_bytes, "max_files": max_files, "source_paths": paths,
-                 "changed_ranges": ranges, "base_ref": base_ref, "max_candidates": max_candidates}
+                 "changed_ranges": ranges, "base_ref": base_ref, "max_candidates": max_candidates,
+                 "role_priorities": role_priorities}
     return transport, selection, checks
 
 

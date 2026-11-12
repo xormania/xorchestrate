@@ -9,6 +9,12 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- Jev change packets retain moved assignment before-state using stable target identities and distinguish repeated targets.
+- Jev diagnostics select changed behavior across configured architecture roles,
+  retain complete before/after source and deletions, and connect contract wrappers
+  to statically declared fixtures and subjects. Packets identify missing inputs
+  and preserve whole-change source budgets; static relationships do not claim
+  behavioral coverage. See [architecture diagnostics](docs/architecture-enforcement.md#jev-diagnostics).
 - The project server now runs in a terminal host, selected in `settings.json`
   as `terminal_host`. It defaults to a private multiplexer server (`tmux`),
   so the server's terminal survives its client and an operator can attach to
