@@ -477,5 +477,193 @@
       "command": "PYTHONPYCACHEPREFIX=/tmp/jev-routing-adversarial-fix-green /workspace/scratch/150dce018256/ci-jev-test-env/bin/python -m pytest -p no:cacheprovider tests/hexagonal/test_ci_lifecycle.py tests/hexagonal/test_ci_reuse.py -q",
       "result": "209 passed in 1.05s"
     }
+  },
+  "hosted_architecture_contract_amendment": {
+    "reason": "Hosted PR83 shard4 exposed four stale literal name assertions. The contract now evaluates checked-in name and guard for a source event; actual shell exit checks remain unchanged.",
+    "fault_witnesses": [
+      {
+        "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+        "candidate_sha256": "6539545f85b8e7c580c3dd1dfc4f07be4d5356b42e844a9e0e6297fe6a4bb8ae",
+        "classification": "detected",
+        "commands": {
+          "control": {
+            "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+            "command": [
+              "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+              "-m",
+              "pytest",
+              "-p",
+              "_xorchestrate_calibration_observer",
+              "-q",
+              "--tb=short",
+              "tests/hexagonal/test_architecture_cli.py::test_required_architecture_status_reflects_the_shared_static_result[success]",
+              "--junitxml=/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-name/control.xml"
+            ],
+            "cwd": "/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-name/control",
+            "environment": {
+              "PYTHONDONTWRITEBYTECODE": "1",
+              "PYTHONPATH": "/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-name/control-run-observer:/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-name/control"
+            },
+            "exit_status": 0,
+            "finished_at": "2026-11-12T11:19:27.417130+00:00",
+            "launched": true,
+            "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+            "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+            "started_at": "2026-11-12T11:19:26.549819+00:00",
+            "status": "passed",
+            "stderr": "/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-name/control-run/stderr.log",
+            "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "stdout": "/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-name/control-run/stdout.log",
+            "stdout_sha256": "59907462a8d5fd93406cdf4c7d1eb2f7b7a96664ae85c4ec202693d419cd019e",
+            "terminal": "capture",
+            "timeout_seconds": 120,
+            "xml": "/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-name/control.xml",
+            "stdout_text": ".                                                                        [100%]\n1 passed in 0.09s\n",
+            "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"0\" skipped=\"0\" tests=\"1\" time=\"0.072\" timestamp=\"2026-11-12T06:19:27.275090-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_architecture_cli\" name=\"test_required_architecture_status_reflects_the_shared_static_result[success]\" time=\"0.007\" /></testsuite></testsuites>"
+          },
+          "mutant": {
+            "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+            "command": [
+              "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+              "-m",
+              "pytest",
+              "-p",
+              "_xorchestrate_calibration_observer",
+              "-q",
+              "--tb=short",
+              "tests/hexagonal/test_architecture_cli.py::test_required_architecture_status_reflects_the_shared_static_result[success]",
+              "--junitxml=/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-name/mutant.xml"
+            ],
+            "cwd": "/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-name/mutant",
+            "environment": {
+              "PYTHONDONTWRITEBYTECODE": "1",
+              "PYTHONPATH": "/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-name/mutant-run-observer:/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-name/mutant"
+            },
+            "exit_status": 1,
+            "finished_at": "2026-11-12T11:19:28.262663+00:00",
+            "launched": true,
+            "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+            "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+            "started_at": "2026-11-12T11:19:27.418280+00:00",
+            "status": "failed",
+            "stderr": "/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-name/mutant-run/stderr.log",
+            "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "stdout": "/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-name/mutant-run/stdout.log",
+            "stdout_sha256": "2c3917c573c256babaab3bbcb1bbe7c8a1b43ed23d0d327b0ca20c5b4fd25de8",
+            "terminal": "capture",
+            "timeout_seconds": 120,
+            "xml": "/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-name/mutant.xml",
+            "stdout_text": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_ test_required_architecture_status_reflects_the_shared_static_result[success] _\ntests/hexagonal/test_architecture_cli.py:81: in test_required_architecture_status_reflects_the_shared_static_result\n    assert expression(status[\"name\"], context) == \"Hexagonal architecture\", \"SOURCE_VALIDATION_RETAINS_REQUIRED_ARCHITECTURE_NAME\"\nE   AssertionError: SOURCE_VALIDATION_RETAINS_REQUIRED_ARCHITECTURE_NAME\nE   assert 'Wrong architecture status' == 'Hexagonal architecture'\nE     \nE     - Hexagonal architecture\nE     + Wrong architecture status\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_architecture_cli.py::test_required_architecture_status_reflects_the_shared_static_result[success]\n1 failed in 0.09s\n",
+            "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"1\" skipped=\"0\" tests=\"1\" time=\"0.092\" timestamp=\"2026-11-12T06:19:28.105376-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_architecture_cli\" name=\"test_required_architecture_status_reflects_the_shared_static_result[success]\" time=\"0.004\"><properties><property name=\"calibration.attribution\" value=\"{&quot;assertion_span&quot;: [81, 4, 81, 130], &quot;exception_type&quot;: &quot;AssertionError&quot;, &quot;file&quot;: &quot;/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-name/mutant/tests/hexagonal/test_architecture_cli.py&quot;, &quot;function&quot;: &quot;test_required_architecture_status_reflects_the_shared_static_result&quot;, &quot;instruction&quot;: &quot;RAISE_VARARGS&quot;, &quot;instruction_offset&quot;: 774, &quot;instruction_span&quot;: [81, 4, 81, 130], &quot;line&quot;: 81, &quot;phase&quot;: &quot;call&quot;, &quot;target_assertion&quot;: true, &quot;test_name&quot;: &quot;test_required_architecture_status_reflects_the_shared_static_result[success]&quot;}\" /></properties><failure message=\"AssertionError: SOURCE_VALIDATION_RETAINS_REQUIRED_ARCHITECTURE_NAME&#10;assert 'Wrong architecture status' == 'Hexagonal architecture'&#10;  &#10;  - Hexagonal architecture&#10;  + Wrong architecture status\">tests/hexagonal/test_architecture_cli.py:81: in test_required_architecture_status_reflects_the_shared_static_result\n    assert expression(status[\"name\"], context) == \"Hexagonal architecture\", \"SOURCE_VALIDATION_RETAINS_REQUIRED_ARCHITECTURE_NAME\"\nE   AssertionError: SOURCE_VALIDATION_RETAINS_REQUIRED_ARCHITECTURE_NAME\nE   assert 'Wrong architecture status' == 'Hexagonal architecture'\nE     \nE     - Hexagonal architecture\nE     + Wrong architecture status</failure></testcase></testsuite></testsuites>"
+          }
+        },
+        "expected_diagnostic": "SOURCE_VALIDATION_RETAINS_REQUIRED_ARCHITECTURE_NAME",
+        "finished_at": "2026-11-12T11:19:28.263730+00:00",
+        "mutation_applied": true,
+        "mutation_sha256": "cbf1a903e0e07dbdf5dd42aae8c6c81a02f3fe0d70329f1ac88f8128a9db327b",
+        "target": "tests.hexagonal.test_architecture_cli::test_required_architecture_status_reflects_the_shared_static_result[success]",
+        "unaffected": [],
+        "fault": {
+          "new": "\"name\": \"Wrong architecture status\"",
+          "old": "\"name\": \"${{ github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && 'PR metadata (no Hexagonal architecture)' || 'Hexagonal architecture' }}\"",
+          "path": ".github/workflows/ci.yml"
+        },
+        "patch": "--- a/.github/workflows/ci.yml\n+++ b/.github/workflows/ci.yml\n@@ -489,7 +489,7 @@\n       }\n     },\n     \"architecture-status\": {\n-      \"name\": \"${{ github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && 'PR metadata (no Hexagonal architecture)' || 'Hexagonal architecture' }}\",\n+      \"name\": \"Wrong architecture status\",\n       \"runs-on\": \"ubuntu-24.04\",\n       \"timeout-minutes\": 2,\n       \"needs\": [\n"
+      },
+      {
+        "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+        "candidate_sha256": "6539545f85b8e7c580c3dd1dfc4f07be4d5356b42e844a9e0e6297fe6a4bb8ae",
+        "classification": "detected",
+        "commands": {
+          "control": {
+            "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+            "command": [
+              "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+              "-m",
+              "pytest",
+              "-p",
+              "_xorchestrate_calibration_observer",
+              "-q",
+              "--tb=short",
+              "tests/hexagonal/test_architecture_cli.py::test_required_architecture_status_reflects_the_shared_static_result[failure]",
+              "--junitxml=/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-failed-static/control.xml"
+            ],
+            "cwd": "/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-failed-static/control",
+            "environment": {
+              "PYTHONDONTWRITEBYTECODE": "1",
+              "PYTHONPATH": "/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-failed-static/control-run-observer:/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-failed-static/control"
+            },
+            "exit_status": 0,
+            "finished_at": "2026-11-12T11:19:29.463463+00:00",
+            "launched": true,
+            "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+            "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+            "started_at": "2026-11-12T11:19:28.552371+00:00",
+            "status": "passed",
+            "stderr": "/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-failed-static/control-run/stderr.log",
+            "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "stdout": "/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-failed-static/control-run/stdout.log",
+            "stdout_sha256": "e8c2ebdecc6c68bd31c948de0b0c1dd4c57dd47d093194a6c1d241c65727824d",
+            "terminal": "capture",
+            "timeout_seconds": 120,
+            "xml": "/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-failed-static/control.xml",
+            "stdout_text": ".                                                                        [100%]\n1 passed in 0.07s\n",
+            "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"0\" skipped=\"0\" tests=\"1\" time=\"0.062\" timestamp=\"2026-11-12T06:19:29.325815-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_architecture_cli\" name=\"test_required_architecture_status_reflects_the_shared_static_result[failure]\" time=\"0.005\" /></testsuite></testsuites>"
+          },
+          "mutant": {
+            "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+            "command": [
+              "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+              "-m",
+              "pytest",
+              "-p",
+              "_xorchestrate_calibration_observer",
+              "-q",
+              "--tb=short",
+              "tests/hexagonal/test_architecture_cli.py::test_required_architecture_status_reflects_the_shared_static_result[failure]",
+              "--junitxml=/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-failed-static/mutant.xml"
+            ],
+            "cwd": "/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-failed-static/mutant",
+            "environment": {
+              "PYTHONDONTWRITEBYTECODE": "1",
+              "PYTHONPATH": "/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-failed-static/mutant-run-observer:/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-failed-static/mutant"
+            },
+            "exit_status": 1,
+            "finished_at": "2026-11-12T11:19:30.240763+00:00",
+            "launched": true,
+            "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+            "python": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+            "started_at": "2026-11-12T11:19:29.464767+00:00",
+            "status": "failed",
+            "stderr": "/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-failed-static/mutant-run/stderr.log",
+            "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "stdout": "/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-failed-static/mutant-run/stdout.log",
+            "stdout_sha256": "9f033e8b424ec516eac93d261e21f60649bab25e51d25b2a2755b32c366aca97",
+            "terminal": "capture",
+            "timeout_seconds": 120,
+            "xml": "/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-failed-static/mutant.xml",
+            "stdout_text": "F                                                                        [100%]\n=================================== FAILURES ===================================\n_ test_required_architecture_status_reflects_the_shared_static_result[failure] _\ntests/hexagonal/test_architecture_cli.py:83: in test_required_architecture_status_reflects_the_shared_static_result\n    assert expression(status[\"if\"], context), \"ARCHITECTURE_STATUS_RUNS_AFTER_EVERY_STATIC_OUTCOME\"\nE   AssertionError: ARCHITECTURE_STATUS_RUNS_AFTER_EVERY_STATIC_OUTCOME\nE   assert False\nE    +  where False = expression('${{ success() }}', {'github': {'event_name': 'pull_request', 'repository_id': 77, 'ref': 'refs/pull/17/merge', 'event': {'action': 'synch...s': {'code': 'true', 'reuse': 'false'}}, 'changes': {'result': 'failure'}, 'application-tests': {'result': 'success'}}})\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_architecture_cli.py::test_required_architecture_status_reflects_the_shared_static_result[failure]\n1 failed in 0.07s\n",
+            "junit_text": "<?xml version=\"1.0\" encoding=\"utf-8\"?><testsuites name=\"pytest tests\"><testsuite name=\"pytest\" errors=\"0\" failures=\"1\" skipped=\"0\" tests=\"1\" time=\"0.074\" timestamp=\"2026-11-12T06:19:30.109124-05:00\" hostname=\"a04d1f3a81ed\"><testcase classname=\"tests.hexagonal.test_architecture_cli\" name=\"test_required_architecture_status_reflects_the_shared_static_result[failure]\" time=\"0.003\"><properties><property name=\"calibration.attribution\" value=\"{&quot;assertion_span&quot;: [83, 4, 83, 99], &quot;exception_type&quot;: &quot;AssertionError&quot;, &quot;file&quot;: &quot;/workspace/scratch/150dce018256/jev-routing-redproof/required-architecture-failed-static/mutant/tests/hexagonal/test_architecture_cli.py&quot;, &quot;function&quot;: &quot;test_required_architecture_status_reflects_the_shared_static_result&quot;, &quot;instruction&quot;: &quot;RAISE_VARARGS&quot;, &quot;instruction_offset&quot;: 1558, &quot;instruction_span&quot;: [83, 4, 83, 99], &quot;line&quot;: 83, &quot;phase&quot;: &quot;call&quot;, &quot;target_assertion&quot;: true, &quot;test_name&quot;: &quot;test_required_architecture_status_reflects_the_shared_static_result[failure]&quot;}\" /></properties><failure message=\"AssertionError: ARCHITECTURE_STATUS_RUNS_AFTER_EVERY_STATIC_OUTCOME&#10;assert False&#10; +  where False = expression('${{ success() }}', {'github': {'event_name': 'pull_request', 'repository_id': 77, 'ref': 'refs/pull/17/merge', 'event': {'action': 'synch...s': {'code': 'true', 'reuse': 'false'}}, 'changes': {'result': 'failure'}, 'application-tests': {'result': 'success'}}})\">tests/hexagonal/test_architecture_cli.py:83: in test_required_architecture_status_reflects_the_shared_static_result\n    assert expression(status[\"if\"], context), \"ARCHITECTURE_STATUS_RUNS_AFTER_EVERY_STATIC_OUTCOME\"\nE   AssertionError: ARCHITECTURE_STATUS_RUNS_AFTER_EVERY_STATIC_OUTCOME\nE   assert False\nE    +  where False = expression('${{ success() }}', {'github': {'event_name': 'pull_request', 'repository_id': 77, 'ref': 'refs/pull/17/merge', 'event': {'action': 'synch...s': {'code': 'true', 'reuse': 'false'}}, 'changes': {'result': 'failure'}, 'application-tests': {'result': 'success'}}})</failure></testcase></testsuite></testsuites>"
+          }
+        },
+        "expected_diagnostic": "ARCHITECTURE_STATUS_RUNS_AFTER_EVERY_STATIC_OUTCOME",
+        "finished_at": "2026-11-12T11:19:30.242223+00:00",
+        "mutation_applied": true,
+        "mutation_sha256": "e78016dc6fba92c776d9cf58eb60662fc840151ee0bc11e93902f943ea50f34e",
+        "target": "tests.hexagonal.test_architecture_cli::test_required_architecture_status_reflects_the_shared_static_result[failure]",
+        "unaffected": [],
+        "fault": {
+          "new": "\"architecture-status\": {\n      \"name\": \"${{ github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && 'PR metadata (no Hexagonal architecture)' || 'Hexagonal architecture' }}\",\n      \"runs-on\": \"ubuntu-24.04\",\n      \"timeout-minutes\": 2,\n      \"needs\": [\n        \"changes\"\n      ],\n      \"if\": \"${{ success() }}\",\n      ",
+          "old": "\"architecture-status\": {\n      \"name\": \"${{ github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && 'PR metadata (no Hexagonal architecture)' || 'Hexagonal architecture' }}\",\n      \"runs-on\": \"ubuntu-24.04\",\n      \"timeout-minutes\": 2,\n      \"needs\": [\n        \"changes\"\n      ],\n      \"if\": \"${{ always() && !(github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body)) }}\",\n      ",
+          "path": ".github/workflows/ci.yml"
+        },
+        "patch": "--- a/.github/workflows/ci.yml\n+++ b/.github/workflows/ci.yml\n@@ -495,7 +495,7 @@\n       \"needs\": [\n         \"changes\"\n       ],\n-      \"if\": \"${{ always() && !(github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body)) }}\",\n+      \"if\": \"${{ success() }}\",\n       \"steps\": [\n         {\n           \"name\": \"Report shared static result\",\n"
+      }
+    ],
+    "green": {
+      "command": "PYTHONPYCACHEPREFIX=/tmp/jev-required-architecture-green /workspace/scratch/150dce018256/ci-jev-test-env/bin/python -m pytest -p no:cacheprovider tests/hexagonal/test_architecture_cli.py -q",
+      "result": "7 passed in 0.24s",
+      "ruff": "All checks passed."
+    }
   }
 }

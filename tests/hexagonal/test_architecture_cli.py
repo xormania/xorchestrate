@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from scripts.testkit.composition import plan
+from tests.hexagonal.support.github_actions import expression, pr_context
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -75,8 +76,11 @@ def test_ci_retains_blocking_gate_and_independent_diagnostics(tmp_path):
 def test_required_architecture_status_reflects_the_shared_static_result(tmp_path, static_result):
     workflow = json.loads((ROOT / ".github/workflows/ci.yml").read_text())
     status = workflow["jobs"]["architecture-status"]
-    assert status["name"] == "Hexagonal architecture"
-    assert status["needs"] == ["changes"] and status["if"] == "always()"
+    context = pr_context("synchronize")
+    context["needs"]["changes"]["result"] = static_result
+    assert expression(status["name"], context) == "Hexagonal architecture", "SOURCE_VALIDATION_RETAINS_REQUIRED_ARCHITECTURE_NAME"
+    assert status["needs"] == ["changes"]
+    assert expression(status["if"], context), "ARCHITECTURE_STATUS_RUNS_AFTER_EVERY_STATIC_OUTCOME"
     assert not status.get("continue-on-error")
     step, = status["steps"]
     assert step["env"]["STATIC_RESULT"] == "${{ needs.changes.result }}"
