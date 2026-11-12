@@ -1,5 +1,10 @@
 # Measuring Jev architecture diagnostics
 
+For pinned real-PR source replays, heldout groups, independent dispositions and
+the economical full-evaluation versus live-health CI policy, see
+[operational measurement](jev-operational.md). The synthetic corpus below remains
+a measurement-plumbing and narrowly scoped classification control.
+
 The evaluator compares the existing deterministic architecture checker with Jev
 on the same small, frozen source corpus. It measures whether a diagnostic identifies
 an independently specified source fault that the deterministic checker missed.

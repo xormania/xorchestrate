@@ -202,6 +202,14 @@ cannot change the deterministic result. Reports are retained with the aggregate
 evidence and summarized alongside it. See
 [test evidence triage](../docs/testing-framework.md) for selection limits.
 
+The architecture job selects its evaluation workload from changed paths. Changes
+to Jev code, contracts, corpus or workflow inputs run the paired synthetic pilot
+and heldout historical incidents; an unavailable change scope also selects that
+full path. Other code changes run one small fresh health control. These reports
+remain advisory, and historical matches do not establish prospective defect
+detection or engineering time saved. See
+[operational evaluation](../docs/jev-operational.md).
+
 CI neither requests reviews nor merges branches. xor controls those decisions.
 
 ## Release workflow
