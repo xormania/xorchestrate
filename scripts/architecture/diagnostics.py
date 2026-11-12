@@ -43,7 +43,8 @@ CRITERIA = {
     "insufficient_evidence": "The supplied evidence cannot establish an answer to this question.",
 }
 _CONTEXT_OPTIONS = {"max_source_bytes", "max_files", "source_paths", "checks", "max_candidates", "changed_ranges", "base_ref",
-                    "cache_dir", "batch", "cache_ttl_seconds", "role_priorities"} | BUDGET_OPTIONS
+                    "cache_dir", "batch", "cache_ttl_seconds", "role_priorities",
+                    "source_atomic", "threshold", "post_test", "max_support_evidence"} | BUDGET_OPTIONS
 
 
 def _json_bytes(value: object) -> bytes:
@@ -55,6 +56,11 @@ def _configuration(options: dict) -> tuple[dict, dict, list[str]]:
         raise ValueError("Diagnostics configuration must be an object.")
     if "criteria" in options:
         raise ValueError("Diagnostics criteria are supplied by the named diagnostic checks.")
+    if type(options.get("source_atomic", False)) is not bool:
+        raise ValueError("source_atomic must be a boolean.")
+    threshold = options.get("threshold", .7)
+    if type(threshold) not in (int, float) or not .5 < threshold <= 1:
+        raise ValueError("threshold must be greater than .5 and at most 1.")
     max_source_bytes = options.get("max_source_bytes", 24000)
     max_files = options.get("max_files", 8)
     if type(max_source_bytes) is not int or not 1 <= max_source_bytes <= 1000000:
@@ -159,6 +165,27 @@ def diagnose(report: dict, root: Path, options: dict | None = None) -> dict:
     base.update({"context_sha256": hashlib.sha256(_json_bytes(context)).hexdigest(),
                  "source_scope": scope, "model": transport["model"],
                  "evidence_context": context})
+    if options.get("source_atomic", False):
+        from .atomic import evaluate_subjects, execution_summary, source_subjects
+        evaluator.close()
+        subjects, evidence = source_subjects(context, checks)
+        if not subjects:
+            return {**base, "status": "inconclusive", "reason": "no_complete_candidate"}
+        rows, executions = evaluate_subjects(subjects, options, evaluator_factory=TypeSafeEvaluator)
+        candidates = {item["candidate_id"]: item for item in context["candidates"]}
+        for row in rows:
+            item = candidates[row["subject_id"]]
+            base["assessments"].append({**row, "candidate_id": row["subject_id"],
+                "task_id": row["subject_id"] + ":" + row["check_id"], "confidence": None, "details": {},
+                **{key: item[key] for key in ("path", "start_line", "end_line")}})
+        base.update(stage="source", advisory=True, evidence=[{"id": key, **value} for key, value in evidence.items()],
+                    execution=execution_summary(executions))
+        unavailable = all(not row["judgments"] for row in rows) and any(
+            row.get("reason") not in {None, "required_evidence_missing"} for row in rows)
+        if unavailable:
+            base["reason"] = "atomic_provider_unavailable"
+        return {**base, "status": "unavailable" if unavailable else "complete",
+                "concerns": sum(row["outcome"] == "concern" for row in rows)}
     tasks = evaluation_tasks(context, checks)
     if not tasks:
         evaluator.close()

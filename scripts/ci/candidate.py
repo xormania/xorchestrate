@@ -252,8 +252,12 @@ def lane_producer(jobs, name):
     return original, observation
 
 
-def qualify_lineage(context, producers, metadata, expected):
-    """Choose the newest actual execution of each lane, including partial reruns."""
+def qualify_lineage(context, producers, metadata, expected, *, allow_failed=False):
+    """Bind lane identity; only advisory consumers may inspect completed failures.
+
+    Allowing a failed producer authenticates its observations, never its success.
+    Required CI qualification retains the successful-only default.
+    """
     validate_context(context)
     run, check, commit = metadata["run"], metadata["check"], metadata["git"]
     if not all(isinstance(value, dict) for value in (run, check, commit)):
@@ -298,7 +302,8 @@ def qualify_lineage(context, producers, metadata, expected):
         if (observation["run_attempt"] > run["run_attempt"] or not _positive(selected.get("id"))
                 or not _positive(observation.get("id"))
                 or any(job.get("run_id", run["id"]) != run["id"] for job in (selected, observation))
-                or observation.get("status") != "completed" or observation.get("conclusion") != "success"):
+                or observation.get("status") != "completed"
+                or observation.get("conclusion") not in ({"success", "failure"} if allow_failed else {"success"})):
             raise ValueError("Newest authoritative lane execution did not succeed: " + lane)
         artifact_name = f"{lane}--attempt-{newest}"
         artifacts = [item for item in metadata["artifacts"] if item.get("name") == artifact_name]

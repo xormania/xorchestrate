@@ -65,6 +65,48 @@ tmux, native configuration or model credentials. `--family` filters behavioral
 tests only; it never reduces static coverage. The default composition runs each
 selected check once.
 
+## Jev advisory stages
+
+The early architecture job asks atomic questions about selected current source
+and declared role contracts. `source_atomic` enables separate applicability,
+evidence sufficiency, claim and exact evidence-ID support questions. Questions
+sharing a packet run in one bounded batch. Current and prior source remain
+explicitly labelled; deletion questions evaluate the removal under the current
+contract. The support-question shortlist prioritizes focal source and receipts;
+all supplied evidence remains available for applicability and claim judgments.
+Reports distinguish shortlisted, scored and unscored evidence IDs. Source text is evidence, never an
+instruction, and this stage has no executed test evidence. It cannot establish
+behavioral coverage or test quality.
+
+After deterministic qualification, the CI result job runs optional post-test
+triage, including when a required lane failed. It authenticates the current
+candidate, original context, GitHub job/artifact lineage and inventory receipts.
+A failed job can supply an observation; it cannot qualify as a successful lane.
+Foreign, missing or contradictory receipts are excluded and reported explicitly.
+The separate provider setup and triage steps cannot turn a failing gate green or
+make a passing gate fail because Jev is unavailable.
+
+Post-test checks compare declared family guarantees with complete selected test
+units and their bounded static bindings. Selection prioritizes failed modules,
+then changed tests and tests whose static dependencies include changed source.
+`failure_regression` additionally requires an assertion failure matched to the
+exact executed inventory case. Missing failure text, missing concrete bindings,
+unknown dynamic relationships and unrun tests remain insufficient evidence.
+Static dependency selection is not a coverage claim. Unselected modules and
+omitted source remain visible in the artifact.
+
+`contracts/hexagonal-jev.json` configures `threshold`, `max_support_evidence` (12 by default), source checks and the
+`post_test` checks, `max_subjects`, `max_cases_per_subject` (four by default)
+and `max_source_bytes`. Post-test subjects prioritize actual failed cases, then
+distinct test units; omitted case counts and identity digests remain explicit. The default checks are
+`guarantee_gap` and `failure_regression`. Raw atomic distributions, applicability,
+sufficiency, supplied evidence IDs and selected supporting IDs remain in
+`triage.json`; the CI summary includes the exact selected source text and spans.
+The threshold is routing policy, not a calibrated defect probability. A concern
+is an investigation candidate for human review, never a confirmed defect or an
+additional acceptance gate. Reused behavioral runs are not described as fresh
+execution and do not repeat post-test model work.
+
 ## Sharding the tests suite
 
 `--shard K/N` (1 <= K <= N) splits the `tests` suite by test module. The plugin
