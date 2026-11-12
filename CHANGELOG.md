@@ -89,6 +89,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Fixed
 
+- Native crash calibration waits for the applied-effect boundary before crash
+  injection and reaps its blocked host when a scenario fails.
+
 - The built-in PR provider limits authenticated inspection and handoff reads to
   configured workspace repositories plus explicit `read_repositories` entries.
   Out-of-scope reads are rejected before hosting or credential lookup.
