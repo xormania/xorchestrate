@@ -92,7 +92,6 @@ def public_error_code(error: BaseException, default: str | None = "external_erro
     return code if isinstance(code, str) and code else default
 
 
-
 def project_operation_errors(value: JSON) -> JSON:
     """Project legacy diagnostics conservatively; do not purge stored history.
 

@@ -233,10 +233,12 @@ def log_path(log):
 
 
 def os_error_code(error: BaseException, default: str | None = "external_error") -> str | None:
-    """A local operating-system failure's errno name (``ENOENT``), else ``public_error_code``.
+    """The errno name (``ENOENT``) of a failed local OS call, else ``public_error_code``.
 
-    Errno names are a closed, non-sensitive vocabulary, so they keep useful host
-    diagnostics without exposing an exception's class name or text.
+    For the terminal hosts' own file, process and socket calls: errno names are a
+    closed, non-sensitive vocabulary there, so they keep useful host diagnostics
+    without exposing an exception's class name or text. Not for library errors
+    that reuse ``errno`` for their own codes (``ssl.SSLError``).
     """
     if isinstance(error, OSError) and isinstance(error.errno, int) and error.errno in errno.errorcode:
         return errno.errorcode[error.errno]

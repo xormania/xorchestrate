@@ -366,7 +366,7 @@ normal successful provider results keep their existing contract.
 Retained records, responses and telemetry that name a failure take its code from
 `public_error_code`: a typed failure's code, otherwise the site's documented
 default (`external_error`, or a specific one such as `evaluation_unavailable`).
-They never record an untyped exception's class name, text or attributes.
+They do not record an untyped exception's class name, text or attributes.
 Terminal adapters that report a local operating-system failure use
 `terminal_support.os_error_code` (an adapter helper, since errno is not a
 foundation dependency), which gives its errno name (for example `EACCES`) and otherwise

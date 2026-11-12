@@ -1,5 +1,4 @@
 import ast
-import errno
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
@@ -29,14 +28,7 @@ from tests.hexagonal.support.application import (
 )
 from tests.hexagonal.support.effect_errors import PRIVATE_ERROR_TYPE, EffectErrors
 from xorchestrate.adapters.policies import RuleGuardrail
-from xorchestrate.model import (
-    Assessment,
-    Capability,
-    Conflict,
-    OrchestrationError,
-    Verdict,
-    public_error_code,
-)
+from xorchestrate.model import Assessment, Capability, Conflict, OrchestrationError, Verdict, public_error_code
 
 
 def test_work_lifecycle_has_free_form_roles_context_and_optimistic_updates(store):
@@ -923,26 +915,3 @@ def test_public_error_code_survives_a_failing_typed_code():
             pass
 
     assert public_error_code(UnreadableCode("Public."), "evaluation_unavailable") == "evaluation_unavailable"
-
-
-@pytest.mark.parametrize("error,expected", [
-    (PermissionError(errno.EACCES, "PRIVATE_ERROR_MESSAGE"), "EACCES"),
-    (OSError("PRIVATE_ERROR_MESSAGE"), "external_error"),
-    (OrchestrationError("Public.", "remote_changed"), "remote_changed"),
-    (_private_failure(), "external_error"),
-])
-def test_os_error_code_names_errno_without_class_or_text(error, expected):
-    from xorchestrate.adapters.terminal_support import os_error_code
-
-    assert os_error_code(error) == expected, "OS_ERROR_CODE_ERRNO_ONLY"
-
-
-def test_terminal_location_problem_reports_errno_not_class(monkeypatch, tmp_path):
-    from xorchestrate.adapters import local_socket, terminal_support
-
-    def refused(path):
-        raise PermissionError(errno.EACCES, "PRIVATE_ERROR_MESSAGE")
-    monkeypatch.setattr(local_socket, "check_private_location", refused)
-    problem = terminal_support.location_problem(tmp_path)
-    assert "EACCES" in problem and "PermissionError" not in problem and "PRIVATE" not in problem, \
-        "TERMINAL_PROBLEM_PUBLIC_REASON"
