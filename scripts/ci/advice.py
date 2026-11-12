@@ -98,7 +98,7 @@ def download_artifact(source, listing, name, token, directory, budget):
     return Path(directory) / name
 
 
-def prepare(event, work, token, env, *, get=None, observe=None):
+def prepare(event, work, token, env, *, get=None, observe=None, policy=None):
     """Prepare evidence without a provider key; a durable upload follows this."""
     get = get or (lambda url: api_json(url, token))
     observe = observe or reuse.observe_current
@@ -118,19 +118,47 @@ def prepare(event, work, token, env, *, get=None, observe=None):
     if record["consumer_attempt"] > 1:
         return {**record, "status": "consumer_rerun_suppressed"}
     repo, default = repository["full_name"], repository["default_branch"]
+    if policy is not None and not isinstance(policy, dict):
+        raise ValueError("Invalid advice policy")
+    stages = {"source": True, "post_test": True} if policy is None else policy.get("automatic")
+    if (not isinstance(stages, dict) or stages.keys() != {"source", "post_test"}
+            or any(type(value) is not bool for value in stages.values())
+            or policy is not None and policy.get("schema_version") != 1):
+        raise ValueError("Invalid automatic advice stages")
+    record["stages"] = dict(stages)
+    manual_source = False
     if env.get("GITHUB_EVENT_NAME") == "workflow_dispatch":
-        if (env.get("GITHUB_REF") != "refs/heads/" + default
-                or event.get("inputs", {}).get("calibration") not in (True, "true")):
-            raise ValueError("Calibration requires explicit dispatch on the default branch")
-        name = f"jev-reservation-calibration-{record['consumer_run_id']}"
-        record.update(kind="calibration")
+        inputs = event.get("inputs", {})
+        calibration = inputs.get("calibration") in (True, "true")
+        requested = inputs.get("source_run_id", "")
+        if env.get("GITHUB_REF") != "refs/heads/" + default or calibration == bool(requested):
+            raise ValueError("Select calibration or an explicit source run on the default branch")
+        if calibration:
+            name = f"jev-reservation-calibration-{record['consumer_run_id']}"
+            record.update(kind="calibration")
+        else:
+            if not isinstance(requested, str) or not re.fullmatch(r"[1-9][0-9]{0,19}", requested):
+                raise ValueError("Invalid explicit source run")
+            values = {key: inputs.get(key, True) for key in ("source", "post_test")}
+            if any(type(value) is not bool and value not in ("true", "false") for value in values.values()):
+                raise ValueError("Invalid explicit advice stages")
+            record["stages"] = {key: value in (True, "true") for key, value in values.items()}
+            if not any(record["stages"].values()):
+                return {**record, "status": "manual_stages_disabled"}
+            event_run = {"id": int(requested)}
+            manual_source = True
     elif env.get("GITHUB_EVENT_NAME") == "workflow_run":
+        if not any(stages.values()):
+            return {**record, "status": "automatic_disabled"}
         event_run = event.get("workflow_run", {})
+    else:
+        raise ValueError("Unsupported advice event")
+    if env.get("GITHUB_EVENT_NAME") == "workflow_run" or manual_source:
         if not candidate._positive(event_run.get("id")):
             raise ValueError("Invalid source run")
         prefix = "https://api.github.com/repos/" + repo
         run = get(prefix + f"/actions/runs/{event_run['id']}")
-        source = validate_source(event, run)
+        source = validate_source({**event, "workflow_run": run} if manual_source else event, run)
         record.update(kind="source", source=source)
         if run.get("conclusion") in {"cancelled", "skipped"}:
             return {**record, "status": "source_" + run["conclusion"]}
@@ -168,7 +196,7 @@ def prepare(event, work, token, env, *, get=None, observe=None):
         test_artifacts = {}
         for item in rows:
             name = item.get("name", "")
-            if not name.startswith("framework-tests-"):
+            if not record["stages"]["post_test"] or not name.startswith("framework-tests-"):
                 continue
             lane, separator, attempt_text = name.rpartition("--attempt-")
             if not separator or not attempt_text.isdigit() or not 1 <= int(attempt_text) <= source["run_attempt"]:
@@ -179,8 +207,8 @@ def prepare(event, work, token, env, *, get=None, observe=None):
             download_artifact(source, rows, name, token, directory, budget)
         record.update(tested_sha=context["checkout"]["commit"], artifact_budget=budget)
         name = f"jev-reservation-source-{source['run_id']}-{source['run_attempt']}"
-    else:
-        raise ValueError("Unsupported advice event")
+        if manual_source:
+            name += f"-manual-{record['consumer_run_id']}"
     previous = prior_reservation(repo, name, default, token, get=get)
     record["reservation_name"] = name
     if previous:
@@ -215,18 +243,23 @@ def assess(plan, source_root, trusted_root, output, *, token, cache_dir=None):
     options["base_ref"] = context.get("tested_base_sha") or "HEAD^"
     if cache_dir:
         options["cache_dir"] = str(cache_dir)
-    profile = read_json(trusted_root / "contracts/hexagonal.json")
-    report = check(source_root, profile)
-    report["diagnostics"] = diagnose(report, source_root, options)
+    stages = plan.get("stages", {"source": True, "post_test": True})
+    report = {"diagnostics": {"status": "disabled"}}
+    if stages["source"]:
+        profile = read_json(trusted_root / "contracts/hexagonal.json")
+        report = check(source_root, profile)
+        report["diagnostics"] = diagnose(report, source_root, options)
     provenance = {"trusted_sha": plan["trusted_sha"], "source": plan["source"],
                   "tested_sha": context["checkout"]["commit"], "consumer_run_id": plan["consumer_run_id"]}
     report["advice_provenance"] = provenance
     candidate.write_json(output / "diagnostics.json", report)
     work = Path(plan["result_path"]).parents[2]
-    triage_options = {**options, **options.get("post_test", {})}
-    triage_report = triage(source_root, work / "artifacts", read_json(plan["result_path"]),
-                           read_json(work / "metadata.json"), read_json(source_root / candidate.WORKFLOW),
-                           read_json(source_root / "contracts/testing.json"), triage_options)
+    triage_report = {"status": "disabled"}
+    if stages["post_test"]:
+        triage_options = {**options, **options.get("post_test", {})}
+        triage_report = triage(source_root, work / "artifacts", read_json(plan["result_path"]),
+                               read_json(work / "metadata.json"), read_json(source_root / candidate.WORKFLOW),
+                               read_json(source_root / "contracts/testing.json"), triage_options)
     triage_report["advice_provenance"] = provenance
     candidate.write_json(output / "triage.json", triage_report)
     # Evidence is retained even if the branch advances during inference. It is
@@ -248,7 +281,8 @@ def main(argv=None):
     token = os.environ.get("GITHUB_TOKEN", "")
     try:
         if args.mode == "prepare":
-            result = prepare(read_json(os.environ["GITHUB_EVENT_PATH"]), args.work, token, os.environ)
+            policy = read_json(args.trusted_root / "contracts/jev-advice.json")
+            result = prepare(read_json(os.environ["GITHUB_EVENT_PATH"]), args.work, token, os.environ, policy=policy)
             candidate.write_json(args.work / "plan.json", result)
             if os.environ.get("GITHUB_OUTPUT"):
                 with Path(os.environ["GITHUB_OUTPUT"]).open("a") as stream:

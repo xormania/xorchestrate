@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "measurement_basis": "adapted_fixture_cases_not_live_model_evaluation",
+  "description": "Expected outcomes were written independently of the event-probe implementation. Historical measurements describe donor implementations only. Provider-shaped replies exercise integration, not Jev judgment accuracy.",
+  "donors": [
+    {
+      "id": "agentscient-test-defect",
+      "source": "https://github.com/xormania/agentscient/pull/356",
+      "run": "https://github.com/xormania/agentscient/actions/runs/36538364420",
+      "model": "jev-1.13.0",
+      "measurement": {"assessment_seconds": 0.357, "input_tokens": 5495, "output_tokens": 116},
+      "result": "The deliberately incorrect 3 != 2 assertion was classified test_defect and its actual excerpt selected; required CI stayed failed.",
+      "limit": "One labeled integration case; the full original request is not reproduced here."
+    },
+    {
+      "id": "agentscient-inconclusive",
+      "source": "https://github.com/uscient/agentscient-test-repo/pull/1",
+      "run": "https://github.com/uscient/agentscient-test-repo/actions/runs/36959571730",
+      "result": "An authenticated deliberate-failure probe routed to unknown at confidence 0.57, with no sufficiently confident excerpt.",
+      "limit": "The synthetic ambiguous case below is a control inspired by this limitation, not an exact replay."
+    },
+    {
+      "id": "mago-bounded-calibration",
+      "source": "https://github.com/xormania/mago-serena_v2-poc/blob/b6dbec8378338e39fe51489bc28f9ad578e4f3ab/docs/evidence/ci-performance/live-calibration-summary.json",
+      "measurement": {"provider_calls": 4, "minimum_seconds": 0.093961, "maximum_seconds": 0.23348, "input_tokens": 6090, "output_tokens": 906},
+      "result": "One accepted known-defect diagnosis, two abstentions, and one duplicate-support rejection.",
+      "limit": "Frozen known-failure and healthy replays, plus a synthetic ambiguous control; no fresh discovery or measured investigation savings."
+    },
+    {
+      "id": "cce-relevance-layout",
+      "source": "https://github.com/xormania/cce-proj/blob/051434e231ab27f36c28fe33d89af7a9a09c73e7/work/kernel/context-jev/evidence/20261105T0240Z-jev-matrix-test.md",
+      "result": "On the original clean six-case holdout, shared-state selection reduced six missed required records to one, with two extra records. A two-question/max-score composition increased irrelevant selections and was reverted.",
+      "limit": "Context-selection evidence; thresholds and resulting accuracy are not transferred to PR diagnosis."
+    }
+  ],
+  "cases": [
+    {
+      "id": "incorrect-count-assertion",
+      "group": "count-assertion",
+      "origin": "adapted_from_donor",
+      "donor": "agentscient-test-defect",
+      "kind": "failure",
+      "evidence": {
+        "complete": true,
+        "failure": {"id": "test_two_entries", "text": "The test fixture contains ['first', 'second'] but asserts that its length is 3. AssertionError: 3 != 2."},
+        "excerpts": [
+          {"id": "e1", "text": "Starting test runner.", "source": "command.log:1"},
+          {"id": "e2", "text": "entries = ['first', 'second']\nassert len(entries) == 3\nAssertionError: 2 == 3", "source": "command.log:10-12"}
+        ]
+      },
+      "expected": {"failure_kind": "test_defect", "causal_excerpt": "e2"}
+    },
+    {
+      "id": "ambiguous-timeout",
+      "group": "timeout",
+      "origin": "independently_authored_control",
+      "donor": "agentscient-inconclusive",
+      "kind": "failure",
+      "evidence": {
+        "complete": true,
+        "failure": {"id": "test_wait", "text": "The command timed out. No information establishes whether the environment, implementation or expectation caused the delay."},
+        "excerpts": [{"id": "e1", "text": "Timeout after 30 seconds.", "source": "command.log:1"}]
+      },
+      "expected": {"failure_kind": "unknown", "causal_excerpt": "none"}
+    },
+    {
+      "id": "review-failure-still-present",
+      "group": "receipt-persistence",
+      "origin": "independently_authored_control",
+      "kind": "review",
+      "evidence": {
+        "complete": true,
+        "finding": {"id": "review-41", "text": "persist() returns success without writing the receipt to the supplied store; a later reader cannot find it.", "path": "sample/receipt.py"},
+        "source": {"path": "sample/receipt.py", "text": "def persist(store, receipt):\n    return {'status': 'success'}\n"}
+      },
+      "expected": {"concern": true}
+    },
+    {
+      "id": "review-failure-fixed",
+      "group": "receipt-persistence",
+      "origin": "independently_authored_control",
+      "kind": "review",
+      "evidence": {
+        "complete": true,
+        "finding": {"id": "review-41", "text": "persist() returns success without writing the receipt to the supplied store; a later reader cannot find it.", "path": "sample/receipt.py"},
+        "source": {"path": "sample/receipt.py", "text": "def persist(store, receipt):\n    store.write(receipt)\n    return {'status': 'success'}\n"}
+      },
+      "expected": {"concern": false}
+    },
+    {
+      "id": "scope-direct-requirement",
+      "group": "scope-selection",
+      "origin": "independently_authored_control",
+      "donor": "cce-relevance-layout",
+      "kind": "scope",
+      "evidence": {
+        "complete": true,
+        "purpose": "Make the receipt writer retain data before reporting success.",
+        "candidates": [
+          {"id": "retain-before-success", "text": "Receipt persistence must complete before the writer reports success."},
+          {"id": "release-tag-format", "text": "Release tags must use the package version."}
+        ]
+      },
+      "expected": {"relevant_ids": ["retain-before-success"], "irrelevant_ids": ["release-tag-format"]}
+    }
+  ]
+}

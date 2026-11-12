@@ -16,6 +16,24 @@
           "required": true,
           "default": false,
           "type": "boolean"
+        },
+        "source_run_id": {
+          "description": "Explicit completed CI run for broad source/test advice (leave empty for calibration)",
+          "required": false,
+          "default": "",
+          "type": "string"
+        },
+        "source": {
+          "description": "Include broad source diagnostics for the explicit source run",
+          "required": false,
+          "default": true,
+          "type": "boolean"
+        },
+        "post_test": {
+          "description": "Include broad post-test triage for the explicit source run",
+          "required": false,
+          "default": true,
+          "type": "boolean"
         }
       }
     }
@@ -33,7 +51,7 @@
   "jobs": {
     "advice": {
       "name": "Jev advice (independent of CI result)",
-      "if": "(github.event_name == 'workflow_run' && github.event.workflow_run.head_repository.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch && inputs.calibration)",
+      "if": "(github.event_name == 'workflow_run' && github.event.workflow_run.head_repository.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch && (inputs.calibration || inputs.source_run_id != ''))",
       "runs-on": "ubuntu-24.04",
       "timeout-minutes": 10,
       "steps": [

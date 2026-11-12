@@ -107,6 +107,52 @@ def test_preparation_authenticates_real_receipts_before_reserving_provider_acces
     assert plan["artifact_budget"]["count"] == 4
 
 
+@pytest.mark.parametrize("conclusion", ("success", "failure"))
+def test_disabled_automatic_advice_stops_before_evidence_intake(peer, tmp_path, monkeypatch, conclusion):
+    peer.event["workflow_run"]["conclusion"] = conclusion
+    peer.metadata[101]["run"]["conclusion"] = conclusion
+    event_path, github_output, work = tmp_path / "event.json", tmp_path / "github-output", tmp_path / "work"
+    event_path.write_text(json.dumps(peer.event))
+    for key, value in {**peer.env, "GITHUB_EVENT_PATH": str(event_path), "GITHUB_OUTPUT": str(github_output),
+                       "GITHUB_TOKEN": "fixture-token"}.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    monkeypatch.setattr(subject, "api_json", lambda url, token: peer.get(url))
+
+    exit_code = subject.main(["prepare", "--work", str(work), "--trusted-root", str(ROOT)])
+    plan = json.loads((work / "plan.json").read_text())
+    assert exit_code == 0 and plan["status"] == "automatic_disabled" and not peer.requests, \
+        "DISABLED_AUTOMATIC_ADVICE_PERFORMS_NO_EVIDENCE_INTAKE"
+    assert plan["provider_needed"] is False and "provider_needed=false\n" in github_output.read_text(), \
+        "DISABLED_AUTOMATIC_ADVICE_NEVER_REQUESTS_PROVIDER_ACCESS"
+    assert not (work / "artifacts").exists() and not (work / "reservation").exists()
+
+
+@pytest.mark.parametrize("mode", ("automatic", "manual_source", "manual_post_test", "calibration"))
+def test_broad_advice_remains_explicitly_available(peer, tmp_path, mode):
+    policy = json.loads((ROOT / "contracts/jev-advice.json").read_text())
+    event, env = deepcopy(peer.event), dict(peer.env)
+    if mode == "automatic":
+        policy["automatic"] = {"source": True, "post_test": True}
+    else:
+        env.update(GITHUB_EVENT_NAME="workflow_dispatch", GITHUB_REF="refs/heads/master")
+        event.pop("workflow_run")
+        event["inputs"] = {"calibration": "true"} if mode == "calibration" else {
+            "calibration": "false", "source_run_id": "101", "source": str(mode == "manual_source").lower(),
+            "post_test": str(mode == "manual_post_test").lower()}
+    plan = subject.prepare(event, tmp_path / "work", "fixture-token", env, get=peer.get, policy=policy)
+    assert plan["status"] == "reservation_required" and plan["provider_needed"] is True, \
+        "EXPLICIT_BROAD_ADVICE_REMAINS_AVAILABLE"
+    if mode == "calibration":
+        assert plan["kind"] == "calibration" and not any("/actions/runs/101" in path for path in peer.requests)
+    else:
+        expected = {"source": mode != "manual_post_test", "post_test": mode != "manual_source"}
+        assert plan["stages"] == expected and plan["source"]["run_id"] == 101, \
+            "EXPLICIT_BROAD_ADVICE_BINDS_SELECTED_STAGES_AND_SOURCE"
+        assert plan["artifact_budget"]["count"] == (4 if expected["post_test"] else 2), \
+            "SOURCE_ONLY_ADVICE_DOES_NOT_DOWNLOAD_TEST_ARCHIVES"
+
+
 @pytest.mark.parametrize("expired", (False, True))
 def test_a_trusted_reservation_suppresses_duplicate_provider_work_even_after_expiry(peer, tmp_path, expired):
     peer.reserve(expired=expired)
@@ -189,6 +235,8 @@ def test_independent_consumer_reserves_before_any_secret_bearing_step():
     assert secret_steps
     for step in secret_steps:
         assert steps.index(step) > steps.index(reserve)
+        assert "steps.gate.outputs.provider_needed == 'true'" in step["if"], \
+            "DISABLED_ADVICE_GATE_WITHHOLDS_PROVIDER_CREDENTIALS"
         assert "steps.reserve.outcome == 'success'" in step["if"], "ADVICE_RESERVATION_PRECEDES_PROVIDER_ACCESS"
         assert step["run"].startswith("cd trusted\n"), "ADVICE_EXECUTES_ONLY_TRUSTED_CODE"
         assert step.get("timeout-minutes", 0) > 0
@@ -263,3 +311,26 @@ def test_changed_candidate_checkout_is_refused_before_assessment(tmp_path, monke
     monkeypatch.setattr(subject.reuse, "observe_current", no_observe)
     with pytest.raises(ValueError, match="checkout identity changed"):
         subject.assess(fixture.plan, fixture.source, fixture.trusted, fixture.work / "output", token="fixture-token")
+
+
+@pytest.mark.parametrize("selected", ("source", "post_test"))
+def test_only_selected_broad_advice_stage_reaches_its_collector(tmp_path, monkeypatch, selected):
+    from scripts.architecture import diagnostics, triage
+    from tests.hexagonal.support.ci_advice import assessment_checkouts
+
+    fixture = assessment_checkouts(tmp_path)
+    fixture.plan["stages"] = {"source": selected == "source", "post_test": selected == "post_test"}
+    calls = []
+    def diagnose(*args):
+        calls.append("source")
+        return {"status": "complete"}
+    def collect_triage(*args):
+        calls.append("post_test")
+        return {"status": "complete"}
+    monkeypatch.setattr(subject.reuse, "observe_current", lambda *_: {"status": "current"})
+    monkeypatch.setattr(diagnostics, "diagnose", diagnose)
+    monkeypatch.setattr(triage, "triage", collect_triage)
+    result = subject.assess(fixture.plan, fixture.source, fixture.trusted, fixture.work / "output", token="fixture-token")
+    assert calls == [selected], "DISABLED_BROAD_STAGE_MAKES_NO_PROVIDER_REQUEST"
+    assert result["source_status"] == ("complete" if selected == "source" else "disabled")
+    assert result["triage_status"] == ("complete" if selected == "post_test" else "disabled")

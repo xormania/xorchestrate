@@ -161,7 +161,7 @@
       }
     },
     "architecture": {
-      "guarantee": "Deterministic dependency policy and planted violations preserve product, test-kit, scenario and evidence-decoder boundaries.",
+      "guarantee": "Deterministic dependency policy and planted violations preserve product, test-kit, scenario and evidence-decoder boundaries. Event advice distinguishes verified source identity from protected inference evidence and authorizes refetched review identities before provider use.",
       "modules": {
         "tests/hexagonal/test_architecture_enforcement.py": "framework",
         "tests/hexagonal/test_architecture_diagnostics.py": "adapter",
@@ -174,7 +174,8 @@
         "tests/hexagonal/test_architecture_packets.py": "composition",
         "tests/hexagonal/test_jev_requests.py": "adapter",
         "tests/hexagonal/test_jev_post_test_triage.py": "composition",
-        "tests/hexagonal/test_jev_operational.py": "calibration"
+        "tests/hexagonal/test_jev_operational.py": "calibration",
+        "tests/hexagonal/test_jev_events.py": "composition"
       }
     },
     "live-acceptance": {

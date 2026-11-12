@@ -140,11 +140,11 @@ The job output is
 `steps.guard.outputs.force == 'false' && steps.classify.outputs.code || 'true'`.
 It is `false` only when the guard ran and allowed classification and the
 classifier reported `false`. The tests shards, the application aggregate, the
-verification, tmux acceptance and Jev diagnostics jobs declare `needs: paths` and
+verification and tmux acceptance jobs declare `needs: paths` and
 the documentation condition `!cancelled() && needs.paths.outputs.code != 'false'`
 (the application aggregate also needs the shard matrix). The deterministic
-behavioral jobs additionally require `needs.paths.outputs.reuse != 'true'`;
-the advisory Jev job remains fresh for code-bearing candidates. An unavailable
+behavioral jobs additionally require `needs.paths.outputs.reuse != 'true'`.
+Jev runs separately under its event and advice policies. An unavailable
 classifier or reuse planner cannot skip validation. An explicit supersession
 decision can skip old static and behavioral lanes, but cannot qualify a pass.
 On a documentation-only or
@@ -199,8 +199,12 @@ selected/omitted source scope, and do not override deterministic violations or
 create requirements from findings. See
 [architecture enforcement](../docs/architecture-enforcement.md).
 
-Jev source diagnostics and candidate-bound test evidence triage run in the separate
-`Jev advisory` workflow after CI completes. `CI result` has no Jev dependency,
+Focused Jev event probes select PR context and failed CI log evidence. Broad source
+diagnostics and candidate-bound test evidence triage remain available in the separate
+`Jev advisory` workflow; both automatic stages default off in
+`contracts/jev-advice.json`, before evidence intake or provider access.
+Explicit default-branch dispatches can select a completed `source_run_id` and either
+stage. See [focused event advice](../docs/jev-events.md). `CI result` has no Jev dependency,
 provider credential, diagnostic installation or inference step. The consumer uses
 trusted default-branch code and model policy; the tested checkout and artifacts
 are read as data. It authenticates their producer identity, reserves each source

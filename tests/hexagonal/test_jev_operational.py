@@ -10,6 +10,7 @@ import pytest
 
 from scripts.architecture import operational as subject
 from tests.hexagonal.contracts.jev_operational import comparison_stays_advisory, labels_are_withheld
+from tests.hexagonal.support.github_actions import expression
 from tests.hexagonal.support.jev_operational import SubjectProvider, declared_disposition, operational_catalog
 from tests.hexagonal.support.jev_triage import AtomicProvider
 
@@ -215,8 +216,15 @@ def test_live_calibration_is_explicit_default_branch_work_separate_from_source_a
     option = workflow["on"]["workflow_dispatch"]["inputs"]["calibration"]
     assert option["type"] == "boolean" and option["default"] is False and option["required"] is True
     job = workflow["jobs"]["advice"]
-    assert "github.ref_name == github.event.repository.default_branch && inputs.calibration" in job["if"], \
-        "LIVE_CALIBRATION_REQUIRES_EXPLICIT_DEFAULT_BRANCH_DISPATCH"
+    for branch, calibration, source_run, expected in (
+        ("master", False, "", False), ("master", True, "", True), ("master", False, "101", True),
+        ("feature", True, "", False), ("feature", False, "101", False),
+    ):
+        context = {"github": {"event_name": "workflow_dispatch", "ref_name": branch,
+                              "event": {"repository": {"default_branch": "master"}}},
+                   "inputs": {"calibration": calibration, "source_run_id": source_run}}
+        assert expression("${{ " + job["if"] + " }}", context) is expected, \
+            "LIVE_CALIBRATION_REQUIRES_EXPLICIT_DEFAULT_BRANCH_DISPATCH"
     pilots = [step for step in job["steps"] if "--split heldout" in step.get("run", "")]
     assert len(pilots) == 1 and not any("--health" in step.get("run", "") for step in job["steps"])
     pilot = pilots[0]
