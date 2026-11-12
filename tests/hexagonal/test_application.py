@@ -874,16 +874,27 @@ def test_public_error_code_replaces_malformed_typed_code():
 
 
 def _copied_error_attributes(source, origin="<sample>"):
-    """Calls that read an object's ``code`` or ``details`` by name instead of through public_error."""
-    return [f"{origin}:{node.lineno}" for node in ast.walk(ast.parse(source))
+    """Reads of an exception's ``code``/``details`` by name, or of a caught exception's class name."""
+    tree = ast.parse(source)
+    hits = [node.lineno for node in ast.walk(tree)
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "getattr"
             and len(node.args) >= 2 and isinstance(node.args[1], ast.Constant) and node.args[1].value in {"code", "details"}]
+    for handler in ast.walk(tree):
+        if isinstance(handler, ast.ExceptHandler) and handler.name:
+            hits += [node.lineno for statement in handler.body for node in ast.walk(statement)
+                     if isinstance(node, ast.Attribute) and node.attr == "__name__" and isinstance(node.value, ast.Call)
+                     and isinstance(node.value.func, ast.Name) and node.value.func.id == "type"
+                     and [getattr(arg, "id", None) for arg in node.value.args] == [handler.name]]
+    return [f"{origin}:{line}" for line in sorted(hits)]
 
 
 def test_error_attribute_scan_detects_copies_and_accepts_public_helpers():
     assert _copied_error_attributes('code = getattr(error, "code", type(error).__name__)\n'), "control: copy detected"
     assert _copied_error_attributes('details = getattr(exc, "details", {})\n'), "control: copy detected"
-    assert _copied_error_attributes('code = public_error_code(error)\nname = getattr(error, "name", None)\n') == []
+    assert _copied_error_attributes('try:\n    run()\nexcept OSError as failure:\n    x = type(failure).__name__\n'), \
+        "control: caught class name detected"
+    assert _copied_error_attributes('code = public_error_code(error)\nname = getattr(error, "name", None)\n'
+                                    'try:\n    run()\nexcept OSError as failure:\n    x = type(sink).__name__\n') == []
 
 
 def test_only_public_error_helpers_read_exception_code_or_details():

@@ -214,6 +214,7 @@ class CompositionTests(unittest.TestCase):
         with self.assertRaises(OrchestrationError) as failure:
             runtime.close()
         self.assertEqual(failure.exception.code, "cleanup_failed")
+        self.assertEqual(failure.exception.details, {"errors": ["external_error"]}, "CLEANUP_PUBLIC_FAILURE_CODES")
         self.assertEqual(extension.closed, ["second", "first", "store"])
         runtime.close()
         self.assertEqual(extension.closed, ["second", "first", "store"])

@@ -1,8 +1,12 @@
 """Terminal host port: one behavioural contract for every adapter and the memory fake."""
 
 import contextlib
+import errno
+import importlib
 import json
 import shutil
+import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -14,6 +18,7 @@ from tests.hexagonal.support.terminal_host import adapter_subject, memory_subjec
 from xorchestrate.instance.doctor import terminal_host_check
 from xorchestrate.instance.home import Home
 from xorchestrate.instance.services import Services
+from xorchestrate.model import OrchestrationError
 
 CONTROLLER_VARIABLE = "XO_CONTROLLER_ONLY"
 
@@ -238,3 +243,90 @@ def test_the_multiplexer_scan_finds_a_planted_mention(tmp_path):
         (tmp_path / relative).write_text(text, encoding="utf-8")
     assert multiplexer_mentions(tmp_path) == ["scripts/acceptance/scenario.py:1", "scripts/testkit/adapters/runner.py:1",
                                               "xorchestrate/instance/operations.py:1"]
+
+
+# -- public failure reasons -------------------------------------------------------
+
+PRIVATE = "PRIVATE_HOST_FAILURE"
+
+
+class _PrivateFailure(RuntimeError):
+    code, details = PRIVATE, {"private": PRIVATE}
+
+
+@pytest.mark.parametrize("error,expected", [
+    (PermissionError(errno.EACCES, PRIVATE), "EACCES"),
+    (OSError(PRIVATE), "external_error"),
+    (OrchestrationError("Public.", "remote_changed"), "remote_changed"),
+    (_PrivateFailure(PRIVATE), "external_error"),
+])
+def test_os_error_code_names_errno_without_class_or_text(error, expected):
+    from xorchestrate.adapters.terminal_support import os_error_code
+
+    assert os_error_code(error) == expected, "OS_ERROR_CODE_ERRNO_ONLY"
+
+
+def _assert_public(text):
+    assert PRIVATE not in text and "Error" not in text, "TERMINAL_PUBLIC_REASON"
+
+
+def test_location_problem_reports_errno_not_class(monkeypatch, tmp_path):
+    from xorchestrate.adapters import local_socket, terminal_support
+
+    def refused(path):
+        raise PermissionError(errno.EACCES, PRIVATE)
+    monkeypatch.setattr(local_socket, "check_private_location", refused)
+    problem = terminal_support.location_problem(tmp_path)
+    assert "EACCES" in problem, "TERMINAL_PUBLIC_REASON"
+    _assert_public(problem)
+
+
+def _multiplexer(tmp_path):
+    # Collected tests reach the multiplexer adapter only through its factory reference.
+    module, _, name = ADAPTERS["multiplexer"][0].partition(":")
+    base = track(tempfile.mkdtemp(prefix="xth-"))
+    return getattr(importlib.import_module(module), name)(
+        {"name": "probe", "socket": f"{base}/probe.sock", "binary": sys.executable})
+
+
+@pytest.mark.parametrize("raised,expected", [
+    (subprocess.TimeoutExpired(["host", PRIVATE], 1), "timeout"),
+    (PermissionError(errno.EACCES, PRIVATE), "EACCES"),
+])
+def test_multiplexer_control_failure_reports_public_reason(monkeypatch, tmp_path, raised, expected):
+    host = _multiplexer(tmp_path)
+
+    def failing(*args, **kwargs):
+        raise raised
+    monkeypatch.setattr(subprocess, "run", failing)
+    with pytest.raises(OrchestrationError) as unanswered:
+        host._control("list-sessions", start=True)
+    assert unanswered.value.details == {"error": expected}, "TERMINAL_PUBLIC_REASON"
+    _assert_public(json.dumps(unanswered.value.details))
+
+
+def test_multiplexer_readiness_failure_reports_public_reason(monkeypatch, tmp_path):
+    from xorchestrate.adapters import terminal_support
+
+    host = _multiplexer(tmp_path)
+
+    def failing(path):
+        raise _PrivateFailure(PRIVATE)
+    monkeypatch.setattr(terminal_support, "location_problem", failing)
+    reason = host.readiness()
+    assert reason == "the terminal host could not be checked (external_error)", "TERMINAL_PUBLIC_REASON"
+
+
+def test_detached_process_start_failure_reports_errno(monkeypatch, tmp_path):
+    from xorchestrate.adapters import process_terminal
+    from xorchestrate.ports import TerminalCommand
+
+    base = track(tempfile.mkdtemp(prefix="xth-"))
+    host = process_terminal.DetachedProcessHost({"name": "probe", "location": f"{base}/probe"})
+
+    def failing(*args, **kwargs):
+        raise PermissionError(errno.EACCES, PRIVATE)
+    monkeypatch.setattr(process_terminal.subprocess, "Popen", failing)
+    with pytest.raises(OrchestrationError) as refused:
+        host.open_terminal("worker", TerminalCommand((sys.executable, "-c", "pass"), str(tmp_path)))
+    assert refused.value.details == {"name": "worker", "error": "EACCES"}, "TERMINAL_PUBLIC_REASON"

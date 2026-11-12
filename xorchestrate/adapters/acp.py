@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from copy import deepcopy
 
-from ..model import JSON, OrchestrationError
+from ..model import JSON, OrchestrationError, public_error_code
 from ..outcomes import effect_outcome
 from .process import encode_json
 from .process_sessions import NativeSessions
@@ -108,7 +108,7 @@ class ACPSessionDriver(NativeSessions):
                 kind, fields = "native_completion", {"result": value}
             except Exception as exc:
                 kind, fields = "native_completion_unknown", {
-                    "error": exc.code if isinstance(exc, OrchestrationError) else type(exc).__name__, "outcome": "unknown"}
+                    "error": public_error_code(exc), "outcome": "unknown"}
             with live.lock:
                 live.pending.pop(prompt_id, None)
                 self._prompt_finished(live, prompt_id, kind == "native_completion")

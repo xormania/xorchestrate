@@ -136,7 +136,7 @@ class TmuxTerminalHost:
                 return "the socket path is too long for a Unix socket"
             return support.location_problem(self.socket.parent)
         except Exception as error:  # readiness never raises
-            return type(error).__name__
+            return f"the terminal host could not be checked ({support.os_error_code(error)})"
 
     # -- terminals ----------------------------------------------------------------
 
@@ -527,7 +527,8 @@ class TmuxTerminalHost:
                                     timeout=self.control_timeout, cwd="/", stdin=subprocess.DEVNULL)
         except (OSError, subprocess.TimeoutExpired) as error:
             raise OrchestrationError("The terminal host did not answer.", "terminal_host_unavailable",
-                                     {"error": type(error).__name__}) from None
+                                     {"error": "timeout" if isinstance(error, subprocess.TimeoutExpired)
+                                      else support.os_error_code(error)}) from None
         if server is not False and after and not support.alive(server):
             raise OrchestrationError("The terminal host changed while it was being controlled.",
                                      "terminal_identity_mismatch")

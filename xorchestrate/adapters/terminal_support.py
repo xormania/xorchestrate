@@ -7,6 +7,7 @@ through the terminal host port; callers see only opaque receipts.
 
 from __future__ import annotations
 
+import errno
 import os
 import re
 import signal
@@ -14,7 +15,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..model import OrchestrationError
+from ..model import OrchestrationError, public_error_code
 from ..ports import TerminalCommand
 
 NAME = re.compile(r"[A-Za-z0-9_][A-Za-z0-9._-]{0,63}")
@@ -216,7 +217,7 @@ def location_problem(path):
     except OrchestrationError as error:
         return str(error)
     except OSError as error:
-        return type(error).__name__
+        return f"the location could not be checked ({os_error_code(error)})"
     return None
 
 
@@ -229,3 +230,16 @@ def log_path(log):
         raise OrchestrationError("The log must be in an existing private directory.", "invalid_arguments",
                                  {"location": str(path.parent)})
     return path
+
+
+def os_error_code(error: BaseException, default: str | None = "external_error") -> str | None:
+    """The errno name (``ENOENT``) of a failed local OS call, else ``public_error_code``.
+
+    For the terminal hosts' own file, process and socket calls: errno names are a
+    closed, non-sensitive vocabulary there, so they keep useful host diagnostics
+    without exposing an exception's class name or text. Not for library errors
+    that reuse ``errno`` for their own codes (``ssl.SSLError``).
+    """
+    if isinstance(error, OSError) and isinstance(error.errno, int) and error.errno in errno.errorcode:
+        return errno.errorcode[error.errno]
+    return public_error_code(error, default)
