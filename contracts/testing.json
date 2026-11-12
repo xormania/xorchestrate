@@ -234,6 +234,12 @@
       "modules": {
         "tests/hexagonal/test_xcontracts.py": "contract"
       }
+    },
+    "agent-guidance": {
+      "guarantee": "Shared agent skills have one source that every harness location mirrors by relative symlink, well-formed front matter, guidance pointers that resolve and no local paths, session identifiers or foreign emails; the importing instruction file loads the repository rules, whose agent workflow section points at the skills; the Serena project selects the python language server, honours .gitignore and its caches are ignored.",
+      "modules": {
+        "tests/hexagonal/test_agent_guidance.py": "contract"
+      }
     }
   }
 }
