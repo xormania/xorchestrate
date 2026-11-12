@@ -197,13 +197,18 @@ def test_controlled_provider_identity_and_usage_stay_observed_not_imputed():
 
 
 def test_optional_live_pilot_is_bounded_and_retains_provider_availability():
-    workflow = json.loads((Path(__file__).parents[2] / ".github/workflows/ci.yml").read_text())
-    steps = workflow["jobs"]["architecture"]["steps"]
+    workflow = json.loads((Path(__file__).parents[2] / ".github/workflows/jev.yml").read_text())
+    assert workflow["on"]["workflow_dispatch"]["inputs"]["calibration"]["default"] is False
+    steps = workflow["jobs"]["advice"]["steps"]
     pilots = [step for step in steps if "-m scripts.architecture.effectiveness" in step.get("run", "")]
     assert len(pilots) == 1, "CI must expose one optional live effectiveness measurement"
     pilot = pilots[0]
+    assert "steps.gate.outputs.kind == 'calibration'" in pilot["if"], "LIVE_PILOT_REQUIRES_CALIBRATION_REQUEST"
+    assert "steps.reserve.outcome == 'success'" in pilot["if"]
+    assert pilot["run"].startswith("cd trusted\n")
     assert pilot.get("continue-on-error") is True
-    assert "--mode live" in pilot["run"] and "--max-seconds 120" in pilot["run"]
+    command = next(line for line in pilot["run"].splitlines() if "-m scripts.architecture.effectiveness" in line)
+    assert "--mode live" in command and "--max-seconds 120" in command, "LIVE_PILOT_BOUNDED"
     assert "effectiveness.json" in pilot["run"]
     assert pilot["env"] == {
         "TYPESAFE_API_KEY": "${{ secrets.TYPESAFE_API_KEY || secrets.JEV_API_KEY }}",

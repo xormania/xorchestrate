@@ -115,20 +115,17 @@ source evidence is `inconclusive`. None means Jev found no concern. A completed
 diagnostic only covers the supplied scope. Live provider output and HTTP fixture
 results are distinct evidence.
 
-The final CI summary exposes these advisory assessments, their confidence and
-distributions, and selected, omitted and truncated scope. It links the diagnostic
-artifact and records report/context hashes. Advice is shown as current only when
-the report identifies a clean checkout of the tested revision and the diagnostic
-subject matches the measured subject. Missing, foreign or malformed advice stays
-visible without changing deterministic acceptance. Confidence and distributions
-are model outputs rather than calibrated probabilities of an actual defect.
+The independent `Jev advisory` workflow retains these assessments, their
+probabilities, selected source and omission receipts after CI completes. The
+consumer authenticates the tested checkout and records the separate trusted
+collector revision. Currentness is checked before and after inference; a source
+that advances is marked historical. Confidence and distributions remain model
+outputs rather than calibrated probabilities of an actual defect.
 
-CI runs diagnostics even after a deterministic failure. Its explicit
-`--diagnostics-only` invocation does not determine the separate blocking gate's
-exit status. The deterministic and behavioral steps have no continue-on-error.
-Reports are uploaded after success or failure. GitHub's repository ruleset controls
-whether this job is also mandatory for merging; a workflow cannot grant itself
-that administration setting.
+Required validation never waits for advice. Failed tests can still supply
+candidate-bound diagnostic evidence; setup/provider failure cannot turn the
+required result green or red. See [independent CI advice](jev-ci-advice.md) for
+trusted execution, reservations, output location and rollout behavior.
 
 ## Limits and extension
 

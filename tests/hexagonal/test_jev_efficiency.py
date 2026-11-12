@@ -293,14 +293,17 @@ def test_cli_cache_and_batch_flags_reach_diagnostics(tmp_path, monkeypatch):
 
 
 def test_ci_restores_external_advisory_cache_and_invokes_it():
-    workflow = json.loads(Path(".github/workflows/ci.yml").read_text())
-    architecture = workflow["jobs"]["architecture"]
-    restored = [step for step in architecture["steps"] if step.get("uses", "").startswith("actions/cache@")]
+    workflow = json.loads(Path(".github/workflows/jev.yml").read_text())
+    advice = workflow["jobs"]["advice"]
+    restored = [step for step in advice["steps"] if step.get("uses", "").startswith("actions/cache@")]
     assert len(restored) == 1, "CI_ADVISORY_CACHE_RESTORED"
     step = restored[0]
     assert step["with"]["path"] == "${{ runner.temp }}/jev-assessment-cache", "CI_CACHE_OUTSIDE_CANDIDATE"
-    assert step.get("continue-on-error") is True, "CI_CACHE_FAILURE_ADVISORY"
     assert len(step["uses"].rsplit("@", 1)[1]) == 40
-    invocation = next(item["run"] for item in architecture["steps"] if "--jev-config" in item.get("run", ""))
-    assert '--cache-dir "$RUNNER_TEMP/jev-assessment-cache"' in invocation, "CI_CACHE_INVOKED"
-    assert "--diagnostics-only" in invocation
+    diagnostic = next(item for item in advice["steps"] if "-m scripts.ci.advice assess" in item.get("run", ""))
+    assert '--cache-dir "$RUNNER_TEMP/jev-assessment-cache"' in diagnostic["run"], "CI_CACHE_INVOKED"
+    assert diagnostic.get("continue-on-error") is True, "CI_ASSESSMENT_FAILURE_ADVISORY"
+    required = json.loads(Path(".github/workflows/ci.yml").read_text())
+    assert not any(item.get("uses", "").startswith("actions/cache@")
+                   and "jev-assessment-cache" in str(item.get("with", {}))
+                   for job in required["jobs"].values() for item in job["steps"]), "CI_CACHE_FAILURE_ADVISORY"

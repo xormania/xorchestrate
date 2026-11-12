@@ -494,134 +494,6 @@
         }
       ]
     },
-    "architecture": {
-      "name": "Jev architecture diagnostics",
-      "outputs": {
-        "artifact_url": "${{ steps.diagnostic-artifact.outputs.artifact-url }}"
-      },
-      "runs-on": "ubuntu-24.04",
-      "timeout-minutes": 6,
-      "needs": [
-        "paths"
-      ],
-      "if": "${{ !cancelled() && needs.paths.outputs.code != 'false' && !(github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body)) && needs.paths.outputs.superseded != 'true' }}",
-      "steps": [
-        {
-          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
-          "with": {
-            "persist-credentials": false,
-            "fetch-depth": 0
-          },
-          "id": "checkout"
-        },
-        {
-          "name": "Configure external Python cache",
-          "id": "cache",
-          "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/xorchestrate-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\"\nprintf 'UV_PROJECT_ENVIRONMENT=%s\\n' \"$RUNNER_TEMP/xor-validation-python\" >> \"$GITHUB_ENV\""
-        },
-        {
-          "uses": "actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0",
-          "with": {
-            "python-version": "3.12.16"
-          },
-          "id": "python"
-        },
-        {
-          "name": "Install pinned validation runtime manager",
-          "uses": "astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9",
-          "with": {
-            "version": "0.13.7",
-            "enable-cache": true,
-            "cache-dependency-glob": "uv.lock"
-          }
-        },
-        {
-          "name": "Install test and diagnostic dependencies",
-          "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --only-group validation --no-install-project --managed-python --python 3.12.16\nuv sync --locked --no-default-groups --group validation --no-install-project --managed-python --python 3.12.16 --extra test\nuv pip install --python \"$UV_PROJECT_ENVIRONMENT/bin/python\" --no-deps --no-build-isolation -e .\necho \"$UV_PROJECT_ENVIRONMENT/bin\" >> \"$GITHUB_PATH\"",
-          "id": "dependencies"
-        },
-        {
-          "name": "Restore exact-request advisory cache",
-          "uses": "actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830",
-          "continue-on-error": true,
-          "with": {
-            "path": "${{ runner.temp }}/jev-assessment-cache",
-            "key": "${{ runner.os }}-jev-v1-${{ hashFiles('scripts/architecture/*.py', 'xorchestrate/adapters/evaluation.py', 'contracts/hexagonal*.json') }}-${{ github.run_id }}-${{ github.run_attempt }}",
-            "restore-keys": "${{ runner.os }}-jev-v1-"
-          }
-        },
-        {
-          "name": "Jev architecture diagnostics",
-          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
-          "env": {
-            "TYPESAFE_API_KEY": "${{ secrets.TYPESAFE_API_KEY || secrets.JEV_API_KEY }}",
-            "JEV_ENDPOINT": "${{ vars.JEV_ENDPOINT }}",
-            "JEV_MODEL": "${{ vars.JEV_MODEL }}",
-            "JEV_BASE_REF": "${{ github.event.pull_request.base.sha || github.event.before }}"
-          },
-          "run": "jev_base_ref=\"$JEV_BASE_REF\"\nif [ -z \"$jev_base_ref\" ] || [ \"$jev_base_ref\" = \"0000000000000000000000000000000000000000\" ]; then\n  jev_base_ref=\"$(git rev-parse HEAD^)\"\nfi\npython3 -m scripts.architecture --jev-config contracts/hexagonal-jev.json --base-ref \"$jev_base_ref\" --cache-dir \"$RUNNER_TEMP/jev-assessment-cache\" --diagnostics-only --output \"$RUNNER_TEMP/architecture/diagnostics.json\""
-        },
-        {
-          "name": "Select Jev evaluation scope",
-          "id": "evaluation-scope",
-          "continue-on-error": true,
-          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
-          "env": {
-            "JEV_BASE_REF": "${{ github.event.pull_request.base.sha || github.event.before }}"
-          },
-          "run": "python3 -m scripts.architecture.operational --select-base \"$JEV_BASE_REF\" --github-output \"$GITHUB_OUTPUT\" --output \"$RUNNER_TEMP/architecture/evaluation-selection.json\""
-        },
-        {
-          "name": "Measure Jev effectiveness on paired architecture controls",
-          "continue-on-error": true,
-          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success' && steps.evaluation-scope.outputs.evaluation_mode != 'health'",
-          "env": {
-            "TYPESAFE_API_KEY": "${{ secrets.TYPESAFE_API_KEY || secrets.JEV_API_KEY }}",
-            "JEV_ENDPOINT": "${{ vars.JEV_ENDPOINT }}",
-            "JEV_MODEL": "${{ vars.JEV_MODEL }}"
-          },
-          "run": "python3 -m scripts.architecture.effectiveness --mode live --jev-config contracts/hexagonal-jev.json --max-seconds 120 --output \"$RUNNER_TEMP/architecture/effectiveness.json\""
-        },
-        {
-          "name": "Measure Jev operational value on heldout PR incidents",
-          "continue-on-error": true,
-          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success' && steps.evaluation-scope.outputs.evaluation_mode != 'health'",
-          "env": {
-            "TYPESAFE_API_KEY": "${{ secrets.TYPESAFE_API_KEY || secrets.JEV_API_KEY }}",
-            "JEV_ENDPOINT": "${{ vars.JEV_ENDPOINT }}",
-            "JEV_MODEL": "${{ vars.JEV_MODEL }}"
-          },
-          "run": "python3 -m scripts.architecture.operational --mode live --split heldout --max-seconds 120 --output \"$RUNNER_TEMP/architecture/operational.json\""
-        },
-        {
-          "name": "Check intentional Jev live health",
-          "continue-on-error": true,
-          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success' && steps.evaluation-scope.outputs.evaluation_mode == 'health'",
-          "env": {
-            "TYPESAFE_API_KEY": "${{ secrets.TYPESAFE_API_KEY || secrets.JEV_API_KEY }}",
-            "JEV_ENDPOINT": "${{ vars.JEV_ENDPOINT }}",
-            "JEV_MODEL": "${{ vars.JEV_MODEL }}"
-          },
-          "run": "python3 -m scripts.architecture.operational --mode live --health --output \"$RUNNER_TEMP/architecture/health.json\""
-        },
-        {
-          "name": "Record unavailable diagnostics",
-          "if": "!cancelled() && (steps.checkout.outcome != 'success' || steps.cache.outcome != 'success' || steps.python.outcome != 'success' || steps.dependencies.outcome != 'success')",
-          "run": "mkdir -p \"$RUNNER_TEMP/architecture\"\ncat > \"$RUNNER_TEMP/architecture/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"launched\":false,\"reason\":\"CI checkout, cache, interpreter or dependency setup did not succeed\"}\nJSON"
-        },
-        {
-          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
-          "if": "always()",
-          "with": {
-            "name": "architecture-evidence--attempt-${{ github.run_attempt }}",
-            "path": "${{ runner.temp }}/architecture/",
-            "if-no-files-found": "error",
-            "retention-days": 30
-          },
-          "id": "diagnostic-artifact"
-        }
-      ]
-    },
     "package": {
       "name": "Installed package acceptance",
       "runs-on": "ubuntu-24.04",
@@ -699,7 +571,6 @@
         "verification",
         "tmux-acceptance",
         "architecture-status",
-        "architecture",
         "package"
       ],
       "if": "${{ always() }}",
@@ -743,38 +614,6 @@
           },
           "run": "mkdir -p \"$RUNNER_TEMP/ci-result\"\nprintf '%s\\n' \"$JOB_OUTCOMES\" > \"$RUNNER_TEMP/ci-result/needs.json\"\nprintf '%s\\n' \"$CI_CANDIDATE_CONTEXT\" > \"$RUNNER_TEMP/ci-result/context.json\"\nif [ -z \"$CI_REUSE_PLAN\" ]; then\n  CI_REUSE_PLAN='{\"schema_version\":1,\"decision\":\"execute\",\"reason\":\"planning_unavailable\",\"history\":[]}'\nfi\nprintf '%s\\n' \"$CI_REUSE_PLAN\" > \"$RUNNER_TEMP/ci-result/reuse-plan.json\"\ncollection_status=0\npython3 -I -B scripts/ci/candidate.py collect --output \"$RUNNER_TEMP/ci-result/metadata.json\" --artifacts \"$RUNNER_TEMP/ci-result-inputs\" --workflow .github/workflows/ci.yml --needs \"$RUNNER_TEMP/ci-result/needs.json\" || collection_status=$?\npython3 -I -B scripts/ci/result.py --needs \"$RUNNER_TEMP/ci-result/needs.json\" --workflow .github/workflows/ci.yml --catalog contracts/testing.json --artifacts \"$RUNNER_TEMP/ci-result-inputs\" --event \"$EVENT_NAME\" --source-sha \"$SOURCE_SHA\" --tested-sha \"$TESTED_SHA\" --run-url \"$RUN_URL\" --context \"$RUNNER_TEMP/ci-result/context.json\" --metadata \"$RUNNER_TEMP/ci-result/metadata.json\" --reuse-plan \"$RUNNER_TEMP/ci-result/reuse-plan.json\" --summary \"$GITHUB_STEP_SUMMARY\" --output \"$RUNNER_TEMP/ci-result/result.json\"\nexit \"$collection_status\"",
           "id": "qualification"
-        },
-        {
-          "name": "Install optional Jev triage dependencies",
-          "id": "triage-dependencies",
-          "if": "!cancelled() && needs.paths.outputs.code == 'true' && needs.paths.outputs.reuse != 'true' && steps.checkout.outcome == 'success' && steps.python.outcome == 'success' && steps.uv.outcome == 'success'",
-          "continue-on-error": true,
-          "timeout-minutes": 2,
-          "env": {
-            "UV_PROJECT_ENVIRONMENT": "${{ runner.temp }}/jev-triage-python",
-            "PYTHONPYCACHEPREFIX": "${{ runner.temp }}/jev-triage-pycache"
-          },
-          "run": "uv sync --locked --no-default-groups --group validation --no-install-project --managed-python --python 3.12.16 --extra test\nuv pip install --python \"$UV_PROJECT_ENVIRONMENT/bin/python\" --no-deps --no-build-isolation -e ."
-        },
-        {
-          "name": "Jev candidate-bound test evidence triage",
-          "id": "triage",
-          "if": "!cancelled() && needs.paths.outputs.code == 'true' && needs.paths.outputs.reuse != 'true' && steps.checkout.outcome == 'success' && steps.python.outcome == 'success' && steps.uv.outcome == 'success' && steps.triage-dependencies.outcome == 'success'",
-          "continue-on-error": true,
-          "timeout-minutes": 3,
-          "env": {
-            "TYPESAFE_API_KEY": "${{ secrets.TYPESAFE_API_KEY || secrets.JEV_API_KEY }}",
-            "JEV_ENDPOINT": "${{ vars.JEV_ENDPOINT }}",
-            "JEV_MODEL": "${{ vars.JEV_MODEL }}",
-            "PYTHONPYCACHEPREFIX": "${{ runner.temp }}/jev-triage-pycache"
-          },
-          "run": "\"$RUNNER_TEMP/jev-triage-python/bin/python\" -m scripts.architecture.triage --artifacts \"$RUNNER_TEMP/ci-result-inputs\" --result \"$RUNNER_TEMP/ci-result/result.json\" --metadata \"$RUNNER_TEMP/ci-result/metadata.json\" --workflow .github/workflows/ci.yml --catalog contracts/testing.json --jev-config contracts/hexagonal-jev.json --output \"$RUNNER_TEMP/ci-result/triage.json\" --summary \"$GITHUB_STEP_SUMMARY\""
-        },
-        {
-          "name": "Record unavailable Jev triage",
-          "if": "!cancelled() && needs.paths.outputs.code == 'true' && needs.paths.outputs.reuse != 'true' && steps.checkout.outcome == 'success' && steps.python.outcome == 'success' && steps.uv.outcome == 'success' && (steps.triage-dependencies.outcome != 'success' || steps.triage.outcome != 'success')",
-          "continue-on-error": true,
-          "run": "mkdir -p \"$RUNNER_TEMP/ci-result\"\nif [ ! -f \"$RUNNER_TEMP/ci-result/triage.json\" ]; then\n  printf '%s\\n' '{\"schema_version\":1,\"stage\":\"post_test\",\"advisory\":true,\"status\":\"inconclusive\",\"reason\":\"triage_setup_or_execution_unavailable\",\"assessments\":[]}' > \"$RUNNER_TEMP/ci-result/triage.json\"\nfi\nprintf '\\n## Jev post-test advisory\\n\\nUnavailable: optional setup or execution did not complete. Deterministic qualification is unchanged.\\n' >> \"$GITHUB_STEP_SUMMARY\""
         },
         {
           "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",

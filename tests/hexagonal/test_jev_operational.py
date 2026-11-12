@@ -210,20 +210,20 @@ def test_adjudication_rejects_a_changed_retained_question_packet(catalog, tmp_pa
         subject.adjudicate(report, ledger)
 
 
-def test_ci_separates_changed_input_pilots_from_one_fresh_health_control():
-    workflow = json.loads((Path(__file__).parents[2] / ".github/workflows/ci.yml").read_text())
-    steps = workflow["jobs"]["architecture"]["steps"]
-    selection = next((step for step in steps if step.get("id") == "evaluation-scope"), None)
-    assert selection is not None, "CI_PILOT_SCOPE_IS_EXPLICIT"
-    assert "--select-base" in selection["run"] and "--github-output" in selection["run"]
-    pilots = [step for step in steps if "--split heldout" in step.get("run", "")]
-    health = [step for step in steps if "--health" in step.get("run", "")]
-    assert len(pilots) == len(health) == 1
-    assert "evaluation_mode != 'health'" in pilots[0]["if"]
-    assert "evaluation_mode == 'health'" in health[0]["if"]
-    for step in (pilots[0], health[0]):
-        assert step.get("continue-on-error") is True
-        assert "--mode live" in step["run"] and "${{ secrets.TYPESAFE_API_KEY || secrets.JEV_API_KEY }}" == step["env"]["TYPESAFE_API_KEY"]
+def test_live_calibration_is_explicit_default_branch_work_separate_from_source_advice():
+    workflow = json.loads((Path(__file__).parents[2] / ".github/workflows/jev.yml").read_text())
+    option = workflow["on"]["workflow_dispatch"]["inputs"]["calibration"]
+    assert option["type"] == "boolean" and option["default"] is False and option["required"] is True
+    job = workflow["jobs"]["advice"]
+    assert "github.ref_name == github.event.repository.default_branch && inputs.calibration" in job["if"], \
+        "LIVE_CALIBRATION_REQUIRES_EXPLICIT_DEFAULT_BRANCH_DISPATCH"
+    pilots = [step for step in job["steps"] if "--split heldout" in step.get("run", "")]
+    assert len(pilots) == 1 and not any("--health" in step.get("run", "") for step in job["steps"])
+    pilot = pilots[0]
+    assert "steps.gate.outputs.kind == 'calibration'" in pilot["if"], "SOURCE_EVENTS_DO_NOT_RUN_CALIBRATION"
+    assert pilot.get("continue-on-error") is True and pilot.get("timeout-minutes", 0) > 0
+    assert "--mode live" in pilot["run"] and "--max-seconds 120" in pilot["run"]
+    assert pilot["env"]["TYPESAFE_API_KEY"] == "${{ secrets.TYPESAFE_API_KEY || secrets.JEV_API_KEY }}"
 
 
 def test_live_bridge_forwards_shared_flat_budget_and_retry_controls(monkeypatch):

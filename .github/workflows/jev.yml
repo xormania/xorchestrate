@@ -1,0 +1,153 @@
+{
+  "name": "Jev advisory",
+  "on": {
+    "workflow_run": {
+      "workflows": [
+        "CI"
+      ],
+      "types": [
+        "completed"
+      ]
+    },
+    "workflow_dispatch": {
+      "inputs": {
+        "calibration": {
+          "description": "Run bounded live effectiveness and heldout controls from trusted default-branch code",
+          "required": true,
+          "default": false,
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "permissions": {
+    "contents": "read",
+    "actions": "read",
+    "checks": "read",
+    "pull-requests": "read"
+  },
+  "concurrency": {
+    "group": "jev-advice-${{ github.event.workflow_run.id || github.run_id }}-${{ github.event.workflow_run.run_attempt || github.run_attempt }}",
+    "cancel-in-progress": false
+  },
+  "jobs": {
+    "advice": {
+      "name": "Jev advice (independent of CI result)",
+      "if": "(github.event_name == 'workflow_run' && github.event.workflow_run.head_repository.full_name == github.repository) || (github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch && inputs.calibration)",
+      "runs-on": "ubuntu-24.04",
+      "timeout-minutes": 10,
+      "steps": [
+        {
+          "name": "Initialize isolated runtime paths",
+          "run": "printf '%s\\n' \"PYTHONPYCACHEPREFIX=$RUNNER_TEMP/jev-advice-pycache\" \"UV_PROJECT_ENVIRONMENT=$RUNNER_TEMP/jev-advice-python\" >> \"$GITHUB_ENV\""
+        },
+        {
+          "name": "Checkout trusted default-branch advice",
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "ref": "${{ github.event.repository.default_branch }}",
+            "path": "trusted",
+            "persist-credentials": false,
+            "fetch-depth": 0
+          }
+        },
+        {
+          "name": "Record trusted executable identity",
+          "run": "printf 'JEV_TRUSTED_SHA=%s\\n' \"$(git -C trusted rev-parse HEAD)\" >> \"$GITHUB_ENV\""
+        },
+        {
+          "name": "Authenticate evidence and inspect prior reservations",
+          "id": "gate",
+          "env": {
+            "GITHUB_TOKEN": "${{ github.token }}"
+          },
+          "run": "cd trusted\npython3 -m scripts.ci.advice prepare --work \"$RUNNER_TEMP/jev-advice\""
+        },
+        {
+          "name": "Reserve source attempt before provider access",
+          "id": "reserve",
+          "if": "steps.gate.outputs.provider_needed == 'true'",
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+          "with": {
+            "name": "${{ steps.gate.outputs.reservation_name }}",
+            "path": "${{ runner.temp }}/jev-advice/reservation/reservation.json",
+            "if-no-files-found": "error",
+            "retention-days": 90
+          }
+        },
+        {
+          "name": "Checkout source as data only",
+          "if": "steps.gate.outputs.provider_needed == 'true' && steps.reserve.outcome == 'success' && steps.gate.outputs.kind == 'source'",
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "ref": "${{ steps.gate.outputs.tested_sha }}",
+            "path": "source",
+            "persist-credentials": false,
+            "fetch-depth": 0
+          }
+        },
+        {
+          "name": "Install pinned runtime manager",
+          "if": "steps.gate.outputs.provider_needed == 'true'",
+          "uses": "astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9",
+          "with": {
+            "version": "0.13.7",
+            "enable-cache": true,
+            "cache-dependency-glob": "trusted/uv.lock"
+          }
+        },
+        {
+          "name": "Install trusted diagnostic dependencies",
+          "if": "steps.gate.outputs.provider_needed == 'true'",
+          "run": "cd trusted\nuv sync --locked --no-default-groups --group validation --extra test --no-install-project --managed-python --python 3.12.16"
+        },
+        {
+          "name": "Restore trusted exact-request cache",
+          "if": "steps.gate.outputs.provider_needed == 'true'",
+          "uses": "actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830",
+          "with": {
+            "path": "${{ runner.temp }}/jev-assessment-cache",
+            "key": "${{ runner.os }}-jev-trusted-v1-${{ hashFiles('trusted/scripts/architecture/*.py', 'trusted/xorchestrate/adapters/evaluation.py', 'trusted/contracts/hexagonal*.json') }}-${{ github.run_id }}",
+            "restore-keys": "${{ runner.os }}-jev-trusted-v1-"
+          }
+        },
+        {
+          "name": "Assess source and executed tests using trusted code",
+          "if": "steps.gate.outputs.provider_needed == 'true' && steps.reserve.outcome == 'success' && steps.gate.outputs.kind == 'source'",
+          "continue-on-error": true,
+          "timeout-minutes": 3,
+          "env": {
+            "GITHUB_TOKEN": "${{ github.token }}",
+            "TYPESAFE_API_KEY": "${{ secrets.TYPESAFE_API_KEY || secrets.JEV_API_KEY }}",
+            "JEV_ENDPOINT": "${{ vars.JEV_ENDPOINT }}",
+            "JEV_MODEL": "${{ vars.JEV_MODEL }}"
+          },
+          "run": "cd trusted\n\"$UV_PROJECT_ENVIRONMENT/bin/python\" -m scripts.ci.advice assess --work \"$RUNNER_TEMP/jev-advice\" --source-root \"$GITHUB_WORKSPACE/source\" --cache-dir \"$RUNNER_TEMP/jev-assessment-cache\""
+        },
+        {
+          "name": "Explicit live effectiveness and heldout calibration",
+          "if": "steps.gate.outputs.provider_needed == 'true' && steps.reserve.outcome == 'success' && steps.gate.outputs.kind == 'calibration'",
+          "continue-on-error": true,
+          "timeout-minutes": 5,
+          "env": {
+            "TYPESAFE_API_KEY": "${{ secrets.TYPESAFE_API_KEY || secrets.JEV_API_KEY }}",
+            "JEV_ENDPOINT": "${{ vars.JEV_ENDPOINT }}",
+            "JEV_MODEL": "${{ vars.JEV_MODEL }}"
+          },
+          "run": "cd trusted\n\"$UV_PROJECT_ENVIRONMENT/bin/python\" -m scripts.architecture.effectiveness --mode live --jev-config contracts/hexagonal-jev.json --max-seconds 120 --output \"$RUNNER_TEMP/jev-advice/output/effectiveness.json\"\n\"$UV_PROJECT_ENVIRONMENT/bin/python\" -m scripts.architecture.operational --mode live --split heldout --max-seconds 120 --output \"$RUNNER_TEMP/jev-advice/output/operational.json\""
+        },
+        {
+          "name": "Retain advice and its source identity",
+          "if": "always()",
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+          "with": {
+            "name": "jev-advice-${{ github.event.workflow_run.id || github.run_id }}-${{ github.event.workflow_run.run_attempt || github.run_attempt }}-consumer-${{ github.run_id }}-${{ github.run_attempt }}",
+            "path": "${{ runner.temp }}/jev-advice/output/\n${{ runner.temp }}/jev-advice/plan.json",
+            "if-no-files-found": "warn",
+            "retention-days": 30
+          }
+        }
+      ]
+    }
+  }
+}

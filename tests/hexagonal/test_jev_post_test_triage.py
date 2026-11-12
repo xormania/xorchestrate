@@ -167,18 +167,18 @@ def test_stdlib_summary_exposes_stage_evidence_and_uncertainty_without_html_exec
     assert "Model probabilities are uncalibrated" in rendered
 
 
-def test_post_failure_ci_triage_remains_optional_and_retains_its_evidence():
-    workflow = json.loads((Path(__file__).parents[2] / ".github/workflows/ci.yml").read_text())
-    steps = workflow["jobs"]["ci-result"]["steps"]
-    qualification = next(index for index, step in enumerate(steps) if step.get("id") == "qualification")
-    triage = next((step for step in steps if "-m scripts.architecture.triage" in step.get("run", "")), None)
-    assert triage is not None, "POST_TEST_TRIAGE_IS_WIRED"
-    assert steps.index(triage) > qualification
-    assert triage.get("continue-on-error") is True and triage.get("timeout-minutes", 0) > 0
-    assert "!cancelled()" in triage["if"] and "success()" not in triage["if"]
-    assert "steps.qualification.outcome == 'success'" not in triage["if"]
-    assert "reuse != 'true'" in triage["if"]
-    assert all(token in triage["run"] for token in ("--result", "--metadata", "--artifacts", "--summary", "triage.json"))
+def test_post_failure_triage_runs_independently_and_retains_its_evidence():
+    workflow = json.loads((Path(__file__).parents[2] / ".github/workflows/jev.yml").read_text())
+    assert workflow["on"]["workflow_run"] == {"workflows": ["CI"], "types": ["completed"]}
+    steps = workflow["jobs"]["advice"]["steps"]
+    triage = next(step for step in steps if "-m scripts.ci.advice assess" in step.get("run", ""))
+    assert triage.get("continue-on-error") is True, "POST_TEST_TRIAGE_REMAINS_OPTIONAL"
+    assert triage.get("timeout-minutes", 0) > 0
+    assert "steps.reserve.outcome == 'success'" in triage["if"]
+    assert "steps.gate.outputs.kind == 'source'" in triage["if"]
+    assert "conclusion" not in triage["if"] and "conclusion" not in workflow["jobs"]["advice"]["if"]
+    upload = next(step for step in steps if step.get("with", {}).get("name", "").startswith("jev-advice-"))
+    assert upload["if"] == "always()" and "jev-advice/output/" in upload["with"]["path"]
 
 
 @pytest.mark.parametrize("kind", ("deleted", "modified"))
