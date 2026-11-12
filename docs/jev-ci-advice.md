@@ -4,6 +4,12 @@ Required verification finishes when its deterministic evidence is qualified.
 The `Jev advisory` workflow consumes completed `CI` runs separately, so diagnostic
 setup, provider delays and calibration cannot prolong `CI result`.
 
+Focused [PR-event and failed-log probes](jev-events.md) are the default automatic
+placement. The trusted `contracts/jev-advice.json` sets both broad automatic stages
+(`source` and `post_test`) to false. A completed-CI event records
+`automatic_disabled` before any API evidence request, artifact download or provider
+call. Enable either stage in that configuration to compare its broader advice.
+
 The consumer reuses the current source diagnostics and executed-test triage.
 Its event gate and durable reservation follow
 [Mago–Serena's trusted consumer](https://github.com/xormania/mago-serena_v2-poc/blob/b6dbec8378338e39fe51489bc28f9ad578e4f3ab/tools/ci/prepare_diagnosis.py);
@@ -16,7 +22,8 @@ services retain their responsibilities.
 
 1. Check out the default branch into `trusted`, with no persisted Git credential.
    Record the actual trusted commit. This code and its locked dependencies are
-   the only executable diagnostic implementation.
+   the only executable diagnostic implementation. Apply the trusted automatic
+   policy before collecting evidence.
 2. Authenticate the completed source run and its candidate context against GitHub
    run/check/commit metadata. Download only selected result, context and test
    artifacts through the bounded, digest-checking archive reader. ZIP traversal,
@@ -52,8 +59,16 @@ bounded repository CI evidence, not arbitrary uploaded archives.
 
 ## Calibration and rollout
 
+To request broad advice explicitly, dispatch `Jev advisory` on the default branch
+with `source_run_id` set to a completed CI run and choose `source` and `post_test`.
+This authenticates the run through the same intake and currentness checks. Each
+explicit dispatch has a separate reservation; a rerun of that dispatch is still
+suppressed. This manual action does not rerun CI. Selecting neither stage records
+`manual_stages_disabled` without evidence or provider access.
+
 Full synthetic and heldout live calibration requires an explicit dispatch of
 `Jev advisory` with `calibration=true` on the default branch. The default is false.
+Leave `source_run_id` empty for calibration; the two modes are mutually exclusive.
 Routine CI events do not repeat full replays or health calls. Existing local
 fixture, live replay and health commands remain available; rerun calibration
 deliberately after changing a model, question, evidence policy or corpus.
@@ -61,6 +76,7 @@ deliberately after changing a model, question, evidence policy or corpus.
 GitHub activates the `workflow_run` listener from the default branch. Before this
 PR merges, local contract/fault tests can exercise the consumer and its workflow
 wiring, but a PR's green CI cannot demonstrate that this new trusted consumer ran
-live. Its first post-merge completed CI run supplies that hosted activation
-evidence. Provider availability and useful diagnostic accuracy are distinct from
-successful workflow activation.
+live. With the default broad stages disabled, a post-merge completed CI run can
+demonstrate the skip receipt; an explicit source dispatch or policy opt-in is
+needed to demonstrate broad hosted inference. Provider availability and useful
+diagnostic accuracy are distinct from successful workflow activation.

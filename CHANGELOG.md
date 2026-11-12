@@ -9,6 +9,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- Small advisory Jev probes select PR review attention, examine specific findings
+  and classify failed CI evidence in trusted event workflows. Their bounded,
+  cached results do not delay required CI. See [event advice](docs/jev-events.md).
 - Jev source and post-test advice runs after CI in a separate trusted consumer; required verification no longer waits for inference. Full live calibration is explicitly dispatched.
 - PR title/body edits use a small metadata observation and marking a draft ready
   preserves existing checks. Source and base changes still validate; obsolete

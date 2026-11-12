@@ -1,0 +1,351 @@
+{
+  "schema_version": 1,
+  "scope": "Advisory PR events, source-bound failure diagnosis, typed evidence selection and trusted event intake",
+  "implementation_commit": "18a8d3c",
+  "runtime": "3.12.16 (main, Oct 26 2026, 14:08:45) [Clang 23.1.3 ]",
+  "measurement_basis": "local_integration_with_scripted_HTTP_provider_not_live_Jev_accuracy",
+  "green": {
+    "command": "python -m pytest -p no:cacheprovider tests/hexagonal/test_jev_events.py -q",
+    "passed": 27,
+    "failed": 0,
+    "files_sha256": {
+      "scripts/ci/jev_events.py": "8216872d0d184077efa3d918328d47473d079d7ef859d959f54eff0a89007176",
+      "contracts/jev-events.json": "8ae2398cd1e35b0fc8eb227f226287f61c1bae3e88e96ec30a0eb3d5422f2a8e",
+      ".github/workflows/jev-events.yml": "b022c5221a49ee87ec850abae9253da1bfd7891f43c926b1c54ecb6667f2e6ba",
+      ".github/workflows/jev-review-events.yml": "96dc501bc6e722afceea4797feaf3a77072a13b4851ce7cd43e2da589e6ce8c2",
+      "tests/hexagonal/test_jev_events.py": "0e3fcd76dbfa3a3b7cba8d75babad5dc34e09ca81ca60d0752fc24a58e77b4d0",
+      "tests/hexagonal/contracts/jev_events.py": "d198c192ebb6d0d7ecc29e37b4524f2db8e68aa3a78bb5616c2faae3db5dcdfb",
+      "tests/hexagonal/support/jev_events.py": "310627c7e09f58393288929bb3bc733a37b9eadb7e18bb4e7102cba0d5482217",
+      "tests/fixtures/jev-events/cases.json": "9dc6f7db4e863faa7a2103a257a4120e5e0c0c0652f6f351a6c9770a9d684578",
+      "contracts/testing.json": "5eecee124ac26061035bf190cdd6afd7b932f3d1f5a7d7edab2641d47c2a413f"
+    }
+  },
+  "calibration_command": "python -m scripts.verification calibrate --candidate . --out <fresh-external-directory> --mutation <row-mutation.json> --selector tests/hexagonal/test_jev_events.py::<row-case> --target tests.hexagonal.test_jev_events::<row-case> --diagnostic <row-expected_diagnostic>",
+  "witnesses": [
+    {
+      "name": "incomplete_sent",
+      "case": "test_incomplete_or_unbound_source_never_reaches_inference[incomplete]",
+      "mutation": {
+        "path": "scripts/ci/jev_events.py",
+        "old": "or evidence.get(\"complete\") is not True",
+        "new": "or False"
+      },
+      "target": "tests.hexagonal.test_jev_events::test_incomplete_or_unbound_source_never_reaches_inference[incomplete]",
+      "expected_diagnostic": "INCOMPLETE_EVENT_EVIDENCE_IS_NOT_SENT",
+      "classification": "detected",
+      "candidate_sha256": "9f509e69f53a2350966bc7ba5ab324b1ba57bf57b0865e89bae5f92c5410bce3",
+      "mutation_sha256": "60e88953886c96ff5f7ab5dc8acdd47bf4e5379592c97aac1b87e7442d0533fb",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "control_exit": 0,
+      "mutant_exit": 1
+    },
+    {
+      "name": "digest_ignored",
+      "case": "test_incomplete_or_unbound_source_never_reaches_inference[wrong_digest]",
+      "mutation": {
+        "path": "scripts/ci/jev_events.py",
+        "old": "or unit.get(\"sha256\") != hashlib.sha256(unit[\"text\"].encode()).hexdigest()",
+        "new": "or False"
+      },
+      "target": "tests.hexagonal.test_jev_events::test_incomplete_or_unbound_source_never_reaches_inference[wrong_digest]",
+      "expected_diagnostic": "INCOMPLETE_EVENT_EVIDENCE_IS_NOT_SENT",
+      "classification": "detected",
+      "candidate_sha256": "9f509e69f53a2350966bc7ba5ab324b1ba57bf57b0865e89bae5f92c5410bce3",
+      "mutation_sha256": "91381bd90bef6586538c95878190d7052b24a45bbe99e3ab1f12f5a0b89e73cb",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "control_exit": 0,
+      "mutant_exit": 1
+    },
+    {
+      "name": "source_silently_trimmed",
+      "case": "test_incomplete_or_unbound_source_never_reaches_inference[oversized]",
+      "mutation": {
+        "path": "scripts/ci/jev_events.py",
+        "old": "packet = protect(packet, secrets=secrets)",
+        "new": "packet = protect(packet, secrets=secrets)\n    if packet.get(\"kind\") == \"review\" and len(packet[\"evidence\"][\"source\"][\"text\"]) > 100:\n        packet[\"evidence\"][\"source\"][\"text\"] = packet[\"evidence\"][\"source\"][\"text\"][:100]\n        packet[\"evidence\"][\"source\"][\"sha256\"] = hashlib.sha256(packet[\"evidence\"][\"source\"][\"text\"].encode()).hexdigest()"
+      },
+      "target": "tests.hexagonal.test_jev_events::test_incomplete_or_unbound_source_never_reaches_inference[oversized]",
+      "expected_diagnostic": "INCOMPLETE_EVENT_EVIDENCE_IS_NOT_SENT",
+      "classification": "detected",
+      "candidate_sha256": "9f509e69f53a2350966bc7ba5ab324b1ba57bf57b0865e89bae5f92c5410bce3",
+      "mutation_sha256": "c1f1190b9068946df67d1f5dedf231dde91315ea3efcea5fdb9420be7bed4c70",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "control_exit": 0,
+      "mutant_exit": 1
+    },
+    {
+      "name": "finding_dropped_from_cache",
+      "case": "test_unchanged_event_reuses_inference_but_selected_evidence_invalidates_it",
+      "mutation": {
+        "path": "scripts/ci/jev_events.py",
+        "old": "kind, evidence = _packet(packet, limits)",
+        "new": "kind, evidence = _packet(packet, limits)\n        if kind == \"review\":\n            evidence = {**evidence, \"finding\": {**evidence[\"finding\"], \"text\": \"ignored finding\"}}"
+      },
+      "target": "tests.hexagonal.test_jev_events::test_unchanged_event_reuses_inference_but_selected_evidence_invalidates_it",
+      "expected_diagnostic": "CHANGED_FINDING_INVALIDATES_EVENT_CACHE",
+      "classification": "detected",
+      "candidate_sha256": "9f509e69f53a2350966bc7ba5ab324b1ba57bf57b0865e89bae5f92c5410bce3",
+      "mutation_sha256": "e21293192ccf27d26a5d739ad68a5d833a627cdc0a1dd62dc049188d16ae4dc0",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "control_exit": 0,
+      "mutant_exit": 1
+    },
+    {
+      "name": "native_confidence_substituted",
+      "case": "test_uncertain_probability_is_visible_without_promoting_high_native_confidence",
+      "mutation": {
+        "path": "scripts/ci/jev_events.py",
+        "old": "probability = answer.details[\"probabilities\"][answer.outcome]",
+        "new": "probability = answer.confidence"
+      },
+      "target": "tests.hexagonal.test_jev_events::test_uncertain_probability_is_visible_without_promoting_high_native_confidence",
+      "expected_diagnostic": "UNCERTAIN_OPTION_PROBABILITY_REMAINS_UNKNOWN",
+      "classification": "detected",
+      "candidate_sha256": "9f509e69f53a2350966bc7ba5ab324b1ba57bf57b0865e89bae5f92c5410bce3",
+      "mutation_sha256": "79f44388d3d0384ca031e7f8422545245cf59f36ef369d5f3b6f35a7bfcc972d",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "control_exit": 0,
+      "mutant_exit": 1
+    },
+    {
+      "name": "deadline_replenished",
+      "case": "test_shared_deadline_preserves_completed_category_without_starting_another_call",
+      "mutation": {
+        "path": "scripts/ci/jev_events.py",
+        "old": "remaining = deadline - time.monotonic()",
+        "new": "remaining = policy[\"connection\"][\"timeout\"]"
+      },
+      "target": "tests.hexagonal.test_jev_events::test_shared_deadline_preserves_completed_category_without_starting_another_call",
+      "expected_diagnostic": "SHARED_EVENT_DEADLINE_RETAINS_PARTIAL_RESULT",
+      "classification": "detected",
+      "candidate_sha256": "9f509e69f53a2350966bc7ba5ab324b1ba57bf57b0865e89bae5f92c5410bce3",
+      "mutation_sha256": "8e513ddfaa663e18e0c52491df912bd82ee6ac5c254cc2546438e7b9e201d92c",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "control_exit": 0,
+      "mutant_exit": 1
+    },
+    {
+      "name": "metadata_eligibility_removed",
+      "case": "test_irrelevant_metadata_edits_do_not_collect_or_assess_code",
+      "mutation": {
+        "path": "scripts/ci/jev_events.py",
+        "old": "if action == \"edited\" and not {\"body\", \"title\"}.intersection(event.get(\"changes\", {})):",
+        "new": "if False:"
+      },
+      "target": "tests.hexagonal.test_jev_events::test_irrelevant_metadata_edits_do_not_collect_or_assess_code",
+      "expected_diagnostic": "NONSEMANTIC_EDIT_HAS_NO_JEV_PACKET",
+      "classification": "detected",
+      "candidate_sha256": "9f509e69f53a2350966bc7ba5ab324b1ba57bf57b0865e89bae5f92c5410bce3",
+      "mutation_sha256": "7cabc989175a3c0a854d729bab25206cbd3806ade7c327ad73f1de08d0b166b2",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "control_exit": 0,
+      "mutant_exit": 1
+    },
+    {
+      "name": "event_head_guard_removed",
+      "case": "test_event_collector_rejects_a_superseded_head_before_fetching_source",
+      "mutation": {
+        "path": "scripts/ci/jev_events.py",
+        "old": "if event[\"pull_request\"][\"head\"][\"sha\"] != sha:",
+        "new": "if False:"
+      },
+      "target": "tests.hexagonal.test_jev_events::test_event_collector_rejects_a_superseded_head_before_fetching_source",
+      "expected_diagnostic": "STALE_EVENT_NEVER_BUILDS_PACKET",
+      "classification": "unrelated_failure",
+      "candidate_sha256": "9f509e69f53a2350966bc7ba5ab324b1ba57bf57b0865e89bae5f92c5410bce3",
+      "mutation_sha256": "8078de2e63777c6c3580d4235a68df4d15a5ce1490a688948f2cb60dc4863730",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "control_exit": 0,
+      "mutant_exit": 1
+    },
+    {
+      "name": "pre_call_freshness_removed",
+      "case": "test_event_command_checks_freshness_before_spending_and_before_publication[before]",
+      "mutation": {
+        "path": "scripts/ci/jev_events.py",
+        "old": "elif before is not True:",
+        "new": "elif False:"
+      },
+      "target": "tests.hexagonal.test_jev_events::test_event_command_checks_freshness_before_spending_and_before_publication[before]",
+      "expected_diagnostic": "PRE_CALL_FRESHNESS_AVOIDS_WASTED_INFERENCE",
+      "classification": "detected",
+      "candidate_sha256": "9f509e69f53a2350966bc7ba5ab324b1ba57bf57b0865e89bae5f92c5410bce3",
+      "mutation_sha256": "4e863b09c18f8a3f75187b5ce0e648800e4a19bc38c85b535bc3bcd48a5b34e6",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "control_exit": 0,
+      "mutant_exit": 1
+    },
+    {
+      "name": "publication_freshness_removed",
+      "case": "test_event_command_checks_freshness_before_spending_and_before_publication[during]",
+      "mutation": {
+        "path": "scripts/ci/jev_events.py",
+        "old": "if after is not True:",
+        "new": "if False:"
+      },
+      "target": "tests.hexagonal.test_jev_events::test_event_command_checks_freshness_before_spending_and_before_publication[during]",
+      "expected_diagnostic": "STALE_EVENT_CANNOT_PUBLISH_ADVICE",
+      "classification": "detected",
+      "candidate_sha256": "9f509e69f53a2350966bc7ba5ab324b1ba57bf57b0865e89bae5f92c5410bce3",
+      "mutation_sha256": "a7a513f1b4b63f91b2fbbdc29a9e14f8964dab6a278d37b54a15579fe07baa7d",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "control_exit": 0,
+      "mutant_exit": 1
+    },
+    {
+      "name": "relay_identity_removed",
+      "case": "test_review_relay_is_bound_to_its_producer_pr[head]",
+      "mutation": {
+        "path": "scripts/ci/jev_events.py",
+        "old": "raise ValueError(\"unidentified_review_relay\")",
+        "new": "return payload"
+      },
+      "target": "tests.hexagonal.test_jev_events::test_review_relay_is_bound_to_its_producer_pr[head]",
+      "expected_diagnostic": "REVIEW_RELAY_CANNOT_CHANGE_CANDIDATE_IDENTITY",
+      "classification": "detected",
+      "candidate_sha256": "9f509e69f53a2350966bc7ba5ab324b1ba57bf57b0865e89bae5f92c5410bce3",
+      "mutation_sha256": "7439587982f183c1edbcab3b117ecc72c167ce8dee07661988d88b57cf12e9d1",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "control_exit": 0,
+      "mutant_exit": 1
+    },
+    {
+      "name": "candidate_code_with_credential",
+      "case": "test_event_workflows_keep_credentials_on_trusted_code_and_relays_as_data",
+      "mutation": {
+        "path": ".github/workflows/jev-events.yml",
+        "old": "\"ref\": \"master\"",
+        "new": "\"ref\": \"${{ github.event.pull_request.head.sha }}\""
+      },
+      "target": "tests.hexagonal.test_jev_events::test_event_workflows_keep_credentials_on_trusted_code_and_relays_as_data",
+      "expected_diagnostic": "EVENT_CONSUMER_EXECUTES_ONLY_TRUSTED_BRANCH",
+      "classification": "detected",
+      "candidate_sha256": "9f509e69f53a2350966bc7ba5ab324b1ba57bf57b0865e89bae5f92c5410bce3",
+      "mutation_sha256": "298b8b130cb9ad3020d10867584690df9c15c4f129266f533af14970be226621",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "control_exit": 0,
+      "mutant_exit": 1
+    },
+    {
+      "name": "credential_redaction_removed",
+      "case": "test_failed_workflow_reads_its_own_attempt_and_supplies_real_log_windows",
+      "mutation": {
+        "path": "scripts/ci/jev_events.py",
+        "old": "packet = protect(packet, secrets=secrets)",
+        "new": "packet = deepcopy(packet)"
+      },
+      "target": "tests.hexagonal.test_jev_events::test_failed_workflow_reads_its_own_attempt_and_supplies_real_log_windows",
+      "expected_diagnostic": "EVENT_EVIDENCE_REDACTS_CREDENTIALS",
+      "classification": "detected",
+      "candidate_sha256": "9f509e69f53a2350966bc7ba5ab324b1ba57bf57b0865e89bae5f92c5410bce3",
+      "mutation_sha256": "4365225f4cdb6d5031c87f16282190625901d9cb27d04b01683c9de038bc1633",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "control_exit": 0,
+      "mutant_exit": 1
+    },
+    {
+      "name": "excerpt_question_dropped",
+      "case": "test_failure_probe_selects_existing_evidence_and_keeps_original_failure",
+      "mutation": {
+        "path": "scripts/ci/jev_events.py",
+        "old": "deadline = time.monotonic() + policy[\"connection\"][\"timeout\"]",
+        "new": "if kind == \"failure\":\n            groups = groups[:1]\n        deadline = time.monotonic() + policy[\"connection\"][\"timeout\"]"
+      },
+      "target": "tests.hexagonal.test_jev_events::test_failure_probe_selects_existing_evidence_and_keeps_original_failure",
+      "expected_diagnostic": "FAILURE_CATEGORY_AND_SUPPLIED_EXCERPT_ARE_SEPARATE_RESULTS",
+      "classification": "detected",
+      "candidate_sha256": "9f509e69f53a2350966bc7ba5ab324b1ba57bf57b0865e89bae5f92c5410bce3",
+      "mutation_sha256": "8dbb360bb04bcfde2af875ff99a71d76f391ab964f7398e9082da01c97be5b75",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "control_exit": 0,
+      "mutant_exit": 1
+    },
+    {
+      "name": "event_head_guard_removed_v2",
+      "case": "test_event_collector_rejects_a_superseded_head_before_fetching_source",
+      "mutation": {
+        "path": "scripts/ci/jev_events.py",
+        "old": "if event[\"pull_request\"][\"head\"][\"sha\"] != sha:",
+        "new": "if False:"
+      },
+      "target": "tests.hexagonal.test_jev_events::test_event_collector_rejects_a_superseded_head_before_fetching_source",
+      "expected_diagnostic": "STALE_EVENT_NEVER_BUILDS_PACKET",
+      "classification": "detected",
+      "candidate_sha256": "df82a9a6aa0703c55cf56bd21b7efb280c0bd62b0196ac3473752f0f8723280a",
+      "mutation_sha256": "8078de2e63777c6c3580d4235a68df4d15a5ce1490a688948f2cb60dc4863730",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "control_exit": 0,
+      "mutant_exit": 1
+    },
+    {
+      "name": "source_identity_alias",
+      "case": "test_semantic_cache_reuse_is_rebound_to_a_new_current_head",
+      "mutation": {
+        "path": "scripts/ci/jev_events.py",
+        "old": "packet = protect(packet, secrets=secrets)",
+        "new": "packet = packet"
+      },
+      "target": "tests.hexagonal.test_jev_events::test_semantic_cache_reuse_is_rebound_to_a_new_current_head",
+      "expected_diagnostic": "CACHED_ASSESSMENT_REBINDS_WITHOUT_REWRITING_ORIGINAL",
+      "classification": "detected",
+      "candidate_sha256": "df82a9a6aa0703c55cf56bd21b7efb280c0bd62b0196ac3473752f0f8723280a",
+      "mutation_sha256": "478ccc50f244539df17deaf9cd6f98dd784b432df0a7f04d30385b1a8afa4cdd",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "control_exit": 0,
+      "mutant_exit": 1
+    }
+  ],
+  "detected": 15,
+  "uncredited_attempts": 1,
+  "notes": [
+    "Each fault was planted in an isolated complete candidate copy and paired with the same passing control test. The shared assertion observer excluded setup and import errors.",
+    "The first stale-event guard witness hit an overrestrictive HTTP test double before the target assertion. The double was corrected to accept reads at the observed current head; the repeated witness is detected. The first attempt remains uncredited.",
+    "A genuine initial implementation defect aliased caller-owned source identity into an earlier report. The same regression failed before repair and passed after it; source_identity_alias also retains an exact reproducible fault witness.",
+    "Donor case provenance and retained measurements are separate from provider input. Mock/provider-shaped replies prove wiring and policy behavior, not Jev correctness or reviewer-time savings."
+  ],
+  "broad_automatic_policy": {
+    "implementation_commit": "5bc4aae",
+    "scope": "Automatic broad advice stops before API/artifact intake; explicit stages and focused PR probes remain available.",
+    "green": {
+      "command": "python -m pytest -p no:cacheprovider tests/hexagonal/test_ci_advice.py tests/hexagonal/test_jev_events.py -q",
+      "passed": 70,
+      "failed": 0,
+      "files_sha256": {
+        "scripts/ci/advice.py": "b012ebc5124ce30b5b571800f875423abee65cb265bd64eaa7109dd112cbe741",
+        "contracts/jev-advice.json": "f8b0061fcb0119151ff3dd99189a7b45f22c8119de49ab0de1194b6e69e416cc",
+        ".github/workflows/jev.yml": "a537dd14adccea2149b7f2030aa41863242b180275b4528ded8f3df666030719",
+        "scripts/ci/jev_events.py": "8216872d0d184077efa3d918328d47473d079d7ef859d959f54eff0a89007176",
+        "contracts/jev-events.json": "8ae2398cd1e35b0fc8eb227f226287f61c1bae3e88e96ec30a0eb3d5422f2a8e",
+        "tests/hexagonal/test_ci_advice.py": "bdc92f73ac11213376f4f1524dc9d7b2b6907af4d183c645335a2188a373bb7c",
+        "tests/hexagonal/test_jev_events.py": "282b23f9213a67c2287ccfe2ad2c4ed0c301be544b0979d6badf08206bf21827"
+      }
+    },
+    "calibration_command": "python -m scripts.verification calibrate --candidate . --out <fresh-external-directory> --mutation <witness-mutation.json> --selector tests/hexagonal/test_ci_advice.py::test_disabled_automatic_advice_stops_before_evidence_intake[failure] --target tests.hexagonal.test_ci_advice::test_disabled_automatic_advice_stops_before_evidence_intake[failure] --diagnostic DISABLED_AUTOMATIC_ADVICE_PERFORMS_NO_EVIDENCE_INTAKE",
+    "witness": {
+      "name": "trusted_automatic_policy_ignored",
+      "mutation": {
+        "path": "scripts/ci/advice.py",
+        "old": "args.work, token, os.environ, policy=policy)",
+        "new": "args.work, token, os.environ, policy=None)"
+      },
+      "target": "tests.hexagonal.test_ci_advice::test_disabled_automatic_advice_stops_before_evidence_intake[failure]",
+      "expected_diagnostic": "DISABLED_AUTOMATIC_ADVICE_PERFORMS_NO_EVIDENCE_INTAKE",
+      "classification": "detected",
+      "candidate_sha256": "7b949cff8b857c8f42f0d7e9434bde83138b0ea23bbcdce7224768b616bf59ae",
+      "mutation_sha256": "9aa5313c2193292632c68e8d83b54da49c7aef0f541da3f37ee26bb6652faea9",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "control_exit": 0,
+      "mutant_exit": 1
+    },
+    "uncredited_attempt": {
+      "classification": "unrelated_failure",
+      "candidate_sha256": "07a8cec3e391b53e541c947032dd460a1106178b4247fde4b5f6cc78e9de8841",
+      "reason": "Initial CLI fixture omitted the GitHub token that Actions supplies, so the mutant hit the authenticated-observation guard before the intended assertion. The fixture now supplies its existing fake token; the repeated witness is detected."
+    },
+    "notes": [
+      "The RED copy bypassed the trusted policy at the real CLI boundary and reached evidence intake; the passing control made zero API calls and emitted provider_needed=false. No live provider credentials or requests were used.",
+      "Stage collector spies and scripted HTTP establish selected work and preserved focused routing, not model accuracy or end-to-end GitHub runner timing.",
+      "The earlier green and witness blocks describe the original implementation snapshot and remain unchanged."
+    ]
+  }
+}
