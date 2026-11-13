@@ -52,6 +52,11 @@ eligible deterministic lanes may reuse exact qualified evidence. Static checks
 and both stable required verdicts run even for title/body edits, so the newest
 workflow run can satisfy branch protection. Marking a draft ready preserves its
 existing candidate checks without starting a new run.
+Title/body-only edits share the source candidate's concurrency group without
+cancelling active validation. GitHub coalesces waiting edits into one pending
+run, which qualifies completed source receipts when it starts. A pending
+metadata run with no jobs cannot invalidate those receipts; missing or material
+failed evidence still requires full validation.
 Pushes to master and manual runs execute full validation. See
 [PR lifecycle validation](../docs/pr-lifecycle-ci.md) for event handling, original
 evidence links and the `CI_REUSE_ENABLED=false` recovery switch. Selected jobs are:
