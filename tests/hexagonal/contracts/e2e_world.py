@@ -8,8 +8,9 @@ clients. Scenarios never reach for processes, sockets or sleeps themselves; they
 - ``host``: the terminal host's name.
 - ``save(policy=None)`` writes the project's configuration; ``policy="manual"`` selects the manual recovery policy.
 - ``client(actor="worker")`` connects an MCP client through ``connect``. A client has ``call(name, args, *,
-  refused=None)``, ``send_without_waiting(name, args)``, ``close()`` and ``kill()`` (ends its process outright, as
-  a crashed harness would), and is a context manager that closes it.
+  refused=None)``, ``attempt(name, args)`` (the reply's structured content whether accepted or refused, with
+  ``error`` when refused; it never raises on a refusal), ``send_without_waiting(name, args)``, ``close()`` and
+  ``kill()`` (ends its process outright, as a crashed harness would), and is a context manager that closes it.
 - ``start(client, *, in_flight=False)`` starts the hosted session and sends one turn; with ``in_flight`` a second
   turn is left in flight at the peer. Returns the session.
 - ``up()``, ``down()`` (detaching), ``recover()`` and ``status()`` return the command's JSON reply.
