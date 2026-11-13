@@ -269,10 +269,15 @@ LISTENS_HELD_ON_STDIN = ("import socket, sys\n"
 the test owns, so it lives until the test closes it or dies itself, never longer."""
 
 
-def test_a_total_loss_also_ends_a_subject_process_born_after_its_first_selection(subject, monkeypatch):
-    """A container failure leaves nothing of the subject: a process that becomes the subject's own after the loss
-    first selected its victims is ended too, or the loss fails. The test starts exactly one such newcomer itself,
-    right after that first selection, and ends it by identity whatever happens."""
+@pytest.mark.parametrize("arrivals", [1, 4], ids=["after-the-first-selection", "after-every-selection"])
+def test_a_total_loss_ends_subject_processes_born_after_it_selects_or_fails(subject, monkeypatch, arrivals):
+    """A container failure leaves nothing of the subject. The test itself starts a process that becomes the
+    subject's own right after a selection the loss makes, up to ``arrivals`` of them, and ends each by identity
+    whatever happens.
+
+    After the first selection only: that newcomer is ended too, or the loss fails. After every selection: some
+    newcomer always arrives after the loss's last look, so the loss must fail rather than return as if total.
+    """
     import subprocess
     import sys
     from pathlib import Path
@@ -283,42 +288,47 @@ def test_a_total_loss_also_ends_a_subject_process_born_after_its_first_selection
     session = driver.start(subject.spec("late"))
     driver.close()
     real = ownership.owned_processes
-    newcomers, address = [], subject.base / "late.sock"
+    newcomers = []
 
-    def newcomer_after_the_first_selection(root, marker, **options):
+    def newcomer_after_a_selection(root, marker, **options):
         selection = real(root, marker, **options)
-        if not newcomers and Path(root) == subject.base:
+        if len(newcomers) < arrivals and Path(root) == subject.base:
+            address = subject.base / f"late-{len(newcomers)}.sock"
             child = subprocess.Popen([sys.executable, "-c", LISTENS_HELD_ON_STDIN, str(address)], stdin=subprocess.PIPE,
                                      stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
-            newcomers.append((child, ownership.processes()[child.pid][0]))
+            newcomers.append((child, ownership.processes()[child.pid][0], address))
             assert child.stdout.readline() == b"ready\n", "the newcomer did not start listening"
         return selection
 
     process, bystander, outside = _bystander(subject.sessions / "z")
     try:
         with monkeypatch.context() as during:
-            during.setattr(ownership, "owned_processes", newcomer_after_the_first_selection)
+            during.setattr(ownership, "owned_processes", newcomer_after_a_selection)
             fence = _fenced(monkeypatch)
             try:
                 subject.lose(session, everything=True)
                 failed = False
             except AssertionError:
-                failed = True  # raising about it is also acceptable
+                failed = True
             finally:
                 fence.__exit__(None, None, None)
-        assert len(newcomers) == 1, "the loss never selected the subject's processes through the hook"
-        _, newcomer = newcomers[0]
-        assert failed or not ownership.alive(newcomer), "a subject process born after the first selection survived the loss"
+        assert newcomers, "the loss never selected the subject's processes through the hook"
+        assert len(newcomers) <= arrivals, newcomers
+        if arrivals == 1:
+            assert failed or not ownership.alive(newcomers[0][1]), \
+                "a subject process born after the first selection survived the loss"
+        else:
+            assert failed, "a loss that left a subject process alive returned as if it were total"
         assert ownership.alive(bystander), "the simulated loss killed a process outside the subject"
     finally:
-        for child, identity in newcomers:
+        for child, identity, address in newcomers:
             ownership.send_signal(identity, 9)
             child.stdin.close()
             child.stdout.close()
             child.wait(timeout=10)
-        address.unlink(missing_ok=True)
+            address.unlink(missing_ok=True)
         _end(process, outside)
-    assert not any(ownership.alive(identity) for _, identity in newcomers), "a newcomer outlived the test"
+    assert not any(ownership.alive(identity) for _, identity, _ in newcomers), "a newcomer outlived the test"
 
 
 def test_cleanup_reaches_only_the_subjects_own_processes(subject, monkeypatch):
