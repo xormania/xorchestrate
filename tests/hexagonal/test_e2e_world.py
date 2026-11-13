@@ -194,7 +194,8 @@ def test_a_gate_still_held_at_exit_is_released_in_cleanup(tmp_path):
 
 # Waiting -----------------------------------------------------------------------------------------
 
-def test_await_fails_at_its_deadline_naming_its_label_on_the_injected_clock():
+def test_await_fails_at_its_deadline_naming_its_label_on_the_injected_clock(monkeypatch):
+    monkeypatch.setenv("XO_TEST_TIMEOUT_SCALE", "1")  # nominal budgets: these deadlines are compared with fixed values
     clock = ControlledClock()
     with World("detached-process", clock=clock, sleep=clock.sleep) as world:
         started = time.monotonic()
@@ -205,7 +206,8 @@ def test_await_fails_at_its_deadline_naming_its_label_on_the_injected_clock():
         assert clock.elapsed >= 30, clock.elapsed
 
 
-def test_the_remaining_budget_shrinks_on_the_injected_clock_during_an_await():
+def test_the_remaining_budget_shrinks_on_the_injected_clock_during_an_await(monkeypatch):
+    monkeypatch.setenv("XO_TEST_TIMEOUT_SCALE", "1")  # nominal budgets: these deadlines are compared with fixed values
     clock = ControlledClock()
     seen = []
 
@@ -220,6 +222,7 @@ def test_the_remaining_budget_shrinks_on_the_injected_clock_during_an_await():
 
 
 def test_a_blocking_call_inside_an_await_gets_the_remaining_budget_as_its_timeout(monkeypatch):
+    monkeypatch.setenv("XO_TEST_TIMEOUT_SCALE", "1")  # nominal budgets: these deadlines are compared with fixed values
     project_server = importlib.import_module("tests.hexagonal.support.project_server")
     real = project_server.subprocess.run
     timeouts = []
@@ -341,7 +344,8 @@ def test_a_victim_that_survives_the_grace_fails_the_disturbance_naming_its_recei
         assert alive(sentinel)
 
 
-def test_the_remaining_budget_never_reaches_zero_at_the_deadline():
+def test_the_remaining_budget_never_reaches_zero_at_the_deadline(monkeypatch):
+    monkeypatch.setenv("XO_TEST_TIMEOUT_SCALE", "1")  # nominal budgets: these deadlines are compared with fixed values
     clock = ControlledClock()
     seen = []
 
@@ -429,7 +433,8 @@ def test_a_blocking_call_cut_off_at_the_deadline_is_an_expired_wait(monkeypatch)
                 world.await_("status at the deadline", lambda: world.status(), timeout=5)
 
 
-def test_an_inner_await_never_gets_more_time_than_the_outer_one_has_left():
+def test_an_inner_await_never_gets_more_time_than_the_outer_one_has_left(monkeypatch):
+    monkeypatch.setenv("XO_TEST_TIMEOUT_SCALE", "1")  # nominal budgets: these deadlines are compared with fixed values
     clock = ControlledClock()
     seen = []
     with World("detached-process", clock=clock, sleep=clock.sleep) as world:
