@@ -5,6 +5,7 @@ Real git runs against a throwaway repository whose origin's default branch is no
 argument list the tool runs is recorded; none may force, discard or prune.
 """
 
+import contextlib
 import json
 import shutil
 import signal
@@ -313,6 +314,16 @@ def test_procfs_reads_parent_group_command_directory_and_open_files(tmp_path):
     assert (found[102].ppid, found[102].pgid) == (101, 205)
 
 
+@pytest.mark.parametrize("pgid", [-1, 0, 1])
+def test_procfs_never_signals_process_group_one_or_below(monkeypatch, pgid):
+    procfs = tool("adapters.procfs")
+    sent = []
+    monkeypatch.setattr(procfs.os, "killpg", lambda group, sig: sent.append((group, sig)))
+    with contextlib.suppress(ValueError):
+        procfs.ProcFs().signal_group(pgid, signal.SIGTERM)
+    assert sent == []
+
+
 # Neutrality: optional, standard library only, nothing depends on it --------------------------------
 
 def test_nothing_outside_the_tool_imports_or_requires_it():
@@ -384,16 +395,29 @@ def test_remove_refuses_a_tree_whose_directory_is_gone(ws, change):
     except Exception as error:  # noqa: BLE001 - the defect being pinned
         pytest.fail(f"remove raised {error!r}")
     assert result.code == 1, result.text
-    assert codes(result), result.text
+    assert "NOT_A_TREE" in codes(result), result.text
     assert (refs(ws), trees(ws)) == before
 
 
-@pytest.mark.parametrize("prefix", [("status",), ("stash", "list")], ids=["status", "stash"])
-def test_a_safety_check_that_errors_refuses_removal(ws, prefix):
+@pytest.mark.parametrize("prefix,code", [(("status",), "DIRTY"), (("stash", "list"), "STASH")], ids=["status", "stash"])
+def test_a_safety_check_that_errors_refuses_removal(ws, prefix, code):
     path = ws.new("unchecked")
     ws.git.fail[prefix] = "fatal: planted failure"
     before = refs(ws), trees(ws)
     result = ws.run("remove", "unchecked")
     assert result.code == 1, result.text
-    assert codes(result), result.text
+    assert code in codes(result), result.text
     assert path.is_dir() and (refs(ws), trees(ws)) == before
+
+
+def test_a_serena_server_in_the_tree_whose_state_records_no_command_counts_as_in_use(ws):
+    path = ws.new("guarded")
+    state = ws.make_state(path, pid=2_400, pgid=2_400, port=1, head=git(path, "rev-parse", "HEAD"),
+                          version=contract.DEFAULT_SERENA_VERSION, started=0.0, last_call=None, argv=(), start_time=None)
+    ws.store().save(ws.key(path), state)
+    ws.processes.add(2_400, cwd=path, argv=server_argv(path, 1))
+    before = refs(ws), trees(ws)
+    result = ws.run("remove", "guarded")
+    assert result.code == 1 and "IN_USE" in codes(result), result.text
+    assert "2400" in result.text and ws.processes.signals == [] and path.is_dir()
+    assert (refs(ws), trees(ws)) == before
