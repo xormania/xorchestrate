@@ -118,3 +118,18 @@ in commits, PR descriptions, PR or review comments, code or documentation.
 Follow [the PR quality standard](docs/pr-quality.md) for coverage, behavioral
 proof, pre-draft adversarial review and candidate evidence. The bounded review and
 practical delivery guidance above still applies.
+
+## Agent workflow
+
+Shared development guidance for agents lives in the documents it points to, so
+every harness gets the same rules whether or not it loads repository skills:
+
+- Running checks and placing tests: `docs/testing-framework.md`.
+- Proving tests red before implementation: `docs/pr-quality.md` ("Prove detection").
+- Preparing a pull request: `docs/pr-quality.md` and the attribution rule above.
+- Working as a team of sessions, recovering after a crash, and navigating the
+  code with Serena when it is connected: `docs/agent-workflow.md`.
+
+Harnesses that load skills find thin pointers to these documents in
+`.agents/skills`; Claude Code sees them through `.claude/skills`. The documents
+remain the source of truth.
