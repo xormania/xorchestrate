@@ -115,6 +115,66 @@ Behavioral checks cover `StateStore`, `Companion`, `VersionControl` and
 structure, and the behavior they must support is described in each port's
 docstring and in [the application architecture](hexagonal-architecture.md).
 
+## Capability execution and retention
+
+Ordinary providers keep the existing journaled invocation behavior. Trusted
+configuration can select a different execution policy for an exact
+`provider/capability` address:
+
+```json
+{
+  "capability_execution": {
+    "reports/inspect": {"mode": "query", "observation": "none"},
+    "reports/export": {"mode": "receipt", "observation": "none"}
+  }
+}
+```
+
+| Mode | Execution | Retention and repeated calls |
+| --- | --- | --- |
+| `journaled` (default) | Requires an idempotency key; reserves the operation before invoking | Retains arguments, result and work evidence; replays the retained result |
+| `query` | Invokes freshly after discovery and invocation authorization; an idempotency key is optional | Creates no operation, invocation or work evidence; returns `{"result": ...}` and rechecks the authorization context and authority revision before releasing it |
+| `receipt` | Requires a key and uses the same durable effect reservation and uncertain-outcome fence | First response is `{"result": ..., "operation_id": ...}`; retains request fingerprint, scope, outcome and descriptor, but no argument payload, provider result or work evidence. A completed repeat returns only `{"operation_id": ..., "status": "completed", "result_retained": false}` |
+
+Selecting `query` asserts that this installed operation is a read: Xorchestrate
+cannot prove that an arbitrary provider has no side effects. Select `receipt`
+for mutations whose payloads must not be copied into the orchestration store.
+Failed and uncertain receipt effects remain fenced. Completed-but-unapplied
+outcomes retain their completion fact without the discarded result, and can be
+explicitly reconciled to a status receipt. Reconciliation never manufactures
+retained measurement evidence for these modes. A previously retained effect
+keeps its fence even if current configuration selects query execution.
+
+Native calls retain their original source identity and request fingerprint.
+They do not retain private query/receipt payloads in native-call records or
+application-tool observations. A completed native query repeats a fresh,
+authorized read; a receipt repeat returns only its operation receipt. Changed
+arguments or execution mode on the same native call identity are refused.
+Native failures retain their verified operation identity so the caller can
+inspect and reconcile the fenced effect. Native reconciliation itself repeats
+only its safe completion receipt after current authorization.
+
+`observation` independently selects `full` (the default) or `none` for optional
+application and typed native-tool telemetry. Required durable native-call and
+native-observation evidence still follows `mode`: journaled calls retain it;
+queries and receipt calls omit payloads. `none` suppresses typed driver
+observations emitted before or after the callback, including queued telemetry,
+and nested `Application.record_observation` calls on the executing thread. A
+nested call cannot turn capture back on. This is not control over an external
+process's transcript or unrelated asynchronous adapter telemetry. Configure
+those sources separately. Receipt retries and reconciliation retain the
+originating observation choice using the actual actor and retained source binding.
+
+An installed provider may expose the provisional `execution_policies()` hook,
+returning this same map with local capability names. Composition qualifies the
+names with the configured provider name, then applies explicit configuration
+overrides. This hook is trusted installed code, not remote discovery. Descriptor
+annotations, including `readOnlyHint`, remain descriptive data and never select
+execution policy. Explicit selections are validated before providers are
+constructed; installed hook results are validated during composition. The hook
+and top-level section are Xorchestrate extensions; the
+four-field `xcontracts.Capability` and `CapabilityProvider` port are unchanged.
+
 ## Companion records
 
 A companion kind is used either project-scoped (`records(project)`) or

@@ -74,9 +74,9 @@ ACTIONS = {
                            "disconnected; report each old session's replacement.",
                            {"session_ids": {"type": "array", "items": STRING}}),
     "capabilities": action_spec("Discover provider capabilities using provider/name addresses.", {"provider": STRING}, read=True),
-    "invoke": action_spec("Invoke a discovered capability, once per explicit idempotency key.", {
+    "invoke": action_spec("Invoke a discovered capability using trusted execution policy; effects require an idempotency key.", {
         "capability": STRING, "arguments": OBJECT, "idempotency_key": STRING, "work_id": STRING,
-    }, ("capability", "arguments", "idempotency_key")),
+    }, ("capability", "arguments")),
     "assess": action_spec("Obtain an assessment, escalating uncertainty using configured evaluators.", {
         "question": STRING, "work_id": STRING, "context": OBJECT,
     }, ("question",)),
