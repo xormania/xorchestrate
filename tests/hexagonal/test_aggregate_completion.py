@@ -23,6 +23,7 @@ from tests.hexagonal.support.native import (
     retry,
     wait_for,
 )
+from tests.hexagonal.support.temporal_evidence import StoreOrder, record_observations
 from xorchestrate.adapters.codex import CodexSessionDriver
 from xorchestrate.adapters.grok import GrokSessionDriver
 from xorchestrate.adapters.native_calls import NativeCallLedger
@@ -181,7 +182,8 @@ def test_completion_before_submission_response_must_bind_to_returned_turn(comple
     peers = {"codex": {"session_id": "app", "native_id": live.native_id, "incarnation": live.incarnation}}
     raw = {"observations": [{"id": str(i), "session_id": "app", "origin": "adapter", "stale": False, "created_by": "codex",
         "created_at": event["at"], "observation": event} for i, event in enumerate(observations)]}
-    latest = {"at": observations[-1]["at"]}
+    order = record_observations(raw)
+    latest = {"at": observations[-1]["at"], "order": {"source": order.envelope["source_id"], "seq": order.events[-1]["seq"]}}
     if expected == "idle":
         completed_native_turns(raw, peers, "codex", latest)
     else:
@@ -294,6 +296,7 @@ def test_finished_callbacks_do_not_hide_unfinished_native_turns(protocol, order,
             raw = {"observations": [{"id": str(i), "session_id": "app", "origin": "adapter", "stale": False, "created_by": protocol,
                     "created_at": event["at"], "observation": event} for i, event in enumerate(captured)],
                    "messages": [], "attempts": [], "evidence": []}
+            record_observations(raw)
             events = normalize(raw, peers, [], "protocol-fixture")
             run = {"raw_records": raw, "events": events, "sessions": peers}
             if remaining:
@@ -306,6 +309,7 @@ def test_finished_callbacks_do_not_hide_unfinished_native_turns(protocol, order,
                 at = datetime.now(timezone.utc).isoformat()
                 bad["observations"].append({"id": "false-idle", "session_id": "app", "origin": "adapter", "stale": False, "created_by": protocol,
                     "created_at": at, "observation": {**peers[protocol], "kind": "activity", "source": protocol, "at": at, "state": "idle"}})
+                StoreOrder(bad).created("native_observation", bad["observations"][-1])
                 with pytest.raises(VerificationFailure, match="^completion_native_turn_unresolved$"):
                     check_case(case, {"raw_records": bad, "events": normalize(bad, peers, [], "protocol-fixture"), "sessions": peers}, {})
                 (tmp_path / (label + "-false-idle.json")).write_text(json.dumps(bad, indent=2))
