@@ -18,6 +18,14 @@ from typing import Any
 from .acceptance import WorkAcceptance
 from .actions import ACTIONS, SESSION_CREATIONS, STRING
 from .assessment import WorkAssessment
+from .capability_execution import (
+    DEFAULT_EXECUTION,
+    execution_policies,
+    observation_scope,
+    observation_suppressed,
+    private_error,
+    request_binding,
+)
 from .delivery import DeliveryMixin
 from .effects import EffectJournalMixin
 from .inspection import InspectionProjector
@@ -71,6 +79,7 @@ class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
         provider_configurations: JSON | None = None, evaluator_configurations: JSON | None = None,
         state_engine: StateEngine | None = None, telemetry: TelemetrySink | None = None,
         worktree: JSON | None = None, recovery_policy: RecoveryPolicy | None = None,
+        capability_execution: JSON | None = None,
     ):
         self.store = store
         # The worktree of calls that do not bring their own (the process's own
@@ -91,6 +100,7 @@ class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
         # One token per recovery running in this runtime (set add/discard are atomic for the builtin set).
         self._running_recoveries = set()
         self.providers = dict(providers)
+        self.capability_execution = execution_policies(capability_execution)
         self.provider_configurations = deepcopy(provider_configurations or {})
         self.sessions = dict(sessions)
         self.guardrail = guardrail
@@ -153,9 +163,31 @@ class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
                                             replay_only=replay_only, telemetry_run_id=telemetry_run_id)
 
     def _call_with_worktree(self, action, arguments, actor, *, native_context, replay_only, telemetry_run_id):
+        with observation_scope(self.execution_policy(action, arguments, actor=actor)):
+            return self._observed_call(action, arguments, actor, native_context=native_context,
+                replay_only=replay_only, telemetry_run_id=telemetry_run_id)
+
+    def execution_policy(self, action, arguments, *, actor=None):
+        """Return trusted configuration, never a caller or descriptor annotation."""
+        address = arguments.get("capability") if action == "invoke" and isinstance(arguments, dict) else None
+        policy = deepcopy(self.capability_execution.get(address, DEFAULT_EXECUTION)) if isinstance(address, str) else dict(DEFAULT_EXECUTION)
+        operation_id = None
+        if isinstance(arguments, dict):
+            if action == "invoke" and isinstance(actor, str) and isinstance(arguments.get("idempotency_key"), str):
+                operation_id = canonical_digest([actor, arguments["idempotency_key"]])
+            elif action == "resolve_operation" and isinstance(arguments.get("operation_id"), str):
+                operation_id = arguments["operation_id"]
+        if operation_id is not None:
+            with self.store.transaction() as tx:
+                operation = tx.get("operation", operation_id)
+            if operation and operation.data.get("execution_mode") == "receipt":
+                return deepcopy(operation.data.get("execution_policy", {"mode": "receipt", "observation": "none"}))
+        return policy
+
+    def _observed_call(self, action, arguments, actor, *, native_context, replay_only, telemetry_run_id):
         if telemetry_run_id is not None and (not isinstance(telemetry_run_id, str) or not telemetry_run_id):
             raise OrchestrationError("Telemetry run identity must be nonempty text.", "invalid_arguments")
-        if self.telemetry is None or (isinstance(action, str) and action.startswith("telemetry_")):
+        if self.telemetry is None or observation_suppressed() or (isinstance(action, str) and action.startswith("telemetry_")):
             guarded = action in {"telemetry_events", "telemetry_status", "telemetry_payload", "telemetry_usage"}
             authority = self._telemetry_authority() if guarded else None
             result = self._call(action, arguments, actor, native_context=native_context, replay_only=replay_only)
@@ -216,6 +248,17 @@ class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
         return scope
 
     def record_observation(self, event_type, payload, context, **metadata):
+        if observation_suppressed():
+            return {"status": "disabled", "receipt": None, "reason": "execution_policy"}
+        if isinstance(event_type, str) and event_type.startswith("native.") and isinstance(payload, dict):
+            try:
+                policy = self._native_observation_policy(context, payload)
+            except Exception:
+                # Optional capture must neither fail the application nor retain
+                # unchecked payloads when its execution policy is unavailable.
+                return {"status": "unavailable", "receipt": None, "reason": "execution_policy_unavailable"}
+            if policy["observation"] == "none":
+                return {"status": "disabled", "receipt": None, "reason": "execution_policy"}
         return self.telemetry_service.record(event_type, payload, context, **metadata)
 
     def _telemetry_authority(self):
@@ -565,6 +608,7 @@ class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
             if not separator or provider_name not in self.providers:
                 raise OrchestrationError("Capabilities must use an available provider/name address.", "not_found")
             provider = self.providers[provider_name]
+            authority = self._execution_authority()
             # Discovery and invocation have distinct policy decisions. Metadata can
             # authorize invocation only after discovery has supplied the descriptor.
             self._authorize("capabilities", context)
@@ -577,17 +621,54 @@ class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
             validate(args["arguments"], capability.input_schema)
             context = {**context, "provider": provider_name, "capability": {**asdict(capability), "name": args["capability"]}}
             self._authorize("invoke", context)
-        return self._effect("invoke", args, actor, context, lambda operation: provider.invoke(name, deepcopy(args["arguments"]), {
-            "actor": actor, "work_id": context["work_id"], "operation_id": operation.key,
-            "capability": asdict(capability),
-        }))
+            policy = self.execution_policy("invoke", args)
+            if policy["mode"] != "query" and "idempotency_key" not in args:
+                raise OrchestrationError("Effect invocations require an idempotency key.", "invalid_arguments")
+            with self.store.transaction() as tx:
+                self._verify_context(tx, context)
+                if policy["mode"] == "query" and self._execution_authority() != authority:
+                    raise Conflict("Capability authority changed during authorization.")
+
+        def perform(operation=None):
+            try:
+                return provider.invoke(name, deepcopy(args["arguments"]), {
+                    "actor": actor, "work_id": context["work_id"],
+                    "operation_id": operation.key if operation is not None else None,
+                    "capability": asdict(capability),
+                })
+            except Exception as error:
+                if policy["mode"] != "journaled":
+                    raise private_error(error) from error
+                raise
+
+        if policy["mode"] == "query":
+            raw = perform()
+            if not isinstance(raw, dict):
+                raise OrchestrationError("Capability output must be a JSON object.", "invalid_result")
+            # Query results are current observations, never historical operation
+            # results. A concurrent authority/context change refuses disclosure.
+            with self.store.transaction() as tx:
+                self._verify_context(tx, context)
+                if self._execution_authority() != authority:
+                    raise Conflict("Capability authority changed during the query.")
+            return {"result": deepcopy(raw)}
+        return self._effect("invoke", args, actor, {**context, "execution_mode": policy["mode"], "execution_policy": policy}, perform)
+
+    def _execution_authority(self):
+        revision = getattr(self.guardrail, "authority_revision", None)
+        return id(self.guardrail), revision() if callable(revision) else None
 
     def _reserve_effect(self, tx: Transaction, action: str, key: str, args: JSON, actor: str, context: JSON, data: JSON) -> None:
         if action != "invoke":
             return self._reserve_session_effect(tx, action, key, args, actor, context, data)
         data["capability"] = deepcopy(context["capability"])
+        private = context.get("execution_mode") == "receipt"
+        if private:
+            data.update(execution_mode="receipt", execution_policy=deepcopy(context["execution_policy"]), result_retained=False)
+            data["arguments"] = request_binding(args)
+            data.pop("idempotency_key", None)
         self._create(tx, "invocation", actor, {
-            "capability": args["capability"], "arguments": args["arguments"], "work_id": data["work_id"],
+            "capability": args["capability"], **({"result_retained": False} if private else {"arguments": args["arguments"]}), "work_id": data["work_id"],
             "operation_id": key, "status": "pending",
         }, key)
 
@@ -598,6 +679,9 @@ class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
             raise OrchestrationError("Capability output must be a JSON object.", "invalid_result")
         actor = operation.data["actor"]
         invocation = self._require(tx, "invocation", operation.key)
+        if operation.data.get("execution_mode") == "receipt":
+            self._transition(tx, invocation, "complete", {**invocation.data, "status": "completed"}, actor)
+            return {"result": deepcopy(raw), "operation_id": operation.key}
         record = self._transition(tx, invocation, "complete", {**invocation.data, "status": "completed", "result": deepcopy(raw)}, actor)
         if operation.data.get("work_id"):
             self._evidence(tx, actor, operation.data["work_id"], raw, {"type": "capability", "operation_id": operation.key})

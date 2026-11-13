@@ -14,6 +14,7 @@ from uuid import uuid4
 
 from . import __version__
 from .application import Application
+from .capability_execution import execution_policies
 from .model import OrchestrationError, canonical_digest, public_error_code, unique_keys
 from .ports import ApplicationToolSessionDriver, SessionDriver
 from .worktrees import bound_worktree, session_worktree
@@ -30,7 +31,8 @@ BUILTINS = {
     "state_engine": {"declared": "xorchestrate.adapters.state:ConfiguredStateEngine"},
     "store": {"memory": "xorchestrate.adapters.storage:MemoryStore", "sqlite": "xorchestrate.adapters.storage:SQLiteStore"},
     "providers": {"mcp": "xorchestrate.adapters.capabilities:StdioMCPProvider", "cli": "xorchestrate.adapters.capabilities:CLIProvider",
-        "pr": "xorchestrate.adapters.pr:PullRequestProvider"},
+        "pr": "xorchestrate.adapters.pr:PullRequestProvider",
+        "telemetry": "xorchestrate.adapters.telemetry_provider:TelemetryProvider"},
     "sessions": {
         "jsonrpc": "xorchestrate.adapters.process_sessions:JSONRPCSessionDriver",
         "codex": "xorchestrate.adapters.codex:CodexSessionDriver",
@@ -267,7 +269,7 @@ CONFIG_MIGRATIONS = ConfigMigrations(max(SUPPORTED_CONFIG_VERSIONS), {})
 
 RELEASE = f"v{__version__}"
 # Nested storage kinds are selected inside telemetry options, never as sections.
-_SECTIONS = (frozenset(BUILTINS) - NESTED - OPERATOR) | {"assessment", "session_fallbacks", "version"}
+_SECTIONS = (frozenset(BUILTINS) - NESTED - OPERATOR) | {"assessment", "session_fallbacks", "capability_execution", "version"}
 _ADAPTER_FIELDS = frozenset({"adapter", "options", "enabled"})
 # Singleton adapters in construction order, with their defaults.
 _SINGLETONS = {
@@ -385,7 +387,7 @@ def _select(kind, specification, base_dir):
     target = BUILTINS[kind].get(adapter, adapter)
     if ":" not in target:
         raise OrchestrationError(f"Unknown {kind} adapter: {adapter}", "configuration_error")
-    if kind in {"providers", "sessions"} and adapter in BUILTINS[kind] and adapter != "pr":
+    if kind in {"providers", "sessions"} and adapter in BUILTINS[kind] and adapter not in {"pr", "telemetry"}:
         options["cwd"] = _resolve_path(base_dir, options.get("cwd", "."), kind, adapter)
     if kind == "sessions" and adapter == "hosted":
         options["directory"] = str(_resolve_path(base_dir, options.get("directory", "hosted"), kind, adapter,
@@ -424,6 +426,7 @@ def validate_config(config=None, base_dir=None, *, telemetry_defaults=None):
     unknown = set(config) - _SECTIONS
     if unknown:
         raise OrchestrationError("Unknown configuration sections.", "configuration_error", {"sections": sorted(unknown)})
+    selected_execution = execution_policies(config.get("capability_execution"))
     base_dir = Path(base_dir or Path.cwd()).resolve()
 
     telemetry, telemetry_unavailable, telemetry_cause = None, False, None
@@ -460,6 +463,9 @@ def validate_config(config=None, base_dir=None, *, telemetry_defaults=None):
                 material = deepcopy(specification)
                 material_options = material.setdefault("options", {})
                 material_options["cwd"] = _resolve_path(base_dir, material_options.get("cwd", "."), kind, selection.adapter)
+                if kind == "providers" and selected_execution:
+                    material["capability_execution"] = {address: policy for address, policy in selected_execution.items()
+                        if address.partition("/")[0] == name}
                 if kind == "evaluators" and specification.get("adapter") == "tool":
                     provider = material["options"].get("provider")
                     material["measurement_provider_configuration"] = provider_configurations.get(provider)
@@ -598,6 +604,15 @@ def build(config=None, base_dir=None, *, project=None, telemetry_defaults=None, 
         state_engine = construct(adapters["state_engine"])
         store = construct(adapters["store"])
         providers.update(collection("providers"))
+        policies = {}
+        for provider_name, provider in providers.items():
+            select = getattr(provider, "execution_policies", None)
+            if callable(select):
+                # This hook belongs to trusted installed adapter code. Remote
+                # discovery annotations never enter this configuration path.
+                defaults = execution_policies(select(), qualified=False)
+                policies.update({f"{provider_name}/{name}": policy for name, policy in defaults.items()})
+        policies.update(execution_policies(config.get("capability_execution")))
         sessions = collection("sessions")
         guardrail = construct(adapters["guardrail"])
         routing = construct(adapters["routing"])
@@ -615,6 +630,7 @@ def build(config=None, base_dir=None, *, project=None, telemetry_defaults=None, 
             receipt_policy=construct(adapters["receipt_policy"]),
             session_fallbacks=config.get("session_fallbacks"),
             provider_configurations=resolved.provider_configurations,
+            capability_execution=policies,
             evaluator_configurations=resolved.evaluator_configurations,
             state_engine=state_engine,
             telemetry=telemetry,
@@ -627,6 +643,9 @@ def build(config=None, base_dir=None, *, project=None, telemetry_defaults=None, 
                     **{key: event[key] for key in ("event_id", "basis", "completeness", "reason") if key in event})
             return None
         for resource in (*providers.values(), *sessions.values(), *evaluators.values()):
+            bind_service = getattr(resource, "bind_telemetry_service", None)
+            if callable(bind_service):
+                bind_service(application.telemetry_service)
             bind_telemetry = getattr(resource, "bind_telemetry", None)
             if callable(bind_telemetry) and telemetry is not None:
                 bind_telemetry(capture)
@@ -671,7 +690,8 @@ def _wire_application_tools(name: str, driver: SessionDriver, application: Appli
         if "work_id" in properties and context.get("work_id") and "work_id" not in arguments:
             arguments["work_id"] = context["work_id"]
         if "idempotency_key" in properties:
-            required = "idempotency_key" in schema.get("required", [])
+            required = ("idempotency_key" in schema.get("required", [])
+                or (action == "invoke" and application.execution_policy(action, arguments)["mode"] != "query"))
             if idempotency_key is None and not required:
                 arguments.pop("idempotency_key", None)
             elif not isinstance(idempotency_key, str) or not idempotency_key:
