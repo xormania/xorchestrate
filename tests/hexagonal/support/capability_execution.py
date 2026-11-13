@@ -185,6 +185,17 @@ class Subject:
             "expected_version": operation["version"], "outcome": "completed",
             "result": {"payload": "PRIVATE_RECONCILIATION_RESULT"}, "reason": "Verified independently"})
 
+    def prepare_native_resolution(self, operation_id):
+        operation = self.operation(operation_id)
+        self.resolution_arguments = {"operation_id": operation_id,
+            "expected_version": operation["version"], "outcome": "completed",
+            "result": {"payload": "PRIVATE_RECONCILIATION_RESULT"}, "reason": "Verified independently"}
+
+    def resolve_native(self, *, replay_only=False):
+        context = {**self.native_context, "call_id": "receipt-resolution"}
+        return self.app.invoke_native("agent", "resolve_operation", self.resolution_arguments,
+                                      context, replay_only=replay_only)
+
 
 def configured_subject(root, *, defaults=False, policy=None, annotations=None):
     name = "TrustedQueryProvider" if defaults else "Provider"
