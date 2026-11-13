@@ -9,6 +9,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- CI coalesces title/body edits behind same-candidate validation. A separate
+  trusted queue controller cancels proved obsolete source runs while preserving
+  current validation, using ordinary cancellation and retaining observed decisions.
 - Acceptance and tool evaluation share semantic provider-result decoding while
   preserving the exact raw evidence. Direct measurements can include business
   `content`; MCP assessment JSON text with duplicate fields is now refused.
