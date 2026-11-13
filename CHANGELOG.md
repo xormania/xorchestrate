@@ -9,6 +9,12 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- An ownerless `close` of a managed run ends a leftover process only when it names the run and the
+  run's marker, its private endpoint or descent from one of those selects it; it no longer ends a
+  process for naming the run alone. Its cleanup verdict is stricter: a process that names the run or
+  carries its marker but is not ended counts as remaining, so `cleanup.verified` can now be false where
+  it was true. An orphaned check command whose worker has died is reported as remaining, not ended.
+  The end-to-end world and the test kit share this selection (`ownership.owned_processes`).
 - Telemetry capture and operations share an application-independent service with
   explicit authority, projection and live source collaborators. Existing actions,
   resource visibility, bounded reads and bundle authorization are preserved.
