@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+import struct
 import os
 import pwd
 import shlex
@@ -137,17 +138,108 @@ def _display(setting: Setting, value: Any) -> str:
     return str(value)
 
 
+def discover_by_files(start: Path) -> tuple[Path | None, Path | None, str | None]:
+    """The main checkout and git common directory for ``start`` by plain file reads, never a process.
+
+    Returns ``(main, common, None)``, or ``(None, None, reason)`` when the layout is not
+    recognised: no ``.git`` entry, an unreadable one, or a bare main repository.
+    """
+    current = Path(os.path.abspath(start))
+    for directory in (current, *current.parents):
+        entry = directory / ".git"
+        if entry.is_dir():
+            return directory.resolve(), entry.resolve(), None
+        if not entry.is_file():
+            continue
+        try:
+            text = entry.read_text(encoding="utf-8").strip()
+        except (OSError, UnicodeDecodeError) as error:
+            return None, None, f"cannot read {entry}: {error}"
+        if not text.startswith("gitdir:"):
+            return None, None, f"{entry} is not a gitdir pointer"
+        gitdir = (directory / text.removeprefix("gitdir:").strip()).resolve()
+        pointer = gitdir / "commondir"
+        if not pointer.is_file():
+            return directory.resolve(), gitdir, None  # a submodule or a separate git directory
+        try:
+            common = (gitdir / pointer.read_text(encoding="utf-8").strip()).resolve()
+        except (OSError, UnicodeDecodeError) as error:
+            return None, None, f"cannot read {pointer}: {error}"
+        if common.name != ".git":
+            return None, None, "the repository's main checkout is bare"
+        return common.parent, common, None
+    return None, None, "no git repository found"
+
+
+def tracked_by_index(common: Path, name: str = REPO_FILE) -> bool | None:
+    """Whether ``name`` (at the top of the checkout) is in git's index, read directly.
+
+    True or False for index versions 2 and 3 of a SHA-1 repository; None when the index
+    cannot be understood (another version, SHA-256, damaged). No index means untracked.
+    """
+    index = common / "index"
+    if not index.exists():
+        return False
+    try:
+        data = index.read_bytes()
+        config = (common / "config").read_text(encoding="utf-8", errors="replace") if (common / "config").is_file() \
+            else ""
+    except OSError:
+        return None
+    if "objectformat" in config.replace(" ", "").lower() and "sha256" in config.lower():
+        return None
+    if len(data) < 12 or data[:4] != b"DIRC":
+        return None
+    version, count = struct.unpack(">II", data[4:12])
+    if version not in (2, 3):
+        return None
+    wanted, offset = name.encode(), 12
+    for _ in range(count):
+        fixed = 62
+        if offset + fixed > len(data):
+            return None
+        flags = struct.unpack(">H", data[offset + 60:offset + 62])[0]
+        if flags & 0x4000:
+            if version < 3:
+                return None
+            fixed += 2
+        start = offset + fixed
+        length = flags & 0x0FFF
+        if length == 0x0FFF:
+            end = data.find(b"\0", start)
+            if end < 0:
+                return None
+        else:
+            end = start + length
+        if end > len(data):
+            return None
+        if data[start:end] == wanted:
+            return True
+        offset += ((fixed + (end - start) + 8) // 8) * 8
+    return False
+
+
 def load(repo: Path, *, env: Mapping[str, str], flags: Mapping[str, str | None] | None = None,
-         settings: Iterable[Setting] = SETTINGS, git: Git | None = None) -> DevConfig:
+         settings: Iterable[Setting] = SETTINGS, git: Git | None = None, discovery: str = "git") -> DevConfig:
     """Resolve every declared setting for the repository containing ``repo``.
 
     Only ``env`` is consulted, never the process environment, and from it only names
-    in the developer namespace.
+    in the developer namespace. ``discovery="files"`` finds the repository with plain
+    file reads and never starts a process; a layout it does not recognise skips the
+    repository file with a REPO_FILE_SKIPPED warning instead of failing.
     """
     settings = tuple(settings)
     declared = {setting.key for setting in settings}
-    main = find_main_checkout(Path(repo), git)
     warnings: list[tuple[str, str | None, int | None, str]] = []
+    skip_reason = None
+    if discovery == "files":
+        main, common, skip_reason = discover_by_files(Path(repo))
+        if main is None:
+            main = Path(os.path.abspath(repo))
+    elif discovery == "git":
+        main, common = find_main_checkout(Path(repo), git), None
+    else:
+        raise DevConfigError("UNKNOWN_SETTING", f"unknown discovery {discovery!r}")
 
     layers: list[tuple[str, dict[str, tuple[str, Source]]]] = []
     layers.append(("flag", {key: (value, Source("flag")) for key, value in (flags or {}).items()
@@ -163,11 +255,18 @@ def load(repo: Path, *, env: Mapping[str, str], flags: Mapping[str, str | None] 
             warnings.append(("UNKNOWN_KEY", None, None, name))
     layers.append(("env", from_env))
     repo_file = main / REPO_FILE
-    if repo_file.is_file() and _tracked(git, main):
-        raise DevConfigError("ENV_FILE_TRACKED", f"{repo_file} is tracked by git; local settings must stay "
-                             "untracked (git rm --cached it)")
-    for kind, path in (("repo_file", repo_file), ("user_file", user_file(env))):
-        layers.append((kind, _read_file(kind, path, declared, warnings)))
+    read_repo_file = skip_reason is None
+    if read_repo_file and repo_file.is_file():
+        tracked = _tracked(git, main) if common is None else tracked_by_index(common)
+        if tracked is None:
+            skip_reason, read_repo_file = "git's index could not be read without running git", False
+        elif tracked:
+            raise DevConfigError("ENV_FILE_TRACKED", f"{repo_file} is tracked by git; local settings must stay "
+                                 "untracked (git rm --cached it)")
+    if skip_reason is not None:
+        warnings.append(("REPO_FILE_SKIPPED", str(repo_file) if common is not None else None, None, skip_reason))
+    layers.append(("repo_file", _read_file("repo_file", repo_file, declared, warnings) if read_repo_file else {}))
+    layers.append(("user_file", _read_file("user_file", user_file(env), declared, warnings)))
 
     values: dict[str, Any] = {}
     sources: dict[str, Source] = {}

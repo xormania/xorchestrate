@@ -37,13 +37,19 @@ def main(argv: Sequence[str] | None = None, *, env: Mapping[str, str] | None = N
     env = os.environ if env is None else env
     repo = arguments.repo or Path.cwd()
     try:
+        if arguments.repo is not None and not arguments.repo.is_dir():
+            raise DevConfigError("NOT_A_REPOSITORY", f"{arguments.repo} is not a directory")
         if arguments.command == "get":
-            print(load(repo, env=env).display(arguments.key))
+            print(load(repo, env=env, discovery="files").display(arguments.key))
             return 0
         if arguments.command == "show":
-            config = load(repo, env=env)
+            config = load(repo, env=env, discovery="files")
             for warning in config.warnings:
                 code, path, line, key = warning
+                if code == "REPO_FILE_SKIPPED":
+                    print(f"{code}: {key} ({path or 'no repository'}); the repository settings file was not read",
+                          file=sys.stderr)
+                    continue
                 where = f"{path}:{line}" if path else "environment"
                 print(f"{code}: {key} ({where}) is not a declared setting; ignored", file=sys.stderr)
             print("\n".join(config.explain()))

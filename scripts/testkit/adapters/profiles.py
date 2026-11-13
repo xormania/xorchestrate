@@ -52,7 +52,7 @@ def load_dev(root):
     except ImportError:
         return None
     try:
-        return load(Path(root), env=os.environ)
+        return load(Path(root), env=os.environ, discovery="files")
     except DevConfigError as error:
         if error.code == "NOT_A_REPOSITORY":
             return None
