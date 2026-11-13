@@ -37,6 +37,13 @@ def _finished(world):
     return recovery if recovery.get("report") and not recovery.get("running") else None
 
 
+def _decided(world):
+    """The status once the startup recovery decision is recorded and no recovery runs."""
+    status = world.status()
+    recovery = status["recovery"]
+    return status if recovery.get("detected") is not None and not recovery.get("running") else None
+
+
 def _lost(world, client):
     """Every process of the project dies at once; the client went with it."""
     client.kill()
@@ -90,8 +97,10 @@ def under_manual_nothing_is_reconnected_until_recover(world):
     original = world.start(client)
     _lost(world, client)
     world.up()
-    world.settle(2)  # long enough for a reconnect the manual policy must never make; slice 2 replaces it
-    status = world.status()
+    # The server records its startup recovery decision before it serves. Under the manual policy nothing is
+    # selected and no recovery runs, so once decided nothing can reconnect later. (Only for manual: an automatic
+    # run can be decided an instant before it is marked running.)
+    status = world.await_("the startup recovery decided", lambda: _decided(world))
     assert status["recovery"]["detected"]["selected"] == [], status["recovery"]
     assert any(item["session_id"] == original["id"] for item in status["sessions_needing_reconnect"]), status
     assert world.bridge_hosts() == [], "nothing was reconnected"
