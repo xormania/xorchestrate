@@ -55,3 +55,28 @@ def witnessed_native_schedule(fixture):
     fixture.release_tail("first")
     assert fixture.completion("first").payload["native_operation"] == first["native_operation"]
     fixture.await_idle()
+
+
+def each_release_reaches_only_the_next_held_boundary(fixture):
+    """One operation may hold before start, in its callback and in its native tail."""
+    fixture.submit("chain", start=True, callback=True, tail=True)
+    start = fixture.activation("chain", "start")
+    assert start is not None and start["stage"] == "start", "CHAIN_START_IS_ACTIVATED"
+    assert fixture.activation("chain", "callback") is None
+    assert fixture.activation("chain", "tail") is None
+    assert fixture.completion("chain") is None
+    fixture.release_start("chain")
+    callback = fixture.activation("chain", "callback")
+    assert callback is not None and callback["operation"] == "chain", "CHAIN_RELEASE_REACHES_CALLBACK"
+    assert fixture.activation("chain", "tail") is None and fixture.completion("chain") is None, \
+        "CHAIN_CALLBACK_REMAINS_HELD_AFTER_START_RELEASE"
+    fixture.release_callback("chain")
+    tail = fixture.activation("chain", "tail")
+    assert tail is not None and tail["stage"] == "tail", "CHAIN_RELEASE_REACHES_NATIVE_TAIL"
+    assert tail["native_operation"] == start["native_operation"]
+    assert fixture.completion("chain") is None, "CHAIN_NATIVE_TAIL_REMAINS_HELD_AFTER_CALLBACK_RELEASE"
+    fixture.release_tail("chain")
+    completed = fixture.completion("chain")
+    assert completed is not None and completed.payload["native_operation"] == start["native_operation"], \
+        "CHAIN_RELEASE_REACHES_OWN_COMPLETION"
+    fixture.await_idle()
