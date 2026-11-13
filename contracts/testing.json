@@ -28,7 +28,7 @@
       }
     },
     "release": {
-      "guarantee": "A release tag, the package version, the xork alias version and its exact pin, and the changelog agree before publishing, and both distributions are built, accepted and published together; the launcher, under either command name, reports how it or its alias was installed and the matching upgrade command; the install script provides uv and installs the launcher without elevated privileges.",
+      "guarantee": "A release tag, the package version, the xork alias version and its exact pin, and the changelog agree before publishing, and both distributions are built, accepted and published together; the launcher, under either command name, reports how it or its alias was installed and the matching upgrade command; the install script provides uv and installs the launcher without elevated privileges; workflow uv downloads verify the reviewed archive checksum before executing the runtime.",
       "modules": {
         "tests/hexagonal/test_release_identity.py": "contract",
         "tests/hexagonal/test_release_workflow.py": "contract",
@@ -47,11 +47,12 @@
       }
     },
     "delivery": {
-      "guarantee": "Queued messages, delivery attempts, retries and recovery preserve recipient scope, effect uncertainty and causal receipts.",
+      "guarantee": "Queued messages, delivery attempts, retries and recovery preserve recipient scope, effect uncertainty and causal receipts; default session selection follows witnessed creation order independently of UTC labels, with explicit legacy fallback.",
       "modules": {
         "tests/hexagonal/test_delivery.py": "contract",
         "tests/hexagonal/test_delivery_adversarial.py": "contract",
-        "tests/hexagonal/test_delivery_scope.py": "contract"
+        "tests/hexagonal/test_delivery_scope.py": "contract",
+        "tests/hexagonal/test_session_selection.py": "contract"
       }
     },
     "sessions": {
@@ -155,6 +156,7 @@
       "guarantee": "Independent checker observations, verdicts and fault attribution establish the selected candidate behavior without using product verdicts as the oracle.",
       "modules": {
         "tests/hexagonal/test_verification.py": "calibration",
+        "tests/hexagonal/test_calibrated_checks.py": "calibration",
         "tests/hexagonal/test_verification_decoders.py": "adapter",
         "tests/hexagonal/test_temporal_evidence.py": "contract",
         "tests/hexagonal/test_lifecycle_runner.py": "composition",
@@ -188,9 +190,10 @@
       }
     },
     "framework": {
-      "guarantee": "Shared execution, resource ownership, configuration, evidence and collection guarantee complete declared plans and honest outcomes for every selected test family.",
+      "guarantee": "Shared execution, resource ownership, configuration, evidence and collection guarantee complete declared plans and honest outcomes for every selected test family. Classified observation waits consume one monotonic budget, preserve retry safety and scale only harness allowances.",
       "modules": {
         "tests/hexagonal/test_testkit_core.py": "contract",
+        "tests/hexagonal/test_testkit_temporal_waits.py": "framework",
         "tests/hexagonal/test_testkit_command.py": "adapter",
         "tests/hexagonal/test_testkit_sharding.py": "framework",
         "tests/hexagonal/test_testkit_configuration.py": "adapter",
@@ -246,9 +249,15 @@
       }
     },
     "agent-guidance": {
-      "guarantee": "Shared agent skills have one source that every harness location mirrors by relative symlink, front matter a strict YAML reader accepts, guidance pointers and section anchors that resolve, and no local paths, session identifiers or foreign emails in the skills, the workflow guidance or the Serena project; the importing instruction file loads the repository rules, whose agent workflow section points at the skills; the Serena project selects the python language server and the tools interface, honours .gitignore, ships Serena's own .gitignore and ignores its cache, memories and local overrides.",
+      "guarantee": "Shared agent skills have one source that every harness location mirrors by relative symlink, front matter a strict YAML reader accepts, guidance pointers and section anchors that resolve, and no local paths, session identifiers or foreign emails in the skills, the workflow guidance or the Serena project; the importing instruction file loads the repository rules, whose agent workflow section points at the skills; the Serena project selects the python language server and the tools interface, honours .gitignore, ships Serena's own .gitignore and ignores its cache, memories and local overrides. The shared guidance stays generic: exactly the shared skills, no section, rules wording or pointer describing one contributor's own team of sessions or its crash recovery.",
       "modules": {
         "tests/hexagonal/test_agent_guidance.py": "contract"
+      }
+    },
+    "devconfig": {
+      "guarantee": "Developer tools read optional local settings from one declared table: namespaced keys with typed values and neutral defaults derived only from HOME, the XDG directories and the main checkout's name; a strict literal KEY=VALUE format that is never executed; precedence flag, environment, the main checkout's git-ignored file, the user file, default, each value explained with its source; a committed example equal to the rendered table; and no reader or importer outside the declared consumers.",
+      "modules": {
+        "tests/hexagonal/test_devconfig.py": "contract"
       }
     }
   }

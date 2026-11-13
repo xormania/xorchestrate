@@ -50,11 +50,13 @@ def calibration_workspace(root, output, mutation):
     return identity, control, mutant
 
 
-def observed_pytest(root, output, selectors, *, junit=None, timeout=120):
+def observed_pytest(root, output, selectors, *, junit=None, timeout=120, contract=None):
     """Execute selected cases through the common command/evidence adapter.
 
     The trusted assertion observer is retained outside the subject's package.
     This also supports small standalone faulty subjects without a test catalog.
+    ``contract`` (``module:function``) names the one contract function whose
+    assertions the observer may attribute to the selected tests.
     """
     root, output = Path(root).resolve(), Path(output).resolve()
     checker = output.parent / (output.name + "-observer")
@@ -65,6 +67,8 @@ def observed_pytest(root, output, selectors, *, junit=None, timeout=120):
     junit = Path(junit).resolve() if junit is not None else output / "results.xml"
     command = [sys.executable, "-m", "pytest", "-p", "_xorchestrate_calibration_observer",
                "-q", "--tb=short", *selectors, "--junitxml=" + str(junit)]
+    if contract is not None:
+        command += ["--calibration-contract", contract]
     record = run_command(command, root, output, timeout=timeout, environment={
         "PYTHONPATH": str(checker) + os.pathsep + str(root), "PYTHONDONTWRITEBYTECODE": "1"})
     record.update(xml=str(junit), stdout=str(output / "stdout.log"), stderr=str(output / "stderr.log"),
@@ -73,14 +77,15 @@ def observed_pytest(root, output, selectors, *, junit=None, timeout=120):
     return record
 
 
-def _trial(root, output, mutation, selectors):
+def _trial(root, output, mutation, selectors, contract=None):
     """Run a passing control and exactly one source mutation in isolated copies; no verdict."""
     output = Path(output).resolve()
     identity, control, mutant = calibration_workspace(root, output, mutation)
     records, cases = {}, {}
     for name, directory in (("control", control), ("mutant", mutant)):
         junit = output / (name + ".xml")
-        records[name] = observed_pytest(directory, output / (name + "-run"), selectors, junit=junit)
+        records[name] = observed_pytest(directory, output / (name + "-run"), selectors, junit=junit,
+                                        contract=contract)
         cases[name] = junit_cases(junit) if junit.exists() else {}
     return {"control_cases": cases["control"], "mutant_cases": cases["mutant"],
             "control_exit": records["control"]["exit_status"], "mutant_exit": records["mutant"]["exit_status"],
@@ -99,7 +104,7 @@ def run_trial(root, output):
         mutation = {"path": case.mutation.path, "old": case.mutation.old, "new": case.mutation.new}
         directory = Path(output) / case_id
         try:
-            record = _trial(root, directory, mutation, list(case.selectors))
+            record = _trial(root, directory, mutation, list(case.selectors), case.contract)
         except Exception as error:
             # Private evidence of why the case could not run; the report keeps only a typed reason.
             directory.mkdir(parents=True, exist_ok=True, mode=0o700)

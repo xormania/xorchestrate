@@ -3,7 +3,8 @@
 Selects inventories by name or by stage (default: those registered at ci),
 runs each case through the calibration service with the isolated trial
 adapter, and writes one suite report. Exits 2 for an unknown or unregistered
-inventory, or for a selection that names no inventory, before any case runs.
+inventory, a selection that names no inventory, or a declared contract the
+candidate tree does not hold, before any case runs.
 """
 import argparse
 import json
@@ -14,7 +15,7 @@ from scripts.testkit.adapters.evidence import candidate_identity, now, verify_ca
 
 from .__main__ import run_trial
 from .fault_calibration import calibrate_inventory
-from .inventory_files import InventoryError, load_inventory, load_registry, select
+from .inventory_files import InventoryError, check_inventory_tree, load_inventory, load_registry, select
 
 INVENTORIES = Path(__file__).with_name("inventories")
 
@@ -34,6 +35,8 @@ def main(argv=None):
     try:
         names = select(load_registry(args.registry_dir), names=args.inventory, stage=args.stage)
         inventories = [load_inventory(args.registry_dir, name) for name in names]
+        for inventory in inventories:
+            check_inventory_tree(inventory, root)
     except InventoryError as error:
         print(error.code, file=sys.stderr)
         return 2

@@ -112,6 +112,50 @@ def finished_recovery(cli, timeout=60):
     raise AssertionError(f"recovery did not finish: {cli.json('status')['recovery']}")
 
 
+def recovery_within(cli, timeout):
+    """Whether recovery finished (a report, nothing running) before ``timeout``; never raises at the deadline."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        recovery = cli.json("status")["recovery"]
+        if recovery.get("report") and not recovery.get("running"):
+            return True
+        time.sleep(0.25)
+    return False
+
+
+class ScriptedStatus:
+    """A CLI whose ``status`` reports the scripted recovery states in turn, then the last one forever."""
+
+    def __init__(self, *states):
+        self.states = list(states)
+
+    def json(self, command):
+        assert command == "status"
+        return {"recovery": self.states.pop(0) if len(self.states) > 1 else self.states[0]}
+
+
+def within(cli, timeout):
+    """``recovery_within`` looked up when called, so the module stays importable before it exists."""
+    return globals()["recovery_within"](cli, timeout)
+
+
+def test_recovery_within_is_true_once_a_report_exists_and_nothing_runs():
+    cli = ScriptedStatus({"running": True}, {"running": True, "report": {"x": 1}}, {"running": False, "report": {"x": 1}})
+    assert within(cli, 5) is True
+
+
+@pytest.mark.parametrize("state", [{"running": True}, {"running": True, "report": {"x": 1}}, {"running": False}])
+def test_recovery_within_is_false_at_the_deadline_and_never_raises(state):
+    started = time.monotonic()
+    assert within(ScriptedStatus(state), 0.3) is False
+    assert time.monotonic() - started < 5
+
+
+def test_finished_recovery_still_raises_at_the_deadline():
+    with pytest.raises(AssertionError):
+        finished_recovery(ScriptedStatus({"running": True}), timeout=0.3)
+
+
 def sessions(client):
     return {item["id"]: item for item in client.call("list_sessions", {})["sessions"]}
 
@@ -142,7 +186,8 @@ def test_after_total_loss_the_default_policy_brings_the_session_back_without_a_c
     client.process.kill()
     total_loss(cli)
     assert cli.json("up")["started"] is True
-    mapped = recovered_map(finished_recovery(cli)["report"])
+    assert recovery_within(cli, 60), "RECOVERY_STARTS_ON_UP"
+    mapped = recovered_map(cli.json("status")["recovery"]["report"])
     assert list(mapped) == [original["id"]], mapped
     after = Client(cli)
     try:
@@ -216,7 +261,7 @@ def test_a_server_only_crash_adopts_the_running_terminal_and_keeps_its_bridge_ho
     cli.json("up")
     mapped = recovered_map(finished_recovery(cli)["report"])
     assert original["id"] in mapped, mapped
-    assert bridge_hosts(cli) == hosts, "the running terminal was adopted: the same bridge host process serves it"
+    assert bridge_hosts(cli) == hosts, "RECOVERY_ADOPTS_RUNNING_TERMINAL"
     after = Client(cli)
     try:
         assert_continues(after, original, mapped[original["id"]])

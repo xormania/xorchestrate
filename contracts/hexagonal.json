@@ -10,6 +10,7 @@
     "scripts/verification",
     "scripts/architecture",
     "scripts/ci",
+    "scripts/devconfig",
     "tests"
   ],
   "roles": {
@@ -330,7 +331,8 @@
       "modules": [
         "scripts.testkit",
         "scripts.testkit.model",
-        "scripts.testkit.ports"
+        "scripts.testkit.ports",
+        "scripts.testkit.waits"
       ],
       "allowed_roles": [
         "testkit_foundation"
@@ -676,6 +678,19 @@
       "allowed_external": [
         "stdlib:*",
         "jsonschema"
+      ],
+      "allow_dynamic": false
+    },
+    "devconfig": {
+      "modules": [
+        "scripts.devconfig",
+        "scripts.devconfig.*"
+      ],
+      "allowed_roles": [
+        "devconfig"
+      ],
+      "allowed_external": [
+        "stdlib:*"
       ],
       "allow_dynamic": false
     },
@@ -1184,7 +1199,8 @@
         "telemetry_views",
         "ci_tooling",
         "ci_timings",
-        "testkit_pytest"
+        "testkit_pytest",
+        "devconfig"
       ],
       "allowed_external": [
         "stdlib:*",
@@ -1239,7 +1255,8 @@
         "telemetry",
         "telemetry_views",
         "package_acceptance",
-        "ci_timings"
+        "ci_timings",
+        "devconfig"
       ],
       "allowed_external": [
         "stdlib:*",

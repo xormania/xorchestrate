@@ -18,10 +18,13 @@ from scripts.verification.calibration import classify
 from tests.hexagonal.support.fault_calibration import (
     CANDIDATE,
     INVENTORIES,
+    MARKER,
     OTHER,
+    OTHER_SELECTOR,
     OUTCOMES,
     ROOT,
     TARGET,
+    TARGET_SELECTOR,
     Recorder,
     case,
     inventory_directory,
@@ -37,8 +40,9 @@ from tests.hexagonal.support.verification_evidence import repository as git_repo
 NATIVE = ("grok-native-observation", "requested-selection", "claude-native-hook", "external-detach",
           "crash-uncertainty", "autonomous-callback", "delivery-uncertainty")
 """The seven cases of scripts/verification/faults.json at 66390e7, in order; all were detected there."""
-NATIVE_CASES_SHA256 = "dc12f9a24147b6473c508238547c188abd01a7afbc4bc5ce1768aa811d190fec"
-"""sha256 of the canonical JSON (sorted keys, compact) of that file's case list."""
+NATIVE_CASES_SHA256 = "25013556c9d11fc3c59947d641a96521b95686e767b4154970175df058a89a44"
+"""sha256 of the canonical JSON (sorted keys, compact) of that file's case list, with the three lowercase
+diagnostics renamed to UPPER_SNAKE under the calibrated-check standard and nothing else changed."""
 
 
 def run(cases, records, *, name="probe", candidate=CANDIDATE):
@@ -288,6 +292,14 @@ CASE_FAULTS = {
     "unknown-expectation": [raw_case(expect="skipped")],
     "repeated-name": [raw_case("same"), raw_case("same")],
     "bad-name": [raw_case("Has Spaces")],
+    "contract-without-function": [raw_case(contract="tests.hexagonal.contracts.probe")],
+    "contract-two-functions": [raw_case(contract="tests.hexagonal.contracts.probe:check:other")],
+    "contract-bad-module": [raw_case(contract="1probe:check")],
+    "contract-empty": [raw_case(contract="")],
+    "contract-not-text": [raw_case(contract=["probe", "check"])],
+    "contract-empty-module-part": [raw_case(contract="tests..probe:check")],
+    "contract-trailing-dot": [raw_case(contract="tests.probe.:check")],
+    "contract-leading-dot": [raw_case(contract=".probe:check")],
 }
 
 
@@ -321,6 +333,143 @@ def test_select_defaults_to_ci_and_follows_stage_or_the_names_given():
     assert raised.value.code == "unknown_inventory"
 
 
+# Checks declared in a contract function -------------------------------------------------------------
+
+CONTRACT_SOURCE = (
+    "def check(value):\n"
+    f"    assert value == 1, {MARKER!r}\n"
+    "def quiet(value):\n"
+    f"    # {MARKER}\n"
+    f"    return {MARKER!r}\n"
+    "def nested(value):\n"
+    "    def inner():\n"
+    f"        assert value == 1, {MARKER!r}\n"
+    "    return inner\n"
+    "def scoped(value):\n"
+    "    class Local:\n"
+    "        def method(self):\n"
+    f"            assert value == 1, {MARKER!r}\n"
+    f"    check = lambda: {MARKER!r}\n"
+    "    return Local, check\n"
+    "class Holder:\n"
+    "    def method(self, value):\n"
+    f"        assert value == 1, {MARKER!r}\n"
+)
+
+
+def declared(contract, *, diagnostic=MARKER):
+    module = service()
+    return module.Inventory(name="probe", cases=(module.FaultCase(
+        name="declared", mutation=module.Mutation(path="module.py", old="VALUE = 1", new="VALUE = 2"),
+        selectors=(TARGET_SELECTOR, OTHER_SELECTOR), target=TARGET, diagnostic=diagnostic, unaffected=(OTHER,),
+        contract=contract),))
+
+
+def contract_root(tmp_path):
+    root = tmp_path / "candidate"
+    (root / "pkg").mkdir(parents=True)
+    (root / "pkg" / "__init__.py").write_text("")
+    (root / "pkg" / "contract_mod.py").write_text(CONTRACT_SOURCE)
+    return root
+
+
+def test_a_case_may_declare_the_contract_function_holding_its_check(tmp_path):
+    directory = inventory_directory(tmp_path / "inventories", inventories={"probe.json": {"schema_version": 1, "cases": [
+        raw_case("declared", contract="tests.hexagonal.contracts.probe:check"), raw_case("plain")]}})
+    first, second = load(directory).cases
+    assert first.contract == "tests.hexagonal.contracts.probe:check"
+    assert second.contract is None
+
+
+def test_the_tree_check_accepts_a_declared_function_holding_the_exact_assertion(tmp_path):
+    assert loader().check_inventory_tree(declared("pkg.contract_mod:check"), contract_root(tmp_path)) is None
+
+
+@pytest.mark.parametrize("contract,code", [
+    ("pkg.absent_mod:check", "contract_not_found"),
+    ("pkg.contract_mod:absent", "contract_not_found"),
+    ("pkg.contract_mod:method", "contract_not_found"),
+    ("pkg.contract_mod:quiet", "diagnostic_not_in_contract"),
+    ("pkg.contract_mod:nested", "diagnostic_not_in_contract"),
+    ("pkg.contract_mod:scoped", "diagnostic_not_in_contract"),
+])
+def test_the_tree_check_refuses_a_declared_contract_it_cannot_find_or_that_lacks_the_assertion(tmp_path, contract,
+                                                                                                 code):
+    files = loader()
+    with pytest.raises(files.InventoryError) as raised:
+        files.check_inventory_tree(declared(contract), contract_root(tmp_path))
+    assert raised.value.code == code, (contract, raised.value.code)
+
+
+def test_the_tree_check_needs_the_exact_identifier_as_the_assertion_message(tmp_path):
+    files = loader()
+    with pytest.raises(files.InventoryError) as raised:
+        files.check_inventory_tree(declared("pkg.contract_mod:check", diagnostic="PLANTED_FAULT"), contract_root(tmp_path))
+    assert raised.value.code == "diagnostic_not_in_contract"
+
+
+def test_the_tree_check_leaves_cases_without_a_contract_to_the_standard_test(tmp_path):
+    module = service()
+    inventory = module.Inventory(name="probe", cases=(case("plain"),))
+    assert loader().check_inventory_tree(inventory, tmp_path) is None
+
+
+def _contract_repository(tmp_path):
+    repository = git_repository(tmp_path / "repo")
+    (repository / "module.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (repository / "contracts_probe.py").write_text(f"def check(value):\n    assert value == 1, {MARKER!r}\n",
+                                                   encoding="utf-8")
+    (repository / "test_probe.py").write_text(
+        "from module import VALUE\nfrom contracts_probe import check\n"
+        "def test_target():\n    check(VALUE)\n"
+        "def test_other():\n    assert True\n", encoding="utf-8")
+    return repository
+
+
+def _contract_cases(**contracts):
+    selectors = ["test_probe.py::test_target", "test_probe.py::test_other"]
+    cases = []
+    for name, (contract, expect) in contracts.items():
+        value = {"name": name, "mutation": {"path": "module.py", "old": "VALUE = 1", "new": "VALUE = 2"},
+                 "selectors": selectors, "target": "test_probe::test_target", "diagnostic": MARKER,
+                 "unaffected": ["test_probe::test_other"], "expect": expect}
+        if contract:
+            value["contract"] = contract
+        cases.append(value)
+    return cases
+
+
+def _probe_directory(tmp_path, cases):
+    return inventory_directory(tmp_path / "inventories", registry={"schema_version": 1, "inventories": {
+        "probe": {"file": "probe.json", "stages": ["manual"]}}},
+        inventories={"probe.json": {"schema_version": 1, "cases": cases}})
+
+
+def test_a_check_in_its_declared_contract_function_is_detected_and_an_undeclared_one_is_not(tmp_path):
+    """A real run: the same failing contract assertion is credited only when the case declares that function."""
+    repository = _contract_repository(tmp_path)
+    directory = _probe_directory(tmp_path, _contract_cases(declared=("contracts_probe:check", "detected"),
+                                                           undeclared=(None, "unrelated_failure")))
+    out = tmp_path / "out"
+    result = cli("--candidate", str(repository), "--out", str(out), "--registry-dir", str(directory),
+                 "--stage", "manual")
+    assert result.returncode == 0, (result.returncode, result.stdout[-800:], result.stderr[-800:])
+    report = json.loads((out / "suite.json").read_text())["inventories"]["probe"]
+    assert [(row["name"], row["classification"]) for row in report["results"]] == [
+        ("declared", "detected"), ("undeclared", "unrelated_failure")], report["results"]
+
+
+def test_an_unresolvable_declared_contract_exits_2_before_any_case_runs(tmp_path):
+    repository = _contract_repository(tmp_path)
+    directory = _probe_directory(tmp_path, _contract_cases(declared=("contracts_probe:absent", "detected")))
+    out = tmp_path / "out"
+    result = cli("--candidate", str(repository), "--out", str(out), "--registry-dir", str(directory),
+                 "--stage", "manual")
+    assert result.returncode == 2, (result.returncode, result.stdout[-500:], result.stderr[-500:])
+    assert "contract_not_found" in result.stdout + result.stderr
+    assert not out.exists() or not any(path.is_dir() for path in out.iterdir()), "no case ran"
+
+
 # The real registry ----------------------------------------------------------------------------------
 
 def _real():
@@ -336,7 +485,7 @@ def test_the_real_registry_holds_the_native_inventory_at_ci_and_faults_json_is_g
     assert not (ROOT / "scripts/verification/faults.json").exists(), "one source of cases: the registry"
 
 
-def test_the_native_inventory_is_todays_faults_json_verbatim():
+def test_the_native_inventory_is_todays_faults_json_with_standard_markers():
     import hashlib
     cases = json.loads((INVENTORIES / "native.json").read_text())["cases"]
     canonical = json.dumps(cases, sort_keys=True, separators=(",", ":")).encode()
@@ -362,12 +511,14 @@ def _test_source(target):
     return ast.get_source_segment(path.read_text(encoding="utf-8"), nodes[0])
 
 
-def test_every_registered_target_test_carries_its_diagnostic_text():
+def test_every_registered_case_carries_its_diagnostic_text_where_it_asserts():
+    """In the target test, or in the contract function the case declares."""
     _, inventories = _real()
     for name, inventory in inventories.items():
         for fault in inventory.cases:
             assert fault.target in {module_form(selector) for selector in fault.selectors}, (name, fault.name)
-            assert fault.diagnostic in _test_source(fault.target), (name, fault.name, fault.diagnostic)
+            site = fault.contract.replace(":", "::", 1) if fault.contract else fault.target
+            assert fault.diagnostic in _test_source(site), (name, fault.name, site, fault.diagnostic)
 
 
 def test_the_migrated_native_inventory_gives_todays_verdicts_on_this_candidate(tmp_path):
@@ -414,7 +565,7 @@ def _canonical_sha256(name):
 
 def test_the_real_registry_holds_native_work_and_state_at_ci_in_that_order():
     registry, inventories = _real()
-    assert list(registry.items()) == [("native", ("ci",)), ("work", ("ci",)), ("state", ("ci",))], registry
+    assert list(registry.items())[:3] == [("native", ("ci",)), ("work", ("ci",)), ("state", ("ci",))], registry
     assert tuple(case.name for case in inventories["state"].cases) == STATE
     assert tuple(case.name for case in inventories["work"].cases) == WORK
 
@@ -437,12 +588,271 @@ def test_the_work_inventory_is_the_old_work_cases_split_by_store():
     assert _canonical_sha256("work") == WORK_CASES_SHA256
 
 
+_RECOVERY_TESTS = "tests.hexagonal.test_recovery"
+_RECOVERY_E2E = "tests.hexagonal.test_recovery_end_to_end"
+_RECOVERY_CONTRACT = "tests.hexagonal.contracts.recovery"
+_SERVER, _LIFECYCLE = "xorchestrate/server.py", "xorchestrate/session_lifecycle.py"
+_MANUAL = "manual_policy_reconnects_nothing_and_reconciles_what_cannot_reconnect"
+_DEFAULT = "default_policy_recovers_from_durable_state_alone"
+
+
+def _scenario(name):
+    return f"{_RECOVERY_TESTS}::test_recovery_meets_the_contract[{name}]"
+
+
+RECOVERY = (
+    # name, mutated file, target, diagnostic, declared contract function, unaffected neighbour
+    ("recovery-policy-ignored", _SERVER, _scenario(_MANUAL), "RECOVERY_MANUAL_POLICY_RECONNECTS_NOTHING",
+     f"{_RECOVERY_CONTRACT}:{_MANUAL}", _scenario(_DEFAULT)),
+    ("manual-leaves-dead-sessions-active", _SERVER, _scenario(_MANUAL), "RECOVERY_MANUAL_RECONCILES_DEAD_SESSIONS",
+     f"{_RECOVERY_CONTRACT}:{_MANUAL}", _scenario("pending_effects_are_never_replayed")),
+    ("disconnect-reason-not-recorded", _LIFECYCLE, _scenario(_DEFAULT), "RECOVERY_DISCONNECT_REASON_RECORDED",
+     f"{_RECOVERY_CONTRACT}:{_DEFAULT}", _scenario("pending_effects_are_never_replayed")),
+    ("one-failure-stops-the-rest", _LIFECYCLE, _scenario("one_failure_stops_neither_the_others_nor_the_server"),
+     "RECOVERY_ONE_FAILURE_STOPS_NO_OTHER", f"{_RECOVERY_CONTRACT}:one_failure_stops_neither_the_others_nor_the_server",
+     _scenario("pending_effects_are_never_replayed")),
+    ("recover-ignores-caller-authority", _LIFECYCLE, _scenario("explicit_recover_acts_only_where_its_caller_is_authorised"),
+     "RECOVERY_RECOVER_RESPECTS_CALLER_AUTHORITY",
+     f"{_RECOVERY_CONTRACT}:explicit_recover_acts_only_where_its_caller_is_authorised",
+     _scenario("the_automatic_run_acts_as_the_runtime")),
+    ("up-never-starts-recovery", "xorchestrate/cli.py",
+     f"{_RECOVERY_E2E}::test_after_total_loss_the_default_policy_brings_the_session_back_without_a_call[detached-process]",
+     "RECOVERY_STARTS_ON_UP", None,
+     f"{_RECOVERY_E2E}::test_recovery_within_is_true_once_a_report_exists_and_nothing_runs"),
+    ("running-terminal-reopened", "xorchestrate/adapters/hosted.py",
+     f"{_RECOVERY_E2E}::test_a_server_only_crash_adopts_the_running_terminal_and_keeps_its_bridge_host[detached-process]",
+     "RECOVERY_ADOPTS_RUNNING_TERMINAL", None,
+     f"{_RECOVERY_E2E}::test_after_total_loss_the_default_policy_brings_the_session_back_without_a_call[detached-process]"),
+    ("recover-ignores-work-binding", _LIFECYCLE,
+     f"{_RECOVERY_TESTS}::test_an_explicit_recover_weighs_the_sessions_work_binding_for_the_caller",
+     "RECOVERY_RECOVER_WEIGHS_WORK_BINDING", None, _scenario("explicit_recover_acts_only_where_its_caller_is_authorised")),
+    ("shutdown-does-not-wait-for-recovery", _SERVER,
+     f"{_RECOVERY_TESTS}::test_a_server_interrupted_during_recovery_waits_for_the_session_in_hand_before_it_returns",
+     "RECOVERY_SERVE_LOOP_WAITS_FOR_RECOVERY", None,
+     f"{_RECOVERY_TESTS}::test_recovery_running_belongs_to_the_live_runtime_not_to_durable_state"),
+    ("recovery-takes-sessions-while-stopping", _LIFECYCLE,
+     f"{_RECOVERY_TESTS}::test_a_server_stopping_during_recovery_waits_for_the_session_in_hand_and_takes_no_more",
+     "RECOVERY_STOPPING_TAKES_NO_MORE_SESSIONS", None,
+     f"{_RECOVERY_TESTS}::test_recovery_running_belongs_to_the_live_runtime_not_to_durable_state"),
+    ("running-outlives-recovery", _LIFECYCLE,
+     f"{_RECOVERY_TESTS}::test_recovery_running_belongs_to_the_live_runtime_not_to_durable_state",
+     "RECOVERY_RUNNING_BELONGS_TO_LIVE_RUNTIME", None,
+     f"{_RECOVERY_TESTS}::test_an_explicit_recover_weighs_the_sessions_work_binding_for_the_caller"),
+    ("doctor-opens-unapproved-store", "xorchestrate/instance/doctor.py",
+     f"{_RECOVERY_TESTS}::test_doctor_does_not_open_a_built_in_store_of_unapproved_configuration",
+     "RECOVERY_DOCTOR_SKIPS_UNAPPROVED_STORE", None,
+     f"{_RECOVERY_TESTS}::test_doctor_never_imports_or_constructs_a_store_factory_for_its_recovery_check[approved]"),
+    ("doctor-constructs-store-factory", "xorchestrate/instance/doctor.py",
+     f"{_RECOVERY_TESTS}::test_doctor_never_imports_or_constructs_a_store_factory_for_its_recovery_check[approved]",
+     "RECOVERY_DOCTOR_NEVER_IMPORTS_STORE_FACTORY", None,
+     f"{_RECOVERY_TESTS}::test_doctor_never_imports_or_constructs_a_store_factory_for_its_recovery_check[unapproved]"),
+)
+"""The recovery area's planted faults (old faults 23-25 and 27-36; 26 dropped as an equivalent mutant)."""
+RECOVERY_MUTATIONS_SHA256 = "fd440a44eeb1a818a16ccb81f4fe7888dea9fe5459abc913c6999f2f41b92669"
+"""sha256 of the canonical JSON of the cases' mutation objects in order: each fault's file, anchor and replacement
+exactly as the old recovery fault script planted them."""
+
+
+def test_the_registry_holds_the_recovery_inventory_at_the_manual_stage():
+    """Converted old faults enter at the manual stage; promoting an inventory is an edit of the registry."""
+    registry, _ = _real()
+    assert list(registry)[3] == "recovery" and registry["recovery"] == ("manual",), registry
+
+
+def test_the_recovery_inventory_is_the_old_faults_with_standard_checks():
+    import hashlib
+    _, inventories = _real()
+    found = tuple((case.name, case.mutation.path, case.target, case.diagnostic, case.contract, case.unaffected)
+                  for case in inventories["recovery"].cases)
+    assert found == tuple((name, path, target, diagnostic, contract, (unaffected,))
+                          for name, path, target, diagnostic, contract, unaffected in RECOVERY), found
+    for fault in inventories["recovery"].cases:
+        assert {module_form(selector) for selector in fault.selectors} == {fault.target, *fault.unaffected}, fault.name
+        assert fault.expect == "detected", fault.name
+    mutations = json.loads((INVENTORIES / "recovery.json").read_text())["cases"]
+    canonical = json.dumps([item["mutation"] for item in mutations], sort_keys=True, separators=(",", ":"))
+    assert hashlib.sha256(canonical.encode()).hexdigest() == RECOVERY_MUTATIONS_SHA256
+
+
+_HOSTED_TESTS = "tests.hexagonal.test_hosted_sessions"
+_HOSTED_CONTRACT = "tests.hexagonal.contracts.hosted_sessions"
+
+
+def _hosted(host, scenario):
+    return f"{_HOSTED_TESTS}::test_hosted_sessions_meet_the_contract[{host}-{scenario}]"
+
+
+_UNBOUND = "without_a_bound_host_start_is_refused"
+HOSTED = (
+    # name, target scenario and host, diagnostic, unaffected scenario and host; every case declares its scenario
+    ("stop-removes-saved-state", ("detached-process", "stop_closes_the_terminal_keeps_the_state_and_resume_reopens_it"),
+     "HOSTED_STOP_KEEPS_PRIVATE_STATE", ("detached-process", "start_converses_and_detach_only_detaches")),
+    ("detach-closes-the-terminal", ("detached-process", "start_converses_and_detach_only_detaches"),
+     "HOSTED_DETACH_ONLY_DETACHES", ("detached-process", _UNBOUND)),
+    ("vanished-terminal-not-reopened",
+     ("detached-process", "reconnect_reopens_a_vanished_conversation_without_manual_cleanup"),
+     "HOSTED_RECONNECT_REOPENS_VANISHED", ("detached-process", _UNBOUND)),
+    ("unverified-cleanup-reported-verified", ("detached-process", "unverified_cleanup_is_reported_and_nothing_is_removed"),
+     "HOSTED_UNVERIFIED_CLEANUP_REPORTED", ("detached-process", _UNBOUND)),
+    ("failed-start-returns-terminal-output",
+     ("detached-process", "a_failed_start_keeps_its_output_private_and_says_where_the_log_is"),
+     "HOSTED_FAILED_START_KEEPS_OUTPUT_PRIVATE", ("detached-process", _UNBOUND)),
+    ("specification-on-command-line", ("detached-process", "the_specification_never_reaches_process_arguments"),
+     "HOSTED_SPECIFICATION_NEVER_IN_ARGUMENTS", ("detached-process", _UNBOUND)),
+)
+"""The hosted-session area's planted faults: old faults 15-17 and 19-21, all in xorchestrate/adapters/hosted.py.
+
+18 (an exited terminal reused) and 22 (an unbound driver starts anyway) are not converted: 18 shows only as
+session_start_failed, which a broken environment raises too, and 22 only as an uncoded crash, never a start.
+16's planted close no longer adopts the terminal first, since that adopt was refused before anything closed."""
+HOSTED_MUTATIONS_SHA256 = "63f187a5c89c25c9652cb8300924790847b0cbf59cb1864b4c89e66f4658fe99"
+"""sha256 of the canonical JSON of the cases' mutation objects in order: the old hosted fault script's, with 16's
+adopt line removed."""
+
+
+def test_the_registry_holds_the_hosted_inventory_at_the_manual_stage_after_recovery():
+    """Converted old faults enter at the manual stage; promoting an inventory is an edit of the registry."""
+    registry, _ = _real()
+    assert list(registry)[4] == "hosted" and registry["hosted"] == ("manual",), registry
+
+
+def test_the_hosted_inventory_is_the_old_faults_with_standard_checks():
+    import hashlib
+    _, inventories = _real()
+    found = tuple((case.name, case.mutation.path, case.target, case.diagnostic, case.contract, case.unaffected)
+                  for case in inventories["hosted"].cases)
+    expected = tuple((name, "xorchestrate/adapters/hosted.py", _hosted(*target), diagnostic,
+                      f"{_HOSTED_CONTRACT}:{target[1]}", (_hosted(*unaffected),))
+                     for name, target, diagnostic, unaffected in HOSTED)
+    assert found == expected, found
+    for fault in inventories["hosted"].cases:
+        assert {module_form(selector) for selector in fault.selectors} == {fault.target, *fault.unaffected}, fault.name
+        assert fault.expect == "detected", fault.name
+    mutations = json.loads((INVENTORIES / "hosted.json").read_text())["cases"]
+    canonical = json.dumps([item["mutation"] for item in mutations], sort_keys=True, separators=(",", ":"))
+    assert hashlib.sha256(canonical.encode()).hexdigest() == HOSTED_MUTATIONS_SHA256
+
+
+_SERVER_TESTS = "tests.hexagonal.test_project_server"
+_HOST_CONTRACT_TEST = "tests.hexagonal.test_terminal_host::test_adapters_meet_the_contract"
+_HOST_CONTRACT = "tests.hexagonal.contracts.terminal_host"
+_ENDING = f"{_SERVER_TESTS}::test_down_lets_a_stopped_servers_process_end_on_its_own"
+_TOTAL_LOSS = f"{_SERVER_TESTS}::test_total_loss_never_blocks_status_doctor_down_or_the_next_up"
+_INVENTORY = "inventory_sees_everything_and_takes_nothing"
+_SWEEP = "sweep_removes_only_exited_terminals_nobody_here_holds"
+PROJECT_SERVER = (
+    # name, mutated file, target, diagnostic, declared contract function, unaffected neighbour
+    ("down-closes-an-ending-server", "xorchestrate/cli.py", f"{_ENDING}[detached-process]",
+     "PROJECT_SERVER_DOWN_LETS_AN_ENDING_SERVER_FINISH", None, f"{_TOTAL_LOSS}[detached-process]"),
+    ("inventory-claims-every-terminal-held", "xorchestrate/adapters/tmux.py",
+     f"{_HOST_CONTRACT_TEST}[multiplexer-surviving-{_INVENTORY}]", "TERMINAL_HOST_INVENTORY_REPORTS_WHO_HOLDS",
+     f"{_HOST_CONTRACT}:{_INVENTORY}", f"{_HOST_CONTRACT_TEST}[detached-process-surviving-{_INVENTORY}]"),
+    ("sweep-removes-running-terminals", "xorchestrate/adapters/tmux.py",
+     f"{_HOST_CONTRACT_TEST}[multiplexer-surviving-{_SWEEP}]", "TERMINAL_HOST_SWEEP_REMOVES_ONLY_EXITED_ORPHANS",
+     f"{_HOST_CONTRACT}:{_SWEEP}", f"{_HOST_CONTRACT_TEST}[detached-process-surviving-{_SWEEP}]"),
+    ("lost-terminal-record-blocks-the-project", "xorchestrate/cli.py", f"{_TOTAL_LOSS}[detached-process]",
+     "PROJECT_SERVER_LOST_TERMINAL_RECORD_NEVER_BLOCKS", None,
+     f"{_SERVER_TESTS}::test_down_whose_client_gave_up_still_stops_and_status_never_stops"),
+)
+"""The project-server area's planted faults (old faults 1-4). The lost-record case credits only the host's
+unrecoverable-terminal refusals in status, never another terminal-host error."""
+PROJECT_SERVER_MUTATIONS_SHA256 = "6522b3c5c7d842141942ad8924a04ea1c3aaf4c360fcaef5281b5201ad906f58"
+"""sha256 of the canonical JSON of the cases' mutation objects in order, as the old project-server fault script
+planted them."""
+
+
+def test_the_registry_holds_the_project_server_inventory_at_the_manual_stage_after_hosted():
+    registry, _ = _real()
+    assert list(registry)[5] == "project-server" and registry["project-server"] == ("manual",), registry
+
+
+def test_the_project_server_inventory_is_the_old_faults_with_standard_checks():
+    import hashlib
+    _, inventories = _real()
+    found = tuple((case.name, case.mutation.path, case.target, case.diagnostic, case.contract, case.unaffected)
+                  for case in inventories["project-server"].cases)
+    assert found == tuple((name, path, target, diagnostic, contract, (unaffected,))
+                          for name, path, target, diagnostic, contract, unaffected in PROJECT_SERVER), found
+    for fault in inventories["project-server"].cases:
+        assert {module_form(selector) for selector in fault.selectors} == {fault.target, *fault.unaffected}, fault.name
+        assert fault.expect == "detected", fault.name
+    mutations = json.loads((INVENTORIES / "project-server.json").read_text())["cases"]
+    canonical = json.dumps([item["mutation"] for item in mutations], sort_keys=True, separators=(",", ":"))
+    assert hashlib.sha256(canonical.encode()).hexdigest() == PROJECT_SERVER_MUTATIONS_SHA256
+
+
+_LIFECYCLE_TESTS = "tests.hexagonal.test_acceptance_lifecycle::"
+_TERMINALS_TESTS = "tests.hexagonal.test_managed_terminals::"
+_ENTRYPOINT_TESTS = "tests.hexagonal.test_testkit_entrypoint::"
+_WORKFLOW_TESTS = "tests.hexagonal.test_managed_workflow::"
+_WORKER = _LIFECYCLE_TESTS + "test_the_worker_never_sees_the_controllers_multiplexer_markers"
+_NO_FALLBACK = _LIFECYCLE_TESTS + "test_an_unready_default_host_is_a_setup_error_never_a_silent_fallback"
+_SCHEMA = _TERMINALS_TESTS + "test_host_descriptors_are_schema_two_and_older_ones_are_refused_with_a_reason"
+_PLANTED = _TERMINALS_TESTS + "test_a_planted_descriptor_is_neither_offered_nor_run"
+_PLAN = _ENTRYPOINT_TESTS + "test_checks_plan_selects_declared_family_and_retains_inventory"
+_ENDPOINT = _WORKFLOW_TESTS + "test_an_endpoint_named_in_the_plan_is_removed_only_when_it_is_the_runs_own"
+TESTKIT = (
+    # name, mutated file, target, diagnostic, unaffected neighbour; no case declares a contract
+    ("worker-context-not-set", "scripts/testkit/adapters/supervised_run.py", _WORKER,
+     "TESTKIT_WORKER_KNOWS_ITS_TERMINAL_HOST", _NO_FALLBACK),
+    ("schema-one-descriptors-accepted", "scripts/testkit/adapters/terminals.py", _SCHEMA,
+     "TESTKIT_OLDER_DESCRIPTORS_ARE_REFUSED_WITH_A_REASON", _PLANTED),
+    ("attach-runs-the-descriptors-argv", "scripts/testkit/adapters/terminals.py", _PLANTED,
+     "TESTKIT_DESCRIPTOR_ARGV_IS_NEVER_RUN", _SCHEMA),
+    ("placement-not-checked", "scripts/testkit/adapters/terminals.py", _PLANTED,
+     "TESTKIT_DESCRIPTOR_PLACEMENT_IS_CHECKED", _SCHEMA),
+    ("readiness-keeps-the-old-name", "scripts/testkit/adapters/terminal_selection.py",
+     _ENTRYPOINT_TESTS + "test_native_doctor_checks_inputs_without_authentication_or_process_launch",
+     "TESTKIT_READINESS_NAMES_THE_TERMINAL_HOST", _PLAN),
+    ("default-keeps-the-product-fallback", "scripts/testkit/adapters/terminal_selection.py", _NO_FALLBACK,
+     "TESTKIT_DEFAULT_HOST_HAS_NO_FALLBACK", _WORKER),
+    ("timeout-interrupts-the-whole-group", "scripts/testkit/adapters/supervised_run.py",
+     _LIFECYCLE_TESTS + "test_a_timed_out_worker_alone_is_asked_to_stop_and_its_last_words_are_captured",
+     "TESTKIT_TIMEOUT_STOPS_THE_WORKER_ALONE_FIRST", _WORKER),
+    ("endpoint-removed-without-checks", "scripts/testkit/operator_composition.py", _ENDPOINT,
+     "TESTKIT_FOREIGN_ENDPOINTS_ARE_NEVER_REMOVED", _PLAN),
+    ("keep-allowed-in-the-foreground", "scripts/testkit/operator_composition.py",
+     _WORKFLOW_TESTS + "test_kept_terminals_outlive_a_killed_supervisor_until_close_adopts_and_ends_them",
+     "TESTKIT_KEEP_IS_REFUSED_IN_THE_FOREGROUND", _ENDPOINT),
+)
+"""The test kit's planted faults: old faults 5-12 and 14 (13 dropped as escaping its selection). Each credits only
+its fault's own symptom: the worker's missing host name, the schema-1 refusal's reason, a created marker, an old
+readiness name, a signalled child, a removed foreign endpoint or an accepted keep."""
+TESTKIT_MUTATIONS_SHA256 = "abb8b4ef2e43a001ed30b679c2f7d621d331610d008e9120c1ea36ce2411ac4d"
+"""sha256 of the canonical JSON of the cases' mutation objects in order, as the old test-kit fault script planted
+them."""
+
+
+def test_the_registry_holds_the_testkit_inventory_at_the_manual_stage_after_project_server():
+    registry, _ = _real()
+    assert list(registry)[6] == "testkit" and registry["testkit"] == ("manual",), registry
+
+
+def test_the_testkit_inventory_is_the_old_faults_with_standard_checks():
+    import hashlib
+    _, inventories = _real()
+    found = tuple((case.name, case.mutation.path, case.target, case.diagnostic, case.contract, case.unaffected)
+                  for case in inventories["testkit"].cases)
+    assert found == tuple((name, path, target, diagnostic, None, (unaffected,))
+                          for name, path, target, diagnostic, unaffected in TESTKIT), found
+    for fault in inventories["testkit"].cases:
+        assert {module_form(selector) for selector in fault.selectors} == {fault.target, *fault.unaffected}, fault.name
+        assert fault.expect == "detected", fault.name
+    mutations = json.loads((INVENTORIES / "testkit.json").read_text())["cases"]
+    canonical = json.dumps([item["mutation"] for item in mutations], sort_keys=True, separators=(",", ":"))
+    assert hashlib.sha256(canonical.encode()).hexdigest() == TESTKIT_MUTATIONS_SHA256
+
+
 @pytest.mark.parametrize("name,expected", ids=["state", "work"], argvalues=[
     ("state", tuple((name, "detected") for name in STATE[:-1]) + (("unrelated-error-control", "unrelated_failure"),)),
     ("work", tuple((name, "detected") for name in WORK)),
 ])
 def test_the_migrated_inventory_gives_the_old_verdicts_on_this_candidate(tmp_path, name, expected):
-    """Parity: a real run through the service classifies every case as the old entry point did."""
+    """Parity: a real run through the service classifies every case as the old entry point did.
+
+    Real runs are for inventories registered at ci; an inventory at another stage keeps only the cheap tree
+    checks in this module (schema, exact anchors, target among the selectors, one assert site where credited).
+    """
     trials = __import__("scripts.verification.__main__", fromlist=["run_trial"])
     from scripts.testkit.adapters.evidence import candidate_identity
     _, inventories = _real()

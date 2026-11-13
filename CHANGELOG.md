@@ -13,6 +13,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   order for exchange, held-work and native-completion proof. Civil-clock changes
   and report-list reordering no longer create or reverse that proof. See
   [retained observation order](docs/testing-framework.md#retained-observation-order).
+- Shared native observation waits use injectable monotonic budgets and clamp
+  polling sleeps to the remaining allowance. `XO_TEST_TIMEOUT_SCALE` optionally
+  expands classified harness allowances; protected product/fault durations stay
+  unchanged. Timeout diagnostics retain the effective budget and retry counts.
 - Acceptance and tool evaluation share semantic provider-result decoding while
   preserving the exact raw evidence. Direct measurements can include business
   `content`; MCP assessment JSON text with duplicate fields is now refused.
@@ -100,6 +104,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Fixed
 
+- Routed delivery selects the latest session by its durable creation event order,
+  preserving selection across equal timestamps, clock rollback and SQLite reopen.
+  Sessions without creation events retain an explicit
+  [legacy fallback](docs/native-sessions.md#session-selection-for-routed-delivery).
 - A failed bridge frame write closes the connection before another writer can
   append to the unfinished frame. Awaiting requests retain unknown outcomes;
   response timeouts after complete writes still allow observation and control.
@@ -127,6 +135,11 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Added
 
+- Optional developer settings for contributor tools: one declared table of
+  `XORCHESTRATE_DEV_*` keys read from flags, the environment, a git-ignored
+  `.devtools.env` and a user file, with `python3 -m scripts.devconfig show`
+  naming each value's source. The product does not read them. See
+  [developer settings](docs/agent-workflow.md#developer-settings).
 - Calibration fault cases are registered data: one service judges any inventory
   under `scripts/verification/inventories/`, selected by name or by stage (`ci`,
   `pre-draft`, `manual`). The native faults moved there unchanged. See
@@ -139,6 +152,25 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   same service; each work fault now runs once per storage adapter. Their
   separate entry points are gone: run
   `python -m scripts.verification.calibrate_suite --inventory state` (or `work`).
+- A calibration case may declare the contract function that holds its check
+  (`"contract": "module:function"`); an assertion there is credited only for that
+  case. Calibrated checks follow one standard: an UPPER_SNAKE ID asserted at one
+  site, with `refusal(call, code)` for refusal guarantees. Three native
+  diagnostics are renamed to UPPER_SNAKE.
+- The recovery area's planted faults are calibrated by a `recovery` inventory
+  registered at the `manual` stage: thirteen cases, five credited in their
+  declared recovery contract.
+- `python3 -m scripts.testkit run --suite calibration` takes `--inventory NAME`
+  (repeatable) or `--stage ci|pre-draft|manual`; the default still runs the
+  inventories registered at `ci`.
+- The hosted-session area's planted faults are calibrated by a `hosted`
+  inventory at the `manual` stage: six cases, each credited in the hosted
+  session contract scenario it declares.
+- The project-server area's planted faults are calibrated by a `project-server`
+  inventory at the `manual` stage: four cases, two credited in the terminal host
+  contract they declare.
+- The test kit's own planted faults are calibrated by a `testkit` inventory at
+  the `manual` stage: nine cases, each credited in its target test.
 - Jev now asks evidence-addressed atomic questions at the source stage and adds
   optional post-test guarantee support and failure triage. Current candidate and
   lane identity, executed inventories and exact failure cases bind the advice;
@@ -146,11 +178,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   CI qualification stays unchanged when a lane or the provider fails.
 
 - Shared development skills for agents working on this repository (run-checks,
-  red-first, pr-ready, crash-recovery, team-roles, serena) in `.agents/skills`,
+  red-first, pr-ready, serena) in `.agents/skills`,
   mirrored for Claude Code through relative symlinks in `.claude/skills`. They
   point at the existing guides and at the new
-  [agent workflow](docs/agent-workflow.md), which covers team roles, crash
-  recovery for contributors and using Serena. A Serena project configuration
+  [agent workflow](docs/agent-workflow.md). A Serena project configuration
   (`.serena/project.yml`, python language server, tools interface) is
   included; connecting Serena stays a per-machine step.
 - `hosted` session adapter: a native session runs in a bridge host that
