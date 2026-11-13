@@ -6,6 +6,7 @@ registry directory cannot supply a weaker schema) and builds inventory values. I
 """
 from __future__ import annotations
 
+import ast
 import json
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -92,7 +93,7 @@ def load_inventory(directory: Path, name: str) -> Inventory:
         cases.append(FaultCase(name=case["name"], mutation=Mutation(**case["mutation"]),
                                selectors=tuple(case["selectors"]), target=case["target"],
                                diagnostic=case["diagnostic"], unaffected=tuple(case["unaffected"]),
-                               expect=case.get("expect", "detected")))
+                               expect=case.get("expect", "detected"), contract=case.get("contract")))
     return Inventory(name=name, cases=tuple(cases))
 
 
@@ -106,3 +107,54 @@ def select(registry: Mapping[str, Sequence[str]], *, names: Sequence[str] = (), 
         return tuple(dict.fromkeys(names))
     wanted = stage or DEFAULT_STAGE
     return tuple(name for name, stages in registry.items() if wanted in stages)
+
+
+def _contract_function(root: Path, contract: str):
+    """The top-level function a ``module:function`` contract names in the tree under ``root``, else None."""
+    module, _, name = contract.partition(":")
+    base = Path(root).joinpath(*module.split("."))
+    for path in (base.with_suffix(".py"), base / "__init__.py"):
+        if path.is_file():
+            try:
+                tree = ast.parse(path.read_text(encoding="utf-8"))
+            except (OSError, UnicodeError, SyntaxError):
+                return None
+            return next((node for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                         and node.name == name), None)
+    return None
+
+
+NESTED_SCOPES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.ClassDef)
+
+
+def _own_nodes(function):
+    """The function's own statements and expressions, not those of scopes nested inside it.
+
+    The observer credits an assertion raised in the contract function's own code only, so an assertion in
+    a nested function, lambda or class must not satisfy the tree check either.
+    """
+    pending = list(ast.iter_child_nodes(function))
+    while pending:
+        node = pending.pop()
+        yield node
+        if not isinstance(node, NESTED_SCOPES):
+            pending.extend(ast.iter_child_nodes(node))
+
+
+def check_inventory_tree(inventory: Inventory, root: Path) -> None:
+    """Refuse a case whose declared contract function is absent or does not assert its diagnostic.
+
+    A declared contract must be a top-level function in the candidate tree holding ``assert <condition>,
+    "<diagnostic>"`` with exactly that constant message. Cases without a contract are left to the
+    repository's standard test, which finds each diagnostic's one assertion in its target test.
+    """
+    for case in inventory.cases:
+        if case.contract is None:
+            continue
+        function = _contract_function(root, case.contract)
+        label = inventory.name + "/" + case.name
+        if function is None:
+            raise InventoryError("contract_not_found", label + " declares " + case.contract)
+        if not any(isinstance(node, ast.Assert) and isinstance(node.msg, ast.Constant)
+                   and node.msg.value == case.diagnostic for node in _own_nodes(function)):
+            raise InventoryError("diagnostic_not_in_contract", label)

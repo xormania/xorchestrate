@@ -18,10 +18,13 @@ from scripts.verification.calibration import classify
 from tests.hexagonal.support.fault_calibration import (
     CANDIDATE,
     INVENTORIES,
+    MARKER,
     OTHER,
+    OTHER_SELECTOR,
     OUTCOMES,
     ROOT,
     TARGET,
+    TARGET_SELECTOR,
     Recorder,
     case,
     inventory_directory,
@@ -37,8 +40,9 @@ from tests.hexagonal.support.verification_evidence import repository as git_repo
 NATIVE = ("grok-native-observation", "requested-selection", "claude-native-hook", "external-detach",
           "crash-uncertainty", "autonomous-callback", "delivery-uncertainty")
 """The seven cases of scripts/verification/faults.json at 66390e7, in order; all were detected there."""
-NATIVE_CASES_SHA256 = "dc12f9a24147b6473c508238547c188abd01a7afbc4bc5ce1768aa811d190fec"
-"""sha256 of the canonical JSON (sorted keys, compact) of that file's case list."""
+NATIVE_CASES_SHA256 = "25013556c9d11fc3c59947d641a96521b95686e767b4154970175df058a89a44"
+"""sha256 of the canonical JSON (sorted keys, compact) of that file's case list, with the three lowercase
+diagnostics renamed to UPPER_SNAKE under the calibrated-check standard and nothing else changed."""
 
 
 def run(cases, records, *, name="probe", candidate=CANDIDATE):
@@ -288,6 +292,14 @@ CASE_FAULTS = {
     "unknown-expectation": [raw_case(expect="skipped")],
     "repeated-name": [raw_case("same"), raw_case("same")],
     "bad-name": [raw_case("Has Spaces")],
+    "contract-without-function": [raw_case(contract="tests.hexagonal.contracts.probe")],
+    "contract-two-functions": [raw_case(contract="tests.hexagonal.contracts.probe:check:other")],
+    "contract-bad-module": [raw_case(contract="1probe:check")],
+    "contract-empty": [raw_case(contract="")],
+    "contract-not-text": [raw_case(contract=["probe", "check"])],
+    "contract-empty-module-part": [raw_case(contract="tests..probe:check")],
+    "contract-trailing-dot": [raw_case(contract="tests.probe.:check")],
+    "contract-leading-dot": [raw_case(contract=".probe:check")],
 }
 
 
@@ -321,6 +333,143 @@ def test_select_defaults_to_ci_and_follows_stage_or_the_names_given():
     assert raised.value.code == "unknown_inventory"
 
 
+# Checks declared in a contract function -------------------------------------------------------------
+
+CONTRACT_SOURCE = (
+    "def check(value):\n"
+    f"    assert value == 1, {MARKER!r}\n"
+    "def quiet(value):\n"
+    f"    # {MARKER}\n"
+    f"    return {MARKER!r}\n"
+    "def nested(value):\n"
+    "    def inner():\n"
+    f"        assert value == 1, {MARKER!r}\n"
+    "    return inner\n"
+    "def scoped(value):\n"
+    "    class Local:\n"
+    "        def method(self):\n"
+    f"            assert value == 1, {MARKER!r}\n"
+    f"    check = lambda: {MARKER!r}\n"
+    "    return Local, check\n"
+    "class Holder:\n"
+    "    def method(self, value):\n"
+    f"        assert value == 1, {MARKER!r}\n"
+)
+
+
+def declared(contract, *, diagnostic=MARKER):
+    module = service()
+    return module.Inventory(name="probe", cases=(module.FaultCase(
+        name="declared", mutation=module.Mutation(path="module.py", old="VALUE = 1", new="VALUE = 2"),
+        selectors=(TARGET_SELECTOR, OTHER_SELECTOR), target=TARGET, diagnostic=diagnostic, unaffected=(OTHER,),
+        contract=contract),))
+
+
+def contract_root(tmp_path):
+    root = tmp_path / "candidate"
+    (root / "pkg").mkdir(parents=True)
+    (root / "pkg" / "__init__.py").write_text("")
+    (root / "pkg" / "contract_mod.py").write_text(CONTRACT_SOURCE)
+    return root
+
+
+def test_a_case_may_declare_the_contract_function_holding_its_check(tmp_path):
+    directory = inventory_directory(tmp_path / "inventories", inventories={"probe.json": {"schema_version": 1, "cases": [
+        raw_case("declared", contract="tests.hexagonal.contracts.probe:check"), raw_case("plain")]}})
+    first, second = load(directory).cases
+    assert first.contract == "tests.hexagonal.contracts.probe:check"
+    assert second.contract is None
+
+
+def test_the_tree_check_accepts_a_declared_function_holding_the_exact_assertion(tmp_path):
+    assert loader().check_inventory_tree(declared("pkg.contract_mod:check"), contract_root(tmp_path)) is None
+
+
+@pytest.mark.parametrize("contract,code", [
+    ("pkg.absent_mod:check", "contract_not_found"),
+    ("pkg.contract_mod:absent", "contract_not_found"),
+    ("pkg.contract_mod:method", "contract_not_found"),
+    ("pkg.contract_mod:quiet", "diagnostic_not_in_contract"),
+    ("pkg.contract_mod:nested", "diagnostic_not_in_contract"),
+    ("pkg.contract_mod:scoped", "diagnostic_not_in_contract"),
+])
+def test_the_tree_check_refuses_a_declared_contract_it_cannot_find_or_that_lacks_the_assertion(tmp_path, contract,
+                                                                                                 code):
+    files = loader()
+    with pytest.raises(files.InventoryError) as raised:
+        files.check_inventory_tree(declared(contract), contract_root(tmp_path))
+    assert raised.value.code == code, (contract, raised.value.code)
+
+
+def test_the_tree_check_needs_the_exact_identifier_as_the_assertion_message(tmp_path):
+    files = loader()
+    with pytest.raises(files.InventoryError) as raised:
+        files.check_inventory_tree(declared("pkg.contract_mod:check", diagnostic="PLANTED_FAULT"), contract_root(tmp_path))
+    assert raised.value.code == "diagnostic_not_in_contract"
+
+
+def test_the_tree_check_leaves_cases_without_a_contract_to_the_standard_test(tmp_path):
+    module = service()
+    inventory = module.Inventory(name="probe", cases=(case("plain"),))
+    assert loader().check_inventory_tree(inventory, tmp_path) is None
+
+
+def _contract_repository(tmp_path):
+    repository = git_repository(tmp_path / "repo")
+    (repository / "module.py").write_text("VALUE = 1\n", encoding="utf-8")
+    (repository / "contracts_probe.py").write_text(f"def check(value):\n    assert value == 1, {MARKER!r}\n",
+                                                   encoding="utf-8")
+    (repository / "test_probe.py").write_text(
+        "from module import VALUE\nfrom contracts_probe import check\n"
+        "def test_target():\n    check(VALUE)\n"
+        "def test_other():\n    assert True\n", encoding="utf-8")
+    return repository
+
+
+def _contract_cases(**contracts):
+    selectors = ["test_probe.py::test_target", "test_probe.py::test_other"]
+    cases = []
+    for name, (contract, expect) in contracts.items():
+        value = {"name": name, "mutation": {"path": "module.py", "old": "VALUE = 1", "new": "VALUE = 2"},
+                 "selectors": selectors, "target": "test_probe::test_target", "diagnostic": MARKER,
+                 "unaffected": ["test_probe::test_other"], "expect": expect}
+        if contract:
+            value["contract"] = contract
+        cases.append(value)
+    return cases
+
+
+def _probe_directory(tmp_path, cases):
+    return inventory_directory(tmp_path / "inventories", registry={"schema_version": 1, "inventories": {
+        "probe": {"file": "probe.json", "stages": ["manual"]}}},
+        inventories={"probe.json": {"schema_version": 1, "cases": cases}})
+
+
+def test_a_check_in_its_declared_contract_function_is_detected_and_an_undeclared_one_is_not(tmp_path):
+    """A real run: the same failing contract assertion is credited only when the case declares that function."""
+    repository = _contract_repository(tmp_path)
+    directory = _probe_directory(tmp_path, _contract_cases(declared=("contracts_probe:check", "detected"),
+                                                           undeclared=(None, "unrelated_failure")))
+    out = tmp_path / "out"
+    result = cli("--candidate", str(repository), "--out", str(out), "--registry-dir", str(directory),
+                 "--stage", "manual")
+    assert result.returncode == 0, (result.returncode, result.stdout[-800:], result.stderr[-800:])
+    report = json.loads((out / "suite.json").read_text())["inventories"]["probe"]
+    assert [(row["name"], row["classification"]) for row in report["results"]] == [
+        ("declared", "detected"), ("undeclared", "unrelated_failure")], report["results"]
+
+
+def test_an_unresolvable_declared_contract_exits_2_before_any_case_runs(tmp_path):
+    repository = _contract_repository(tmp_path)
+    directory = _probe_directory(tmp_path, _contract_cases(declared=("contracts_probe:absent", "detected")))
+    out = tmp_path / "out"
+    result = cli("--candidate", str(repository), "--out", str(out), "--registry-dir", str(directory),
+                 "--stage", "manual")
+    assert result.returncode == 2, (result.returncode, result.stdout[-500:], result.stderr[-500:])
+    assert "contract_not_found" in result.stdout + result.stderr
+    assert not out.exists() or not any(path.is_dir() for path in out.iterdir()), "no case ran"
+
+
 # The real registry ----------------------------------------------------------------------------------
 
 def _real():
@@ -336,7 +485,7 @@ def test_the_real_registry_holds_the_native_inventory_at_ci_and_faults_json_is_g
     assert not (ROOT / "scripts/verification/faults.json").exists(), "one source of cases: the registry"
 
 
-def test_the_native_inventory_is_todays_faults_json_verbatim():
+def test_the_native_inventory_is_todays_faults_json_with_standard_markers():
     import hashlib
     cases = json.loads((INVENTORIES / "native.json").read_text())["cases"]
     canonical = json.dumps(cases, sort_keys=True, separators=(",", ":")).encode()
