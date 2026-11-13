@@ -704,3 +704,21 @@ def test_a_checkout_without_an_index_has_nothing_tracked(world, monkeypatch, tmp
     (repo / ".devtools.env").write_text(REPO_VALUE)
     config = by_files(world, monkeypatch, repo)
     assert config.get("XORCHESTRATE_DEV_SERENA_VERSION") == "9.9.repo" and skipped(config) == []
+
+
+def test_show_and_get_outside_a_repository_report_the_skipped_file_and_still_read_the_user_file(
+        world, monkeypatch, tmp_path):
+    plain = tmp_path / "plain-dir"
+    plain.mkdir()
+    (plain / ".devtools.env").write_text(REPO_VALUE)
+    world.user_file(USER_VALUE)
+    with no_processes(monkeypatch):
+        code, output = world.cli("show", cwd=plain)
+    assert code == 0, output
+    lines = [line for line in output.splitlines() if line.startswith(f"{SKIPPED}: ")]
+    assert len(lines) == 1, output
+    assert lines[0].endswith("(no repository); the repository settings file was not read"), lines[0]
+    assert any(line.startswith("XORCHESTRATE_DEV_SERENA_CONTEXT=user-context") for line in output.splitlines())
+    assert any(line.startswith("XORCHESTRATE_DEV_SERENA_VERSION=2.1.0") for line in output.splitlines())
+    with no_processes(monkeypatch):
+        assert world.cli("get", "XORCHESTRATE_DEV_SERENA_CONTEXT", cwd=plain) == (0, "user-context\n")
