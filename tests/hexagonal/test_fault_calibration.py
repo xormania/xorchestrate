@@ -653,9 +653,10 @@ RECOVERY_MUTATIONS_SHA256 = "fd440a44eeb1a818a16ccb81f4fe7888dea9fe5459abc913c69
 exactly as the old recovery fault script planted them."""
 
 
-def test_the_registry_holds_the_recovery_inventory_at_ci():
+def test_the_registry_holds_the_recovery_inventory_at_the_manual_stage():
+    """Converted old faults enter at the manual stage; promoting an inventory is an edit of the registry."""
     registry, _ = _real()
-    assert list(registry)[-1] == "recovery" and registry["recovery"] == ("ci",), registry
+    assert list(registry)[3] == "recovery" and registry["recovery"] == ("manual",), registry
 
 
 def test_the_recovery_inventory_is_the_old_faults_with_standard_checks():
@@ -673,13 +674,16 @@ def test_the_recovery_inventory_is_the_old_faults_with_standard_checks():
     assert hashlib.sha256(canonical.encode()).hexdigest() == RECOVERY_MUTATIONS_SHA256
 
 
-@pytest.mark.parametrize("name,expected", ids=["state", "work", "recovery"], argvalues=[
+@pytest.mark.parametrize("name,expected", ids=["state", "work"], argvalues=[
     ("state", tuple((name, "detected") for name in STATE[:-1]) + (("unrelated-error-control", "unrelated_failure"),)),
     ("work", tuple((name, "detected") for name in WORK)),
-    ("recovery", tuple((row[0], "detected") for row in RECOVERY)),
 ])
 def test_the_migrated_inventory_gives_the_old_verdicts_on_this_candidate(tmp_path, name, expected):
-    """Parity: a real run through the service classifies every case as the old entry point did."""
+    """Parity: a real run through the service classifies every case as the old entry point did.
+
+    Real runs are for inventories registered at ci; an inventory at another stage keeps only the cheap tree
+    checks in this module (schema, exact anchors, target among the selectors, one assert site where credited).
+    """
     trials = __import__("scripts.verification.__main__", fromlist=["run_trial"])
     from scripts.testkit.adapters.evidence import candidate_identity
     _, inventories = _real()
@@ -755,8 +759,7 @@ def test_composition_builds_one_calibration_check_per_ci_registered_inventory(tm
               if item.name.endswith("-calibration")]
     ci = files.select(registry, stage="ci")
     assert [check.name for check in checks] == [f"{name}-calibration" for name in ci]
-    assert [check.name for check in checks] == ["native-calibration", "work-calibration", "state-calibration",
-                                                "recovery-calibration"]
+    assert [check.name for check in checks] == ["native-calibration", "work-calibration", "state-calibration"]
     entries = json.loads((INVENTORIES / "registry.json").read_text())["inventories"]
     for name, check in zip(ci, checks):
         assert check.argv == (sys.executable, "-m", "scripts.verification.calibrate_suite", "--candidate",
