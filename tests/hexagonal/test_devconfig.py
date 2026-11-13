@@ -575,7 +575,9 @@ def test_a_settings_file_tracked_by_git_is_refused(world):
     error = world.error()
     assert error.code == "ENV_FILE_TRACKED" and str(path) in str(error.detail), (error.code, error.detail)
     code, output = world.cli("show")
-    assert code == 2 and "ENV_FILE_TRACKED" in output, output
+    # show reads files only, and a tracked file is skipped there rather than refused.
+    assert code == 0 and any(line.startswith("REPO_FILE_SKIPPED: ") for line in output.splitlines()), output
+    assert "injected" not in output, "the tracked file was read"
 
 
 # Discovery by plain file reads: no process, same answers as git ---------------------------------------

@@ -19,7 +19,7 @@ import pytest
 
 from tests.hexagonal.contracts import devconfig as contract
 from tests.hexagonal.support.dev_defaults import SEAMS, accepts_dev, trusted_executable, trusted_file, with_dev
-from tests.hexagonal.support.devconfig import SettingsWorld, no_processes, resolved
+from tests.hexagonal.support.devconfig import SettingsWorld, no_processes
 from tests.hexagonal.support.git_repositories import REPOSITORY_NAME
 from tests.hexagonal.support.managed_profiles import ROOT, dev_shell_subject, profile_file, run_shell
 from tests.hexagonal.support.source_scan import imports, tracked
@@ -349,6 +349,12 @@ def test_the_live_testkit_guide_documents_the_new_default_and_the_precedence():
 
 # Loading settings for the kit starts no process ----------------------------------------------------
 
+def kit_section_view(config):
+    """What a load says about the test kit's own settings: their explained values and the warnings."""
+    lines = [line for line in config.explain() if line.split("=", 1)[0] in contract.SLICE_C]
+    return lines, list(config.warnings)
+
+
 def hermetic(monkeypatch, world, calls=None):
     """The kit's own settings lookup, run for real but against the throwaway repository and HOME only."""
     profiles = kit("adapters.profiles")
@@ -370,7 +376,7 @@ def test_the_kit_loads_developer_settings_without_starting_a_process(world, monk
     with no_processes(monkeypatch):
         loaded = kit("adapters.profiles").load_dev(repo)
     assert loaded is not None
-    assert resolved(loaded) == resolved(world.load(repo))
+    assert kit_section_view(loaded) == kit_section_view(world.load(repo)), "the kit reads only its own section"
     assert loaded.get(OUTPUT) == world.main / "kit-runs"
 
 
@@ -481,14 +487,28 @@ def test_the_doctor_command_hands_its_developer_settings_to_the_profile_doctor(w
     assert received == [loaded]
 
 
-def test_a_foreground_runs_report_file_carries_the_developer_settings(world, tmp_path, capsys):
+def test_a_foreground_runs_report_file_carries_the_developer_settings(world, tmp_path, capsys, monkeypatch):
     values = {TERMINAL_BINARY: trusted_executable(tmp_path / "terminal")}
     cli = kit("operator_cli")
     composition = kit("composition")
+    child_environments = []
+    real = composition.cache_environment
+
+    def recorded(root):
+        environment = real(root)
+        child_environments.append(environment)
+        return environment
+
+    monkeypatch.setattr(composition, "cache_environment", recorded)
     with_dev(cli.main, ["run", "--suite", "static", "--output", str(tmp_path / "runs")],
              direct_runner=composition.run, preflight=composition.preflight, dev=dev(world, **values))
     report, _ = last_json(capsys)
     on_disk = json.loads((Path(report["directory"]) / "report.json").read_text())
+    assert report["status"] == "passed" and on_disk["status"] == "passed", "the run's own checks failed"
+    assert child_environments, "the run never prepared its child commands' environment"
+    for environment in child_environments:
+        assert all(isinstance(name, str) and isinstance(value, str) for name, value in environment.items()), \
+            environment
     assert on_disk.get("environment", {}).get("dev_settings") == expected_dev_settings(values)
 
 
