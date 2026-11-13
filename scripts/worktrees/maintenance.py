@@ -170,11 +170,22 @@ class Maintenance:
         created = (self.repo.out(["reflog", "show", "--format=%H", f"refs/heads/{branch}", "--"]) or "").splitlines()
         return bool(created) and created[-1] != tip
 
+    def _on_first_parent_history(self, tip: str, base: str) -> bool:
+        """Whether ``tip`` is on the base's own line (a fast-forward or no work at all), not merged-in work.
+
+        Work merged through a merge commit is reached only through its second parent. A tip on the
+        base's first-parent line may be a fresh or merely advanced branch, so it never counts as merged.
+        Unknown counts as on the line (fail safe).
+        """
+        history = self.repo.out(["rev-list", "--first-parent", base])
+        return history is None or tip in history.split()
+
     def _merged(self, tree: Tree, base: str | None, offline: bool) -> bool:
         """Merged into the base with work of its own, or a pull request merged into the default branch."""
         if not tree.head:
             return False
-        if base and self.repo.is_ancestor(tree.head, base) and self._own_commits(tree.branch, tree.head):
+        if (base and self.repo.is_ancestor(tree.head, base) and self._own_commits(tree.branch, tree.head)
+                and not self._on_first_parent_history(tree.head, base)):
             return True
         if offline or not tree.branch:
             return False
