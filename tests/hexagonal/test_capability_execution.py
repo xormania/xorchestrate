@@ -4,6 +4,7 @@ import pytest
 
 from tests.hexagonal.contracts.capability_execution import (
     default_contract,
+    native_receipt_reconciliation_contract,
     query_authority_contract,
     query_contract,
     query_currentness_contract,
@@ -53,6 +54,10 @@ def test_trusted_policy_changes_cannot_reinterpret_retained_effects_as_fresh_que
 
 def test_receipt_local_settlement_failure_and_reconciliation_keep_payloads_ephemeral(store):
     receipt_settlement_contract(Subject(store, "receipt"))
+
+
+def test_native_receipt_reconciliation_returns_success_and_replays_without_payloads(store):
+    native_receipt_reconciliation_contract(Subject(store, "receipt"))
 
 
 @pytest.mark.parametrize("mode", ["journaled", "receipt"])

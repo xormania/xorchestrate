@@ -72,6 +72,9 @@ def receipt_failure_contract(subject, outcome, native=False):
     failure = subject.failure(lambda: subject.invoke(native=native))
     expected = {"unknown": "operation_unknown", "failed": "operation_failed", "completed": "result_unapplied"}
     assert failure["code"] == expected[outcome], "RECEIPT_MUST_PRESERVE_EFFECT_KNOWLEDGE"
+    operations = [row for row in subject.retained()["operation"] if row["action"] == "invoke"]
+    assert len(operations) == 1 and failure["details"].get("operation_id") == operations[0]["id"], \
+        "RECEIPT_FAILURE_MUST_IDENTIFY_ITS_RECONCILABLE_OPERATION"
     assert private_absent(failure), "RECEIPT_FAILURE_MUST_NOT_PUBLISH_RETAINED_PAYLOAD"
     assert private_absent(subject.retained()), "RECEIPT_FAILURE_MUST_NOT_RETAIN_PAYLOAD"
     subject.failure(lambda: subject.invoke(native=native, replay_only=native))
@@ -108,6 +111,28 @@ def receipt_settlement_contract(subject):
     assert subject.invoke() == {"operation_id": operation_id, "status": "completed", "result_retained": False}
     assert private_absent(subject.retained()), "RECEIPT_RECONCILIATION_MUST_NOT_RETAIN_PAYLOAD"
     assert subject.provider.calls == 1
+
+
+def native_receipt_reconciliation_contract(subject):
+    subject.make_native()
+    subject.fail_settlement()
+    failure = subject.failure(subject.invoke)
+    assert failure["code"] == "result_unapplied", "CONTROL_RECEIPT_NEEDS_LOCAL_SETTLEMENT"
+    operation_id = failure["details"]["operation_id"]
+    subject.prepare_native_resolution(operation_id)
+    resolved = subject.failure(subject.resolve_native)
+    assert resolved["code"] is None, "NATIVE_RECEIPT_RECONCILIATION_MUST_SETTLE_SUCCESSFULLY"
+    assert resolved["result"]["operation"]["status"] == "completed"
+    settled = subject.operation(operation_id)
+    repeated = subject.resolve_native(replay_only=True)
+    assert repeated == {"operation_id": operation_id, "status": "completed", "result_retained": False}, \
+        "NATIVE_RECONCILIATION_REPLAY_MUST_RETURN_ONLY_COMPLETION"
+    assert subject.operation(operation_id) == settled, "NATIVE_RECONCILIATION_MUST_NOT_EXECUTE_TWICE"
+    assert subject.provider.calls == 1
+    assert private_absent(subject.retained()), "NATIVE_RECONCILIATION_MUST_NOT_RETAIN_PAYLOADS"
+    subject.deny("resolve_operation")
+    denied = subject.failure(lambda: subject.resolve_native(replay_only=True))
+    assert denied["code"] == "denied", "NATIVE_RECONCILIATION_REPLAY_MUST_REAUTHORIZE"
 
 
 def default_contract(subject):

@@ -58,7 +58,7 @@ def private_error(error):
 
 def request_binding(arguments):
     """The non-payload scope needed to authorize retained execution receipts."""
-    return {key: deepcopy(arguments[key]) for key in ("capability", "work_id") if key in arguments}
+    return {key: deepcopy(arguments[key]) for key in ("capability", "work_id", "operation_id") if key in arguments}
 
 
 def effect_receipt(operation_id, status="completed"):

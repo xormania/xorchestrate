@@ -150,6 +150,9 @@ They do not retain private query/receipt payloads in native-call records or
 application-tool observations. A completed native query repeats a fresh,
 authorized read; a receipt repeat returns only its operation receipt. Changed
 arguments or execution mode on the same native call identity are refused.
+Native failures retain their verified operation identity so the caller can
+inspect and reconcile the fenced effect. Native reconciliation itself repeats
+only its safe completion receipt after current authorization.
 
 `observation` independently selects `full` (the default) or `none` for the
 application call and its native-tool envelopes. `none` also suppresses nested
