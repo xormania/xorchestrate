@@ -53,6 +53,8 @@ def test_the_worker_never_sees_the_controllers_multiplexer_markers(tmp_path, mon
     """The host strips its own nesting markers, so a native worker started from inside one is not confused."""
     monkeypatch.setenv("TMUX", "/tmp/unrelated-server,1,0")
     monkeypatch.setenv("TMUX_PANE", "%9")
+    # Run from inside a hosted terminal or a worker, the variable would be inherited and hide its own absence.
+    monkeypatch.delenv("XORCHESTRATE_TERMINAL_HOST", raising=False)
     seen = tmp_path / "seen.json"
     code = (f"import json,os; from pathlib import Path; Path({str(seen)!r}).write_text(json.dumps("
             "{k: os.environ.get(k) for k in ('TMUX_PANE', 'XORCHESTRATE_TERMINAL_HOST')})); "
@@ -61,7 +63,8 @@ def test_the_worker_never_sees_the_controllers_multiplexer_markers(tmp_path, mon
     assert report["status"] == "passed", report
     observed = json.loads(seen.read_text())
     assert observed["TMUX_PANE"] != "%9", "the controller's pane marker reached the worker"
-    assert observed["XORCHESTRATE_TERMINAL_HOST"] == "acceptance"
+    assert observed["XORCHESTRATE_TERMINAL_HOST"] is not None, "TESTKIT_WORKER_KNOWS_ITS_TERMINAL_HOST"
+    assert observed["XORCHESTRATE_TERMINAL_HOST"] == "acceptance", observed
 
 
 @pytest.mark.parametrize("policy", ["external", "disabled"])
@@ -338,8 +341,9 @@ def test_a_timed_out_worker_alone_is_asked_to_stop_and_its_last_words_are_captur
             "print('working', flush=True); time.sleep(60)\n")
     report = run_in_host([sys.executable, "-c", code], tmp_path, timeout=2, grace=5)
     assert report["failure"] == "timeout" and report["cleanup"]["verified"], report
-    assert "FAILED worker: interrupted child-signalled=False" in (tmp_path / "pane.txt").read_text(), \
-        (tmp_path / "pane.txt").read_text()[-500:]
+    pane = (tmp_path / "pane.txt").read_text()
+    assert "child-signalled=True" not in pane, "TESTKIT_TIMEOUT_STOPS_THE_WORKER_ALONE_FIRST"
+    assert "FAILED worker: interrupted child-signalled=False" in pane, pane[-500:]
 
 
 def test_an_unready_default_host_is_a_setup_error_never_a_silent_fallback(tmp_path, monkeypatch):
@@ -350,7 +354,7 @@ def test_an_unready_default_host_is_a_setup_error_never_a_silent_fallback(tmp_pa
     from scripts.testkit.adapters import terminal_selection
 
     monkeypatch.setattr(product, "DEFAULT_TERMINAL_HOST", {**UNREADY, "fallback": {"adapter": "detached-process"}})
-    assert "fallback" not in terminal_selection.parse(None)
+    assert "fallback" not in terminal_selection.parse(None), "TESTKIT_DEFAULT_HOST_HAS_NO_FALLBACK"
     check = testkit.plan(directory=tmp_path / "plan", suite="acceptance", mode="protocol-fixture")[0]
     row = testkit.readiness(check, root=Path(__file__).resolve().parents[2], mode="protocol-fixture")
     item = next(item for item in row["readiness"] if item["name"] == "terminal_host")
