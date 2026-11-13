@@ -1,0 +1,158 @@
+{
+  "cases": [
+    {
+      "diagnostic": "TESTKIT_WORKER_KNOWS_ITS_TERMINAL_HOST",
+      "mutation": {
+        "new": "",
+        "old": "        env[WORKER_CONTEXT] = host.name\n",
+        "path": "scripts/testkit/adapters/supervised_run.py"
+      },
+      "name": "worker-context-not-set",
+      "selectors": [
+        "tests/hexagonal/test_acceptance_lifecycle.py::test_the_worker_never_sees_the_controllers_multiplexer_markers",
+        "tests/hexagonal/test_acceptance_lifecycle.py::test_an_unready_default_host_is_a_setup_error_never_a_silent_fallback"
+      ],
+      "target": "tests.hexagonal.test_acceptance_lifecycle::test_the_worker_never_sees_the_controllers_multiplexer_markers",
+      "unaffected": [
+        "tests.hexagonal.test_acceptance_lifecycle::test_an_unready_default_host_is_a_setup_error_never_a_silent_fallback"
+      ]
+    },
+    {
+      "diagnostic": "TESTKIT_OLDER_DESCRIPTORS_ARE_REFUSED_WITH_A_REASON",
+      "mutation": {
+        "new": "return None if schema in (1, HOSTED_SCHEMA) else",
+        "old": "return None if schema == HOSTED_SCHEMA else",
+        "path": "scripts/testkit/adapters/terminals.py"
+      },
+      "name": "schema-one-descriptors-accepted",
+      "selectors": [
+        "tests/hexagonal/test_managed_terminals.py::test_host_descriptors_are_schema_two_and_older_ones_are_refused_with_a_reason",
+        "tests/hexagonal/test_managed_terminals.py::test_a_planted_descriptor_is_neither_offered_nor_run"
+      ],
+      "target": "tests.hexagonal.test_managed_terminals::test_host_descriptors_are_schema_two_and_older_ones_are_refused_with_a_reason",
+      "unaffected": [
+        "tests.hexagonal.test_managed_terminals::test_a_planted_descriptor_is_neither_offered_nor_run"
+      ]
+    },
+    {
+      "diagnostic": "TESTKIT_DESCRIPTOR_ARGV_IS_NEVER_RUN",
+      "mutation": {
+        "new": "        if descriptor.get(\"attach\"):\n            return subprocess.call(descriptor[\"attach\"][\"argv\"])\n        if host_for is None:\n",
+        "old": "        if host_for is None:\n",
+        "path": "scripts/testkit/adapters/terminals.py"
+      },
+      "name": "attach-runs-the-descriptors-argv",
+      "selectors": [
+        "tests/hexagonal/test_managed_terminals.py::test_a_planted_descriptor_is_neither_offered_nor_run",
+        "tests/hexagonal/test_managed_terminals.py::test_host_descriptors_are_schema_two_and_older_ones_are_refused_with_a_reason"
+      ],
+      "target": "tests.hexagonal.test_managed_terminals::test_a_planted_descriptor_is_neither_offered_nor_run",
+      "unaffected": [
+        "tests.hexagonal.test_managed_terminals::test_host_descriptors_are_schema_two_and_older_ones_are_refused_with_a_reason"
+      ]
+    },
+    {
+      "diagnostic": "TESTKIT_DESCRIPTOR_PLACEMENT_IS_CHECKED",
+      "mutation": {
+        "new": ")",
+        "old": "            and placement_problem(descriptor) is None)",
+        "path": "scripts/testkit/adapters/terminals.py"
+      },
+      "name": "placement-not-checked",
+      "selectors": [
+        "tests/hexagonal/test_managed_terminals.py::test_a_planted_descriptor_is_neither_offered_nor_run",
+        "tests/hexagonal/test_managed_terminals.py::test_host_descriptors_are_schema_two_and_older_ones_are_refused_with_a_reason"
+      ],
+      "target": "tests.hexagonal.test_managed_terminals::test_a_planted_descriptor_is_neither_offered_nor_run",
+      "unaffected": [
+        "tests.hexagonal.test_managed_terminals::test_host_descriptors_are_schema_two_and_older_ones_are_refused_with_a_reason"
+      ]
+    },
+    {
+      "diagnostic": "TESTKIT_READINESS_NAMES_THE_TERMINAL_HOST",
+      "mutation": {
+        "new": "item = {\"name\": \"multiplexer\",",
+        "old": "item = {\"name\": \"terminal_host\",",
+        "path": "scripts/testkit/adapters/terminal_selection.py"
+      },
+      "name": "readiness-keeps-the-old-name",
+      "selectors": [
+        "tests/hexagonal/test_testkit_entrypoint.py::test_native_doctor_checks_inputs_without_authentication_or_process_launch",
+        "tests/hexagonal/test_testkit_entrypoint.py::test_checks_plan_selects_declared_family_and_retains_inventory"
+      ],
+      "target": "tests.hexagonal.test_testkit_entrypoint::test_native_doctor_checks_inputs_without_authentication_or_process_launch",
+      "unaffected": [
+        "tests.hexagonal.test_testkit_entrypoint::test_checks_plan_selects_declared_family_and_retains_inventory"
+      ]
+    },
+    {
+      "diagnostic": "TESTKIT_DEFAULT_HOST_HAS_NO_FALLBACK",
+      "mutation": {
+        "new": "return default",
+        "old": "return {key: item for key, item in default.items() if key != \"fallback\"}",
+        "path": "scripts/testkit/adapters/terminal_selection.py"
+      },
+      "name": "default-keeps-the-product-fallback",
+      "selectors": [
+        "tests/hexagonal/test_acceptance_lifecycle.py::test_an_unready_default_host_is_a_setup_error_never_a_silent_fallback",
+        "tests/hexagonal/test_acceptance_lifecycle.py::test_the_worker_never_sees_the_controllers_multiplexer_markers"
+      ],
+      "target": "tests.hexagonal.test_acceptance_lifecycle::test_an_unready_default_host_is_a_setup_error_never_a_silent_fallback",
+      "unaffected": [
+        "tests.hexagonal.test_acceptance_lifecycle::test_the_worker_never_sees_the_controllers_multiplexer_markers"
+      ]
+    },
+    {
+      "diagnostic": "TESTKIT_TIMEOUT_STOPS_THE_WORKER_ALONE_FIRST",
+      "mutation": {
+        "new": "                    host.interrupt(TERMINAL)\n                    time.sleep(min(grace, 2))\n                    (run_dir / \"pane.txt\").write_text(host.recent_output(TERMINAL, CAPTURE_LINES), encoding=\"utf-8\")\n                    host.close_terminal(TERMINAL, grace=max(0.1, remaining(grace)))",
+        "old": "                    closure = host.close_terminal(TERMINAL, grace=max(0.1, remaining(grace)))\n                    if not closure.cleanup_verified:\n                        errors.append(\"terminal_cleanup_unverified\")\n                    (run_dir / \"pane.txt\").write_text(_log_tail(run_dir / \"terminal.log\"), encoding=\"utf-8\")",
+        "path": "scripts/testkit/adapters/supervised_run.py"
+      },
+      "name": "timeout-interrupts-the-whole-group",
+      "selectors": [
+        "tests/hexagonal/test_acceptance_lifecycle.py::test_a_timed_out_worker_alone_is_asked_to_stop_and_its_last_words_are_captured",
+        "tests/hexagonal/test_acceptance_lifecycle.py::test_the_worker_never_sees_the_controllers_multiplexer_markers"
+      ],
+      "target": "tests.hexagonal.test_acceptance_lifecycle::test_a_timed_out_worker_alone_is_asked_to_stop_and_its_last_words_are_captured",
+      "unaffected": [
+        "tests.hexagonal.test_acceptance_lifecycle::test_the_worker_never_sees_the_controllers_multiplexer_markers"
+      ]
+    },
+    {
+      "diagnostic": "TESTKIT_FOREIGN_ENDPOINTS_ARE_NEVER_REMOVED",
+      "mutation": {
+        "new": "    if False and (path.parent != Path(tempfile.gettempdir())",
+        "old": "    if (path.parent != Path(tempfile.gettempdir())",
+        "path": "scripts/testkit/operator_composition.py"
+      },
+      "name": "endpoint-removed-without-checks",
+      "selectors": [
+        "tests/hexagonal/test_managed_workflow.py::test_an_endpoint_named_in_the_plan_is_removed_only_when_it_is_the_runs_own",
+        "tests/hexagonal/test_testkit_entrypoint.py::test_checks_plan_selects_declared_family_and_retains_inventory"
+      ],
+      "target": "tests.hexagonal.test_managed_workflow::test_an_endpoint_named_in_the_plan_is_removed_only_when_it_is_the_runs_own",
+      "unaffected": [
+        "tests.hexagonal.test_testkit_entrypoint::test_checks_plan_selects_declared_family_and_retains_inventory"
+      ]
+    },
+    {
+      "diagnostic": "TESTKIT_KEEP_IS_REFUSED_IN_THE_FOREGROUND",
+      "mutation": {
+        "new": "    if False:\n        raise ValueError",
+        "old": "    if settings.get(\"keep_after_run\"):\n        raise ValueError",
+        "path": "scripts/testkit/operator_composition.py"
+      },
+      "name": "keep-allowed-in-the-foreground",
+      "selectors": [
+        "tests/hexagonal/test_managed_workflow.py::test_kept_terminals_outlive_a_killed_supervisor_until_close_adopts_and_ends_them",
+        "tests/hexagonal/test_managed_workflow.py::test_an_endpoint_named_in_the_plan_is_removed_only_when_it_is_the_runs_own"
+      ],
+      "target": "tests.hexagonal.test_managed_workflow::test_kept_terminals_outlive_a_killed_supervisor_until_close_adopts_and_ends_them",
+      "unaffected": [
+        "tests.hexagonal.test_managed_workflow::test_an_endpoint_named_in_the_plan_is_removed_only_when_it_is_the_runs_own"
+      ]
+    }
+  ],
+  "schema_version": 1
+}

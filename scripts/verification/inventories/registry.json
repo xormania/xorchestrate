@@ -36,6 +36,12 @@
       "stages": [
         "manual"
       ]
+    },
+    "testkit": {
+      "file": "testkit.json",
+      "stages": [
+        "manual"
+      ]
     }
   }
 }
