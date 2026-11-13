@@ -594,6 +594,8 @@ _RECOVERY_E2E_CONTRACT = "tests.hexagonal.contracts.recovery_e2e"
 _AFTER_LOSS = "after_total_loss_the_default_policy_brings_the_session_back_without_a_call"
 _SERVER_ONLY = "a_server_only_crash_adopts_the_running_terminal_and_keeps_its_bridge_host"
 _IN_FLIGHT = "a_turn_in_flight_at_the_loss_is_left_unresolved_reported_and_never_replayed"
+_THIRD_RESTART = "a_third_unclean_restart_with_an_unknown_replacement_brings_the_session_back_once"
+_FAILED_RESOLUTION = "resolving_an_unknown_replacement_as_failed_leaves_one_live_session"
 
 
 def _e2e(host, scenario):
@@ -656,10 +658,18 @@ RECOVERY = (
     ("in-flight-turn-replayed-after-recovery", _LIFECYCLE, _e2e("detached-process", _IN_FLIGHT),
      "RECOVERY_IN_FLIGHT_TURN_IS_NEVER_REPLAYED_TO_THE_PEER", f"{_RECOVERY_E2E_CONTRACT}:{_IN_FLIGHT}",
      _e2e("detached-process", _AFTER_LOSS)),
+    ("unknown-replacement-taken-as-reconnectable", _LIFECYCLE, _e2e("detached-process", _THIRD_RESTART),
+     "RECOVERY_THIRD_RESTART_KEEPS_ONE_LIVE_SESSION", f"{_RECOVERY_E2E_CONTRACT}:{_THIRD_RESTART}",
+     _e2e("detached-process", _AFTER_LOSS)),
+    ("resolved-operation-kept-for-reconciliation", _LIFECYCLE, _e2e("detached-process", _FAILED_RESOLUTION),
+     "RECOVERY_FAILED_RESOLUTION_LEAVES_RECONCILIATION", f"{_RECOVERY_E2E_CONTRACT}:{_FAILED_RESOLUTION}",
+     _e2e("detached-process", _AFTER_LOSS)),
 )
 """The recovery area's planted faults (old faults 23-25 and 27-36; 26 dropped as an equivalent mutant), and a
-replay of the in-flight turn straight through the driver after recovery reconnects."""
-RECOVERY_MUTATIONS_SHA256 = "835c8301e7675a7485bad7dad0f87742ef66627091741ea9dc9ee32c7af5dd8d"
+replay of the in-flight turn straight through the driver after recovery reconnects; an unknown replacement taken
+as reconnectable; and a resolved operation still listed for reconciliation. Whether every unknown replacement stays
+reported is identified but not calibrated: three separate code paths name it, so no single planted fault fails it."""
+RECOVERY_MUTATIONS_SHA256 = "326003fb6e84343acb09f73b50d2b92f8493102e0a25fadad13153c48aaa6942"
 """sha256 of the canonical JSON of the cases' mutation objects in order: each fault's file, anchor and replacement
 exactly as the old recovery fault script planted them."""
 
