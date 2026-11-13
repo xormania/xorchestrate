@@ -32,9 +32,10 @@ def test_all_plan_is_the_same_named_checks_as_individual_suites(tmp_path, mode):
     together = composition.plan(suite="all", **options)
     separately = sum((composition.plan(suite=suite, **options) for suite in composition.COMPONENT_SUITES), ())
     assert together == separately
-    assert [check.name for check in together] == ["ruff", "syntax", "architecture", "tests", "native-calibration",
-                                                "work-calibration", "state-calibration", "acceptance", "multi-harness"] + [
-                                                    c.name for c in composition.plan(suite="stories", **options)]
+    assert [check.name for check in together] == [
+        "ruff", "syntax", "architecture", "secret-scan", "tests", "native-calibration",
+        "work-calibration", "state-calibration", "acceptance", "multi-harness",
+    ] + [c.name for c in composition.plan(suite="stories", **options)]
     assert len({check.name for check in together}) == len(together)
     acceptance, multi = (next(c for c in together if c.name == name) for name in ("acceptance", "multi-harness"))
     assert acceptance.argv[:3] == (sys.executable, "-m", "scripts.acceptance")
@@ -51,12 +52,12 @@ def test_all_plan_is_the_same_named_checks_as_individual_suites(tmp_path, mode):
 def test_checks_plan_selects_declared_family_and_retains_inventory(tmp_path):
     checks = composition.plan(directory=tmp_path, suite="checks", mode="protocol-fixture",
                               families=("state",), check_timeout=37)
-    assert [check.name for check in checks] == ["ruff", "syntax", "architecture", "tests"]
+    assert [check.name for check in checks] == ["ruff", "syntax", "architecture", "secret-scan", "tests"]
     tests = next(check for check in checks if check.name == "tests")
     assert tests.argv[-2:] == ("--test-family", "state")
     assert "--test-inventory" in tests.argv
     assert all(check.timeout == 37 for check in checks)
-    assert checks[:3] == composition.plan(directory=tmp_path, suite="static", mode="protocol-fixture",
+    assert checks[:4] == composition.plan(directory=tmp_path, suite="static", mode="protocol-fixture",
                                           check_timeout=37)
     assert (tests,) == composition.plan(directory=tmp_path, suite="tests", mode="protocol-fixture",
                                         families=("state",), check_timeout=37)
@@ -130,7 +131,7 @@ def test_static_doctor_needs_no_test_discovery_or_native_setup(monkeypatch):
     monkeypatch.setattr(subprocess, "Popen", unrelated_dependency)
     report = composition.preflight(suite="static", mode="native")
     assert report["status"] == "passed"
-    assert [row["name"] for row in report["checks"]] == ["ruff", "syntax", "architecture"]
+    assert [row["name"] for row in report["checks"]] == ["ruff", "syntax", "architecture", "secret-scan"]
 
 
 @pytest.mark.parametrize("fault", ["missing-native", "missing-brief", "preparation"])
@@ -308,7 +309,9 @@ def test_without_a_selection_the_ci_stage_is_planned_as_before(tmp_path):
 def test_a_named_inventory_replaces_the_default_calibration_checks_in_the_whole_run(tmp_path):
     checks = composition.plan(directory=tmp_path, suite="all", mode="protocol-fixture", inventories=("recovery",))
     assert [check.name for check in _calibration(checks)] == ["recovery-calibration"]
-    assert [check.name for check in checks][:4] == ["ruff", "syntax", "architecture", "tests"]
+    assert [check.name for check in checks][:5] == [
+        "ruff", "syntax", "architecture", "secret-scan", "tests",
+    ]
 
 
 @pytest.mark.parametrize("options,fragments", [

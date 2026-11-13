@@ -50,7 +50,7 @@ def test_stop_is_idempotent_and_cannot_relabel_a_finished_proof():
 
 def test_invalid_native_input_snapshot_does_not_suppress_independent_static_plan(tmp_path):
     source, directory, plan = frozen_plan(tmp_path, "{", prepare=prepare_run)
-    assert plan["selected_check_ids"] == ["ruff", "syntax", "architecture"]
+    assert plan["selected_check_ids"] == ["ruff", "syntax", "architecture", "secret-scan"]
     assert plan["input_snapshot_errors"]["config"] == "JSONDecodeError"
     assert (directory / "inputs" / "config").read_bytes() == source.read_bytes()
     assert plan["config"] == str(directory / "inputs" / "config")

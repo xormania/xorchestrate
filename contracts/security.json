@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "xorchestrate.secret-scan",
+  "version": "1",
+  "allow_marker": "secret-scan: allow",
+  "rules": [
+    {
+      "id": "private-key",
+      "pattern": "-----BEGIN (?:RSA |EC |OPENSSH |PGP |ENCRYPTED )?PRIVATE KEY-----"
+    },
+    {
+      "id": "aws-access-key-id",
+      "pattern": "\\b(?:AKIA|ASIA)[0-9A-Z]{16}\\b"
+    },
+    {
+      "id": "github-token",
+      "pattern": "\\bgh[pousr]_[A-Za-z0-9]{36,}\\b"
+    },
+    {
+      "id": "slack-token",
+      "pattern": "\\bxox[abpsr]-[A-Za-z0-9-]{10,}\\b"
+    },
+    {
+      "id": "google-api-key",
+      "pattern": "\\bAIza[0-9A-Za-z_-]{35}\\b"
+    }
+  ]
+}

@@ -26,7 +26,10 @@ uv sync --locked --no-default-groups --group validation --extra test --no-instal
 uv pip install --python "$UV_PROJECT_ENVIRONMENT/bin/python" --no-deps --no-build-isolation -e .
 export PATH="$UV_PROJECT_ENVIRONMENT/bin:$PATH"
 
-# Ruff lint/security, current-source syntax and deterministic architecture.
+# Focused security view: shared Ruff policy and candidate-complete secret scan.
+python3 -m scripts.testkit run --suite security
+
+# Security checks, current-source syntax and deterministic architecture.
 python3 -m scripts.testkit run --suite static
 
 # Cataloged behavioral tests with inventory and JUnit.
@@ -52,7 +55,7 @@ python3 -m scripts.testkit run --suite acceptance
 python3 -m scripts.testkit stories
 python3 -m scripts.testkit run --suite stories --story work-acceptance --timeout 60
 
-# Everything above, using the same composed checks.
+# Every component suite; security checks run once through static.
 python3 -m scripts.testkit run
 ```
 
@@ -63,7 +66,9 @@ syntax validation reads current bytes rather than trusting cached bytecode.
 Static-only execution needs Python and the pinned Ruff, without pytest discovery,
 tmux, native configuration or model credentials. `--family` filters behavioral
 tests only; it never reduces static coverage. The default composition runs each
-selected check once.
+selected check once. `security` is a focused view rather than another component:
+`static`, `checks` and the default/all composition include its Ruff and secret-scan
+checks once through `static`.
 
 ## Jev advisory stages
 
@@ -175,6 +180,18 @@ files. Architecture uses its explicit scope and role policy in
 `contracts/hexagonal.json`. The retained manifests describe each check's actual
 selection; an inventory of planned roots alone does not prove file coverage.
 
+The secret scan applies the policy in `contracts/security.json` to every existing
+Git-tracked file and every nonignored untracked file in the candidate. It reads
+bytes rather than assuming text, so binary inputs remain in scope. In-repository
+directory-link entries are identity-bound in the manifest while their target
+files are scanned through their own candidate paths; broken or escaping links
+are refused. A
+`secret-scan: allow` marker suppresses an intentional match only on its own line.
+The structured report binds every selected path to its captured byte hash and the
+complete effective-input identity. Findings retain only path, line and rule;
+matched credential bytes are excluded from the report and captured command
+output.
+
 `--output /path/outside/checkout` selects a reusable evidence parent; each invocation
 allocates a private run directory. `--check-timeout` bounds each deterministic or
 calibration command. `--timeout` retains the live scenario timeout. Native harness
@@ -255,6 +272,7 @@ controller requests, native callback selection and managed tmux automation.
 | Behavioral family, guarantee and test layer | [`contracts/testing.json`](../contracts/testing.json) |
 | Static check definitions and suite membership | Shared test-kit composition and static adapter |
 | Ruff policy and validation dependency pin | `ruff.toml`, `pyproject.toml` validation group; generated `.github/requirements-ci.txt` |
+| Secret detection policy and same-line allowances | `contracts/security.json`; shared static and secret-scan adapters |
 | Catalog validation and selection | `scripts/testkit/catalog.py` |
 | Shard specification, balanced module partition and timings format | `scripts/testkit/sharding.py`, `contracts/test-timings.json` |
 | Timings regeneration from JUnit | `scripts/testkit/adapters/timings.py`, `python3 -m scripts.testkit.timings` |
@@ -417,8 +435,9 @@ ignored/untracked files and followed symlink targets. This identity is distinct
 from the repository commit/tree and the existing calibration candidate hash.
 Source/configuration changes invalidate the affected result. Reports retain check
 IDs, readiness/preparation outcomes, tool versions, structured findings and raw
-command receipts. A check blocked before launch has an explicit setup outcome and
-does not borrow another check's command record.
+command receipts. Secret-scan findings and command output are redacted rather than
+retaining the matched bytes. A check blocked before launch has an explicit setup
+outcome and does not borrow another check's command record.
 
 Structural plan errors reject the whole plan. Missing tools, selected
 configuration or check-specific preparation block only dependent checks;

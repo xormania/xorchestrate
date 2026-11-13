@@ -19,6 +19,8 @@ def static_subject(root):
     root = Path(root)
     root.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(ROOT / "ruff.toml", root / "ruff.toml")
+    (root / "contracts").mkdir(exist_ok=True)
+    shutil.copyfile(ROOT / "contracts/security.json", root / "contracts/security.json")
     (root / ".github").mkdir(exist_ok=True)
     shutil.copyfile(ROOT / ".github/requirements-ci.txt", root / ".github/requirements-ci.txt")
     for relative in ("xorchestrate/subject.py", "scripts/subject.py", "tests/hexagonal/support/subject.py"):

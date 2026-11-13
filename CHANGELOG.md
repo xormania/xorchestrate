@@ -138,6 +138,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Added
 
+- The test kit adds a focused `--suite security` view and candidate-complete,
+  redacted secret scanning. The existing static suite and CI lane run it once;
+  `contracts/security.json` owns detection policy and same-line
+  `secret-scan: allow` exceptions.
 - Work-tree maintenance: `python3 -m scripts.worktrees report` judges every
   tree and scratch or run directory, and `prune --apply` removes only what it
   can prove safe, keeping and reporting everything else. See

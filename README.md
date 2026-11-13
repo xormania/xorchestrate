@@ -23,13 +23,20 @@ uv sync --locked --only-group validation --no-install-project --managed-python -
 uv sync --locked --no-default-groups --group validation --extra test --no-install-project --managed-python --python 3.12.16
 uv pip install --python "$UV_PROJECT_ENVIRONMENT/bin/python" --no-deps --no-build-isolation -e .
 export PATH="$UV_PROJECT_ENVIRONMENT/bin:$PATH"
+python3 -m scripts.testkit run --suite security
 python3 -m scripts.testkit run --suite static
 python3 -m scripts.testkit run --suite checks
 ```
 
-`static` runs Ruff, current-source syntax validation and architecture enforcement;
-`tests` runs the cataloged behavioral tests; `checks` combines both. Use
-`python3 -m scripts.testkit run` for every component suite: static checks, tests, calibration, live protocol workflows and stories.
+`security` is a focused view of the shared Ruff check and candidate-complete
+secret scan. The scan applies `contracts/security.json` to tracked and nonignored
+untracked files, including binary bytes; a same-line `secret-scan: allow` marker
+permits an intentional match without widening the exception. Its structured
+evidence identifies files and findings without republishing matched credentials.
+`static` adds current-source syntax validation and architecture enforcement;
+`tests` runs the cataloged behavioral tests; `checks` combines `static` and
+`tests`. `checks` and the default/`--suite all` composition include the security
+checks once through `static`.
 Local and CI runs use the same [testing framework](docs/testing-framework.md),
 shared contracts, fixtures and evidence services. See [live tests](docs/live-testkit.md)
 for authenticated native configuration.
