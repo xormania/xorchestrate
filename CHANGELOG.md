@@ -9,10 +9,6 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
-- Operational telemetry accepts a nested `sink` adapter selection, including
-  trusted installed factories, through the existing composition resolver.
-  Current flat local/OTLP options keep working; sampling, bounded dispatch and
-  local corpus capture remain shared. See [telemetry options](docs/telemetry.md#configuration-options).
 - CI runs eight application-test shards with refreshed fallback weights and a shared artifact-based timing model that updates from complete qualified runs.
 - Small advisory Jev probes select PR review attention, examine specific findings
   and classify failed CI evidence in trusted event workflows. Their bounded,
@@ -255,6 +251,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   are selected adapters (`corpus`, `artifacts`). `composition.build()` accepts
   `telemetry_defaults` to construct the local collector when a configuration
   has no telemetry section.
+- Operational telemetry accepts a nested `sink` adapter selection, including
+  trusted installed factories, through the existing composition resolver.
+  Current flat local/OTLP options keep working; sampling, bounded dispatch and
+  local corpus capture remain shared. See [telemetry options](docs/telemetry.md#configuration-options).
 - `telemetry_status` reports a bounded `cause` when telemetry is unavailable.
 - A shared project server, so several agent harnesses use one application,
   state store and set of live sessions (see
