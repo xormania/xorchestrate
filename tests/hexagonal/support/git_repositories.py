@@ -14,7 +14,7 @@ DEFAULT_BRANCH = "trunk"
 """The origin's default branch; not ``master``, so a default base must come from origin/HEAD."""
 FILES = {
     "README.md": "sample\n",
-    ".gitignore": "*.log\n",
+    ".gitignore": "*.log\n.serena/cache/\n.venv/\nvenv/\nbuild/\ndist/\n.pytest_cache/\n__pycache__/\n",
     "app_constants.py": "LIMIT = 3\n",
     "pkg/__init__.py": "",
     "pkg/a_values.py": "VALUES = (1, 2)\n",
