@@ -228,8 +228,7 @@ def test_a_blocking_call_inside_an_await_gets_the_remaining_budget_as_its_timeou
 
     clock = ControlledClock()
     with World("detached-process", clock=clock, sleep=clock.sleep) as world:
-        world.save()
-        clock.advance(elapsed=0)
+        running(world)
         monkeypatch.setattr(project_server.subprocess, "run", recording)
         budgets = []
 
