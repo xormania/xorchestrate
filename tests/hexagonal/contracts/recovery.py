@@ -29,7 +29,7 @@ def default_policy_recovers_from_durable_state_alone(subject):
     assert subject.reconnects == {hosted: 1}, "only the session whose driver reconnects is reconnected"
     assert [item["session_id"] for item in report["recovered"]] == [hosted], report
     assert subject.status(after, owned) == "disconnected", "an owned child cannot survive a hard restart"
-    assert subject.reason(after, owned) == "hard_restart"
+    assert subject.reason(after, owned) == "hard_restart", "RECOVERY_DISCONNECT_REASON_RECORDED"
     assert after.interrupted_sessions() == [], "nothing is left interrupted"
 
 
@@ -39,10 +39,10 @@ def manual_policy_reconnects_nothing_and_reconciles_what_cannot_reconnect(subjec
     after = subject.runtime(policy="manual")
     status_before = subject.status(after, hosted)
     subject.server_recovery(after, unclean_stop=True)
-    assert subject.reconnects == {}, "the manual policy reconnects nothing"
+    assert subject.reconnects == {}, "RECOVERY_MANUAL_POLICY_RECONNECTS_NOTHING"
     assert subject.status(after, hosted) == status_before, "a reconnectable session is left exactly as it was"
     assert hosted in [item.session_id for item in after.interrupted_sessions()], "and is listed as needing recovery"
-    assert subject.status(after, owned) == "disconnected", "a session that cannot reconnect is reconciled"
+    assert subject.status(after, owned) == "disconnected", "RECOVERY_MANUAL_RECONCILES_DEAD_SESSIONS"
     assert subject.reason(after, owned) == "hard_restart"
     events = subject.events(after, "session.disconnected", owned)
     assert len(events) == 1 and events[0].get("reason") == "hard_restart", events
@@ -72,8 +72,8 @@ def one_failure_stops_neither_the_others_nor_the_server(subject):
     subject.fail_reconnect(broken)
     after = subject.runtime()
     report = subject.server_recovery(after, unclean_stop=True)
+    assert [item["session_id"] for item in report["recovered"]] == [healthy], "RECOVERY_ONE_FAILURE_STOPS_NO_OTHER"
     assert [item["session_id"] for item in report["failed"]] == [broken], report
-    assert [item["session_id"] for item in report["recovered"]] == [healthy], report
     assert subject.server_answers(after), "the server still serves after a failed recovery"
 
 
@@ -118,7 +118,7 @@ def explicit_recover_acts_only_where_its_caller_is_authorised(subject):
                 for item in items}
 
     named = after.call("recover", {"session_ids": [owners["hosted"]]}, "worker")
-    assert subject.reconnects == {}, "naming another actor's session does not let the worker reconnect it"
+    assert subject.reconnects == {}, "RECOVERY_RECOVER_RESPECTS_CALLER_AUTHORITY"
     assert owners["hosted"] in unauthorised(named), f"it is listed as not authorised: {named}"
     everything = after.call("recover", {}, "worker")
     assert subject.reconnects == {workers["hosted"]: 1}, "the worker recovers its own session only"

@@ -563,7 +563,7 @@ def _canonical_sha256(name):
 
 def test_the_real_registry_holds_native_work_and_state_at_ci_in_that_order():
     registry, inventories = _real()
-    assert list(registry.items()) == [("native", ("ci",)), ("work", ("ci",)), ("state", ("ci",))], registry
+    assert list(registry.items())[:3] == [("native", ("ci",)), ("work", ("ci",)), ("state", ("ci",))], registry
     assert tuple(case.name for case in inventories["state"].cases) == STATE
     assert tuple(case.name for case in inventories["work"].cases) == WORK
 
@@ -586,9 +586,95 @@ def test_the_work_inventory_is_the_old_work_cases_split_by_store():
     assert _canonical_sha256("work") == WORK_CASES_SHA256
 
 
-@pytest.mark.parametrize("name,expected", ids=["state", "work"], argvalues=[
+_RECOVERY_TESTS = "tests.hexagonal.test_recovery"
+_RECOVERY_E2E = "tests.hexagonal.test_recovery_end_to_end"
+_RECOVERY_CONTRACT = "tests.hexagonal.contracts.recovery"
+_SERVER, _LIFECYCLE = "xorchestrate/server.py", "xorchestrate/session_lifecycle.py"
+_MANUAL = "manual_policy_reconnects_nothing_and_reconciles_what_cannot_reconnect"
+_DEFAULT = "default_policy_recovers_from_durable_state_alone"
+
+
+def _scenario(name):
+    return f"{_RECOVERY_TESTS}::test_recovery_meets_the_contract[{name}]"
+
+
+RECOVERY = (
+    # name, mutated file, target, diagnostic, declared contract function, unaffected neighbour
+    ("recovery-policy-ignored", _SERVER, _scenario(_MANUAL), "RECOVERY_MANUAL_POLICY_RECONNECTS_NOTHING",
+     f"{_RECOVERY_CONTRACT}:{_MANUAL}", _scenario(_DEFAULT)),
+    ("manual-leaves-dead-sessions-active", _SERVER, _scenario(_MANUAL), "RECOVERY_MANUAL_RECONCILES_DEAD_SESSIONS",
+     f"{_RECOVERY_CONTRACT}:{_MANUAL}", _scenario("pending_effects_are_never_replayed")),
+    ("disconnect-reason-not-recorded", _LIFECYCLE, _scenario(_DEFAULT), "RECOVERY_DISCONNECT_REASON_RECORDED",
+     f"{_RECOVERY_CONTRACT}:{_DEFAULT}", _scenario("pending_effects_are_never_replayed")),
+    ("one-failure-stops-the-rest", _LIFECYCLE, _scenario("one_failure_stops_neither_the_others_nor_the_server"),
+     "RECOVERY_ONE_FAILURE_STOPS_NO_OTHER", f"{_RECOVERY_CONTRACT}:one_failure_stops_neither_the_others_nor_the_server",
+     _scenario("pending_effects_are_never_replayed")),
+    ("recover-ignores-caller-authority", _LIFECYCLE, _scenario("explicit_recover_acts_only_where_its_caller_is_authorised"),
+     "RECOVERY_RECOVER_RESPECTS_CALLER_AUTHORITY",
+     f"{_RECOVERY_CONTRACT}:explicit_recover_acts_only_where_its_caller_is_authorised",
+     _scenario("the_automatic_run_acts_as_the_runtime")),
+    ("up-never-starts-recovery", "xorchestrate/cli.py",
+     f"{_RECOVERY_E2E}::test_after_total_loss_the_default_policy_brings_the_session_back_without_a_call[detached-process]",
+     "RECOVERY_STARTS_ON_UP", None,
+     f"{_RECOVERY_E2E}::test_recovery_within_is_true_once_a_report_exists_and_nothing_runs"),
+    ("running-terminal-reopened", "xorchestrate/adapters/hosted.py",
+     f"{_RECOVERY_E2E}::test_a_server_only_crash_adopts_the_running_terminal_and_keeps_its_bridge_host[detached-process]",
+     "RECOVERY_ADOPTS_RUNNING_TERMINAL", None,
+     f"{_RECOVERY_E2E}::test_after_total_loss_the_default_policy_brings_the_session_back_without_a_call[detached-process]"),
+    ("recover-ignores-work-binding", _LIFECYCLE,
+     f"{_RECOVERY_TESTS}::test_an_explicit_recover_weighs_the_sessions_work_binding_for_the_caller",
+     "RECOVERY_RECOVER_WEIGHS_WORK_BINDING", None, _scenario("explicit_recover_acts_only_where_its_caller_is_authorised")),
+    ("shutdown-does-not-wait-for-recovery", _SERVER,
+     f"{_RECOVERY_TESTS}::test_a_server_interrupted_during_recovery_waits_for_the_session_in_hand_before_it_returns",
+     "RECOVERY_SERVE_LOOP_WAITS_FOR_RECOVERY", None,
+     f"{_RECOVERY_TESTS}::test_recovery_running_belongs_to_the_live_runtime_not_to_durable_state"),
+    ("recovery-takes-sessions-while-stopping", _LIFECYCLE,
+     f"{_RECOVERY_TESTS}::test_a_server_stopping_during_recovery_waits_for_the_session_in_hand_and_takes_no_more",
+     "RECOVERY_STOPPING_TAKES_NO_MORE_SESSIONS", None,
+     f"{_RECOVERY_TESTS}::test_recovery_running_belongs_to_the_live_runtime_not_to_durable_state"),
+    ("running-outlives-recovery", _LIFECYCLE,
+     f"{_RECOVERY_TESTS}::test_recovery_running_belongs_to_the_live_runtime_not_to_durable_state",
+     "RECOVERY_RUNNING_BELONGS_TO_LIVE_RUNTIME", None,
+     f"{_RECOVERY_TESTS}::test_an_explicit_recover_weighs_the_sessions_work_binding_for_the_caller"),
+    ("doctor-opens-unapproved-store", "xorchestrate/instance/doctor.py",
+     f"{_RECOVERY_TESTS}::test_doctor_does_not_open_a_built_in_store_of_unapproved_configuration",
+     "RECOVERY_DOCTOR_SKIPS_UNAPPROVED_STORE", None,
+     f"{_RECOVERY_TESTS}::test_doctor_never_imports_or_constructs_a_store_factory_for_its_recovery_check[approved]"),
+    ("doctor-constructs-store-factory", "xorchestrate/instance/doctor.py",
+     f"{_RECOVERY_TESTS}::test_doctor_never_imports_or_constructs_a_store_factory_for_its_recovery_check[approved]",
+     "RECOVERY_DOCTOR_NEVER_IMPORTS_STORE_FACTORY", None,
+     f"{_RECOVERY_TESTS}::test_doctor_never_imports_or_constructs_a_store_factory_for_its_recovery_check[unapproved]"),
+)
+"""The recovery area's planted faults (old faults 23-25 and 27-36; 26 dropped as an equivalent mutant)."""
+RECOVERY_MUTATIONS_SHA256 = "fd440a44eeb1a818a16ccb81f4fe7888dea9fe5459abc913c6999f2f41b92669"
+"""sha256 of the canonical JSON of the cases' mutation objects in order: each fault's file, anchor and replacement
+exactly as the old recovery fault script planted them."""
+
+
+def test_the_registry_holds_the_recovery_inventory_at_ci():
+    registry, _ = _real()
+    assert list(registry)[-1] == "recovery" and registry["recovery"] == ("ci",), registry
+
+
+def test_the_recovery_inventory_is_the_old_faults_with_standard_checks():
+    import hashlib
+    _, inventories = _real()
+    found = tuple((case.name, case.mutation.path, case.target, case.diagnostic, case.contract, case.unaffected)
+                  for case in inventories["recovery"].cases)
+    assert found == tuple((name, path, target, diagnostic, contract, (unaffected,))
+                          for name, path, target, diagnostic, contract, unaffected in RECOVERY), found
+    for fault in inventories["recovery"].cases:
+        assert {module_form(selector) for selector in fault.selectors} == {fault.target, *fault.unaffected}, fault.name
+        assert fault.expect == "detected", fault.name
+    mutations = json.loads((INVENTORIES / "recovery.json").read_text())["cases"]
+    canonical = json.dumps([item["mutation"] for item in mutations], sort_keys=True, separators=(",", ":"))
+    assert hashlib.sha256(canonical.encode()).hexdigest() == RECOVERY_MUTATIONS_SHA256
+
+
+@pytest.mark.parametrize("name,expected", ids=["state", "work", "recovery"], argvalues=[
     ("state", tuple((name, "detected") for name in STATE[:-1]) + (("unrelated-error-control", "unrelated_failure"),)),
     ("work", tuple((name, "detected") for name in WORK)),
+    ("recovery", tuple((row[0], "detected") for row in RECOVERY)),
 ])
 def test_the_migrated_inventory_gives_the_old_verdicts_on_this_candidate(tmp_path, name, expected):
     """Parity: a real run through the service classifies every case as the old entry point did."""
@@ -667,7 +753,8 @@ def test_composition_builds_one_calibration_check_per_ci_registered_inventory(tm
               if item.name.endswith("-calibration")]
     ci = files.select(registry, stage="ci")
     assert [check.name for check in checks] == [f"{name}-calibration" for name in ci]
-    assert [check.name for check in checks] == ["native-calibration", "work-calibration", "state-calibration"]
+    assert [check.name for check in checks] == ["native-calibration", "work-calibration", "state-calibration",
+                                                "recovery-calibration"]
     entries = json.loads((INVENTORIES / "registry.json").read_text())["inventories"]
     for name, check in zip(ci, checks):
         assert check.argv == (sys.executable, "-m", "scripts.verification.calibrate_suite", "--candidate",

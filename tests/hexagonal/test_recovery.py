@@ -34,7 +34,7 @@ def test_an_explicit_recover_weighs_the_sessions_work_binding_for_the_caller(sub
                         "effect": "deny"}]}
     after = subject.runtime("manual", rules=rules)
     report = after.call("recover", {}, "worker")
-    assert [item["session_id"] for item in report["not_authorised"]] == [session], report
+    assert [item["session_id"] for item in report["not_authorised"]] == [session], "RECOVERY_RECOVER_WEIGHS_WORK_BINDING"
     assert report["recovered"] == [] and subject.reconnects == {}, "nothing was reconnected"
 
 
@@ -64,7 +64,7 @@ def test_a_server_stopping_during_recovery_waits_for_the_session_in_hand_and_tak
         _wait_for(lambda: sum(subject.reconnect_calls.values()) == 1)  # the first reconnect is in hand
         served.server.down(detach=True)
         assert not thread.is_alive(), "the recovery finished before the server stopped"
-        assert sum(subject.reconnect_calls.values()) == 1, "no further session was taken"
+        assert sum(subject.reconnect_calls.values()) == 1, "RECOVERY_STOPPING_TAKES_NO_MORE_SESSIONS"
         left = {item.session_id for item in after.interrupted_sessions()}
         assert len(left & {first, second}) == 1, "the session not taken stays interrupted"
     finally:
@@ -93,7 +93,7 @@ def test_a_server_interrupted_during_recovery_waits_for_the_session_in_hand_befo
         served.server.transport.accept = interrupted  # the serve loop ends abruptly, without a drain
         served.thread.join(30)
         assert not served.thread.is_alive(), "the serve loop returned"
-        assert not thread.is_alive(), "the recovery finished before the serve loop returned"
+        assert not thread.is_alive(), "RECOVERY_SERVE_LOOP_WAITS_FOR_RECOVERY"
         assert sum(subject.reconnect_calls.values()) == 1, "no further session was taken"
         left = {item.session_id for item in after.interrupted_sessions()}
         assert len(left & {first, second}) == 1, "the session not taken stays interrupted"
@@ -116,7 +116,7 @@ def test_recovery_running_belongs_to_the_live_runtime_not_to_durable_state(subje
         assert abandoned.recovery_status()["running"] is True
         later = subject.runtime()
         later.recover([])  # its own recovery, which ends
-        assert later.recovery_status()["running"] is False, "the other runtime's recovery is not this one's"
+        assert later.recovery_status()["running"] is False, "RECOVERY_RUNNING_BELONGS_TO_LIVE_RUNTIME"
     finally:
         worker.join(30)
 
@@ -155,7 +155,7 @@ def test_doctor_never_imports_or_constructs_a_store_factory_for_its_recovery_che
             result = cli.run("doctor", environment=environment)
         finally:
             cli.cleanup()
-    assert not (tmp_path / "marker.imported").exists(), "the factory's module was imported"
+    assert not (tmp_path / "marker.imported").exists(), "RECOVERY_DOCTOR_NEVER_IMPORTS_STORE_FACTORY"
     assert not (tmp_path / "marker.constructed").exists(), "the factory was called"
     checks = {check["check"]: check for check in json.loads(result.stdout)["checks"]}
     assert checks["recovery"].get("inspected") is False, checks["recovery"]
@@ -179,7 +179,7 @@ def test_doctor_does_not_open_a_built_in_store_of_unapproved_configuration():
             result = cli.run("doctor")
             checks = {check["check"]: check for check in json.loads(result.stdout)["checks"]}
             assert checks["approval"]["status"] == "error", checks["approval"]
-            assert checks["recovery"].get("inspected") is False, checks["recovery"]
+            assert checks["recovery"].get("inspected") is False, "RECOVERY_DOCTOR_SKIPS_UNAPPROVED_STORE"
             assert sorted(Path(cli.home).rglob("*.sqlite3")) == stores, "no store was created"
             assert {path: hashlib.sha256(path.read_bytes()).hexdigest() for path in stores} == digests
         finally:
