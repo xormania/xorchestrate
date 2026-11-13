@@ -263,12 +263,13 @@ def test_shared_support_harness_allowance_uses_the_opted_in_scale(monkeypatch, m
 
 
 @pytest.mark.parametrize("terminal", [False, True], ids=["socket", "terminal"])
-def test_terminal_receivers_never_manufacture_a_minimum_timeout(monkeypatch, terminal):
+@pytest.mark.parametrize("timeout,scale,expected", [(.005, 1, .005), (.02, 2, .04)])
+def test_terminal_receivers_never_manufacture_a_minimum_timeout(monkeypatch, terminal, timeout, scale, expected):
     from tests.hexagonal.support import managed_terminals
 
     clock = ControlledClock()
     supplied = []
-    monkeypatch.setenv("XO_TEST_TIMEOUT_SCALE", "1")
+    monkeypatch.setenv("XO_TEST_TIMEOUT_SCALE", str(scale))
     monkeypatch.setattr(managed_terminals.time, "monotonic", clock.monotonic)
     if terminal:
         def select(read, write, errors, timeout):
@@ -276,12 +277,12 @@ def test_terminal_receivers_never_manufacture_a_minimum_timeout(monkeypatch, ter
             return read, [], []
         monkeypatch.setattr(managed_terminals.select, "select", select)
         monkeypatch.setattr(managed_terminals.os, "read", lambda fd, limit: b"ready")
-        result = managed_terminals.receive_terminal_until(42, b"ready", timeout=.005)
+        result = managed_terminals.receive_terminal_until(42, b"ready", timeout=timeout)
     else:
         connection = SimpleNamespace(settimeout=supplied.append, recv=lambda size: b"ready")
-        result = managed_terminals.receive_until(connection, b"ready", timeout=.005)
+        result = managed_terminals.receive_until(connection, b"ready", timeout=timeout)
     assert result == b"ready"
-    assert supplied == pytest.approx([.005]), "TERMINAL_RECEIVE_USES_ACTUAL_REMAINDER"
+    assert supplied == pytest.approx([expected]), "TERMINAL_RECEIVE_USES_ACTUAL_REMAINDER"
 
 
 @pytest.mark.parametrize("terminal", [False, True], ids=["socket", "terminal"])
@@ -340,6 +341,9 @@ def test_supervisor_records_unbudgeted_host_shutdown_overrun(tmp_path, monkeypat
     report = supervised_run.supervise(("controlled-worker",), tmp_path, host=host, cleanup_budget=.05, grace=1)
     assert report["cleanup"]["verified"] is False
     assert "cleanup_deadline" in report["cleanup"]["errors"]
+    assert report["cleanup"]["elapsed_seconds"] == pytest.approx(.1)
+    assert report["cleanup"]["overrun_seconds"] == pytest.approx(.05)
+    assert report["cleanup"]["budget_scope"] == "cooperative_cleanup"
     assert report["duration_seconds"] == .1, "unbudgeted host.shutdown remains a cooperative boundary"
 
 
