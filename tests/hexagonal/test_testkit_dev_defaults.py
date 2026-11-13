@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 
 from tests.hexagonal.contracts import devconfig as contract
-from tests.hexagonal.support.dev_defaults import SEAMS, accepts_dev, with_dev
+from tests.hexagonal.support.dev_defaults import SEAMS, accepts_dev, trusted_executable, trusted_file, with_dev
 from tests.hexagonal.support.devconfig import SettingsWorld, no_processes, resolved
 from tests.hexagonal.support.git_repositories import REPOSITORY_NAME
 from tests.hexagonal.support.managed_profiles import ROOT, dev_shell_subject, profile_file, run_shell
@@ -184,7 +184,8 @@ def test_a_fresh_run_without_a_profile_uses_the_interpreter_setting_and_keeps_it
 
 def test_a_profile_keeps_its_own_interpreter_rules(world, tmp_path):
     profile = profile_file(tmp_path / "operator")
-    result = settings(world, ["run", "--profile", str(profile)], **{INTERPRETER: tmp_path / "elsewhere"})
+    elsewhere = trusted_executable(tmp_path / "elsewhere")
+    result = settings(world, ["run", "--profile", str(profile)], **{INTERPRETER: elsewhere})
     assert result["interpreter"] == sys.executable
 
 
@@ -224,13 +225,13 @@ def selected_host(result):
 
 
 def test_the_terminal_binary_setting_becomes_the_default_hosts_binary_option(world, tmp_path):
-    binary = tmp_path / "bin" / "terminal"
+    binary = trusted_executable(tmp_path / "bin" / "terminal")
     assert selected_host(settings(world, ["run"], **{TERMINAL_BINARY: binary})) == default_host(binary)
     assert settings(world, ["run"])["terminal_host"] in (None, default_host())
 
 
 def test_a_terminal_host_flag_or_profile_field_wins_over_the_binary_setting(world, tmp_path):
-    binary = tmp_path / "bin" / "terminal"
+    binary = trusted_executable(tmp_path / "bin" / "terminal")
     plain = {"adapter": default_host()["adapter"]}
     flagged = settings(world, ["run", "--terminal-host", json.dumps(plain)], **{TERMINAL_BINARY: binary})
     assert selected_host(flagged) == plain
@@ -249,7 +250,7 @@ def expected_dev_settings(values):
 
 
 def test_the_plan_records_the_developer_settings_that_shaped_the_run(world, tmp_path):
-    values = {INTERPRETER: tmp_path / "py", TERMINAL_BINARY: tmp_path / "terminal",
+    values = {INTERPRETER: trusted_executable(tmp_path / "py"), TERMINAL_BINARY: trusted_executable(tmp_path / "terminal"),
               "XORCHESTRATE_DEV_SERENA_VERSION": "9.9.9"}
     result = settings(world, ["start", "--suite", "static", "--output", str(tmp_path / "runs")], **values)
     candidate = tmp_path / "candidate"
@@ -264,7 +265,7 @@ def test_the_plan_records_the_developer_settings_that_shaped_the_run(world, tmp_
 
 
 def test_a_foreground_report_carries_the_same_developer_settings(world, tmp_path, capsys):
-    values = {TERMINAL_BINARY: tmp_path / "terminal"}
+    values = {TERMINAL_BINARY: trusted_executable(tmp_path / "terminal")}
     seen = {}
 
     def runner(**options):
@@ -348,6 +349,19 @@ def test_the_live_testkit_guide_documents_the_new_default_and_the_precedence():
 
 # Loading settings for the kit starts no process ----------------------------------------------------
 
+def hermetic(monkeypatch, world, calls=None):
+    """The kit's own settings lookup, run for real but against the throwaway repository and HOME only."""
+    profiles = kit("adapters.profiles")
+    real = profiles.load_dev
+    monkeypatch.setattr(os, "environ", {**world.env()})
+
+    def load_dev(root):
+        if calls is not None:
+            calls.append(root)
+        return real(world.main)
+
+    monkeypatch.setattr(profiles, "load_dev", load_dev)
+
 @pytest.mark.parametrize("where", ["main", "linked"])
 def test_the_kit_loads_developer_settings_without_starting_a_process(world, monkeypatch, where):
     repo = world.main if where == "main" else world.tree
@@ -361,12 +375,12 @@ def test_the_kit_loads_developer_settings_without_starting_a_process(world, monk
 
 
 @pytest.mark.parametrize("action", ["doctor", "plan"])
-def test_doctor_and_plan_load_the_checkouts_settings_without_starting_a_process(monkeypatch, tmp_path, capsys, action):
+def test_doctor_and_plan_load_the_checkouts_settings_without_starting_a_process(world, monkeypatch, tmp_path, capsys,
+                                                                              action):
     cli = kit("operator_cli")
     composition = kit("composition")
     calls = []
-    real = cli.profiles.load_dev
-    monkeypatch.setattr(cli.profiles, "load_dev", lambda root: calls.append(root) or real(root))
+    hermetic(monkeypatch, world, calls)
     with no_processes(monkeypatch) as attempts:
         code = cli.main([action, "--suite", "static", "--output", str(tmp_path / "runs")],
                         direct_runner=composition.run, preflight=composition.preflight)
@@ -374,3 +388,154 @@ def test_doctor_and_plan_load_the_checkouts_settings_without_starting_a_process(
     assert attempts == [], attempts
     assert calls, "the kit did not look for developer settings"
     assert code == 0 and report.get("status") == "passed", report
+
+
+# Review findings: robustness, trust and evidence ----------------------------------------------------
+
+CONTROL_ACTIONS = ("status", "watch", "attach", "wait", "stop", "close", "collect", "verify")
+
+
+def last_json(capsys):
+    captured = capsys.readouterr()
+    return json.loads(captured.out.strip().splitlines()[-1]), captured.err
+
+
+@pytest.mark.parametrize("action", [*CONTROL_ACTIONS, "stories"])
+def test_control_commands_never_load_developer_settings(monkeypatch, tmp_path, capsys, action):
+    cli = kit("operator_cli")
+    profiles = kit("adapters.profiles")
+    calls = []
+
+    def refuse(root):
+        calls.append(root)
+        raise ValueError("developer settings: planted: a control command loaded developer settings")
+
+    monkeypatch.setattr(profiles, "load_dev", refuse)
+    argv = ["stories"] if action == "stories" else [action, str(tmp_path / "no-such-run")]
+    cli.main(argv, direct_runner=None, preflight=None)
+    capsys.readouterr()
+    assert calls == [], f"{action} loaded developer settings"
+    if action != "stories":
+        monkeypatch.setenv("PYTHONPYCACHEPREFIX", str(tmp_path / "cache"))
+        monkeypatch.setattr(profiles.os, "execv", lambda *args: (_ for _ in ()).throw(Exec(*args)))
+        with pytest.raises((Exec, ValueError, OSError)):
+            profiles.bootstrap(argv, root=ROOT)
+        assert calls == [], f"the bootstrap loaded developer settings for {action}"
+
+
+def test_a_bad_value_in_another_section_never_reaches_the_kit(world, monkeypatch, tmp_path, capsys):
+    world.repo_file("XORCHESTRATE_DEV_SERENA_TIMEOUT=abc\nXORCHESTRATE_DEV_TESTKIT_OUTPUT=kit-runs\n")
+    hermetic(monkeypatch, world)
+    loaded = kit("adapters.profiles").load_dev(ROOT)
+    assert loaded is not None and loaded.get(OUTPUT) == world.main / "kit-runs"
+    cli = kit("operator_cli")
+    composition = kit("composition")
+    code = cli.main(["plan", "--suite", "static", "--output", str(tmp_path / "runs")],
+                    direct_runner=composition.run, preflight=composition.preflight)
+    report, _ = last_json(capsys)
+    assert code == 0 and report["status"] == "passed", report
+
+
+def test_an_unsafe_testkit_setting_is_a_setup_error_naming_it(world, monkeypatch, tmp_path, capsys):
+    hermetic(monkeypatch, world)
+    monkeypatch.setitem(os.environ, TERMINAL_BINARY, str(tmp_path / "no-such-terminal"))
+    cli = kit("operator_cli")
+    code = cli.main(["plan", "--suite", "static", "--output", str(tmp_path / "runs")],
+                    direct_runner=None, preflight=None)
+    report, _ = last_json(capsys)
+    assert code == 1 and report["status"] == "setup_error", report
+    assert TERMINAL_BINARY in report["diagnostic"] and "UNSAFE_SETTING" in report["diagnostic"], report
+
+
+def test_an_interpreter_setting_inside_the_candidate_is_refused(world):
+    inside = ROOT / "scripts" / "proof.sh"
+    with pytest.raises(ValueError, match="outside the measured candidate"):
+        settings(world, ["run"], **{INTERPRETER: inside})
+
+
+def test_doctor_with_a_profile_checks_the_terminal_binary_and_config_settings(world, tmp_path, monkeypatch):
+    profiles = kit("adapters.profiles")
+    binary = trusted_executable(tmp_path / "bin" / "terminal")
+    config = trusted_file(tmp_path / "native.json")
+    seen = []
+    monkeypatch.setattr(profiles.terminal_selection, "readiness",
+                        lambda selection, **kwargs: seen.append(selection) or {"name": "terminal_host", "passed": True})
+    acceptance = profile_file(tmp_path / "acceptance", {"suite": "acceptance"})
+    with_dev(profiles.doctor, acceptance, root=ROOT, dev=dev(world, **{TERMINAL_BINARY: binary}))
+    assert seen and kit("adapters.terminal_selection").parse(seen[-1]) == default_host(binary), seen
+    native = profile_file(tmp_path / "native", {"mode": "native", "suite": "static"})
+    result = with_dev(profiles.doctor, native, root=ROOT, dev=dev(world, **{NATIVE_CONFIG: config}))
+    assert result["profile"]["config"] == str(config)
+
+
+def test_the_doctor_command_hands_its_developer_settings_to_the_profile_doctor(world, tmp_path, monkeypatch, capsys):
+    cli = kit("operator_cli")
+    received = []
+    monkeypatch.setattr(cli.profiles, "doctor",
+                        lambda path, **kwargs: received.append(kwargs.get("dev")) or {"status": "passed"})
+    loaded = dev(world)
+    profile = profile_file(tmp_path / "operator", {"suite": "static"})
+    with_dev(cli.main, ["doctor", "--profile", str(profile)], direct_runner=None,
+             preflight=lambda **kwargs: {"status": "passed", "checks": []}, dev=loaded)
+    capsys.readouterr()
+    assert received == [loaded]
+
+
+def test_a_foreground_runs_report_file_carries_the_developer_settings(world, tmp_path, capsys):
+    values = {TERMINAL_BINARY: trusted_executable(tmp_path / "terminal")}
+    cli = kit("operator_cli")
+    composition = kit("composition")
+    with_dev(cli.main, ["run", "--suite", "static", "--output", str(tmp_path / "runs")],
+             direct_runner=composition.run, preflight=composition.preflight, dev=dev(world, **values))
+    report, _ = last_json(capsys)
+    on_disk = json.loads((Path(report["directory"]) / "report.json").read_text())
+    assert on_disk.get("environment", {}).get("dev_settings") == expected_dev_settings(values)
+
+
+def test_a_repeated_run_keeps_the_developer_settings_of_the_run_it_repeats(world, tmp_path):
+    recorded = {TERMINAL_BINARY: {"value": "/recorded/terminal", "source": "user_file /recorded/devtools.env:1"}}
+    saved = tmp_path / "saved run"
+    saved.mkdir()
+    (saved / "plan.json").write_text(json.dumps({"suite": "static", "mode": "protocol-fixture",
+                                                 "output": str(tmp_path / "runs"), "dev_settings": recorded}))
+    current = {TERMINAL_BINARY: trusted_executable(tmp_path / "current-terminal")}
+    result = settings(world, ["start", "--from", str(saved)], **current)
+    assert result.get("dev_settings") == recorded
+
+
+def test_settings_warnings_go_to_stderr_one_line_each(world, tmp_path, monkeypatch, capsys):
+    world.repo_file("XORCHESTRATE_DEV_NO_SUCH_SETTING=1\n")
+    loaded = dev(world)
+    assert [warning[0] for warning in loaded.warnings] == ["UNKNOWN_KEY"]
+    cli = kit("operator_cli")
+    composition = kit("composition")
+    with_dev(cli.main, ["plan", "--suite", "static", "--output", str(tmp_path / "runs")],
+             direct_runner=composition.run, preflight=composition.preflight, dev=loaded)
+    report, err = last_json(capsys)
+    assert report["status"] == "passed", report
+    lines = [line for line in err.splitlines() if "UNKNOWN_KEY" in line]
+    assert len(lines) == 1 and "XORCHESTRATE_DEV_NO_SUCH_SETTING" in lines[0], err
+    profiles = kit("adapters.profiles")
+    monkeypatch.setenv("PYTHONPYCACHEPREFIX", str(tmp_path / "cache"))
+    monkeypatch.setattr(profiles.os, "execv", lambda *args: (_ for _ in ()).throw(Exec(*args)))
+    with pytest.raises(Exec):
+        with_dev(profiles.bootstrap, ["plan"], root=ROOT, dev=loaded)
+    err = capsys.readouterr().err
+    assert len([line for line in err.splitlines() if "UNKNOWN_KEY" in line]) == 1, err
+
+
+def test_a_skipped_settings_file_is_recorded_in_the_plan(world, tmp_path):
+    repo_file = world.repo_file("XORCHESTRATE_DEV_TESTKIT_OUTPUT=never-read\n")
+    repo_file.chmod(0o664)
+    result = settings(world, ["start", "--suite", "static", "--output", str(tmp_path / "runs")])
+    candidate = tmp_path / "candidate"
+    candidate.mkdir()
+    composition = kit("operator_composition")
+    directory = composition.prepare_run({**result, "root": str(candidate)})
+    try:
+        plan = json.loads((directory / "plan.json").read_text())
+    finally:
+        composition.remove_endpoint(kit("adapters.terminals").run_endpoint(directory))
+    skipped = plan.get("dev_settings", {}).get("_skipped")
+    assert isinstance(skipped, list) and [entry.get("file") for entry in skipped] == [str(repo_file)], plan
+    assert all(isinstance(entry.get("reason"), str) and entry["reason"] for entry in skipped), skipped

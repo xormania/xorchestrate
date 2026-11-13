@@ -50,8 +50,10 @@ SLICE_C = {
     "XORCHESTRATE_DEV_TERMINAL_BINARY": ("path", None, "testkit"),
 }
 """Key -> (kind, default template, section) for the test kit's settings (slice C)."""
-EVIDENCE_KEYS = frozenset({"XORCHESTRATE_DEV_NATIVE_CONFIG", "XORCHESTRATE_DEV_TERMINAL_BINARY"})
-"""Settings that can change what a run proves; every run records them whatever their source."""
+EVIDENCE_KEYS = frozenset({"XORCHESTRATE_DEV_NATIVE_CONFIG", "XORCHESTRATE_DEV_TERMINAL_BINARY",
+                           "XORCHESTRATE_DEV_TESTKIT_INTERPRETER", "XORCHESTRATE_DEV_TESTKIT_PROFILE"})
+"""Settings that can change what a run proves (they select an executable or a configuration); every run
+records them whatever their source."""
 TESTKIT_SECTION = "testkit"
 LEGACY_OUTPUT_NAME = "xorchestrate-runs"
 """The test kit's former output folder beside the checkout; no default points there any more."""
