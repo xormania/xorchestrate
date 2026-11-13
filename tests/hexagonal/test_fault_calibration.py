@@ -841,9 +841,9 @@ TESTKIT = (
 """The test kit's planted faults: old faults 5-12 and 14 (13 dropped as escaping its selection). Each credits only
 its fault's own symptom: the worker's missing host name, the schema-1 refusal's reason, a created marker, an old
 readiness name, a signalled child, a removed foreign endpoint or an accepted keep."""
-TESTKIT_MUTATIONS_SHA256 = "abb8b4ef2e43a001ed30b679c2f7d621d331610d008e9120c1ea36ce2411ac4d"
-"""sha256 of the canonical JSON of the cases' mutation objects in order, as the old test-kit fault script planted
-them."""
+TESTKIT_MUTATIONS_SHA256 = "3338d87984f136de1ba68974d128dda59db5a9db77c0d3f05680ab5ad9bbfae2"
+"""sha256 of the canonical JSON of the retained faults' mutation objects in order, using their current source
+anchors."""
 
 
 def test_the_registry_holds_the_testkit_inventory_at_the_manual_stage_after_project_server():

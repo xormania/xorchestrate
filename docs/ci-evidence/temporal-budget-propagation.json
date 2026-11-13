@@ -231,5 +231,38 @@
     "No native vendor authentication or WSL/host-suspend qualification performed.",
     "Hosted/native scenarios blocked by unavailable tmux or AF_UNIX sockets require an appropriate execution environment.",
     "Arbitrary synchronous application, filesystem/proc and terminal-host calls are not preempted; requested timeouts are not strict total-return guarantees."
-  ]
+  ],
+  "ci_inventory_pin_repair": {
+    "base_commit": "210134e60d0b3e1cc20f836fb687553c20175980",
+    "source_comparison_base": "314e979d01c5f8bf563b060ad91406e1b7bd7c14",
+    "repair": {
+      "path": "tests/hexagonal/test_fault_calibration.py",
+      "source_sha256": "68c051d4212f474b409a52f08d4f8970d9619a6f26cf0a9e114b66627b24fe20",
+      "old_digest": "abb8b4ef2e43a001ed30b679c2f7d621d331610d008e9120c1ea36ce2411ac4d",
+      "new_digest": "3338d87984f136de1ba68974d128dda59db5a9db77c0d3f05680ab5ad9bbfae2",
+      "comment": "Clarified canonical digest binds current source anchors of retained faults"
+    },
+    "inventory_verification": "Parsed structural comparison confirmed only timeout-interrupts-the-whole-group mutation.old and mutation.new replaced max(0.1, remaining(grace)) with remaining(grace); all nine case identities, target paths, diagnostics, selectors, healthy controls and expectations unchanged.",
+    "red": {
+      "command": "PYTHONPYCACHEPREFIX=/workspace/scratch/ab325f7a673c/timing-v2-pycache/budget-tests /workspace/scratch/ab325f7a673c/timing-v2-env/bin/python -m pytest -q -p no:cacheprovider tests/hexagonal/test_fault_calibration.py::test_the_testkit_inventory_is_the_old_faults_with_standard_checks --junitxml=/workspace/scratch/ab325f7a673c/timing-v2-inventory-pin-red.xml",
+      "result": "1 failed in 0.22s; intended canonical digest assertion"
+    },
+    "green": {
+      "command": "PYTHONPYCACHEPREFIX=/workspace/scratch/ab325f7a673c/timing-v2-pycache/budget-tests /workspace/scratch/ab325f7a673c/timing-v2-env/bin/python -m pytest -q -p no:cacheprovider tests/hexagonal/test_fault_calibration.py --junitxml=/workspace/scratch/ab325f7a673c/timing-v2-inventory-pin-green.xml",
+      "result": "115 passed in 52.43s"
+    },
+    "ruff": "python -m ruff check tests/hexagonal/test_fault_calibration.py: All checks passed!",
+    "limits": "Test-only working-tree repair; no remote or commit changes. This module validates retained fault inventory semantics and runs its existing state/work calibration parity controls; no new claim about native-host manual execution.",
+    "hosted_failure": {
+      "pull_request": 133,
+      "source_commit": "15503e2ad5b5aa31a4f7e3cb313dfba694b230c2",
+      "merge_revision": "e8028de3d93f32a1d5b21d739a1996f7310da818",
+      "tree": "3d52a2334ca0abf94fa6f14a0a52bc23c1da6b0b",
+      "run_id": 43515299285,
+      "job_id": 132195821302,
+      "artifact_id": 14079828505,
+      "outcome": "Shard 3: 618 passed, 1 failed at the canonical testkit mutation digest assertion; candidate integrity passed.",
+      "artifact": "/workspace/scratch/ab325f7a673c/timing-v2-evidence/pr133-shard3-attempt1.zip"
+    }
+  }
 }
