@@ -24,7 +24,7 @@ from .adapters.evidence import candidate_identity, digest, now, write_json
 from .adapters.managed_process import ManagedWorker
 from .adapters.managed_store import ManagedStore, owner_alive
 from .adapters.native_evidence import collection_supplement
-from .adapters.ownership import owned_processes, processes_naming, send_signal, subreaper
+from .adapters.ownership import alive, owned_processes, processes_naming, send_signal, subreaper
 from .adapters.shard_timings import timing_source, verify_timings
 from .composition import ROOT, preflight, run
 from .composition import plan as check_plan
@@ -333,9 +333,22 @@ def _ending(directory, placement):
     return sorted(_selected(directory, placement, within=processes_naming(directory)), key=lambda item: item.pid)
 
 
+def _marked(directory):
+    """Processes carrying the run's marker, found with the run directory as the root: for reporting only.
+
+    The run directory outlives the private endpoint, so a marked leftover is still counted after the endpoint is
+    removed. Never a source of signals: what close may end comes from ``_ending`` alone.
+    """
+    try:
+        selection = owned_processes(directory, (RUN_MARKER, str(directory)))
+    except ValueError:
+        return set()
+    return {identity for identity, why in selection.selected.items() if why == "home"}
+
+
 def _leftovers(directory, placement):
     """Everything of the run still alive: what names it or carries its marker."""
-    return set(processes_naming(directory)) | _selected(directory, placement)
+    return set(processes_naming(directory)) | _selected(directory, placement) | _marked(directory)
 
 
 def close_without_supervisor(directory, state):
@@ -383,14 +396,23 @@ def close_without_supervisor(directory, state):
             errors.append(getattr(error, "code", "terminal_host_shutdown"))
         finally:
             host.close()
+    # What this close selected stays selected through escalation: its own SIGTERM may end a selected parent and
+    # cut the link that selected a child. Only this close's own selections are kept, and each is re-checked by
+    # identity, so a reused pid is never signalled.
+    chosen = set()
+
+    def ending():
+        chosen.update(_ending(directory, placement))
+        return sorted((identity for identity in chosen if alive(identity)), key=lambda item: item.pid)
+
     for number in (signal.SIGTERM, signal.SIGKILL):
-        survivors = _ending(directory, placement)
+        survivors = ending()
         for identity in survivors:
             send_signal(identity, number)
         deadline = time.monotonic() + 3
         while survivors and time.monotonic() < deadline:
             time.sleep(.05)
-            survivors = _ending(directory, placement)
+            survivors = ending()
         if not survivors:
             break
     remaining = _leftovers(directory, placement)
