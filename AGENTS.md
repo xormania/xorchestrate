@@ -128,6 +128,9 @@ every harness gets the same rules whether or not it loads repository skills:
 - Proving tests red before implementation: `docs/pr-quality.md` ("Prove detection").
 - Preparing a pull request: `docs/pr-quality.md` and the attribution rule above.
 - Navigating the code with Serena when it is connected: `docs/agent-workflow.md`.
+- Work trees: one line of work, one tree, one owner, placed outside the
+  checkout; the main checkout stays on the default branch, unedited:
+  `docs/agent-workflow.md`.
 
 Harnesses that load skills find thin pointers to these documents in
 `.agents/skills`; Claude Code sees them through `.claude/skills`. The documents

@@ -142,9 +142,19 @@ default in your home), never into the repository.
 
 ## Work trees and per-tree Serena (optional tool)
 
-`python3 -m scripts.worktrees` is an optional convenience for contributors who
-work in several git work trees at once. Nothing in the repository requires it.
-It reads its settings through the [developer settings](#developer-settings);
+Where work trees go: one line of work, one work tree, one owner. Every tree
+lives under one dedicated root outside the checkout, never inside it or beside
+it. The main checkout stays on the default branch and is not edited. When a
+tree's branch is merged, its owner removes the tree once it is clean, never by
+force.
+
+`python3 -m scripts.worktrees` is the provided way to follow that rule: `new`
+places each tree under the configured work-tree root
+(`XORCHESTRATE_DEV_WORKTREE_ROOT`, by default outside the checkout) and
+`remove` refuses any removal it cannot prove safe. It is an optional
+convenience for contributors who work in several git work trees at once;
+nothing else in the repository depends on it. It reads its settings through
+the [developer settings](#developer-settings);
 `--root` and `--state-dir` override the work-tree root and the tool's state
 directory for one command, and `--repo` names the repository (by default the
 one containing the current directory; inside a linked tree it means the main

@@ -11,8 +11,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from scripts.testkit.adapters.managed_store import owner_alive
-from scripts.testkit.adapters.ownership import send_signal
+from scripts.testkit.adapters.ownership import Identity, alive, send_signal
 
 SOURCE = Path(__file__).resolve().parents[3]
 
@@ -48,6 +47,27 @@ def _command(pid):
         return Path(f"/proc/{pid}/cmdline").read_bytes().replace(b"\0", b" ").decode(errors="replace")
     except OSError:
         return ""
+
+
+def owner_running(owner):
+    """Whether the run's recorded owner process still runs, judged by its identity (pid and start time).
+
+    ``owner_alive`` turns false as soon as the owner record is released; the supervisor exits a few
+    milliseconds later. A test that must leave no process behind waits for this instead.
+    """
+    if not isinstance(owner, dict):
+        return False
+    try:
+        return alive(Identity(owner["pid"], owner["started"]))
+    except (KeyError, TypeError):
+        return False
+
+
+def await_owner_exit(read_owner, *, timeout=20):
+    """Wait, on the shared classified budget, until the owner that ``read_owner()`` returns has exited."""
+    from tests.hexagonal.support.native import wait_for
+
+    return wait_for(lambda: not owner_running(read_owner()), timeout, message="the run's supervisor did not exit")
 
 
 def await_condition(predicate, *, timeout=20):
@@ -120,7 +140,7 @@ class PublicWorkflow:
                     self.command("stop", directory)
                     self.command("wait", directory, timeout=40)
                 self.command("close", directory, timeout=20)
-                await_condition(lambda: not owner_alive(self.state(directory).get("owner")), timeout=15)
+                await_owner_exit(lambda: self.state(directory).get("owner"), timeout=15)
 
 
 @contextlib.contextmanager

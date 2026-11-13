@@ -16,8 +16,10 @@ from tests.hexagonal.support.live_diagnostics import (
 from tests.hexagonal.support.managed_workflow import (
     PublicWorkflow,
     await_condition,
+    await_owner_exit,
     foreign_terminal,
     isolated_candidate,
+    owner_running,
 )
 from tests.hexagonal.support.terminal_host import requires_host
 
@@ -65,7 +67,7 @@ def test_public_detached_success_repeat_close_and_ownerless_recollection(tmp_pat
             assert collected.returncode == 0, collected.stdout + collected.stderr
             closed, _ = workflow.command("close", first)
             assert closed.returncode == 0
-            await_condition(lambda: not owner_alive(workflow.state(first)["owner"]))
+            await_owner_exit(lambda: workflow.state(first)["owner"])
             stopped, unchanged = workflow.command("stop", first)
             assert stopped.returncode == 0 and unchanged["status"] == "already_finished"
             assert foreign_alive()
@@ -185,7 +187,7 @@ def test_kept_terminals_outlive_a_killed_supervisor_until_close_adopts_and_ends_
         assert dashboards(), "the kept dashboard is running"
         owner = workflow.state(directory)["owner"]
         send_signal(Identity(owner["pid"], owner["started"]), signal.SIGKILL)
-        await_condition(lambda: not owner_alive(workflow.state(directory)["owner"]))
+        await_owner_exit(lambda: workflow.state(directory)["owner"])
         assert dashboards(), "kept terminals outlive their supervisor"
         closed, response = workflow.command("close", directory)
         assert closed.returncode == 0, closed.stdout + closed.stderr
@@ -212,7 +214,7 @@ def test_close_after_a_supervisor_killed_mid_run_leaves_no_process_and_no_endpoi
         assert endpoint.is_dir() and processes_naming(directory)
         owner = workflow.state(directory)["owner"]
         send_signal(Identity(owner["pid"], owner["started"]), signal.SIGKILL)
-        await_condition(lambda: not owner_alive(workflow.state(directory)["owner"]))
+        await_owner_exit(lambda: workflow.state(directory)["owner"])
         closed, response = workflow.command("close", directory)
         assert closed.returncode == 0, closed.stdout + closed.stderr
         assert response["status"] == "closed" and response["cleanup"]["verified"], response
@@ -267,7 +269,7 @@ def test_ctrl_c_on_the_supervisor_finishes_unsuccessfully_with_verified_cleanup(
         assert result["phase"] in TERMINAL_PHASES and result["outcome"] == "failed"
         assert result["reason"] == "supervisor_signal"
         assert result["cleanup"]["verified"] and not result["observed"]["worker_alive"], result["cleanup"]
-        await_condition(lambda: not owner_alive(workflow.state(directory)["owner"]))
+        await_owner_exit(lambda: workflow.state(directory)["owner"])
         # The host's processes end just after the supervisor; a real leak never clears.
         await_condition(lambda: processes_naming(directory) == [], timeout=20)
     finally:
@@ -305,3 +307,28 @@ def test_freeze_stops_the_runs_own_worker_and_never_a_look_alike_outside_the_run
             look_alike.kill()
             look_alike.wait(timeout=10)
         outside.rmdir()
+
+
+def test_a_released_owner_record_is_not_an_exited_supervisor():
+    """The owner record is released a few milliseconds before the supervisor exits; waits use the identity."""
+    import subprocess
+    import sys
+
+    from scripts.testkit.adapters.ownership import processes
+    from scripts.testkit.waits import WaitTimeout
+
+    process = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(120)"])
+    try:
+        identity = processes()[process.pid][0]
+        released = {"pid": identity.pid, "started": identity.started, "released_at": "2026-01-01T00:00:00Z"}
+        assert not owner_alive(released), "the record says released"
+        assert owner_running(released), "but the supervisor process still runs"
+        with pytest.raises(WaitTimeout):
+            await_owner_exit(lambda: released, timeout=0.3)
+        process.kill()
+        process.wait(timeout=10)
+        await_owner_exit(lambda: released, timeout=5)
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.wait(timeout=10)

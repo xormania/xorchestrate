@@ -24,7 +24,6 @@ import os
 import signal
 import stat
 import subprocess
-import time
 import weakref
 from dataclasses import dataclass
 from pathlib import Path
@@ -256,8 +255,3 @@ def reap(world):
     _, _, survivors = _kill_until_quiet(str(world.cli.home), world.spawned)
     if survivors:
         raise AssertionError(f"the world's teardown left {len(survivors)} of its processes alive")
-
-
-def settle(seconds):
-    """A fixed pause kept from the original scenarios until an observed boundary replaces it."""
-    time.sleep(seconds)
