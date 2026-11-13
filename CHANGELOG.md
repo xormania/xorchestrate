@@ -142,6 +142,11 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   redacted secret scanning. The existing static suite and CI lane run it once;
   `contracts/security.json` owns detection policy and same-line
   `secret-scan: allow` exceptions.
+- The shared security and static suites add pinned Zizmor 1.32.0 workflow
+  analysis. It scans explicit top-level GitHub workflow files offline with strict
+  collection, applies the reviewed exact exceptions in `contracts/zizmor.yml`,
+  and retains candidate-bound normalized findings without republishing workflow
+  source. The existing static CI lane runs it once; no new hosted status is added.
 - Work-tree maintenance: `python3 -m scripts.worktrees report` judges every
   tree and scratch or run directory, and `prune --apply` removes only what it
   can prove safe, keeping and reporting everything else. See

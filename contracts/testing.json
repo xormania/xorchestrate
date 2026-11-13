@@ -201,6 +201,7 @@
         "tests/hexagonal/test_stories.py": "composition",
         "tests/hexagonal/test_static_checks.py": "adapter",
         "tests/hexagonal/test_security_testkit.py": "adapter",
+        "tests/hexagonal/test_workflow_security.py": "adapter",
         "tests/hexagonal/test_testkit_integration.py": "composition",
         "tests/hexagonal/test_acceptance_testkit.py": "composition",
         "tests/hexagonal/test_test_framework.py": "framework",

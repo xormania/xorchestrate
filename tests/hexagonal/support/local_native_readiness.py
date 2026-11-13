@@ -32,11 +32,12 @@ class LocalNativeReadiness:
         self.native = self.profile.parent / "native.json"
 
     @staticmethod
-    def probe(sqlite_ready=True):
+    def probe(sqlite_ready=True, *, zizmor=True):
         collector = {"status": "ready", "sqlite_version": "3.53.1"} if sqlite_ready else {
             "status": "unavailable", "sqlite_version": "3.44.0", "reason": "sqlite_version"}
         return {"version": [3, 12, 14], "virtual": True, "executable": sys.executable,
-            "dependencies": {"jsonschema": True, "pytest": True, "ruff": True}, "collector": collector}
+            "dependencies": {"jsonschema": True, "pytest": True, "ruff": True, "zizmor": zizmor},
+            "collector": collector}
 
     def setup_native(self):
         with patch.object(profiles, "_interpreter_details", return_value=self.probe()):
@@ -172,7 +173,8 @@ class LocalNativeReadiness:
             extras = next(argument for argument in command if argument.startswith(str(ROOT) + "["))
             installed.append(extras.split("[", 1)[1].rstrip("]").split(","))
             return SimpleNamespace(returncode=0)
-        with patch.object(profiles, "_interpreter_details", return_value=self.probe()), \
+        with patch.object(profiles, "_interpreter_details", side_effect=[
+                self.probe(zizmor=False), self.probe(zizmor=True)]), \
                 patch.object(profiles.subprocess, "run", side_effect=install):
             result = profiles.setup(self.profile, root=ROOT, install=True)
         return result, installed, before == (chosen.read_bytes(), self.native.read_bytes())

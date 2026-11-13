@@ -55,9 +55,11 @@ def test_cli_accepts_the_security_suite(tmp_path, monkeypatch, capsys):
 
 def test_security_and_static_plans_select_the_declared_checks_once(tmp_path):
     options = {"directory": tmp_path, "mode": "protocol-fixture", "check_timeout": 37}
-    assert [check.name for check in composition.plan(suite="security", **options)] == ["ruff", "secret-scan"]
+    assert [check.name for check in composition.plan(suite="security", **options)] == [
+        "ruff", "secret-scan", "zizmor",
+    ]
     assert [check.name for check in composition.plan(suite="static", **options)] == [
-        "ruff", "syntax", "architecture", "secret-scan",
+        "ruff", "syntax", "architecture", "secret-scan", "zizmor",
     ]
 
     for suite in ("checks", "all"):
@@ -65,6 +67,7 @@ def test_security_and_static_plans_select_the_declared_checks_once(tmp_path):
         assert len(names) == len(set(names)), f"{suite} must execute each planned check once"
         assert names.count("ruff") == 1
         assert names.count("secret-scan") == 1
+        assert names.count("zizmor") == 1
 
 
 def test_clean_whole_candidate_is_a_passing_complete_control(tmp_path):

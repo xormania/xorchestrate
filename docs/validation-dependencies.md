@@ -2,9 +2,11 @@
 
 `uv.lock` is the resolved validation baseline. `pyproject.toml` keeps the public
 package dependency ranges and optional integration selection; its `validation`
-dependency group declares Ruff and packaging tools. Each exact `build-system.requires`
-declaration also appears in that group, so native uv resolution includes the backend
-requirements; update the paired declarations together when changing them. CI selects Python 3.12.16 and
+dependency group declares the exact Ruff and Zizmor validation tools alongside
+packaging tools. Zizmor 1.32.0 is installed as an executable rather than an
+importable Python module. Each exact `build-system.requires` declaration also
+appears in that group, so native uv resolution includes the backend requirements;
+update the paired declarations together when changing them. CI selects Python 3.12.16 and
 uv 0.13.7. The lock records transitive packages and artifact identities. It does not claim to freeze operating-system packages
 or vendor/model services.
 
@@ -35,6 +37,12 @@ with the application and needs no extra. `--no-install-project` installs the loc
 tools before source builds, so their backend is already installed. The editable
 installation uses that backend without resolving another build environment. Package builders
 likewise use this Python with `python -m build --no-isolation`.
+
+Managed test-kit setup installs the generated validation requirements into its
+selected environment. Its readiness probe observes the `zizmor` executable beside
+that environment's Python without executing the scanner; this keeps reusable
+profiles independent of whether the environment's `bin` directory is active on
+the caller's `PATH`.
 
 Update the reviewed baseline intentionally:
 

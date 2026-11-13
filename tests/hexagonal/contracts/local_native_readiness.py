@@ -116,6 +116,8 @@ def selected_config_install_contract(subject, enabled):
     result, installed, unchanged = subject.setup_selected_config(enabled)
     assert result["status"] == "passed"
     assert installed == [["test"]], "SETUP_MUST_INSTALL_ONE_DEPENDENCY_SET_WHATEVER_THE_CAPTURE_POLICY"
+    assert result["python"]["dependencies"]["zizmor"] is True, \
+        "SETUP_MUST_RETURN_THE_POST_INSTALL_WORKFLOW_SCANNER_DETAIL"
     assert unchanged, "DEPENDENCY_SETUP_MUST_NOT_REWRITE_EITHER_OPERATOR_CONFIGURATION"
 
 

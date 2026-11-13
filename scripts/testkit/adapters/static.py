@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
+import re
+import shutil
 import sys
 import tomllib
 from dataclasses import replace
@@ -19,10 +22,13 @@ CHECK_SUITES = {
     "syntax": frozenset({"static"}),
     "architecture": frozenset({"static"}),
     "secret-scan": frozenset(STATIC_SUITES),
+    "zizmor": frozenset(STATIC_SUITES),
 }
 STATIC_IDS = tuple(CHECK_SUITES)
 SYNTAX_SCRIPT = Path(__file__).with_name("syntax.py").resolve()
 SECRET_SCAN_SCRIPT = Path(__file__).with_name("secret_scan.py").resolve()
+ZIZMOR_SCRIPT = Path(__file__).with_name("zizmor.py").resolve()
+ZIZMOR_VERSION = "1.32.0"
 
 
 def definitions(*, directory, timeout=600, suites=("static",)):
@@ -43,6 +49,11 @@ def definitions(*, directory, timeout=600, suites=("static",)):
                               str(directory / "inputs-secret-scan.json"), "--output",
                               str(directory / "secret-scan.json")), timeout,
               (str(SECRET_SCAN_SCRIPT), "contracts/security.json")),
+        Check("zizmor", (sys.executable, str(ZIZMOR_SCRIPT), "--manifest",
+                          str(directory / "inputs-zizmor.json"), "--output",
+                          str(directory / "zizmor.json"), "--cache-dir",
+                          str(directory / "zizmor-cache")), timeout,
+              (str(ZIZMOR_SCRIPT), "contracts/zizmor.yml", ".github/requirements-ci.txt")),
     )
     return tuple(check for check in checks if CHECK_SUITES[check.name] & selected)
 
@@ -122,6 +133,59 @@ def _ruff_configuration(root):
     return paths
 
 
+def _zizmor_executable(env):
+    """Select the scanner from explicit PATH or the active interpreter environment."""
+    selected = None
+    if "PATH" in env:
+        path = env["PATH"]
+        if not isinstance(path, str):
+            raise ValueError("Explicit Zizmor PATH must be a string")
+        selected = shutil.which("zizmor", path=path)
+        if selected is None:
+            raise ValueError("Explicit PATH contains no Zizmor executable")
+    else:
+        sibling = Path(sys.executable).with_name("zizmor")
+        if sibling.is_file() and os.access(sibling, os.X_OK):
+            selected = str(sibling)
+        else:
+            selected = shutil.which("zizmor")
+    if selected is None:
+        raise ValueError("Zizmor executable is unavailable")
+    executable = Path(selected).resolve(strict=True)
+    if not executable.is_file() or not os.access(executable, os.X_OK):
+        raise ValueError("Zizmor executable is unavailable")
+    return str(executable)
+
+
+def _zizmor_sources(root):
+    directory = root / ".github/workflows"
+    if not directory.exists():
+        raise ValueError("Zizmor selected no workflow files")
+    resolved = directory.resolve(strict=True)
+    if not resolved.is_relative_to(root) or not resolved.is_dir():
+        raise ValueError("Zizmor workflow directory resolves outside the candidate")
+    sources = []
+    for path in directory.iterdir():
+        if path.suffix not in {".yml", ".yaml"}:
+            continue
+        if path.is_dir() and not path.is_symlink():
+            continue
+        _, relative, _ = repository_path(root, path)
+        sources.append(relative)
+    sources.sort()
+    if not sources:
+        raise ValueError("Zizmor selected no workflow files")
+    return sources
+
+
+def _zizmor_pin(path):
+    pins = [line.strip().split("==", 1)[1] for line in Path(path).read_text().splitlines()
+            if line.strip().startswith("zizmor==")]
+    if len(pins) != 1 or not pins[0]:
+        raise ValueError("Zizmor requires one exact requirements-ci.txt pin")
+    return pins[0]
+
+
 def static_manifest(name, *, root, directory, runner, env, timeout=600):
     """Resolve current membership using the checker's own selection where needed.
 
@@ -130,6 +194,7 @@ def static_manifest(name, *, root, directory, runner, env, timeout=600):
     configuration cannot silently alter lint coverage. Syntax and architecture
     retain their declared Python traversal, including examined ignored files.
     Secret scanning follows all cached and nonignored untracked candidate files.
+    Zizmor receives only explicit, top-level GitHub workflow files.
     """
     root, directory = Path(root).resolve(), Path(directory).resolve()
     configs = []
@@ -205,6 +270,38 @@ def static_manifest(name, *, root, directory, runner, env, timeout=600):
         }
         tool["secret_scanner"] = {"path": str(SECRET_SCAN_SCRIPT), **file_identity(SECRET_SCAN_SCRIPT)}
         tool["security_policy"] = {"id": policy["id"], "version": policy["version"]}
+    elif name == "zizmor":
+        sources = _zizmor_sources(root)
+        configs = ["contracts/zizmor.yml", ".github/requirements-ci.txt"]
+        for configuration in configs:
+            repository_path(root, configuration)
+        executable = _zizmor_executable(env)
+        version = _command(
+            runner,
+            (sys.executable, str(ZIZMOR_SCRIPT), "--probe-version", "--executable", executable),
+            root=root,
+            env=env,
+            timeout=timeout,
+        ).strip()
+        pin = _zizmor_pin(root / configs[1])
+        if pin != ZIZMOR_VERSION or version != "zizmor " + pin:
+            raise ValueError(
+                "Installed Zizmor does not match the single requirements-ci.txt pin: " + version
+            )
+        selection = {
+            "roots": [".github/workflows"],
+            "method": "sorted explicit top-level *.{yml,yaml}",
+            "recursive": False,
+            "offline": True,
+            "strict_collection": True,
+            "format": "json-v1",
+            "persona": "regular",
+            "executable": executable,
+            "version": version,
+        }
+        tool["zizmor"] = version
+        tool["zizmor_executable"] = executable
+        tool["zizmor_wrapper"] = {"path": str(ZIZMOR_SCRIPT), **file_identity(ZIZMOR_SCRIPT)}
     else:
         raise ValueError("Unknown static check: " + name)
     manifest = effective_inputs(root, [*sources, *configs, *_tool_sources(root, name)],
@@ -224,6 +321,8 @@ def prepare_static(check, *, root, directory, runner, env):
         # Explicit files freeze tool membership after the tool's own discovery.
         argv.extend(str(root / name) for name in manifest["sources"])
         check = replace(check, argv=tuple(argv))
+    elif check.name == "zizmor":
+        check = replace(check, argv=(*check.argv, "--executable", manifest["tool"]["zizmor_executable"]))
     return check, manifest
 
 
@@ -282,6 +381,74 @@ def bind_static_report(name, *, directory, manifest):
             if filename not in allowed:
                 raise ValueError("Ruff reported an unselected source: " + filename)
         binding.update(status="passed" if not report else "failed", findings=len(report))
+    elif name == "zizmor":
+        expected_fields = {"schema_version", "status", "effective_input_sha256", "files", "findings"}
+        if not isinstance(report, dict) or set(report) != expected_fields or report.get("schema_version") != 1:
+            raise ValueError("Unsupported structured Zizmor report")
+        if report.get("status") not in {"passed", "failed"} or not isinstance(report.get("findings"), list):
+            raise ValueError("Malformed Zizmor report status/findings")
+        if report.get("effective_input_sha256") != manifest["content_sha256"]:
+            raise ValueError("Zizmor report belongs to another effective-input manifest")
+        entries = report.get("files")
+        if not isinstance(entries, list) or any(
+                not isinstance(item, dict) or set(item) != {"path", "sha256"} for item in entries):
+            raise ValueError("Zizmor file evidence requires exactly path and sha256")
+        if entries != sorted(entries, key=lambda item: item["path"]):
+            raise ValueError("Zizmor file evidence is not deterministic")
+        observed = _reported_files(report, manifest, complete=True)
+
+        configurations = ["contracts/zizmor.yml", ".github/requirements-ci.txt"]
+        if manifest.get("scope", {}).get("configuration") != configurations:
+            raise ValueError("Zizmor manifest has no bound policy configuration")
+        root = Path(manifest["root"])
+        for configuration in configurations:
+            identity = manifest.get("files", {}).get(configuration)
+            if not isinstance(identity, dict):
+                raise ValueError("Zizmor manifest has an incomplete policy configuration")
+            if digest((root / configuration).read_bytes()) != identity.get("content_sha256"):
+                raise ValueError("Zizmor policy configuration changed after effective-input capture")
+        pin = _zizmor_pin(root / configurations[1])
+        selection = manifest.get("scope", {}).get("selection", {})
+        tool = manifest.get("tool", {})
+        if (pin != ZIZMOR_VERSION or tool.get("zizmor") != "zizmor " + pin
+                or selection.get("version") != tool.get("zizmor")
+                or selection.get("executable") != tool.get("zizmor_executable")
+                or selection.get("offline") is not True
+                or selection.get("strict_collection") is not True
+                or selection.get("format") != "json-v1"
+                or selection.get("persona") != "regular"):
+            raise ValueError("Zizmor report has no exact bound tool policy")
+
+        expected_finding_fields = {"path", "line", "column", "rule", "severity", "confidence"}
+        severities, confidences = {"informational", "low", "medium", "high"}, {"low", "medium", "high"}
+        identities = []
+        for finding in report["findings"]:
+            if not isinstance(finding, dict) or set(finding) != expected_finding_fields:
+                raise ValueError("Zizmor findings have an unsupported shape")
+            if finding["path"] not in observed:
+                raise ValueError("Zizmor finding names an unselected workflow")
+            for coordinate in ("line", "column"):
+                value = finding[coordinate]
+                if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+                    raise ValueError("Zizmor finding requires positive source coordinates")
+            rule = finding["rule"]
+            if not isinstance(rule, str) or re.fullmatch(r"[a-z0-9][a-z0-9-]*", rule) is None:
+                raise ValueError("Zizmor finding names an invalid rule")
+            if finding["severity"] not in severities or finding["confidence"] not in confidences:
+                raise ValueError("Zizmor finding has invalid determinations")
+            identities.append(tuple(finding[field] for field in sorted(expected_finding_fields)))
+        if len(identities) != len(set(identities)):
+            raise ValueError("Zizmor report repeats a finding")
+        ordered = sorted(report["findings"], key=lambda item: (
+            item["path"], item["line"], item["column"], item["rule"],
+            item["severity"], item["confidence"],
+        ))
+        if report["findings"] != ordered:
+            raise ValueError("Zizmor findings are not deterministic")
+        passed = report["status"] == "passed"
+        if passed == bool(report["findings"]):
+            raise ValueError("Zizmor status contradicts its findings")
+        binding.update(status=report["status"], findings=len(report["findings"]))
     elif name == "secret-scan":
         expected_fields = {"schema_version", "status", "effective_input_sha256", "files", "findings"}
         if not isinstance(report, dict) or set(report) != expected_fields or report.get("schema_version") != 1:

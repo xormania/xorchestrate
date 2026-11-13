@@ -76,7 +76,7 @@ def test_multiple_acceptance_drivers_expand_without_repeating_static_checks(tmp_
     names = [check.name for check in checks]
     assert len(names) == len(set(names))
     assert names.count("ruff") == names.count("syntax") == names.count("architecture") == names.count(
-        "secret-scan") == 1
+        "secret-scan") == names.count("zizmor") == 1
     acceptance = [check for check in checks if check.name.startswith("acceptance:")]
     assert [check.argv[check.argv.index("--driver") + 1] for check in acceptance] == ["first", "second/name"]
     assert all("/" not in check.name for check in acceptance)

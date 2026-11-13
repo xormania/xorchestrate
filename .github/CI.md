@@ -24,8 +24,9 @@ python3 -m scripts.testkit run --suite multi-harness
 python3 -m scripts.testkit run --suite acceptance
 ```
 
-`security` is the focused Ruff and candidate-complete secret-scan view. `checks`
-combines `static` and `tests`. The default `python3 -m scripts.testkit run`
+`security` is the focused Ruff, candidate-complete secret-scan and pinned Zizmor
+workflow-analysis view. `checks` combines `static` and `tests`. The default
+`python3 -m scripts.testkit run`
 composes every component suite once: static checks, tests, calibration, both live
 suites and `stories`. `static`, `checks` and the default/`all` composition execute
 the security checks once through `static`.
@@ -73,7 +74,7 @@ evidence links and the `CI_REUSE_ENABLED=false` recovery switch. Selected jobs a
 | Job | Purpose |
 |---|---|
 | Classify changed paths | `scripts/ci/classify_changes.py` decides whether the change touches anything other than documentation; see below |
-| Static checks | Shared `static` suite: Ruff lint/security, candidate-complete secret scanning, current-source syntax and deterministic architecture enforcement |
+| Static checks | Shared `static` suite: Ruff lint/security, candidate-complete secret scanning, pinned offline Zizmor workflow analysis, current-source syntax and deterministic architecture enforcement |
 | Application tests shard K/N (Python 3.12) | Matrix of N jobs, each running `--suite tests --shard K/N` with its own pytest inventory/JUnit |
 | Application and adapter tests (Python 3.12) | Retains the existing status name; needs every tests shard and fails unless the shard matrix succeeded. It does not rerun validation |
 | Calibration and multi-harness verification | Shared `calibration` suite and composed three-harness `multi-harness` protocol suite, in parallel with the tests shards |
@@ -81,9 +82,11 @@ evidence links and the `CI_REUSE_ENABLED=false` recovery switch. Selected jobs a
 | Hexagonal architecture | Retains the existing required status name and reports the shared static job's outcome; it does not rerun validation |
 
 The focused `security` view does not create another hosted lane or status. CI
-enforces the same Ruff and secret-scan checks once through the existing `Static
-checks` lane, whose outcome also backs the required `Hexagonal architecture`
-status.
+enforces the same Ruff, secret-scan and Zizmor checks once through the existing
+`Static checks` lane, whose outcome also backs the required `Hexagonal
+architecture` status. Zizmor scans only the explicit top-level workflow files,
+offline and with strict collection, against `contracts/zizmor.yml`; it is not a
+claim that every security property or repository file is covered.
 
 Each Python job configures `PYTHONPYCACHEPREFIX` and `UV_PROJECT_ENVIRONMENT` in
 runner temporary storage before validation. uv-managed Python 3.12.16 and uv 0.13.7 are
@@ -104,8 +107,9 @@ with the already locked backend. Public package dependency ranges remain unchang
 The setup-uv download/wheel cache is keyed by `uv.lock`; a cache hit does not
 replace frozen installation or test execution. Ordinary jobs omit telemetry;
 application shards explicitly select that optional extra. The validation dependency
-group supplies Ruff and build tooling. `.github/requirements-ci.txt` is a generated
-pip-compatible export of that group, not a second manually edited pin source.
+group supplies Ruff, Zizmor 1.32.0 and build tooling.
+`.github/requirements-ci.txt` is a generated pip-compatible export of that group,
+not a second manually edited pin source.
 See [validation dependencies](../docs/validation-dependencies.md) for intentional
 updates, runtime/build exports and separately labeled fresh-resolution checks.
 
@@ -209,6 +213,9 @@ the shared Ruff definition with independent expected findings; it runs in the
 tests shard that owns its module, where the pinned Ruff dependency is installed.
 The framework family separately checks the whole-candidate secret selection,
 binary-byte handling, same-line `secret-scan: allow` marker and redacted evidence.
+Its workflow-security coverage also exercises a clean workflow, a deliberate
+template-injection fault, strict malformed-input refusal, exact workflow/policy
+binding, token scrubbing and safe normalized evidence.
 The verification job installs `.[test]`. Architecture and tmux
 regression tests run through the tests shards; dedicated jobs do not rerun
 the same selected pytest modules.
@@ -218,7 +225,10 @@ the same selected pytest modules.
 `static-checks-python-3.12` retains static reports, effective-input identities,
 structured findings and raw command receipts for 30 days. Secret-scan evidence
 contains selected-file hashes and path/line/rule findings, never the matched
-credential bytes.
+credential bytes. Zizmor evidence contains selected workflow hashes and normalized
+path/location/rule/severity/confidence findings; the adapter does not expose the
+tool-native workflow snippets, descriptions, fixes or URLs to the outer command
+logs or report.
 `framework-tests-python-3.12-shard-K-of-N` retains each shard's family/case
 inventory, JUnit and command records for 30 days. `calibration-python-3.12` retains
 calibration reports and command records for 30 days. Shard JUnit reports can
