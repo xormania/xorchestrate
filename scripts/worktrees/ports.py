@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from contextlib import AbstractContextManager
 from typing import Any, Protocol
 
 from scripts.worktrees.model import Proc, ServerState
@@ -39,8 +40,9 @@ class Launcher(Protocol):
 
 
 class McpTransport(Protocol):
-    def post(self, url: str, body: Mapping[str, Any], session: str | None) -> tuple[str | None, list[dict[str, Any]]]:
-        """POST one JSON-RPC message; return the session id and the JSON-RPC messages received."""
+    def post(self, url: str, body: Mapping[str, Any], session: str | None,
+             timeout: float | None = None) -> tuple[str | None, list[dict[str, Any]]]:
+        """POST one JSON-RPC message within ``timeout`` seconds; return the session id and the messages received."""
 
     def delete(self, url: str, session: str) -> None: ...
 
@@ -59,6 +61,9 @@ class StateStore(Protocol):
     def delete(self, key: str) -> None: ...
 
     def list(self) -> list[tuple[str, ServerState]]: ...
+
+    def lock(self, key: str) -> AbstractContextManager[None]:
+        """Exclusive access to one key across processes, held for the ``with`` block."""
 
 
 class FileSystem(Protocol):
@@ -98,6 +103,8 @@ class Github(Protocol):
 class DiskUsage(Protocol):
     def size(self, path: str) -> int:
         """Apparent size in bytes of the regular files under ``path``, not following links."""
+    def real_path(self, path: str) -> str:
+        """``path`` made absolute with every symbolic link resolved (missing parts kept as given)."""
 
 
 class PortPicker(Protocol):

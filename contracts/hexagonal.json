@@ -704,7 +704,8 @@
         "__future__",
         "collections",
         "dataclasses",
-        "typing"
+        "typing",
+        "contextlib"
       ],
       "allow_dynamic": false,
       "forbidden_calls": [
@@ -733,7 +734,9 @@
         "typing",
         "urllib.parse",
         "re",
-        "time"
+        "time",
+        "contextlib",
+        "hashlib"
       ],
       "allow_dynamic": false,
       "forbidden_calls": [

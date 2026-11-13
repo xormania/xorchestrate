@@ -56,9 +56,16 @@ class ProcFs:
                 open_paths.append(os.readlink(descriptor))
             except OSError:
                 continue
-        return Proc(pid=int(directory.name), ppid=ppid, pgid=pgid, cwd=cwd, argv=argv, open_paths=tuple(open_paths))
+        try:
+            start_time = int(fields[19])
+        except (IndexError, ValueError):
+            start_time = None
+        return Proc(pid=int(directory.name), ppid=ppid, pgid=pgid, cwd=cwd, argv=argv, open_paths=tuple(open_paths),
+                    start_time=start_time)
 
     def signal_group(self, pgid: int, sig: int) -> None:
+        if pgid <= 1:
+            raise ValueError(f"refusing to signal process group {pgid}")
         try:
             os.killpg(pgid, sig)
         except ProcessLookupError:

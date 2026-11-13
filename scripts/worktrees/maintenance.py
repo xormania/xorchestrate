@@ -15,9 +15,9 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
-from scripts.worktrees.core import Repository, SerenaService, TreeService, family, tree_key
+from scripts.worktrees.core import Repository, SerenaService, TreeService
 from scripts.worktrees.model import Config, Outcome, Proc, Refusal, Tree
-from scripts.worktrees.ports import Clock, DiskUsage, FileSystem, Github, ProcessTable, StateStore
+from scripts.worktrees.ports import Clock, DiskUsage, FileSystem, GitError, Github, ProcessTable, StateStore
 
 DAY = 86_400.0
 HOUR = 3_600.0
@@ -155,7 +155,8 @@ class Maintenance:
     def _tree_row(self, tree: Tree, base: str | None, table: list[Proc], offline: bool) -> TreeRow:
         now = self.clock.now()
         exists = self.files.is_dir(tree.path)
-        state = None if tree.main else self.store.load(tree_key(self.config.root, tree.path))
+        state = None if tree.main or not exists else self.store.load(self.serena.key(tree.path))
+        server = self.serena.ours(state, tree.path, table) if state else None
         admin = None if tree.main else self._admin_dir(tree)
         uses = [self.files.mtime(posixpath.join(admin, name)) for name in ("index", "logs/HEAD")] if admin else []
         uses.append(state.last_call if state else None)
@@ -166,10 +167,13 @@ class Maintenance:
         clean = (self.repo.out(["--no-optional-locks", "status", "--porcelain"], tree.path) == "") if exists else None
         merged = self._merged(tree, base, offline)
         on_origin = bool(tree.head) and self.repo.on_origin(tree.head)
-        stash = bool(tree.branch) and self.repo.stashed_on(tree.branch)
-        own = family(table, state.pid) if state and self.processes.alive(state.pid) else set()
+        try:
+            stash = bool(tree.branch) and self.repo.stashed_on(tree.branch)
+        except GitError:
+            stash = True  # an unreadable stash is a reason to look, never a reason to remove
+        own = self.serena.family_of(tree.path, table) if server else set()
         in_use = exists and bool(self._users(tree.path, table, own))
-        serena = "up" if state and self.processes.alive(state.pid) else "down"
+        serena = "up" if server else "down"
         reasons: list[str] = []
         if tree.main:
             verdict = "MAIN"
