@@ -139,11 +139,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   CI qualification stays unchanged when a lane or the provider fails.
 
 - Shared development skills for agents working on this repository (run-checks,
-  red-first, pr-ready, crash-recovery, team-roles, serena) in `.agents/skills`,
+  red-first, pr-ready, serena) in `.agents/skills`,
   mirrored for Claude Code through relative symlinks in `.claude/skills`. They
   point at the existing guides and at the new
-  [agent workflow](docs/agent-workflow.md), which covers team roles, crash
-  recovery for contributors and using Serena. A Serena project configuration
+  [agent workflow](docs/agent-workflow.md). A Serena project configuration
   (`.serena/project.yml`, python language server, tools interface) is
   included; connecting Serena stays a per-machine step.
 - `hosted` session adapter: a native session runs in a bridge host that
