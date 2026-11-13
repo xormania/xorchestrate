@@ -91,6 +91,7 @@
       ]
     },
     {
+      "contract": "tests.hexagonal.contracts.recovery_e2e:after_total_loss_the_default_policy_brings_the_session_back_without_a_call",
       "diagnostic": "RECOVERY_STARTS_ON_UP",
       "mutation": {
         "new": "                pass",
@@ -99,15 +100,16 @@
       },
       "name": "up-never-starts-recovery",
       "selectors": [
-        "tests/hexagonal/test_recovery_end_to_end.py::test_after_total_loss_the_default_policy_brings_the_session_back_without_a_call[detached-process]",
-        "tests/hexagonal/test_recovery_end_to_end.py::test_recovery_within_is_true_once_a_report_exists_and_nothing_runs"
+        "tests/hexagonal/test_recovery_end_to_end.py::test_recovery_meets_the_end_to_end_contract[detached-process-after_total_loss_the_default_policy_brings_the_session_back_without_a_call]",
+        "tests/hexagonal/test_recovery.py::test_recovery_meets_the_contract[default_policy_recovers_from_durable_state_alone]"
       ],
-      "target": "tests.hexagonal.test_recovery_end_to_end::test_after_total_loss_the_default_policy_brings_the_session_back_without_a_call[detached-process]",
+      "target": "tests.hexagonal.test_recovery_end_to_end::test_recovery_meets_the_end_to_end_contract[detached-process-after_total_loss_the_default_policy_brings_the_session_back_without_a_call]",
       "unaffected": [
-        "tests.hexagonal.test_recovery_end_to_end::test_recovery_within_is_true_once_a_report_exists_and_nothing_runs"
+        "tests.hexagonal.test_recovery::test_recovery_meets_the_contract[default_policy_recovers_from_durable_state_alone]"
       ]
     },
     {
+      "contract": "tests.hexagonal.contracts.recovery_e2e:a_server_only_crash_adopts_the_running_terminal_and_keeps_its_bridge_host",
       "diagnostic": "RECOVERY_ADOPTS_RUNNING_TERMINAL",
       "mutation": {
         "new": "        if terminal is not None:",
@@ -116,12 +118,12 @@
       },
       "name": "running-terminal-reopened",
       "selectors": [
-        "tests/hexagonal/test_recovery_end_to_end.py::test_a_server_only_crash_adopts_the_running_terminal_and_keeps_its_bridge_host[detached-process]",
-        "tests/hexagonal/test_recovery_end_to_end.py::test_after_total_loss_the_default_policy_brings_the_session_back_without_a_call[detached-process]"
+        "tests/hexagonal/test_recovery_end_to_end.py::test_recovery_meets_the_end_to_end_contract[detached-process-a_server_only_crash_adopts_the_running_terminal_and_keeps_its_bridge_host]",
+        "tests/hexagonal/test_recovery_end_to_end.py::test_recovery_meets_the_end_to_end_contract[detached-process-after_total_loss_the_default_policy_brings_the_session_back_without_a_call]"
       ],
-      "target": "tests.hexagonal.test_recovery_end_to_end::test_a_server_only_crash_adopts_the_running_terminal_and_keeps_its_bridge_host[detached-process]",
+      "target": "tests.hexagonal.test_recovery_end_to_end::test_recovery_meets_the_end_to_end_contract[detached-process-a_server_only_crash_adopts_the_running_terminal_and_keeps_its_bridge_host]",
       "unaffected": [
-        "tests.hexagonal.test_recovery_end_to_end::test_after_total_loss_the_default_policy_brings_the_session_back_without_a_call[detached-process]"
+        "tests.hexagonal.test_recovery_end_to_end::test_recovery_meets_the_end_to_end_contract[detached-process-after_total_loss_the_default_policy_brings_the_session_back_without_a_call]"
       ]
     },
     {
