@@ -263,6 +263,8 @@ class DeliveryMixin:
                 observation["result"] = {"result_retained": False}
                 if isinstance(result, dict) and isinstance(result.get("operation_id"), str):
                     observation["result"]["operation_id"] = result["operation_id"]
+                    if result.get("status") == "completed":
+                        observation["result"]["status"] = "completed"
         session_id = context.get("session_id")
         if not session_id:
             raise OrchestrationError("Native observation has no application session binding.", "session_identity")
@@ -442,16 +444,27 @@ class DeliveryMixin:
         if previous:
             # Queries reauthorize and observe current state. Receipt effects use
             # their operation fence and return only the retained status receipt.
-            return self.call(action_name, arguments, actor=context["actor"], native_context=context,
-                replay_only=policy["mode"] == "receipt")
+            if policy["mode"] == "query" or "idempotency_key" in arguments:
+                return self.call(action_name, arguments, actor=context["actor"], native_context=context,
+                    replay_only=policy["mode"] == "receipt")
+            # A reconciliation mutates an existing operation rather than
+            # reserving another effect key. Its native identity is its fence.
+            current = self._context(context["actor"], arguments)
+            current["native_source"] = deepcopy(context)
+            self._authorize(action_name, current)
+            with self.store.transaction() as tx:
+                self._verify_context(tx, current)
+            return deepcopy(previous.data["result"])
         completed = False
         try:
             with before_effect():
                 self.observe_native(driver_name, context, {**native, "phase": "requested"})
             result = self.call(action_name, arguments, actor=context["actor"], native_context=context)
             completed = True
-            receipt = (effect_receipt(result["operation_id"]) if policy["mode"] == "receipt"
-                       else {"result_retained": False})
+            operation_id = result.get("operation_id")
+            if operation_id is None and isinstance(result.get("operation"), dict):
+                operation_id = result["operation"].get("id")
+            receipt = effect_receipt(operation_id) if policy["mode"] == "receipt" else {"result_retained": False}
             self.observe_native(driver_name, context, {**native, "phase": "completed", "result": receipt})
             with self.store.transaction() as tx:
                 row = self._require(tx, "native_call", identity)
@@ -463,6 +476,13 @@ class DeliveryMixin:
             if completed:
                 error = OrchestrationError("The capability completed, but native-call settlement needs reconciliation.",
                     "result_unapplied", {"outcome": "completed", "result_retained": False})
+            expected_operation = (canonical_digest([context["actor"], arguments["idempotency_key"]])
+                if "idempotency_key" in arguments else arguments.get("operation_id"))
+            supplied_operation = original.details.get("operation_id") if isinstance(original, OrchestrationError) else None
+            if isinstance(expected_operation, str) and (completed or supplied_operation == expected_operation):
+                # Reconstruct only the request-bound application identity;
+                # provider diagnostic fields remain discarded.
+                error.details["operation_id"] = expected_operation
             try:
                 with self.store.transaction() as tx:
                     row = self._require(tx, "native_call", identity)
