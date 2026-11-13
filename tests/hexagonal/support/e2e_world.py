@@ -102,7 +102,8 @@ class World:
         if in_flight:  # a turn in flight when the failure comes: the peer holds "hang" for seconds
             client.send_without_waiting("send_session", {"session_id": session["id"], "message": {"text": "hang"},
                                                          "idempotency_key": "send-hang"})
-            e2e_disturbances.settle(1)
+            self.await_("the peer took delivery of the turn left in flight",
+                        lambda: "hang" in [entry["text"] for entry in self.peer_received(session)])
         return session
 
     def up(self):
@@ -116,10 +117,6 @@ class World:
 
     def status(self):
         return self._json("status")
-
-    def settle(self, seconds):
-        """A fixed quiet interval, kept until a decision boundary replaces it."""
-        e2e_disturbances.settle(seconds)
 
     def hold(self, stage):
         """Arm a controlled gate at ``stage`` before the action that reaches it (see ``e2e_disturbances.hold``)."""
