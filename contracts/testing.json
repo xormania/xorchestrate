@@ -158,6 +158,7 @@
         "tests/hexagonal/test_verification.py": "calibration",
         "tests/hexagonal/test_calibrated_checks.py": "calibration",
         "tests/hexagonal/test_verification_decoders.py": "adapter",
+        "tests/hexagonal/test_temporal_evidence.py": "contract",
         "tests/hexagonal/test_lifecycle_runner.py": "composition",
         "tests/hexagonal/test_calibration_attribution.py": "calibration",
         "tests/hexagonal/test_fault_calibration.py": "calibration"

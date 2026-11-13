@@ -9,6 +9,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- Exchange receipts and the independent multi-harness checker use retained store
+  order for exchange, held-work and native-completion proof. Civil-clock changes
+  and report-list reordering no longer create or reverse that proof. See
+  [retained observation order](docs/testing-framework.md#retained-observation-order).
 - CI coalesces title/body edits behind same-candidate validation. A separate
   trusted queue controller cancels proved obsolete source runs while preserving
   current validation, using ordinary cancellation and retaining observed decisions.
@@ -433,6 +437,12 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   `migrate-config` on the installed launcher.
 
 ### Upgrade notes
+
+- **Verification evidence:** new multi-harness runs retain ordering envelope
+  version 1. Older captures without committed order witnesses cannot qualify
+  temporal assertions; rerun the relevant scenario rather than reconstructing
+  order from timestamps. The receipt policy receives an additional internal
+  `events` field; public delivery inspection and persisted data version are unchanged.
 
 - **CI policy:** edited/readiness PR events now run current observations.
   `CI_REUSE_ENABLED=false` disables behavioral reuse without weakening ordinary
