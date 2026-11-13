@@ -37,6 +37,7 @@ SLICE_A = {
     "XORCHESTRATE_DEV_SERENA_COMMAND": ("command", SERENA_COMMAND, "serena"),
     "XORCHESTRATE_DEV_PROBE_TOOL": ("str", None, "serena"),
     "XORCHESTRATE_DEV_PROBE_ARGS": ("json", None, "serena"),
+    "XORCHESTRATE_DEV_SERENA_ALLOW_EDITS": ("int", "0", "serena"),
 }
 """Key -> (kind, default template, section) for slice A's settings."""
 

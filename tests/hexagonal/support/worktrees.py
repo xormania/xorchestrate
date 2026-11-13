@@ -34,6 +34,12 @@ from tests.hexagonal.support.git_repositories import (  # noqa: F401  (re-export
     make_repository,
 )
 
+READONLY_CONTEXT_NAME = "worktrees-readonly.yml"
+"""The tool's read-only Serena context file name (see ``contracts.worktrees.READONLY_CONTEXT``)."""
+READONLY_TOOL_ORDER = ("find_declaration", "find_implementations", "find_referencing_symbols", "find_symbol",
+                       "get_diagnostics_for_file", "get_diagnostics_for_symbol", "get_symbols_overview")
+"""The read-only tools, in the order a fake server started with that context offers them."""
+
 PROBE_FILE = "pkg/b_model.py"
 """The first sorted tracked Python file with a top-level class or function in ``FILES``."""
 
@@ -204,8 +210,10 @@ class McpBehaviour:
 class FakeMcpServer:
     """A stdlib streamable-HTTP MCP endpoint at http://127.0.0.1:<port>/mcp."""
 
-    def __init__(self, port, behaviour):
+    def __init__(self, port, behaviour, tools=None):
+        """``tools``: what this endpoint offers in tools/list (default: ``behaviour.tools``)."""
         self.behaviour = behaviour
+        offered = tools
         self.sessions = set()
         server = self
 
@@ -254,7 +262,7 @@ class FakeMcpServer:
                     return self._send(202)
                 if method == "tools/list":
                     return self._send(200, {"jsonrpc": "2.0", "id": body["id"], "result": {
-                        "tools": [{"name": name, "inputSchema": {"type": "object"}} for name in behaviour.tools]}})
+                        "tools": [{"name": name, "inputSchema": {"type": "object"}} for name in (offered or behaviour.tools)]}})
                 if method == "tools/call":
                     kind, value = behaviour.answer(body["params"]["name"], body["params"].get("arguments", {}))
                     return self._send(200, {"jsonrpc": "2.0", "id": body["id"], kind: value})
@@ -359,6 +367,7 @@ class FakeLauncher:
         self.next_pid = 40_000
         self.raw_reply = b""
         self.on_spawn = None
+        self.honour_context = True
         self.lock = threading.Lock()
 
     def spawn(self, argv, cwd, env, log):
@@ -380,7 +389,7 @@ class FakeLauncher:
             self.processes.on_exit[pid] = self.servers[pid].stop
             log.write_text("serving\n", encoding="utf-8")
         elif behaviour == "serve":
-            self.servers[pid] = FakeMcpServer(port, self.behaviour)
+            self.servers[pid] = FakeMcpServer(port, self.behaviour, tools=self._offered(argv))
             self.processes.on_exit[pid] = self.servers[pid].stop
             log.write_text("serving\n", encoding="utf-8")
         elif behaviour == "address_in_use":
@@ -394,6 +403,13 @@ class FakeLauncher:
         else:
             raise AssertionError(behaviour)
         return pid
+
+    def _offered(self, argv):
+        """A server started with the tool's read-only context offers only the read-only tools, unless the test
+        says the server ignores its context (``honour_context = False``)."""
+        if "--context" in argv and argv[argv.index("--context") + 1].endswith(READONLY_CONTEXT_NAME):
+            return READONLY_TOOL_ORDER if self.honour_context else None
+        return None
 
     def stop_all(self):
         for pid in list(self.servers):

@@ -28,6 +28,14 @@ TOOL_ROLES = frozenset({"worktrees_foundation", "worktrees_core", "worktrees_ada
 TEST_ROLES = frozenset({"test_support", "test_collection"})
 
 
+READONLY_TOOLS = frozenset({"find_symbol", "get_symbols_overview", "find_referencing_symbols", "find_implementations",
+                            "find_declaration", "get_diagnostics_for_file", "get_diagnostics_for_symbol"})
+"""The only tools a per-tree server may offer unless edits are allowed: symbol lookups and diagnostics."""
+READONLY_CONTEXT = "worktrees-readonly.yml"
+"""The tool-owned Serena context file, under ``<state dir>/serena-home/contexts/``."""
+LOOPBACK = "127.0.0.1"
+
+
 def serena_argv(version, context, project, port):
     """The documented default launch command, with the placeholders filled."""
     return ["uvx", "--python", "3.12", "--from", f"serena-agent=={version}", "serena", "start-mcp-server",
