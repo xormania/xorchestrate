@@ -669,3 +669,45 @@ def test_prune_reports_a_failed_delete_and_keeps_going(ws, fleet):
     assert str(fleet.dirs["old-marked"]) in result.err, result.text
     assert not fleet.dirs["run-old"].exists(), "prune stopped at the failed delete"
     assert not fleet.trees["merged"].exists(), result.text
+
+
+def test_a_merged_branch_without_a_reflog_is_never_removable(ws, fleet):
+    merged = fleet.trees["merged"]
+    reflog = ws.main / ".git" / "logs" / "refs" / "heads" / "merged"
+    assert reflog.is_file()
+    reflog.unlink()
+    row = by_path(report(ws, fleet)["trees"])[str(merged)]
+    assert row["verdict"] != "REMOVABLE", row
+    guarded(ws, "prune", "--apply", env=fleet.env())
+    assert merged.is_dir()
+
+
+def test_the_brief_names_an_unsafe_root_instead_of_measuring_it(ws):
+    result = guarded(ws, "report", "--brief", env=ws.env(XORCHESTRATE_DEV_SCRATCH_ROOT=ws.main),
+                     ports=ws.ports(disk=ZeroDisk()))
+    assert result.code == 0 and "CONFIG_INVALID" in result.out, result.text
+
+
+def test_scratch_rm_under_a_symlinked_root_sees_processes_in_the_real_directory(ws):
+    real = ws.base / "real-scratch"
+    link = ws.base / "link-scratch"
+    entry = _marked_scratch(real, "busy-20260101T000000Z", ws.clock.now())
+    link.symlink_to(real, target_is_directory=True)
+    ws.processes.add(8_970, cwd=entry, argv=["bash"])
+    result = guarded(ws, "scratch", "rm", str(link / entry.name), env=ws.env(XORCHESTRATE_DEV_SCRATCH_ROOT=link))
+    assert result.code == 1 and "IN_USE" in result.text, result.text
+    assert entry.is_dir()
+
+
+def test_a_failed_delete_alone_makes_prune_exit_one(ws):
+    scratch = ws.base / "scratch"
+    entry = _marked_scratch(scratch, "old-20260101T000000Z", ws.clock.now() - 2 * DAY)
+    stuck = entry / "stuck"
+    stuck.mkdir()
+    (stuck / "file").write_text("x\n")
+    stuck.chmod(0o500)
+    try:
+        result = guarded(ws, "prune", "--apply", "--offline", env=ws.env(XORCHESTRATE_DEV_SCRATCH_ROOT=scratch))
+    finally:
+        stuck.chmod(0o700)
+    assert result.code == 1 and str(entry) in result.err, result.text
