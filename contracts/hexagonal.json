@@ -715,7 +715,8 @@
     },
     "worktrees_core": {
       "modules": [
-        "scripts.worktrees.core"
+        "scripts.worktrees.core",
+        "scripts.worktrees.maintenance"
       ],
       "allowed_roles": [
         "worktrees_foundation",
@@ -730,7 +731,9 @@
         "posixpath",
         "signal",
         "typing",
-        "urllib.parse"
+        "urllib.parse",
+        "re",
+        "time"
       ],
       "allow_dynamic": false,
       "forbidden_calls": [

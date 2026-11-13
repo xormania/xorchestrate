@@ -63,6 +63,14 @@ class Config:
     serena_command: tuple[str, ...]
     probe_tool: str | None
     probe_args: dict[str, Any] | None
+    scratch_root: str = ""
+    extra_roots: tuple[str, ...] = ()
+    run_roots: tuple[str, ...] = ()
+    idle_days: float = 7.0
+    scratch_max_age_hours: float = 24.0
+    run_max_age_days: float = 7.0
+    brief_size_gb: float = 5.0
+    owner: str | None = None
 
 
 @dataclass

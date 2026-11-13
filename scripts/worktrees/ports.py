@@ -71,6 +71,34 @@ class FileSystem(Protocol):
 
     def make_dirs(self, path: str) -> None: ...
 
+    def list_dir(self, path: str) -> list[str]:
+        """Names of the entries in ``path``; empty when it cannot be read."""
+
+    def mtime(self, path: str) -> float | None: ...
+
+    def is_symlink(self, path: str) -> bool: ...
+
+    def write_text(self, path: str, text: str) -> None: ...
+
+    def remove_tree(self, path: str) -> None:
+        """Delete a directory tree without following symbolic links out of it."""
+
+    def archive(self, directory: str, tar_path: str, arcname: str) -> None:
+        """Write ``directory`` into a new tar file whose members are rooted at ``arcname``."""
+
+    def find_dirs(self, root: str, names: frozenset[str]) -> list[str]:
+        """Directories under ``root`` with one of ``names``, not following links and not entering .git."""
+
+
+class Github(Protocol):
+    def merged_pr_head(self, branch: str) -> str | None:
+        """The head commit of a merged pull request from ``branch``, or None; may raise when unavailable."""
+
+
+class DiskUsage(Protocol):
+    def size(self, path: str) -> int:
+        """Apparent size in bytes of the regular files under ``path``, not following links."""
+
 
 class PortPicker(Protocol):
     def __call__(self) -> int:
