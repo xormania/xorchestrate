@@ -1,6 +1,5 @@
 """Controlled provider, authority and failure adapters for execution policies."""
 
-import json
 from contextlib import contextmanager
 from copy import deepcopy
 
@@ -197,7 +196,3 @@ def configuration_error(value, root):
     except OrchestrationError as error:
         return error.code
     return None
-
-
-def encoded(value):
-    return json.dumps(value, sort_keys=True, allow_nan=False)
