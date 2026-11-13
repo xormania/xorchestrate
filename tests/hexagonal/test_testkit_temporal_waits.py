@@ -3,8 +3,8 @@
 import pytest
 
 from tests.hexagonal.support import native
-from tests.hexagonal.support.temporal_waits import ControlledClock
-from xorchestrate.model import Conflict, OrchestrationError
+from tests.hexagonal.support.temporal_waits import ControlledClock, conflict_with_retry_flag
+from xorchestrate.model import OrchestrationError
 
 
 @pytest.fixture(autouse=True)
@@ -105,10 +105,10 @@ def test_native_wait_returns_late_truthy_observation_without_claiming_preemption
 
 
 @pytest.mark.parametrize("error", [
-    Conflict("unsafe", retry_safe=False),
-    Conflict("truthy integer is not permission", retry_safe=1),
-    Conflict("truthy string is not permission", retry_safe="true"),
-    Conflict("no permission", retry_safe=None),
+    conflict_with_retry_flag(False),
+    conflict_with_retry_flag(1),
+    conflict_with_retry_flag("true"),
+    conflict_with_retry_flag(None),
     OrchestrationError("other application error", "operation_unknown", {"retry_safe": True}),
 ])
 def test_native_wait_propagates_every_error_without_explicit_safe_conflict(error):

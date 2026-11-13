@@ -1,5 +1,14 @@
 """Independent elapsed and wall controls for bounded observation scenarios."""
 
+from xorchestrate.model import Conflict
+
+
+def conflict_with_retry_flag(value):
+    """Model malformed boundary evidence without constructor normalization."""
+    error = Conflict("observation changed")
+    error.details["retry_safe"] = value
+    return error
+
 
 class ControlledClock:
     def __init__(self):
