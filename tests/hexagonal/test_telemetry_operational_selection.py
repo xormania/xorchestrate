@@ -7,6 +7,7 @@ from copy import deepcopy
 import pytest
 
 from tests.hexagonal.support.native import wait_for
+from tests.hexagonal.support.producer_capture import HttpFixture
 from tests.hexagonal.support.telemetry import Fixture
 from tests.hexagonal.support.telemetry_collector import MODULE, SelectedOperationalSink
 from xorchestrate.adapters.telemetry_collector.ports import CollectorScope
@@ -63,6 +64,26 @@ def test_legacy_and_nested_local_sink_selections_keep_working(telemetry, operati
     wait_for(lambda: operational_status(app)["dispatch"]["pending"] == 0)
     assert app.telemetry.status()["operational"]["exported"] > 0
     assert app.telemetry.status()["operational"]["sink"] == "LocalOperationalSink"
+    sink = app.telemetry._operational.exporter.sink
+    assert sink.capacity == 2 and len(sink.events) == 2, "LOCAL_SINK_SELECTION_MUST_FORWARD_CAPACITY"
+
+
+@pytest.mark.parametrize("nested", [False, True])
+def test_legacy_and_nested_otlp_select_the_configured_endpoint_and_timeout(telemetry, nested):
+    with HttpFixture(b"{}") as server:
+        options = {"endpoint": f"http://127.0.0.1:{server.server.server_port}", "timeout": 0.3}
+        operational = {"sink": {"adapter": "otlp", "options": options}} if nested else {"adapter": "otlp", **options}
+        app = configure(telemetry, operational)
+        assert operational_status(app)["status"] == "ready", "OTLP_SELECTION_MUST_BE_READY"
+        sink = app.telemetry._operational.exporter.sink
+        assert (sink.endpoint, sink.timeout) == (options["endpoint"], 0.3), "OTLP_SELECTION_MUST_FORWARD_OPTIONS"
+        assert server.requests == [], "CONSTRUCTING_AN_OPTIONAL_SINK_MUST_NOT_CONTACT_ITS_BACKEND"
+        app.call("create_work", {"goal": "private-otlp-payload"})
+        wait_for(lambda: operational_status(app)["dispatch"]["pending"] == 0)
+        assert server.requests, "SELECTED_OTLP_SINK_MUST_EXPORT_TO_THE_CONFIGURED_BACKEND"
+        assert app.telemetry.status()["operational"]["failures"] == 0
+        assert "private-otlp-payload" not in str(server.requests)
+        assert app.call("telemetry_status", {})["event_count"] == 2
 
 
 def test_sampling_selected_sink_leaves_complete_corpus(telemetry):
