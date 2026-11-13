@@ -2,7 +2,8 @@
 
 The target marker occurs in every assertion source line. Only executing that
 assertion with a false condition earns detection; helper/collection failures do
-not. These controls run real pytest processes and feed both public classifiers.
+not. These controls run real pytest processes through the shared observed-pytest
+service and feed the one calibration classifier every inventory uses.
 """
 import difflib
 import xml.etree.ElementTree as ET
@@ -10,22 +11,26 @@ from pathlib import Path
 
 import pytest
 
+from scripts.verification.__main__ import observed_pytest
 from scripts.verification.calibration import classify, junit_cases
-from tests.hexagonal.calibrate_work_acceptance import CONTROL, execute
-from tests.hexagonal.calibrate_work_acceptance import classify as classify_work
 
 MARKER = "EXPECTED_VIOLATION"
+CONTROL = "test_unaffected_control"
 TARGET = "test_probe::test_target"
 UNAFFECTED = "test_probe::" + CONTROL
 
 
-def run_subject(tmp_path, source, *, collection="", target="test_target"):
+def execute(root, output, selectors):
+    return observed_pytest(root, output, selectors, timeout=45)
+
+
+def run_subject(tmp_path, source, *, collection="", target="test_target", control="assert True"):
     root = tmp_path
     root.mkdir(exist_ok=True)
     (root / "test_probe.py").write_text(
         collection + "\n" + source + "\n"
         f"def {target}():\n    assert compute() == 1, '{MARKER}'\n"
-        f"def {CONTROL}():\n    assert True\n"
+        f"def {CONTROL}():\n    {control}\n"
     )
     command = execute(root, root / "result", ["test_probe.py"])
     return command, junit_cases(Path(command["xml"]))
@@ -55,24 +60,28 @@ def test_marker_in_source_is_not_executed_assertion(passing_control, tmp_path, s
     result = classify(control, mutant, TARGET, MARKER, [UNAFFECTED],
                       control_exit=control_command["exit_status"], mutant_exit=mutant_command["exit_status"])
     assert result["classification"] == expected, "F07_ASSERTION_ATTRIBUTION"
-    assert classify_work(mutant_command["exit_status"], Path(mutant_command["xml"]), "test_target", MARKER)["classification"] == expected
     if expected in {"detected", "unrelated_failure", "setup_error"} and TARGET in mutant:
         assert MARKER in mutant[TARGET]["diagnostic"]
 
 
 def test_unapplied_fault_and_process_timeout_cannot_earn_detection(passing_control, tmp_path):
     _, control = passing_control
-    command, mutant = run_subject(tmp_path / "mutant", "def compute():\n    return 2")
+    _, mutant = run_subject(tmp_path / "mutant", "def compute():\n    return 2")
     assert classify(control, mutant, TARGET, MARKER, [UNAFFECTED], mutation_applied=False)["classification"] == "setup_error"
     assert classify(control, mutant, TARGET, MARKER, [UNAFFECTED], mutant_exit=124)["classification"] == "unrelated_failure"
-    assert classify_work(124, Path(command["xml"]), "test_target", MARKER)["classification"] == "unrelated_failure"
 
 
 def test_target_name_prefix_does_not_substitute_for_required_assertion(passing_control, tmp_path):
     _, control = passing_control
-    command, mutant = run_subject(tmp_path / "mutant", "def compute():\n    return 2", target="test_target_unrelated")
+    _, mutant = run_subject(tmp_path / "mutant", "def compute():\n    return 2", target="test_target_unrelated")
     assert classify(control, mutant, TARGET, MARKER, [UNAFFECTED])["classification"] == "not_exercised"
-    assert classify_work(command["exit_status"], Path(command["xml"]), "test_target", MARKER)["classification"] == "missing_coverage"
+
+
+def test_a_failing_unaffected_control_turns_a_detected_fault_into_unrelated_failure(passing_control, tmp_path):
+    _, control = passing_control
+    command, mutant = run_subject(tmp_path / "mutant", "def compute():\n    return 2", control="assert False, 'broken'")
+    assert classify(control, mutant, TARGET, MARKER, [UNAFFECTED], mutant_exit=command["exit_status"]
+                    )["classification"] == "unrelated_failure"
 
 
 def test_traceback_marker_cannot_substitute_for_actual_assertion_message():
@@ -88,7 +97,6 @@ def test_malformed_junit_cannot_earn_detection(tmp_path, xml):
     path.write_text(xml)
     with pytest.raises(ET.ParseError):
         junit_cases(path)
-    assert classify_work(1, path, "test_target", MARKER)["classification"] == "setup_error"
 
 
 @pytest.mark.parametrize("change", ["missing", "duplicate", "wrong_test", "malformed"])
@@ -111,7 +119,6 @@ def test_missing_or_ambiguous_observer_attribution_cannot_earn_detection(passing
     tree.write(path)
     mutant = junit_cases(path)
     assert classify(control, mutant, TARGET, MARKER, [UNAFFECTED])["classification"] == "unrelated_failure"
-    assert classify_work(command["exit_status"], path, "test_target", MARKER)["classification"] == "unrelated_failure"
 
 
 def run_statement_subject(root, statement, *, fault=False, unrelated=False, mode="rewrite"):
@@ -152,7 +159,6 @@ def test_raising_instruction_identifies_assertion_not_an_adjacent_statement(tmp_
     result = classify(control, mutant, TARGET, MARKER, [UNAFFECTED],
         control_exit=control_command["exit_status"], mutant_exit=mutant_command["exit_status"])
     assert result["classification"] == expected, "IV04_ACTUAL_ASSERTION_EXECUTION_REQUIRED"
-    assert classify_work(mutant_command["exit_status"], Path(mutant_command["xml"]), "test_target", MARKER)["classification"] == expected
     attribution = mutant[TARGET]["attribution"]
     assert attribution["target_assertion"] is (expected == "detected")
     assert attribution["instruction"] == "RAISE_VARARGS"
@@ -167,6 +173,5 @@ def test_missing_instruction_positions_cannot_earn_detection(tmp_path, monkeypat
     mutant_command, mutant = run_statement_subject(tmp_path / "mutant", statement, fault=True, mode=mode)
     assert classify(control, mutant, TARGET, MARKER, [UNAFFECTED],
         control_exit=control_command["exit_status"], mutant_exit=mutant_command["exit_status"])["classification"] == "unrelated_failure"
-    assert classify_work(mutant_command["exit_status"], Path(mutant_command["xml"]), "test_target", MARKER)["classification"] == "unrelated_failure"
     assert mutant[TARGET]["attribution"]["instruction_span"] is None
     assert mutant[TARGET]["attribution"]["target_assertion"] is False

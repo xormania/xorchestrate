@@ -39,8 +39,7 @@ Generated evidence is not represented as a new measured code input.
    actual Codex, Claude and Grok adapter code against deterministic subprocess peers,
    including routing, storage, native observations and external-host lifecycle.
 6. Calibrate the frozen candidate in separate output directories:
-   `python -m scripts.verification.calibrate_suite --inventory native --out /absolute/new-native-calibration`
-   and `python tests/hexagonal/calibrate_work_acceptance.py --output /absolute/new-work-calibration`.
+   `python -m scripts.verification.calibrate_suite --inventory native --inventory work --inventory state --out /absolute/new-calibration`.
    The inventories retain exact source mutations, named assertions and unaffected
    controls. A setup failure, unrelated failure, skipped case or escaped fault
    never counts as detection.
