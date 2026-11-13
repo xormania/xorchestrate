@@ -2,6 +2,7 @@
 import json
 import sys
 import threading
+import time
 from copy import deepcopy
 from datetime import datetime, timezone
 from functools import partial
@@ -54,6 +55,7 @@ def composed_overlap(protocol, order, tmp_path, force_idle=False):
                 if method == "turn/completed":
                     with live.lock:
                         live.activity = "idle"
+                        time.sleep(0.2)  # Hold the gap between state and record open, so measuring inside it fails.
                         adapter._observation(live, "activity", state="idle")
                         injected.append(params.get("turn", {}).get("id"))
             adapter._notification = faulty
