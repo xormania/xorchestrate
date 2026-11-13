@@ -422,6 +422,13 @@ def bootstrap(argv=None, *, root=None, dev=None):
         if not isinstance(interpreter, str) or not interpreter:
             raise ValueError("Saved run plan does not identify its configured interpreter")
         _external(interpreter, root, "saved interpreter")
+    if (interpreter is None and profile_path is None and source_run is None
+            and action in {"run", "start", "plan", "doctor", "setup"}):
+        # Without a profile or a saved run, a fresh command runs under the configured interpreter.
+        configured = dev_value(dev, DEV_INTERPRETER)
+        if configured is not None:
+            _external(configured, root, "interpreter")
+            interpreter = str(configured)
     if interpreter is not None:
         if not Path(interpreter).is_file():
             raise ValueError("Profile environment is unavailable; run scripts/proof.sh setup --profile PATH")
