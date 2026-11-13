@@ -372,3 +372,20 @@ def test_a_profile_run_carries_the_selection_into_its_plan(tmp_path, selection):
     expected = ["recovery-calibration"] if "inventories" in selection else [
         f"{name}-calibration" for name, entry in _registered().items() if "manual" in entry["stages"]]
     assert [check.name for check in _calibration(checks)] == expected
+
+
+def test_a_run_executes_exactly_the_selected_inventories(tmp_path, monkeypatch):
+    """The selection reaches what the run checks for readiness and what it launches, not only its refusals."""
+    launched = []
+
+    def record_and_stop(self, argv, *args, **kwargs):
+        launched.append(tuple(argv))
+        raise RuntimeError("stopped by the test before the command ran")
+
+    monkeypatch.setattr(RecordingRunner, "run", record_and_stop)
+    report = composition.run(output=tmp_path / "runs", suite="calibration", inventories=("recovery",))
+    assert report["selected_check_ids"] == ["recovery-calibration"], report
+    assert [check["name"] for check in report["checks"]] == ["recovery-calibration"], report["checks"]
+    preflight = json.loads((Path(report["directory"]) / "preflight.json").read_text(encoding="utf-8"))
+    assert [check["name"] for check in preflight["checks"]] == ["recovery-calibration"], preflight
+    assert len(launched) == 1 and launched[0][launched[0].index("--inventory") + 1] == "recovery", launched
