@@ -560,3 +560,35 @@ def test_a_skipped_settings_file_is_recorded_in_the_plan(world, tmp_path):
     skipped = plan.get("dev_settings", {}).get("_skipped")
     assert isinstance(skipped, list) and [entry.get("file") for entry in skipped] == [str(repo_file)], plan
     assert all(isinstance(entry.get("reason"), str) and entry["reason"] for entry in skipped), skipped
+
+
+def _bootstrap_exec(world, tmp_path, monkeypatch, argv, **values):
+    profiles = kit("adapters.profiles")
+    monkeypatch.setenv("PYTHONPYCACHEPREFIX", str(tmp_path / "cache"))
+    monkeypatch.setattr(profiles.os, "execv", lambda *args: (_ for _ in ()).throw(Exec(*args)))
+    with pytest.raises(Exec) as selected:
+        with_dev(profiles.bootstrap, argv, root=ROOT, dev=dev(world, **values))
+    return selected.value.args
+
+
+@pytest.mark.parametrize("action", ["run", "start", "plan", "doctor", "setup"])
+def test_the_bootstrap_runs_a_fresh_command_with_the_interpreter_setting(world, tmp_path, monkeypatch, action):
+    configured = wrapper_interpreter(tmp_path / "configured")
+    path, argv = _bootstrap_exec(world, tmp_path, monkeypatch, [action], **{INTERPRETER: configured})
+    assert path == str(configured), "the run would start with another interpreter than the one recorded"
+    assert argv[0] == str(configured) and argv[1:4] == ["-m", "scripts.testkit", action], argv
+
+
+def test_a_profile_or_a_saved_run_keeps_its_own_interpreter_over_the_setting(world, tmp_path, monkeypatch):
+    setting = wrapper_interpreter(tmp_path / "setting")
+    profiled = wrapper_interpreter(tmp_path / "profiled")
+    saved_interpreter = wrapper_interpreter(tmp_path / "saved")
+    profile = profile_file(tmp_path / "operator", {"interpreter": str(profiled)})
+    saved = tmp_path / "saved run"
+    saved.mkdir()
+    (saved / "plan.json").write_text(json.dumps({"interpreter": str(saved_interpreter)}))
+    for argv, expected in ((["run", "--profile", str(profile)], profiled),
+                           (["start", "--from", str(saved)], saved_interpreter),
+                           (["status", str(saved)], saved_interpreter)):
+        path, _ = _bootstrap_exec(world, tmp_path, monkeypatch, argv, **{INTERPRETER: setting})
+        assert path == str(expected), (argv, path)
