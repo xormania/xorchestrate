@@ -8,6 +8,7 @@ from copy import deepcopy
 from .inspection import DELIVERY_RECORDS
 from .model import Conflict, OrchestrationError, action_spec, canonical_digest, public_error_code, record_view
 from .outcomes import before_effect, completed_effect_result, effect_outcome
+from .store_events import retained_events
 
 S = {"type": "string", "minLength": 1}
 DELIVERY_ACTIONS = {
@@ -47,6 +48,11 @@ class DeliveryMixin:
             "sessions": sessions, "messages": [record_view(r) for r in tx.list("message")],
             "all_attempts": [record_view(r) for r in tx.list("delivery_attempt")],
             "observations": [record_view(r) for r in tx.list("native_observation")],
+            # Only creation witnesses used by the receipt policy participate in
+            # its snapshot. Unrelated log traffic must not invalidate a read.
+            # Public get_delivery still projects only DELIVERY_RECORDS.
+            "events": [event for event in retained_events(tx)
+                       if event.get("type") in {"message.created", "evidence.created"}],
             "receipts": [record_view(r) for r in tx.list("delivery_receipt") if r.data["message_id"] == message_id]}
 
     def _get_delivery(self, args, actor, context):

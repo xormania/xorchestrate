@@ -37,13 +37,16 @@ FIXTURE = Path(__file__).with_name("build-log.json")
 
 
 def snapshot(application):
+    from xorchestrate.store_events import retained_events
+
     with application.store.transaction() as tx:
         def records(kind):
             return [{**deepcopy(r.data), "id": r.key, "version": r.version} for r in tx.list(kind)]
         return {"sessions": records("session"), "messages": records("message"), "attempts": records("delivery_attempt"),
                 "observations": records("native_observation"), "evidence": records("evidence"),
                 "operations": records("operation"), "receipts": records("delivery_receipt"),
-                "native_calls": records("native_call")}
+                "native_calls": records("native_call"),
+                "ordering": {"version": 1, "source_id": uuid.uuid4().hex, "events": list(retained_events(tx))}}
 
 
 def protocol_config(root, state):
@@ -86,6 +89,7 @@ class ComposedSuite:
         self.directory, self.mode, self.timeout = Path(directory), mode, timeout
         self.criteria, self.bindings, self.fixture = criteria, bindings, fixture
         self.provider = self.application.providers["verification"]
+        self.provider.bind_ordering(self.record_provider_boundary)
         self.run_id = uuid.uuid4().hex
         self.memories = {peer: secrets.token_hex(16) for peer in PEERS}
         self.nonces = {case["id"]: secrets.token_hex(12) for case in criteria["required_cases"]
@@ -104,6 +108,13 @@ class ComposedSuite:
         self.product_modules = {}
         self.checks = CheckRecorder(SystemClock())
 
+    def record_provider_boundary(self, event):
+        # This fixture-owned marker joins the same actual serialization boundary
+        # as durable application observations. It is recorded at emit(), never
+        # reconstructed when a later snapshot happens to read the provider.
+        with self.application.store.transaction() as tx:
+            tx.emit({"type": "verification.provider", "observation": deepcopy(event)})
+
     def call(self, action, arguments):
         from xorchestrate.model import Conflict
         # Autonomous callbacks may change the authorization snapshot between
@@ -121,8 +132,10 @@ class ComposedSuite:
                 time.sleep(.01)
 
     def raw_run(self):
-        raw = snapshot(self.application)
+        # Every published fixture event already has a committed marker. Read
+        # that prefix first so its marker cannot fall after the store snapshot.
         provider = self.provider.snapshot()
+        raw = snapshot(self.application)
         result = {"mode": self.mode, "run_id": self.run_id, "started_at": self.started, "cutoff": now(),
                   "bindings": self.bindings, "raw_records": raw, "provider_events": provider,
                   "sessions": self.sessions, "memories": self.memories, "nonces": self.nonces,

@@ -59,6 +59,7 @@
         "xorchestrate.schema",
         "xorchestrate.session_lifecycle",
         "xorchestrate.state",
+        "xorchestrate.store_events",
         "xorchestrate.worktrees"
       ],
       "allowed_roles": [
@@ -513,7 +514,8 @@
     "verification_core": {
       "modules": [
         "scripts.verification.core",
-        "scripts.verification.evidence"
+        "scripts.verification.evidence",
+        "scripts.verification.order"
       ],
       "allowed_roles": [
         "verification_foundation",
