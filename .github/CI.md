@@ -246,6 +246,22 @@ The local evaluation and live-health commands remain available. See
 
 CI neither requests reviews nor merges branches. xor controls those decisions.
 
+## Dependency update pull requests
+
+[Dependabot](dependabot.yml) checks GitHub Actions weekly and groups minor and
+patch version updates in `actions-minor-patch`. Major updates remain individual
+PRs within the existing limit of two open version-update PRs. This adapts
+[UXor's weekly grouping](https://github.com/xormania/uxor/blob/main/.github/dependabot.yml)
+while keeping major upgrades separately reviewable. Every version update waits
+at least seven days after release, then becomes eligible at a scheduled check.
+The group applies only to version updates; security updates have no cooldown.
+See GitHub's [grouping and cooldown options](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference).
+
+Action references stay pinned to commit SHAs. Dependabot uses the corresponding
+release version to classify tagged pins; updates it cannot classify as minor or
+patch remain individual. Grouping reduces PR volume, while CI, the explicit uv
+archive checksum and owner review check whether an update is suitable to merge.
+
 ## Release workflow
 
 `.github/workflows/release.yml` is separate from CI. It runs on a pushed
