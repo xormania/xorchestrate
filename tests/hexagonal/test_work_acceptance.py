@@ -23,7 +23,7 @@ from xorchestrate.adapters.acceptance import RequiredChecksAcceptance
 from xorchestrate.adapters.policies import RuleGuardrail
 from xorchestrate.adapters.storage import SQLiteStore
 from xorchestrate.composition import build
-from xorchestrate.model import Conflict, OrchestrationError
+from xorchestrate.model import Conflict, OrchestrationError, canonical_digest
 
 
 @pytest.fixture
@@ -226,6 +226,56 @@ def test_duplicate_measurement_json_fields_cannot_supply_a_passing_summary(app):
     app.providers["checks"].transform = duplicate
     measure(app, work)
     assert "measurement_binding_mismatch" in issues(accept(app, work))
+
+
+@pytest.mark.parametrize("transport", ["direct", "structured", "text"])
+def test_measurement_formats_preserve_business_content_and_raw_evidence(app, transport):
+    work, _ = setup_work(app, {"A": "Behavior"})
+    supplied = []
+
+    def response(result):
+        if transport == "direct":
+            raw = {**result, "content": {"artifact": "report.json", "summary": "business output"}}
+        elif transport == "structured":
+            raw = {"structuredContent": result, "content": [{"type": "text", "text": "display summary"}], "isError": False}
+        else:
+            raw = {"content": [{"type": "text", "text": json.dumps(result, indent=2)}], "isError": False}
+        supplied.append(deepcopy(raw))
+        return raw
+
+    app.providers["checks"].transform = response
+    measurement = measure(app, work)["measurement"]
+    assert accept(app, work)["accepted"], "TRANSPORT_DECODING_MUST_PRESERVE_DIRECT_MEASUREMENT"
+    assert len(supplied) == 1
+    with app.store.transaction() as tx:
+        retained = tx.get("measurement", measurement["id"])
+        operation = tx.get("operation", retained.data["operation_id"])
+        assert retained.data["raw_response"] == supplied[0], "MEASUREMENT_RAW_RESPONSE_MUST_REMAIN_EXACT"
+        assert retained.data["raw_digest"] == canonical_digest(supplied[0])
+        assert operation.data["external_result"] == supplied[0], "OPERATION_MUST_RETAIN_ORIGINAL_PROVIDER_RESULT"
+
+
+@pytest.mark.parametrize("envelope", ["error", "null-structured", "wrong-block", "multiple-blocks", "invalid-json", "nonfinite-json"])
+def test_invalid_measurement_envelopes_never_supply_acceptance(app, envelope):
+    work, _ = setup_work(app, {"A": "Behavior"})
+
+    def response(result):
+        if envelope == "error":
+            return {"isError": True, "structuredContent": result}
+        if envelope == "null-structured":
+            return {"structuredContent": None, "content": [{"type": "text", "text": json.dumps(result)}]}
+        if envelope == "wrong-block":
+            return {"content": [{"type": "image", "text": json.dumps(result)}]}
+        if envelope == "multiple-blocks":
+            return {"content": [{"type": "text", "text": json.dumps(result)}, {"type": "text", "text": "extra"}]}
+        text = "not JSON" if envelope == "invalid-json" else json.dumps(result).replace('"passed": true', '"passed": NaN')
+        return {"content": [{"type": "text", "text": text}]}
+
+    app.providers["checks"].transform = response
+    measure(app, work)
+    decision = accept(app, work)
+    assert not decision["accepted"], "INVALID_PROVIDER_ENVELOPE_CANNOT_ESTABLISH_MEASUREMENT"
+    assert "measurement_binding_mismatch" in issues(decision)
 
 
 def test_candidate_change_invalidates_existing_acceptance_and_old_evidence(app):

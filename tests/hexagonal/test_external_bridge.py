@@ -128,7 +128,7 @@ def test_external_detach_does_not_terminate_host_and_reconnect_retains_context(b
     assert backend["ownership"] == "external"
     assert first.send(backend, {})["memory"] == "unrepeatable-private-marker"
     assert first.detach(backend)["terminated"] is False
-    assert not native.closed, "external_detach_must_not_terminate_native_process"
+    assert not native.closed, "EXTERNAL_DETACH_MUST_NOT_TERMINATE_NATIVE_PROCESS"
     assert native.stops == 0
     assert host.thread.is_alive()
     with BridgeClient(host) as second:
@@ -428,7 +428,7 @@ def test_actual_host_crash_preserves_unknown_applied_effect_without_replay(tmp_p
         assert resumed["incarnation"] != backend["incarnation"]
         assert resumed["native_incarnation"] != backend["native_incarnation"]
         pending = client.inspect(resumed)["effects"]
-        assert any(effect["status"] == "unknown" for effect in pending.values()), "killed_host_must_preserve_unknown_effect"
+        assert any(effect["status"] == "unknown" for effect in pending.values()), "KILLED_HOST_MUST_PRESERVE_UNKNOWN_EFFECT"
         assert json.loads(native_state.read_text())["effects"] == 1, "killed_host_must_not_replay_applied_effect"
         assert client.send(resumed, {}) == {"memory": "private-before-kill", "effects": 1}
     finally:

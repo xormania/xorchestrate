@@ -38,6 +38,8 @@ class FaultCase:
     diagnostic: str
     unaffected: tuple[str, ...] = ()
     expect: str = "detected"
+    contract: str | None = None
+    """``module:function`` of the one contract function holding this case's check, when not the target test."""
 
 
 @dataclass(frozen=True)
@@ -59,7 +61,7 @@ the report keeps.
 
 def _judge(case: FaultCase, raw: Mapping) -> str:
     return classify(raw["control_cases"], raw["mutant_cases"], case.target, case.diagnostic, case.unaffected,
-                    mutation_applied=raw["mutation_applied"], control_exit=raw["control_exit"],
+                    contract=case.contract, mutation_applied=raw["mutation_applied"], control_exit=raw["control_exit"],
                     mutant_exit=raw["mutant_exit"])["classification"]
 
 

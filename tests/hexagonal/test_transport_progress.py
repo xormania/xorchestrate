@@ -71,7 +71,7 @@ def test_callback_after_submission_ack_progresses_without_poll():
     peer = transport(handle, lambda method, params: answered.set() if method == "callback_answered" else None)
     try:
         assert peer.request("start") == {"accepted": True}
-        assert called.wait(1), "post_ack_callback_progress"
+        assert called.wait(1), "POST_ACK_CALLBACK_PROGRESS"
         assert answered.wait(1), "post_ack_callback_response"
     finally:
         peer.close()
