@@ -140,7 +140,7 @@
           "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --managed-python --python 3.12.16 --no-default-groups --group validation --no-install-project"
         },
         {
-          "uses": "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
+          "uses": "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333",
           "with": {
             "name": "distributions",
             "path": "${{ runner.temp }}/dist"
@@ -179,7 +179,7 @@
       },
       "steps": [
         {
-          "uses": "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
+          "uses": "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333",
           "with": {
             "name": "distributions",
             "path": "dist"
@@ -209,14 +209,14 @@
       },
       "steps": [
         {
-          "uses": "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
+          "uses": "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333",
           "with": {
             "name": "distributions",
             "path": "${{ runner.temp }}/dist"
           }
         },
         {
-          "uses": "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
+          "uses": "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333",
           "with": {
             "name": "release-identity",
             "path": "${{ runner.temp }}/identity"

@@ -261,7 +261,7 @@
         {
           "name": "Read the shared test timing snapshot",
           "id": "timings",
-          "uses": "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
+          "uses": "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333",
           "with": {
             "artifact-ids": "${{ needs.paths.outputs.timings_artifact }}",
             "path": "${{ runner.temp }}/ci-timings"
@@ -666,7 +666,7 @@
           "id": "timings",
           "if": "always()",
           "continue-on-error": true,
-          "uses": "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
+          "uses": "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333",
           "with": {
             "artifact-ids": "${{ needs.paths.outputs.timings_artifact }}",
             "path": "${{ runner.temp }}/ci-timings"
