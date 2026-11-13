@@ -38,9 +38,19 @@ def processes():
     return result
 
 
+def _identity_of(pid):
+    """``(Identity, state)`` of the one process ``pid``, read as ``processes`` reads it, or None if it is gone."""
+    try:
+        fields = Path(f"/proc/{pid}/stat").read_text().rsplit(") ", 1)[1].split()
+        return Identity(pid, int(fields[19])), fields[0]
+    except (OSError, ValueError, IndexError):
+        return None
+
+
 def alive(identity):
-    current = processes().get(identity.pid)
-    return current is not None and current[0] == identity and current[2] != "Z"
+    """Whether this exact identity (pid and start time) still runs; a zombie is dead. Reads only that process."""
+    current = _identity_of(identity.pid)
+    return current is not None and current[0] == identity and current[1] != "Z"
 
 
 def send_signal(identity, number):

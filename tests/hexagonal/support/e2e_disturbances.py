@@ -172,7 +172,7 @@ def _kill_until_quiet(home, spawned=()):
             break
         victims.update(fresh)
         ancestry.update({child: root for child, root in ancestors.items() if child in fresh})
-        survivors = _kill(list(victims))
+        survivors = _kill(list(fresh))  # earlier passes' victims are gone: a pass that left a survivor stopped
         if survivors:
             break
     if not survivors:
