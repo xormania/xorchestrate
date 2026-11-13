@@ -42,7 +42,8 @@ flowchart TD
 The application module keeps action dispatch, authorization context and its
 verification, guardrail authorization, record creation and update, work, actor
 and message records, capability discovery and invocation (with the invocation
-effect hooks) and telemetry reads. The remaining use cases live in focused
+effect hooks). Telemetry actions delegate to the shared telemetry service.
+The remaining use cases live in focused
 modules that it assembles:
 
 | Module | Responsibility |
@@ -54,6 +55,7 @@ modules that it assembles:
 | `assessment.py` | `WorkAssessment`: triage and escalation through configured evaluators; like acceptance, it depends only on contracts and host callbacks |
 | `acceptance.py` | `WorkAcceptance` (below) |
 | `inspection.py` | `InspectionProjector` (below) |
+| `telemetry_service.py` | `TelemetryService`: automatic observation intake, authorized telemetry reads and bundle operations through explicit collaborators |
 
 Shared canonical JSON digests, public record views and action descriptors are
 foundation helpers in `model.py`.
@@ -95,6 +97,17 @@ acceptance reads compose the component's transactional view with the inspection
 projector in the application; acceptance imports neither its host nor projection,
 delivery or infrastructure. Measurement replay and result reconciliation retain
 their existing operation evidence and never launch another effect implicitly.
+
+`TelemetryService` owns the telemetry operations used by the application actions.
+It receives a current capture-adapter supplier, store, inspection projector,
+context/authorization/verification callbacks, authority revision and current
+source collections. It does not receive the application facade or select
+infrastructure. Authorized views and bundle closure checks remain in
+`TelemetryViews`; the service also checks the policy revision after a complete
+status, events, payload or usage read, including status source-health reporting.
+Automatic observations pass through the same service and retain optional
+capture's failure isolation. Replacing a runtime capture adapter, source
+collection or guardrail remains visible to subsequent operations.
 
 The core is usable with supplied ports without importing SQLite, subprocesses,
 MCP machinery, or the historical runtime. Memory and SQLite stores pass the

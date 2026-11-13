@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "id": "xorchestrate.hexagonal",
-  "version": "15",
+  "version": "16",
   "description": "Current application-owned ports, infrastructure-independent core and replaceable adapters. Composition is the trusted factory boundary. Source dependencies are distinct from runtime calls through ports. Active live-test infrastructure follows the same dependency direction: generic test-kit ports/core, concrete execution adapters, independent evidence predicates and explicit runner composition. Shared test contracts remain independent of their subjects; support adapters own fixtures, and collected tests cannot import other collected tests. The public ports, their values and errors and the adapter factory convention come from the external, stdlib-only xcontracts package (Apache-2.0), which the foundation re-exports. Roles that reach the foundation allow only xcontracts.ports and xcontracts.model; the conformance kit (xcontracts.testing) and the factory types are allowed only in test support and collected tests; xcontracts never imports xorchestrate, which its own tests and tests/hexagonal/test_xcontracts.py check.",
   "source_roots": [
     "xorchestrate",
@@ -167,7 +167,8 @@
     },
     "telemetry": {
       "modules": [
-        "xorchestrate.telemetry"
+        "xorchestrate.telemetry",
+        "xorchestrate.telemetry_service"
       ],
       "allowed_roles": [
         "foundation",
@@ -193,7 +194,7 @@
         "input",
         "print"
       ],
-      "description": "Pure observation protection and authorized telemetry views; storage and transport remain adapters.",
+      "description": "Observation protection, authorized views and telemetry operations depend on explicit collaborators, not the application facade; storage and transport remain adapters.",
       "forbidden_literals": [
         "tmux"
       ]

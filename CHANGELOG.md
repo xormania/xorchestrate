@@ -9,6 +9,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- Telemetry capture and operations share an application-independent service with
+  explicit authority, projection and live source collaborators. Existing actions,
+  resource visibility, bounded reads and bundle authorization are preserved.
 - Exchange receipts and the independent multi-harness checker use retained store
   order for exchange, held-work and native-completion proof. Civil-clock changes
   and report-list reordering no longer create or reverse that proof. See
