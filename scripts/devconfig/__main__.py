@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import os
 import sys
+import tempfile
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
@@ -32,6 +34,22 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _write_example(target: Path, text: str) -> None:
+    """Replace the example atomically, never writing through a symbolic link at its path."""
+    if target.is_symlink():
+        raise DevConfigError("EXAMPLE_UNSAFE", f"{target} is a symbolic link; refusing to write through it")
+    handle, temporary = tempfile.mkstemp(dir=target.parent, prefix=".devtools.env.example.", suffix=".tmp")
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8") as output:
+            output.write(text)
+        os.chmod(temporary, 0o644)
+        os.replace(temporary, target)  # replaces the path itself; a link swapped in meanwhile is not followed
+    except BaseException:
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(temporary)
+        raise
+
+
 def main(argv: Sequence[str] | None = None, *, env: Mapping[str, str] | None = None) -> int:
     arguments = _parser().parse_args(argv)
     env = os.environ if env is None else env
@@ -57,7 +75,7 @@ def main(argv: Sequence[str] | None = None, *, env: Mapping[str, str] | None = N
         target = find_checkout(repo) / EXAMPLE_FILE
         expected = render_example(SETTINGS)
         if arguments.write:
-            target.write_text(expected, encoding="utf-8")
+            _write_example(target, expected)
             print(target)
             return 0
         current = target.read_text(encoding="utf-8") if target.is_file() else None
