@@ -266,12 +266,20 @@ that must stay green. `registry.json` names every inventory and the stages it ru
 at (`ci`, `pre-draft`, `manual`); `schema.json` defines both files, and an
 unregistered file or an unknown name is an error. The calibration suite composes one
 check per inventory registered at `ci` (`native-calibration`, `work-calibration`,
-`state-calibration`), each running that inventory; to run others on demand:
+`state-calibration`), each running that inventory. Select others by name or stage:
 
 ```bash
-python3 -m scripts.verification.calibrate_suite --candidate . --out <new directory outside the tree> --stage manual
+python3 -m scripts.testkit run --suite calibration --inventory recovery   # repeatable
+python3 -m scripts.testkit run --suite calibration --stage manual
 python3 -m scripts.verification.calibrate_suite --candidate . --out <new directory outside the tree> --inventory native
 ```
+
+When to run what: inventories registered at `ci` run on every CI run. Run a
+`manual` inventory with `--suite calibration --inventory <name>` when a change
+touches the source its cases anchor into (the tree check in the default tests names
+each anchor), and before a release; the owner of that change runs it. Every
+registered inventory, whatever its stage, is checked without running its cases
+(schema, anchors, targets, one assertion site) in every default tests run.
 
 With neither option, the inventories registered at `ci` run. A selection that names
 no inventory (for example a stage with nothing registered) exits 2 with

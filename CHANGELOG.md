@@ -140,6 +140,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 - The recovery area's planted faults are calibrated by a `recovery` inventory
   registered at the `manual` stage: thirteen cases, five credited in their
   declared recovery contract.
+- `python3 -m scripts.testkit run --suite calibration` takes `--inventory NAME`
+  (repeatable) or `--stage ci|pre-draft|manual`; the default still runs the
+  inventories registered at `ci`.
 - Jev now asks evidence-addressed atomic questions at the source stage and adds
   optional post-test guarantee support and failure triage. Current candidate and
   lane identity, executed inventories and exact failure cases bind the advice;
