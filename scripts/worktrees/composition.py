@@ -56,7 +56,8 @@ def build(repo: Path, env: Mapping[str, str], flags: Mapping[str, str | None], p
         serena_timeout=settings.get("XORCHESTRATE_DEV_SERENA_TIMEOUT"),
         serena_command=tuple(settings.get("XORCHESTRATE_DEV_SERENA_COMMAND")),
         probe_tool=settings.get("XORCHESTRATE_DEV_PROBE_TOOL"),
-        probe_args=settings.get("XORCHESTRATE_DEV_PROBE_ARGS"))
+        probe_args=settings.get("XORCHESTRATE_DEV_PROBE_ARGS"),
+        allow_edits=bool(settings.get("XORCHESTRATE_DEV_SERENA_ALLOW_EDITS")))
     processes = ports.processes or ProcFs()
     store = ports.store or JsonStateStore(Path(config.state_dir) / STORE_SUBDIR)
     files = ports.files or LocalFiles()

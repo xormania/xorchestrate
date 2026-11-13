@@ -76,6 +76,8 @@ class FileSystem(Protocol):
 
     def make_dirs(self, path: str) -> None: ...
 
+    def write_text(self, path: str, text: str) -> None: ...
+
     def real_path(self, path: str) -> str:
         """``path`` made absolute with every symbolic link resolved (missing parts kept as given)."""
 

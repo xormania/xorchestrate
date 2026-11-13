@@ -22,5 +22,9 @@ class LocalFiles:
     def make_dirs(self, path: str) -> None:
         os.makedirs(path, exist_ok=True)
 
+    def write_text(self, path: str, text: str) -> None:
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(text)
+
     def real_path(self, path: str) -> str:
         return os.path.realpath(path)

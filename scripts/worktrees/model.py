@@ -66,6 +66,7 @@ class Config:
     serena_command: tuple[str, ...]
     probe_tool: str | None
     probe_args: dict[str, Any] | None
+    allow_edits: bool = False
 
 
 @dataclass
