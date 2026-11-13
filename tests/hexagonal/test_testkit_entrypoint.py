@@ -262,3 +262,94 @@ def test_recording_runner_retains_raw_failure_and_missing_executable(tmp_path, m
     assert runner.records[0]["exit_status"] == 7
     assert runner.records[1]["exit_status"] is None
 
+
+
+# Calibration inventory selection: --inventory NAME (repeatable) or --stage --------------------------------
+
+REGISTRY = composition.ROOT / "scripts/verification/inventories/registry.json"
+
+
+def _registered():
+    return json.loads(REGISTRY.read_text(encoding="utf-8"))["inventories"]
+
+
+def _calibration(checks):
+    return [check for check in checks if check.name.endswith("-calibration")]
+
+
+def test_named_inventories_are_planned_in_the_order_given_and_once_each(tmp_path):
+    checks = _calibration(composition.plan(directory=tmp_path, suite="calibration", mode="protocol-fixture",
+                                           inventories=("recovery", "native", "recovery")))
+    assert [check.name for check in checks] == ["recovery-calibration", "native-calibration"]
+    recovery = checks[0]
+    assert recovery.argv == (sys.executable, "-m", "scripts.verification.calibrate_suite", "--candidate",
+                             str(composition.ROOT), "--out", str(tmp_path / "recovery-calibration"),
+                             "--inventory", "recovery"), recovery.argv
+    assert set(recovery.required) == {"scripts/verification/calibrate_suite.py",
+                                      "scripts/verification/inventories/" + _registered()["recovery"]["file"]}
+
+
+@pytest.mark.parametrize("stage", ["ci", "manual"])
+def test_a_stage_plans_every_inventory_registered_at_it_in_registry_order(tmp_path, stage):
+    checks = _calibration(composition.plan(directory=tmp_path, suite="calibration", mode="protocol-fixture",
+                                           stage=stage))
+    expected = [f"{name}-calibration" for name, entry in _registered().items() if stage in entry["stages"]]
+    assert expected and [check.name for check in checks] == expected
+    assert all("--stage" not in check.argv for check in checks), "the stage is expanded, never passed on"
+
+
+def test_without_a_selection_the_ci_stage_is_planned_as_before(tmp_path):
+    options = dict(directory=tmp_path, suite="calibration", mode="protocol-fixture")
+    assert composition.plan(**options) == composition.plan(stage="ci", **options)
+    assert [check.name for check in composition.plan(**options)] == [
+        "native-calibration", "work-calibration", "state-calibration"]
+
+
+def test_a_named_inventory_replaces_the_default_calibration_checks_in_the_whole_run(tmp_path):
+    checks = composition.plan(directory=tmp_path, suite="all", mode="protocol-fixture", inventories=("recovery",))
+    assert [check.name for check in _calibration(checks)] == ["recovery-calibration"]
+    assert [check.name for check in checks][:4] == ["ruff", "syntax", "architecture", "tests"]
+
+
+@pytest.mark.parametrize("options,fragments", [
+    ({"suite": "tests", "inventories": ("native",)}, ("--inventory and --stage select calibration inventories in the "
+                                                      "calibration suite",)),
+    ({"suite": "static", "stage": "manual"}, ("--inventory and --stage select calibration inventories in the "
+                                              "calibration suite",)),
+    ({"suite": "calibration", "inventories": ("native",), "stage": "ci"}, ("Select --inventory or --stage, not both",)),
+    ({"suite": "calibration", "inventories": ("no-such-inventory",)}, ("Unknown calibration inventory",
+                                                                       "no-such-inventory")),
+    ({"suite": "calibration", "stage": "pre-draft"}, ("No calibration inventory is registered at stage pre-draft",)),
+], ids=["inventory-outside-calibration", "stage-outside-calibration", "both", "unknown-name", "empty-stage"])
+def test_a_wrong_selection_is_refused_before_any_command(tmp_path, monkeypatch, options, fragments):
+    assert not any("pre-draft" in entry["stages"] for entry in _registered().values()), "the empty stage must be empty"
+
+    def unexpected_launch(*args, **kwargs):
+        pytest.fail("a refused selection launched a command")
+
+    monkeypatch.setattr(RecordingRunner, "run", unexpected_launch)
+    report = composition.run(output=tmp_path, **options)
+    assert report["status"] == "setup_error" and report["checks"] == [], report
+    assert report["error"]["type"] == "ValueError", report["error"]
+    for fragment in fragments:
+        assert fragment in report["error"]["diagnostic"], report["error"]
+
+
+def test_the_command_line_carries_both_selections_into_the_run():
+    from scripts.testkit import operator_cli, operator_composition
+
+    named = operator_cli.parser().parse_args(["run", "--suite", "calibration", "--inventory", "recovery",
+                                              "--inventory", "native"])
+    assert operator_cli.overrides(named)["inventories"] == ["recovery", "native"]
+    staged = operator_cli.parser().parse_args(["run", "--suite", "calibration", "--stage", "manual"])
+    assert operator_cli.overrides(staged)["stage"] == "manual"
+    assert "inventories" not in operator_cli.overrides(staged) and "stage" not in operator_cli.overrides(named)
+    with pytest.raises(SystemExit):
+        operator_cli.parser().parse_args(["run", "--suite", "calibration", "--stage", "nightly"])
+    assert {"inventories", "stage"} <= set(operator_composition.RUN_FIELDS)
+
+
+@pytest.mark.parametrize("document", ["docs/testing-framework.md", "docs/pr-quality.md"])
+def test_the_guides_say_when_to_select_inventories_or_a_stage(document):
+    text = (composition.ROOT / document).read_text(encoding="utf-8")
+    assert "--suite calibration --inventory" in text and "--stage" in text, document
