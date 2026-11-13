@@ -9,6 +9,7 @@ from tests.hexagonal.contracts.capability_execution import (
     query_currentness_contract,
     receipt_contract,
     receipt_failure_contract,
+    receipt_policy_change_contract,
     receipt_settlement_contract,
 )
 from tests.hexagonal.support.capability_execution import Subject, configuration_error, configured_subject
@@ -43,6 +44,11 @@ def test_receipt_effect_returns_live_result_but_replays_only_completion(store, n
 @pytest.mark.parametrize("outcome", ["unknown", "failed", "completed"])
 def test_receipt_failure_preserves_outcome_without_copying_payloads(store, native, outcome):
     receipt_failure_contract(Subject(store, "receipt"), outcome, native)
+
+
+@pytest.mark.parametrize("native", [False, True])
+def test_trusted_policy_changes_cannot_reinterpret_retained_effects_as_fresh_queries(store, native):
+    receipt_policy_change_contract(Subject(store, "receipt"), native)
 
 
 def test_receipt_local_settlement_failure_and_reconciliation_keep_payloads_ephemeral(store):

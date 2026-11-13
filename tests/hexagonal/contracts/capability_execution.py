@@ -78,6 +78,22 @@ def receipt_failure_contract(subject, outcome, native=False):
     assert subject.provider.calls == 1, "RECEIPT_UNCERTAIN_EFFECT_MUST_NOT_REPEAT"
 
 
+def receipt_policy_change_contract(subject, native=False):
+    if native:
+        subject.make_native()
+    original = subject.invoke(native=native)
+    subject.reconstruct("query")
+    if native:
+        failure = subject.failure(lambda: subject.invoke(native=True, replay_only=True))
+        assert failure["code"] == "conflict", "NATIVE_RECEIPT_MODE_CHANGE_MUST_NOT_REEXECUTE_EFFECT"
+    else:
+        repeated = subject.invoke()
+        assert repeated == {"operation_id": original["operation_id"], "status": "completed", "result_retained": False}, \
+            "RETAINED_EFFECT_MUST_NOT_BECOME_A_FRESH_QUERY"
+    assert subject.provider.calls == 1
+    assert private_absent(subject.retained())
+
+
 def receipt_settlement_contract(subject):
     subject.fail_settlement()
     failure = subject.failure(subject.invoke)

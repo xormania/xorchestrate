@@ -142,6 +142,12 @@ class Subject:
         self.guardrail.denied = action
         self.guardrail.revision += 1
 
+    def reconstruct(self, mode):
+        self.app = application(self.store, providers={"tools": self.provider}, driver=Native(),
+            guardrail=self.guardrail,
+            capability_execution={"tools/inspect": {"mode": mode, "observation": "none"}})
+        self.app.telemetry = self.capture
+
     def change_during_call(self, target):
         def callback(arguments, context):
             if target == "authority":
