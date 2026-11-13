@@ -18,6 +18,30 @@
       "stages": [
         "ci"
       ]
+    },
+    "recovery": {
+      "file": "recovery.json",
+      "stages": [
+        "manual"
+      ]
+    },
+    "hosted": {
+      "file": "hosted.json",
+      "stages": [
+        "manual"
+      ]
+    },
+    "project-server": {
+      "file": "project-server.json",
+      "stages": [
+        "manual"
+      ]
+    },
+    "testkit": {
+      "file": "testkit.json",
+      "stages": [
+        "manual"
+      ]
     }
   }
 }

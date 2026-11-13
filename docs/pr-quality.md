@@ -67,6 +67,10 @@ Run healthy controls as well. Select faults that exercise the changed guarantees
 this does not require mutation testing the entire repository for every PR.
 
 Reuse the framework's existing calibration, command and evidence services.
+When a change touches source that a `manual` calibration inventory anchors into, run
+it with `python3 -m scripts.testkit run --suite calibration --inventory <name>` (or
+`--stage manual`) and record the result; see
+[when to run what](testing-framework.md#adding-or-changing-coverage).
 The [testing guide](testing-framework.md#adding-or-changing-coverage) explains
 where reusable expectations and support belong. Documentation-only changes need
 appropriate content/link checks; do not invent a behavioral red result for prose.

@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from tests.hexagonal.support.native import native_drivers, peer_options, wait_for
+from tests.hexagonal.support.temporal_waits import ControlledClock
 from xorchestrate.adapters.native_gateway import LocalGateway, request
 from xorchestrate.model import Capability, Conflict, OrchestrationError
 
@@ -40,11 +41,12 @@ def test_wait_for_propagates_unsafe_errors(error):
 
 
 def test_wait_for_safe_conflict_keeps_original_deadline(monkeypatch):
-    ticks = iter([0, 0, 1])
-    monkeypatch.setattr(time, "monotonic", lambda: next(ticks))
-    monkeypatch.setattr(time, "sleep", lambda delay: None)
+    clock = ControlledClock()
+    monkeypatch.setattr(time, "monotonic", clock.monotonic)
+    monkeypatch.setattr(time, "sleep", clock.sleep)
 
     def observation():
+        clock.advance(elapsed=1)
         raise Conflict("Evidence keeps changing", retry_safe=True)
 
     with pytest.raises(AssertionError, match="Expected native observation did not arrive"):

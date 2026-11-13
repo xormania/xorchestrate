@@ -10,6 +10,10 @@ class LatestSessionSelection:
 
     def select(self, message, recipient, sessions):
         eligible = [s for s in sessions if not self.options.get("driver") or s["driver"] == self.options["driver"]]
+        witnessed = [s for s in eligible if type(s.get("creation_sequence")) is int and s["creation_sequence"] > 0]
+        if witnessed:
+            return max(witnessed, key=lambda s: s["creation_sequence"])["id"]
+        # Unwitnessed legacy records retain their previous deterministic fallback.
         return max(eligible, key=lambda s: (s.get("created_at", ""), s["id"]))["id"] if eligible else None
 
 
