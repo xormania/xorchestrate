@@ -23,6 +23,5 @@ for where tests belong.
 - When refactoring test support, repeat the relevant fault witnesses before and
   after the change.
 - When work is delegated, the test author and the implementer are different, as
-  the PR quality standard asks. In a split team the implementer does not edit
-  tests, and the tests go in unchanged as their own commit before the
-  implementation ([team roles](../../../docs/agent-workflow.md#team-roles)).
+  the PR quality standard asks. The implementer does not edit the tests; they go
+  in unchanged as their own commit before the implementation.

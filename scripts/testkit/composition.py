@@ -87,7 +87,10 @@ def cache_environment(root):
     cache = Path(sys.pycache_prefix).resolve()
     if cache == root or root in cache.parents:
         raise ValueError("PYTHONPYCACHEPREFIX must be outside the measured candidate")
-    return {"PYTHONPYCACHEPREFIX": str(cache)}
+    environment = {"PYTHONPYCACHEPREFIX": str(cache)}
+    if "XO_TEST_TIMEOUT_SCALE" in os.environ:
+        environment["XO_TEST_TIMEOUT_SCALE"] = os.environ["XO_TEST_TIMEOUT_SCALE"]
+    return environment
 
 
 def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=ROOT, brief=None,
