@@ -9,6 +9,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- Acceptance and tool evaluation share semantic provider-result decoding while
+  preserving the exact raw evidence. Direct measurements can include business
+  `content`; MCP assessment JSON text with duplicate fields is now refused.
 - CI runs eight application-test shards with refreshed fallback weights and a shared artifact-based timing model that updates from complete qualified runs.
 - Small advisory Jev probes select PR review attention, examine specific findings
   and classify failed CI evidence in trusted event workflows. Their bounded,

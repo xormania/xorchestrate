@@ -37,7 +37,7 @@
       }
     },
     "capabilities": {
-      "guarantee": "Configured capability providers and evaluators preserve discovery, invocation, permissions and assessment evidence across process adapters; PR reads honor their configured repository scope before hosting access.",
+      "guarantee": "Configured capability providers and evaluators preserve discovery, invocation, permissions and assessment evidence across process adapters; semantic result decoding preserves direct business content and rejects ambiguous transport JSON; PR reads honor their configured repository scope before hosting access.",
       "modules": {
         "tests/hexagonal/test_capabilities.py": "adapter",
         "tests/hexagonal/test_evaluation.py": "adapter",
@@ -86,7 +86,7 @@
       }
     },
     "work-acceptance": {
-      "guarantee": "Completion and assessment require current, correctly bound evidence without losing owner goals or conflating turn completion with accepted work.",
+      "guarantee": "Completion and assessment require current, correctly bound evidence without losing owner goals or conflating turn completion with accepted work; measurement decoding preserves direct business content and exact retained provider responses and digests.",
       "modules": {
         "tests/hexagonal/test_work_acceptance.py": "contract",
         "tests/hexagonal/test_work_acceptance_component.py": "contract",
