@@ -212,7 +212,7 @@ class Subject:
             "result": {"payload": "PRIVATE_PROVIDER_RESULT"}})
         return [before, after]
 
-    def codex_callback(self):
+    def driver_callback(self):
         """Use the installed Codex translation and source capture paths without launching a process."""
         driver = CodexSessionDriver({"command": [sys.executable]})
         observed = []

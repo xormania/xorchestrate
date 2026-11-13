@@ -58,7 +58,7 @@ def test_retained_receipt_retry_under_new_native_identity_keeps_original_privacy
     retained_receipt_new_native_call_contract(Subject(store, "receipt", actor="worker"))
 
 
-@pytest.mark.parametrize("boundary", ["observer", "codex"])
+@pytest.mark.parametrize("boundary", ["observer", pytest.param("driver", id="codex")])
 @pytest.mark.parametrize("observation", ["none", "full"])
 def test_driver_observations_apply_policy_outside_application_callback_scope(store, observation, boundary):
     driver_observation_policy_contract(Subject(store, "journaled", observation, actor="worker"), observation, boundary)

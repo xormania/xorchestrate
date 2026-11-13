@@ -114,8 +114,8 @@ def retained_receipt_new_native_call_contract(subject):
 
 def driver_observation_policy_contract(subject, observation, boundary):
     subject.make_native()
-    if boundary == "codex":
-        response = subject.codex_callback()
+    if boundary == "driver":
+        response = subject.driver_callback()
         assert response["result"]["invocation"]["result"]["payload"] == "PRIVATE_PROVIDER_RESULT"
         assert response["observed"] == [("native_tool_call", 0), ("native_tool_result", 1)], \
             "CONTROL_DRIVER_OBSERVATIONS_MUST_BRACKET_ACTUAL_CALLBACK"
