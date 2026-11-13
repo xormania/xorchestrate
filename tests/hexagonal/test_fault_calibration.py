@@ -454,3 +454,159 @@ def test_the_suite_report_holds_each_inventory_report(tmp_path):
         ("caught", "detected"), ("escapes", "escaped_fault")], report["results"]
     assert report["passed"] is False and suite["passed"] is False
     assert (out / "probe").is_dir(), "each inventory's cases are kept under its own name"
+
+
+# Hardening: the edges of the loader, the service and the command line --------------------------------
+
+PROBE_TESTS = (
+    "from module import VALUE, GROUPED\n"
+    "def test_target():\n    assert VALUE == 1, 'PLANTED_FAULT_MARKER'\n"
+    "def test_other():\n    assert True\n"
+    "class TestGroup:\n"
+    "    def test_grouped(self):\n        assert GROUPED == 1, 'GROUPED_FAULT_MARKER'\n")
+
+
+def probe_repository(root, *, drift=None):
+    """A throwaway git candidate; with ``drift``, its tests write that file into the candidate itself."""
+    repository = git_repository(root)
+    (repository / "module.py").write_text("VALUE = 1\nGROUPED = 1\n", encoding="utf-8")
+    tests = PROBE_TESTS
+    if drift is not None:
+        tests += f"def test_drift():\n    open({str(repository / drift)!r}, 'w').write('changed')\n"
+    (repository / "test_probe.py").write_text(tests, encoding="utf-8")
+    return repository
+
+
+def probe_cases():
+    function = ["test_probe.py::test_target", "test_probe.py::test_other"]
+    grouped = ["test_probe.py::TestGroup::test_grouped", "test_probe.py::test_other"]
+    return [{"name": "caught", "mutation": {"path": "module.py", "old": "VALUE = 1", "new": "VALUE = 2"},
+             "selectors": function, "target": "test_probe::test_target", "diagnostic": "PLANTED_FAULT_MARKER",
+             "unaffected": ["test_probe::test_other"]},
+            {"name": "grouped", "mutation": {"path": "module.py", "old": "GROUPED = 1", "new": "GROUPED = 2"},
+             "selectors": grouped, "target": "test_probe.TestGroup::test_grouped",
+             "diagnostic": "GROUPED_FAULT_MARKER", "unaffected": ["test_probe::test_other"]}]
+
+
+def probe_registry(root, cases, stages=("manual",)):
+    return inventory_directory(root, registry={"schema_version": 1, "inventories": {
+        "probe": {"file": "probe.json", "stages": list(stages)}}},
+        inventories={"probe.json": {"schema_version": 1, "cases": cases}})
+
+
+@pytest.fixture(scope="module")
+def probe_run(tmp_path_factory):
+    """One real CLI run of a function case and a class case, both detected, kept for several checks."""
+    base = tmp_path_factory.mktemp("probe-run")
+    repository = probe_repository(base / "repo")
+    directory = probe_registry(base / "inventories", probe_cases())
+    out = base / "out"
+    result = cli("--candidate", str(repository), "--out", str(out), "--registry-dir", str(directory),
+                 "--inventory", "probe")
+    return result, out
+
+
+def test_a_test_class_selector_is_judged_by_its_junit_identity(probe_run):
+    result, out = probe_run
+    suite = json.loads((out / "suite.json").read_text())
+    rows = suite["inventories"]["probe"]["results"]
+    assert [(row["name"], row["classification"]) for row in rows] == [("caught", "detected"), ("grouped", "detected")], rows
+    assert result.returncode == 0 and suite["passed"] is True, (result.returncode, result.stderr[-500:])
+
+
+def test_a_class_selector_target_must_name_its_class(tmp_path):
+    grouped = probe_cases()[1]
+    directory = probe_registry(tmp_path / "inventories", [grouped])
+    assert load(directory).cases[0].target == "test_probe.TestGroup::test_grouped"
+    directory = probe_registry(tmp_path / "other", [{**grouped, "target": "test_probe::test_grouped"}])
+    assert error_code(directory) == "target_not_selected"
+
+
+def test_each_case_keeps_its_raw_trial_record_beside_its_evidence(probe_run):
+    _, out = probe_run
+    suite = json.loads((out / "suite.json").read_text())
+    for index, name in enumerate(("caught", "grouped"), 1):
+        path = out / "probe" / f"{index:02d}-{name}" / "trial.json"
+        assert path.is_file(), path
+        record = json.loads(path.read_text())
+        assert {"control_cases", "mutant_cases", "control_exit", "mutant_exit", "mutation_applied",
+                "candidate_sha256", "commands"} <= set(record), sorted(record)
+        assert record["candidate_sha256"] == suite["inventories"]["probe"]["candidate_sha256"]
+
+
+def test_the_progress_file_holds_every_event_in_order(probe_run):
+    _, out = probe_run
+    suite = json.loads((out / "suite.json").read_text())
+    report = suite["inventories"]["probe"]
+    events = json.loads((out / "probe.progress.json").read_text())
+    assert events == [*({"event": "case", **row} for row in report["results"]), {"event": "report", **report}]
+
+
+def test_a_candidate_that_changes_during_the_run_fails_the_suite(tmp_path):
+    """Each case is detected and its report passes, but the candidate changed under the run."""
+    repository = probe_repository(tmp_path / "repo", drift="drift.txt")
+    cases = [{**probe_cases()[0], "selectors": [*probe_cases()[0]["selectors"], "test_probe.py::test_drift"]}]
+    directory = probe_registry(tmp_path / "inventories", cases)
+    out = tmp_path / "out"
+    result = cli("--candidate", str(repository), "--out", str(out), "--registry-dir", str(directory),
+                 "--inventory", "probe")
+    suite = json.loads((out / "suite.json").read_text())
+    assert suite["inventories"]["probe"]["passed"] is True, suite["inventories"]["probe"]["results"]
+    assert (repository / "drift.txt").exists(), "the run changed the candidate"
+    assert suite["candidate_integrity"]["passed"] is False
+    assert suite["passed"] is False and result.returncode == 1, (result.returncode, result.stdout[-300:])
+
+
+def test_a_selection_with_no_inventory_exits_2_before_any_run(tmp_path):
+    repository = probe_repository(tmp_path / "repo")
+    directory = probe_registry(tmp_path / "inventories", probe_cases(), stages=("ci",))
+    out = tmp_path / "out"
+    result = cli("--candidate", str(repository), "--out", str(out), "--registry-dir", str(directory),
+                 "--stage", "manual")
+    assert result.returncode == 2, (result.returncode, result.stdout[-300:], result.stderr[-300:])
+    assert "no_inventory_selected" in result.stderr
+    assert not out.exists(), "nothing was written"
+
+
+def test_an_output_directory_inside_the_candidate_is_refused(tmp_path):
+    repository = probe_repository(tmp_path / "repo")
+    directory = probe_registry(tmp_path / "inventories", probe_cases())
+    out = repository / "calibration-out"
+    result = cli("--candidate", str(repository), "--out", str(out), "--registry-dir", str(directory),
+                 "--inventory", "probe")
+    assert result.returncode == 2, (result.returncode, result.stdout[-300:], result.stderr[-300:])
+    assert "--out" in result.stderr, result.stderr[-300:]
+    assert not out.exists(), "the candidate was not written to"
+
+
+def test_a_target_listed_as_unaffected_is_refused(tmp_path):
+    directory = inventory_directory(tmp_path / "inventories", inventories={"probe.json": {
+        "schema_version": 1, "cases": [raw_case(unaffected=[TARGET, OTHER])]}})
+    assert error_code(directory) == "invalid_inventory"
+
+
+@pytest.mark.parametrize("selector", ["--co::test_target", "-k::test_target"])
+def test_a_selector_that_reads_as_a_pytest_option_is_refused(tmp_path, selector):
+    case = raw_case(selectors=[selector, "tests/hexagonal/test_probe.py::test_target",
+                               "tests/hexagonal/test_probe.py::test_other"])
+    directory = inventory_directory(tmp_path / "inventories",
+                                    inventories={"probe.json": {"schema_version": 1, "cases": [case]}})
+    assert error_code(directory) == "invalid_inventory", selector
+
+
+def test_select_names_each_inventory_once():
+    assert loader().select({"a": ("ci",), "b": ("ci",)}, names=("a", "b", "a")) == ("a", "b")
+
+
+@pytest.mark.parametrize("code", ["Not a code " + SENTINEL, "x" * 65, "", "1starts_with_digit", 7, None])
+def test_only_a_typed_code_becomes_the_reason(code):
+    report, events, _ = run([case("raises")], {"raises": TypedTrialError("failed " + SENTINEL, code)})
+    (row,) = report["results"]
+    assert row["reason"] == "trial_failed", row
+    assert SENTINEL not in json.dumps([report, events])
+
+
+def test_a_typed_code_at_the_length_limit_is_kept():
+    code = "a" + "b" * 63
+    report, _, _ = run([case("raises")], {"raises": TypedTrialError("failed", code)})
+    assert report["results"][0]["reason"] == code
