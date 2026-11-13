@@ -337,7 +337,7 @@ class HostedSessionDriver:
                 except OrchestrationError as error:
                     bridge.close()
                     last = error
-                    if error.code != "bridge_unavailable":
+                    if error.code != "bridge_unavailable" or error.details.get("outcome") != "not_started":
                         raise
             current = next((item for item in host.terminals() if item.name == terminal.name), None)
             if current is None or not current.running or time.monotonic() >= deadline:

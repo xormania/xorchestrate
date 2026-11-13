@@ -134,6 +134,7 @@ class LocalGateway:
                     packet = _decode(raw)
                     if not isinstance(packet, dict) or not isinstance(packet.get("token"), str) or not hmac.compare_digest(packet["token"], gateway.token):
                         raise ValueError("Gateway authentication failed")
+                    _remaining(self.connection, deadline)
                     result = handler(packet.get("action"), packet.get("payload", {}))
                     response = {"result": result}
                 except OrchestrationError as error:
