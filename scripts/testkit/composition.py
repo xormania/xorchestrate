@@ -346,7 +346,7 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
         timeout=180, root=ROOT, brief=None, families=(), check_timeout=600,
         directory=None, cancellation=None, result_sink=None, shutdown_grace=10.0, drivers=(),
         stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000, shard=None, terminal_host=None, timings=None,
-        inventories=(), stage=None):
+        inventories=(), stage=None, dev_settings=None):
     root, output = Path(root).resolve(), Path(output).expanduser().resolve()
     if output == root or root in output.parents:
         raise ValueError("Run output must be outside the measured candidate")
@@ -388,7 +388,8 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
 
     try:
         env = cache_environment(root)
-        report["environment"] = env
+        # The report's copy carries the developer-settings record; child commands get only the environment.
+        report["environment"] = env if dev_settings is None else {**env, "dev_settings": dev_settings}
         if timings is not None and shard is None:
             raise ValueError("--timings requires a tests shard")
         if shard is not None:

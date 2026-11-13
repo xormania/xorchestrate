@@ -455,7 +455,8 @@
         "composition",
         "operator",
         "telemetry",
-        "telemetry_views"
+        "telemetry_views",
+        "devconfig"
       ],
       "allowed_external": [
         "stdlib:*",
@@ -998,7 +999,8 @@
         "testkit_pytest",
         "testkit_configuration",
         "telemetry",
-        "telemetry_views"
+        "telemetry_views",
+        "devconfig"
       ],
       "allowed_external": [
         "stdlib:*",
@@ -1036,7 +1038,8 @@
         "testkit_pytest",
         "testkit_configuration",
         "telemetry",
-        "telemetry_views"
+        "telemetry_views",
+        "devconfig"
       ],
       "allowed_external": [
         "stdlib:*",

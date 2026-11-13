@@ -7,6 +7,8 @@ import math
 import os
 import pwd
 import shlex
+import stat
+import struct
 import subprocess
 from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
@@ -114,6 +116,10 @@ class DevConfig:
         self._setting(key)
         return self._sources[key]
 
+    def display(self, key: str) -> str:
+        """The value as text: what ``show`` and ``get`` print and runs record ("" when unset)."""
+        return _display(self._setting(key), self.get(key))
+
     def explain(self) -> list[str]:
         return [f"{key}={_display(setting, self._values[key])}  # {self._sources[key].describe()}"
                 for key, setting in self._settings.items()]
@@ -133,17 +139,175 @@ def _display(setting: Setting, value: Any) -> str:
     return str(value)
 
 
+def discover_by_files(start: Path) -> tuple[Path | None, Path | None, str | None]:
+    """The main checkout and git common directory for ``start`` by plain file reads, never a process.
+
+    Returns ``(main, common, None)``, or ``(None, None, reason)`` when the layout is not
+    recognised: no ``.git`` entry, an unreadable one, or a bare main repository.
+    """
+    current = Path(os.path.abspath(start))
+    for directory in (current, *current.parents):
+        entry = directory / ".git"
+        if entry.is_dir():
+            problem = _git_dir_problem(entry)
+            if problem:
+                return None, None, problem
+            return directory.resolve(), entry.resolve(), None
+        if not entry.is_file():
+            continue
+        try:
+            text = entry.read_text(encoding="utf-8").strip()
+        except (OSError, UnicodeDecodeError) as error:
+            return None, None, f"cannot read {entry}: {error}"
+        if not text.startswith("gitdir:"):
+            return None, None, f"{entry} is not a gitdir pointer"
+        gitdir = (directory / text.removeprefix("gitdir:").strip()).resolve()
+        problem = _git_dir_problem(gitdir)
+        if problem:
+            return None, None, problem
+        pointer = gitdir / "commondir"
+        if not pointer.is_file():
+            return directory.resolve(), gitdir, None  # a submodule or a separate git directory
+        try:
+            common = (gitdir / pointer.read_text(encoding="utf-8").strip()).resolve()
+        except (OSError, UnicodeDecodeError) as error:
+            return None, None, f"cannot read {pointer}: {error}"
+        if common.name != ".git":
+            return None, None, "no main checkout found (a bare repository or a separate git directory)"
+        problem = _git_dir_problem(common)
+        if problem:
+            return None, None, problem
+        return common.parent, common, None
+    return None, None, "no git repository found"
+
+
+def _owner_problem(info: os.stat_result, what: str, *, root_ok: bool = False) -> str | None:
+    owners = (os.geteuid(), 0) if root_ok else (os.geteuid(),)
+    if info.st_uid not in owners:
+        return f"{what} is not owned by you"
+    if info.st_mode & 0o022:
+        return f"{what} is writable by group or others"
+    return None
+
+
+def _git_dir_problem(path: Path) -> str | None:
+    """Why ``path`` is not a git directory to trust: missing HEAD, another owner or open permissions."""
+    try:
+        info = os.stat(path)
+        if not stat.S_ISDIR(info.st_mode) or not (path / "HEAD").is_file():
+            return f"{path} is not a git directory"
+    except OSError as error:
+        return f"cannot inspect {path}: {error}"
+    return _owner_problem(info, str(path))
+
+
+def file_problem(path: Path) -> str | None:
+    """Why a settings file must not be read: not a regular file, a link, another owner or open permissions."""
+    try:
+        info = os.lstat(path)
+    except OSError as error:
+        return f"cannot inspect it: {error}"
+    if stat.S_ISLNK(info.st_mode):
+        return "it is a symbolic link"
+    if not stat.S_ISREG(info.st_mode):
+        return "it is not a regular file"
+    return _owner_problem(info, "it")
+
+
+def selection_problem(path: Path, trust: str) -> str | None:
+    """Why a path that selects what runs is unsafe; checked on its resolved target, failing closed."""
+    try:
+        info = os.stat(os.path.realpath(path))
+    except FileNotFoundError:
+        return "it does not exist"
+    except OSError as error:
+        return f"cannot inspect it: {error}"
+    if not stat.S_ISREG(info.st_mode):
+        return "it is not a regular file"
+    if trust == "executable" and not info.st_mode & 0o111:
+        return "it is not executable"
+    return _owner_problem(info, "it", root_ok=True)
+
+
+def tracked_by_index(common: Path, name: str = REPO_FILE) -> bool | None:
+    """Whether ``name`` (at the top of the checkout) is in git's index, read directly.
+
+    True or False for index versions 2 and 3 of a SHA-1 repository; None when the index
+    cannot be understood (another version, SHA-256, damaged). No index means untracked.
+    """
+    index = common / "index"
+    if not index.exists():
+        return False
+    try:
+        data = index.read_bytes()
+        config = (common / "config").read_text(encoding="utf-8", errors="replace") if (common / "config").is_file() \
+            else ""
+    except OSError:
+        return None
+    if "objectformat" in config.replace(" ", "").lower() and "sha256" in config.lower():
+        return None
+    if len(data) < 12 or data[:4] != b"DIRC":
+        return None
+    version, count = struct.unpack(">II", data[4:12])
+    if version not in (2, 3):
+        return None
+    wanted, offset = name.encode(), 12
+    for _ in range(count):
+        fixed = 62
+        if offset + fixed > len(data):
+            return None
+        flags = struct.unpack(">H", data[offset + 60:offset + 62])[0]
+        if flags & 0x4000:
+            if version < 3:
+                return None
+            fixed += 2
+        start = offset + fixed
+        length = flags & 0x0FFF
+        if length == 0x0FFF:
+            end = data.find(b"\0", start)
+            if end < 0:
+                return None
+        else:
+            end = start + length
+        if end > len(data):
+            return None
+        if data[start:end] == wanted:
+            return True
+        offset += ((fixed + (end - start) + 8) // 8) * 8
+    trailer = len(data) - 20
+    while offset + 8 <= trailer:
+        signature, size = data[offset:offset + 4], struct.unpack(">I", data[offset + 4:offset + 8])[0]
+        if signature == b"link":
+            return None  # a split index: some entries live in a shared index this parser does not read
+        offset += 8 + size
+    return False
+
+
 def load(repo: Path, *, env: Mapping[str, str], flags: Mapping[str, str | None] | None = None,
-         settings: Iterable[Setting] = SETTINGS, git: Git | None = None) -> DevConfig:
+         settings: Iterable[Setting] = SETTINGS, git: Git | None = None, discovery: str = "git",
+         sections: Iterable[str] | None = None) -> DevConfig:
     """Resolve every declared setting for the repository containing ``repo``.
 
     Only ``env`` is consulted, never the process environment, and from it only names
-    in the developer namespace.
+    in the developer namespace. ``discovery="files"`` finds the repository with plain
+    file reads and never starts a process; a layout it does not recognise skips the
+    repository file with a REPO_FILE_SKIPPED warning instead of failing.
     """
     settings = tuple(settings)
     declared = {setting.key for setting in settings}
-    main = find_main_checkout(Path(repo), git)
+    if sections is not None:
+        wanted_sections = set(sections)
+        settings = tuple(setting for setting in settings if setting.section in wanted_sections)
     warnings: list[tuple[str, str | None, int | None, str]] = []
+    skip_reason = None
+    if discovery == "files":
+        main, common, skip_reason = discover_by_files(Path(repo))
+        if main is None:
+            main = Path(os.path.abspath(repo))
+    elif discovery == "git":
+        main, common = find_main_checkout(Path(repo), git), None
+    else:
+        raise DevConfigError("UNKNOWN_SETTING", f"unknown discovery {discovery!r}")
 
     layers: list[tuple[str, dict[str, tuple[str, Source]]]] = []
     layers.append(("flag", {key: (value, Source("flag")) for key, value in (flags or {}).items()
@@ -159,11 +323,20 @@ def load(repo: Path, *, env: Mapping[str, str], flags: Mapping[str, str | None] 
             warnings.append(("UNKNOWN_KEY", None, None, name))
     layers.append(("env", from_env))
     repo_file = main / REPO_FILE
-    if repo_file.is_file() and _tracked(git, main):
-        raise DevConfigError("ENV_FILE_TRACKED", f"{repo_file} is tracked by git; local settings must stay "
-                             "untracked (git rm --cached it)")
-    for kind, path in (("repo_file", repo_file), ("user_file", user_file(env))):
-        layers.append((kind, _read_file(kind, path, declared, warnings)))
+    read_repo_file = skip_reason is None
+    if read_repo_file and repo_file.is_file():
+        tracked = _tracked(git, main) if common is None else tracked_by_index(common)
+        if tracked is None:
+            skip_reason, read_repo_file = "git's index could not be read without running git", False
+        elif tracked and common is not None:
+            skip_reason, read_repo_file = "it is tracked by git; local settings must stay untracked", False
+        elif tracked:
+            raise DevConfigError("ENV_FILE_TRACKED", f"{repo_file} is tracked by git; local settings must stay "
+                                 "untracked (git rm --cached it)")
+    if skip_reason is not None:
+        warnings.append(("REPO_FILE_SKIPPED", str(repo_file) if common is not None else None, None, skip_reason))
+    layers.append(("repo_file", _read_file("repo_file", repo_file, declared, warnings) if read_repo_file else {}))
+    layers.append(("user_file", _read_file("user_file", user_file(env), declared, warnings)))
 
     values: dict[str, Any] = {}
     sources: dict[str, Source] = {}
@@ -189,7 +362,12 @@ def _tracked(git: Git | None, main: Path) -> bool:
 
 def _read_file(kind: str, path: Path, declared: set[str],
                warnings: list[tuple[str, str | None, int | None, str]]) -> dict[str, tuple[str, Source]]:
-    if not path.is_file():
+    if not os.path.lexists(path):
+        return {}
+    problem = file_problem(path)
+    if problem:
+        code = "REPO_FILE_SKIPPED" if kind == "repo_file" else "USER_FILE_SKIPPED"
+        warnings.append((code, str(path), None, problem))
         return {}
     try:
         text = path.read_bytes().decode("utf-8-sig")
@@ -217,7 +395,12 @@ def _typed(setting: Setting, raw: str | None, source: Source, env: Mapping[str, 
         if setting.kind == "str":
             return raw
         if setting.kind == "path":
-            return _path(raw, source, env)
+            path = _path(raw, source, env)
+            if setting.trust and source.kind != "default":
+                problem = selection_problem(path, setting.trust)
+                if problem:
+                    raise DevConfigError("UNSAFE_SETTING", f"{setting.key} from {source.describe()}: {path}: {problem}")
+            return path
         if setting.kind == "int":
             return int(raw)
         if setting.kind == "float":
@@ -257,4 +440,5 @@ def _path(raw: str, source: Source, env: Mapping[str, str]) -> Path:
     if not path.is_absolute():
         base = Path(source.path).parent if source.path else Path(os.getcwd())
         path = base / path
-    return path.resolve(strict=False)
+    # Normalized but never resolved: a configured symbolic link (a virtualenv's python, say) stays as given.
+    return Path(os.path.normpath(os.path.abspath(path)))
