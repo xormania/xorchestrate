@@ -167,7 +167,8 @@
     },
     "telemetry": {
       "modules": [
-        "xorchestrate.telemetry"
+        "xorchestrate.telemetry",
+        "xorchestrate.telemetry_service"
       ],
       "allowed_roles": [
         "foundation",
@@ -193,7 +194,7 @@
         "input",
         "print"
       ],
-      "description": "Pure observation protection and authorized telemetry views; storage and transport remain adapters.",
+      "description": "Observation protection, authorized views and telemetry operations depend on explicit collaborators, not the application facade; storage and transport remain adapters.",
       "forbidden_literals": [
         "tmux"
       ]
