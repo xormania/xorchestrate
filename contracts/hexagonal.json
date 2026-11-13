@@ -61,6 +61,7 @@
         "xorchestrate.schema",
         "xorchestrate.session_lifecycle",
         "xorchestrate.state",
+        "xorchestrate.store_events",
         "xorchestrate.worktrees"
       ],
       "allowed_roles": [

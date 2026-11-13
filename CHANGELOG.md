@@ -96,6 +96,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Fixed
 
+- Routed delivery selects the latest session by its durable creation event order,
+  preserving selection across equal timestamps, clock rollback and SQLite reopen.
+  Sessions without creation events retain an explicit
+  [legacy fallback](docs/native-sessions.md#session-selection-for-routed-delivery).
 - A failed bridge frame write closes the connection before another writer can
   append to the unfinished frame. Awaiting requests retain unknown outcomes;
   response timeouts after complete writes still allow observation and control.

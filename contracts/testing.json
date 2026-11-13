@@ -47,11 +47,12 @@
       }
     },
     "delivery": {
-      "guarantee": "Queued messages, delivery attempts, retries and recovery preserve recipient scope, effect uncertainty and causal receipts.",
+      "guarantee": "Queued messages, delivery attempts, retries and recovery preserve recipient scope, effect uncertainty and causal receipts; default session selection follows witnessed creation order independently of UTC labels, with explicit legacy fallback.",
       "modules": {
         "tests/hexagonal/test_delivery.py": "contract",
         "tests/hexagonal/test_delivery_adversarial.py": "contract",
-        "tests/hexagonal/test_delivery_scope.py": "contract"
+        "tests/hexagonal/test_delivery_scope.py": "contract",
+        "tests/hexagonal/test_session_selection.py": "contract"
       }
     },
     "sessions": {
