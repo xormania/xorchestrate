@@ -207,22 +207,29 @@ def _interrupted_by_a_second_loss(world):
     return original, interrupted, recovery
 
 
+def _lineage_view(world, client, original, recovery):
+    """The original's lineage after ``recovery``, observed but not judged: what was recovered, what lives, what is
+    uncertain and what the operator is shown."""
+    mapped = recovered_map(recovery["report"])
+    listed = sessions(client)
+    family = lineage(listed, original["id"])
+    return {"listed": listed, "family": family,
+            "recovered": [replacement for source, replacement in mapped.items() if source in family],
+            "live": sorted(key for key in family if listed[key]["status"] in {"starting", "active"}),
+            "uncertain": sorted(key for key in family if listed[key]["status"] == "unknown"),
+            "shown": _mentioned(recovery) | _mentioned(world.status())}
+
+
 def _one_live_successor(world, client, original, recovery):
     """Exactly one live session in the original's lineage, the one ``recovery`` recovered; returns it and the listing.
 
     Members killed mid-reconnect keep an uncertain outcome rather than a guessed one, and the operator sees each.
     """
-    mapped = recovered_map(recovery["report"])
-    listed = sessions(client)
-    family = lineage(listed, original["id"])
-    recovered = [replacement for source, replacement in mapped.items() if source in family]
-    assert len(recovered) == 1, mapped
-    live = sorted(key for key in family if listed[key]["status"] in {"starting", "active"})
-    assert live == recovered, {key: listed[key]["status"] for key in family}
-    uncertain = sorted(key for key in family if listed[key]["status"] == "unknown")
-    shown = _mentioned(recovery) | _mentioned(world.status())
-    assert set(uncertain) <= shown, {"uncertain": uncertain, "shown to the operator": sorted(shown)}
-    return recovered[0], listed
+    view = _lineage_view(world, client, original, recovery)
+    assert len(view["recovered"]) == 1 and view["live"] == view["recovered"], \
+        {key: view["listed"][key]["status"] for key in view["family"]}
+    assert set(view["uncertain"]) <= view["shown"], {"uncertain": view["uncertain"], "shown": sorted(view["shown"])}
+    return view["recovered"][0], view["listed"]
 
 
 def _peer_took_the_first_turn_once(world, original):
@@ -249,7 +256,11 @@ def a_third_unclean_restart_with_an_unknown_replacement_brings_the_session_back_
     world.up()
     recovery = world.await_("recovery finished after the third up", lambda: _finished(world))
     with world.client() as after:
-        successor, listed = _one_live_successor(world, after, original, recovery)
+        view = _lineage_view(world, after, original, recovery)
+        assert len(view["recovered"]) == 1 and view["live"] == view["recovered"], \
+            "RECOVERY_THIRD_RESTART_KEEPS_ONE_LIVE_SESSION"
+        assert set(view["uncertain"]) <= view["shown"], "RECOVERY_UNKNOWN_REPLACEMENT_STAYS_REPORTED"
+        successor, listed = view["recovered"][0], view["listed"]
         assert listed[interrupted]["status"] == "unknown", listed[interrupted]
         assert len(world.bridge_hosts()) == 1, "no second terminal or bridge host for the conversation"
         _peer_took_the_first_turn_once(world, original)
@@ -267,7 +278,7 @@ def resolving_an_unknown_replacement_as_failed_leaves_one_live_session(world):
         operator.call("resolve_operation", {"operation_id": operation_id, "expected_version": operation["version"],
                                             "outcome": "failed", "reason": "the replacement was lost mid-reconnect"})
         needing = _mentioned(world.status()["recovery"].get("needs_reconciliation", []))
-        assert interrupted not in needing, world.status()["recovery"].get("needs_reconciliation")
+        assert interrupted not in needing, "RECOVERY_FAILED_RESOLUTION_LEAVES_RECONCILIATION"
         _one_live_successor(world, operator, original, recovery)
         _peer_took_the_first_turn_once(world, original)
     assert len(world.bridge_hosts()) == 1, "exactly one bridge host serves the conversation"
