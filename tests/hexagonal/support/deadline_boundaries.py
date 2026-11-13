@@ -120,3 +120,51 @@ class PhaseGroup:
 
     def observe(self):
         return set()
+
+
+class QuietTracker:
+    known = set()
+
+    def children(self):
+        return set()
+
+    def hand_to_host(self, before):
+        pass
+
+    def observe(self):
+        return set()
+
+    def reap(self):
+        pass
+
+    def release_host(self):
+        pass
+
+
+class CostedHost:
+    name = "controlled-host"
+    interactive = False
+
+    def __init__(self, clock, *, observation_cost, shutdown_cost=0):
+        self.clock, self.observation_cost, self.shutdown_cost = clock, observation_cost, shutdown_cost
+        self.observations, self.graces = 0, []
+        self.terminal = SimpleNamespace(name="acceptance", running=False, exit_status=0, receipt={})
+
+    def open_terminal(self, *args, **kwargs):
+        return self.terminal
+
+    def terminals(self):
+        self.observations += 1
+        if self.observations > 1:
+            self.clock.advance(elapsed=self.observation_cost)
+        return [self.terminal]
+
+    def recent_output(self, *args):
+        return ""
+
+    def close_terminal(self, name, *, grace):
+        self.graces.append(grace)
+        return SimpleNamespace(cleanup_verified=True)
+
+    def shutdown(self):
+        self.clock.advance(elapsed=self.shutdown_cost)

@@ -13,8 +13,10 @@ from scripts.testkit.model import Cancelled
 from scripts.verification import lifecycle
 from scripts.verification.checker import VerificationFailure
 from tests.hexagonal.support.deadline_boundaries import (
+    CostedHost,
     PhaseChild,
     PhaseGroup,
+    QuietTracker,
     guarded_call,
     partial_host,
     responding_client,
@@ -220,16 +222,21 @@ def test_shared_support_wait_clamps_after_predicate_work(monkeypatch, module, fu
 
 
 @pytest.mark.parametrize("module,function", [("managed_workflow", "await_condition"), ("terminal_host", "wait")])
-def test_shared_support_wait_preserves_predicate_error_identity(module, function):
+@pytest.mark.parametrize("timeout_error", [False, True], ids=["runtime-error", "independent-wait-timeout"])
+def test_shared_support_wait_preserves_predicate_error_identity(module, function, timeout_error):
+    from scripts.testkit.waits import WaitBudget, WaitTimeout
+
     subject = importlib.import_module("tests.hexagonal.support." + module)
-    failure = RuntimeError("predicate failed independently")
+    failure = (WaitTimeout("independent predicate timeout", budget=WaitBudget(1, "product_guarantee"),
+                           elapsed=1, attempts=1, retries=0) if timeout_error
+               else RuntimeError("predicate failed independently"))
 
     def predicate():
         raise failure
 
-    with pytest.raises(RuntimeError) as caught:
+    with pytest.raises(Exception) as caught:
         getattr(subject, function)(predicate)
-    assert caught.value is failure
+    assert caught.value is failure, "SHARED_SUPPORT_PRESERVES_INDEPENDENT_PREDICATE_ERROR"
 
 
 @pytest.mark.parametrize("module,function,returns_value", [
@@ -253,3 +260,132 @@ def test_shared_support_harness_allowance_uses_the_opted_in_scale(monkeypatch, m
     with pytest.raises(error):
         getattr(subject, function)(lambda: False, timeout=.03)
     assert clock.elapsed == pytest.approx(.06), "SHARED_HARNESS_ALLOWANCE_APPLIES_CONFIGURED_SCALE"
+
+
+@pytest.mark.parametrize("terminal", [False, True], ids=["socket", "terminal"])
+def test_terminal_receivers_never_manufacture_a_minimum_timeout(monkeypatch, terminal):
+    from tests.hexagonal.support import managed_terminals
+
+    clock = ControlledClock()
+    supplied = []
+    monkeypatch.setenv("XO_TEST_TIMEOUT_SCALE", "1")
+    monkeypatch.setattr(managed_terminals.time, "monotonic", clock.monotonic)
+    if terminal:
+        def select(read, write, errors, timeout):
+            supplied.append(timeout)
+            return read, [], []
+        monkeypatch.setattr(managed_terminals.select, "select", select)
+        monkeypatch.setattr(managed_terminals.os, "read", lambda fd, limit: b"ready")
+        result = managed_terminals.receive_terminal_until(42, b"ready", timeout=.005)
+    else:
+        connection = SimpleNamespace(settimeout=supplied.append, recv=lambda size: b"ready")
+        result = managed_terminals.receive_until(connection, b"ready", timeout=.005)
+    assert result == b"ready"
+    assert supplied == pytest.approx([.005]), "TERMINAL_RECEIVE_USES_ACTUAL_REMAINDER"
+
+
+@pytest.mark.parametrize("terminal", [False, True], ids=["socket", "terminal"])
+def test_terminal_receiver_eof_preserves_missing_marker_assertion(monkeypatch, terminal):
+    from tests.hexagonal.support import managed_terminals
+
+    if terminal:
+        monkeypatch.setattr(managed_terminals.select, "select", lambda read, *args: (read, [], []))
+        monkeypatch.setattr(managed_terminals.os, "read", lambda fd, limit: b"")
+        def call():
+            return managed_terminals.receive_terminal_until(42, b"missing")
+    else:
+        connection = SimpleNamespace(settimeout=lambda seconds: None, recv=lambda size: b"")
+        def call():
+            return managed_terminals.receive_until(connection, b"missing")
+    with pytest.raises(AssertionError) as caught:
+        call()
+    assert caught.value.args == (b"",)
+
+
+def test_socket_receiver_preserves_its_underlying_read_error():
+    from tests.hexagonal.support.managed_terminals import receive_until
+
+    error = OSError("connection lost")
+    def receive(size):
+        raise error
+    connection = SimpleNamespace(settimeout=lambda seconds: None, recv=receive)
+    with pytest.raises(OSError) as caught:
+        receive_until(connection, b"missing")
+    assert caught.value is error
+
+
+@pytest.mark.parametrize("cost,expected", [(.03, .02), (.06, 0)])
+def test_supervisor_cleanup_does_not_add_a_terminal_grace_floor(tmp_path, monkeypatch, cost, expected):
+    from scripts.testkit.adapters import supervised_run
+
+    clock = ControlledClock()
+    host = CostedHost(clock, observation_cost=cost)
+    monkeypatch.setattr(supervised_run.time, "monotonic", clock.monotonic)
+    monkeypatch.setattr(supervised_run.time, "sleep", clock.sleep)
+    monkeypatch.setattr(supervised_run, "OwnedProcesses", QuietTracker)
+    report = supervised_run.supervise(("controlled-worker",), tmp_path, host=host, cleanup_budget=.05, grace=1)
+    assert host.graces == pytest.approx([expected]), "SUPERVISOR_CLEANUP_PASSES_ZERO_WITHOUT_NEW_GRACE"
+    if cost > .05:
+        assert report["cleanup"]["verified"] is False and "cleanup_deadline" in report["cleanup"]["errors"]
+
+
+def test_supervisor_records_unbudgeted_host_shutdown_overrun(tmp_path, monkeypatch):
+    from scripts.testkit.adapters import supervised_run
+
+    clock = ControlledClock()
+    host = CostedHost(clock, observation_cost=0, shutdown_cost=.1)
+    monkeypatch.setattr(supervised_run.time, "monotonic", clock.monotonic)
+    monkeypatch.setattr(supervised_run.time, "sleep", clock.sleep)
+    monkeypatch.setattr(supervised_run, "OwnedProcesses", QuietTracker)
+    report = supervised_run.supervise(("controlled-worker",), tmp_path, host=host, cleanup_budget=.05, grace=1)
+    assert report["cleanup"]["verified"] is False
+    assert "cleanup_deadline" in report["cleanup"]["errors"]
+    assert report["duration_seconds"] == .1, "unbudgeted host.shutdown remains a cooperative boundary"
+
+
+def test_managed_worker_clamps_its_term_phase_sleep_after_observation(tmp_path, monkeypatch):
+    import signal
+
+    from scripts.testkit.adapters import managed_process
+    from scripts.testkit.adapters.ownership import Identity
+
+    clock = ControlledClock()
+    identity = Identity(1234, "controlled")
+    signals = []
+
+    def observe():
+        if signals and signals[-1] == signal.SIGKILL:
+            return set()
+        if signals:
+            clock.advance(elapsed=.025)
+        return {identity}
+
+    tracker = SimpleNamespace(observe=observe, reap=lambda: None)
+    monkeypatch.setattr(managed_process, "OwnedProcesses", lambda: tracker)
+    monkeypatch.setattr(managed_process, "send_signal", lambda item, number: signals.append(number))
+    monkeypatch.setattr(managed_process.time, "monotonic", clock.monotonic)
+    monkeypatch.setattr(managed_process.time, "sleep", clock.sleep)
+    host = SimpleNamespace(terminals=lambda: [])
+    worker = managed_process.ManagedWorker(tmp_path, host=host, root=tmp_path, interpreter="unused", grace=.03)
+    receipt = worker.cleanup_work()
+    assert clock.sleeps[0] == pytest.approx(.005), "MANAGED_WORKER_PHASE_SLEEP_USES_POST_OBSERVATION_REMAINDER"
+    assert signals == [signal.SIGTERM, signal.SIGKILL] and receipt["verified"] is True
+
+
+def test_composed_suite_preserves_an_independent_timeout_after_cooperative_overrun(monkeypatch):
+    from scripts.verification import multi_harness
+
+    clock = ControlledClock()
+    error = TimeoutError("independent adapter timeout")
+    suite = multi_harness.ComposedSuite.__new__(multi_harness.ComposedSuite)
+    suite.timeout = .01
+
+    def call(*args, **kwargs):
+        clock.advance(elapsed=.02)
+        raise error
+
+    suite.call = call
+    monkeypatch.setattr(multi_harness.time, "monotonic", clock.monotonic)
+    with pytest.raises(TimeoutError) as caught:
+        suite.wait(lambda run: True, "outer-observation")
+    assert caught.value is error
