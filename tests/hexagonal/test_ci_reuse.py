@@ -315,6 +315,28 @@ def test_metadata_title_is_workflow_generated_and_contains_no_pr_prose(evidence)
     assert not unstarted_metadata({**run, "conclusion": "failure"}, [], evidence.current)
 
 
+@pytest.mark.parametrize("status", ("queued", "pending"))
+def test_pending_metadata_burst_does_not_veto_the_finished_source(evidence, status):
+    original = evidence.add_run(101, 1)
+    superseded = evidence.add_run(201, 2, conclusion="cancelled", action="edited", jobs=[])
+    waiting = evidence.add_run(302, 5, status=status, conclusion=None, action="edited", jobs=[])
+    result = evidence.select([waiting, original, evidence.current_run(), superseded])
+    assert_reused(result, 101)
+    assert {row["run_id"] for row in result["references"]} == {101}, \
+        "CI_WAITING_OBSERVATIONS_CANNOT_SUPPLY_EXECUTED_EVIDENCE"
+
+
+@pytest.mark.parametrize("source_state", ("missing", "queued", "in_progress", "failure", "cancelled"))
+def test_metadata_replacing_pending_source_cannot_invent_completed_evidence(evidence, source_state):
+    waiting = evidence.add_run(302, 5, status="pending", conclusion=None, action="edited", jobs=[])
+    runs = [waiting]
+    if source_state != "missing":
+        active = source_state in {"queued", "in_progress"}
+        runs.append(evidence.add_run(101, 1, status=source_state if active else "completed",
+            conclusion=None if active else source_state, jobs=[]))
+    assert_execute(evidence.select(runs))
+
+
 def test_unknown_newer_candidate_falls_back_without_searching_past_it(evidence):
     green = evidence.add_run(101, 1)
     newer = evidence.add_run(201, 2, conclusion="failure")
@@ -769,6 +791,63 @@ def test_cached_neutral_attempt_is_rechecked_if_a_retry_appears_during_api_inspe
             else producer_api.inspect(101, tmp_path / "original"),
         runtime=producer_api.runtime)
     assert result["decision"] == "execute", "CI_REUSE_NEUTRAL_LIST_ATTEMPT_CANNOT_HIDE_NEW_RETRY"
+
+
+@pytest.mark.parametrize("status", ("queued", "pending"))
+@pytest.mark.parametrize("fault", (None, "started_job", "retry", "running", "source_action", "other_base", "failure"))
+def test_waiting_metadata_requires_native_first_attempt_zero_job_proof(producer_api, tmp_path, status, fault):
+    producer_api.summary(201)
+    metadata = producer_api.metadata[201]
+    metadata["run"].update(status=status, conclusion=None)
+    metadata["jobs"] = []
+    metadata["artifacts"] = []
+    if fault == "started_job":
+        metadata["jobs"] = [{"id": 20150, "run_attempt": 1, "status": "in_progress"}]
+    elif fault == "retry":
+        metadata["run"]["run_attempt"] = 2
+        metadata["jobs"] = [{"id": 20150, "run_attempt": 1, "status": "completed", "conclusion": "failure"}]
+    elif fault == "running":
+        metadata["run"]["status"] = "in_progress"
+    elif fault == "source_action":
+        metadata["run"]["display_title"] = metadata_title(producer_api.current, "synchronize")
+    elif fault == "other_base":
+        metadata["run"]["display_title"] = metadata["run"]["display_title"].rsplit(":", 1)[0] + ":" + "f" * 40
+    elif fault == "failure":
+        metadata["run"].update(status="completed", conclusion="failure")
+    runs = [producer_api.metadata[101]["run"], metadata["run"]]
+    plan = subject.select_run(runs, producer_api.current,
+        lambda run: producer_api.inspect(run["id"], tmp_path / f"observed-{run['id']}"), runtime=producer_api.runtime)
+    if fault is None:
+        assert_reused(plan, 101)
+        assert producer_api.requests.count("/actions/runs/201/attempts/1/jobs") >= 2, \
+            "CI_WAITING_JOB_EMPTINESS_RECHECKED_AFTER_NATIVE_RUN_OBSERVATION"
+    else:
+        assert_execute(plan)
+
+
+def test_waiting_metadata_that_acquires_a_job_during_recheck_remains_material(producer_api, tmp_path, monkeypatch):
+    producer_api.summary(201)
+    metadata = producer_api.metadata[201]
+    metadata["run"].update(status="pending", conclusion=None)
+    metadata["jobs"] = []
+    metadata["artifacts"] = []
+    native_pages = subject._pages
+    reads = 0
+
+    def pages(context, token, path, key):
+        nonlocal reads
+        if path == "/actions/runs/201/attempts/1/jobs":
+            reads += 1
+            if reads == 2:
+                metadata["jobs"] = [{"id": 20150, "run_attempt": 1, "status": "in_progress"}]
+        return native_pages(context, token, path, key)
+
+    monkeypatch.setattr(subject, "_pages", pages)
+    runs = [producer_api.metadata[101]["run"], metadata["run"]]
+    plan = subject.select_run(runs, producer_api.current,
+        lambda run: producer_api.inspect(run["id"], tmp_path / f"observed-{run['id']}"), runtime=producer_api.runtime)
+    assert_execute(plan)
+    assert reads >= 2, "CI_WAITING_JOB_START_WITNESS_WAS_OBSERVED"
 
 
 @pytest.mark.parametrize("native_copy", (False, True))
