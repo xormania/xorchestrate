@@ -499,9 +499,11 @@ class JsonLineProcess(TelemetrySource):
                 self.close()
             raise
 
-    def notify(self, method: str, params: dict | None = None) -> None:
+    def notify(self, method: str, params: dict | None = None, *, timeout: float | None = None) -> None:
+        duration = self.timeout if timeout is None else positive_number({"timeout": timeout}, "timeout", self.timeout)
+        deadline = time.monotonic() + duration
         try:
-            self._write(self._envelope(method=method, **({"params": params} if params is not None else {})), time.monotonic() + self.timeout)
+            self._write(self._envelope(method=method, **({"params": params} if params is not None else {})), deadline)
         except OrchestrationError as exc:
             if exc.details.get("outcome") != "not_started":
                 self._fail(exc)

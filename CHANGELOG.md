@@ -9,6 +9,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- Runtime adapter requests share monotonic allowances across connection, writer
+  admission, fragmented I/O and response waits. Hosted attachment propagates its
+  remaining allowance through bridge activation; uncertain effects and existing
+  cleanup policies are preserved. See [runtime request budgets](docs/runtime-request-budgets.md).
 - An ownerless `close` of a managed run ends a leftover process only when it names the run and the
   run's marker, its private endpoint or descent from one of those selects it; it no longer ends a
   process for naming the run alone. Its cleanup verdict is stricter: a process that names the run or

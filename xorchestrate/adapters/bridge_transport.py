@@ -204,16 +204,21 @@ class Peer:
         self.reader = threading.Thread(target=self._read, daemon=True, name="session-bridge-reader")
         self.reader.start()
 
-    def _write(self, packet):
+    def _write(self, packet, deadline=None):
+        deadline = time.monotonic() + self.timeout if deadline is None else deadline
         data = (json.dumps(packet, allow_nan=False, separators=(",", ":")) + "\n").encode()
         if len(data) > self.max_frame:
             raise bridge_error("Bridge frame exceeds the configured limit.", "bridge_protocol")
+        if not self._writer.acquire(timeout=max(0, deadline - time.monotonic())):
+            raise bridge_error("Bridge writer admission timed out; nothing was sent.", "bridge_timeout")
         try:
-            with self._writer:
+            try:
                 if self.closed:
                     raise bridge_error("Bridge connection is closed.")
+                if time.monotonic() >= deadline:
+                    raise bridge_error("Bridge writer admission timed out; nothing was sent.", "bridge_timeout")
                 try:
-                    self._write_frame(data)
+                    self._write_frame(data, deadline)
                 except OSError:
                     # Fence the stream before another writer can append to a
                     # partial frame. Cleanup joins the receive thread, which
@@ -221,13 +226,15 @@ class Peer:
                     # the writer lock.
                     pending = self._begin_close()
                     raise
+            finally:
+                self._writer.release()
         except OSError as exc:
             self._finish_close(pending)
             raise bridge_error("Bridge write outcome is unknown.", outcome="unknown") from exc
 
-    def _write_frame(self, data):
+    def _write_frame(self, data, deadline=None):
         """Write one complete frame while the caller owns the writer lock."""
-        deadline = time.monotonic() + self.timeout
+        deadline = time.monotonic() + self.timeout if deadline is None else deadline
         remaining = memoryview(data)
         while remaining:
             delay = deadline - time.monotonic()
@@ -241,7 +248,15 @@ class Peer:
                 raise OSError("closed")
             remaining = remaining[sent:]
 
-    def request(self, method, params):
+    def request(self, method, params, *, timeout=None):
+        """Spend one allowance on writer admission, frame send and response.
+
+        A caller's remainder can shorten the configured request allowance.
+        Expiry before writer admission has no effect; after a successful send
+        the original request remains registered for its eventual response.
+        """
+        duration = self.timeout if timeout is None else min(self.timeout, positive_number({"timeout": timeout}, "timeout", self.timeout))
+        deadline = time.monotonic() + duration
         key = uuid.uuid4().hex
         future = Future()
         with self._lock:
@@ -251,13 +266,13 @@ class Peer:
                 raise bridge_error("Bridge pending request limit reached.", "bridge_capacity")
             self._pending[key] = future
         try:
-            self._write({"id": key, "method": method, "params": copy_json(params)})
+            self._write({"id": key, "method": method, "params": copy_json(params)}, deadline)
         except Exception:
             with self._lock:
                 self._pending.pop(key, None)
             raise
         try:
-            return future.result(self.timeout)
+            return future.result(max(0, deadline - time.monotonic()))
         except TimeoutError as exc:
             # Keep this request registered. A late response still has its original
             # identity; another observation/control request may proceed meanwhile.

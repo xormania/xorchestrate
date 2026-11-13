@@ -320,19 +320,25 @@ class HostedSessionDriver:
         return bridge
 
     def _attach_while_running(self, terminal, directory, endpoint, call):
-        """Retry ``call(bridge)`` while the terminal runs, up to the attach timeout."""
+        """Retry ``call(bridge, remaining)`` within one attachment allowance.
+
+        The bridge carries that remainder through connect, attach and activate;
+        terminal control and any failure cleanup retain their own port policy.
+        """
         host = self.host
         deadline = time.monotonic() + self.attach_timeout
         last = None
         while True:
-            bridge = self._new_bridge(endpoint)
-            try:
-                return bridge, call(bridge)
-            except OrchestrationError as error:
-                bridge.close()
-                last = error
-                if error.code != "bridge_unavailable":
-                    raise
+            remaining = deadline - time.monotonic()
+            if remaining > 0:
+                bridge = self._new_bridge(endpoint)
+                try:
+                    return bridge, call(bridge, remaining)
+                except OrchestrationError as error:
+                    bridge.close()
+                    last = error
+                    if error.code != "bridge_unavailable":
+                        raise
             current = next((item for item in host.terminals() if item.name == terminal.name), None)
             if current is None or not current.running or time.monotonic() >= deadline:
                 # A safe summary and where the private log is: what the terminal printed stays in that log
@@ -344,7 +350,7 @@ class HostedSessionDriver:
                 reason = "exited" if current is None or not current.running else "did not accept a connection in time"
                 raise OrchestrationError(f"The hosted session's bridge host {reason}.", "session_start_failed",
                                          details) from last
-            time.sleep(0.1)
+            time.sleep(min(0.1, max(0, deadline - time.monotonic())))
 
     def _entry_terminals(self, host):
         """Names of this entry's running hosted terminals at the host, whoever holds them."""
@@ -380,7 +386,7 @@ class HostedSessionDriver:
         try:
             terminal, directory, endpoint = self._open_terminal(key, specification)
             bridge, receipt = self._attach_while_running(terminal, directory, endpoint,
-                                                         lambda bridge: bridge.attach({"context": context}))
+                                                         lambda bridge, remaining: bridge.attach({"context": context}, timeout=remaining))
             return self._hosted(bridge, receipt, terminal, key, directory, endpoint, specification, context)
         finally:
             self._release(reserved)
@@ -425,7 +431,7 @@ class HostedSessionDriver:
                 terminal, directory, endpoint = self._open_terminal(key, native_specification)
             bridge, receipt = self._attach_while_running(
                 terminal, directory, endpoint,
-                lambda bridge: getattr(bridge, method)(inner_source, {"context": context}))
+                lambda bridge, remaining: getattr(bridge, method)(inner_source, {"context": context}, timeout=remaining))
             return self._hosted(bridge, receipt, terminal, key, directory, endpoint, native_specification, context)
         finally:
             if reserved is not None:

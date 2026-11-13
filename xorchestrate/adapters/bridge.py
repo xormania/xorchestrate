@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import socket
 import threading
+import time
 import uuid
 from copy import deepcopy
 from dataclasses import asdict
@@ -14,6 +15,7 @@ from pathlib import Path
 
 from ..model import canonical_digest
 from .bridge_transport import Peer, bridge_error, copy_json, fifo_connect
+from .process import positive_number
 
 
 class BridgeSessionDriver:
@@ -81,7 +83,8 @@ class BridgeSessionDriver:
                 self._observer(deepcopy(local["context"]), deepcopy(observation))
             local["observed"].add(observation["sequence"])
 
-    def _attach(self, specification, source=None):
+    def _attach(self, specification, source=None, *, timeout=None):
+        deadline = None if timeout is None else time.monotonic() + positive_number({"timeout": timeout}, "timeout", 30)
         specification = copy_json(specification)
         if not isinstance(specification, dict) or set(specification) - {"context"}:
             raise bridge_error("Bridge attachment accepts trusted application context only; configure the host to select native settings.", "invalid_arguments")
@@ -95,7 +98,12 @@ class BridgeSessionDriver:
                 connection = fifo_connect(self.endpoint)
             else:
                 connection = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-                connection.settimeout(self.options.get("timeout", 30))
+                allowance = self.options.get("timeout", 30)
+                if deadline is not None:
+                    allowance = min(allowance, deadline - time.monotonic())
+                    if allowance <= 0:
+                        raise TimeoutError("Bridge attachment deadline")
+                connection.settimeout(allowance)
                 connection.connect(self.endpoint)
                 connection.settimeout(None)
         except OSError as exc:
@@ -104,8 +112,17 @@ class BridgeSessionDriver:
             raise bridge_error("The configured bridge endpoint is unavailable.") from exc
         local = {"context": copy_json(specification.get("context", {})), "cursor": 0, "observed": set()}
         peer = Peer(connection, lambda method, params: self._incoming(local, method, params), self.options)
+
+        def request(method, params):
+            if deadline is None:
+                return peer.request(method, params)
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise bridge_error("Bridge attachment deadline exceeded; the outcome is unresolved.", "bridge_timeout", "unknown")
+            return peer.request(method, params, timeout=remaining)
+
         try:
-            receipt = peer.request("attach", {"context": local["context"], "source": source,
+            receipt = request("attach", {"context": local["context"], "source": source,
                 "catalog_identity": canonical_digest([asdict(c) for c in self._capabilities])})
             if not isinstance(receipt, dict) or not receipt.get("native_id") or not receipt.get("incarnation") or receipt.get("ownership") != "external":
                 raise bridge_error("Host returned an invalid attachment receipt.", "bridge_protocol")
@@ -114,23 +131,23 @@ class BridgeSessionDriver:
             local.update({"receipt": deepcopy(receipt), "peer": peer})
             with self._lock:
                 self._sessions[handle] = local
-            peer.request("activate", {"incarnation": receipt["incarnation"]})
+            request("activate", {"incarnation": receipt["incarnation"]})
             return receipt
         except Exception:
             peer.close()
             raise
 
-    def start(self, specification):
-        return self.attach(specification)
+    def start(self, specification, *, timeout=None):
+        return self.attach(specification, timeout=timeout)
 
-    def attach(self, specification):
-        return self._attach(specification)
+    def attach(self, specification, *, timeout=None):
+        return self._attach(specification, timeout=timeout)
 
-    def resume(self, source_backend, specification):
-        return self._attach(specification, copy_json(source_backend))
+    def resume(self, source_backend, specification, *, timeout=None):
+        return self._attach(specification, copy_json(source_backend), timeout=timeout)
 
-    def reconnect(self, source_backend, specification):
-        return self.resume(source_backend, specification)
+    def reconnect(self, source_backend, specification, *, timeout=None):
+        return self.resume(source_backend, specification, timeout=timeout)
 
     def _get(self, session):
         with self._lock:

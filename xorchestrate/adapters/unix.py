@@ -48,9 +48,10 @@ def _validate_hello(value):
 class _SocketStream(io.RawIOBase):
     """Raw reads from a socket that first return bytes already received with the hello."""
 
-    def __init__(self, connection, prefix):
+    def __init__(self, connection, prefix, deadline=None):
         self._socket = connection
         self._prefix = bytes(prefix)
+        self.deadline = deadline
 
     def readable(self):
         return True
@@ -61,7 +62,20 @@ class _SocketStream(io.RawIOBase):
             buffer[:count] = self._prefix[:count]
             self._prefix = self._prefix[count:]
             return count
+        if self.deadline is not None:
+            _set_remaining(self._socket, self.deadline)
         return self._socket.recv_into(buffer)
+
+
+def _set_remaining(connection, deadline):
+    """Bound the next blocking socket operation by one original deadline."""
+    if deadline is None:
+        connection.settimeout(None)
+        return
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise TimeoutError("connection deadline")
+    connection.settimeout(remaining)
 
 
 def read_hello(connection, maximum, timeout):
@@ -276,9 +290,10 @@ class UnixClient:
                  check=same_user):
         self.path = check_socket_path(path)
         self.max_frame_bytes = max_frame_bytes
+        deadline = None if timeout is None else time.monotonic() + timeout
         self.socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
-            self.socket.settimeout(timeout)
+            _set_remaining(self.socket, deadline)
             self.socket.connect(str(self.path))
             # Mirror the server's check before sending anything: a listener run
             # by another user (e.g. one that pre-bound an explicit --socket in a
@@ -290,8 +305,10 @@ class UnixClient:
                                                             "uid": None if credentials is None else credentials.uid})
             hello = {"xorchestrate": "hello", "version": HANDSHAKE_VERSION, "purpose": purpose, "actor": actor,
                      "attributes": attributes or {}}
-            self.reader = self.socket.makefile("rb")
+            self._stream = _SocketStream(self.socket, b"", deadline)
+            self.reader = io.BufferedReader(self._stream)
             try:
+                _set_remaining(self.socket, deadline)
                 self.socket.sendall(_encode(hello) + b"\n")
                 frame = read_line_frame(self.reader, self.max_frame_bytes)
                 reply = None if frame is None else decode_json(frame)
@@ -314,19 +331,31 @@ class UnixClient:
                                               "The server refused the connection."),
                     "connection_refused", {"reason": reason, **(details if isinstance(details, dict) else {})})
             self.welcome = reply
+            self._stream.deadline = None
             self.socket.settimeout(None)
         except BaseException:
-            self.socket.close()
+            self.close()
             raise
 
     def request(self, value, timeout=None):
         """Send one control frame and read its single reply."""
-        self.socket.settimeout(timeout)
-        self.socket.sendall(_encode(value) + b"\n")
-        frame = read_line_frame(self.reader, self.max_frame_bytes)
-        if frame is None:
-            raise OrchestrationError("The server closed the control connection.", "io_error")
-        return decode_json(frame)
+        deadline = None if timeout is None else time.monotonic() + timeout
+        self._stream.deadline = deadline
+        try:
+            _set_remaining(self.socket, deadline)
+            self.socket.sendall(_encode(value) + b"\n")
+            frame = read_line_frame(self.reader, self.max_frame_bytes)
+            if frame is None:
+                raise OrchestrationError("The server closed the control connection.", "io_error")
+            return decode_json(frame)
+        except OSError:
+            # A partial or late reply must never satisfy a later control call.
+            self.close()
+            raise
+        finally:
+            self._stream.deadline = None
+            if not self.reader.closed:
+                self.socket.settimeout(None)
 
     def close(self):
         try:
