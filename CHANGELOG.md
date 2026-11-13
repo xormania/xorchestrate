@@ -120,6 +120,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Added
 
+- Optional work-tree tool for contributors: `python3 -m scripts.worktrees`
+  creates and safely removes git work trees and runs one Serena server per
+  tree over local HTTP, so a session can use symbol tools on any tree. See
+  [work trees and per-tree Serena](docs/agent-workflow.md#work-trees-and-per-tree-serena-optional-tool).
 - Optional developer settings for contributor tools: one declared table of
   `XORCHESTRATE_DEV_*` keys read from flags, the environment, a git-ignored
   `.devtools.env` and a user file, with `python3 -m scripts.devconfig show`
