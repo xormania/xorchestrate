@@ -271,7 +271,7 @@ def test_the_committed_example_is_the_rendered_table_byte_for_byte():
     assert committed.read_text(encoding="utf-8") == _example()
 
 
-def test_the_local_settings_file_is_ignored_and_the_example_istracked():
+def test_the_local_settings_file_is_ignored_and_the_example_is_tracked():
     ignored = subprocess.run(["git", "check-ignore", "-q", contract.REPO_FILE], cwd=ROOT)
     assert ignored.returncode == 0, f"{contract.REPO_FILE} must be git-ignored"
     tracked = subprocess.run(["git", "ls-files", "--error-unmatch", contract.EXAMPLE_FILE], cwd=ROOT,
