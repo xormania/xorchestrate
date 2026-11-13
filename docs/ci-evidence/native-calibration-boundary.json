@@ -1,0 +1,147 @@
+{
+  "purpose": "Make native crash calibration acknowledge the applied effect independently of RPC timeout and reap its own blocked host on failure. Product behavior and unknown/no-replay assertions are unchanged.",
+  "base_commit": "66390e749c6c630ff8716c17b742de6ad9b60a26",
+  "python": "3.12.16",
+  "hosted_failure": {
+    "run_id": 43208261315,
+    "job_id": 131149063016,
+    "source_sha": "48c6a0b81eb60d9bf9990cf9e055b1f5e419a296",
+    "execution_sha": "3af2aacb0c137f8bc6d949ea8ff3e9049b0a11ae",
+    "artifact_id": 13940866531,
+    "artifact_sha256": "5775229850e723895fa447601708029bd71c619f4e2c07b3d9d2a2c6dcd8c635",
+    "observed": "crash-uncertainty invalid_control: blocked.exists assertion then cleanup TimeoutExpired; six other native faults detected, work/state calibration and multi-harness passed."
+  },
+  "delayed_boundary": {
+    "fixture_delay_seconds": 0.3,
+    "rpc_timeout_seconds": 0.1,
+    "fixture_mutation": {
+      "path": "tests/hexagonal/fixtures/bridge_native.py",
+      "old": "    def send(self, backend, message):\n        state =",
+      "new": "    def send(self, backend, message):\n        time.sleep(.3)  # Controlled native scheduling delay before the effect.\n        state ="
+    },
+    "reproduction_setup": "Both isolated copies retain identical fixture delay, PID recording immediately after Popen, and kill/reap fallback so cleanup does not mask the boundary assertion. RED retains the predecessor immediate blocked.exists assertion; GREEN uses the shared bounded observation wait.",
+    "results": {
+      "red": {
+        "command": [
+          "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+          "-m",
+          "pytest",
+          "-p",
+          "_xorchestrate_calibration_observer",
+          "-q",
+          "--tb=short",
+          "tests/hexagonal/test_external_bridge.py::test_actual_host_crash_preserves_unknown_applied_effect_without_replay",
+          "--basetemp=/workspace/scratch/150dce018256/native-scheduling-reproduction/red-tmp",
+          "--junitxml=/workspace/scratch/150dce018256/native-scheduling-reproduction/red-run/results.xml"
+        ],
+        "cwd": "/workspace/scratch/150dce018256/native-scheduling-reproduction/snapshot/content",
+        "exit_status": 1,
+        "stdout_sha256": "44f33159dc0b2fc9cfc4ca48b8ae17ed0a924377721400435aec46fbd888bf2f",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout": "F                                                                        [100%]\n=================================== FAILURES ===================================\n____ test_actual_host_crash_preserves_unknown_applied_effect_without_replay ____\ntests/hexagonal/test_external_bridge.py:412: in test_actual_host_crash_preserves_unknown_applied_effect_without_replay\n    assert blocked.exists()\nE   AssertionError: assert False\nE    +  where False = exists()\nE    +    where exists = PosixPath('/workspace/scratch/150dce018256/native-scheduling-reproduction/red-tmp/test_actual_host_crash_preserv0/blocked').exists\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_external_bridge.py::test_actual_host_crash_preserves_unknown_applied_effect_without_replay\n1 failed in 5.67s\n",
+        "owned_processes": [
+          {
+            "pid": 19,
+            "reaped": true
+          }
+        ],
+        "files_sha256": {
+          "tests/hexagonal/fixtures/bridge_native.py": "52a7427c819dbe467375a2f83546fbd3ebefb860121e55a1f6eed933d326d327",
+          "tests/hexagonal/test_external_bridge.py": "c527890dcce7642eb3bd83197003f87b7a3bc2973bf1cef5c2e37d4901b455d7"
+        }
+      },
+      "green": {
+        "command": [
+          "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+          "-m",
+          "pytest",
+          "-p",
+          "_xorchestrate_calibration_observer",
+          "-q",
+          "--tb=short",
+          "tests/hexagonal/test_external_bridge.py::test_actual_host_crash_preserves_unknown_applied_effect_without_replay",
+          "--basetemp=/workspace/scratch/150dce018256/native-scheduling-reproduction/green-tmp",
+          "--junitxml=/workspace/scratch/150dce018256/native-scheduling-reproduction/green-run/results.xml"
+        ],
+        "cwd": "/workspace/scratch/150dce018256/native-scheduling-reproduction/healthy-snapshot/content",
+        "exit_status": 0,
+        "stdout_sha256": "117fc97efab587b02a2738f5b524caed8febb1be274d8e11bdb4e245c4ebed78",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout": ".                                                                        [100%]\n1 passed in 1.81s\n",
+        "owned_processes": [
+          {
+            "pid": 26,
+            "reaped": true
+          },
+          {
+            "pid": 32,
+            "reaped": true
+          }
+        ],
+        "files_sha256": {
+          "tests/hexagonal/fixtures/bridge_native.py": "52a7427c819dbe467375a2f83546fbd3ebefb860121e55a1f6eed933d326d327",
+          "tests/hexagonal/test_external_bridge.py": "a9f06462dd03b21f3faf0aa775d86c128bf4c11a3da918e64723663ea407332b"
+        }
+      }
+    }
+  },
+  "canonical_fault": {
+    "classification": "detected",
+    "candidate_sha256": "4a55a502f61a1c627587783a1571ead2be5ee3f04ce2386900a4a1b423643303",
+    "mutation": {
+      "new": "Transition(\"recover\", frozenset({\"pending\"}), \"completed\")",
+      "old": "Transition(\"recover\", frozenset({\"pending\"}), \"unknown\")",
+      "path": "xorchestrate/activity.py"
+    },
+    "diagnostic": "killed_host_must_preserve_unknown_effect",
+    "target": "tests.hexagonal.test_external_bridge::test_actual_host_crash_preserves_unknown_applied_effect_without_replay",
+    "unaffected": [
+      "tests.hexagonal.test_external_bridge::test_bridge_rejects_manufactured_receipts_and_changed_configuration"
+    ],
+    "commands": {
+      "control": {
+        "command": [
+          "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+          "-m",
+          "pytest",
+          "-p",
+          "_xorchestrate_calibration_observer",
+          "-q",
+          "--tb=short",
+          "tests/hexagonal/test_external_bridge.py::test_actual_host_crash_preserves_unknown_applied_effect_without_replay",
+          "tests/hexagonal/test_external_bridge.py::test_bridge_rejects_manufactured_receipts_and_changed_configuration",
+          "--junitxml=/workspace/scratch/150dce018256/native-calibration-boundary-proof/canonical-crash-fault/control.xml"
+        ],
+        "cwd": "/workspace/scratch/150dce018256/native-calibration-boundary-proof/canonical-crash-fault/control",
+        "exit_status": 0,
+        "stdout_sha256": "2b1de2f830d76664f66cfe4e0a619a803504508f18fb395c3ece000468f23876",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout": "..                                                                       [100%]\n2 passed in 2.54s\n"
+      },
+      "mutant": {
+        "command": [
+          "/workspace/scratch/150dce018256/ci-jev-test-env/bin/python",
+          "-m",
+          "pytest",
+          "-p",
+          "_xorchestrate_calibration_observer",
+          "-q",
+          "--tb=short",
+          "tests/hexagonal/test_external_bridge.py::test_actual_host_crash_preserves_unknown_applied_effect_without_replay",
+          "tests/hexagonal/test_external_bridge.py::test_bridge_rejects_manufactured_receipts_and_changed_configuration",
+          "--junitxml=/workspace/scratch/150dce018256/native-calibration-boundary-proof/canonical-crash-fault/mutant.xml"
+        ],
+        "cwd": "/workspace/scratch/150dce018256/native-calibration-boundary-proof/canonical-crash-fault/mutant",
+        "exit_status": 1,
+        "stdout_sha256": "75d4661fc72a679cfeaf771b7eb4f4118ea12f3cb18bdd8ba8c269689ba1b25b",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout": "F.                                                                       [100%]\n=================================== FAILURES ===================================\n____ test_actual_host_crash_preserves_unknown_applied_effect_without_replay ____\ntests/hexagonal/test_external_bridge.py:431: in test_actual_host_crash_preserves_unknown_applied_effect_without_replay\n    assert any(effect[\"status\"] == \"unknown\" for effect in pending.values()), \"killed_host_must_preserve_unknown_effect\"\nE   AssertionError: killed_host_must_preserve_unknown_effect\nE   assert False\nE    +  where False = any(<generator object test_actual_host_crash_preserves_unknown_applied_effect_without_replay.<locals>.<genexpr> at 0x7fd7c47db780>)\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_external_bridge.py::test_actual_host_crash_preserves_unknown_applied_effect_without_replay\n1 failed, 1 passed in 2.55s\n"
+      }
+    }
+  },
+  "green": {
+    "command": "PYTHONPYCACHEPREFIX=/tmp/native-calibration-boundary-final-green /workspace/scratch/150dce018256/ci-jev-test-env/bin/python -m pytest -p no:cacheprovider tests/hexagonal/test_external_bridge.py -q",
+    "result": "15 passed in 8.91s",
+    "ruff": "All checks passed."
+  }
+}

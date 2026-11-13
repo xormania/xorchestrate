@@ -14,6 +14,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.hexagonal.support.native import wait_for
 from xorchestrate.adapters.bridge import BridgeSessionDriver
 from xorchestrate.adapters.bridge_host import SessionBridgeHost
 from xorchestrate.adapters.bridge_transport import Peer
@@ -408,7 +409,8 @@ def test_actual_host_crash_preserves_unknown_applied_effect_without_replay(tmp_p
         with pytest.raises(OrchestrationError) as error:
             client.send(backend, {"remember": "private-before-kill", "block_after": True})
         assert error.value.code == "bridge_timeout"
-        assert blocked.exists()
+        # An RPC timeout does not acknowledge that the native effect was applied.
+        wait_for(blocked.exists, timeout=5, message="CRASH_FIXTURE_REACHED_APPLIED_EFFECT_BOUNDARY")
         assert json.loads(native_state.read_text())["effects"] == 1
         assert any(effect["status"] == "pending" for effect in json.loads(state.read_text())["effects"].values())
         # This is the test's own subprocess, already identified by Popen. Wait
@@ -433,7 +435,12 @@ def test_actual_host_crash_preserves_unknown_applied_effect_without_replay(tmp_p
         client.close()
         if process.poll() is None:
             process.terminate()
-        process.communicate(timeout=5)
+        try:
+            process.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            # The intentionally blocked fixture cannot drain after a failed assertion.
+            process.kill()
+            process.communicate(timeout=5)
     assert process.returncode == 0
     deadline = time.monotonic() + 1
     while endpoint.exists() and time.monotonic() < deadline:

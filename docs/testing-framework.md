@@ -231,6 +231,13 @@ assertion. Do not replace their independent oracle with a call to the production
 implementation. Counts are descriptive evidence, not an optimization target or a
 frozen acceptance threshold.
 
+Crash calibration waits for the native fixture's applied-effect acknowledgment
+before killing its host. An RPC timeout alone does not establish that boundary.
+Failed scenarios also kill and reap their own blocked host if graceful termination
+cannot finish. The unknown-effect and no-replay assertions are unchanged; the
+[boundary regression receipt](ci-evidence/native-calibration-boundary.json)
+records the delayed-fixture reproduction and retained fault detection.
+
 ## Consolidation and completion evidence
 
 The test-framework consolidation (PR #12) established the following outcomes:
