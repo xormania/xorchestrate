@@ -30,6 +30,8 @@ BEHAVIOURS = {
     "B6": "the importing instruction file loads the rules, and the rules' Agent workflow section points at the skills",
     "B7": "the shared guidance stays generic: no skill, workflow section, rules wording or pointer describes one "
           "contributor's own team of sessions or its crash recovery",
+    "B8": "the skill folders are exactly the view's declared shared set, and the workflow guidance keeps the view's "
+          "declared sections",
 }
 
 SHARED_SKILLS = ("pr-ready", "red-first", "run-checks", "serena")
@@ -50,7 +52,7 @@ FAULTS = {
     "multi-line-description": ("B1", ".agents/skills/beta"),
     "description-with-unquoted-colon": ("B1", "strict YAML"),
     "description-starts-with-indicator": ("B1", "strict YAML"),
-    "name-not-lowercase": ("B1", "lowercase"),
+    "name-not-lowercase": ("B1", "lowercase", ("B8",)),
     "description-too-long": ("B1", "1024"),
     "missing-mirror": ("B2", ".claude/skills/beta"),
     "copy-instead-of-symlink": ("B2", ".claude/skills/beta"),
@@ -61,7 +63,7 @@ FAULTS = {
     "dead-link-pointer": ("B3", "docs/missing.md"),
     "dead-backtick-pointer": ("B3", "scripts/missing.py"),
     "renamed-document": ("B3", "docs/guide.md", ("B6",)),
-    "workflow-guidance-missing": ("B3", WORKFLOW, ("B6",)),
+    "workflow-guidance-missing": ("B3", WORKFLOW, ("B6", "B8")),
     "dead-anchor": ("B3", "guide.md#first"),
     "home-path": ("B4", "/home/"),
     "temp-path": ("B4", "/tmp/"),
@@ -83,11 +85,14 @@ FAULTS = {
     "section-missing": ("B6", SECTION),
     "section-without-skills": ("B6", SKILLS),
     "section-points-at-missing-document": ("B6", "docs/vanished.md"),
-    "withheld-skill": ("B7", f"{SKILLS}/team-roles"),
+    "withheld-skill": ("B7", f"{SKILLS}/team-roles", ("B8",)),
     "withheld-workflow-section": ("B7", "Crash recovery for contributors"),
     "rules-describe-the-team": ("B7", "team of sessions"),
     "pointer-to-withheld-section": ("B7", "agent-workflow.md#team-roles"),
     "pointer-to-withheld-skill": ("B7", f"{SKILLS}/crash-recovery"),
+    "undeclared-skill": ("B8", f"{SKILLS}/delta"),
+    "declared-skill-missing": ("B8", f"{SKILLS}/alpha", ("B2",)),
+    "kept-section-removed": ("B8", "Notes"),
 }
 
 
@@ -596,6 +601,23 @@ def generic_guidance(view):
     return found
 
 
+# B8 -------------------------------------------------------------------------------------------------
+
+def declared_shape(view, skills, sections):
+    """The skill folders are exactly ``skills`` (B2 holds the mirror to them); the workflow keeps ``sections``."""
+    found = []
+    present = tuple(view.listdir(SKILLS) or ())
+    for name in sorted(set(present) - set(skills)):
+        found.append(f"{SKILLS}/{name} is not one of the declared shared skills")
+    for name in sorted(set(skills) - set(present)):
+        found.append(f"{SKILLS}/{name} is a declared shared skill but is missing")
+    workflow = view.text(WORKFLOW) or ""
+    for title in sections:
+        if section(workflow, title) is None:
+            found.append(f"{WORKFLOW} lost its '{title}' section")
+    return found
+
+
 CHECKS = {
     "B1": well_formed_skills,
     "B2": mirrored_skills,
@@ -604,4 +626,5 @@ CHECKS = {
     "B5": serena_project,
     "B6": rules_reach_every_harness,
     "B7": generic_guidance,
+    "B8": lambda view: declared_shape(view, view.shared_skills, view.kept_sections),
 }
