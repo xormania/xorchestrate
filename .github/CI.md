@@ -14,6 +14,7 @@ uv sync --locked --only-group validation --no-install-project --managed-python -
 uv sync --locked --no-default-groups --group validation --extra test --no-install-project --managed-python --python 3.12.16
 uv pip install --python "$UV_PROJECT_ENVIRONMENT/bin/python" --no-deps --no-build-isolation -e .
 export PATH="$UV_PROJECT_ENVIRONMENT/bin:$PATH"
+python3 -m scripts.testkit run --suite security
 python3 -m scripts.testkit run --suite static
 python3 -m scripts.testkit run --suite tests
 python3 -m scripts.testkit run --suite tests --shard 1/8   # one of eight hosted shards
@@ -23,9 +24,11 @@ python3 -m scripts.testkit run --suite multi-harness
 python3 -m scripts.testkit run --suite acceptance
 ```
 
-`checks` combines `static` and `tests`. The default `python3 -m scripts.testkit run`
+`security` is the focused Ruff and candidate-complete secret-scan view. `checks`
+combines `static` and `tests`. The default `python3 -m scripts.testkit run`
 composes every component suite once: static checks, tests, calibration, both live
-suites and `stories`.
+suites and `stories`. `static`, `checks` and the default/`all` composition execute
+the security checks once through `static`.
 `--family NAME` selects behavioral families without reducing static coverage.
 `--shard K/N` (only with `--suite tests`) runs one balanced, deterministic shard of the selected test modules;
 shards 1..N together cover the selection exactly once (see
@@ -59,12 +62,17 @@ evidence links and the `CI_REUSE_ENABLED=false` recovery switch. Selected jobs a
 | Job | Purpose |
 |---|---|
 | Classify changed paths | `scripts/ci/classify_changes.py` decides whether the change touches anything other than documentation; see below |
-| Static checks | Shared `static` suite: Ruff lint/security, current-source syntax and deterministic architecture enforcement |
+| Static checks | Shared `static` suite: Ruff lint/security, candidate-complete secret scanning, current-source syntax and deterministic architecture enforcement |
 | Application tests shard K/N (Python 3.12) | Matrix of N jobs, each running `--suite tests --shard K/N` with its own pytest inventory/JUnit |
 | Application and adapter tests (Python 3.12) | Retains the existing status name; needs every tests shard and fails unless the shard matrix succeeded. It does not rerun validation |
 | Calibration and multi-harness verification | Shared `calibration` suite and composed three-harness `multi-harness` protocol suite, in parallel with the tests shards |
 | Tmux live acceptance (protocol fixture) | Shared acceptance suite. The job provisions tmux for the test kit's own supervisor (installed through apt only when the runner image lacks it; the step prints `tmux -V`). That supervisor is not the product terminal host. Private owned process cleanup is part of the receipt |
 | Hexagonal architecture | Retains the existing required status name and reports the shared static job's outcome; it does not rerun validation |
+
+The focused `security` view does not create another hosted lane or status. CI
+enforces the same Ruff and secret-scan checks once through the existing `Static
+checks` lane, whose outcome also backs the required `Hexagonal architecture`
+status.
 
 Each Python job configures `PYTHONPYCACHEPREFIX` and `UV_PROJECT_ENVIRONMENT` in
 runner temporary storage before validation. uv-managed Python 3.12.16 and uv 0.13.7 are
@@ -188,6 +196,8 @@ implementation as a product acceptance obligation.
 Security-lint calibration belongs to the catalog's architecture family and uses
 the shared Ruff definition with independent expected findings; it runs in the
 tests shard that owns its module, where the pinned Ruff dependency is installed.
+The framework family separately checks the whole-candidate secret selection,
+binary-byte handling, same-line `secret-scan: allow` marker and redacted evidence.
 The verification job installs `.[test]`. Architecture and tmux
 regression tests run through the tests shards; dedicated jobs do not rerun
 the same selected pytest modules.
@@ -195,7 +205,9 @@ the same selected pytest modules.
 ## Evidence and limits
 
 `static-checks-python-3.12` retains static reports, effective-input identities,
-structured findings and raw command receipts for 30 days.
+structured findings and raw command receipts for 30 days. Secret-scan evidence
+contains selected-file hashes and path/line/rule findings, never the matched
+credential bytes.
 `framework-tests-python-3.12-shard-K-of-N` retains each shard's family/case
 inventory, JUnit and command records for 30 days. `calibration-python-3.12` retains
 calibration reports and command records for 30 days. Shard JUnit reports can

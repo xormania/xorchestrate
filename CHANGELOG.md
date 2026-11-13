@@ -123,6 +123,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Added
 
+- The test kit adds a focused `--suite security` view and candidate-complete,
+  redacted secret scanning. The existing static suite and CI lane run it once;
+  `contracts/security.json` owns detection policy and same-line
+  `secret-scan: allow` exceptions.
 - Optional developer settings for contributor tools: one declared table of
   `XORCHESTRATE_DEV_*` keys read from flags, the environment, a git-ignored
   `.devtools.env` and a user file, with `python3 -m scripts.devconfig show`

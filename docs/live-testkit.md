@@ -32,10 +32,13 @@ python3 -m scripts.testkit doctor
 python3 -m scripts.testkit run
 ```
 
-The default runs every component suite: static checks, behavioral tests and calibration
-followed by both live suites and the `stories` battery, with real application processes and deterministic protocol peers. It does not contact vendor models. Each invocation creates a
-fresh private run under `../xorchestrate-runs/`, prints its directory and writes
-`report.json`. `--output /path/outside/checkout` changes that reusable parent.
+The default runs every component suite: static checks (including Ruff and the
+candidate-complete secret scan once), behavioral tests and calibration followed
+by both live suites and the `stories` battery, with real application processes
+and deterministic protocol peers. It does not contact vendor models. Each
+invocation creates a fresh private run under `../xorchestrate-runs/`, prints its
+directory and writes `report.json`. `--output /path/outside/checkout` changes that
+reusable parent.
 No manual copying of the owner brief, creation of criteria or selection of a new
 run directory is needed. The brief is copied and hash-bound when its check is
 prepared. Unavailable live prerequisites or a missing brief block the affected
@@ -69,7 +72,9 @@ For managed native prompts, use `start` and `attach`: the existing native launch
 exposes an owned interactive terminal with input/output separate from MCP pipes.
 Seeing an outer worker pane alone does not establish native prompt access.
 
-Use `--suite acceptance` for terminal-host/MCP callbacks and persistence, or
+Use `--suite security` for the focused Ruff and secret-scan view, or
+`--suite static` to add syntax and architecture checks. Use `--suite acceptance`
+for terminal-host/MCP callbacks and persistence, or
 `--suite multi-harness` for the existing 46-case communication, controlled work
 and lifecycle suite. `--timeout` controls each scenario's existing timeout; the
 outer command bound allows the complete suite to finish. `--brief` selects an
@@ -101,6 +106,7 @@ depend on the checker verdict. New modules must receive an explicit role in
 [`contracts/hexagonal.json`](../contracts/hexagonal.json).
 
 ```bash
+python3 -m scripts.testkit run --suite security
 python3 -m scripts.testkit run --suite static
 python3 -m pytest -p no:cacheprovider tests/hexagonal/test_testkit_*.py tests/hexagonal/test_acceptance_testkit.py -q
 ```
