@@ -297,6 +297,9 @@ CASE_FAULTS = {
     "contract-bad-module": [raw_case(contract="1probe:check")],
     "contract-empty": [raw_case(contract="")],
     "contract-not-text": [raw_case(contract=["probe", "check"])],
+    "contract-empty-module-part": [raw_case(contract="tests..probe:check")],
+    "contract-trailing-dot": [raw_case(contract="tests.probe.:check")],
+    "contract-leading-dot": [raw_case(contract=".probe:check")],
 }
 
 
@@ -338,6 +341,16 @@ CONTRACT_SOURCE = (
     "def quiet(value):\n"
     f"    # {MARKER}\n"
     f"    return {MARKER!r}\n"
+    "def nested(value):\n"
+    "    def inner():\n"
+    f"        assert value == 1, {MARKER!r}\n"
+    "    return inner\n"
+    "def scoped(value):\n"
+    "    class Local:\n"
+    "        def method(self):\n"
+    f"            assert value == 1, {MARKER!r}\n"
+    f"    check = lambda: {MARKER!r}\n"
+    "    return Local, check\n"
     "class Holder:\n"
     "    def method(self, value):\n"
     f"        assert value == 1, {MARKER!r}\n"
@@ -377,6 +390,8 @@ def test_the_tree_check_accepts_a_declared_function_holding_the_exact_assertion(
     ("pkg.contract_mod:absent", "contract_not_found"),
     ("pkg.contract_mod:method", "contract_not_found"),
     ("pkg.contract_mod:quiet", "diagnostic_not_in_contract"),
+    ("pkg.contract_mod:nested", "diagnostic_not_in_contract"),
+    ("pkg.contract_mod:scoped", "diagnostic_not_in_contract"),
 ])
 def test_the_tree_check_refuses_a_declared_contract_it_cannot_find_or_that_lacks_the_assertion(tmp_path, contract,
                                                                                                  code):
