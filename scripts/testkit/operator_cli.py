@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import os
 import select
@@ -17,6 +18,8 @@ from .composition import MODES, ROOT, SUITES
 from .operator import FINISHED
 from .stories import STORIES, select_stories, validate_limits
 
+CONTROLS = frozenset({"status", "watch", "attach", "wait", "stop", "close", "collect", "verify", "stories"})
+"""Commands that use only saved runs or the catalog: they never read developer settings."""
 ACTIONS = ("setup", "doctor", "run", "start", "list", "status", "watch", "attach", "wait", "stop", "close", "collect", "verify", "stories", "plan")
 
 
@@ -102,6 +105,14 @@ def _default_output(dev):
     return str(base / "xorchestrate" / "runs" / ROOT.name)
 
 
+def _interpreter(dev):
+    configured = profiles.dev_value(dev, profiles.DEV_INTERPRETER)
+    if configured is None:
+        return sys.executable
+    profiles._external(configured, ROOT, "interpreter")
+    return str(configured)
+
+
 def settings(args, *, dev=None):
     """Settings by precedence: flags, then the profile, then developer settings, then built-in defaults."""
     dev = profiles.load_dev(ROOT) if dev is None else dev
@@ -109,7 +120,12 @@ def settings(args, *, dev=None):
     if args.source:
         if args.profile:
             raise ValueError("Choose --from or --profile, not both")
-        return managed.repeat_settings(args.source, explicit)
+        values = managed.repeat_settings(args.source, explicit)
+        # A repeat reruns the saved inputs, so it carries the record of the settings that shaped them.
+        saved = managed.read_json(Path(args.source).expanduser() / "plan.json")
+        if isinstance(saved, dict) and "dev_settings" in saved:
+            values["dev_settings"] = saved["dev_settings"]
+        return values
     profile = _profile(args, dev)
     if profile:
         values = profiles.load_profile(profile, root=ROOT, overrides=explicit, dev=dev)
@@ -121,7 +137,7 @@ def settings(args, *, dev=None):
               "timeout": 180, "check_timeout": 600, "shutdown_grace": 10, "run_timeout": None,
               "terminal_host": None, "keep_after_run": False,
               "output": _default_output(dev),
-              "interpreter": str(profiles.dev_value(dev, profiles.DEV_INTERPRETER) or sys.executable),
+              "interpreter": _interpreter(dev),
               "root": str(ROOT), **explicit}
     if "config" not in explicit and values["mode"] == "native":
         configured = profiles.dev_value(dev, profiles.DEV_NATIVE_CONFIG)
@@ -227,7 +243,12 @@ def main(argv=None, *, direct_runner, preflight, dev=None):
     argument_parser = parser()
     args = argument_parser.parse_args(argv)
     try:
-        dev = profiles.load_dev(ROOT) if dev is None else dev
+        if args.action in CONTROLS:
+            dev = None
+        else:
+            dev = profiles.load_dev(ROOT) if dev is None else dev
+            for line in profiles.dev_warnings(dev):
+                print(line, file=sys.stderr)
         profile = _profile(args, dev)
         if args.detach and args.action != "start":
             raise ValueError("--detach belongs to start")
@@ -267,7 +288,7 @@ def main(argv=None, *, direct_runner, preflight, dev=None):
                 raise ValueError("setup requires --profile PATH (or XORCHESTRATE_DEV_TESTKIT_PROFILE)")
             if args.directory:
                 raise ValueError("setup takes a reusable profile path and explicit selections")
-            result = profiles.setup(profile, root=ROOT, overrides=overrides(args))
+            result = profiles.setup(profile, root=ROOT, overrides=overrides(args), dev=dev)
         elif args.action == "list":
             if not profile:
                 raise ValueError("list requires --profile PATH (or XORCHESTRATE_DEV_TESTKIT_PROFILE)")
@@ -313,7 +334,7 @@ def main(argv=None, *, direct_runner, preflight, dev=None):
                 result = preflight(root=ROOT, shutdown_grace=options["shutdown_grace"], output=options["output"],
                                    **managed.execution_options(options))
                 if profile:
-                    environment = profiles.doctor(profile, root=ROOT, overrides=overrides(args))
+                    environment = profiles.doctor(profile, root=ROOT, overrides=overrides(args), dev=dev)
                     result["profile_readiness"] = environment
                     if environment["status"] != "passed":
                         result["status"] = "setup_error"
@@ -326,7 +347,10 @@ def main(argv=None, *, direct_runner, preflight, dev=None):
                     if result["probe"]["status"] != "passed":
                         result["status"] = "setup_error"
             elif args.action == "run":
-                result = managed.foreground(options, direct_runner)
+                runner = direct_runner
+                if options.get("dev_settings") is not None:
+                    runner = functools.partial(direct_runner, dev_settings=options["dev_settings"])
+                result = managed.foreground(options, runner)
                 if isinstance(result, dict) and options.get("dev_settings") is not None:
                     environment = result.setdefault("environment", {})
                     if isinstance(environment, dict):

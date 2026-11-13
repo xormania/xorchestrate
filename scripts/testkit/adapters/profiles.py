@@ -52,11 +52,22 @@ def load_dev(root):
     except ImportError:
         return None
     try:
-        return load(Path(root), env=os.environ, discovery="files")
+        # File reads only, so doctor and plan never start a process; only the kit's own section is typed,
+        # so a bad value meant for another tool never affects the kit.
+        return load(Path(root), env=os.environ, discovery="files", sections=(DEV_SECTION,))
     except DevConfigError as error:
-        if error.code == "NOT_A_REPOSITORY":
-            return None
         raise ValueError(f"developer settings: {error.code}: {error.detail}") from None
+
+
+def dev_warnings(dev):
+    """One line per developer-settings warning, for stderr."""
+    if dev is None:
+        return []
+    lines = []
+    for code, path, line, detail in dev.warnings:
+        where = f"{path}:{line}" if path and line else (path or "environment")
+        lines.append(f"developer settings: {code}: {detail} ({where})")
+    return lines
 
 
 def dev_value(dev, key):
@@ -71,10 +82,21 @@ def dev_record(dev):
     if dev is None:
         return {}
     from scripts.devconfig.keys import SETTINGS
+    from scripts.devconfig.model import DevConfigError
 
-    return {setting.key: {"value": dev.display(setting.key), "source": dev.source(setting.key).describe()}
-            for setting in SETTINGS
-            if setting.evidence or (setting.section == DEV_SECTION and dev.source(setting.key).kind != "default")}
+    record = {}
+    for setting in SETTINGS:
+        try:
+            source = dev.source(setting.key)
+        except DevConfigError:
+            continue  # a section this consumer did not load
+        if setting.evidence or (setting.section == DEV_SECTION and source.kind != "default"):
+            record[setting.key] = {"value": dev.display(setting.key), "source": source.describe()}
+    skipped = [{"file": path or "", "reason": detail} for code, path, _, detail in dev.warnings
+               if code in ("REPO_FILE_SKIPPED", "USER_FILE_SKIPPED")]
+    if skipped:
+        record["_skipped"] = skipped
+    return record
 
 
 def default_terminal_host(binary):
@@ -219,7 +241,7 @@ print(json.dumps({'version':list(sys.version_info[:3]),'virtual':sys.prefix!=sys
     return details
 
 
-def setup(profile_path, *, root, install=True, overrides=None):
+def setup(profile_path, *, root, install=True, overrides=None, dev=None):
     """Create once, preserve existing settings, and install only when requested."""
     root, profile_path = Path(root).resolve(), Path(profile_path).expanduser().resolve()
     _external(profile_path, root, "profile")
@@ -227,10 +249,10 @@ def setup(profile_path, *, root, install=True, overrides=None):
     with (profile_path.parent / (profile_path.name + ".setup.lock")).open("a+b") as lock:
         os.chmod(lock.name, 0o600)
         fcntl.flock(lock, fcntl.LOCK_EX)
-        return _setup(profile_path, root=root, install=install, overrides=overrides)
+        return _setup(profile_path, root=root, install=install, overrides=overrides, dev=dev)
 
 
-def _setup(profile_path, *, root, install, overrides=None):
+def _setup(profile_path, *, root, install, overrides=None, dev=None):
     created = False
     if not profile_path.exists():
         defaults = {"schema_version": 1, "mode": "protocol-fixture", "suite": "all",
@@ -248,10 +270,10 @@ def _setup(profile_path, *, root, install, overrides=None):
     if overrides:
         # Explicit operator selections may update the reusable profile. The
         # application's native config and authentication remain untouched.
-        load_profile(profile_path, root=root, overrides=overrides)
+        load_profile(profile_path, root=root, overrides=overrides, dev=dev)
         source = json.loads(profile_path.read_text(encoding="utf-8"))
         write_json(profile_path, {**source, **overrides})
-    profile = load_profile(profile_path, root=root)
+    profile = load_profile(profile_path, root=root, dev=dev)
     workspace = _external(profile_path.parent / "workspace", root, "workspace")
     workspace.mkdir(parents=True, exist_ok=True, mode=0o700)
     native_config = profile_path.parent / "native.json"
@@ -294,9 +316,9 @@ def _setup(profile_path, *, root, install, overrides=None):
                 "Linux/WSL /proc."]}
 
 
-def doctor(profile_path, *, root, overrides=None):
+def doctor(profile_path, *, root, overrides=None, dev=None):
     """Read-only environment observations; composition owns check readiness."""
-    profile = load_profile(profile_path, root=root, overrides=overrides)
+    profile = load_profile(profile_path, root=root, overrides=overrides, dev=dev)
     observations = []
     interpreter = profile["interpreter"]
     try:
@@ -374,8 +396,11 @@ def bootstrap(argv=None, *, root=None, dev=None):
             source_run = argument.split("=", 1)[1]
     action = argv[0] if argv else None
     controls = {"status", "watch", "attach", "wait", "stop", "close", "collect", "verify"}
-    if profile_path is None and source_run is None and action not in controls:
-        configured = dev_value(load_dev(root) if dev is None else dev, DEV_PROFILE)
+    if profile_path is None and source_run is None and action not in controls | {"stories"}:
+        dev = load_dev(root) if dev is None else dev
+        for line in dev_warnings(dev):
+            print(line, file=sys.stderr)
+        configured = dev_value(dev, DEV_PROFILE)
         profile_path = None if configured is None else str(configured)
     interpreter = None
     if profile_path is not None and action != "setup":
