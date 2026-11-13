@@ -26,7 +26,7 @@ uv sync --locked --no-default-groups --group validation --extra test --no-instal
 uv pip install --python "$UV_PROJECT_ENVIRONMENT/bin/python" --no-deps --no-build-isolation -e .
 export PATH="$UV_PROJECT_ENVIRONMENT/bin:$PATH"
 
-# Focused security view: shared Ruff policy and candidate-complete secret scan.
+# Focused security view: Ruff, candidate-complete secret scan and workflow analysis.
 python3 -m scripts.testkit run --suite security
 
 # Security checks, current-source syntax and deterministic architecture.
@@ -63,12 +63,15 @@ The cache prefix must resolve outside the candidate and is inherited by child
 Python commands. Use a fresh prefix for each validation session. Ruff and pytest
 caches are disabled or written outside the candidate by the shared suites;
 syntax validation reads current bytes rather than trusting cached bytecode.
-Static-only execution needs Python and the pinned Ruff, without pytest discovery,
-tmux, native configuration or model credentials. `--family` filters behavioral
-tests only; it never reduces static coverage. The default composition runs each
-selected check once. `security` is a focused view rather than another component:
-`static`, `checks` and the default/all composition include its Ruff and secret-scan
-checks once through `static`.
+Static-only execution needs Python, the pinned Ruff and the pinned Zizmor
+executable, without pytest discovery, tmux, native configuration or model
+credentials. Managed setup installs both validation tools for its selected
+interpreter; `doctor` checks that environment's Zizmor executable without
+launching the scanner. `--family` filters behavioral tests only; it never reduces
+static coverage. The default composition runs each selected check once.
+`security` is a focused view rather than another component: `static`, `checks`
+and the default/all composition include its Ruff, secret-scan and Zizmor checks
+once through `static`.
 
 ## Jev advisory stages
 
@@ -192,6 +195,17 @@ complete effective-input identity. Findings retain only path, line and rule;
 matched credential bytes are excluded from the report and captured command
 output.
 
+The Zizmor check selects only immediate `.yml` and `.yaml` files beneath
+`.github/workflows`; an empty selection, a broken link or a workflow that resolves
+outside the candidate is refused. The pinned Zizmor 1.32.0 executable runs with
+offline access, strict collection and the regular persona against the explicit
+`contracts/zizmor.yml` policy. That policy records exact filename-and-line
+exceptions for reviewed workflow behavior, so line movement can invalidate an
+exception rather than silently widening it. The adapter holds tool-native output
+only long enough to normalize it, then publishes candidate-bound file hashes and
+path/location/rule/severity/confidence findings; workflow snippets and fixes are
+not copied into the report or outer command output.
+
 `--output /path/outside/checkout` selects a reusable evidence parent; each invocation
 allocates a private run directory. `--check-timeout` bounds each deterministic or
 calibration command. `--timeout` retains the live scenario timeout. Native harness
@@ -226,6 +240,7 @@ controller requests, native callback selection and managed tmux automation.
 | Static check definitions and suite membership | Shared test-kit composition and static adapter |
 | Ruff policy and validation dependency pin | `ruff.toml`, `pyproject.toml` validation group; generated `.github/requirements-ci.txt` |
 | Secret detection policy and same-line allowances | `contracts/security.json`; shared static and secret-scan adapters |
+| Workflow-analysis policy and validation dependency pin | `contracts/zizmor.yml`, `pyproject.toml` validation group; generated `.github/requirements-ci.txt`; shared static and Zizmor adapters |
 | Catalog validation and selection | `scripts/testkit/catalog.py` |
 | Shard specification, balanced module partition and timings format | `scripts/testkit/sharding.py`, `contracts/test-timings.json` |
 | Timings regeneration from JUnit | `scripts/testkit/adapters/timings.py`, `python3 -m scripts.testkit.timings` |
@@ -347,8 +362,10 @@ from the repository commit/tree and the existing calibration candidate hash.
 Source/configuration changes invalidate the affected result. Reports retain check
 IDs, readiness/preparation outcomes, tool versions, structured findings and raw
 command receipts. Secret-scan findings and command output are redacted rather than
-retaining the matched bytes. A check blocked before launch has an explicit setup
-outcome and does not borrow another check's command record.
+retaining the matched bytes. Zizmor's source-bearing native output is normalized
+inside its adapter and never reaches the outer command receipt. A check blocked
+before launch has an explicit setup outcome and does not borrow another check's
+command record.
 
 Structural plan errors reject the whole plan. Missing tools, selected
 configuration or check-specific preparation block only dependent checks;

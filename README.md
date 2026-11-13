@@ -28,11 +28,15 @@ python3 -m scripts.testkit run --suite static
 python3 -m scripts.testkit run --suite checks
 ```
 
-`security` is a focused view of the shared Ruff check and candidate-complete
-secret scan. The scan applies `contracts/security.json` to tracked and nonignored
-untracked files, including binary bytes; a same-line `secret-scan: allow` marker
-permits an intentional match without widening the exception. Its structured
-evidence identifies files and findings without republishing matched credentials.
+`security` is a focused view of the shared Ruff check, candidate-complete secret
+scan and pinned Zizmor workflow analysis. The secret scan applies
+`contracts/security.json` to tracked and nonignored untracked files, including
+binary bytes; a same-line `secret-scan: allow` marker permits an intentional match
+without widening the exception. Zizmor 1.32.0 examines the explicit top-level
+`.github/workflows/*.yml` and `*.yaml` selection offline, with strict collection
+and the reviewed exact exceptions in `contracts/zizmor.yml`. Structured evidence
+identifies selected file bytes and normalized findings without republishing
+matched credentials or workflow source.
 `static` adds current-source syntax validation and architecture enforcement;
 `tests` runs the cataloged behavioral tests; `checks` combines `static` and
 `tests`. `checks` and the default/`--suite all` composition include the security
