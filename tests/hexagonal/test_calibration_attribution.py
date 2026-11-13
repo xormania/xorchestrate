@@ -184,12 +184,23 @@ DECORATED_SOURCE = ("import functools\n"
                     f"@logged\ndef check(value):\n    assert value == 1, '{MARKER}'\n")
 
 
-def run_contract_subject(root, value, *, body="check(compute())", source=CONTRACT_SOURCE, contract=CONTRACT):
+HOOK_CONFTEST = ("import pytest\nimport contract_probe\n"
+                 "@pytest.hookimpl(hookwrapper=True)\n"
+                 "def pytest_pyfunc_call(pyfuncitem):\n"
+                 "    if pyfuncitem.name == 'test_target':\n"
+                 "        contract_probe.check(pyfuncitem.module.compute())\n"
+                 "    yield\n")
+
+
+def run_contract_subject(root, value, *, body="check(compute())", source=CONTRACT_SOURCE, contract=CONTRACT,
+                         conftest=None):
     # Imported here so this section merges cleanly with the slice that re-points the module's own imports.
     from scripts.verification.__main__ import observed_pytest
 
     root.mkdir(parents=True)
     (root / "contract_probe.py").write_text(source)
+    if conftest:
+        (root / "conftest.py").write_text(conftest)
     names = "check, other_check" if "other_check" in source else "check"
     (root / "test_probe.py").write_text(
         f"from contract_probe import {names}\n"
@@ -223,6 +234,17 @@ def test_only_an_assertion_in_the_declared_contract_function_earns_contract_cred
     attribution = mutant[TARGET]["attribution"]
     assert attribution["contract_assertion"] is (expected == "detected"), attribution
     assert attribution["target_assertion"] is (body.startswith("assert")), attribution
+
+
+def test_a_contract_assertion_the_target_test_did_not_call_earns_nothing(tmp_path):
+    """A hook running in the call phase calls the contract before the test runs; the test is not in the chain."""
+    control_command, control = run_contract_subject(tmp_path / "control", 1, body="pass", conftest=HOOK_CONFTEST)
+    mutant_command, mutant = run_contract_subject(tmp_path / "mutant", 2, body="pass", conftest=HOOK_CONFTEST)
+    assert mutant[TARGET]["status"] == "failed", mutant[TARGET]
+    result = classify(control, mutant, TARGET, MARKER, [UNAFFECTED], contract=CONTRACT,
+                      control_exit=control_command["exit_status"], mutant_exit=mutant_command["exit_status"])
+    assert result["classification"] == "unrelated_failure", "CONTRACT_CALLED_BY_TARGET_TEST"
+    assert mutant[TARGET]["attribution"]["contract_assertion"] is False
 
 
 def test_without_a_declared_contract_credit_is_unchanged(tmp_path):
