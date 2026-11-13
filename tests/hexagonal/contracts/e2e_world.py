@@ -15,8 +15,14 @@ clients. Scenarios never reach for processes, sockets or sleeps themselves; they
 - ``up()``, ``down()`` (detaching), ``recover()`` and ``status()`` return the command's JSON reply.
 - ``disturb(value)`` applies a disturbance and returns a ``Receipt``.
 - ``bridge_hosts()`` lists the running bridge hosts of this project.
+- ``socket_files()`` lists the Unix socket files present under the world's home, live or left behind.
 - ``await_(label, predicate, *, timeout=None)`` returns the zero-argument predicate's first truthy value; at the
   deadline (the world's, or ``timeout``) it raises ``WaitExpired`` naming ``label``.
+- ``hold(stage)`` arms a gate in the session peer at ``stage`` (``"resume"``: the peer is asked to continue a
+  conversation) before the action that reaches it, and returns a ``Gate``: ``entered()`` is true once the peer is
+  waiting there, ``release()`` lets it and every later arrival through.
+- ``peer_received(session)`` lists what the session peer took delivery of for that session's conversation in this
+  world, as entries with ``native_id`` and ``text``, in delivery order.
 """
 
 from dataclasses import dataclass, field
@@ -83,7 +89,13 @@ class World(Protocol):
 
     def bridge_hosts(self) -> list: ...
 
+    def socket_files(self) -> list: ...
+
     def await_(self, label, predicate, *, timeout=None): ...
+
+    def hold(self, stage): ...
+
+    def peer_received(self, session) -> list: ...
 
 
 def awaited_or_none(world, label, predicate):
