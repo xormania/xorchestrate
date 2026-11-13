@@ -1,137 +1,18 @@
 # Agent workflow
 
-How agents work on this repository together, how a contributor recovers after a
-crash, how developer tools read optional local settings, and how to use Serena
-here. [AGENTS.md](../AGENTS.md) carries the
+How developer tools read optional local settings, and how to use Serena here.
+[AGENTS.md](../AGENTS.md) carries the
 repository's rules and takes precedence over this document; xor's current
 direction takes precedence over both.
 
 The shared skills in `.agents/skills` point at this document and at the guides
-it names. Codex reads that folder (`codex debug prompt-input` lists all six
+it names. Codex reads that folder (`codex debug prompt-input` lists all four
 skills without a model call). Claude Code sees each skill through a relative
 symlink in `.claude/skills`. Grok reads both folders, but only in a trusted
 folder: untrusted, it shows none of the skills and no instruction files;
 trusted (`--trust`, or `/hooks-trust` in a session), `grok inspect` lists all
-six skills and both instruction files. This document and the guides stay the
+four skills and both instruction files. This document and the guides stay the
 source of truth, so a harness that loads no skills still gets the same rules.
-
-## Team roles
-
-A single contributor works through the whole change alone, following
-[the PR quality standard](pr-quality.md): tests that prove detection, the
-implementation, the pre-draft review and the draft. Nothing in this section
-restricts that.
-
-When work is split across several agent sessions, these roles apply. They stay
-the same however many sessions there are and whatever they are called:
-
-- **Coordinator.** Writes the behaviour specification, routes work, and makes
-  design and scope decisions; in a split team it is the role that takes those
-  questions to xor. Keeps the current roster of sessions; nothing in the
-  repository names sessions.
-- **Test writer.** Writes the tests and proves they fail for the intended
-  reason before the implementation or fix exists; for a fix, red against the
-  defective code ([Prove detection](pr-quality.md#prove-detection)).
-- **Implementer.** Writes the implementation or fix that turns those tests
-  green. The PR quality standard asks for separate implementation and test
-  authors when work is delegated, so in a split team the implementer does not
-  edit tests: a test that looks wrong goes to the coordinator, who takes it to
-  the test writer.
-- **Lookup.** Answers specific questions about where something lives or how an
-  existing mechanism works, with file and line references. Read-only.
-
-Default ownership of paths in a split team. The coordinator may change it per
-task:
-
-| Role | Owns |
-|---|---|
-| Test writer | `tests/` and `contracts/testing.json` |
-| Implementer | `xorchestrate/`, `scripts/testkit/`, `scripts/acceptance/`, `docs/`, `contracts/hexagonal.json` and `CHANGELOG.md` |
-
-Working rules for a split team:
-
-- A direct message between two sessions can speed up a question, but it never
-  settles a design or scope question; that goes through the coordinator.
-- One committer per branch, normally the implementer. The test writer's tests
-  go in unchanged as their own commit before the implementation commit, so the
-  history shows red before green.
-- One writer per file. A shared note is edited by its own section, never
-  rewritten wholesale.
-
-For everyone, alone or in a team:
-
-- Commit work in progress at every checkpoint and push the branch; a pushed
-  draft branch is the recovery mechanism. Keep anything you will need later
-  outside temporary directories, and keep private notes out of the repository.
-- Pull requests are drafts; xor merges. Never force-push or rewrite published
-  history. Attribution and publication follow AGENTS.md and the PR quality
-  standard.
-
-## Crash recovery for contributors
-
-After a machine, container or session crash, first find out what is at risk,
-read-only, and report it before changing anything. Product state (sessions,
-terminals, the effect journal) has its own recovery, described in
-[recovering after a container or machine failure](terminal-host.md#recovering-after-a-container-or-machine-failure);
-this section is about the work in the repository.
-
-Being asked to run a recovery check authorises the read-only inventory only.
-Saving work (a commit and push to the existing feature branch, never to master)
-is a separate step that needs the go-ahead of whoever directs the work (the
-coordinator in a split team, otherwise xor). Restoring a truncated file from a
-commit is a decision you report, not one you make.
-
-1. **Check for live work.** List the running agent and build processes and the
-   other agent sessions. Leave alone any worktree where something is still
-   running, and say so in the report.
-2. **Write nothing while you look.** Set `GIT_OPTIONAL_LOCKS=0` so `git status`
-   does not refresh the index, do not fetch, and use `git ls-remote origin` for
-   what the remote holds now. Do not switch, check out, reset, stash, clean,
-   commit, push, prune or repair until the inventory is complete.
-3. **Inventory every worktree** that `git worktree list` shows, and every other
-   clone you work in: branch, HEAD (hash, date, subject), upstream and
-   ahead/behind, whether the branch still exists on the remote,
-   `git status --porcelain --untracked-files=all`, `git stash list`, commits
-   on no remote branch (`git log --branches --not --remotes`), and files changed
-   in the hours before the crash that are not committed.
-4. **Look for damage.** Leftover `*.lock` files in the git directories, a
-   `git status` or `git log` that errors, zero-length or NUL-filled tracked
-   files (a clean status rules these out for tracked files),
-   `git fsck --connectivity-only`, and each `.xorchestrate/state.sqlite3`
-   opened read-only with a `PRAGMA quick_check`.
-5. **Find loose work.** Dropped stashes and amended commits appear as dangling
-   commits in `git fsck`. For each one, and for any patch saved before the
-   crash, check whether its change is already in master without touching the
-   working tree or the real index, using a temporary index:
-
-   ```bash
-   index="$(mktemp -d)/index"
-   GIT_INDEX_FILE="$index" git read-tree <master ref>
-   GIT_INDEX_FILE="$index" git apply --cached --check -R <patch file>   # succeeds: already in master
-   rm -r "$(dirname "$index")"
-   ```
-
-   For a dangling commit, make the patch with `git diff <commit>^ <commit>`.
-   When the check fails, later commits have often rewritten the same lines:
-   compare which of the lines the patch adds are present in master, and say
-   whether the remainder looks superseded or lost.
-6. **Check open pull requests** with `gh pr list` and `gh pr checks <number>`.
-   A skipped check has not passed. Note whether any local branch holds work
-   beyond a pull request's head.
-7. **Product state.** With no server running, `xorchestrate doctor` reports,
-   read-only, whether the last server stopped cleanly and which sessions are
-   persisted as live, but only for an approved configuration with a built-in
-   store adapter; otherwise it constructs nothing and says so, which is not a
-   clean bill of health. Starting the server then recovers sessions under the
-   project's recovery policy; `xorchestrate status` and `xorchestrate recover`
-   follow [the terminal host guide](terminal-host.md).
-
-Report in this order: what is at risk (uncommitted or unpushed, with paths),
-what is damaged, what is safe; then a table per worktree; then what you could
-not check. Flag anything at risk as soon as you find it rather than waiting for
-the full sweep. The checks cannot see damage to an ignored file, a truncated
-untracked file that is not empty, or work that existed only in a lost session's
-memory.
 
 ## Developer settings
 
@@ -258,3 +139,91 @@ default in your home), never into the repository.
   `--project <checkout>` instead for that harness.
 - Unverified: whether pyright starts on a machine without Node on its path, and
   whether each harness starts MCP servers in the session's directory.
+
+## Work trees and per-tree Serena (optional tool)
+
+`python3 -m scripts.worktrees` is an optional convenience for contributors who
+work in several git work trees at once. Nothing in the repository requires it.
+It reads its settings through the [developer settings](#developer-settings);
+`--root` and `--state-dir` override the work-tree root and the tool's state
+directory for one command, and `--repo` names the repository (by default the
+one containing the current directory; inside a linked tree it means the main
+checkout).
+
+```bash
+python3 -m scripts.worktrees new feat/example          # tree at <root>/feat/example, from the remote's default branch
+python3 -m scripts.worktrees remove feat/example       # only when clean, unlocked, unused and pushed or merged
+python3 -m scripts.worktrees serena up feat/example    # one Serena server for that tree
+python3 -m scripts.worktrees serena call feat/example find_symbol '{"name_path_pattern": "TerminalHost"}'
+python3 -m scripts.worktrees serena check feat/example # before trusting its answers
+python3 -m scripts.worktrees serena down feat/example
+```
+
+`new` starts the branch from the remote's default branch (or
+`XORCHESTRATE_DEV_BASE`, or `--base`) with no upstream, after a fetch. It
+refuses, changing nothing, when the directory or branch exists or the base
+cannot be resolved. `remove` refuses a tree that has uncommitted or untracked
+changes, is locked, has a stash entry made on its branch, has a process working
+in it, or holds commits that are neither pushed nor merged. It never forces;
+it deletes the branch only when merged into the base, and only if the branch
+still points where it did.
+
+A session's own Serena connection serves the directory the session started in.
+`serena` gives any session symbol tools for another tree without restarting:
+`up` starts one Serena MCP server per tree over local HTTP, with a Serena home
+in the tool's state directory, so your own Serena configuration is untouched.
+A per-tree server is read-only: it offers only Serena's symbol and diagnostic
+tools (no editing, file-reading or shell tools), `up` refuses a server that
+offers more, and edits in a tree go through your ordinary tools. Setting
+`XORCHESTRATE_DEV_SERENA_ALLOW_EDITS=1` restores Serena's full tool set.
+Servers listen on 127.0.0.1 on a port the kernel picks, and Serena's HTTP
+transport has no authentication: on a machine shared with other accounts, any
+local account can reach a running server while it runs, so it can read the
+tree's symbols, and with edits allowed it could edit the tree as you.
+A server counts as up only after it answers a real symbol query (by default an
+overview of the first tracked Python file that defines something; set
+`XORCHESTRATE_DEV_PROBE_TOOL` and `XORCHESTRATE_DEV_PROBE_ARGS` to choose
+another). `call` and `tools` use it from the shell, `ls` lists servers, `reap`
+forgets dead ones and stops servers whose tree is gone, and `down` stops a
+server and its language server. `check` reports a server that does not answer,
+serves another directory, has a twin, runs a different Serena version, or
+predates a commit or a change to `.serena/project.yml`; restart it with
+`serena up` after a branch switch or pull. Without Serena's launcher, `serena`
+says so and the tree commands still work; `XORCHESTRATE_DEV_SERENA_COMMAND`
+replaces the launch command.
+
+### Keeping trees and scratch space in check
+
+Work trees, clean copies and run directories pile up. `report` shows what is
+there and what can go; `prune` removes only what it can prove safe.
+
+```bash
+python3 -m scripts.worktrees report             # every tree and scratch, run or extra directory
+python3 -m scripts.worktrees report --brief     # one line when something needs attention, else nothing
+python3 -m scripts.worktrees prune              # what prune would do; changes nothing
+python3 -m scripts.worktrees prune --apply
+python3 -m scripts.worktrees scratch new copy   # a marked scratch directory for a clean copy; prints its path
+python3 -m scripts.worktrees scratch rm <path>
+```
+
+`report` judges each tree: `REMOVABLE` when it holds commits of its own that
+are merged into the remote's default branch (or a pull request from it was
+merged there), it is clean, has no stash, is unlocked and nothing works in it;
+`NEEDS_LOOK` with the reason when it is dirty, unpushed, stashed, locked,
+merged but in use, idle for `XORCHESTRATE_DEV_IDLE_DAYS`, or registered without
+its directory, and for any unregistered checkout under the root; `KEEP`
+otherwise, including a fresh tree with no commits yet. `--offline` skips the
+GitHub lookup; `--brief` is always offline, never fails, and counts only
+reclaimable space, so a session-start hook can call it.
+
+`prune --apply` fetches, re-checks each removable tree just before removing it
+the same way `remove` does, drops a missing tree's registration only when it is
+unlocked and its branch tip is on its origin branch (after saving a backup),
+stops servers whose tree is gone, and deletes marked scratch directories older
+than `XORCHESTRATE_DEV_SCRATCH_MAX_AGE_HOURS` and run directories (holding a
+`plan.json`, not a git checkout) under `XORCHESTRATE_DEV_RUN_ROOTS` older than
+`XORCHESTRATE_DEV_RUN_MAX_AGE_DAYS`, when nothing uses them. It never deletes
+an orphan checkout, an unmarked entry or anything under
+`XORCHESTRATE_DEV_EXTRA_ROOTS`, which are listed for information only. A root
+that is `/`, your home directory, or overlaps a checkout or the tool's state is
+refused.

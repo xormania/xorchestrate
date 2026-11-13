@@ -231,7 +231,10 @@ def durable_exchange():
                  "submission": {"submitted": True}, "sequence": 1}
                 for i, (message, peer) in enumerate(((challenge, "grok"), (reply, "codex")))]
     return {"message": challenge, "messages": [challenge, reply], "evidence": [evidence], "sessions": sessions,
-            "observations": observations, "attempts": attempts[:1], "all_attempts": attempts}, expectation
+            "observations": observations, "attempts": attempts[:1], "all_attempts": attempts,
+            "events": [{"seq": 1, "type": "message.created", "record_id": "m1"},
+                       {"seq": 2, "type": "message.created", "record_id": "m2"},
+                       {"seq": 3, "type": "evidence.created", "record_id": "e1"}]}, expectation
 
 
 def test_production_receipt_requires_durable_native_callback_chain():
@@ -330,9 +333,9 @@ def test_successful_transport_does_not_hide_wrong_work_missing_completion_or_uns
     args = {"batch": 0, "failed_jobs": [], "failed_tests": 0}
     common = {"peer": peer, **sessions[peer], "tool": "invoke", "arguments": args, "call_id": "work-call"}
     events.extend([
-        {"seq": 20, "event": "native_tool", **common, "origin": "grok/session/update", "native_actor": peer},
-        {"seq": 21, "event": "tool_called", **common, "callback_actor": peer},
-        {"seq": 22, "event": "work_submitted", **common, "callback_actor": peer, "batch": 0, "answer": {"failed_jobs": [], "failed_tests": 0}},
+        {"seq": 20, "order": {"source": "fixture-store", "seq": 20}, "event": "native_tool", **common, "origin": "grok/session/update", "native_actor": peer},
+        {"seq": 21, "order": {"source": "fixture-store", "seq": 21}, "event": "tool_called", **common, "callback_actor": peer},
+        {"seq": 22, "order": {"source": "fixture-store", "seq": 22}, "event": "work_submitted", **common, "callback_actor": peer, "batch": 0, "answer": {"failed_jobs": [], "failed_tests": 0}},
     ])
     fixture = {"batches": [[{"job": "required", "attempt": 1, "status": "FAIL", "failed_tests": 2}]]}
     run = {"events": events, "sessions": sessions}
@@ -342,8 +345,8 @@ def test_successful_transport_does_not_hide_wrong_work_missing_completion_or_uns
         check_case({"id": "work", "kind": "work", "peer": peer, "batch": 0}, run, fixture)
     with pytest.raises(VerificationFailure, match="native_completion_missing"):
         check_case({"id": "completion", "kind": "completion", "peer": peer}, run, fixture)
-    events.append({"seq": 23, "event": "tool_completed", **common, "callback_actor": peer})
-    events.append({"seq": 24, "event": "activity", "peer": peer, **sessions[peer], "state": "idle", "basis": "native", "native_actor": peer})
+    events.append({"seq": 23, "order": {"source": "fixture-store", "seq": 23}, "event": "tool_completed", **common, "callback_actor": peer})
+    events.append({"seq": 24, "order": {"source": "fixture-store", "seq": 24}, "event": "activity", "peer": peer, **sessions[peer], "state": "idle", "basis": "native", "native_actor": peer})
     # A late submission acknowledgement cannot invalidate actual completion.
     events.append({"seq": 25, "event": "submitted", "peer": peer, **sessions[peer]})
     assert check_case({"id": "completion", "kind": "completion", "peer": peer}, run, fixture)

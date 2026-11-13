@@ -31,7 +31,7 @@ from .composition import plan as check_plan
 from .operator import FINISHED, decide, project
 
 RUN_FIELDS = ("suite", "mode", "config", "brief", "drivers", "families", "shard", "timings", "timeout", "check_timeout",
-              "stories", "max_sessions", "max_turns", "max_tool_calls", "terminal_host")
+              "stories", "max_sessions", "max_turns", "max_tool_calls", "terminal_host", "inventories", "stage")
 PROBE_STORY = "native-handshake"
 
 

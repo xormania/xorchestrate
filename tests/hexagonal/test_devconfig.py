@@ -6,19 +6,27 @@ equals the rendered table, the local file is ignored, and nothing outside the de
 consumers reads developer settings.
 """
 
-import ast
 import json
 import os
 import re
 import shlex
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
 from tests.hexagonal.contracts import devconfig as contract
-from tests.hexagonal.support.devconfig import ROOT, SettingsWorld, devconfig, names_someone
+from tests.hexagonal.support.devconfig import (
+    SettingsWorld,
+    devconfig,
+    load_by_files,
+    names_someone,
+    no_processes,
+    resolved,
+)
 from tests.hexagonal.support.git_repositories import REPOSITORY_NAME, git
+from tests.hexagonal.support.source_scan import ROOT, imports, namespace_uses, tracked
 
 
 @pytest.fixture
@@ -57,6 +65,13 @@ def test_the_table_declares_slice_a_settings_with_their_kinds_defaults_and_secti
     assert {key: declared.get(key) for key in contract.SLICE_A} == contract.SLICE_A
 
 
+def test_the_table_declares_the_test_kit_settings_and_marks_the_evidence_ones():
+    declared = {setting.key: setting for setting in settings()}
+    assert {key: (declared[key].kind, declared[key].default, declared[key].section) if key in declared else None
+            for key in contract.SLICE_C} == contract.SLICE_C
+    assert {setting.key for setting in settings() if setting.evidence} == contract.EVIDENCE_KEYS
+
+
 # Defaults -----------------------------------------------------------------------------------------
 
 @pytest.mark.parametrize("xdg", [False, True], ids=["home", "xdg"])
@@ -81,7 +96,7 @@ def test_scalar_defaults_are_typed_and_unset_defaults_are_none(world):
     for key in ("XORCHESTRATE_DEV_BASE", "XORCHESTRATE_DEV_PROBE_TOOL", "XORCHESTRATE_DEV_PROBE_ARGS"):
         assert config.get(key) is None, key
     assert list(config.warnings) == []
-    assert config.evidence() == {}
+    assert config.evidence() == {key: {"value": "", "source": "default"} for key in contract.EVIDENCE_KEYS}
 
 
 # Precedence ---------------------------------------------------------------------------------------
@@ -169,6 +184,32 @@ def test_path_values_expand_home_and_resolve_relative_to_their_source(world, mon
     assert config.get("XORCHESTRATE_DEV_STATE_DIR") == world.base / "from" / "cwd"
     assert config.get("XORCHESTRATE_DEV_WORKTREE_ROOT") == world.base / "flag" / "cwd"
     assert config.get("XORCHESTRATE_DEV_WORKTREE_ROOT").is_absolute()
+
+
+def test_path_values_are_normalized_but_never_follow_symlinks(world, tmp_path):
+    target = tmp_path / "real" / "python3.12"
+    target.parent.mkdir()
+    target.write_text("")
+    link = world.main / "env" / "bin" / "python"
+    link.parent.mkdir(parents=True)
+    link.symlink_to(target)
+    config = world.load(env=world.env(XORCHESTRATE_DEV_STATE_DIR=link))
+    assert config.get("XORCHESTRATE_DEV_STATE_DIR") == link
+    world.repo_file("XORCHESTRATE_DEV_STATE_DIR=env/lib/../bin/python\n")
+    config = world.load()
+    assert config.get("XORCHESTRATE_DEV_STATE_DIR") == link, "normalized against the file, link kept"
+
+
+def test_get_prints_one_typed_value_or_nothing_and_refuses_an_unknown_key(world):
+    code, output = world.cli("get", "XORCHESTRATE_DEV_SERENA_VERSION")
+    assert (code, output) == (0, "2.1.0\n")
+    world.repo_file("XORCHESTRATE_DEV_PYCACHE_PREFIX=~/cache-here\n")
+    code, output = world.cli("get", "XORCHESTRATE_DEV_PYCACHE_PREFIX")
+    assert (code, output) == (0, f"{world.home / 'cache-here'}\n")
+    code, output = world.cli("get", "XORCHESTRATE_DEV_TESTKIT_PROFILE")
+    assert (code, output) == (0, "\n")
+    code, output = world.cli("get", "XORCHESTRATE_DEV_NO_SUCH_SETTING")
+    assert code == 2 and "UNKNOWN_SETTING" in output, output
 
 
 # The file format ----------------------------------------------------------------------------------
@@ -323,36 +364,18 @@ def test_show_prints_one_line_per_setting_with_its_source(world):
 
 # Neutrality: only declared consumers read developer settings ---------------------------------------
 
-def _tracked(*patterns):
-    out = subprocess.run(["git", "ls-files", "-z", "--", *patterns], cwd=ROOT, capture_output=True, check=True).stdout
-    return [path for path in out.decode().split("\0") if path]
-
-
 def test_no_source_outside_the_declared_consumers_mentions_developer_settings():
-    naming = [path for path in _tracked("xorchestrate/*.py", "scripts/*.py")
+    naming = [path for path in tracked("xorchestrate/*.py", "scripts/*.py")
               if not path.startswith(contract.CONSUMERS)
               and re.search(r"\.devtools\.env|XORCHESTRATE_DEV_", (ROOT / path).read_text(encoding="utf-8"))]
     assert naming == [], naming
 
 
-def _imports(path):
-    tree = ast.parse((ROOT / path).read_text(encoding="utf-8"))
-    names = set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            names.update(alias.name for alias in node.names)
-        elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
-            names.add(node.module)
-        elif isinstance(node, ast.Constant) and isinstance(node.value, str) and node.value.startswith("scripts."):
-            names.add(node.value)
-    return names
-
-
 def test_no_module_outside_the_declared_consumers_imports_the_settings_layer():
-    importing = [path for path in _tracked("xorchestrate/*.py", "scripts/*.py")
+    importing = [path for path in tracked("xorchestrate/*.py", "scripts/*.py")
                  if not path.startswith(contract.CONSUMERS)
                  and any(name == "scripts.devconfig" or name.startswith("scripts.devconfig.")
-                         for name in _imports(path))]
+                         for name in imports(path))]
     assert importing == [], importing
 
 
@@ -364,28 +387,16 @@ def test_only_consumer_roles_may_depend_on_the_settings_role():
 
 
 def test_the_settings_layer_uses_the_standard_library_only_and_names_no_one():
-    import sys
-    sources = _tracked("scripts/devconfig/*.py")
+    sources = tracked("scripts/devconfig/*.py")
     assert sources, "scripts/devconfig has no tracked modules"
     for path in sources:
-        for name in _imports(path):
+        for name in imports(path):
             top = name.split(".")[0]
             assert top in sys.stdlib_module_names or name.startswith("scripts.devconfig"), (path, name)
         text = (ROOT / path).read_text(encoding="utf-8")
         assert not names_someone(text, contract.HOME_PATHS), path
-        assert _namespace_uses(text) == [], (path, _namespace_uses(text))
-
-
-def _namespace_uses(text):
-    """String constants, other than docstrings, that use the name anywhere but the XDG folder or the key prefix."""
-    tree = ast.parse(text)
-    docstrings = {id(node.body[0].value) for node in ast.walk(tree)
-                  if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef)) and node.body
-                  and isinstance(node.body[0], ast.Expr) and isinstance(node.body[0].value, ast.Constant)}
-    allowed = re.compile(rf"{contract.PREFIX}[A-Z0-9_]*|(?<![A-Za-z]){contract.NAMESPACE}(?=/|$)")
-    return [node.value for node in ast.walk(tree)
-            if isinstance(node, ast.Constant) and isinstance(node.value, str) and id(node) not in docstrings
-            and contract.NAMESPACE in allowed.sub("", node.value).lower()]
+        uses = namespace_uses(text, contract.NAMESPACE, contract.PREFIX)
+        assert uses == [], (path, uses)
 
 
 # Review findings: repository discovery, robustness and edge values -----------------------------------
@@ -457,7 +468,12 @@ def test_a_repository_path_that_is_not_a_checkout_is_refused_without_a_traceback
     path = where(world, tmp_path)
     assert world.error(repo=path).code == "NOT_A_REPOSITORY"
     code, output = world.cli("--repo", str(path), "show")
-    assert code == 2 and "NOT_A_REPOSITORY" in output and "Traceback" not in output, (code, output)
+    assert "Traceback" not in output, output
+    if path.is_dir():
+        # show reads files only: a directory outside any repository has settings, just no repository file.
+        assert code == 0 and any(line.startswith("REPO_FILE_SKIPPED: ") for line in output.splitlines()), output
+    else:
+        assert code == 2 and "NOT_A_REPOSITORY" in output, (code, output)
 
 
 def test_without_git_the_repository_cannot_be_found_and_says_so(world, monkeypatch, tmp_path):
@@ -465,8 +481,10 @@ def test_without_git_the_repository_cannot_be_found_and_says_so(world, monkeypat
     empty.mkdir()
     monkeypatch.setenv("PATH", str(empty))
     assert world.error().code == "NOT_A_REPOSITORY"
+    world.repo_file(REPO_VALUE)
     code, output = world.cli("--repo", str(world.main), "show")
-    assert code == 2 and "Traceback" not in output, output
+    assert code == 0 and "Traceback" not in output, output
+    assert "XORCHESTRATE_DEV_SERENA_VERSION=9.9.repo" in output, "show finds the repository file without git"
 
 
 @pytest.mark.parametrize("damage", ["not-utf8", "unreadable"])
@@ -545,4 +563,349 @@ def test_a_settings_file_tracked_by_git_is_refused(world):
     error = world.error()
     assert error.code == "ENV_FILE_TRACKED" and str(path) in str(error.detail), (error.code, error.detail)
     code, output = world.cli("show")
-    assert code == 2 and "ENV_FILE_TRACKED" in output, output
+    # show reads files only, and a tracked file is skipped there rather than refused.
+    assert code == 0 and any(line.startswith("REPO_FILE_SKIPPED: ") for line in output.splitlines()), output
+    assert "injected" not in output, "the tracked file was read"
+
+
+# Discovery by plain file reads: no process, same answers as git ---------------------------------------
+
+SKIPPED = "REPO_FILE_SKIPPED"
+REPO_VALUE = "XORCHESTRATE_DEV_SERENA_VERSION=9.9.repo\n"
+USER_VALUE = "XORCHESTRATE_DEV_SERENA_CONTEXT=user-context\n"
+
+
+def by_files(world, monkeypatch, repo, env=None):
+    with no_processes(monkeypatch):
+        return load_by_files(repo, env=world.env() if env is None else env)
+
+
+def skipped(config):
+    return [warning for warning in config.warnings if warning[0] == SKIPPED]
+
+
+def submodule(world, tmp_path):
+    inner_origin = tmp_path / "inner"
+    git(tmp_path, "init", "-q", "-b", "trunk", inner_origin)
+    (inner_origin / "mod.py").write_text("X = 1\n")
+    git(inner_origin, "add", "-A")
+    git(inner_origin, "commit", "-q", "-m", "inner")
+    git(world.main, "-c", "protocol.file.allow=always", "submodule", "add", "-q", inner_origin, "sub")
+    return world.main / "sub"
+
+
+@pytest.mark.parametrize("where", ["main", "linked", "inside", "submodule"])
+def test_file_discovery_starts_no_process_and_matches_git_discovery(world, monkeypatch, tmp_path, where):
+    repo = {"main": world.main, "linked": world.tree, "inside": world.tree / "pkg"}.get(where)
+    if where == "submodule":
+        repo = submodule(world, tmp_path)
+        world.repo_file("XORCHESTRATE_DEV_SERENA_VERSION=9.9.sub\n", where=repo)
+    world.repo_file(REPO_VALUE)
+    world.user_file(USER_VALUE)
+    files = by_files(world, monkeypatch, repo)
+    assert resolved(files) == resolved(world.load(repo)), where
+    expected = "9.9.sub" if where == "submodule" else "9.9.repo"
+    assert files.get("XORCHESTRATE_DEV_SERENA_VERSION") == expected
+    assert files.source("XORCHESTRATE_DEV_SERENA_VERSION").kind == "repo_file"
+
+
+def _bare_tree(world, tmp_path):
+    bare = tmp_path / "shared.git"
+    git(tmp_path, "clone", "-q", "--bare", world.main, bare)
+    tree = tmp_path / "bare-linked"
+    git(bare, "worktree", "add", "-q", "-b", "elsewhere", tree)
+    return tree
+
+
+def _plain(world, tmp_path):
+    plain = tmp_path / "plain-dir"
+    plain.mkdir()
+    return plain
+
+
+@pytest.mark.parametrize("make", [_bare_tree, _plain], ids=["bare-common-dir", "no-repository"])
+def test_without_a_main_checkout_file_discovery_skips_only_the_repository_file(world, monkeypatch, tmp_path, make):
+    repo = make(world, tmp_path)
+    (repo / ".devtools.env").write_text(REPO_VALUE)
+    world.user_file(USER_VALUE)
+    env = world.env(XORCHESTRATE_DEV_BASE="from-env")
+    try:
+        config = by_files(world, monkeypatch, repo, env)
+    except devconfig("model").DevConfigError as error:
+        pytest.fail(f"file discovery refused instead of skipping the repository file: {error}")
+    assert [(code, line) for code, _, line, _ in skipped(config)] == [(SKIPPED, None)], config.warnings
+    assert config.source("XORCHESTRATE_DEV_SERENA_VERSION").kind == "default"
+    assert config.get("XORCHESTRATE_DEV_SERENA_CONTEXT") == "user-context"
+    assert config.get("XORCHESTRATE_DEV_BASE") == "from-env"
+    assert config.get("XORCHESTRATE_DEV_WORKTREE_ROOT").name == repo.name
+
+
+def assert_repo_file_skipped(config):
+    assert [code for code, *_ in skipped(config)] == [SKIPPED], config.warnings
+    assert config.source("XORCHESTRATE_DEV_SERENA_VERSION").kind == "default", "the skipped file was read"
+
+
+@pytest.mark.parametrize("layout", ["v2", "v3", "split-index"])
+def test_file_discovery_skips_a_tracked_repository_file_whatever_the_index_layout(world, monkeypatch, layout):
+    world.repo_file(REPO_VALUE)
+    git(world.main, "add", "-f", ".devtools.env")
+    if layout == "v3":
+        git(world.main, "update-index", "--index-version", "3")
+    elif layout == "split-index":
+        git(world.main, "update-index", "--split-index")
+        assert list((world.main / ".git").glob("sharedindex.*")), "git did not split the index"
+    try:
+        config = by_files(world, monkeypatch, world.tree)
+    except devconfig("model").DevConfigError as error:
+        pytest.fail(f"a tracked file was refused instead of skipped: {error}")
+    assert_repo_file_skipped(config)
+
+
+def test_file_discovery_reads_an_untracked_file_through_an_index_version_three(world, monkeypatch):
+    world.repo_file(REPO_VALUE)
+    git(world.main, "update-index", "--index-version", "3")
+    assert by_files(world, monkeypatch, world.main).get("XORCHESTRATE_DEV_SERENA_VERSION") == "9.9.repo"
+
+
+def _index_v4(world, tmp_path):
+    git(world.main, "update-index", "--index-version", "4")
+    return world.main
+
+
+def _damaged(world, tmp_path):
+    index = world.main / ".git" / "index"
+    data = index.read_bytes()
+    index.write_bytes(data[:len(data) // 2])
+    return world.main
+
+
+def _sha256(world, tmp_path):
+    repo = tmp_path / "sha256-repo"
+    git(tmp_path, "init", "-q", "--object-format=sha256", "-b", "trunk", repo)
+    (repo / "a.txt").write_text("a\n")
+    git(repo, "add", "a.txt")
+    git(repo, "commit", "-q", "-m", "a")
+    return repo
+
+
+@pytest.mark.parametrize("make", [_index_v4, _damaged, _sha256], ids=["index-v4", "damaged-index", "sha256"])
+def test_an_index_file_discovery_cannot_read_skips_the_repository_file(world, monkeypatch, tmp_path, make):
+    repo = make(world, tmp_path)
+    (repo / ".devtools.env").write_text(REPO_VALUE)
+    try:
+        config = by_files(world, monkeypatch, repo)
+    except devconfig("model").DevConfigError as error:
+        pytest.fail(f"an unreadable index refused instead of skipping the repository file: {error}")
+    assert [code for code, *_ in skipped(config)] == [SKIPPED], config.warnings
+    assert config.source("XORCHESTRATE_DEV_SERENA_VERSION").kind == "default"
+
+
+def test_a_checkout_without_an_index_has_nothing_tracked(world, monkeypatch, tmp_path):
+    repo = tmp_path / "fresh"
+    git(tmp_path, "init", "-q", "-b", "trunk", repo)
+    assert not (repo / ".git" / "index").exists()
+    (repo / ".devtools.env").write_text(REPO_VALUE)
+    config = by_files(world, monkeypatch, repo)
+    assert config.get("XORCHESTRATE_DEV_SERENA_VERSION") == "9.9.repo" and skipped(config) == []
+
+
+def test_show_and_get_outside_a_repository_report_the_skipped_file_and_still_read_the_user_file(
+        world, monkeypatch, tmp_path):
+    plain = tmp_path / "plain-dir"
+    plain.mkdir()
+    (plain / ".devtools.env").write_text(REPO_VALUE)
+    world.user_file(USER_VALUE)
+    with no_processes(monkeypatch):
+        code, output = world.cli("show", cwd=plain)
+    assert code == 0, output
+    lines = [line for line in output.splitlines() if line.startswith(f"{SKIPPED}: ")]
+    assert len(lines) == 1, output
+    assert lines[0].endswith("(no repository); the repository settings file was not read"), lines[0]
+    assert any(line.startswith("XORCHESTRATE_DEV_SERENA_CONTEXT=user-context") for line in output.splitlines())
+    assert any(line.startswith("XORCHESTRATE_DEV_SERENA_VERSION=2.1.0") for line in output.splitlines())
+    with no_processes(monkeypatch):
+        assert world.cli("get", "XORCHESTRATE_DEV_SERENA_CONTEXT", cwd=plain) == (0, "user-context\n")
+
+
+
+# Settings files are trusted only when they belong to the user ----------------------------------------
+
+USER_SKIPPED = "USER_FILE_SKIPPED"
+
+
+def _symlinked(world, path):
+    real = world.base / ("real-" + path.name)
+    real.write_text(path.read_text())
+    real.chmod(0o600)
+    path.unlink()
+    path.symlink_to(real)
+
+
+def _group_writable(world, path):
+    path.chmod(0o620)
+
+
+def _other_writable(world, path):
+    path.chmod(0o602)
+
+
+def _not_a_file(world, path):
+    path.unlink()
+    path.mkdir()
+
+
+UNTRUSTED = {"symlink": _symlinked, "group-writable": _group_writable, "other-writable": _other_writable,
+             "not-a-regular-file": _not_a_file}
+
+
+@pytest.mark.parametrize("change", sorted(UNTRUSTED))
+def test_an_untrusted_repository_file_is_skipped_not_read(world, monkeypatch, change):
+    path = world.repo_file(REPO_VALUE)
+    path.chmod(0o600)
+    UNTRUSTED[change](world, path)
+    assert_repo_file_skipped(by_files(world, monkeypatch, world.tree))
+
+
+@pytest.mark.parametrize("change", sorted(UNTRUSTED))
+def test_an_untrusted_user_file_is_skipped_not_read(world, monkeypatch, change):
+    path = world.user_file(USER_VALUE)
+    path.chmod(0o600)
+    UNTRUSTED[change](world, path)
+    config = by_files(world, monkeypatch, world.main)
+    assert [code for code, *_ in config.warnings if code == USER_SKIPPED] == [USER_SKIPPED], config.warnings
+    assert config.source("XORCHESTRATE_DEV_SERENA_CONTEXT").kind == "default", "the skipped file was read"
+
+
+def test_settings_files_owned_by_someone_else_are_skipped(world, monkeypatch):
+    world.repo_file(REPO_VALUE).chmod(0o600)
+    world.user_file(USER_VALUE).chmod(0o600)
+    someone_else = os.getuid() + 1
+    monkeypatch.setattr(os, "getuid", lambda: someone_else)
+    monkeypatch.setattr(os, "geteuid", lambda: someone_else)
+    config = by_files(world, monkeypatch, world.main)
+    assert {code for code, *_ in config.warnings} >= {SKIPPED, USER_SKIPPED}, config.warnings
+    assert config.source("XORCHESTRATE_DEV_SERENA_VERSION").kind == "default"
+    assert config.source("XORCHESTRATE_DEV_SERENA_CONTEXT").kind == "default"
+
+
+def test_a_repository_file_in_a_writable_git_directory_is_skipped(world, monkeypatch):
+    world.repo_file(REPO_VALUE).chmod(0o600)
+    git_dir = world.main / ".git"
+    git_dir.chmod(0o775)
+    assert_repo_file_skipped(by_files(world, monkeypatch, world.main))
+
+
+def test_an_empty_git_directory_does_not_make_a_repository(world, monkeypatch, tmp_path):
+    shared = tmp_path / "shared"
+    (shared / ".git").mkdir(parents=True)
+    (shared / ".devtools.env").write_text(REPO_VALUE)
+    (shared / ".devtools.env").chmod(0o600)
+    candidate = shared / "cand"
+    candidate.mkdir()
+    assert_repo_file_skipped(by_files(world, monkeypatch, candidate))
+
+
+def test_a_git_pointer_to_a_directory_without_head_does_not_make_a_repository(world, monkeypatch, tmp_path):
+    bogus = tmp_path / "bogus-gitdir"
+    bogus.mkdir()
+    checkout = tmp_path / "pointed"
+    checkout.mkdir()
+    (checkout / ".git").write_text(f"gitdir: {bogus}\n")
+    (checkout / ".devtools.env").write_text(REPO_VALUE)
+    (checkout / ".devtools.env").chmod(0o600)
+    assert_repo_file_skipped(by_files(world, monkeypatch, checkout))
+
+
+# Settings that select an executable or a configuration ---------------------------------------------
+
+EXECUTABLE_KEYS = ("XORCHESTRATE_DEV_TESTKIT_INTERPRETER", "XORCHESTRATE_DEV_TERMINAL_BINARY")
+FILE_KEYS = ("XORCHESTRATE_DEV_NATIVE_CONFIG", "XORCHESTRATE_DEV_TESTKIT_PROFILE")
+
+
+def _good(tmp_path, executable):
+    path = tmp_path / "selected" / "program"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("#!/bin/sh\nexit 0\n")
+    path.chmod(0o700 if executable else 0o600)
+    return path
+
+
+def _missing(tmp_path, executable):
+    return tmp_path / "selected" / "absent"
+
+
+def _directory(tmp_path, executable):
+    path = tmp_path / "selected" / "a-directory"
+    path.mkdir(parents=True)
+    return path
+
+
+def _writable(tmp_path, executable):
+    path = _good(tmp_path, executable)
+    path.chmod(0o770 if executable else 0o660)
+    return path
+
+
+def _link_to_writable(tmp_path, executable):
+    target = _writable(tmp_path, executable)
+    link = tmp_path / "selected" / "link"
+    link.symlink_to(target)
+    return link
+
+
+def _not_executable(tmp_path, executable):
+    return _good(tmp_path, False)
+
+
+UNSAFE = {"missing": _missing, "directory": _directory, "group-writable": _writable,
+          "link-to-group-writable": _link_to_writable}
+
+
+def _unsafe_cases():
+    for key in EXECUTABLE_KEYS + FILE_KEYS:
+        for name in sorted(UNSAFE):
+            yield key, name
+    for key in EXECUTABLE_KEYS:
+        yield key, "not-executable"
+
+
+@pytest.mark.parametrize("key,case", list(_unsafe_cases()))
+def test_an_unsafe_selection_is_refused_naming_the_key_and_the_reason(world, tmp_path, key, case):
+    make = {**UNSAFE, "not-executable": _not_executable}[case]
+    value = make(tmp_path, key in EXECUTABLE_KEYS)
+    error = world.error(env=world.env(**{key: value}))
+    assert error.code == "UNSAFE_SETTING" and key in error.detail, error
+
+
+def test_a_selection_owned_by_someone_else_is_refused(world, tmp_path, monkeypatch):
+    value = _good(tmp_path, True)
+    someone_else = os.getuid() + 1
+    monkeypatch.setattr(os, "getuid", lambda: someone_else)
+    monkeypatch.setattr(os, "geteuid", lambda: someone_else)
+    error = world.error(env=world.env(XORCHESTRATE_DEV_TERMINAL_BINARY=value))
+    assert error.code == "UNSAFE_SETTING" and "XORCHESTRATE_DEV_TERMINAL_BINARY" in error.detail, error
+
+
+@pytest.mark.parametrize("key", EXECUTABLE_KEYS + FILE_KEYS)
+def test_a_safe_selection_is_accepted_through_a_symlink_or_owned_by_root(world, tmp_path, key):
+    good = _good(tmp_path, key in EXECUTABLE_KEYS)
+    link = tmp_path / "link-to-good"
+    link.symlink_to(good)
+    assert world.load(env=world.env(**{key: link})).get(key) == link
+    root_owned = Path("/bin/sh").resolve()
+    if key in EXECUTABLE_KEYS and root_owned.stat().st_uid == 0:
+        assert world.load(env=world.env(**{key: root_owned})).get(key) == root_owned
+
+
+def test_a_selection_that_cannot_be_inspected_is_refused(world, tmp_path):
+    locked = tmp_path / "locked"
+    program = _good(tmp_path, True)
+    locked.mkdir()
+    hidden = locked / "program"
+    program.rename(hidden)
+    locked.chmod(0)
+    try:
+        error = world.error(env=world.env(XORCHESTRATE_DEV_TERMINAL_BINARY=hidden))
+    finally:
+        locked.chmod(0o700)
+    assert error.code == "UNSAFE_SETTING" and "XORCHESTRATE_DEV_TERMINAL_BINARY" in error.detail, error

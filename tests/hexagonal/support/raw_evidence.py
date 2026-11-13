@@ -6,6 +6,7 @@ logic. They never derive expected outcomes from the subject under test.
 from copy import deepcopy
 
 from scripts.verification.model import canonical, digest
+from tests.hexagonal.support.temporal_evidence import StoreOrder
 
 
 class ObservationBuilder:
@@ -22,6 +23,7 @@ class ObservationBuilder:
         self.work_id = work_id
         self.completed_side, self.separator = completed_side, separator
         self.sequence = 0
+        self.order = StoreOrder(raw)
 
     def at(self):
         self.sequence += 1
@@ -45,9 +47,11 @@ class ObservationBuilder:
                    "origin": "adapter", "stale": False, "created_at": stamp,
                    "work_id": self.work_id, "created_by": peer, "observation": observation}
             self.raw["observations"].append(row)
+            self.order.created("native_observation", row)
             records[side] = row
             if side == "requested" and saved is not None:
                 saved["created_at"] = self.at()
+                self.order.created("message" if action == "send_message" else "evidence", saved)
         return records
 
 
@@ -71,9 +75,12 @@ def raw_exchange(kind="exchange"):
                  "destination": {"actor": target}, "recipients": [target], "body": body}
         raw["messages"].append(saved)
         call(peer, "send_message", {"destination": saved["destination"], "body": body}, {"message": deepcopy(saved)}, saved)
-        raw["attempts"].append({"id": "attempt-" + identifier, "message_id": identifier, "recipient": target,
+        attempt = {"id": "attempt-" + identifier, "message_id": identifier, "recipient": target,
             **sessions[target], "status": "submitted", "sequence": 1, "origin": "adapter",
-            "submission": {"submitted": True}, "created_at": at(), "finished_at": at()})
+            "submission": {"submitted": True}, "created_at": at(), "finished_at": at()}
+        raw["attempts"].append(attempt)
+        observations.order.created("delivery_attempt", attempt)
+        observations.order.submitted(attempt)
 
     message("codex", "grok", "challenge", "")
     message("grok", "codex", "reply", "private")
@@ -87,10 +94,22 @@ def raw_exchange(kind="exchange"):
         providers = [{"event": "work_started", "peer": "grok", "at": "2026-10-24T00:00:00+00:00"},
                      {"event": "work_completed", "peer": "grok", "at": "2026-10-24T00:00:59+00:00"}]
     if kind == "busy":
-        call("grok", "invoke", {"capability": "verification/hold", "arguments": {"case_id": "case"}})
+        hold = call("grok", "invoke", {"capability": "verification/hold", "arguments": {"case_id": "case"}})
         providers = [{"event": "hold_started", "peer": "grok", "case_id": "case", "at": "2026-10-24T00:00:00+00:00"},
                      {"event": "hold_finished", "peer": "grok", "case_id": "case", "released": True,
                       "at": "2026-10-24T00:00:07+00:00"}]
+    if providers:
+        order = observations.order
+        started, finished = (order.provider(event) for event in providers)
+        order.place(started, order.events[0])
+        if kind == "busy":
+            # Declare the held invocation around challenge submission. Its late
+            # delivery timestamps remain the original diagnostic fixture values.
+            for side in ("native", "requested"):
+                order.place(order.creation("native_observation", hold[side]["id"]), started)
+            reply = order.creation("message", "reply")
+            order.place(finished, reply)
+            order.place(order.creation("native_observation", hold["completed"]["id"]), finished, after=True)
     case = {"id": "case", "source": "codex", "target": "grok", "kind": kind}
     criteria = {"required_cases": [case, {"id": "audit", "kind": "audit"}]}
     fixture = {"batches": []}

@@ -1,7 +1,9 @@
 rules:
   dangerous-triggers:
-    # These handlers run trusted default-branch code and collect only bounded event evidence.
     ignore:
+      # The trusted queue controller never executes candidate code and revalidates identities before cancellation.
+      - ci-queue.yml:4
+      # These handlers run trusted default-branch code and collect only bounded event evidence.
       - jev-events.yml:85
       - jev-events.yml:94
       - jev.yml:4

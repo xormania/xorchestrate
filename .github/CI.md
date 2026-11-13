@@ -50,12 +50,23 @@ The job also installs the launcher through each offline [install path](../docs/i
 a local git tag and a source directory, and `uv tool run --from <wheel>`) and
 checks the `install_source` each reports, through both `xo` and `xorchestrate`.
 
-CI runs on GitHub-hosted Ubuntu. Pinned actions have read-only repository
+CI runs on GitHub-hosted Ubuntu. Candidate validation uses read-only repository
 permissions. PR open/source/reopen and all edits receive candidate validation;
 eligible deterministic lanes may reuse exact qualified evidence. Static checks
 and both stable required verdicts run even for title/body edits, so the newest
 workflow run can satisfy branch protection. Marking a draft ready preserves its
 existing candidate checks without starting a new run.
+Title/body-only edits share the source candidate's concurrency group without
+cancelling active validation. GitHub coalesces waiting edits into one pending
+run, which qualifies completed source receipts when it starts. A pending
+metadata run with no jobs cannot invalidate those receipts; missing or material
+failed evidence still requires full validation.
+An independent trusted `CI queue cleanup` workflow uses Actions write permission
+to cancel proved older-source runs for the same-repository PR. It rechecks native
+run identities, attempts, the surviving current-head run and canonical source ref
+before each ordinary cancellation. It never executes candidate code or promotes
+cancellation into passing evidence; retained reports separate requests from
+observed run states. Same-head and base-only changes remain untouched.
 Pushes to master and manual runs execute full validation. See
 [PR lifecycle validation](../docs/pr-lifecycle-ci.md) for event handling, original
 evidence links and the `CI_REUSE_ENABLED=false` recovery switch. Selected jobs are:
@@ -256,6 +267,22 @@ The local evaluation and live-health commands remain available. See
 [operational evaluation](../docs/jev-operational.md).
 
 CI neither requests reviews nor merges branches. xor controls those decisions.
+
+## Dependency update pull requests
+
+[Dependabot](dependabot.yml) checks GitHub Actions weekly and groups minor and
+patch version updates in `actions-minor-patch`. Major updates remain individual
+PRs within the existing limit of two open version-update PRs. This adapts
+[UXor's weekly grouping](https://github.com/xormania/uxor/blob/main/.github/dependabot.yml)
+while keeping major upgrades separately reviewable. Every version update waits
+at least seven days after release, then becomes eligible at a scheduled check.
+The group applies only to version updates; security updates have no cooldown.
+See GitHub's [grouping and cooldown options](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference).
+
+Action references stay pinned to commit SHAs. Dependabot uses the corresponding
+release version to classify tagged pins; updates it cannot classify as minor or
+patch remain individual. Grouping reduces PR volume, while CI, the explicit uv
+archive checksum and owner review check whether an update is suitable to merge.
 
 ## Release workflow
 

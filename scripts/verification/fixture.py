@@ -32,10 +32,23 @@ class VerificationProvider:
         self.progress = {}
         self.released = 0
         self.lock = threading.RLock()
+        self.source_id = uuid.uuid4().hex
+        self.ordering_recorder = None
+
+    def bind_ordering(self, recorder):
+        """Record fixture boundaries synchronously before publishing them."""
+        with self.lock:
+            if self.events:
+                raise RuntimeError("Bind ordering before fixture execution")
+            self.ordering_recorder = recorder
 
     def emit(self, event, peer, **value):
         with self.lock:
-            self.events.append({"event": event, "peer": peer, "at": utc(), **deepcopy(value)})
+            observed = {"event": event, "peer": peer, "at": utc(), **deepcopy(value),
+                        "source_id": self.source_id, "source_seq": len(self.events) + 1}
+            if self.ordering_recorder is not None:
+                self.ordering_recorder(deepcopy(observed))
+            self.events.append(observed)
 
     def discover(self):
         def descriptor(name, properties, required):

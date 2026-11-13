@@ -1,53 +1,20 @@
 """Security checks are selectable, candidate-complete, and safe to publish."""
 
 import json
-import subprocess
 
 import pytest
 
 from scripts.testkit import __main__ as cli
 from scripts.testkit import composition
-from scripts.testkit.adapters.evidence import RecordingRunner
-from scripts.testkit.adapters.static import bind_static_report, definitions, prepare_static
-from tests.hexagonal.support.static_checks import ROOT, static_subject, write_source
-
-
-def _git(root, *args):
-    return subprocess.run(("git", *args), cwd=root, capture_output=True, check=True, text=True)
-
-
-def _security_subject(root):
-    """Build a real candidate with clean tracked and nonignored untracked inputs."""
-    root = static_subject(root)
-    write_source(root, "docs/security-control.txt", "tracked control\n")
-    _git(root, "init", "-q")
-    _git(root, "add", ".")
-    _git(root, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "commit", "-qm",
-         "isolated security subject")
-    write_source(root, "scratch/untracked-security.bin", "untracked control\n")
-    return root
-
-
-def _scan_definition(directory):
-    matches = [check for check in definitions(directory=directory, timeout=30) if check.name == "secret-scan"]
-    assert len(matches) == 1, "the shared static adapter must declare one secret-scan check"
-    return matches[0]
-
-
-def _prepare_scan(root, directory, tmp_path):
-    directory.mkdir(parents=True, exist_ok=True)
-    runner = RecordingRunner(directory / "commands")
-    environment = {"PYTHONPATH": str(ROOT), "PYTHONPYCACHEPREFIX": str(tmp_path / "pycache")}
-    prepared, manifest = prepare_static(_scan_definition(directory), root=root, directory=directory,
-                                        runner=runner, env=environment)
-    return prepared, manifest, runner, environment
-
-
-def _run_scan(root, directory, tmp_path):
-    prepared, manifest, runner, environment = _prepare_scan(root, directory, tmp_path)
-    result = runner.run(prepared.argv, cwd=str(root), env=environment, timeout=prepared.timeout)
-    report = json.loads((directory / "secret-scan.json").read_text(encoding="utf-8"))
-    return result, report, manifest, runner
+from scripts.testkit.adapters.static import bind_static_report
+from tests.hexagonal.support.security_checks import (
+    empty_security_subject,
+    prepare_secret_scan,
+    run_secret_scan,
+    secret_scan_runner,
+    security_subject,
+)
+from tests.hexagonal.support.static_checks import write_source
 
 
 def _assert_complete_file_evidence(report, manifest):
@@ -105,10 +72,10 @@ def test_security_and_static_plans_select_the_declared_checks_once(tmp_path):
 
 
 def test_clean_whole_candidate_is_a_passing_complete_control(tmp_path):
-    root = _security_subject(tmp_path / "candidate")
+    root = security_subject(tmp_path / "candidate")
     directory = tmp_path / "evidence"
 
-    result, report, manifest, _ = _run_scan(root, directory, tmp_path)
+    result, report, manifest, _ = run_secret_scan(root, directory, tmp_path)
 
     assert result.exit == 0, result.stderr + result.stdout
     assert report["schema_version"] == 1 and report["status"] == "passed"
@@ -122,12 +89,12 @@ def test_clean_whole_candidate_is_a_passing_complete_control(tmp_path):
 
 @pytest.mark.parametrize("canary", HIGH_SIGNAL_CREDENTIALS)
 def test_secret_scan_detects_high_signal_credentials_without_republishing_them(tmp_path, canary):
-    root = _security_subject(tmp_path / "candidate")
+    root = security_subject(tmp_path / "candidate")
     relative = "scratch/untracked-security.bin"
     (root / relative).write_bytes(b"unrelated prefix\n" + canary.encode() + b"\ninvalid utf8: \xff\n")
     directory = tmp_path / "evidence"
 
-    result, report, manifest, _ = _run_scan(root, directory, tmp_path)
+    result, report, manifest, _ = run_secret_scan(root, directory, tmp_path)
 
     assert result.exit != 0, "a planted high-signal credential must fail the secret scan"
     assert report["schema_version"] == 1 and report["status"] == "failed"
@@ -144,13 +111,13 @@ def test_secret_scan_detects_high_signal_credentials_without_republishing_them(t
 
 
 def test_allow_marker_applies_only_to_its_own_line(tmp_path):
-    root = _security_subject(tmp_path / "candidate")
+    root = security_subject(tmp_path / "candidate")
     relative = "docs/security-control.txt"
     allowed, blocked = _github_token("A"), _github_token("B")
     write_source(root, relative, f'ALLOWED = "{allowed}"  # secret-scan: allow\n')
     allowed_directory = tmp_path / "allowed-evidence"
 
-    result, report, manifest, _ = _run_scan(root, allowed_directory, tmp_path)
+    result, report, manifest, _ = run_secret_scan(root, allowed_directory, tmp_path)
 
     assert result.exit == 0, result.stderr + result.stdout
     assert report["status"] == "passed" and report["findings"] == []
@@ -159,7 +126,7 @@ def test_allow_marker_applies_only_to_its_own_line(tmp_path):
 
     write_source(root, relative, f'ALLOWED = "{allowed}"  # secret-scan: allow\nBLOCKED = "{blocked}"\n')
     blocked_directory = tmp_path / "blocked-evidence"
-    result, report, manifest, _ = _run_scan(root, blocked_directory, tmp_path)
+    result, report, manifest, _ = run_secret_scan(root, blocked_directory, tmp_path)
 
     assert result.exit != 0
     assert report["findings"] == [{"path": relative, "line": 2, "rule": report["findings"][0]["rule"]}]
@@ -169,16 +136,12 @@ def test_allow_marker_applies_only_to_its_own_line(tmp_path):
 
 
 def test_secret_scan_refuses_a_candidate_with_no_selected_files(tmp_path):
-    root = tmp_path / "empty-candidate"
-    root.mkdir()
-    _git(root, "init", "-q")
+    root = empty_security_subject(tmp_path / "empty-candidate")
     directory = tmp_path / "evidence"
-    directory.mkdir()
-    runner = RecordingRunner(directory / "commands")
-    environment = {"PYTHONPATH": str(ROOT), "PYTHONPYCACHEPREFIX": str(tmp_path / "pycache")}
+    runner = secret_scan_runner(directory)
 
     with pytest.raises(ValueError, match="(?i)(no files|empty)"):
-        prepare_static(_scan_definition(directory), root=root, directory=directory, runner=runner, env=environment)
+        prepare_secret_scan(root, directory, tmp_path, runner=runner)
     assert runner.records == [], "empty selection must be refused before launching the scanner"
 
 
@@ -187,11 +150,11 @@ def test_secret_scan_refuses_a_candidate_with_no_selected_files(tmp_path):
     "finding-extra", "finding-incomplete", "finding-unselected",
 ])
 def test_secret_scan_success_requires_complete_bound_structured_evidence(tmp_path, corruption):
-    root = _security_subject(tmp_path / "candidate")
+    root = security_subject(tmp_path / "candidate")
     if corruption.startswith("finding-"):
         write_source(root, "docs/security-control.txt", _github_token() + "\n")
     directory = tmp_path / "evidence"
-    result, report, manifest, _ = _run_scan(root, directory, tmp_path)
+    result, report, manifest, _ = run_secret_scan(root, directory, tmp_path)
     expected_exit = 1 if corruption.startswith("finding-") else 0
     assert result.exit == expected_exit, result.stderr + result.stdout
     path = directory / "secret-scan.json"

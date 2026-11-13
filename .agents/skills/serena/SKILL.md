@@ -24,3 +24,7 @@ Rules that must survive any summary:
   it. Do not commit that change; restore it and report it.
 - Third-party imports do not resolve because the environment lives outside the
   checkout. Do not add one inside it.
+- For symbol tools on a work tree other than the one your session started in,
+  use the optional `python3 -m scripts.worktrees serena` commands (see
+  [work trees and per-tree Serena](../../../docs/agent-workflow.md#work-trees-and-per-tree-serena-optional-tool));
+  your session's own Serena tools only see its start directory.

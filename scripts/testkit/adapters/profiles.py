@@ -28,9 +28,81 @@ from .shard_timings import timing_source
 FIELDS = frozenset({"schema_version", "suite", "mode", "drivers", "families", "shard", "timings", "config", "brief",
                     "timeout", "check_timeout", "run_timeout", "shutdown_grace", "output",
                     "environment", "interpreter", "stories", "max_sessions", "max_turns", "max_tool_calls", "project",
-                    "terminal_host", "keep_after_run"})
+                    "terminal_host", "keep_after_run", "inventories", "stage"})
 PATH_FIELDS = ("config", "brief", "output", "environment", "interpreter", "timings")
 PROJECT_TOOLS = {"rust": ("rustc", "cargo"), "python": ("python3",), "php": ("php", "composer")}
+DEV_OUTPUT = "XORCHESTRATE_DEV_TESTKIT_OUTPUT"
+DEV_PROFILE = "XORCHESTRATE_DEV_TESTKIT_PROFILE"
+DEV_INTERPRETER = "XORCHESTRATE_DEV_TESTKIT_INTERPRETER"
+DEV_NATIVE_CONFIG = "XORCHESTRATE_DEV_NATIVE_CONFIG"
+DEV_TERMINAL_BINARY = "XORCHESTRATE_DEV_TERMINAL_BINARY"
+DEV_SECTION = "testkit"
+
+
+def load_dev(root):
+    """The developer settings for ``root``, or None when the layer or a repository is unavailable.
+
+    Developer settings sit beneath flags and profiles as machine-level defaults; a candidate copy
+    without the layer or outside a repository simply has none. A settings file that is present but
+    invalid is still an error.
+    """
+    try:
+        from scripts.devconfig.loader import load
+        from scripts.devconfig.model import DevConfigError
+    except ImportError:
+        return None
+    try:
+        # File reads only, so doctor and plan never start a process; only the kit's own section is typed,
+        # so a bad value meant for another tool never affects the kit.
+        return load(Path(root), env=os.environ, discovery="files", sections=(DEV_SECTION,))
+    except DevConfigError as error:
+        raise ValueError(f"developer settings: {error.code}: {error.detail}") from None
+
+
+def dev_warnings(dev):
+    """One line per developer-settings warning, for stderr."""
+    if dev is None:
+        return []
+    lines = []
+    for code, path, line, detail in dev.warnings:
+        where = f"{path}:{line}" if path and line else (path or "environment")
+        lines.append(f"developer settings: {code}: {detail} ({where})")
+    return lines
+
+
+def dev_value(dev, key):
+    """A developer setting's value only when something set it; a default never overrides kit behaviour."""
+    if dev is None or dev.source(key).kind == "default":
+        return None
+    return dev.get(key)
+
+
+def dev_record(dev):
+    """The developer settings that shaped a run: set test-kit settings and every evidence setting."""
+    if dev is None:
+        return {}
+    from scripts.devconfig.keys import SETTINGS
+    from scripts.devconfig.model import DevConfigError
+
+    record = {}
+    for setting in SETTINGS:
+        try:
+            source = dev.source(setting.key)
+        except DevConfigError:
+            continue  # a section this consumer did not load
+        if setting.evidence or (setting.section == DEV_SECTION and source.kind != "default"):
+            record[setting.key] = {"value": dev.display(setting.key), "source": source.describe()}
+    skipped = [{"file": path or "", "reason": detail} for code, path, _, detail in dev.warnings
+               if code in ("REPO_FILE_SKIPPED", "USER_FILE_SKIPPED")]
+    if skipped:
+        record["_skipped"] = skipped
+    return record
+
+
+def default_terminal_host(binary):
+    """The product's default host selection with ``binary`` as its executable option."""
+    selection = terminal_selection.parse(None)
+    return {**selection, "options": {**(selection.get("options") or {}), "binary": str(binary)}}
 
 
 def _external(path, root, name):
@@ -48,8 +120,17 @@ def _strings(value, name):
     return list(value)
 
 
-def load_profile(path, *, root, overrides=None):
-    """Validate one profile and resolve paths against its containing directory."""
+def _first_occurrences(value, name):
+    """Nonempty strings, each kept once in the order first given, as the command line's selection is planned."""
+    return _strings(list(dict.fromkeys(value)) if isinstance(value, (tuple, list)) else value, name)
+
+
+def load_profile(path, *, root, overrides=None, dev=None):
+    """Validate one profile and resolve paths against its containing directory.
+
+    ``dev`` (loaded developer settings) fills only fields that neither the profile nor the
+    overrides set: the output directory, the native configuration and the terminal binary.
+    """
     root, path = Path(root).resolve(), Path(path).expanduser().resolve()
     with path.open(encoding="utf-8") as stream:
         source = json.load(stream)
@@ -66,8 +147,15 @@ def load_profile(path, *, root, overrides=None):
               "config": None, "project": None, "brief": str(root / "docs/implementation/owner-brief.md"),
               "timeout": 180, "check_timeout": 600, "run_timeout": None, "shutdown_grace": 10,
               "output": "runs", "environment": "environment", "interpreter": None,
-              "terminal_host": None, "keep_after_run": False,
+              "terminal_host": None, "keep_after_run": False, "inventories": [], "stage": None,
               **source, **overrides}
+    given = set(source) | set(overrides)
+    if "output" not in given and dev_value(dev, DEV_OUTPUT) is not None:
+        values["output"] = str(dev_value(dev, DEV_OUTPUT))
+    if "config" not in given and values["mode"] == "native" and dev_value(dev, DEV_NATIVE_CONFIG) is not None:
+        values["config"] = str(dev_value(dev, DEV_NATIVE_CONFIG))
+    if "terminal_host" not in given and dev_value(dev, DEV_TERMINAL_BINARY) is not None:
+        values["terminal_host"] = default_terminal_host(dev_value(dev, DEV_TERMINAL_BINARY))
     if type(values["schema_version"]) is not int or values["schema_version"] != 1:
         raise ValueError("Unsupported profile schema_version; expected 1")
     if values["suite"] not in SUITES or values["mode"] not in MODES:
@@ -75,6 +163,7 @@ def load_profile(path, *, root, overrides=None):
     values["drivers"] = _strings(values["drivers"], "drivers")
     values["families"] = _strings(values["families"], "families")
     values["stories"] = _strings(values["stories"], "stories")
+    values["inventories"] = _first_occurrences(values["inventories"], "inventories")
     validate_limits(**{name: values[name] for name in ("max_sessions", "max_turns", "max_tool_calls")})
     if values["stories"] and values["suite"] not in {"stories", "all"}:
         raise ValueError("stories require a suite containing stories")
@@ -161,7 +250,7 @@ print(json.dumps({'version':list(sys.version_info[:3]),'virtual':sys.prefix!=sys
     return details
 
 
-def setup(profile_path, *, root, install=True, overrides=None):
+def setup(profile_path, *, root, install=True, overrides=None, dev=None):
     """Create once, preserve existing settings, and install only when requested."""
     root, profile_path = Path(root).resolve(), Path(profile_path).expanduser().resolve()
     _external(profile_path, root, "profile")
@@ -169,10 +258,10 @@ def setup(profile_path, *, root, install=True, overrides=None):
     with (profile_path.parent / (profile_path.name + ".setup.lock")).open("a+b") as lock:
         os.chmod(lock.name, 0o600)
         fcntl.flock(lock, fcntl.LOCK_EX)
-        return _setup(profile_path, root=root, install=install, overrides=overrides)
+        return _setup(profile_path, root=root, install=install, overrides=overrides, dev=dev)
 
 
-def _setup(profile_path, *, root, install, overrides=None):
+def _setup(profile_path, *, root, install, overrides=None, dev=None):
     created = False
     if not profile_path.exists():
         defaults = {"schema_version": 1, "mode": "protocol-fixture", "suite": "all",
@@ -190,10 +279,10 @@ def _setup(profile_path, *, root, install, overrides=None):
     if overrides:
         # Explicit operator selections may update the reusable profile. The
         # application's native config and authentication remain untouched.
-        load_profile(profile_path, root=root, overrides=overrides)
+        load_profile(profile_path, root=root, overrides=overrides, dev=dev)
         source = json.loads(profile_path.read_text(encoding="utf-8"))
         write_json(profile_path, {**source, **overrides})
-    profile = load_profile(profile_path, root=root)
+    profile = load_profile(profile_path, root=root, dev=dev)
     workspace = _external(profile_path.parent / "workspace", root, "workspace")
     workspace.mkdir(parents=True, exist_ok=True, mode=0o700)
     native_config = profile_path.parent / "native.json"
@@ -236,9 +325,9 @@ def _setup(profile_path, *, root, install, overrides=None):
                 "Linux/WSL /proc."]}
 
 
-def doctor(profile_path, *, root, overrides=None):
+def doctor(profile_path, *, root, overrides=None, dev=None):
     """Read-only environment observations; composition owns check readiness."""
-    profile = load_profile(profile_path, root=root, overrides=overrides)
+    profile = load_profile(profile_path, root=root, overrides=overrides, dev=dev)
     observations = []
     interpreter = profile["interpreter"]
     try:
@@ -293,8 +382,11 @@ def doctor(profile_path, *, root, overrides=None):
             "profile": profile, "readiness": observations, "authentication": "not probed"}
 
 
-def bootstrap(argv=None, *, root=None):
-    """Select a configured interpreter before importing the application CLI."""
+def bootstrap(argv=None, *, root=None, dev=None):
+    """Select a configured interpreter before importing the application CLI.
+
+    Without --profile or --from, a profile from the developer settings selects it.
+    """
     argv = list(sys.argv[1:] if argv is None else argv)
     root = Path(root or Path(__file__).resolve().parents[3]).resolve()
     if sys.version_info < (3, 12):
@@ -314,13 +406,20 @@ def bootstrap(argv=None, *, root=None):
         elif argument.startswith("--from="):
             source_run = argument.split("=", 1)[1]
     action = argv[0] if argv else None
+    controls = {"status", "watch", "attach", "wait", "stop", "close", "collect", "verify"}
+    if profile_path is None and source_run is None and action not in controls | {"stories"}:
+        dev = load_dev(root) if dev is None else dev
+        for line in dev_warnings(dev):
+            print(line, file=sys.stderr)
+        configured = dev_value(dev, DEV_PROFILE)
+        profile_path = None if configured is None else str(configured)
     interpreter = None
     if profile_path is not None and action != "setup":
-        profile = load_profile(profile_path, root=root)
+        profile = load_profile(profile_path, root=root, dev=dev)
         interpreter = profile["interpreter"]
         if action == "doctor" and not Path(interpreter).is_file():
             interpreter = None
-    elif action in {"status", "watch", "attach", "wait", "stop", "close", "collect", "verify"}:
+    elif action in controls:
         source_run = next((argument for argument in argv[1:] if not argument.startswith("-")), None)
     if interpreter is None and source_run is not None:
         saved = json.loads((Path(source_run).expanduser().resolve() / "plan.json").read_text(encoding="utf-8"))
@@ -328,6 +427,13 @@ def bootstrap(argv=None, *, root=None):
         if not isinstance(interpreter, str) or not interpreter:
             raise ValueError("Saved run plan does not identify its configured interpreter")
         _external(interpreter, root, "saved interpreter")
+    if (interpreter is None and profile_path is None and source_run is None
+            and action in {"run", "start", "plan", "doctor", "setup"}):
+        # Without a profile or a saved run, a fresh command runs under the configured interpreter.
+        configured = dev_value(dev, DEV_INTERPRETER)
+        if configured is not None:
+            _external(configured, root, "interpreter")
+            interpreter = str(configured)
     if interpreter is not None:
         if not Path(interpreter).is_file():
             raise ValueError("Profile environment is unavailable; run scripts/proof.sh setup --profile PATH")

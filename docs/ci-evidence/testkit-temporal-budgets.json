@@ -1,0 +1,181 @@
+{
+  "purpose": "Classified harness observation budgets, clamped polling sleeps, exact safe-conflict retries and recorded opt-in timeout scaling.",
+  "base_commit": "e2511f6",
+  "test_first_commits": [
+    "c62d4b8",
+    "65ad81a"
+  ],
+  "implementation_commit": "ded9e7a74ee0107abbdc2bf0945a637f38618b7f",
+  "implementation_tree": "c6a63f07d6b0ed2942275f82d359481b16075b71",
+  "execution_binding": "Validation ran with the complete implementation working tree before its commit. These unchanged source hashes and the captured candidate content identity bind that evidence; this receipt was added afterwards.",
+  "source_sha256": {
+    "scripts/testkit/waits.py": "0b9c6c2c67994b43fd605cb08036a8e1f10ea60b1f2ac2a91b7ec066ecf5c834",
+    "scripts/testkit/composition.py": "ba7f75a7134e925a241bdc5079d332ea3044f302c623c0057395d386a89c9cf0",
+    "scripts/testkit/adapters/clock.py": "a6f43a69220127216030d28a69d5c2317c997d6ec7dcf0d8d0fca9f0f5b8f64a",
+    "tests/hexagonal/support/native.py": "b428315ad0c3e1f01874034845274a0e9c72aa4934f170dc5ab261d6899694f2",
+    "tests/hexagonal/support/temporal_waits.py": "a33ac2c8bfbae447e355c43e8fa36e6eb3abba16977fa11177a22389f9c18392",
+    "tests/hexagonal/test_testkit_temporal_waits.py": "d9ebc9178b6194b7260c0a02dbf033e12871d41a1e4a55b14695d8e8ea8f2427",
+    "tests/hexagonal/test_claude_sessions.py": "29122a224ef8ea03720b19be054c0827c04c472e30eb272e14a60f3eb7236bc5",
+    "contracts/hexagonal.json": "e3b87b3e484e94fa6fef953d042c3a564054ac4be16944ff4c0c4fde727ef7c0",
+    "contracts/testing.json": "8424eedbd0a10598e9c157c50a10d08ad061bdd7c2e7c0cad099b825d5e3af8a"
+  },
+  "candidate_content_sha256": "e529226fa83266d67ea99a460ad5ad3e9dbfea3627301da798b242f466d573bb",
+  "runtime": {
+    "python": "3.12.16",
+    "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+    "environment": "Work host; this does not measure xor WSL2 or vendor-authenticated harnesses"
+  },
+  "predecessor": {
+    "inventory_sha256": "434e62d363faceb5cc95d38666bb055199b58a0727c172fa99d4c52b293e56e7",
+    "exit_status": 1,
+    "outcomes": {
+      "deselected": 55,
+      "passed": 4,
+      "failed": 2
+    },
+    "failed": [
+      "tests/hexagonal/test_testkit_temporal_waits.py::test_native_wait_clamps_sleep_to_remaining_budget",
+      "tests/hexagonal/test_testkit_temporal_waits.py::test_native_wait_does_not_sleep_after_observation_consumes_budget"
+    ],
+    "skipped": [],
+    "scope": "Two new tests using the old helper signature plus its four existing safe-conflict/unsafe-error controls; the old helper remains from e2511f6.",
+    "command": "python -m pytest -p no:cacheprovider tests/hexagonal/test_testkit_temporal_waits.py tests/hexagonal/test_claude_sessions.py -k \"test_native_wait_clamps_sleep_to_remaining_budget or test_native_wait_does_not_sleep_after_observation_consumes_budget or test_wait_for\"",
+    "detected": [
+      {
+        "assertion": "NATIVE_WAIT_CLAMPS_REMAINING_BUDGET",
+        "observed": "Old sleeps [0.01,0.01,0.01] exceed 0.025; expected [0.01,0.01,0.005]."
+      },
+      {
+        "assertion": "NATIVE_WAIT_RECHECKS_BUDGET_AFTER_OBSERVATION",
+        "observed": "A false predicate consumes 0.03 of a 0.025 allowance; old helper sleeps 0.01 again; expected no sleep."
+      }
+    ],
+    "junit_sha256": "00de9ae69cfb008a42d2a7e8cbbaca7ac6e4f7195710364cb0a54aba440c2657"
+  },
+  "fixture_correction": {
+    "initial_attempt": "59 passed, 2 failed: Conflict constructor normalizes truthy retry flags to bool before helper observation. This was a test-fixture issue, not a changed product requirement.",
+    "correction": "65ad81a constructs the Conflict then supplies malformed details to test the existing exact-True guard. Implementation guard is unchanged."
+  },
+  "timing_suite": {
+    "inventory_sha256": "e9a26d8ad3ffcddda90bb1ec58ce83ec47e710c16f7a60f54e7d5531970dfa8d",
+    "exit_status": 0,
+    "outcomes": {
+      "passed": 41
+    },
+    "failed": [],
+    "skipped": [],
+    "command": "python -m pytest -p no:cacheprovider tests/hexagonal/test_testkit_temporal_waits.py -q",
+    "junit_sha256": "0afb2b1e1cb0d2fd088599b8357f00d842a7ad7a8a99f71a3eecd4676a872ef8"
+  },
+  "scale_fault": {
+    "classification": "detected",
+    "mutation_applied": true,
+    "mutation": {
+      "new": "return self.scale",
+      "old": "return self.scale if self.classification == \"harness_allowance\" else 1.0",
+      "path": "scripts/testkit/waits.py"
+    },
+    "target": "tests.hexagonal.test_testkit_temporal_waits::test_budget_scaling_is_confined_to_harness_allowances[product_guarantee-1]",
+    "expected_diagnostic": "ONLY_HARNESS_ALLOWANCES_SCALE",
+    "unaffected": [
+      "tests.hexagonal.test_testkit_temporal_waits::test_budget_scaling_is_confined_to_harness_allowances[harness_allowance-3]"
+    ],
+    "candidate_content_sha256": "e529226fa83266d67ea99a460ad5ad3e9dbfea3627301da798b242f466d573bb",
+    "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+    "reproduction": "scripts.verification.__main__.calibrate with the recorded mutation, target and unaffected selectors; uses shared candidate snapshots, command receipts and assertion observer.",
+    "results": {
+      "control": {
+        "exit_status": 0,
+        "command": [
+          "/workspace/scratch/ab325f7a673c/timing-validation-env/bin/python",
+          "-m",
+          "pytest",
+          "-p",
+          "_xorchestrate_calibration_observer",
+          "-q",
+          "--tb=short",
+          "tests/hexagonal/test_testkit_temporal_waits.py::test_budget_scaling_is_confined_to_harness_allowances[product_guarantee-1]",
+          "tests/hexagonal/test_testkit_temporal_waits.py::test_budget_scaling_is_confined_to_harness_allowances[harness_allowance-3]",
+          "--junitxml=/workspace/scratch/ab325f7a673c/timing-budget-scale-calibration/control.xml"
+        ],
+        "stdout_sha256": "471c77f65875e4c272e08d0f1104f654c2ee63bed8cefdd055594fbb60385d29",
+        "stdout": "..                                                                       [100%]\n2 passed in 0.10s\n"
+      },
+      "mutant": {
+        "exit_status": 1,
+        "command": [
+          "/workspace/scratch/ab325f7a673c/timing-validation-env/bin/python",
+          "-m",
+          "pytest",
+          "-p",
+          "_xorchestrate_calibration_observer",
+          "-q",
+          "--tb=short",
+          "tests/hexagonal/test_testkit_temporal_waits.py::test_budget_scaling_is_confined_to_harness_allowances[product_guarantee-1]",
+          "tests/hexagonal/test_testkit_temporal_waits.py::test_budget_scaling_is_confined_to_harness_allowances[harness_allowance-3]",
+          "--junitxml=/workspace/scratch/ab325f7a673c/timing-budget-scale-calibration/mutant.xml"
+        ],
+        "stdout_sha256": "5f75289ef4c6ff142e9f8f915f7976885de85acff527ea463fddffb1203c0025",
+        "stdout": "F.                                                                       [100%]\n=================================== FAILURES ===================================\n__ test_budget_scaling_is_confined_to_harness_allowances[product_guarantee-1] __\ntests/hexagonal/test_testkit_temporal_waits.py:65: in test_budget_scaling_is_confined_to_harness_allowances\n    assert budget.effective_scale == expected_scale, \"ONLY_HARNESS_ALLOWANCES_SCALE\"\nE   AssertionError: ONLY_HARNESS_ALLOWANCES_SCALE\nE   assert 3 == 1\nE    +  where 3 = WaitBudget(timeout=0.5, classification='product_guarantee', scale=3).effective_scale\n=========================== short test summary info ============================\nFAILED tests/hexagonal/test_testkit_temporal_waits.py::test_budget_scaling_is_confined_to_harness_allowances[product_guarantee-1]\n1 failed, 1 passed in 0.13s\n"
+      }
+    }
+  },
+  "native_integration": {
+    "inventory_sha256": "7af0df901c471c3ac88130541b3573a0841d36337f02d67818eb55863a8d405d",
+    "exit_status": 1,
+    "outcomes": {
+      "passed": 99,
+      "failed": 8,
+      "skipped": 1
+    },
+    "failed": [
+      "tests/hexagonal/test_managed_terminals.py::test_detached_viewer_can_reconnect_without_restarting_native_process",
+      "tests/hexagonal/test_managed_terminals.py::test_existing_claude_launcher_keeps_hook_and_mcp_callbacks_when_using_owned_pty",
+      "tests/hexagonal/test_managed_terminals.py::test_native_prompt_and_input_have_controlling_terminal_and_leave_protocol_streams_clean",
+      "tests/hexagonal/test_managed_terminals.py::test_wrong_owner_or_token_cannot_attach_to_an_owned_native_terminal[boot_id]",
+      "tests/hexagonal/test_managed_terminals.py::test_wrong_owner_or_token_cannot_attach_to_an_owned_native_terminal[pid]",
+      "tests/hexagonal/test_managed_terminals.py::test_wrong_owner_or_token_cannot_attach_to_an_owned_native_terminal[started]",
+      "tests/hexagonal/test_managed_terminals.py::test_wrong_owner_or_token_cannot_attach_to_an_owned_native_terminal[token]",
+      "tests/hexagonal/test_managed_terminals.py::test_wrong_owner_or_token_cannot_attach_to_an_owned_native_terminal[uid]"
+    ],
+    "skipped": [
+      "tests/hexagonal/test_managed_terminals.py::test_public_attach_reaches_nested_native_prompt_and_detaches_without_stopping_it"
+    ],
+    "command": "python -m pytest -p no:cacheprovider tests/hexagonal/test_testkit_temporal_waits.py tests/hexagonal/test_claude_sessions.py tests/hexagonal/test_external_bridge.py tests/hexagonal/test_managed_terminals.py tests/hexagonal/test_session_resume.py tests/hexagonal/test_native_producer_capture.py tests/hexagonal/test_native_completion_state.py -q",
+    "junit_sha256": "18c237f266b40d03e8f483fbf9188d9506c8cd0a222afb0600daad7a10fa14ab",
+    "limitations": "Eight managed-terminal setup failures: AF_UNIX socket creation raises PermissionError [Errno 1] Operation not permitted, including downstream Claude PTY readiness. One terminal-host test skips without tmux. These are retained failures/unavailable execution, not passes; hosted terminal evidence remains required."
+  },
+  "static": {
+    "command": "python -m scripts.testkit run --suite static --output <external directory>",
+    "status": "passed",
+    "candidate_integrity": {
+      "actual": "e529226fa83266d67ea99a460ad5ad3e9dbfea3627301da798b242f466d573bb",
+      "changed_paths": [],
+      "deleted": [],
+      "expected": "e529226fa83266d67ea99a460ad5ad3e9dbfea3627301da798b242f466d573bb",
+      "passed": true
+    },
+    "checks": [
+      {
+        "name": "ruff",
+        "status": "passed",
+        "effective_input_sha256": "0269f93bd670da814db48bad216a4df67313a18a2d93c0bd97660cb11052dc30"
+      },
+      {
+        "name": "syntax",
+        "status": "passed",
+        "effective_input_sha256": "8b7edd4b42cfbbf670db8488ac64b1fc7724e7dd5b1b1f951e31dde141ec9ec8"
+      },
+      {
+        "name": "architecture",
+        "status": "passed",
+        "effective_input_sha256": "cb7e89447664516e1032137358dc0e8ea25e4b8d332a7d665a835838a48e2a83"
+      }
+    ]
+  },
+  "known_limits": [
+    "Only the shared native observation helper applies XO_TEST_TIMEOUT_SCALE; no claim that all test deadlines are migrated.",
+    "A running predicate is not preempted; a late truthy result remains accepted. Product latency assertions need independent measurement.",
+    "Injected time controls the polling loop only. Native I/O remains real and the enclosing command provides its own timeout."
+  ]
+}
