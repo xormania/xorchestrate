@@ -502,6 +502,11 @@ def test_operational_sink_reference_detection_does_not_scan_opaque_adapter_data(
     }) == [], "ONLY_DECLARED_OPERATIONAL_SINK_SELECTIONS_CAN_BE_DISCLOSED_AS_CODE"
     assert repository_references({"telemetry": {"adapter": "custom.collector:factory", "options": opaque}}) == [
         {"where": "telemetry", "kind": "module", "adapter": "custom.collector:factory"}]
+    assert repository_references({"telemetry": {"adapter": "local", "options": {"operational": {"sink": {
+        "adapter": "projectsignals:sink", "options": {name: {"adapter": "business.payload:not_a_factory"}
+                                                       for name in ("session", "corpus", "artifacts")}}}}}}) == [
+        {"where": "telemetry.options.operational.sink", "kind": "module", "adapter": "projectsignals:sink"}], \
+        "SINK_FACTORY_OPTIONS_ARE_OPAQUE_AND_CANNOT_DECLARE_MORE_ADAPTERS"
 
 
 def test_a_companion_inside_a_project_is_refused_or_reported(project, tmp_path):
