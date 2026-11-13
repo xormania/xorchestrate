@@ -137,8 +137,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   case. Calibrated checks follow one standard: an UPPER_SNAKE ID asserted at one
   site, with `refusal(call, code)` for refusal guarantees. Three native
   diagnostics are renamed to UPPER_SNAKE.
-- The recovery area's planted faults are calibrated at `ci` by a `recovery`
-  inventory: thirteen cases, five credited in their declared recovery contract.
+- The recovery area's planted faults are calibrated by a `recovery` inventory
+  registered at the `manual` stage: thirteen cases, five credited in their
+  declared recovery contract.
 - Jev now asks evidence-addressed atomic questions at the source stage and adds
   optional post-test guarantee support and failure triage. Current candidate and
   lane identity, executed inventories and exact failure cases bind the advice;
