@@ -7,6 +7,7 @@ discovery never constructs a collector or changes its configuration.
 from copy import deepcopy
 
 from ..model import Capability, OrchestrationError
+from ..outcomes import before_effect
 from ..schema import validate
 from ..telemetry_actions import TELEMETRY_OPERATIONS
 
@@ -40,14 +41,15 @@ class TelemetryProvider:
                 for name in self._operations]
 
     def invoke(self, name, arguments, context):
-        if name not in self._operations:
-            raise OrchestrationError("Telemetry operation is not exposed by this provider.", "not_found")
-        validate(arguments, TELEMETRY_OPERATIONS[name].input_schema)
-        actor = context.get("actor") if isinstance(context, dict) else None
-        if not isinstance(actor, str) or not actor:
-            raise OrchestrationError("Telemetry requires the authenticated caller context.", "invalid_arguments")
-        if self._service is None:
-            raise OrchestrationError("Telemetry service has not been bound.", "telemetry_unavailable")
+        with before_effect():
+            if name not in self._operations:
+                raise OrchestrationError("Telemetry operation is not exposed by this provider.", "not_found")
+            validate(arguments, TELEMETRY_OPERATIONS[name].input_schema)
+            actor = context.get("actor") if isinstance(context, dict) else None
+            if not isinstance(actor, str) or not actor:
+                raise OrchestrationError("Telemetry requires the authenticated caller context.", "invalid_arguments")
+            if self._service is None:
+                raise OrchestrationError("Telemetry service has not been bound.", "telemetry_unavailable")
         return self._service.invoke(name, deepcopy(arguments), actor)
 
     def close(self):

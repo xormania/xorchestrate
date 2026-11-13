@@ -7,6 +7,7 @@ operation before calling these methods. Views retain per-resource authorization.
 """
 
 from .model import OrchestrationError
+from .outcomes import before_effect
 from .telemetry import TelemetryViews, dispatch_pressure, record_observation
 from .telemetry_actions import TELEMETRY_OPERATIONS
 
@@ -47,10 +48,11 @@ class TelemetryService:
         if name not in TELEMETRY_OPERATIONS:
             raise OrchestrationError("Unknown telemetry operation.", "not_found")
         authority = self._authority()
-        context = self._context(actor, arguments)
-        self._authorize("telemetry_" + name, context)
-        with self._store.transaction() as tx:
-            self._verify_context(tx, context)
+        with before_effect():
+            context = self._context(actor, arguments)
+            self._authorize("telemetry_" + name, context)
+            with self._store.transaction() as tx:
+                self._verify_context(tx, context)
         if name == "report":
             return self._report(arguments, actor, context)
         result = getattr(self, name)(arguments, actor)

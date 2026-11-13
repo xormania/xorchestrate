@@ -7,13 +7,6 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ## Unreleased
 
-### Added
-
-- A selectable `telemetry` capability provider exposes authorized queries, bundle
-  operations and caller reports through ordinary discovery and invocation.
-  Capture, storage and exporters remain separately configured. Legacy telemetry
-  actions delegate to the same service. See [telemetry operations](docs/telemetry.md#operations).
-
 ### Changed
 
 - Capability invocation supports trusted `query` and `receipt` execution policies.
@@ -152,6 +145,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Added
 
+- A selectable `telemetry` capability provider exposes authorized queries, bundle
+  operations and caller reports through ordinary discovery and invocation.
+  Capture, storage and exporters remain separately configured. Legacy telemetry
+  actions delegate to the same service. See [telemetry operations](docs/telemetry.md#operations).
 - The test kit adds a focused `--suite security` view and candidate-complete,
   redacted secret scanning. The existing static suite and CI lane run it once;
   `contracts/security.json` owns detection policy and same-line
@@ -460,6 +457,11 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Upgrade notes
 
+- **Telemetry provider:** opt in with `providers.<name>.adapter: telemetry`;
+  `options.operations` optionally limits its exposed operations. Existing capture
+  configuration and legacy telemetry actions keep their meaning. No corpus or
+  bundle migration is needed. Explicit source filters must include `telemetry`
+  for caller reports.
 - **Capability execution:** the optional top-level `capability_execution` section
   selects exact provider/capability policies; installed providers may supply
   defaults through `execution_policies()`. Existing providers remain journaled.

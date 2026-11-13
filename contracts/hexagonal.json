@@ -20,7 +20,8 @@
         "xorchestrate",
         "xorchestrate.model",
         "xorchestrate.ports",
-        "xorchestrate.provider_results"
+        "xorchestrate.provider_results",
+        "xorchestrate.outcomes"
       ],
       "allowed_roles": [
         "foundation"
@@ -57,7 +58,6 @@
         "xorchestrate.effects",
         "xorchestrate.exchange",
         "xorchestrate.lifecycles",
-        "xorchestrate.outcomes",
         "xorchestrate.pr",
         "xorchestrate.schema",
         "xorchestrate.session_lifecycle",
