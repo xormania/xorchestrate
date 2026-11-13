@@ -11,11 +11,13 @@ instead of breaking collection.
 """
 
 import contextlib
+import dataclasses
 import importlib
 import io
 import json
 import os
 import signal
+import socket
 import threading
 import uuid
 from dataclasses import dataclass, field
@@ -44,18 +46,52 @@ def tool(name=""):
     return importlib.import_module("scripts.worktrees" + ("." + name if name else ""))
 
 
+IDENTITY_FIELDS = frozenset({"argv", "start_time"})
+"""Fields that identify a recorded server's process (agreed with the implementer): the spawned argv and the
+process start time (``/proc/<pid>/stat`` field 22). Before the tool records them they are left out, so an
+identity test fails on its own assertion instead of a constructor error."""
+
+
+def build(cls, **values):
+    """``cls(**values)``, leaving out identity fields that ``cls`` does not declare yet."""
+    declared = {item.name for item in dataclasses.fields(cls)}
+    return cls(**{name: value for name, value in values.items()
+                  if name in declared or name not in IDENTITY_FIELDS})
+
+
+def server_argv(tree, port):
+    return ["serena", "start-mcp-server", "--project", str(tree), "--port", str(port)]
+
+
 class RecordingGit:
-    """The tool's real git adapter, with every argument list kept for inspection."""
+    """The tool's real git adapter, with every argument list kept for inspection.
+
+    ``fail`` maps an argument prefix to stderr text: a matching call raises the tool's GitError
+    without running. ``after`` maps a prefix to a callable run after a matching call succeeded.
+    """
 
     def __init__(self, events):
         self.inner = tool("adapters.git").SubprocessGit()
         self.calls = []
         self.events = events
+        self.fail = {}
+        self.after = {}
+
+    @staticmethod
+    def _matches(args, prefix):
+        return [str(word) for word in args[:len(prefix)]] == list(prefix)
 
     def run(self, args, cwd):
         self.calls.append(list(args))
         self.events.append(("git", *map(str, args)))
-        return self.inner.run(args, cwd)
+        for prefix, stderr in self.fail.items():
+            if self._matches(args, prefix):
+                raise tool("ports").GitError([str(arg) for arg in args], 128, stderr)
+        output = self.inner.run(args, cwd)
+        for prefix, hook in self.after.items():
+            if self._matches(args, prefix):
+                hook()
+        return output
 
 
 class FakeClock:
@@ -73,37 +109,71 @@ class FakeClock:
 
 
 class FakeProcessTable:
-    """Processes the tests declare; signals only ever reach these records."""
+    """Processes the tests declare; signals only ever reach these records.
 
-    def __init__(self, events):
+    ``ignore_term``: pids that survive SIGTERM. ``zombie_on_term``: pids that become zombies on SIGTERM,
+    still listed (as /proc lists them) but not alive. ``linger``: pid to seconds on the clock a pid
+    takes to die after SIGKILL; ``ignore_kill``: pids that never die.
+    """
+
+    def __init__(self, events, clock=None):
         self.events = events
+        self.clock = clock
         self.procs = {}
         self.signals = []
         self.ignore_term = set()
+        self.zombie_on_term = set()
+        self.zombies = set()
+        self.linger = {}
+        self.ignore_kill = set()
+        self.dying = {}
         self.on_exit = {}
 
-    def add(self, pid, *, ppid=1, pgid=None, cwd="/", argv=(), open_paths=()):
-        self.procs[pid] = tool("model").Proc(pid=pid, ppid=ppid, pgid=pid if pgid is None else pgid, cwd=str(cwd),
-                                             argv=tuple(map(str, argv)), open_paths=tuple(map(str, open_paths)))
+    def add(self, pid, *, ppid=1, pgid=None, cwd="/", argv=(), open_paths=(), start_time=None):
+        self.procs[pid] = build(tool("model").Proc, pid=pid, ppid=ppid, pgid=pid if pgid is None else pgid,
+                                cwd=str(cwd), argv=tuple(map(str, argv)), open_paths=tuple(map(str, open_paths)),
+                                start_time=start_time)
+        self.zombies.discard(pid)
         return self.procs[pid]
 
     def kill(self, pid):
+        self.zombies.discard(pid)
+        self.dying.pop(pid, None)
         if self.procs.pop(pid, None) is not None and pid in self.on_exit:
             self.on_exit.pop(pid)()
 
+    def _settle(self):
+        if self.clock is None:
+            return
+        for pid, when in list(self.dying.items()):
+            if self.clock.now() >= when:
+                self.kill(pid)
+
     def processes(self):
+        self._settle()
         return list(self.procs.values())
 
     def signal_group(self, pgid, sig):
         self.signals.append((pgid, sig))
         self.events.append(("signal", pgid, sig))
         for proc in [proc for proc in self.procs.values() if proc.pgid == pgid]:
+            if proc.pid in self.zombies:
+                continue
             if sig == signal.SIGTERM and proc.pid in self.ignore_term:
+                continue
+            if sig == signal.SIGTERM and proc.pid in self.zombie_on_term:
+                self.zombies.add(proc.pid)
+                continue
+            if sig == signal.SIGKILL and proc.pid in self.ignore_kill:
+                continue
+            if sig == signal.SIGKILL and proc.pid in self.linger:
+                self.dying.setdefault(proc.pid, self.clock.now() + self.linger[proc.pid])
                 continue
             self.kill(proc.pid)
 
     def alive(self, pid):
-        return pid in self.procs
+        self._settle()
+        return pid in self.procs and pid not in self.zombies
 
     def groups_signalled(self, sig=None):
         return [pgid for pgid, sent in self.signals if sig is None or sent == sig]
@@ -209,6 +279,61 @@ class FakeMcpServer:
         self.http.server_close()
 
 
+class RawEndpoint:
+    """A local TCP listener on ``port`` that misbehaves as an MCP endpoint.
+
+    ``hang``: accepts (through the kernel backlog) and never replies. ``reply``: reads one request and
+    sends ``reply`` bytes verbatim, then closes, whatever it promised.
+    """
+
+    def __init__(self, port, reply=None):
+        self.reply = reply
+        self.listener = socket.create_server(("127.0.0.1", port), backlog=16)
+        self.held = []
+        self.stopped = False
+        if reply is not None:
+            self.thread = threading.Thread(target=self._serve, daemon=True)
+            self.thread.start()
+
+    def _serve(self):
+        while not self.stopped:
+            try:
+                connection, _ = self.listener.accept()
+            except OSError:
+                return
+            with contextlib.suppress(OSError):
+                connection.settimeout(5)
+                data = b""
+                while b"\r\n\r\n" not in data:
+                    chunk = connection.recv(65536)
+                    if not chunk:
+                        break
+                    data += chunk
+                connection.sendall(self.reply)
+            with contextlib.suppress(OSError):
+                connection.close()
+
+    def stop(self):
+        if self.stopped:
+            return
+        self.stopped = True
+        with contextlib.suppress(OSError):
+            self.listener.close()
+
+
+def truncated_reply(sent=10, promised=100):
+    """HTTP headers promising ``promised`` body bytes, then only ``sent`` of them."""
+    return (f"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {promised}\r\n"
+            "Connection: close\r\n\r\n").encode() + b"{" * sent
+
+
+def json_reply(payload):
+    """A complete HTTP response whose JSON body is ``payload`` (any JSON value)."""
+    body = json.dumps(payload).encode()
+    return (f"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {len(body)}\r\n"
+            "Mcp-Session-Id: raw\r\nConnection: close\r\n\r\n").encode() + body
+
+
 ADDRESS_IN_USE = "ERROR: [Errno 98] error while attempting to bind on address ('127.0.0.1', {port}): address already in use"
 CRASH_TEXT = "Traceback (most recent call last):\nRuntimeError: planted language server crash"
 
@@ -217,8 +342,13 @@ class FakeLauncher:
     """Starts nothing real. Each spawn follows the next scripted behaviour (default ``serve``):
 
     ``serve`` answers MCP on the argv's port; ``address_in_use`` and ``exit`` log and die at once;
-    ``silent`` stays alive and never answers; ``missing`` raises FileNotFoundError.
+    ``silent`` stays alive and never answers; ``missing`` raises FileNotFoundError; ``hang`` listens
+    on the port and never replies; ``raw`` answers every request with ``raw_reply`` bytes.
+    ``on_spawn`` (optional) is called with the argv before anything starts.
+    Each spawned process gets the start time ``START_TIME_BASE + pid``.
     """
+
+    START_TIME_BASE = 500_000
 
     def __init__(self, processes, behaviour):
         self.processes = processes
@@ -227,19 +357,29 @@ class FakeLauncher:
         self.spawns = []
         self.servers = {}
         self.next_pid = 40_000
+        self.raw_reply = b""
+        self.on_spawn = None
+        self.lock = threading.Lock()
 
     def spawn(self, argv, cwd, env, log):
         argv = [str(word) for word in argv]
-        self.spawns.append({"argv": argv, "cwd": str(cwd), "env": dict(env), "log": str(log)})
-        behaviour = self.script.pop(0) if self.script else "serve"
-        if behaviour == "missing":
-            raise FileNotFoundError(argv[0])
-        pid, self.next_pid = self.next_pid, self.next_pid + 10
+        if self.on_spawn is not None:
+            self.on_spawn(argv)
+        with self.lock:
+            self.spawns.append({"argv": argv, "cwd": str(cwd), "env": dict(env), "log": str(log)})
+            behaviour = self.script.pop(0) if self.script else "serve"
+            if behaviour == "missing":
+                raise FileNotFoundError(argv[0])
+            pid, self.next_pid = self.next_pid, self.next_pid + 10
         port = int(argv[argv.index("--port") + 1])
         log = Path(log)
         log.parent.mkdir(parents=True, exist_ok=True)
-        self.processes.add(pid, ppid=1, pgid=pid, cwd=cwd, argv=argv)
-        if behaviour == "serve":
+        self.processes.add(pid, ppid=1, pgid=pid, cwd=cwd, argv=argv, start_time=self.START_TIME_BASE + pid)
+        if behaviour in ("hang", "raw"):
+            self.servers[pid] = RawEndpoint(port, None if behaviour == "hang" else self.raw_reply)
+            self.processes.on_exit[pid] = self.servers[pid].stop
+            log.write_text("serving\n", encoding="utf-8")
+        elif behaviour == "serve":
             self.servers[pid] = FakeMcpServer(port, self.behaviour)
             self.processes.on_exit[pid] = self.servers[pid].stop
             log.write_text("serving\n", encoding="utf-8")
@@ -262,15 +402,24 @@ class FakeLauncher:
                 self.servers.pop(pid).stop()
 
 
-def fake_proc(root, entries):
-    """A /proc-shaped directory: ``entries`` maps pid to (ppid, pgid, comm, argv, cwd, open_paths)."""
+DEFAULT_START_TIME = 12345
+"""The start time (``stat`` field 22) ``fake_proc`` writes unless told otherwise."""
+
+
+def fake_proc(root, entries, *, states=None, start_times=None):
+    """A /proc-shaped directory: ``entries`` maps pid to (ppid, pgid, comm, argv, cwd, open_paths).
+
+    ``states`` maps a pid to its state letter (default S); ``start_times`` to its ``stat`` field 22.
+    """
     root = Path(root)
     root.mkdir(parents=True, exist_ok=True)
     for pid, (ppid, pgid, comm, argv, cwd, open_paths) in entries.items():
         directory = root / str(pid)
         (directory / "fd").mkdir(parents=True)
-        (directory / "stat").write_text(f"{pid} ({comm}) S {ppid} {pgid} {pgid} 0 -1 4194560 100 0 0 0 1 2 0 0 20 0 1 0"
-                                        f" 12345 1000 100\n", encoding="utf-8")
+        state = (states or {}).get(pid, "S")
+        start = (start_times or {}).get(pid, DEFAULT_START_TIME)
+        (directory / "stat").write_text(f"{pid} ({comm}) {state} {ppid} {pgid} {pgid} 0 -1 4194560 100 0 0 0 1 2 0 0 20"
+                                        f" 0 1 0 {start} 1000 100\n", encoding="utf-8")
         (directory / "cmdline").write_bytes(b"".join(word.encode() + b"\0" for word in argv))
         os.symlink(cwd, directory / "cwd")
         for number, path in enumerate(open_paths, start=3):
@@ -293,20 +442,27 @@ class Result:
 class Workspace:
     """One throwaway repository, root, state directory and set of fakes, isolated from the user's environment."""
 
-    def __init__(self, base, monkeypatch, files=None):
+    def __init__(self, base, monkeypatch, files=None, share=None):
+        """``share``: another Workspace whose state directory, clock, process table and launcher this one uses,
+        as a second repository on the same machine would."""
         base = Path(base)
+        base.mkdir(parents=True, exist_ok=True)
         self.base = base
-        self.home = base / "home"
-        self.home.mkdir()
-        isolate(monkeypatch, self.home)
         self.origin, self.main = make_repository(base, files)
         self.root = base / "trees"
-        self.state = base / "state"
-        self.clock = FakeClock()
-        self.events = []
-        self.processes = FakeProcessTable(self.events)
-        self.mcp = McpBehaviour()
-        self.launcher = FakeLauncher(self.processes, self.mcp)
+        if share is None:
+            self.home = base / "home"
+            self.home.mkdir()
+            isolate(monkeypatch, self.home)
+            self.state = base / "state"
+            self.clock = FakeClock()
+            self.events = []
+            self.processes = FakeProcessTable(self.events, self.clock)
+            self.mcp = McpBehaviour()
+            self.launcher = FakeLauncher(self.processes, self.mcp)
+        else:
+            self.home, self.state, self.clock, self.events = share.home, share.state, share.clock, share.events
+            self.processes, self.mcp, self.launcher = share.processes, share.mcp, share.launcher
         self._git = None
 
     @property
@@ -353,29 +509,44 @@ class Workspace:
         return self.tree(branch)
 
     def state_files(self):
+        """Recorded server state: files in the state directory other than logs, Serena's home and lock files."""
         return sorted(path for path in self.state.rglob("*") if path.is_file() and "logs" not in path.parts
-                      and "serena-home" not in path.parts) if self.state.exists() else []
+                      and "serena-home" not in path.parts and "locks" not in path.parts) if self.state.exists() else []
 
     def store(self):
         """The tool's real state store over the state directory the tool was given."""
         return tool("adapters.state").JsonStateStore(self.state / STORE_SUBDIR)
 
     def key(self, tree):
-        tree = Path(tree)
-        return str(tree.relative_to(self.root)) if tree.is_relative_to(self.root) else str(tree)
+        """The state key: the tree's absolute real path, so repositories sharing a state directory never collide."""
+        return os.path.realpath(self.root / tree if not Path(tree).is_absolute() else tree)
 
-    def seed_server(self, tree, *, pid=7_000, pgid=None, port=1, head=None, version="2.1.0", serve=False):
-        """A live server for ``tree`` as the tool would have recorded it: a process and its saved state."""
+    def saved(self, tree):
+        """The recorded state for a branch under the root or a tree path, or None."""
+        return self.store().load(self.key(tree))
+
+    def make_state(self, tree, **values):
+        """A ServerState for ``tree`` with the given fields (identity fields left out until the tool has them)."""
+        return build(tool("model").ServerState, tree=str(tree), **values)
+
+    def seed_server(self, tree, *, pid=7_000, pgid=None, port=1, head=None, version="2.1.0", serve=False,
+                    start_time=None, record_argv=None):
+        """A live server for ``tree`` as the tool would have recorded it: a process and its saved state.
+
+        The process runs ``server_argv``; the state records ``record_argv`` (default: the same argv) and
+        the process's start time.
+        """
         tree = Path(tree)
-        argv = ["serena", "start-mcp-server", "--project", str(tree), "--port", str(port)]
-        self.processes.add(pid, pgid=pgid, cwd=tree, argv=argv)
+        argv = server_argv(tree, port)
+        self.processes.add(pid, pgid=pgid, cwd=tree, argv=argv, start_time=start_time)
         if serve:
             server = FakeMcpServer(port, self.mcp)
             self.launcher.servers[pid] = server
             self.processes.on_exit[pid] = server.stop
-        state = tool("model").ServerState(tree=str(tree), pid=pid, pgid=pid if pgid is None else pgid, port=port,
-                                          head=head or git(tree, "rev-parse", "HEAD"), version=version,
-                                          started=self.clock.now(), last_call=None)
+        state = self.make_state(tree, pid=pid, pgid=pid if pgid is None else pgid, port=port,
+                           head=head or git(tree, "rev-parse", "HEAD"), version=version, started=self.clock.now(),
+                           last_call=None, argv=tuple(argv if record_argv is None else record_argv),
+                           start_time=start_time)
         self.store().save(self.key(tree), state)
         return state
 

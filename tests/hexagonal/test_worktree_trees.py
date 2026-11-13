@@ -6,6 +6,7 @@ argument list the tool runs is recorded; none may force, discard or prune.
 """
 
 import json
+import shutil
 import signal
 import sys
 from pathlib import Path
@@ -17,7 +18,7 @@ from tests.hexagonal.contracts import worktrees as contract
 from tests.hexagonal.support.devconfig import names_someone
 from tests.hexagonal.support.git_repositories import DEFAULT_BRANCH, REPOSITORY_NAME, commit, git
 from tests.hexagonal.support.source_scan import ROOT, imports, namespace_uses, tracked
-from tests.hexagonal.support.worktrees import Workspace, fake_proc, tool
+from tests.hexagonal.support.worktrees import Workspace, fake_proc, server_argv, tool
 
 
 @pytest.fixture
@@ -70,6 +71,7 @@ def test_without_a_resolvable_remote_head_new_refuses_and_says_how_to_set_the_ba
     assert result.code == 1 and codes(result) == {"BASE_UNRESOLVED"}, result.text
     assert "XORCHESTRATE_DEV_BASE" in result.text and "--base" in result.text
     assert (refs(ws), trees(ws)) == before
+    assert [call for call in result.git_calls if call[:1] == ["fetch"]] == [], "a refused new still fetched"
     assert ws.run("new", "orphan", "--base", f"origin/{DEFAULT_BRANCH}").code == 0
 
 
@@ -153,12 +155,28 @@ def test_the_root_and_state_flags_override_every_other_source(ws):
 
 def test_remove_deletes_a_clean_merged_tree_and_its_branch(ws):
     path = ws.new("done")
+    tip = git(path, "rev-parse", "HEAD")
     result = ws.run("remove", "done")
     assert result.code == 0, result.text
     assert not path.exists()
     assert git(ws.main, "branch", "--list", "done") == ""
     deletes = [call for call in ws.git.calls if call[:1] == ["update-ref"]]
-    assert deletes and deletes[-1][:3] == ["update-ref", "-d", "refs/heads/done"] and len(deletes[-1]) == 4, deletes
+    assert deletes and deletes[-1] == ["update-ref", "-d", "refs/heads/done", tip], deletes
+
+
+def test_a_branch_that_moved_during_removal_is_kept_and_the_removal_still_succeeds(ws):
+    path = ws.new("moving")
+    moved = commit(ws.main, "elsewhere.txt", "x\n")
+    git(ws.main, "reset", "-q", "--hard", "HEAD~1")
+    ws.git.after[("worktree", "remove")] = lambda: git(ws.main, "update-ref", "refs/heads/moving", moved)
+    try:
+        result = ws.run("remove", "moving")
+    except Exception as error:  # noqa: BLE001 - the defect being pinned
+        pytest.fail(f"remove raised {error!r}")
+    assert result.code == 0, result.text
+    assert not path.exists()
+    assert git(ws.main, "rev-parse", "refs/heads/moving") == moved
+    assert "kept" in result.text.lower(), result.text
 
 
 def test_remove_keeps_a_pushed_but_unmerged_branch_and_says_so(ws):
@@ -189,6 +207,9 @@ def test_ignored_files_do_not_make_a_tree_dirty(ws):
 def test_remove_stops_the_trees_own_server_first_and_it_does_not_count_as_in_use(ws):
     path = ws.new("served")
     state = ws.seed_server(path, pid=7_100)
+    ws.processes.add(7_101, ppid=7_100, pgid=7_100, cwd=path / "pkg", argv=["node", "pyright"])
+    ws.processes.add(7_102, ppid=7_101, pgid=7_102, cwd=ws.base, argv=["python", "worker"],
+                     open_paths=[path / "README.md"])
     result = ws.run("remove", "served")
     assert result.code == 0, result.text
     assert not path.exists()
@@ -196,7 +217,7 @@ def test_remove_stops_the_trees_own_server_first_and_it_does_not_count_as_in_use
     removed = [index for index, event in enumerate(ws.events) if event[:3] == ("git", "worktree", "remove")]
     assert signalled and removed and max(signalled) < min(removed), ws.events
     assert (state.pgid, signal.SIGTERM) in ws.processes.signals
-    assert ws.store().load(ws.key(path)) is None
+    assert ws.saved(path) is None
 
 
 def _dirty_tracked(ws, path):
@@ -251,7 +272,7 @@ def test_remove_refuses_and_changes_nothing_while_the_server_keeps_running(ws, c
     assert path.is_dir()
     assert (refs(ws), trees(ws), git(path, "status", "--porcelain")) == before
     assert ws.processes.signals == [] and ws.processes.alive(state.pid)
-    assert ws.store().load(ws.key(path)) == state
+    assert ws.saved(path) == state
 
 
 @pytest.mark.parametrize("target,code", [("never-created", "NOT_A_TREE"), (DEFAULT_BRANCH, "MAIN_CHECKOUT")])
@@ -317,3 +338,62 @@ def test_the_tool_uses_the_standard_library_and_settings_layer_only_and_names_no
         assert not names_someone(text, settings_contract.HOME_PATHS), path
         assert "master" not in text, f"{path} hardwires a branch name"
         assert namespace_uses(text, settings_contract.NAMESPACE, settings_contract.PREFIX) == [], path
+
+
+def test_a_stash_made_on_another_branch_does_not_block_removal(ws):
+    path = ws.new("unrelated-stash")
+    (ws.main / "README.md").write_text("main checkout work\n")
+    git(ws.main, "stash", "push", "-q")
+    result = ws.run("remove", "unrelated-stash")
+    assert result.code == 0, result.text
+    assert not path.exists()
+    assert git(ws.main, "stash", "list") != "", "the other branch's stash is untouched"
+
+
+def test_a_recorded_server_pid_now_held_by_an_unrelated_process_in_the_tree_counts_as_in_use(ws):
+    path = ws.new("guarded")
+    state = ws.make_state(path, pid=2_345, pgid=2_345, port=1, head=git(path, "rev-parse", "HEAD"),
+                          version=contract.DEFAULT_SERENA_VERSION, started=0.0, last_call=None,
+                          argv=tuple(server_argv(path, 1)), start_time=None)
+    ws.store().save(ws.key(path), state)
+    ws.processes.add(2_345, cwd=path, argv=["tmux", "new-session", "-d"])
+    ws.processes.add(2_346, ppid=2_345, pgid=2_345, cwd=path / "pkg", argv=["bash"])
+    before = refs(ws), trees(ws)
+    result = ws.run("remove", "guarded")
+    assert result.code == 1 and "IN_USE" in codes(result), result.text
+    assert "2345" in result.text and "2346" in result.text, result.text
+    assert ws.processes.signals == [] and path.is_dir()
+    assert (refs(ws), trees(ws)) == before
+
+
+def _deleted(ws, path):
+    shutil.rmtree(path)
+
+
+def _moved(ws, path):
+    path.rename(ws.base / "moved-away")
+
+
+@pytest.mark.parametrize("change", [_deleted, _moved], ids=["deleted", "moved"])
+def test_remove_refuses_a_tree_whose_directory_is_gone(ws, change):
+    path = ws.new("vanished")
+    change(ws, path)
+    before = refs(ws), trees(ws)
+    try:
+        result = ws.run("remove", "vanished")
+    except Exception as error:  # noqa: BLE001 - the defect being pinned
+        pytest.fail(f"remove raised {error!r}")
+    assert result.code == 1, result.text
+    assert codes(result), result.text
+    assert (refs(ws), trees(ws)) == before
+
+
+@pytest.mark.parametrize("prefix", [("status",), ("stash", "list")], ids=["status", "stash"])
+def test_a_safety_check_that_errors_refuses_removal(ws, prefix):
+    path = ws.new("unchecked")
+    ws.git.fail[prefix] = "fatal: planted failure"
+    before = refs(ws), trees(ws)
+    result = ws.run("remove", "unchecked")
+    assert result.code == 1, result.text
+    assert codes(result), result.text
+    assert path.is_dir() and (refs(ws), trees(ws)) == before
