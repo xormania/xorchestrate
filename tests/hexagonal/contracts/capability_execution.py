@@ -113,20 +113,20 @@ def receipt_settlement_contract(subject):
     assert subject.provider.calls == 1
 
 
-def native_receipt_reconciliation_contract(subject):
+def native_receipt_reconciliation_contract(subject, outcome):
     subject.make_native()
     subject.fail_settlement()
     failure = subject.failure(subject.invoke)
     assert failure["code"] == "result_unapplied", "CONTROL_RECEIPT_NEEDS_LOCAL_SETTLEMENT"
     operation_id = failure["details"]["operation_id"]
-    subject.prepare_native_resolution(operation_id)
+    subject.prepare_native_resolution(operation_id, outcome)
     resolved = subject.failure(subject.resolve_native)
     assert resolved["code"] is None, "NATIVE_RECEIPT_RECONCILIATION_MUST_SETTLE_SUCCESSFULLY"
-    assert resolved["result"]["operation"]["status"] == "completed"
+    assert resolved["result"]["operation"]["status"] == outcome
     settled = subject.operation(operation_id)
     repeated = subject.resolve_native(replay_only=True)
-    assert repeated == {"operation_id": operation_id, "status": "completed", "result_retained": False}, \
-        "NATIVE_RECONCILIATION_REPLAY_MUST_RETURN_ONLY_COMPLETION"
+    assert repeated == {"operation_id": operation_id, "status": outcome, "result_retained": False}, \
+        "NATIVE_RECONCILIATION_REPLAY_MUST_PRESERVE_SETTLED_OUTCOME"
     assert subject.operation(operation_id) == settled, "NATIVE_RECONCILIATION_MUST_NOT_EXECUTE_TWICE"
     assert subject.provider.calls == 1
     assert private_absent(subject.retained()), "NATIVE_RECONCILIATION_MUST_NOT_RETAIN_PAYLOADS"

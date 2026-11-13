@@ -185,10 +185,10 @@ class Subject:
             "expected_version": operation["version"], "outcome": "completed",
             "result": {"payload": "PRIVATE_RECONCILIATION_RESULT"}, "reason": "Verified independently"})
 
-    def prepare_native_resolution(self, operation_id):
+    def prepare_native_resolution(self, operation_id, outcome="completed"):
         operation = self.operation(operation_id)
         self.resolution_arguments = {"operation_id": operation_id,
-            "expected_version": operation["version"], "outcome": "completed",
+            "expected_version": operation["version"], "outcome": outcome,
             "result": {"payload": "PRIVATE_RECONCILIATION_RESULT"}, "reason": "Verified independently"}
 
     def resolve_native(self, *, replay_only=False):
