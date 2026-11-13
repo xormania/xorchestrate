@@ -254,6 +254,13 @@
       "modules": {
         "tests/hexagonal/test_devconfig.py": "contract"
       }
+    },
+    "worktrees": {
+      "guarantee": "The optional work-tree tool creates trees under a configurable root from the remote's default branch and removes them only when clean, unlocked, unstashed, unused and pushed or merged, never forcing or pruning; it runs one Serena server per tree over local HTTP that counts as up only after a real symbol answer, retries a taken port, stops its whole process family without touching shared groups, reports drift by code, works with Serena absent by saying so, passes the server only the given environment plus its own home, and is required by nothing else in the repository.",
+      "modules": {
+        "tests/hexagonal/test_worktree_trees.py": "composition",
+        "tests/hexagonal/test_worktree_serena.py": "composition"
+      }
     }
   }
 }

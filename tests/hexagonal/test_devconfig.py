@@ -6,18 +6,19 @@ equals the rendered table, the local file is ignored, and nothing outside the de
 consumers reads developer settings.
 """
 
-import ast
 import json
 import re
 import shlex
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
 from tests.hexagonal.contracts import devconfig as contract
-from tests.hexagonal.support.devconfig import ROOT, SettingsWorld, devconfig, names_someone
+from tests.hexagonal.support.devconfig import SettingsWorld, devconfig, names_someone
 from tests.hexagonal.support.git_repositories import REPOSITORY_NAME
+from tests.hexagonal.support.source_scan import ROOT, imports, namespace_uses, tracked
 
 
 @pytest.fixture
@@ -270,7 +271,7 @@ def test_the_committed_example_is_the_rendered_table_byte_for_byte():
     assert committed.read_text(encoding="utf-8") == _example()
 
 
-def test_the_local_settings_file_is_ignored_and_the_example_is_tracked():
+def test_the_local_settings_file_is_ignored_and_the_example_istracked():
     ignored = subprocess.run(["git", "check-ignore", "-q", contract.REPO_FILE], cwd=ROOT)
     assert ignored.returncode == 0, f"{contract.REPO_FILE} must be git-ignored"
     tracked = subprocess.run(["git", "ls-files", "--error-unmatch", contract.EXAMPLE_FILE], cwd=ROOT,
@@ -302,36 +303,18 @@ def test_show_prints_one_line_per_setting_with_its_source(world):
 
 # Neutrality: only declared consumers read developer settings ---------------------------------------
 
-def _tracked(*patterns):
-    out = subprocess.run(["git", "ls-files", "-z", "--", *patterns], cwd=ROOT, capture_output=True, check=True).stdout
-    return [path for path in out.decode().split("\0") if path]
-
-
 def test_no_source_outside_the_declared_consumers_mentions_developer_settings():
-    naming = [path for path in _tracked("xorchestrate/*.py", "scripts/*.py")
+    naming = [path for path in tracked("xorchestrate/*.py", "scripts/*.py")
               if not path.startswith(contract.CONSUMERS)
               and re.search(r"\.devtools\.env|XORCHESTRATE_DEV_", (ROOT / path).read_text(encoding="utf-8"))]
     assert naming == [], naming
 
 
-def _imports(path):
-    tree = ast.parse((ROOT / path).read_text(encoding="utf-8"))
-    names = set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            names.update(alias.name for alias in node.names)
-        elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
-            names.add(node.module)
-        elif isinstance(node, ast.Constant) and isinstance(node.value, str) and node.value.startswith("scripts."):
-            names.add(node.value)
-    return names
-
-
 def test_no_module_outside_the_declared_consumers_imports_the_settings_layer():
-    importing = [path for path in _tracked("xorchestrate/*.py", "scripts/*.py")
+    importing = [path for path in tracked("xorchestrate/*.py", "scripts/*.py")
                  if not path.startswith(contract.CONSUMERS)
                  and any(name == "scripts.devconfig" or name.startswith("scripts.devconfig.")
-                         for name in _imports(path))]
+                         for name in imports(path))]
     assert importing == [], importing
 
 
@@ -343,25 +326,13 @@ def test_only_consumer_roles_may_depend_on_the_settings_role():
 
 
 def test_the_settings_layer_uses_the_standard_library_only_and_names_no_one():
-    import sys
-    sources = _tracked("scripts/devconfig/*.py")
+    sources = tracked("scripts/devconfig/*.py")
     assert sources, "scripts/devconfig has no tracked modules"
     for path in sources:
-        for name in _imports(path):
+        for name in imports(path):
             top = name.split(".")[0]
             assert top in sys.stdlib_module_names or name.startswith("scripts.devconfig"), (path, name)
         text = (ROOT / path).read_text(encoding="utf-8")
         assert not names_someone(text, contract.HOME_PATHS), path
-        assert _namespace_uses(text) == [], (path, _namespace_uses(text))
-
-
-def _namespace_uses(text):
-    """String constants, other than docstrings, that use the name anywhere but the XDG folder or the key prefix."""
-    tree = ast.parse(text)
-    docstrings = {id(node.body[0].value) for node in ast.walk(tree)
-                  if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef)) and node.body
-                  and isinstance(node.body[0], ast.Expr) and isinstance(node.body[0].value, ast.Constant)}
-    allowed = re.compile(rf"{contract.PREFIX}[A-Z0-9_]*|(?<![A-Za-z]){contract.NAMESPACE}(?=/|$)")
-    return [node.value for node in ast.walk(tree)
-            if isinstance(node, ast.Constant) and isinstance(node.value, str) and id(node) not in docstrings
-            and contract.NAMESPACE in allowed.sub("", node.value).lower()]
+        uses = namespace_uses(text, contract.NAMESPACE, contract.PREFIX)
+        assert uses == [], (path, uses)
