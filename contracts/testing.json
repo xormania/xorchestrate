@@ -216,6 +216,7 @@
         "tests/hexagonal/test_candidate_evidence.py": "contract",
         "tests/hexagonal/test_ci_advice.py": "contract",
         "tests/hexagonal/test_ci_lifecycle.py": "contract",
+        "tests/hexagonal/test_ci_queue.py": "contract",
         "tests/hexagonal/test_testkit_timing_model.py": "composition"
       }
     },
