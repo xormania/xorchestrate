@@ -66,7 +66,7 @@ class ProviderFixture(Fixture):
         return self.app.telemetry.status()["event_count"]
 
     def bundle_path(self, name):
-        return self.root / name
+        return self.root / "corpus" / "exports" / name
 
     def read_manifest(self, name):
         return json.loads((self.bundle_path(name) / "manifest.json").read_text())
