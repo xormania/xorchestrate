@@ -141,8 +141,8 @@ class LocalTelemetry:
     """A configurable adapter; the collector owns validation, protection and durability.
 
     ``resolve(component, adapter)`` is supplied by composition and returns the
-    factory selected for ``corpus`` or ``artifacts``; this adapter never names a
-    concrete store.
+    factory selected for ``corpus``, ``artifacts`` or ``operational_sink``;
+    this adapter never names a concrete store or operational sink.
     """
 
     def __init__(self, options, *, resolve):
@@ -160,7 +160,7 @@ class LocalTelemetry:
 
     @staticmethod
     def _adapter(resolve, component, name, options, scope):
-        """Construct one selected storage adapter, refusing unknown or unloadable names."""
+        """Construct one selected collector component through the trusted resolver."""
         try:
             factory = resolve(component, name)
         except OrchestrationError as error:
@@ -233,7 +233,7 @@ class LocalTelemetry:
         self.corpus.initialize()
         if options.get("operational") is not None:
             try:
-                self._configure_operational(options["operational"])
+                self._configure_operational(options["operational"], resolve, scope)
             except Exception:
                 # Optional transport configuration has a separate health state;
                 # it cannot disable the independently configured local corpus.
@@ -255,22 +255,32 @@ class LocalTelemetry:
         with self._lock:
             self._failures += 1
 
-    def _configure_operational(self, options):
-        if (not isinstance(options, dict) or options.keys() - {"adapter", "endpoint", "timeout", "capacity",
+    def _configure_operational(self, options, resolve, scope):
+        if (not isinstance(options, dict) or options.keys() - {"sink", "adapter", "endpoint", "timeout", "capacity",
                 "trace_sample_rate", "max_pending", "max_bytes", "drain_timeout"}):
             raise _configuration("Invalid operational telemetry settings.")
-        from .telemetry_export import LocalOperationalSink, ObservationSignals, OperationalExporter, OtlpOperationalSink
+        from .telemetry_export import ObservationSignals, OperationalExporter
 
         rate = options.get("trace_sample_rate", 1.0)
         if isinstance(rate, bool) or not isinstance(rate, (int, float)) or not 0 <= rate <= 1:
             raise _configuration("Invalid operational trace sampling rate.")
-        adapter = options.get("adapter", "local")
-        if adapter == "local":
-            sink = LocalOperationalSink(capacity=options.get("capacity", 1000))
-        elif adapter == "otlp":
-            sink = OtlpOperationalSink(options.get("endpoint", ""), timeout=options.get("timeout", 1.0))
+        if "sink" in options:
+            if options.keys() & {"adapter", "endpoint", "timeout", "capacity"}:
+                raise _configuration("Operational sink selection and its shorthand options cannot be combined.")
+            adapter, sink_options, enabled = config.selection(options["sink"], "operational sink")
+            if not enabled:
+                raise _configuration("Omit operational settings to disable operational export.")
         else:
-            raise _configuration("Unknown operational telemetry adapter.")
+            adapter = options.get("adapter", "local")
+            # Existing flat settings retain their adapter-specific defaults and
+            # ignore fields belonging to the other built-in adapter, as before.
+            fields = {"local": ("capacity",), "otlp": ("endpoint", "timeout")}.get(adapter)
+            if fields is None:
+                raise _configuration("Unknown operational telemetry adapter.")
+            sink_options = {key: options[key] for key in fields if key in options}
+        sink = self._adapter(resolve, "operational_sink", adapter, sink_options, scope)
+        if not callable(getattr(sink, "emit", None)):
+            raise _configuration("Operational telemetry sink must expose emit.", "invalid_adapter")
 
         def sampled(signal):
             if signal.get("kind") != "span":

@@ -279,6 +279,18 @@ no inventory (for example a stage with nothing registered) exits 2 with
 classifies as its expectation: `detected` by default, or `unrelated_failure` for a
 negative control.
 
+A calibrated check is a plain `assert condition, "ID"`. The ID is UPPER_SNAKE and
+is the inventory case's diagnostic, and it is asserted at exactly one site in the
+tests (a parametrized test is one site): in the case's target test, or in the one
+contract function the case declares as `"contract": "module:function"`. Only an
+assertion raised in that function while the target test runs earns credit for a
+case that declares it; the suite command refuses a declared function the tree does
+not hold (`contract_not_found`) or that does not assert the ID
+(`diagnostic_not_in_contract`) before any case runs. To state a refusal guarantee,
+assert `refusal(call, code)` from `tests/hexagonal/contracts/calibrated.py`, which
+answers whether the call was refused with that code and never asserts itself. Other
+assertions and `pytest.raises` stay as they are; they are not calibrated checks.
+
 ## Consolidation and completion evidence
 
 The test-framework consolidation (PR #12) established the following outcomes:

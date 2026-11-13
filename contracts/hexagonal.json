@@ -18,7 +18,8 @@
       "modules": [
         "xorchestrate",
         "xorchestrate.model",
-        "xorchestrate.ports"
+        "xorchestrate.ports",
+        "xorchestrate.provider_results"
       ],
       "allowed_roles": [
         "foundation"
