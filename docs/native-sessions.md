@@ -46,6 +46,33 @@ are identical, the association records all eligible native call IDs and its
 ordered-match basis; it does not claim the MCP request itself supplied a native
 call ID.
 
+## Session selection for routed delivery
+
+The default `session_selection` chooses the most recently created eligible active
+session, constrained by recipient, work and any configured driver. It uses the
+store-assigned sequence of each session's original `session.created` event, so
+equal UTC timestamps, clock rollback and identifier sorting cannot reverse the
+order. Creation means the application's session reservation, before the native
+start or attachment completes; activation and later activity do not reorder it.
+
+The application projects this sequence as `creation_sequence` into the candidate
+views passed to the replaceable selection policy. It reads the retained events
+in the same transaction as the session snapshot, across all required pages.
+It does not rewrite session records or change their UTC `created_at` labels.
+Existing stores with creation events already carry this order, including after a
+SQLite close and reopen; no data migration is required.
+
+For imported or legacy records without a matching creation event, the default
+prefers any eligible session with a witnessed creation sequence. If none has a
+witness, it retains the previous maximum `(created_at, id)` fallback. This is a
+compatibility policy, not proof of the missing records' real creation chronology.
+A field stored on a session record cannot manufacture a creation witness.
+
+Reading creation order currently scans event history for each delivery selection,
+stopping when every candidate's creation event is found. Legacy candidates without
+events require scanning the full retained history. An indexed lookup can be added
+if this cost becomes material; selection policy remains independently replaceable.
+
 ## Configuration and native permissions
 
 A typical native driver selection is:
