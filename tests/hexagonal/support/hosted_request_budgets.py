@@ -1,5 +1,6 @@
 """Hosted attachment through the real bridge driver and independent phase costs."""
 
+from collections import deque
 from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
@@ -41,11 +42,12 @@ class BudgetTerminalHost:
 
 
 @contextmanager
-def hosted_budget_subject(root, *, connect=0, attach=0, activate=0):
+def hosted_budget_subject(root, *, connect=0, attach=0, activate=0, attach_errors=()):
     clock = ControlledClock()
     host = BudgetTerminalHost()
     calls, connections, peers = [], [], []
     costs = {"attach": attach, "activate": activate}
+    errors = deque(attach_errors)
 
     def connect_socket(*_args, **_kwargs):
         connection = ScriptedSocket(clock, connect=connect)
@@ -66,6 +68,8 @@ def hosted_budget_subject(root, *, connect=0, attach=0, activate=0):
             if cost > allowance:
                 raise OrchestrationError("bridge phase exhausted its allowance", "bridge_timeout", {"outcome": "unknown"})
             if method == "attach":
+                if errors:
+                    raise errors.popleft()
                 return {"native_id": "native-budget", "incarnation": "current-incarnation",
                         "host_id": "host-budget", "ownership": "external"}
             return {"active": True}

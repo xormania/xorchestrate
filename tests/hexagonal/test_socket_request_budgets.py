@@ -4,10 +4,10 @@ import json
 
 import pytest
 
+from tests.hexagonal.support import socket_request_budgets as fixture
 from xorchestrate.adapters.native_gateway import GatewayFailure, request
 from xorchestrate.adapters.unix import UnixClient
 from xorchestrate.model import OrchestrationError
-from tests.hexagonal.support import socket_request_budgets as fixture
 
 
 @pytest.mark.parametrize("stage", ["connect_send", "send_receive", "fragments"])
@@ -148,14 +148,15 @@ def test_gateway_healthy_fragmented_authentication_result_and_failure_envelopes(
     assert connection.closed
 
 
-def test_gateway_server_does_not_admit_a_frame_after_its_total_budget(monkeypatch):
+@pytest.mark.parametrize("fragment_delay", [0.3, 0.25], ids=["exceeds-budget", "exhausts-budget"])
+def test_gateway_server_does_not_admit_a_frame_after_its_total_budget(monkeypatch, fragment_delay):
     calls = []
 
     def handle(action, payload):
         calls.append((action, payload))
         return {"accepted": True}
 
-    clock, connection = fixture.gateway_admission(monkeypatch, handle, fragment_delay=0.3)
+    clock, connection = fixture.gateway_admission(monkeypatch, handle, fragment_delay=fragment_delay)
     assert calls == [], "individual fragments must not renew the server's frame-admission budget"
     assert clock.elapsed == pytest.approx(1)
     if connection.sent:
@@ -174,6 +175,26 @@ def test_gateway_server_admits_a_complete_authenticated_frame_within_budget(monk
     assert calls == [("tools/call", {"marker": "admitted"})]
     assert clock.elapsed == pytest.approx(0.4)
     assert [json.loads(raw) for raw in connection.sent] == [{"result": {"accepted": True}}]
+
+
+@pytest.mark.parametrize("handler_delay,replied", [(0.2, True), (0.7, False)], ids=["remaining-reply", "expired-reply"])
+def test_gateway_server_handler_consumes_the_response_remainder(monkeypatch, handler_delay, replied):
+    calls = []
+
+    def handle(action, payload):
+        calls.append((action, payload))
+        return {"accepted": True}
+
+    clock, connection = fixture.gateway_admission(monkeypatch, handle, fragment_delay=0.1,
+                                                  handler_delay=handler_delay)
+    assert calls == [("tools/call", {"marker": "admitted"})], "admitted work executes exactly once"
+    assert clock.elapsed == pytest.approx(0.4 + handler_delay)
+    if replied:
+        assert [json.loads(raw) for raw in connection.sent] == [{"result": {"accepted": True}}]
+        send = next(operation for operation in connection.operations if operation[0] == "send")
+        assert send[2] == pytest.approx(0.4), "reply receives only the remainder after input and handler execution"
+    else:
+        assert connection.sent == [], "cooperative execution may finish late but cannot renew the reply budget"
 
 
 @pytest.mark.parametrize("control", [False, True])

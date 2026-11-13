@@ -46,3 +46,31 @@ def test_hosted_healthy_attachment_keeps_identity_context_and_native_specificati
         assert subject.clock.elapsed == 6
         assert not subject.peers[0].closed
         assert not subject.host.closed
+
+
+@pytest.mark.parametrize("method", ["start", "attach", "resume", "reconnect"])
+def test_hosted_uncertain_attach_failure_is_not_retried_or_reclassified(tmp_path, method):
+    failure = OrchestrationError("partial write outcome is unresolved", "bridge_unavailable", {"outcome": "unknown"})
+    with hosted_budget_subject(tmp_path, attach=2, attach_errors=[failure]) as subject:
+        with pytest.raises(OrchestrationError) as caught:
+            subject.invoke(method)
+        assert caught.value is failure, "an uncertain operation retains its original failure and outcome"
+        assert subject.clock.elapsed == 2
+        assert [call[0] for call in subject.calls] == ["attach"]
+        assert len(subject.connections) == 1
+        assert subject.connections[0].closed
+        assert not subject.host.closed, "unresolved attachment must not trigger terminal cleanup"
+
+
+@pytest.mark.parametrize("method", ["start", "attach", "resume", "reconnect"])
+def test_hosted_definite_unavailable_attach_can_retry_with_remaining_allowance(tmp_path, method):
+    failure = OrchestrationError("endpoint not yet available", "bridge_unavailable", {"outcome": "not_started"})
+    with hosted_budget_subject(tmp_path, attach=2, attach_errors=[failure]) as subject:
+        receipt = subject.invoke(method)
+        assert receipt["native_id"] == "native-budget"
+        assert [call[0] for call in subject.calls] == ["attach", "attach", "activate"]
+        assert subject.clock.elapsed == pytest.approx(4.1)
+        assert subject.calls[1][2] == pytest.approx(4.9), "a safe retry receives only the original remainder"
+        assert subject.connections[0].closed
+        assert not subject.connections[1].closed
+        assert not subject.host.closed

@@ -1,7 +1,5 @@
 """Socket-boundary witnesses with independent elapsed time and real fragmentation."""
 
-from collections import deque
-from contextlib import contextmanager
 import io
 import json
 import os
@@ -9,9 +7,10 @@ import socket
 import struct
 import threading
 import time
+from collections import deque
+from contextlib import contextmanager
 
 from tests.hexagonal.support.temporal_waits import ControlledClock
-
 
 WELCOME = b'{"xorchestrate":"welcome"}\n'
 RESULT = b'{"result":{"ok":true}}\n'
@@ -122,11 +121,16 @@ def descriptor(path, *, address="/unused/gateway.sock", transport="unix", timeou
     return path
 
 
-def gateway_admission(monkeypatch, handler, *, fragment_delay):
+def gateway_admission(monkeypatch, handler, *, fragment_delay, handler_delay=0):
     """Run the real request handler with independently timed inbound fragments."""
     from xorchestrate.adapters.native_gateway import LocalGateway
 
-    gateway = LocalGateway(handler, {"gateway_timeout": 1, "max_frame_bytes": 4096})
+    def timed_handler(action, payload):
+        result = handler(action, payload)
+        clock.advance(elapsed=handler_delay)
+        return result
+
+    gateway = LocalGateway(timed_handler, {"gateway_timeout": 1, "max_frame_bytes": 4096})
     try:
         request_type = gateway.server.RequestHandlerClass
         packet = {"token": gateway.token, "action": "tools/call", "payload": {"marker": "admitted"}}
