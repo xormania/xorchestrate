@@ -22,7 +22,7 @@ from .adapters.evidence import (
     write_json,
 )
 from .adapters.shard_timings import freeze_timings, timing_source, verify_timings
-from .adapters.static import STATIC_IDS
+from .adapters.static import STATIC_IDS, STATIC_SUITES
 from .core import execute_checks, required_inputs, validate_checks
 from .model import COMPONENT_SUITES, MODES, SUITES, Check
 from .sharding import TIMINGS, suite_shard
@@ -134,10 +134,10 @@ def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=
     story_selection = select_stories(stories, mode) if "stories" in selected else ()
     root, directory = Path(root).resolve(), Path(directory).resolve()
     checks = []
-    if "static" in selected:
+    if any(suite in selected for suite in STATIC_SUITES):
         from .adapters.static import definitions
 
-        checks.extend(definitions(directory=directory, timeout=check_timeout))
+        checks.extend(definitions(directory=directory, timeout=check_timeout, suites=selected))
     if "tests" in selected:
         argv = [sys.executable, "-m", "pytest", "tests/hexagonal", "-q", "-rs", "-p", "no:cacheprovider",
                 "--test-inventory", str(directory / "inventory.json"), "--junitxml=" + str(directory / "tests.xml")]
@@ -285,6 +285,24 @@ def readiness(check, *, root, mode, config=None, driver=None, brief=None, famili
         items.extend({"name": path, "passed": False, "reason": "Required input is absent"} for path in missing)
         if check.name == "ruff":
             items.append({"name": "ruff", "passed": importlib.util.find_spec("ruff") is not None})
+        if check.name == "zizmor":
+            from .adapters.static import _zizmor_executable
+
+            try:
+                executable = _zizmor_executable(cache_environment(Path(root).resolve()))
+            except (OSError, ValueError) as error:
+                items.append({"name": "zizmor", "passed": False, "reason": str(error)})
+            else:
+                items.append({"name": "zizmor", "passed": True, "path": executable})
+        if check.name == "dependency-audit":
+            from .adapters.static import _uv_executable
+
+            try:
+                executable = _uv_executable(cache_environment(Path(root).resolve()))
+            except (OSError, ValueError) as error:
+                items.append({"name": "uv", "passed": False, "reason": str(error)})
+            else:
+                items.append({"name": "uv", "passed": True, "path": executable})
         if check.name == "tests":
             from .adapters.pytest_plugin import load_catalog, shard_selection
             from .catalog import select_families

@@ -13,7 +13,7 @@ dependencies = ["jsonschema>=4.22,<5", "xcontracts>=0.1,<0.2"]
 test = ["pytest>=8,<10"]
 
 [dependency-groups]
-validation = ["ruff==0.16.8", "build>=1.2,<2", "setuptools>=68", "wheel>=0.45,<1"]
+validation = ["ruff==0.16.8", "zizmor==1.32.0", "build>=1.2,<2", "setuptools>=68", "wheel>=0.45,<1"]
 
 [project.scripts]
 xo = "xorchestrate.cli:main"

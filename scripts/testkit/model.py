@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 COMPONENT_SUITES = ("static", "tests", "calibration", "acceptance", "multi-harness", "stories")
-SUITES = (*COMPONENT_SUITES, "checks", "all")
+SUITES = (*COMPONENT_SUITES, "security", "dependency-audit", "checks", "all")
 MODES = ("fixture", "protocol-fixture", "native")
 
 

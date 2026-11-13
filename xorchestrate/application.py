@@ -54,7 +54,7 @@ from .ports import (
 from .schema import validate
 from .session_lifecycle import SessionLifecycleMixin
 from .state import StateEngine
-from .telemetry import TelemetryViews, dispatch_pressure, record_observation
+from .telemetry_service import TelemetryService
 from .worktrees import bound_worktree, current_worktree, worktree_identity
 
 
@@ -113,6 +113,14 @@ class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
             raise OrchestrationError("Invalid assessment configuration.", "invalid_configuration", error.details) from error
         self.assessment = deepcopy(assessment if assessment is not None else {})
         self.inspection = InspectionProjector(store, self._context, self._authorize, self._verify_context)
+        self.telemetry_service = TelemetryService(
+            sink=lambda: self.telemetry, store=store,
+            context=lambda actor, arguments: self._context(actor, arguments),
+            authorize=lambda action, context: self._authorize(action, context),
+            verify=lambda tx, context: self._verify_context(tx, context),
+            projector=self.inspection, authority=lambda: self._telemetry_authority(),
+            resources=lambda: (("providers", self.providers), ("sessions", self.sessions), ("evaluators", self.evaluators)),
+        )
         self.work_acceptance = WorkAcceptance(
             store, clock=lambda: self.clock(), verify_authorization=self._verify_context,
             create=self._create, transition=self._transition, emit=self._event,
@@ -208,11 +216,7 @@ class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
         return scope
 
     def record_observation(self, event_type, payload, context, **metadata):
-        return record_observation(self.telemetry, event_type, payload, context, **metadata)
-
-    def _telemetry_views(self):
-        return TelemetryViews(self.telemetry, self.store, self._context, self._authorize,
-                              self._verify_context, self.inspection, self._telemetry_authority)
+        return self.telemetry_service.record(event_type, payload, context, **metadata)
 
     def _telemetry_authority(self):
         policy = self.guardrail
@@ -220,53 +224,28 @@ class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
         return id(policy), revision() if callable(revision) else None
 
     def _telemetry_status(self, arguments, actor, context):
-        if self.telemetry is None:
-            return {"status": "disabled", "coverage": "unknown", "event_count": 0, "sources": {}, "publication": "unknown"}
-        result = self._telemetry_views().status(actor)
-        health = {}
-        for kind, resources in (("providers", self.providers), ("sessions", self.sessions), ("evaluators", self.evaluators)):
-            selected = {}
-            for name, resource in resources.items():
-                report = getattr(resource, "telemetry_health", None)
-                if callable(report):
-                    try:
-                        selected[name] = dispatch_pressure(report())
-                    except Exception:
-                        selected[name] = {"status": "unavailable", "coverage": "unknown"}
-            if selected:
-                health[kind] = selected
-        result["source_dispatch"] = health
-        return result
+        return self.telemetry_service.status(arguments, actor)
 
     def _telemetry_events(self, arguments, actor, context):
-        return self._telemetry_views().events(arguments, actor)
+        return self.telemetry_service.events(arguments, actor)
 
     def _telemetry_payload(self, arguments, actor, context):
-        return self._telemetry_views().payload(arguments, actor)
+        return self.telemetry_service.payload(arguments, actor)
 
     def _telemetry_usage(self, arguments, actor, context):
-        return self._telemetry_views().usage(arguments, actor)
+        return self.telemetry_service.usage(arguments, actor)
 
     def _telemetry_compare(self, arguments, actor, context):
-        return self._telemetry_views().comparison(arguments, actor)
+        return self.telemetry_service.compare(arguments, actor)
 
     def _telemetry_snapshot(self, arguments, actor, context):
-        views = self._telemetry_views()
-        sink = views._configured()
-        authorize = views.bundle_authorizer(actor, "telemetry_snapshot", sink.snapshot_source())
-        return sink.snapshot(arguments["destination"], authorize=authorize, receipt=True)
+        return self.telemetry_service.snapshot(arguments, actor)
 
     def _telemetry_verify(self, arguments, actor, context):
-        views = self._telemetry_views()
-        sink = views._configured()
-        authorize = views.bundle_authorizer(actor, "telemetry_verify", sink.bundle_source(arguments["destination"]))
-        return sink.verify(arguments["destination"], authorize=authorize, receipt=True)
+        return self.telemetry_service.verify(arguments, actor)
 
     def _telemetry_restore(self, arguments, actor, context):
-        views = self._telemetry_views()
-        sink = views._configured()
-        authorize = views.bundle_authorizer(actor, "telemetry_restore", sink.bundle_source(arguments["bundle"]))
-        return sink.restore(arguments["bundle"], arguments["destination"], authorize=authorize, receipt=True)
+        return self.telemetry_service.restore(arguments, actor)
 
     def _call(self, action: str, arguments: JSON, actor: str = "owner", *, native_context=None, replay_only=False,
               capture_context=None) -> JSON:

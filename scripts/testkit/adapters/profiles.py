@@ -226,8 +226,11 @@ def _interpreter_details(interpreter):
     # The collector ships with the application; probe this checkout's own
     # SQLite requirement in the selected interpreter.
     root = Path(__file__).resolve().parents[3]
-    program = """import importlib.util,json,sqlite3,sys
+    program = """import importlib.util,json,os,sqlite3,sys
+from pathlib import Path
 dependencies={name:importlib.util.find_spec(name) is not None for name in ('jsonschema','pytest','ruff')}
+scanner=Path(%r).with_name('zizmor')
+dependencies['zizmor']=scanner.is_file() and os.access(scanner,os.X_OK)
 collector={'status':'unavailable','sqlite_version':sqlite3.sqlite_version}
 try:
     sys.path.insert(0, %r)
@@ -238,7 +241,7 @@ except Exception as error:
     collector['reason']=getattr(error,'code','collector_unavailable')
 print(json.dumps({'version':list(sys.version_info[:3]),'virtual':sys.prefix!=sys.base_prefix,
                   'executable':sys.executable,'dependencies':dependencies,'collector':collector}))
-""" % str(root)
+""" % (str(interpreter), str(root))
     command = [str(interpreter), "-c", program]
     result = subprocess.run(command, capture_output=True, text=True, timeout=15, check=True)
     details = json.loads(result.stdout)
@@ -330,9 +333,11 @@ def doctor(profile_path, *, root, overrides=None, dev=None):
     try:
         details = _interpreter_details(interpreter)
         observations.append({"name": "interpreter", "passed": True, "path": interpreter, **details})
-        required_dependencies = {"ruff"} if profile["suite"] == "static" else {"jsonschema"}
+        required_dependencies = {"ruff"} if profile["suite"] in {"static", "security"} else {"jsonschema"}
         if profile["suite"] in {"all", "checks"}:
             required_dependencies.add("ruff")
+        if profile["suite"] in {"static", "security", "checks", "all"}:
+            required_dependencies.add("zizmor")
         if profile["suite"] in {"all", "checks", "tests"}:
             required_dependencies.add("pytest")
         sqlite_corpus_selected = False

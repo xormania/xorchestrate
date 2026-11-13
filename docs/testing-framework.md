@@ -26,7 +26,13 @@ uv sync --locked --no-default-groups --group validation --extra test --no-instal
 uv pip install --python "$UV_PROJECT_ENVIRONMENT/bin/python" --no-deps --no-build-isolation -e .
 export PATH="$UV_PROJECT_ENVIRONMENT/bin:$PATH"
 
-# Ruff lint/security, current-source syntax and deterministic architecture.
+# Focused security view: deterministic security checks plus the dependency observation.
+python3 -m scripts.testkit run --suite security
+
+# Or run only the network-dependent dependency observation, not both commands.
+python3 -m scripts.testkit run --suite dependency-audit
+
+# Security checks, current-source syntax and deterministic architecture.
 python3 -m scripts.testkit run --suite static
 
 # Cataloged behavioral tests with inventory and JUnit.
@@ -52,7 +58,7 @@ python3 -m scripts.testkit run --suite acceptance
 python3 -m scripts.testkit stories
 python3 -m scripts.testkit run --suite stories --story work-acceptance --timeout 60
 
-# Everything above, using the same composed checks.
+# Every component suite; deterministic security checks run once through static.
 python3 -m scripts.testkit run
 ```
 
@@ -60,10 +66,21 @@ The cache prefix must resolve outside the candidate and is inherited by child
 Python commands. Use a fresh prefix for each validation session. Ruff and pytest
 caches are disabled or written outside the candidate by the shared suites;
 syntax validation reads current bytes rather than trusting cached bytecode.
-Static-only execution needs Python and the pinned Ruff, without pytest discovery,
-tmux, native configuration or model credentials. `--family` filters behavioral
-tests only; it never reduces static coverage. The default composition runs each
-selected check once.
+Static-only execution needs Python, the pinned Ruff and the pinned Zizmor
+executable, without pytest discovery, tmux, native configuration or model
+credentials. Managed setup installs both validation tools for its selected
+interpreter; `doctor` checks that environment's Zizmor executable without
+launching the scanner. `--family` filters behavioral tests only; it never reduces
+static coverage. The default composition runs each selected check once.
+`security` is a focused view rather than another component: it adds the
+network-dependent dependency observation to Ruff, secret-scan and Zizmor.
+`dependency-audit` selects only that observation. `static`, `checks` and the
+default/all composition include the deterministic Ruff, secret-scan and Zizmor
+checks once through `static`; they intentionally exclude dependency auditing so
+their established offline result remains reproducible.
+Concern, unavailable service or malformed evidence makes the focused local suite
+nonzero. Advisory means the hosted observation is retained with
+`continue-on-error`; it does not convert local failures into passing results.
 
 ## Jev advisory stages
 
@@ -175,6 +192,48 @@ files. Architecture uses its explicit scope and role policy in
 `contracts/hexagonal.json`. The retained manifests describe each check's actual
 selection; an inventory of planned roots alone does not prove file coverage.
 
+The secret scan applies the policy in `contracts/security.json` to every existing
+Git-tracked file and every nonignored untracked file in the candidate. It reads
+bytes rather than assuming text, so binary inputs remain in scope. In-repository
+directory-link entries are identity-bound in the manifest while their target
+files are scanned through their own candidate paths; broken or escaping links
+are refused. A
+`secret-scan: allow` marker suppresses an intentional match only on its own line.
+The structured report binds every selected path to its captured byte hash and the
+complete effective-input identity. Findings retain only path, line and rule;
+matched credential bytes are excluded from the report and captured command
+output.
+
+The Zizmor check selects only immediate `.yml` and `.yaml` files beneath
+`.github/workflows`; an empty selection, a broken link or a workflow that resolves
+outside the candidate is refused. The pinned Zizmor 1.32.0 executable runs with
+offline access, strict collection and the regular persona against the explicit
+`contracts/zizmor.yml` policy. That policy records exact filename-and-line
+exceptions for reviewed workflow behavior, so line movement can invalidate an
+exception rather than silently widening it. The adapter holds tool-native output
+only long enough to normalize it, then publishes candidate-bound file hashes and
+path/location/rule/severity/confidence findings; workflow snippets and fixes are
+not copied into the report or outer command output.
+
+The dependency audit binds `pyproject.toml`, `uv.lock`, the exact uv 0.13.7
+executable and every non-editable package in the universal lock selection. It
+runs uv's preview audit command once against the configured OSV endpoint; ambient
+`UV_*` policy and GitHub token variables cannot silently narrow the invocation or
+reach the service. Registry packages are identified by locked name and version.
+Git packages additionally retain their locked commit while acknowledging that
+the advisory lookup can match only the PyPI name and version.
+
+The normalized report retains package identities, vulnerability IDs and aliases,
+fixed versions and advisory timestamps, plus hashes and byte counts for the raw
+tool streams. It does not retain remote summaries, descriptions, references or
+URLs. A vulnerability produces `concern`; service or preview-schema failure
+produces `unavailable` or `error`, never an empty success. An empty response is
+`observed`, not a claim of safety or completeness: OSV data is mutable, uv 0.13.7
+does not let the wrapper prove that a short batch response covered every query,
+and Git-source matching is name/version based. CI retains this evidence in a
+separate artifact from the deterministic static receipt and does not use it as a
+required verdict.
+
 `--output /path/outside/checkout` selects a reusable evidence parent; each invocation
 allocates a private run directory. `--check-timeout` bounds each deterministic or
 calibration command. `--timeout` retains the live scenario timeout. Native harness
@@ -255,6 +314,9 @@ controller requests, native callback selection and managed tmux automation.
 | Behavioral family, guarantee and test layer | [`contracts/testing.json`](../contracts/testing.json) |
 | Static check definitions and suite membership | Shared test-kit composition and static adapter |
 | Ruff policy and validation dependency pin | `ruff.toml`, `pyproject.toml` validation group; generated `.github/requirements-ci.txt` |
+| Secret detection policy and same-line allowances | `contracts/security.json`; shared static and secret-scan adapters |
+| Workflow-analysis policy and validation dependency pin | `contracts/zizmor.yml`, `pyproject.toml` validation group; generated `.github/requirements-ci.txt`; shared static and Zizmor adapters |
+| Locked dependency advisory observation | `pyproject.toml`, `uv.lock`, pinned uv 0.13.7 and the moving OSV service; shared static and dependency-audit adapters |
 | Catalog validation and selection | `scripts/testkit/catalog.py` |
 | Shard specification, balanced module partition and timings format | `scripts/testkit/sharding.py`, `contracts/test-timings.json` |
 | Timings regeneration from JUnit | `scripts/testkit/adapters/timings.py`, `python3 -m scripts.testkit.timings` |
@@ -417,8 +479,11 @@ ignored/untracked files and followed symlink targets. This identity is distinct
 from the repository commit/tree and the existing calibration candidate hash.
 Source/configuration changes invalidate the affected result. Reports retain check
 IDs, readiness/preparation outcomes, tool versions, structured findings and raw
-command receipts. A check blocked before launch has an explicit setup outcome and
-does not borrow another check's command record.
+command receipts. Secret-scan findings and command output are redacted rather than
+retaining the matched bytes. Zizmor's source-bearing native output is normalized
+inside its adapter and never reaches the outer command receipt. A check blocked
+before launch has an explicit setup outcome and does not borrow another check's
+command record.
 
 Structural plan errors reject the whole plan. Missing tools, selected
 configuration or check-specific preparation block only dependent checks;
