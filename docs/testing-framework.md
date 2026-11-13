@@ -276,14 +276,15 @@ python3 -m scripts.verification.calibrate_suite --candidate . --out <new directo
 
 When to run what: inventories registered at `ci` run on every CI run. Run a
 `manual` inventory with `--suite calibration --inventory <name>` when a change
-touches the source its cases anchor into (the tree check in the default tests names
-each anchor), and before a release; the owner of that change runs it. Every
+touches the source its cases anchor into (each case's `mutation.path` in its
+inventory file names the file), and before a release; the owner of that change runs it. Every
 registered inventory, whatever its stage, is checked without running its cases
 (schema, anchors, targets, one assertion site) in every default tests run.
 
-With neither option, the inventories registered at `ci` run. A selection that names
-no inventory (for example a stage with nothing registered) exits 2 with
-`no_inventory_selected` before anything runs. A case passes when it
+With neither option, the inventories registered at `ci` run. The test kit refuses
+an unknown name or a stage with nothing registered as a setup error before
+anything runs; `calibrate_suite` itself exits 2 with `no_inventory_selected` for an
+empty selection. A case passes when it
 classifies as its expectation: `detected` by default, or `unrelated_failure` for a
 negative control.
 
