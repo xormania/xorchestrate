@@ -230,7 +230,7 @@ def test_lifecycle_cleanup_drains_host_and_streams_after_capture_or_runtime_fail
         returncode = None
 
         def __init__(self):
-            self.stdout = io.StringIO('{"ready":true}\n')
+            self.stdout = io.BytesIO(b'{"ready":true}\n')
 
         def poll(self):
             return self.returncode
@@ -274,7 +274,7 @@ def test_lifecycle_cleanup_drains_host_and_streams_after_capture_or_runtime_fail
     monkeypatch.setattr(lifecycle, "_stale", lambda *args: {})
     monkeypatch.setattr(lifecycle, "build", lambda *args: SimpleNamespace(application=inner_application, close=close_runtime))
     monkeypatch.setattr(lifecycle.subprocess, "Popen", launch)
-    monkeypatch.setattr(lifecycle.select, "select", lambda readers, *args: (readers, [], []))
+    monkeypatch.setattr(lifecycle, "read_line", lambda stream, pending, deadline, **kwargs: (stream.readline(), b""))
 
     with pytest.raises(RuntimeError, match="scenario-fault") as caught:
         lifecycle.run_lifecycle(suite, {}, tmp_path)
