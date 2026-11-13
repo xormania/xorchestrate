@@ -781,6 +781,68 @@ def test_the_project_server_inventory_is_the_old_faults_with_standard_checks():
     assert hashlib.sha256(canonical.encode()).hexdigest() == PROJECT_SERVER_MUTATIONS_SHA256
 
 
+_LIFECYCLE_TESTS = "tests.hexagonal.test_acceptance_lifecycle::"
+_TERMINALS_TESTS = "tests.hexagonal.test_managed_terminals::"
+_ENTRYPOINT_TESTS = "tests.hexagonal.test_testkit_entrypoint::"
+_WORKFLOW_TESTS = "tests.hexagonal.test_managed_workflow::"
+_WORKER = _LIFECYCLE_TESTS + "test_the_worker_never_sees_the_controllers_multiplexer_markers"
+_NO_FALLBACK = _LIFECYCLE_TESTS + "test_an_unready_default_host_is_a_setup_error_never_a_silent_fallback"
+_SCHEMA = _TERMINALS_TESTS + "test_host_descriptors_are_schema_two_and_older_ones_are_refused_with_a_reason"
+_PLANTED = _TERMINALS_TESTS + "test_a_planted_descriptor_is_neither_offered_nor_run"
+_PLAN = _ENTRYPOINT_TESTS + "test_checks_plan_selects_declared_family_and_retains_inventory"
+_ENDPOINT = _WORKFLOW_TESTS + "test_an_endpoint_named_in_the_plan_is_removed_only_when_it_is_the_runs_own"
+TESTKIT = (
+    # name, mutated file, target, diagnostic, unaffected neighbour; no case declares a contract
+    ("worker-context-not-set", "scripts/testkit/adapters/supervised_run.py", _WORKER,
+     "TESTKIT_WORKER_KNOWS_ITS_TERMINAL_HOST", _NO_FALLBACK),
+    ("schema-one-descriptors-accepted", "scripts/testkit/adapters/terminals.py", _SCHEMA,
+     "TESTKIT_OLDER_DESCRIPTORS_ARE_REFUSED_WITH_A_REASON", _PLANTED),
+    ("attach-runs-the-descriptors-argv", "scripts/testkit/adapters/terminals.py", _PLANTED,
+     "TESTKIT_DESCRIPTOR_ARGV_IS_NEVER_RUN", _SCHEMA),
+    ("placement-not-checked", "scripts/testkit/adapters/terminals.py", _PLANTED,
+     "TESTKIT_DESCRIPTOR_PLACEMENT_IS_CHECKED", _SCHEMA),
+    ("readiness-keeps-the-old-name", "scripts/testkit/adapters/terminal_selection.py",
+     _ENTRYPOINT_TESTS + "test_native_doctor_checks_inputs_without_authentication_or_process_launch",
+     "TESTKIT_READINESS_NAMES_THE_TERMINAL_HOST", _PLAN),
+    ("default-keeps-the-product-fallback", "scripts/testkit/adapters/terminal_selection.py", _NO_FALLBACK,
+     "TESTKIT_DEFAULT_HOST_HAS_NO_FALLBACK", _WORKER),
+    ("timeout-interrupts-the-whole-group", "scripts/testkit/adapters/supervised_run.py",
+     _LIFECYCLE_TESTS + "test_a_timed_out_worker_alone_is_asked_to_stop_and_its_last_words_are_captured",
+     "TESTKIT_TIMEOUT_STOPS_THE_WORKER_ALONE_FIRST", _WORKER),
+    ("endpoint-removed-without-checks", "scripts/testkit/operator_composition.py", _ENDPOINT,
+     "TESTKIT_FOREIGN_ENDPOINTS_ARE_NEVER_REMOVED", _PLAN),
+    ("keep-allowed-in-the-foreground", "scripts/testkit/operator_composition.py",
+     _WORKFLOW_TESTS + "test_kept_terminals_outlive_a_killed_supervisor_until_close_adopts_and_ends_them",
+     "TESTKIT_KEEP_IS_REFUSED_IN_THE_FOREGROUND", _ENDPOINT),
+)
+"""The test kit's planted faults: old faults 5-12 and 14 (13 dropped as escaping its selection). Each credits only
+its fault's own symptom: the worker's missing host name, the schema-1 refusal's reason, a created marker, an old
+readiness name, a signalled child, a removed foreign endpoint or an accepted keep."""
+TESTKIT_MUTATIONS_SHA256 = "abb8b4ef2e43a001ed30b679c2f7d621d331610d008e9120c1ea36ce2411ac4d"
+"""sha256 of the canonical JSON of the cases' mutation objects in order, as the old test-kit fault script planted
+them."""
+
+
+def test_the_registry_holds_the_testkit_inventory_at_the_manual_stage_after_project_server():
+    registry, _ = _real()
+    assert list(registry)[6] == "testkit" and registry["testkit"] == ("manual",), registry
+
+
+def test_the_testkit_inventory_is_the_old_faults_with_standard_checks():
+    import hashlib
+    _, inventories = _real()
+    found = tuple((case.name, case.mutation.path, case.target, case.diagnostic, case.contract, case.unaffected)
+                  for case in inventories["testkit"].cases)
+    assert found == tuple((name, path, target, diagnostic, None, (unaffected,))
+                          for name, path, target, diagnostic, unaffected in TESTKIT), found
+    for fault in inventories["testkit"].cases:
+        assert {module_form(selector) for selector in fault.selectors} == {fault.target, *fault.unaffected}, fault.name
+        assert fault.expect == "detected", fault.name
+    mutations = json.loads((INVENTORIES / "testkit.json").read_text())["cases"]
+    canonical = json.dumps([item["mutation"] for item in mutations], sort_keys=True, separators=(",", ":"))
+    assert hashlib.sha256(canonical.encode()).hexdigest() == TESTKIT_MUTATIONS_SHA256
+
+
 @pytest.mark.parametrize("name,expected", ids=["state", "work"], argvalues=[
     ("state", tuple((name, "detected") for name in STATE[:-1]) + (("unrelated-error-control", "unrelated_failure"),)),
     ("work", tuple((name, "detected") for name in WORK)),

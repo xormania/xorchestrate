@@ -222,9 +222,9 @@ def test_native_doctor_checks_inputs_without_authentication_or_process_launch(tm
     assert report["status"] == "passed"
     assert report["authentication"] == "verified by live callbacks only"
     readiness = [item for check in report["checks"] for item in check["readiness"]]
-    assert {check["name"] for check in readiness} >= {
-        "terminal_host", "codex:executable", "claude:executable", "grok:executable",
-    }
+    names = {check["name"] for check in readiness}
+    assert "multiplexer" not in names, "TESTKIT_READINESS_NAMES_THE_TERMINAL_HOST"
+    assert names >= {"terminal_host", "codex:executable", "claude:executable", "grok:executable"}, names
 
 
 @pytest.mark.parametrize("destination", ["same", "nested", "symlink"])
