@@ -1,4 +1,4 @@
-"""Current capture, source health and authority through public telemetry actions."""
+"""Current collaborators through public actions and the shared telemetry service."""
 
 import pytest
 
@@ -10,9 +10,9 @@ from tests.hexagonal.contracts.telemetry_service import (
 from tests.hexagonal.support.telemetry_service import ServiceFixture
 
 
-@pytest.fixture
-def telemetry_service(tmp_path):
-    subject = ServiceFixture(tmp_path)
+@pytest.fixture(params=["action", "service"])
+def telemetry_service(request, tmp_path):
+    subject = ServiceFixture(tmp_path, boundary=request.param)
     try:
         yield subject
     finally:

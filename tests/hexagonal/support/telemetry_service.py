@@ -22,8 +22,9 @@ class HealthSource:
 
 
 class ServiceFixture(Fixture):
-    def __init__(self, root):
+    def __init__(self, root, *, boundary="action"):
         super().__init__(root / "original")
+        self.boundary = boundary
         self.replacement = Fixture(root / "replacement")
         self.original_capture = None
         self.changed_policy = None
@@ -44,6 +45,16 @@ class ServiceFixture(Fixture):
 
     def event_ids(self):
         return [row["event_id"] for row in self.events(event_type="fixture.service")]
+
+    def event_page(self, *, actor="owner", **filters):
+        if self.boundary == "service":
+            return self.app.telemetry_service.events({"limit": 1000, **filters}, actor)
+        return super().event_page(actor=actor, **filters)
+
+    def status(self, *, actor="owner"):
+        if self.boundary == "service":
+            return self.app.telemetry_service.status({}, actor)
+        return super().status(actor=actor)
 
     def install_health(self, kind, value=None, *, failure=False):
         setattr(self.app, kind, {"controlled": HealthSource(value, failure=failure)})
