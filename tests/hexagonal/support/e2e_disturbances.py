@@ -25,6 +25,7 @@ from scripts.testkit.adapters import ownership
 from scripts.testkit.adapters.clock import SystemClock
 from scripts.testkit.waits import WaitBudget, WaitTimeout
 from tests.hexagonal.contracts.e2e_world import Receipt, ServerLoss, TotalLoss, WaitExpired
+from tests.hexagonal.support.host_processes import processes_under
 from tests.hexagonal.support.native import wait_for
 
 HOME_KEY = b"XORCHESTRATE_HOME="
@@ -103,14 +104,15 @@ def _holds(pid, inodes):
 
 
 def _victims(home, spawned=()):
-    """This user's processes of the world, each with the signal that selected it.
+    """This user's processes of the world: ``({identity: signal}, {descendant: selected ancestor})``.
 
     ``home``: carries the world's exact home; ``socket``: holds a listening socket bound inside it;
-    ``spawned``: started by the world itself.
+    ``spawned``: started by the world itself; ``descendant``: a child, through parent links read now, of a
+    process already selected by one of those three, never of anything else (not the test runner or shell).
     """
     uid, table = os.getuid(), ownership.processes()
     marker, inodes = os.fsencode(home), _listening_inodes(home)
-    found = {}
+    mine, found = set(), {}
     for pid, (identity, _, state) in table.items():
         if state == "Z" or pid == os.getpid():
             continue
@@ -119,6 +121,7 @@ def _victims(home, spawned=()):
                 continue
         except OSError:
             continue
+        mine.add(pid)
         if _has_home(pid, marker):
             found[identity] = "home"
         elif inodes and _holds(pid, inodes):
@@ -126,7 +129,18 @@ def _victims(home, spawned=()):
     for process in spawned:
         if process.poll() is None and process.pid in table:
             found.setdefault(table[process.pid][0], "spawned")
-    return found
+    children = {}
+    for pid in mine:
+        children.setdefault(table[pid][1], []).append(pid)
+    ancestors, pending = {}, [(identity, identity) for identity in found]
+    while pending:
+        parent, root = pending.pop()
+        for pid in children.get(parent.pid, ()):
+            child = table[pid][0]
+            if child not in found:
+                found[child], ancestors[child] = "descendant", root
+                pending.append((child, root))
+    return found, ancestors
 
 
 def _kill(identities):
@@ -142,23 +156,36 @@ def _kill(identities):
 
 
 def _kill_until_quiet(home, spawned=()):
-    """Kill every victim, again for any that appeared meanwhile; return (victims with signals, survivors)."""
-    victims, survivors = {}, []
+    """Kill every victim, again for any that appeared meanwhile; return (victims, ancestors, survivors)."""
+    victims, ancestry, survivors = {}, {}, []
     for _ in range(3):
-        fresh = {identity: why for identity, why in _victims(home, spawned).items() if identity not in victims}
+        found, ancestors = _victims(home, spawned)
+        fresh = {identity: why for identity, why in found.items() if identity not in victims}
         if not fresh:
             break
         victims.update(fresh)
+        ancestry.update({child: root for child, root in ancestors.items() if child in fresh})
         survivors = _kill(list(victims))
         if survivors:
             break
-    return victims, survivors
+    return victims, ancestry, survivors
 
 
-def _receipt(kind, target, before, effect):
+def _leaked(directory, victims):
+    """World processes still observed by path after a disturbance that no signal selected (reported, never killed).
+
+    Path observation is a reporting aid only; it must never choose what to kill.
+    """
+    table = ownership.processes()
+    taken = {identity.pid for identity in victims}
+    return [table[pid][0] for pid, _ in processes_under([directory]) if pid in table and pid not in taken]
+
+
+def _receipt(kind, target, before, effect, ancestors=None, leaked=()):
     """``before`` maps each victim's identity to the signal that selected it."""
     receipt = Receipt(kind=kind, target=target, before=list(before), effect=list(effect),
-                      outcome="applied" if before else "no_victim", selected=dict(before))
+                      outcome="applied" if before else "no_victim", selected=dict(before),
+                      ancestors=dict(ancestors or {}), leaked=list(leaked))
     if effect:
         raise AssertionError(f"the disturbance left {len(effect)} of its victims alive: {receipt}")
     return receipt
@@ -179,8 +206,9 @@ def _remove_sockets(directory):
 
 def _total_loss(value, world):
     home = _fresh_home(world.cli.home, world.directory)
-    before, effect = _kill_until_quiet(home, world.spawned)
-    receipt = _receipt("total_loss", str(world.directory), before, effect)
+    before, ancestors, effect = _kill_until_quiet(home, world.spawned)
+    receipt = _receipt("total_loss", str(world.directory), before, effect, ancestors,
+                       _leaked(world.directory, before))
     if not value.keep_sockets:
         _remove_sockets(world.directory)
     return receipt
@@ -188,7 +216,7 @@ def _total_loss(value, world):
 
 def _server_loss(value, world):
     home = _fresh_home(world.cli.home, world.directory)
-    candidates = _victims(home)
+    candidates, _ = _victims(home)
     status = world.cli.json("status", expect=0) if candidates and _server_up(world) else {}
     pid = status.get("pid")
     before = {identity: why for identity, why in candidates.items() if identity.pid == pid}
@@ -288,6 +316,6 @@ def remaining(world):
 
 def reap(world):
     """Teardown: stop every process carrying the world's home and every process it spawned; report survivors."""
-    _, survivors = _kill_until_quiet(str(world.cli.home), world.spawned)
+    _, _, survivors = _kill_until_quiet(str(world.cli.home), world.spawned)
     if survivors:
         raise AssertionError(f"the world's teardown left {len(survivors)} of its processes alive")
