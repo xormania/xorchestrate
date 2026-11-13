@@ -27,9 +27,6 @@ def assert_continues(client, original, replacement_id):
     assert reply["output"]["native_id"] == original["backend"]["native_id"], str(reply)[:300]
 
 
-LIVE = {"starting", "active", "unknown"}
-
-
 def lineage(listed, root):
     """``root`` and every session that replaced it, directly or through another replacement."""
     family, grown = {root}, True
@@ -40,6 +37,21 @@ def lineage(listed, root):
                 family.add(key)
                 grown = True
     return family
+
+
+def _mentioned(value):
+    """Every session id a status or report names anywhere."""
+    found = set()
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key in {"session_id", "replacement_session_id"} and isinstance(item, str):
+                found.add(item)
+            else:
+                found |= _mentioned(item)
+    elif isinstance(value, list):
+        for item in value:
+            found |= _mentioned(item)
+    return found
 
 
 def recovered_map(report):
@@ -183,8 +195,12 @@ def a_second_loss_while_a_session_is_being_reconnected_brings_it_back_exactly_on
         family = lineage(listed, original["id"])
         recovered = [replacement for source, replacement in mapped.items() if source in family]
         assert len(recovered) == 1, mapped
-        live = sorted(key for key in family if listed[key]["status"] in LIVE)
+        live = sorted(key for key in family if listed[key]["status"] in {"starting", "active"})
         assert live == recovered, {key: listed[key]["status"] for key in family}
+        # A replacement killed mid-reconnect keeps its outcome uncertain rather than guessed; the operator sees it.
+        uncertain = sorted(key for key in family if listed[key]["status"] == "unknown")
+        shown = _mentioned(recovery) | _mentioned(world.status())
+        assert set(uncertain) <= shown, {"uncertain": uncertain, "shown to the operator": sorted(shown)}
         assert_continues(after, original, recovered[0])
     assert len(world.bridge_hosts()) == 1, "exactly one bridge host serves the conversation"
     world.down()
