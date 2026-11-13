@@ -143,6 +143,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 - `python3 -m scripts.testkit run --suite calibration` takes `--inventory NAME`
   (repeatable) or `--stage ci|pre-draft|manual`; the default still runs the
   inventories registered at `ci`.
+- The hosted-session area's planted faults are calibrated by a `hosted`
+  inventory at the `manual` stage: eight cases, each credited in the hosted
+  session contract scenario it declares.
 - Jev now asks evidence-addressed atomic questions at the source stage and adds
   optional post-test guarantee support and failure triage. Current candidate and
   lane identity, executed inventories and exact failure cases bind the advice;

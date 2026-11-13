@@ -1,0 +1,149 @@
+{
+  "cases": [
+    {
+      "contract": "tests.hexagonal.contracts.hosted_sessions:stop_closes_the_terminal_keeps_the_state_and_resume_reopens_it",
+      "diagnostic": "HOSTED_STOP_KEEPS_PRIVATE_STATE",
+      "mutation": {
+        "new": "        verified = True if closure is None else closure.cleanup_verified\n        (self._paths(hosted[\"key\"])[0] / \"state.json\").unlink(missing_ok=True)\n",
+        "old": "        verified = True if closure is None else closure.cleanup_verified\n",
+        "path": "xorchestrate/adapters/hosted.py"
+      },
+      "name": "stop-removes-saved-state",
+      "selectors": [
+        "tests/hexagonal/test_hosted_sessions.py::test_hosted_sessions_meet_the_contract[detached-process-stop_closes_the_terminal_keeps_the_state_and_resume_reopens_it]",
+        "tests/hexagonal/test_hosted_sessions.py::test_hosted_sessions_meet_the_contract[detached-process-start_converses_and_detach_only_detaches]"
+      ],
+      "target": "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[detached-process-stop_closes_the_terminal_keeps_the_state_and_resume_reopens_it]",
+      "unaffected": [
+        "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[detached-process-start_converses_and_detach_only_detaches]"
+      ]
+    },
+    {
+      "contract": "tests.hexagonal.contracts.hosted_sessions:start_converses_and_detach_only_detaches",
+      "diagnostic": "HOSTED_DETACH_ONLY_DETACHES",
+      "mutation": {
+        "new": "            return bridge.detach(inner)\n        finally:\n            self._forget(session)\n            self._require_host().adopt(session[\"hosted\"][\"terminal\"])\n            self._require_host().close_terminal(session[\"hosted\"][\"terminal\"][\"name\"])",
+        "old": "            return bridge.detach(inner)\n        finally:\n            self._forget(session)",
+        "path": "xorchestrate/adapters/hosted.py"
+      },
+      "name": "detach-closes-the-terminal",
+      "selectors": [
+        "tests/hexagonal/test_hosted_sessions.py::test_hosted_sessions_meet_the_contract[detached-process-start_converses_and_detach_only_detaches]",
+        "tests/hexagonal/test_hosted_sessions.py::test_hosted_sessions_meet_the_contract[detached-process-without_a_bound_host_start_is_refused]"
+      ],
+      "target": "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[detached-process-start_converses_and_detach_only_detaches]",
+      "unaffected": [
+        "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[detached-process-without_a_bound_host_start_is_refused]"
+      ]
+    },
+    {
+      "contract": "tests.hexagonal.contracts.hosted_sessions:reconnect_reopens_a_vanished_conversation_without_manual_cleanup",
+      "diagnostic": "HOSTED_RECONNECT_REOPENS_VANISHED",
+      "mutation": {
+        "new": "            elif error.code in {\"terminal_not_recoverable\", \"terminal_identity_mismatch\"}:\n                raise\n",
+        "old": "            elif error.code in {\"terminal_not_recoverable\", \"terminal_identity_mismatch\"}:\n                terminal = None\n",
+        "path": "xorchestrate/adapters/hosted.py"
+      },
+      "name": "vanished-terminal-not-reopened",
+      "selectors": [
+        "tests/hexagonal/test_hosted_sessions.py::test_hosted_sessions_meet_the_contract[detached-process-reconnect_reopens_a_vanished_conversation_without_manual_cleanup]",
+        "tests/hexagonal/test_hosted_sessions.py::test_hosted_sessions_meet_the_contract[detached-process-without_a_bound_host_start_is_refused]"
+      ],
+      "target": "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[detached-process-reconnect_reopens_a_vanished_conversation_without_manual_cleanup]",
+      "unaffected": [
+        "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[detached-process-without_a_bound_host_start_is_refused]"
+      ]
+    },
+    {
+      "contract": "tests.hexagonal.contracts.hosted_sessions:reconnect_replaces_a_crashed_bridge_host_in_a_living_terminal_host",
+      "diagnostic": "HOSTED_RECONNECT_REPLACES_CRASHED_BRIDGE_HOST",
+      "mutation": {
+        "new": "",
+        "old": "        if terminal is not None and not terminal.running:\n            host.close_terminal(terminal.name)\n            terminal = None\n",
+        "path": "xorchestrate/adapters/hosted.py"
+      },
+      "name": "exited-terminal-reused",
+      "selectors": [
+        "tests/hexagonal/test_hosted_sessions.py::test_hosted_sessions_meet_the_contract[multiplexer-reconnect_replaces_a_crashed_bridge_host_in_a_living_terminal_host]",
+        "tests/hexagonal/test_hosted_sessions.py::test_hosted_sessions_meet_the_contract[detached-process-reconnect_replaces_a_crashed_bridge_host_in_a_living_terminal_host]"
+      ],
+      "target": "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[multiplexer-reconnect_replaces_a_crashed_bridge_host_in_a_living_terminal_host]",
+      "unaffected": [
+        "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[detached-process-reconnect_replaces_a_crashed_bridge_host_in_a_living_terminal_host]"
+      ]
+    },
+    {
+      "contract": "tests.hexagonal.contracts.hosted_sessions:unverified_cleanup_is_reported_and_nothing_is_removed",
+      "diagnostic": "HOSTED_UNVERIFIED_CLEANUP_REPORTED",
+      "mutation": {
+        "new": "        verified = True\n",
+        "old": "        verified = True if closure is None else closure.cleanup_verified\n",
+        "path": "xorchestrate/adapters/hosted.py"
+      },
+      "name": "unverified-cleanup-reported-verified",
+      "selectors": [
+        "tests/hexagonal/test_hosted_sessions.py::test_hosted_sessions_meet_the_contract[detached-process-unverified_cleanup_is_reported_and_nothing_is_removed]",
+        "tests/hexagonal/test_hosted_sessions.py::test_hosted_sessions_meet_the_contract[detached-process-without_a_bound_host_start_is_refused]"
+      ],
+      "target": "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[detached-process-unverified_cleanup_is_reported_and_nothing_is_removed]",
+      "unaffected": [
+        "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[detached-process-without_a_bound_host_start_is_refused]"
+      ]
+    },
+    {
+      "contract": "tests.hexagonal.contracts.hosted_sessions:a_failed_start_keeps_its_output_private_and_says_where_the_log_is",
+      "diagnostic": "HOSTED_FAILED_START_KEEPS_OUTPUT_PRIVATE",
+      "mutation": {
+        "new": "                           \"terminal_running\": bool(current and current.running),\n                           \"recent_output\": host.recent_output(terminal.name, 40)}\n",
+        "old": "                           \"terminal_running\": bool(current and current.running)}\n",
+        "path": "xorchestrate/adapters/hosted.py"
+      },
+      "name": "failed-start-returns-terminal-output",
+      "selectors": [
+        "tests/hexagonal/test_hosted_sessions.py::test_hosted_sessions_meet_the_contract[detached-process-a_failed_start_keeps_its_output_private_and_says_where_the_log_is]",
+        "tests/hexagonal/test_hosted_sessions.py::test_hosted_sessions_meet_the_contract[detached-process-without_a_bound_host_start_is_refused]"
+      ],
+      "target": "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[detached-process-a_failed_start_keeps_its_output_private_and_says_where_the_log_is]",
+      "unaffected": [
+        "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[detached-process-without_a_bound_host_start_is_refused]"
+      ]
+    },
+    {
+      "contract": "tests.hexagonal.contracts.hosted_sessions:the_specification_never_reaches_process_arguments",
+      "diagnostic": "HOSTED_SPECIFICATION_NEVER_IN_ARGUMENTS",
+      "mutation": {
+        "new": "                \"--specification\", json.dumps(native_specification)]",
+        "old": "                \"--specification-file\", str(directory / \"specification.json\")]",
+        "path": "xorchestrate/adapters/hosted.py"
+      },
+      "name": "specification-on-command-line",
+      "selectors": [
+        "tests/hexagonal/test_hosted_sessions.py::test_hosted_sessions_meet_the_contract[detached-process-the_specification_never_reaches_process_arguments]",
+        "tests/hexagonal/test_hosted_sessions.py::test_hosted_sessions_meet_the_contract[detached-process-without_a_bound_host_start_is_refused]"
+      ],
+      "target": "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[detached-process-the_specification_never_reaches_process_arguments]",
+      "unaffected": [
+        "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[detached-process-without_a_bound_host_start_is_refused]"
+      ]
+    },
+    {
+      "contract": "tests.hexagonal.contracts.hosted_sessions:without_a_bound_host_start_is_refused",
+      "diagnostic": "HOSTED_UNBOUND_START_REFUSED",
+      "mutation": {
+        "new": "        if False:\n            raise OrchestrationError(",
+        "old": "        if self.host is None:\n            raise OrchestrationError(",
+        "path": "xorchestrate/adapters/hosted.py"
+      },
+      "name": "unbound-driver-starts",
+      "selectors": [
+        "tests/hexagonal/test_hosted_sessions.py::test_hosted_sessions_meet_the_contract[detached-process-without_a_bound_host_start_is_refused]",
+        "tests/hexagonal/test_hosted_sessions.py::test_hosted_sessions_meet_the_contract[detached-process-unverified_cleanup_is_reported_and_nothing_is_removed]"
+      ],
+      "target": "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[detached-process-without_a_bound_host_start_is_refused]",
+      "unaffected": [
+        "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[detached-process-unverified_cleanup_is_reported_and_nothing_is_removed]"
+      ]
+    }
+  ],
+  "schema_version": 1
+}
