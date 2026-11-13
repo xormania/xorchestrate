@@ -19,7 +19,7 @@ clients. Scenarios never reach for processes, sockets or sleeps themselves; they
   deadline (the world's, or ``timeout``) it raises ``WaitExpired`` naming ``label``.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 
@@ -42,6 +42,12 @@ class Receipt:
     effect: Any
     outcome: str
     """``"applied"``, or ``"no_victim"`` when there was nothing to disturb."""
+    selected: dict = field(default_factory=dict)
+    """Why each identity in ``before`` was a victim: ``"home"`` (it carried the world's XORCHESTRATE_HOME),
+    ``"spawned"`` (``spawn`` started it) or ``"socket"`` (it holds a listening Unix socket bound inside the world's
+    home)."""
+
+SELECTION_SIGNALS = frozenset({"home", "spawned", "socket"})
 
 
 class WaitExpired(AssertionError):
