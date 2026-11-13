@@ -219,8 +219,9 @@ def test_host_descriptors_are_schema_two_and_older_ones_are_refused_with_a_reaso
     assert terminals.discover(old) == []
     with pytest.raises(ValueError, match="older test kit"):
         terminals.attach(legacy)
-    with pytest.raises(ValueError, match="expected 2"):
+    with pytest.raises(ValueError) as caught:
         terminals.attach({**descriptor, "schema_version": 1})
+    assert "expected 2" in str(caught.value), "TESTKIT_OLDER_DESCRIPTORS_ARE_REFUSED_WITH_A_REASON"
 
 
 def test_a_planted_descriptor_is_neither_offered_nor_run(tmp_path, endpoint):
@@ -235,15 +236,19 @@ def test_a_planted_descriptor_is_neither_offered_nor_run(tmp_path, endpoint):
         calls.append((selection, placement))
         return None
 
-    with pytest.raises(ValueError):
+    try:
         terminals.attach(planted, host_for=host_for)
-    assert not marker.exists(), "an argv read from a descriptor was executed"
+        refused = False
+    except ValueError:
+        refused = True
+    assert not marker.exists(), "TESTKIT_DESCRIPTOR_ARGV_IS_NEVER_RUN"
+    assert refused, "a planted descriptor is refused"
     assert calls and calls[0][1]["location"] == str(run / "terminal-host"), "attach asks the host, never the file"
     for placement in ({"name": "acceptance", "location": str(tmp_path / "elsewhere"), "socket": str(endpoint(run) / "host.sock")},
                       {"name": "acceptance", "location": str(run / "terminal-host"), "socket": str(tmp_path / "host.sock")},
                       {"name": "acceptance", "location": str(run / "terminal-host"), "socket": "/tmp/host.sock"}):
         moved = _descriptor(run, endpoint, host={"selection": None, "placement": placement})
-        assert not terminals.validate(moved) and terminals.discover(run) == [], placement
+        assert not terminals.validate(moved) and terminals.discover(run) == [], "TESTKIT_DESCRIPTOR_PLACEMENT_IS_CHECKED"
         with pytest.raises(ValueError):
             terminals.attach(moved, host_for=host_for)
     assert len(calls) == 1, "a placement outside the run's own location never builds a host"
