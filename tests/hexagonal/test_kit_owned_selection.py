@@ -227,6 +227,117 @@ def test_close_reports_a_marked_process_that_does_not_name_the_run_without_endin
     assert result["cleanup"]["remaining_processes"] == 1 and not result["cleanup"]["verified"], result
 
 
+HELD_CHILD = ("import os, signal, sys\n"
+              "if sys.argv[3] == 'ignores-term':\n"
+              "    signal.signal(signal.SIGTERM, signal.SIG_IGN)\n"
+              "hold, ready = int(sys.argv[1]), int(sys.argv[2])\n"
+              "os.write(ready, b'%d\\n' % os.getpid()); os.close(ready)\n"
+              "os.read(hold, 1)\n")
+"""A child that names the run (its last argument) and lives until the test closes the hold pipe, never longer."""
+HELD_PARENT = ("import os, subprocess, sys\n"
+               "hold, ready = int(sys.argv[1]), int(sys.argv[2])\n"
+               f"env = {{k: v for k, v in os.environ.items() if k != {MARKER_KEY!r}}}\n"
+               f"env.update({{{MARKER_KEY!r}: ''}} if sys.argv[5] == 'blank' else {{}})\n"
+               "subprocess.Popen([sys.executable, '-c', sys.argv[3], str(hold), str(ready), sys.argv[4], sys.argv[6]],\n"
+               "                 env=env, pass_fds=(hold, ready), stdin=subprocess.DEVNULL)\n"
+               "os.close(ready)\n"
+               "os.read(hold, 1)\n")
+"""A marked parent that names the run and starts one ``HELD_CHILD`` whose marker is removed (``none``) or blanked
+as for a non-live check command (``blank``); both live until the test closes the hold pipe."""
+
+
+class Family:
+    """A marked parent naming the run and its one child, held on a pipe this test owns; ended by identity."""
+
+    def __init__(self, run, child, child_marker):
+        hold_read, self.hold = os.pipe()
+        ready_read, ready_write = os.pipe()
+        environment = {name: value for name, value in os.environ.items() if name != MARKER_KEY}
+        environment[MARKER_KEY] = str(run)
+        self.parent = subprocess.Popen(
+            [sys.executable, "-c", HELD_PARENT, str(hold_read), str(ready_write), HELD_CHILD, child, child_marker,
+             str(run)], env=environment, pass_fds=(hold_read, ready_write), cwd=tempfile.gettempdir(),
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        os.close(hold_read)
+        os.close(ready_write)
+        try:
+            table = ownership().processes()
+            self.parent_identity = table[self.parent.pid][0]
+            answer = os.read(ready_read, 64)
+        finally:
+            os.close(ready_read)
+        assert answer, "the child did not start"
+        self.child = ownership().processes()[int(answer)][0]
+
+    def end(self):
+        for identity in (self.child, self.parent_identity):
+            ownership().send_signal(identity, signal.SIGKILL)
+        os.close(self.hold)
+        self.parent.wait(timeout=10)
+
+
+@pytest.fixture
+def families():
+    made = []
+    yield lambda *arguments: made.append(Family(*arguments)) or made[-1]
+    for family in made:
+        family.end()
+    ours = [item for family in made for item in (family.child, family.parent_identity)]
+    deadline = time.monotonic() + 10  # an allowance for SIGKILL to land, not a timing claim
+    while any(alive(item) for item in ours) and time.monotonic() < deadline:
+        time.sleep(0.05)
+    assert not any(alive(item) for item in ours), "a process this test started outlived it"
+
+
+class QuietHost:
+    """A terminal host that is up and has nothing to shut down, so ``verified`` turns on processes alone."""
+
+    survives_controller, interactive = True, False
+
+    def adopt(self, receipt):
+        raise AssertionError("nothing to adopt")
+
+    def shutdown(self):
+        pass
+
+    def close(self):
+        pass
+
+
+def test_a_second_close_still_counts_a_marked_leftover_after_the_endpoint_is_gone(run, started, monkeypatch):
+    """The first close reports a marked process it may not end and removes the endpoint; a second close must
+    still count that process as remaining and not report the run as verified clean."""
+    selection = importlib.import_module("scripts.testkit.adapters.terminal_selection")
+    monkeypatch.setattr(selection, "build", lambda *args, **options: selection.SelectedHost(QuietHost(), "quiet", "quiet"))
+    marked = started.identity(started(env={MARKER_KEY: str(run)}).pid)
+    first = close(run)
+    assert first["cleanup"]["remaining_processes"] == 1 and "errors" not in first["cleanup"], first
+    second = close(run)
+    assert alive(marked), "close ended a process the name rule did not reach"
+    assert second["cleanup"]["remaining_processes"] == 1, f"a live marked leftover went uncounted: {second}"
+    assert not second["cleanup"]["verified"], f"a close with a live marked leftover reported verified: {second}"
+
+
+def test_close_ends_a_selected_child_that_ignores_sigterm_after_its_parent_has_gone(run, families):
+    """Close selects a marked parent and its child (by descent) in its first round. Its own SIGTERM ends the
+    parent, which cuts the child's parent link; the child ignores SIGTERM, and close must still end it."""
+    family = families(run, "ignores-term", "none")
+    result = close(run)
+    assert not alive(family.parent_identity), "close did not end the marked parent"
+    assert not alive(family.child), f"a child close had selected survived its escalation: {result}"
+
+
+def test_close_reports_an_orphaned_check_command_whose_worker_died_without_ending_it(run, families):
+    """A check command (blanked marker, names the run) whose worker died before close has no provenance left
+    that close established: it is reported as remaining, never ended."""
+    family = families(run, "plain", "blank")
+    ownership().send_signal(family.parent_identity, signal.SIGKILL)
+    family.parent.wait(timeout=10)
+    result = close(run)
+    assert alive(family.child), "close ended an orphaned check command it never selected"
+    assert result["cleanup"]["remaining_processes"] == 1 and not result["cleanup"]["verified"], result
+
+
 def test_close_leaves_another_runs_marked_process_whose_name_contains_this_run(run, started):
     other = str(run) + "-other"
     foreign = started.identity(started(other, env={MARKER_KEY: other}).pid)
