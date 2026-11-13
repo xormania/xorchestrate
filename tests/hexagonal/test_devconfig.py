@@ -925,3 +925,17 @@ def test_a_safe_selection_is_accepted_through_a_symlink_or_owned_by_root(world, 
     root_owned = Path("/bin/sh").resolve()
     if key in EXECUTABLE_KEYS and root_owned.stat().st_uid == 0:
         assert world.load(env=world.env(**{key: root_owned})).get(key) == root_owned
+
+
+def test_a_selection_that_cannot_be_inspected_is_refused(world, tmp_path):
+    locked = tmp_path / "locked"
+    program = _good(tmp_path, True)
+    locked.mkdir()
+    hidden = locked / "program"
+    program.rename(hidden)
+    locked.chmod(0)
+    try:
+        error = world.error(env=world.env(XORCHESTRATE_DEV_TERMINAL_BINARY=hidden))
+    finally:
+        locked.chmod(0o700)
+    assert error.code == "UNSAFE_SETTING" and "XORCHESTRATE_DEV_TERMINAL_BINARY" in error.detail, error

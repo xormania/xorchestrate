@@ -133,10 +133,11 @@ def test_list_and_setup_accept_the_profile_setting_in_place_of_the_flag(world, t
     listed = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
     assert (code, listed.get("status"), listed.get("runs")) == (0, "passed", []), listed
     calls = []
-    monkeypatch.setattr(cli.profiles, "setup", lambda path, **kwargs: calls.append(Path(path)) or {"status": "passed"})
+    monkeypatch.setattr(cli.profiles, "setup",
+                        lambda path, **kwargs: calls.append((Path(path), kwargs.get("dev"))) or {"status": "passed"})
     code = with_dev(cli.main, ["setup"], direct_runner=None, preflight=None, dev=loaded)
     capsys.readouterr()
-    assert code == 0 and calls == [configured]
+    assert code == 0 and calls == [(configured, loaded)], "setup gets the profile and the developer settings"
 
 
 class Exec(Exception):
