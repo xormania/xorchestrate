@@ -187,16 +187,23 @@ def environment(profile, run_dir):
     return result
 
 
-def processes_naming(text):
-    """Live identities of this user's processes whose command line names ``text``, never this process or its ancestors.
-
-    How a run whose supervisor is gone finds what it left: its terminals' commands name the run directory.
-    """
-    snapshot = processes()
+def _ancestry(snapshot):
+    """This process and its ancestors: never a candidate for any selection here."""
     ancestors, pid = set(), os.getpid()
     while pid in snapshot and pid not in ancestors:
         ancestors.add(pid)
         pid = snapshot[pid][1]
+    return ancestors
+
+
+def processes_naming(text):
+    """Live identities of this user's processes whose command line names ``text``, never this process or its ancestors.
+
+    A name is text anyone can put in a command line: use this to report, or to narrow a selection that
+    ``owned_processes`` already made (its ``within``), never on its own to choose what to signal.
+    """
+    snapshot = processes()
+    ancestors = _ancestry(snapshot)
     needle, found = os.fsencode(str(text)), []
     for pid, (identity, _, state) in snapshot.items():
         if pid in ancestors or state == "Z":
@@ -209,3 +216,124 @@ def processes_naming(text):
             continue
         found.append(identity)
     return found
+
+
+LISTENING = 0x10000
+"""``__SO_ACCEPTCON`` in /proc/net/unix: the socket was bound and listens."""
+
+
+@dataclass(frozen=True)
+class Selection:
+    """Processes selected by provenance: ``selected`` maps each identity to its signal ("home", "spawned",
+    "socket" or "descendant"); ``ancestors`` maps each descendant to the identity that a direct signal selected."""
+
+    selected: dict
+    ancestors: dict
+
+
+def _carries(pid, wanted):
+    """Whether ``pid``'s initial environment holds exactly the entry ``wanted``; nothing else is kept."""
+    try:
+        with open(f"/proc/{pid}/environ", "rb") as source:
+            block = source.read()
+    except OSError:
+        return False  # unreadable: not selected
+    return any(entry == wanted for entry in block.split(b"\0"))
+
+
+def _listening_inodes(root):
+    """Inodes of listening Unix sockets whose bound path, resolved, lies inside the resolved ``root``."""
+    prefix = os.path.realpath(root) + os.sep
+    found = set()
+    try:
+        lines = Path("/proc/net/unix").read_text(encoding="utf-8", errors="replace").splitlines()[1:]
+    except OSError:
+        return found
+    for line in lines:
+        fields = line.split(None, 7)
+        if len(fields) < 8 or fields[7].startswith("@"):
+            continue  # unbound, or an abstract name that is no path
+        try:
+            listening = int(fields[3], 16) & LISTENING
+        except ValueError:
+            continue
+        if listening and os.path.realpath(fields[7]).startswith(prefix):
+            found.add(fields[6])
+    return found
+
+
+def _holds(pid, inodes):
+    """Whether ``pid`` itself holds one of the listening sockets ``inodes``."""
+    try:
+        descriptors = os.listdir(f"/proc/{pid}/fd")
+    except OSError:
+        return False
+    for descriptor in descriptors:
+        try:
+            link = os.readlink(f"/proc/{pid}/fd/{descriptor}")
+        except OSError:
+            continue
+        if link.startswith("socket:[") and link[8:-1] in inodes:
+            return True
+    return False
+
+
+def owned_processes(root, marker, *, spawned=(), within=None):
+    """This user's processes that provably belong to the caller's run, each with the signal that selected it.
+
+    - ``home``: the initial environment sets ``marker`` (a ``(key, value)`` pair) exactly; only that key is
+      compared, and an unreadable environment means "not selected";
+    - ``spawned``: one of the caller's still-running ``spawned`` processes;
+    - ``socket``: it holds a listening Unix socket whose bound path, resolved, lies inside ``root``;
+    - ``descendant``: it descends, through parent links read now, from a process selected above.
+
+    ``root`` must be an existing directory of this user, not a symlink; anything else is refused. This
+    process and its ancestors are never selected. A name or path may narrow a selection that provenance has
+    already made (``within``: identities outside it are never selected, descendants included); it never
+    widens one and never selects by itself.
+    """
+    try:
+        info = os.lstat(root)
+    except OSError as error:
+        raise ValueError(f"refusing to select: {root!s} is not a directory of this user") from error
+    if not os.path.isdir(root) or os.path.islink(root) or info.st_uid != os.getuid():
+        raise ValueError(f"refusing to select: {root!s} is not a directory of this user")
+    key, value = marker
+    wanted = os.fsencode(key) + b"=" + os.fsencode(str(value))
+    snapshot, uid = processes(), os.getuid()
+    excluded = _ancestry(snapshot)
+    allowed = None if within is None else set(within)
+    inodes = _listening_inodes(root)
+    mine, found = set(), {}
+    for pid, (identity, _, state) in snapshot.items():
+        if state == "Z" or pid in excluded:
+            continue
+        try:
+            if os.stat(f"/proc/{pid}").st_uid != uid:
+                continue
+        except OSError:
+            continue
+        mine.add(pid)
+        if allowed is not None and identity not in allowed:
+            continue
+        if _carries(pid, wanted):
+            found[identity] = "home"
+        elif inodes and _holds(pid, inodes):
+            found[identity] = "socket"
+    for process in spawned:
+        entry = snapshot.get(process.pid)
+        if process.poll() is None and entry and process.pid in mine and (allowed is None or entry[0] in allowed):
+            found.setdefault(entry[0], "spawned")
+    children = {}
+    for pid in mine:
+        children.setdefault(snapshot[pid][1], []).append(pid)
+    ancestors, pending = {}, [(identity, identity) for identity in found]
+    while pending:
+        parent, origin = pending.pop()
+        for pid in children.get(parent.pid, ()):
+            child = snapshot[pid][0]
+            if child in found or (allowed is not None and child not in allowed):
+                continue
+            found[child], ancestors[child] = "descendant", origin
+            pending.append((child, origin))
+    return Selection(found, ancestors)

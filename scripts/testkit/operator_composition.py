@@ -24,7 +24,7 @@ from .adapters.evidence import candidate_identity, digest, now, write_json
 from .adapters.managed_process import ManagedWorker
 from .adapters.managed_store import ManagedStore, owner_alive
 from .adapters.native_evidence import collection_supplement
-from .adapters.ownership import processes_naming, send_signal, subreaper
+from .adapters.ownership import alive, owned_processes, processes_naming, send_signal, subreaper
 from .adapters.shard_timings import timing_source, verify_timings
 from .composition import ROOT, preflight, run
 from .composition import plan as check_plan
@@ -315,20 +315,59 @@ def managed_worker(directory, plan):
                          interpreter=plan["interpreter"], grace=plan.get("shutdown_grace", 10), keep_after_run=keep)
 
 
+RUN_MARKER = "XORCHESTRATE_PROOF_DIRECTORY"
+"""The run directory, in the worker's and dashboard's environment (``ManagedWorker``, ``worker``) and inherited
+by their children, except non-live check commands, which blank it (``composition``): those are selected only
+as descendants of a live worker."""
+
+
+def _selected(directory, placement, within=None):
+    try:
+        return set(owned_processes(placement["socket"].parent, (RUN_MARKER, str(directory)), within=within).selected)
+    except ValueError:
+        return set()  # no private endpoint left to anchor provenance: report, never end
+
+
+def _ending(directory, placement):
+    """What close may end: named by the run and selected by its provenance (the name only narrows)."""
+    return sorted(_selected(directory, placement, within=processes_naming(directory)), key=lambda item: item.pid)
+
+
+def _marked(directory):
+    """Processes carrying the run's marker, found with the run directory as the root: for reporting only.
+
+    The run directory outlives the private endpoint, so a marked leftover is still counted after the endpoint is
+    removed. Never a source of signals: what close may end comes from ``_ending`` alone.
+    """
+    try:
+        selection = owned_processes(directory, (RUN_MARKER, str(directory)))
+    except ValueError:
+        return set()
+    return {identity for identity, why in selection.selected.items() if why == "home"}
+
+
+def _leftovers(directory, placement):
+    """Everything of the run still alive: what names it or carries its marker."""
+    return set(processes_naming(directory)) | _selected(directory, placement) | _marked(directory)
+
+
 def close_without_supervisor(directory, state):
     """Close a finished run whose supervisor is gone: end its host at the recorded placement, then stop leftovers.
 
     Kept terminals are adopted from their receipts first. ``shutdown`` reaches
-    terminals no live controller holds; anything still naming the run (an
-    owned host does not end with a supervisor that was killed outright) is
-    stopped by identity. Cleanup is reported from what is actually left.
+    terminals no live controller holds. A leftover (an owned host does not end
+    with a supervisor that was killed outright) is stopped by identity only if
+    it names the run and the run's marker, a socket in its private endpoint or
+    descent from one of those selects it; anything else that names the run or
+    carries its marker is reported, never ended. Cleanup is reported from what
+    is actually left.
     """
     directory = Path(directory)
     terminal = state.get("terminal") or {}
     keep = bool(terminal.get("keep_after_run"))
     plan = read_json(directory / "plan.json")
     placement = host_placement(directory, plan)
-    before = processes_naming(directory)
+    before = _leftovers(directory, placement)
     found = bool(before) or placement["socket"].exists()
     adopted, errors = [], []
     # The run's harness can rewrite plan.json: a built-in host name only, at an endpoint that is still the run's own.
@@ -357,17 +396,26 @@ def close_without_supervisor(directory, state):
             errors.append(getattr(error, "code", "terminal_host_shutdown"))
         finally:
             host.close()
+    # What this close selected stays selected through escalation: its own SIGTERM may end a selected parent and
+    # cut the link that selected a child. Only this close's own selections are kept, and each is re-checked by
+    # identity, so a reused pid is never signalled.
+    chosen = set()
+
+    def ending():
+        chosen.update(_ending(directory, placement))
+        return sorted((identity for identity in chosen if alive(identity)), key=lambda item: item.pid)
+
     for number in (signal.SIGTERM, signal.SIGKILL):
-        survivors = processes_naming(directory)
+        survivors = ending()
         for identity in survivors:
             send_signal(identity, number)
         deadline = time.monotonic() + 3
         while survivors and time.monotonic() < deadline:
             time.sleep(.05)
-            survivors = processes_naming(directory)
+            survivors = ending()
         if not survivors:
             break
-    remaining = processes_naming(directory)
+    remaining = _leftovers(directory, placement)
     if not remove_endpoint(placement["socket"].parent):  # the derived one: never what the plan names
         errors.append("endpoint_not_owned")
     cleanup = {"verified": not remaining and not errors and not placement["socket"].exists(),

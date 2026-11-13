@@ -9,6 +9,12 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- An ownerless `close` of a managed run ends a leftover process only when it names the run and the
+  run's marker, its private endpoint or descent from one of those selects it; it no longer ends a
+  process for naming the run alone. Its cleanup verdict is stricter: a process that names the run or
+  carries its marker but is not ended counts as remaining, so `cleanup.verified` can now be false where
+  it was true. An orphaned check command whose worker has died is reported as remaining, not ended.
+  The end-to-end world and the test kit share this selection (`ownership.owned_processes`).
 - Capability invocation supports trusted `query` and `receipt` execution policies.
   Queries return fresh authorized results without effect records; receipt effects
   retain fencing and outcome without copying argument or result payloads into the
