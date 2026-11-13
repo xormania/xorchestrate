@@ -99,8 +99,8 @@ class FileSystem(Protocol):
 
 
 class Github(Protocol):
-    def merged_pr_head(self, branch: str) -> str | None:
-        """The head commit of a merged pull request from ``branch``, or None; may raise when unavailable."""
+    def merged_pr_head(self, branch: str, base: str | None = None) -> str | None:
+        """The head commit of a pull request from ``branch`` merged into ``base``, or None; may raise."""
 
 
 class DiskUsage(Protocol):

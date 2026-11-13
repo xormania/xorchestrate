@@ -71,7 +71,8 @@ def build(repo: Path, env: Mapping[str, str], flags: Mapping[str, str | None], p
         scratch_max_age_hours=settings.get("XORCHESTRATE_DEV_SCRATCH_MAX_AGE_HOURS"),
         run_max_age_days=settings.get("XORCHESTRATE_DEV_RUN_MAX_AGE_DAYS"),
         brief_size_gb=settings.get("XORCHESTRATE_DEV_BRIEF_SIZE_GB"),
-        owner=settings.get("XORCHESTRATE_DEV_OWNER"))
+        owner=settings.get("XORCHESTRATE_DEV_OWNER"),
+        home=env.get("HOME") or str(Path.home()))
     processes = ports.processes or ProcFs()
     store = ports.store or JsonStateStore(Path(config.state_dir) / STORE_SUBDIR)
     files = ports.files or LocalFiles()

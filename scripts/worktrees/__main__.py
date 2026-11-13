@@ -42,7 +42,6 @@ def _parser() -> argparse.ArgumentParser:
     prune = commands.add_parser("prune", help="remove what the report measures safe (dry run unless --apply)")
     prune.add_argument("--apply", action="store_true")
     prune.add_argument("--offline", action="store_true", help="skip the fetch and GitHub")
-    prune.add_argument("--include-extra", action="store_true", help="also clear old, unused extra-root entries")
     scratch = commands.add_parser("scratch", help="marked scratch directories").add_subparsers(dest="action",
                                                                                                 required=True)
     scratch_new = scratch.add_parser("new", help="create a marked scratch directory and print its path")
@@ -77,6 +76,11 @@ def main(argv: Sequence[str] | None = None, *, env: Mapping[str, str] | None = N
     except DevConfigError as error:
         print(f"{error.code}: {error.detail}", file=sys.stderr)
         return 2
+    if arguments.command in ("report", "prune", "scratch"):
+        unsafe = services.maintenance.unsafe_root()
+        if unsafe:
+            print(unsafe.line(), file=sys.stderr)
+            return 2
     if arguments.command == "report" and arguments.json:
         print(json.dumps(services.maintenance.report_json(arguments.offline), indent=2, sort_keys=True))
         return 0
@@ -92,7 +96,9 @@ def _brief(arguments: argparse.Namespace, env: Mapping[str, str], flags: Mapping
            ports: Ports | None) -> int:
     """At most one line and always success, so a session-start hook can call it."""
     try:
-        line = build(arguments.repo or Path.cwd(), env, flags, ports).maintenance.brief(arguments.offline)
+        maintenance = build(arguments.repo or Path.cwd(), env, flags, ports).maintenance
+        unsafe = maintenance.unsafe_root()
+        line = f"worktrees: report unavailable ({unsafe.code})" if unsafe else maintenance.brief()
     except Exception as error:  # noqa: BLE001 - the brief form must never fail its caller
         code = getattr(error, "code", type(error).__name__)
         line = f"worktrees: report unavailable ({code})"
@@ -105,7 +111,7 @@ def _dispatch(arguments: argparse.Namespace, services) -> Outcome:
     if arguments.command == "report":
         return services.maintenance.report(arguments.offline)
     if arguments.command == "prune":
-        return services.maintenance.prune(arguments.apply, arguments.offline, arguments.include_extra)
+        return services.maintenance.prune(arguments.apply, arguments.offline)
     if arguments.command == "scratch":
         maintenance = services.maintenance
         if arguments.action == "new":

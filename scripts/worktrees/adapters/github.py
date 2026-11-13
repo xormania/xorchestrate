@@ -11,10 +11,13 @@ class GhCli:
         self.cwd = cwd
         self.timeout = timeout
 
-    def merged_pr_head(self, branch: str) -> str | None:
+    def merged_pr_head(self, branch: str, base: str | None = None) -> str | None:
+        command = ["gh", "pr", "list", "--head", branch, "--state", "merged", "--json", "headRefOid", "--limit", "1"]
+        if base:
+            command += ["--base", base]
         try:
             result = subprocess.run(
-                ["gh", "pr", "list", "--head", branch, "--state", "merged", "--json", "headRefOid", "--limit", "1"],
+                command,
                 cwd=self.cwd, capture_output=True, text=True, timeout=self.timeout, check=False)
         except (OSError, subprocess.SubprocessError):
             return None

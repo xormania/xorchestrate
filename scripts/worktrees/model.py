@@ -74,6 +74,7 @@ class Config:
     run_max_age_days: float = 7.0
     brief_size_gb: float = 5.0
     owner: str | None = None
+    home: str = ""
 
 
 @dataclass

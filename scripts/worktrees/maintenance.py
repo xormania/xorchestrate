@@ -73,7 +73,9 @@ class Report:
     dirs: list[DirRow]
 
     def totals(self) -> dict[str, Any]:
-        return {"size": sum(row.size["total"] for row in self.trees) + sum(row.size for row in self.dirs),
+        # Reclaimable space only: not the main checkout, not report-only extra roots.
+        return {"size": sum(row.size["total"] for row in self.trees if row.verdict != "MAIN")
+                + sum(row.size for row in self.dirs if row.kind != "extra"),
                 "removable": sum(row.verdict == "REMOVABLE" for row in self.trees),
                 "needs_look": sum(row.verdict == "NEEDS_LOOK" for row in self.trees),
                 "expired": sum(row.expired for row in self.dirs)}
@@ -100,6 +102,23 @@ class Maintenance:
 
     # Measuring
 
+    def unsafe_root(self) -> Refusal | None:
+        """A scratch, run or extra root that is "/", the home directory, or overlaps a checkout or the state."""
+        real = self.files.real_path
+        protected = [real(tree.path) for tree in self.repo.trees()] + [real(self.config.state_dir)]
+        home = real(self.config.home) if self.config.home else None
+        roots = [("XORCHESTRATE_DEV_SCRATCH_ROOT", self.config.scratch_root)]
+        roots += [("XORCHESTRATE_DEV_RUN_ROOTS", root) for root in self.config.run_roots]
+        roots += [("XORCHESTRATE_DEV_EXTRA_ROOTS", root) for root in self.config.extra_roots]
+        for key, root in roots:
+            resolved = real(root)
+            if resolved == "/" or resolved == home:
+                return Refusal("CONFIG_INVALID", f"{key}: {root} is the filesystem root or the home directory")
+            for other in protected:
+                if _inside(resolved, other) or _inside(other, resolved):
+                    return Refusal("CONFIG_INVALID", f"{key}: {root} overlaps {other}")
+        return None
+
     def measure(self, offline: bool = False) -> Report:
         table = self.processes.processes()
         base = self.config.base or self.repo.default_base()
@@ -113,6 +132,8 @@ class Maintenance:
         return Report(rows, dirs)
 
     def _entries(self, root: str) -> list[str]:
+        """Real paths of the directories directly under ``root`` (itself resolved); links are skipped."""
+        root = self.files.real_path(root)
         return [posixpath.join(root, name) for name in self.files.list_dir(root)
                 if self.files.is_dir(posixpath.join(root, name)) and not self.files.is_symlink(posixpath.join(root, name))]
 
@@ -123,8 +144,10 @@ class Maintenance:
     def _size(self, path: str) -> dict[str, int]:
         if not self.files.is_dir(path):
             return {"total": 0, "serena": 0, "venv": 0, "build": 0}
+        counted = [posixpath.join(path, name) for name in (*VENV_DIRS, *BUILD_DIRS, ".serena")]
         build = sum(self.disk.size(posixpath.join(path, name)) for name in BUILD_DIRS)
-        build += sum(self.disk.size(found) for found in self.files.find_dirs(path, CACHE_DIRS))
+        build += sum(self.disk.size(found) for found in self.files.find_dirs(path, CACHE_DIRS)
+                     if not any(_inside(found, prefix) for prefix in counted))
         return {"total": self.disk.size(path), "serena": self.disk.size(posixpath.join(path, ".serena")),
                 "venv": sum(self.disk.size(posixpath.join(path, name)) for name in VENV_DIRS), "build": build}
 
@@ -140,15 +163,24 @@ class Maintenance:
                 return posixpath.join(worktrees, name)
         return None
 
+    def _own_commits(self, branch: str | None, tip: str) -> bool:
+        """Whether ``branch`` has commits of its own since it was created (from its reflog); unknown means no."""
+        if not branch:
+            return False
+        created = (self.repo.out(["reflog", "show", "--format=%H", f"refs/heads/{branch}", "--"]) or "").splitlines()
+        return bool(created) and created[-1] != tip
+
     def _merged(self, tree: Tree, base: str | None, offline: bool) -> bool:
+        """Merged into the base with work of its own, or a pull request merged into the default branch."""
         if not tree.head:
             return False
-        if base and self.repo.is_ancestor(tree.head, base):
+        if base and self.repo.is_ancestor(tree.head, base) and self._own_commits(tree.branch, tree.head):
             return True
         if offline or not tree.branch:
             return False
+        name = (base or "").removeprefix("refs/remotes/").removeprefix("origin/") or None
         try:
-            return self.github.merged_pr_head(tree.branch) == tree.head
+            return self.github.merged_pr_head(tree.branch, base=name) == tree.head
         except Exception:  # noqa: BLE001 - GitHub evidence is optional; any failure means none
             return False
 
@@ -235,7 +267,9 @@ class Maintenance:
             if mark is not None and isinstance(mark.get("created"), (int, float)):
                 age_from = float(mark["created"])
         elif kind == "run":
-            recognised = self.files.exists(posixpath.join(path, RUN_MARK))
+            # A run directory holds a plan; one that is also a git checkout is never treated as a run.
+            recognised = (self.files.exists(posixpath.join(path, RUN_MARK))
+                          and not self.files.exists(posixpath.join(path, ".git")))
             if recognised:
                 age_from = self.files.mtime(posixpath.join(path, RUN_MARK))
         age = now - age_from if age_from is not None else None
@@ -277,15 +311,16 @@ class Maintenance:
     def report_json(self, offline: bool = False) -> dict[str, Any]:
         return self.measure(offline).as_json()
 
-    def brief(self, offline: bool = False) -> str | None:
-        totals = self.measure(offline).totals()
+    def brief(self) -> str | None:
+        """Always offline: a session-start hook never waits on the network."""
+        totals = self.measure(offline=True).totals()
         large = totals["size"] > self.config.brief_size_gb * GIB
         if not (totals["removable"] or totals["needs_look"] or totals["expired"] or large):
             return None
         return (f"worktrees: {totals['removable']} removable, {totals['needs_look']} need a look, "
                 f"{totals['expired']} expired dirs, {_human(totals['size'])}; {REPORT_HINT}")
 
-    def prune(self, apply: bool = False, offline: bool = False, include_extra: bool = False) -> Outcome:
+    def prune(self, apply: bool = False, offline: bool = False) -> Outcome:
         outcome = Outcome()
         if not offline and not self.repo.ok(["fetch", "origin"]):
             return outcome.refuse(Refusal("FETCH_FAILED", "git fetch origin failed; nothing was changed "
@@ -306,16 +341,20 @@ class Maintenance:
             outcome.out += reaped.out
             outcome.err += reaped.err
         for row in plan.dirs:
-            old_extra = (include_extra and row.kind == "extra" and row.age_s is not None
-                         and row.age_s > self.config.scratch_max_age_hours * HOUR)
-            if row.expired or old_extra:
-                if not apply:
-                    outcome.out.append(f"would delete {row.path}")
-                elif self._users(row.path, self.processes.processes()):
-                    outcome.err.append(f"kept {row.path}: in use")
-                else:
+            # Only what the tool marked (scratch) or recognises as a run; extra roots are report-only.
+            if row.kind not in ("scratch", "run") or not row.expired:
+                continue
+            if not apply:
+                outcome.out.append(f"would delete {row.path}")
+            elif self._users(row.path, self.processes.processes()):
+                outcome.err.append(f"kept {row.path}: in use")
+            else:
+                try:
                     self.files.remove_tree(row.path)
                     outcome.out.append(f"deleted {row.path}")
+                except OSError as error:
+                    outcome.code = max(outcome.code, 1)
+                    outcome.err.append(f"could not delete {row.path}: {error}")
         for row in review:
             if "MISSING_DIR" not in row.reasons or row.locked:
                 outcome.err.append(f"left for review: {row.path} ({','.join(row.reasons) or 'changed'})")
@@ -351,8 +390,18 @@ class Maintenance:
         name = posixpath.basename(admin)
         stamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime(self.clock.now()))
         backup = posixpath.join(self.config.state_dir, "backups", f"{name}-{stamp}.tar")
-        self.files.archive(admin, backup, name)
-        self.files.remove_tree(admin)
+        try:
+            self.files.archive(admin, backup, name)
+        except OSError as error:
+            outcome.code = max(outcome.code, 1)
+            outcome.err.append(f"kept registration of {row.path}: the backup failed: {error}")
+            return
+        try:
+            self.files.remove_tree(admin)
+        except OSError as error:
+            outcome.code = max(outcome.code, 1)
+            outcome.err.append(f"kept registration of {row.path}: could not delete it: {error}")
+            return
         outcome.out.append(f"dropped the registration of missing {row.path}; backup {backup}")
 
     # Scratch
@@ -376,10 +425,11 @@ class Maintenance:
     def scratch_rm(self, target: str) -> Outcome:
         outcome = Outcome()
         path = posixpath.normpath(target)
-        root = posixpath.normpath(self.config.scratch_root)
-        if posixpath.dirname(path) != root or self._mark(path) is None or self.files.is_symlink(path):
+        root = self.files.real_path(self.config.scratch_root)
+        if (self.files.is_symlink(path) or self.files.real_path(posixpath.dirname(path)) != root
+                or self._mark(path) is None):
             return outcome.refuse(Refusal("NOT_SCRATCH", f"{path} is not a marked directory directly under {root}"))
-        users = self._users(path, self.processes.processes())
+        users = self._users(self.files.real_path(path), self.processes.processes())
         if users:
             return outcome.refuse(Refusal("IN_USE", f"{path} is in use by " + ", ".join(str(p.pid) for p in users)))
         self.files.remove_tree(path)
