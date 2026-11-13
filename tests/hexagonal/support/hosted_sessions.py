@@ -111,8 +111,12 @@ class HostedSubject:
         return self.sessions.is_dir() and any(path.is_file() for path in self.sessions.rglob("*state*"))
 
     def lose(self, session, *, everything=True):
-        """Kill the session outright, cleaning nothing: with ``everything`` (a container failure) every process of
-        this subject, the terminal host included; otherwise only the bridge host, by the identity in its receipt."""
+        """Kill the session outright, cleaning nothing.
+
+        With ``everything`` (a container failure): end what provenance selects as the subject's own (its terminal
+        host by the socket in its base, and their descendants), selected afresh over at most three passes and a
+        final look, and fail if any of those survive. A process provenance cannot select is not reached. Otherwise
+        only the bridge host, by the identity in its receipt."""
         from scripts.testkit.adapters.ownership import Identity, alive, send_signal
 
         if everything:
