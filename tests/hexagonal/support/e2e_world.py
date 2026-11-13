@@ -23,6 +23,9 @@ HOSTS = {"multiplexer": "tmux", "detached-process": "detached-process"}
 DEADLINE = 60
 """The harness allowance a world's waits draw on, scaled by ``XO_TEST_TIMEOUT_SCALE`` in the shared wait."""
 
+DEFAULT_COMMAND_TIMEOUT = 60
+"""A CLI command's own limit outside any await, as before extraction."""
+
 
 class Client:
     """An MCP client through ``connect``, as a harness would use it."""
@@ -64,11 +67,18 @@ class Client:
 class World:
     """One project on one real terminal host, with the resumable deterministic session peer."""
 
-    def __init__(self, cli, host, *, clock=None, sleep=None):
+    def __init__(self, cli, host, *, clock=None, sleep=None, gates):
         self.cli = cli
         self.host = host
         self.clock, self.sleep = clock, sleep
+        self.gates = gates
+        """The directory of this world's controlled gates (see ``hold``)."""
         self.spawned = []
+
+    def _json(self, *arguments):
+        """A CLI command's JSON reply; inside an await it gets only the budget that is left."""
+        left = self.remaining()
+        return self.cli.json(*arguments, timeout=DEFAULT_COMMAND_TIMEOUT if left is None else left)
 
     @property
     def directory(self):
@@ -95,20 +105,24 @@ class World:
         return session
 
     def up(self):
-        return self.cli.json("up")
+        return self._json("up")
 
     def down(self):
-        return self.cli.json("down", "--detach")
+        return self._json("down", "--detach")
 
     def recover(self):
-        return self.cli.json("recover")
+        return self._json("recover")
 
     def status(self):
-        return self.cli.json("status")
+        return self._json("status")
 
     def settle(self, seconds):
         """A fixed quiet interval, kept until a decision boundary replaces it."""
         e2e_disturbances.settle(seconds)
+
+    def hold(self, stage):
+        """Arm a controlled gate at ``stage`` before the action that reaches it (see ``e2e_disturbances.hold``)."""
+        return e2e_disturbances.hold(self, stage)
 
     def disturb(self, value):
         return e2e_disturbances.apply(value, self)
@@ -143,10 +157,11 @@ def _session_options():
 
 
 @contextmanager
-def world(host, *, clock=None, sleep=None):
+def world(host, *, clock=None, sleep=None, gates=None):
     """A fresh world on ``host`` (a key of ``HOSTS``); skips when that host cannot run here, never falling back.
 
-    ``clock`` and ``sleep`` are handed to the shared wait, so a test can drive the world's deadline.
+    ``clock`` and ``sleep`` are handed to the shared wait, so a test can drive the world's deadline. ``gates`` is the
+    directory for controlled gates; by default one inside the world, removed with it.
     """
     with short_directory() as directory:
         cli = CliEnvironment(directory, terminal_host={"adapter": HOSTS[host]})
@@ -155,7 +170,9 @@ def world(host, *, clock=None, sleep=None):
             if probe.get("error") or probe.get("adapter") != HOSTS[host]:
                 pytest.skip(f"terminal host unavailable: {probe}")
             cli.options["sessions"] = _session_options()
-            yield World(cli, host, clock=clock, sleep=sleep)
+            gate_directory = directory / "gates" if gates is None else gates
+            gate_directory.mkdir(parents=True, exist_ok=True)
+            yield World(cli, host, clock=clock, sleep=sleep, gates=gate_directory)
         finally:
             cli.cleanup()
             e2e_disturbances.reap(directory)
