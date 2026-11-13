@@ -16,7 +16,8 @@ ROOT = Path(__file__).resolve().parents[2]
 
 @pytest.mark.parametrize("behaviour", sorted(contract.BEHAVIOURS))
 def test_the_repository_satisfies_the_agent_guidance_behaviour(behaviour):
-    contract.require(RepositoryView(ROOT), behaviour)
+    contract.require(RepositoryView(ROOT, shared_skills=contract.SHARED_SKILLS,
+                                    kept_sections=contract.KEPT_SECTIONS), behaviour)
 
 
 def test_a_healthy_tree_passes_every_check(tmp_path):
