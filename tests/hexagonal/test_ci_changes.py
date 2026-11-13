@@ -9,6 +9,7 @@ import pytest
 
 from scripts.ci import classify_changes as subject
 from tests.hexagonal.contracts import ci_changes as contract
+from tests.hexagonal.support.github_actions import expression, pr_context
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -181,7 +182,8 @@ def test_workflow_gates_only_heavy_jobs_on_the_classifier():
     jobs = _jobs()
     classifier = jobs[contract.CLASSIFIER_JOB]
     contract.classifier_output(classifier["outputs"]["code"])
-    assert not classifier.get("needs") and not classifier.get("if")
+    assert not classifier.get("needs")
+    assert expression(classifier.get("if", True), pr_context("synchronize"))
     checkout = classifier["steps"][0]
     assert checkout["with"]["fetch-depth"] == 0 and checkout["with"]["persist-credentials"] is False
     step = next(step for step in classifier["steps"] if step.get("id") == "classify")
@@ -193,7 +195,7 @@ def test_workflow_gates_only_heavy_jobs_on_the_classifier():
         else:
             contract.heavy_job_gate(jobs[name])
     contract.always_running(jobs["changes"], needs=["paths"])
-    assert jobs["changes"]["if"] == "${{ always() }}"
+    assert expression(jobs["changes"]["if"], pr_context("synchronize"))
     contract.always_running(jobs["architecture-status"], needs=["changes"])
     assert set(jobs) == {contract.CLASSIFIER_JOB, *contract.HEAVY_JOBS, *contract.ALWAYS_JOBS}
 

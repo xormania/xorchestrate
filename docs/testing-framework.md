@@ -78,13 +78,14 @@ Reports distinguish shortlisted, scored and unscored evidence IDs. Source text i
 instruction, and this stage has no executed test evidence. It cannot establish
 behavioral coverage or test quality.
 
-After deterministic qualification, the CI result job runs optional post-test
+After CI completes, the independent Jev advisory workflow runs optional post-test
 triage, including when a required lane failed. It authenticates the current
 candidate, original context, GitHub job/artifact lineage and inventory receipts.
 A failed job can supply an observation; it cannot qualify as a successful lane.
 Foreign, missing or contradictory receipts are excluded and reported explicitly.
-The separate provider setup and triage steps cannot turn a failing gate green or
-make a passing gate fail because Jev is unavailable.
+Provider setup and triage neither delay required CI completion nor change its
+verdict. The consumer executes trusted collector code against the tested checkout
+as data; see [independent advice](jev-ci-advice.md).
 
 Post-test checks compare declared family guarantees with complete selected test
 units and their bounded static bindings. Selection prioritizes failed modules,
@@ -101,7 +102,8 @@ and `max_source_bytes`. Post-test subjects prioritize actual failed cases, then
 distinct test units; omitted case counts and identity digests remain explicit. The default checks are
 `guarantee_gap` and `failure_regression`. Raw atomic distributions, applicability,
 sufficiency, supplied evidence IDs and selected supporting IDs remain in
-`triage.json`; the CI summary includes the exact selected source text and spans.
+`triage.json` in the independent advice artifact, including exact selected source
+text and spans.
 The threshold is routing policy, not a calibrated defect probability. A concern
 is an investigation candidate for human review, never a confirmed defect or an
 additional acceptance gate. Reused behavioral runs are not described as fresh
@@ -229,6 +231,13 @@ Maintain calibration witnesses that attribute a real failure to the intended
 assertion. Do not replace their independent oracle with a call to the production
 implementation. Counts are descriptive evidence, not an optimization target or a
 frozen acceptance threshold.
+
+Crash calibration waits for the native fixture's applied-effect acknowledgment
+before killing its host. An RPC timeout alone does not establish that boundary.
+Failed scenarios also kill and reap their own blocked host if graceful termination
+cannot finish. The unknown-effect and no-replay assertions are unchanged; the
+[boundary regression receipt](ci-evidence/native-calibration-boundary.json)
+records the delayed-fixture reproduction and retained fault detection.
 
 Fault cases for calibration are data. An inventory file in
 `scripts/verification/inventories/` holds cases only: one exact source edit, the

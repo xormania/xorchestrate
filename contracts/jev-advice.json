@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "automatic": {
+    "source": false,
+    "post_test": false
+  }
+}

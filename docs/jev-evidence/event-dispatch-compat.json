@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "scope": "Replace the obsolete calibration-only literal with checked-in dispatch expression scenarios: calibration or an explicit source run may start on the default branch; empty requests and other branches may not.",
+  "candidate_base": "0bf33eb",
+  "green": {
+    "command": "python -m pytest -p no:cacheprovider tests/hexagonal/test_jev_operational.py tests/hexagonal/test_ci_advice.py tests/hexagonal/test_jev_events.py -q",
+    "passed": 103,
+    "failed": 0,
+    "files_sha256": {
+      ".github/workflows/jev.yml": "df240a68bfd40fd68129163da76a6552c18e4066ad5368aefe76a98bb127746f",
+      "tests/hexagonal/test_jev_operational.py": "71ed7d9ec3204fc6a67e4c61c43a9b0ea40c489d658c32aa6cd812310175dae2",
+      "tests/hexagonal/support/github_actions.py": "5c2d80d17ea55fec5d548a85f23bf497552a55352be810b0325a65516cdd2bae"
+    }
+  },
+  "fault_witnesses": [
+    {
+      "name": "default_branch_guard_removed",
+      "mutation": {
+        "path": ".github/workflows/jev.yml",
+        "old": "github.ref_name == github.event.repository.default_branch && ",
+        "new": ""
+      },
+      "target": "tests.hexagonal.test_jev_operational::test_live_calibration_is_explicit_default_branch_work_separate_from_source_advice",
+      "expected_diagnostic": "LIVE_CALIBRATION_REQUIRES_EXPLICIT_DEFAULT_BRANCH_DISPATCH",
+      "classification": "detected",
+      "candidate_sha256": "b0289371739a0de489ec10381f1ff2f1144826420d932d073da6646a36c85e12",
+      "mutation_sha256": "3c12ce859cc179fc593285c8a9aa86bd3d6754e6e1778f08ee7f01c29b2777df",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "control_exit": 0,
+      "mutant_exit": 1
+    },
+    {
+      "name": "implicit_dispatch_allowed",
+      "mutation": {
+        "path": ".github/workflows/jev.yml",
+        "old": "(inputs.calibration || inputs.source_run_id != '')",
+        "new": "true"
+      },
+      "target": "tests.hexagonal.test_jev_operational::test_live_calibration_is_explicit_default_branch_work_separate_from_source_advice",
+      "expected_diagnostic": "LIVE_CALIBRATION_REQUIRES_EXPLICIT_DEFAULT_BRANCH_DISPATCH",
+      "classification": "detected",
+      "candidate_sha256": "b0289371739a0de489ec10381f1ff2f1144826420d932d073da6646a36c85e12",
+      "mutation_sha256": "b667b9e51430b624d1ec2945848d62999c3ebadb192525ab906190c8c359fd89",
+      "assertion_observer_sha256": "8107f8fb650517955e46d8790e3bb4ffc2020243e32d26c67f346d60a3bb1779",
+      "control_exit": 0,
+      "mutant_exit": 1
+    }
+  ],
+  "reproduce": "python -m scripts.verification calibrate --candidate . --out <fresh-external-directory> --mutation <row-mutation.json> --selector tests/hexagonal/test_jev_operational.py::test_live_calibration_is_explicit_default_branch_work_separate_from_source_advice --target tests.hexagonal.test_jev_operational::test_live_calibration_is_explicit_default_branch_work_separate_from_source_advice --diagnostic LIVE_CALIBRATION_REQUIRES_EXPLICIT_DEFAULT_BRANCH_DISPATCH",
+  "limitation": "The shared expression fixture covers this predicate subset locally. Hosted workflow acceptance remains an independent GitHub check; no provider request or model accuracy claim is made."
+}

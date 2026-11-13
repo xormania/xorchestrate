@@ -1,0 +1,103 @@
+{
+  "name": "Jev event advice",
+  "permissions": {
+    "contents": "read",
+    "actions": "read"
+  },
+  "concurrency": {
+    "group": "jev-event-${{ github.event.pull_request.number || github.event.workflow_run.id }}",
+    "cancel-in-progress": true
+  },
+  "jobs": {
+    "advise": {
+      "if": "(github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository && (github.event.action != 'edited' || github.event.changes.body || github.event.changes.title)) || (github.event_name == 'workflow_run' && github.event.workflow_run.head_repository.full_name == github.repository && ((github.event.workflow_run.path == '.github/workflows/ci.yml' && github.event.workflow_run.conclusion == 'failure') || (github.event.workflow_run.path == '.github/workflows/jev-review-events.yml' && github.event.workflow_run.conclusion == 'success')))",
+      "runs-on": "ubuntu-latest",
+      "timeout-minutes": 4,
+      "steps": [
+        {
+          "uses": "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+          "with": {
+            "ref": "master",
+            "persist-credentials": false
+          }
+        },
+        {
+          "uses": "astral-sh/setup-uv@94527f2e458b27549849d47d273a16bec83a01e9",
+          "with": {
+            "version": "0.13.7"
+          }
+        },
+        {
+          "name": "Prepare trusted interpreter",
+          "env": {
+            "UV_PROJECT_ENVIRONMENT": "${{ runner.temp }}/jev-event-env",
+            "PYTHONPYCACHEPREFIX": "${{ runner.temp }}/jev-event-pycache"
+          },
+          "run": "uv sync --locked --no-default-groups --no-install-project --managed-python --python 3.12.16\necho \"TRUSTED_SHA=$(git rev-parse HEAD)\" >> \"$GITHUB_ENV\"\n"
+        },
+        {
+          "uses": "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333",
+          "if": "github.event.workflow_run.path == '.github/workflows/jev-review-events.yml'",
+          "with": {
+            "name": "jev-review-event",
+            "path": "${{ runner.temp }}/jev-review-event",
+            "run-id": "${{ github.event.workflow_run.id }}",
+            "github-token": "${{ github.token }}"
+          }
+        },
+        {
+          "uses": "actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830",
+          "with": {
+            "path": "${{ runner.temp }}/jev-event-cache",
+            "key": "jev-event-v1-${{ github.run_id }}-${{ github.run_attempt }}",
+            "restore-keys": "jev-event-v1-"
+          }
+        },
+        {
+          "name": "Assess bounded event evidence",
+          "continue-on-error": true,
+          "timeout-minutes": 2,
+          "env": {
+            "TYPESAFE_API_KEY": "${{ secrets.TYPESAFE_API_KEY }}",
+            "GITHUB_TOKEN": "${{ github.token }}",
+            "EVENT_NAME": "${{ github.event_name }}",
+            "EVENT_PATH": "${{ github.event_path }}",
+            "RELAY": "${{ github.event.workflow_run.path == '.github/workflows/jev-review-events.yml' }}",
+            "PYTHONPYCACHEPREFIX": "${{ runner.temp }}/jev-event-pycache"
+          },
+          "run": "args=()\nif [ \"$RELAY\" = true ]; then args+=(--relay \"$RUNNER_TEMP/jev-review-event/event.json\"); fi\n\"$RUNNER_TEMP/jev-event-env/bin/python\" -m scripts.ci.jev_events \\\n  --event \"$EVENT_PATH\" --event-name \"$EVENT_NAME\" \"${args[@]}\" \\\n  --cache \"$RUNNER_TEMP/jev-event-cache\" --output \"$RUNNER_TEMP/jev-event-result\"\n"
+        },
+        {
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+          "if": "always()",
+          "with": {
+            "name": "jev-event-${{ github.run_id }}-${{ github.run_attempt }}",
+            "path": "${{ runner.temp }}/jev-event-result",
+            "retention-days": 30,
+            "if-no-files-found": "warn"
+          }
+        }
+      ]
+    }
+  },
+  "on": {
+    "pull_request_target": {
+      "types": [
+        "opened",
+        "reopened",
+        "ready_for_review",
+        "edited",
+        "synchronize"
+      ]
+    },
+    "workflow_run": {
+      "workflows": [
+        "CI",
+        "Jev review event"
+      ],
+      "types": [
+        "completed"
+      ]
+    }
+  }
+}

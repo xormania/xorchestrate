@@ -392,22 +392,27 @@ def test_jev_missing_foreign_and_invalid_artifacts_cannot_look_current(tmp_path,
     assert result["status"] == "passed" and result["errors"] == []
 
 
-def test_ci_summary_waits_for_advisory_artifact_without_requiring_jev_success():
+def test_ci_summary_finishes_without_waiting_for_advisory_work():
     workflow = json.loads((Path(__file__).parents[2] / ".github/workflows/ci.yml").read_text())
     aggregate = workflow["jobs"]["ci-result"]
-    assert "architecture" in aggregate["needs"]
-    assert aggregate["if"] == "${{ always() }}"
+    assert "architecture" not in aggregate["needs"], "CI_RESULT_DOES_NOT_WAIT_FOR_ADVISORY_JEV"
+    assert not any("TYPESAFE_API_KEY" in json.dumps(step) for step in aggregate["steps"]), \
+        "CI_RESULT_HAS_NO_POST_QUALIFICATION_PROVIDER_TAIL"
+    assert "always()" in aggregate["if"]
     docs, errors = subject.job_verdict(_needs(), event="pull_request")
     assert docs is False and errors == []
 
 
-def test_ci_advisory_link_is_exported_from_the_actual_artifact_upload():
-    workflow = json.loads((Path(__file__).parents[2] / ".github/workflows/ci.yml").read_text())
-    diagnostic = workflow["jobs"]["architecture"]
-    upload = next(step for step in diagnostic["steps"]
-                  if step.get("with", {}).get("name", "").startswith("architecture-evidence--attempt-"))
-    assert upload.get("id"), "The retained upload must expose its own artifact URL"
-    assert diagnostic.get("outputs", {}).get("artifact_url") == "${{ steps." + upload["id"] + ".outputs.artifact-url }}"
+def test_independent_advice_retains_artifacts_under_their_source_and_consumer_identity():
+    workflow = json.loads((Path(__file__).parents[2] / ".github/workflows/jev.yml").read_text())
+    upload = next(step for step in workflow["jobs"]["advice"]["steps"]
+                  if step.get("with", {}).get("name", "").startswith("jev-advice-"))
+    assert upload["if"] == "always()", "ADVICE_EVIDENCE_SURVIVES_PROVIDER_FAILURE"
+    assert upload["uses"].startswith("actions/upload-artifact@")
+    assert "github.event.workflow_run.id" in upload["with"]["name"]
+    assert "github.event.workflow_run.run_attempt" in upload["with"]["name"]
+    assert "consumer-${{ github.run_id }}-${{ github.run_attempt }}" in upload["with"]["name"]
+    assert "jev-advice/output/" in upload["with"]["path"] and "jev-advice/plan.json" in upload["with"]["path"]
 
 
 @pytest.mark.parametrize("advice_fault", ("http", "archive"))
@@ -553,15 +558,14 @@ def test_grounded_candidate_reports_keep_distinct_claims_and_source_locations(tm
     assert legacy["jev"]["status"] == "complete"
 
 
-def test_ci_diagnostic_context_uses_the_actual_change_base():
-    workflow = json.loads((Path(__file__).parents[2] / ".github/workflows/ci.yml").read_text())
-    diagnostic = workflow["jobs"]["architecture"]
-    checkout = next(step for step in diagnostic["steps"] if step.get("uses", "").startswith("actions/checkout@"))
-    assert checkout.get("with", {}).get("fetch-depth") == 0
-    command = next(step for step in diagnostic["steps"] if step.get("name") == "Jev architecture diagnostics")
-    assert command.get("env", {}).get("JEV_BASE_REF") == "${{ github.event.pull_request.base.sha || github.event.before }}"
-    assert '--base-ref "$jev_base_ref"' in command["run"]
-    assert "git rev-parse" in command["run"] and "HEAD^" in command["run"]
+def test_independent_advice_checks_out_authenticated_tested_source_with_change_history():
+    workflow = json.loads((Path(__file__).parents[2] / ".github/workflows/jev.yml").read_text())
+    source = next(step for step in workflow["jobs"]["advice"]["steps"]
+                  if step.get("with", {}).get("path") == "source")
+    assert source["with"]["ref"] == "${{ steps.gate.outputs.tested_sha }}", "ADVICE_USES_AUTHENTICATED_TESTED_SOURCE"
+    assert source["with"]["fetch-depth"] == 0, "ADVICE_RETAINS_ACTUAL_COMPARISON_HISTORY"
+    assert source["with"]["persist-credentials"] is False
+    assert "steps.gate.outputs.kind == 'source'" in source["if"]
 
 
 @pytest.mark.parametrize("malformed", ("judgment_list", "details_list"))

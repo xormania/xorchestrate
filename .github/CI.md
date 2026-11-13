@@ -47,8 +47,11 @@ a local git tag and a source directory, and `uv tool run --from <wheel>`) and
 checks the `install_source` each reports, through both `xo` and `xorchestrate`.
 
 CI runs on GitHub-hosted Ubuntu. Pinned actions have read-only repository
-permissions. PR open/source/reopen/edit/readiness events receive candidate
-observations; eligible deterministic lanes may reuse exact qualified evidence.
+permissions. PR open/source/reopen and all edits receive candidate validation;
+eligible deterministic lanes may reuse exact qualified evidence. Static checks
+and both stable required verdicts run even for title/body edits, so the newest
+workflow run can satisfy branch protection. Marking a draft ready preserves its
+existing candidate checks without starting a new run.
 Pushes to master and manual runs execute full validation. See
 [PR lifecycle validation](../docs/pr-lifecycle-ci.md) for event handling, original
 evidence links and the `CI_REUSE_ENABLED=false` recovery switch. Selected jobs are:
@@ -61,7 +64,6 @@ evidence links and the `CI_REUSE_ENABLED=false` recovery switch. Selected jobs a
 | Application and adapter tests (Python 3.12) | Retains the existing status name; needs every tests shard and fails unless the shard matrix succeeded. It does not rerun validation |
 | Calibration and multi-harness verification | Shared `calibration` suite and composed three-harness `multi-harness` protocol suite, in parallel with the tests shards |
 | Tmux live acceptance (protocol fixture) | Shared acceptance suite. The job provisions tmux for the test kit's own supervisor (installed through apt only when the runner image lacks it; the step prints `tmux -V`). That supervisor is not the product terminal host. Private owned process cleanup is part of the receipt |
-| Jev architecture diagnostics | Independent diagnostics-only invocation with retained advisory output |
 | Hexagonal architecture | Retains the existing required status name and reports the shared static job's outcome; it does not rerun validation |
 
 Each Python job configures `PYTHONPYCACHEPREFIX` and `UV_PROJECT_ENVIRONMENT` in
@@ -96,11 +98,14 @@ launching dependent validation. Available evidence uploads even on failure.
 
 ### Documentation-only changes
 
-Only pull requests can omit fresh behavioral execution through the independently
-guarded documentation decision or qualified reuse. Pushes (including every push
+Validation runs can omit fresh behavioral execution through the independently
+guarded documentation decision or qualified reuse. Known obsolete source runs
+can also stop after proving a surviving replacement, without qualifying a pass.
+Pushes (including every push
 to `master`) and manual runs always run the full pipeline. Non-PR concurrency
-cancels older work on the same ref; PR concurrency preserves active validation
-and separates source/base candidates. A documentation-only master merge still
+cancels older work on the same ref; PR validation concurrency separates source
+head/base candidates and metadata has a separate group. A delayed older event
+cannot cancel a newer candidate's validation. A documentation-only master merge still
 receives full validation of the integrated tree.
 
 For a pull request, the `paths` job (Classify changed paths) checks out full
@@ -135,17 +140,19 @@ The job output is
 `steps.guard.outputs.force == 'false' && steps.classify.outputs.code || 'true'`.
 It is `false` only when the guard ran and allowed classification and the
 classifier reported `false`. The tests shards, the application aggregate, the
-verification, tmux acceptance and Jev diagnostics jobs declare `needs: paths` and
+verification and tmux acceptance jobs declare `needs: paths` and
 the documentation condition `!cancelled() && needs.paths.outputs.code != 'false'`
 (the application aggregate also needs the shard matrix). The deterministic
-behavioral jobs additionally require `needs.paths.outputs.reuse != 'true'`;
-the advisory Jev job remains fresh for code-bearing candidates. An unavailable
-classifier or reuse planner cannot skip validation. On a documentation-only or
+behavioral jobs additionally require `needs.paths.outputs.reuse != 'true'`.
+Jev runs separately under its event and advice policies. An unavailable
+classifier or reuse planner cannot skip validation. An explicit supersession
+decision can skip old static and behavioral lanes, but cannot qualify a pass.
+On a documentation-only or
 qualified-reuse PR the shards and application aggregate skip together. Otherwise
 the application aggregate uses `always()` and fails unless the whole matrix
 succeeded. The final `CI result` always authenticates the explicit applicability
 or reuse decision. Static checks wait for `paths` to receive the candidate context,
-use an always-running condition, and are never gated on either decision. The
+use an always-running condition, and are never gated on documentation or reuse. The
 `Hexagonal architecture` status always reports their result. The static suite backs
 the required status. It does not lint Markdown, so no documentation check is
 lost by skipping the other jobs.
@@ -192,22 +199,22 @@ selected/omitted source scope, and do not override deterministic violations or
 create requirements from findings. See
 [architecture enforcement](../docs/architecture-enforcement.md).
 
-The source stage asks separate applicability, sufficiency and contract questions
-against complete source packets. After deterministic qualification, `CI result`
-optionally installs the diagnostic dependencies and runs candidate-bound test
-evidence triage, including after failed test lanes. Selected assertions, their
-concrete bindings and matching execution details support advisory judgments;
-omitted cases and unscored evidence remain explicit. Setup or provider failure
-cannot change the deterministic result. Reports are retained with the aggregate
-evidence and summarized alongside it. See
-[test evidence triage](../docs/testing-framework.md) for selection limits.
+Focused Jev event probes select PR context and failed CI log evidence. Broad source
+diagnostics and candidate-bound test evidence triage remain available in the separate
+`Jev advisory` workflow; both automatic stages default off in
+`contracts/jev-advice.json`, before evidence intake or provider access.
+Explicit default-branch dispatches can select a completed `source_run_id` and either
+stage. See [focused event advice](../docs/jev-events.md). `CI result` has no Jev dependency,
+provider credential, diagnostic installation or inference step. The consumer uses
+trusted default-branch code and model policy; the tested checkout and artifacts
+are read as data. It authenticates their producer identity, reserves each source
+attempt before provider access and retains the source and trusted revisions
+separately. Cancelled, superseded, documentation-only and behavior-reuse runs do
+not start new inference. See [independent advice](../docs/jev-ci-advice.md).
 
-The architecture job selects its evaluation workload from changed paths. Changes
-to Jev code, contracts, corpus or workflow inputs run the paired synthetic pilot
-and heldout historical incidents; an unavailable change scope also selects that
-full path. Other code changes run one small fresh health control. These reports
-remain advisory, and historical matches do not establish prospective defect
-detection or engineering time saved. See
+Full synthetic and historical calibration is an explicit default-branch workflow
+dispatch. Routine lifecycle events do not repeat calibration or a health request.
+The local evaluation and live-health commands remain available. See
 [operational evaluation](../docs/jev-operational.md).
 
 CI neither requests reviews nor merges branches. xor controls those decisions.
@@ -232,7 +239,8 @@ effect, receipt or acceptance recording. See [the active guide](../docs/telemetr
 
 ## Aggregate result and reviewer summary
 
-`CI result` is an always-running final job. It requires successful path
+`CI result` is an always-running final job on all selected events, including
+metadata edits. It requires successful path
 classification, static checks, every application shard and its aggregate,
 calibration/multi-harness verification, tmux acceptance, and installed-package
 acceptance when that job is present, either executed now or independently
@@ -240,7 +248,7 @@ qualified from the same candidate. Jev remains advisory. Heavy jobs can skip for
 an explicit successful documentation-only decision, or an authenticated reuse
 plan whose original receipts are requalified. An absent decision, failed
 classifier, missing proof or cancellation cannot establish a pass. Static checks
-remain required on every selected run.
+remain required to qualify every selected validation run.
 
 The aggregate authenticates this run's original per-lane producers through
 GitHub jobs, attempts, artifact metadata, check association and immutable Git
@@ -266,18 +274,10 @@ qualification; GitHub's final `CI result` job status also includes failures of t
 checkout, artifact download and final upload steps. The same stdlib aggregation
 entrypoint is available locally as `python3 -m scripts.ci.result --help`.
 
-The aggregate waits for the advisory architecture job so its artifact is available
-before rendering the summary. This dependency does not require Jev to succeed:
-its job result, provider status and any missing, invalid or foreign report are
-shown separately and never change deterministic qualification. Advice
-is downloaded separately; failure to transfer optional diagnostics cannot fail
-the required artifact download. Current advice
-requires the diagnostic report's tested commit, empty working-tree status and
-matching measured subject. Each assessment shows its choice, confidence and
-distribution, followed by selected/omitted/truncated source scope, report/context
-hashes and an artifact link. Model confidence is not a calibrated defect
-probability. Omitted paths are sampled in the summary; the full scope remains in
-`architecture-evidence/diagnostics.json` and `ci-result-evidence--attempt-N/result.json`.
+The aggregate finishes when deterministic evidence qualification finishes. Jev
+assessments, model probabilities, source scope and execution receipts are retained
+in the independent `jev-advice-...` artifact. They cannot qualify required lanes.
+The consumer labels advice historical if the candidate changes during inference.
 
 ### Required checks and freshness
 

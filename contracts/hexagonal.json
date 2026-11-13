@@ -1026,7 +1026,9 @@
         "scripts.architecture.__main__",
         "scripts.architecture.effectiveness",
         "scripts.architecture.triage",
-        "scripts.architecture.operational"
+        "scripts.architecture.operational",
+        "scripts.ci.jev_events",
+        "scripts.ci.advice"
       ],
       "allowed_roles": [
         "architecture_foundation",

@@ -9,6 +9,17 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- Small advisory Jev probes select PR review attention, examine specific findings
+  and classify failed CI evidence in trusted event workflows. Their bounded,
+  cached results do not delay required CI. See [event advice](docs/jev-events.md).
+- Review probes validate original source before redaction and retain separate
+  inference-text identities. Review-triggered inference requires a configured
+  GitHub reviewer ID verified against the review and relay actor.
+- Jev source and post-test advice runs after CI in a separate trusted consumer; required verification no longer waits for inference. Full live calibration is explicitly dispatched.
+- PR title/body edits use a small metadata observation and marking a draft ready
+  preserves existing checks. Source and base changes still validate; obsolete
+  source work can stop when a surviving current-head run is verified. See
+  [PR lifecycle validation](docs/pr-lifecycle-ci.md).
 - Jev change packets retain moved assignment before-state using stable target identities and distinguish repeated targets.
 - CI summaries retain valid mixed-cache Jev assessments and separate fresh from reused usage.
 - Post-test Jev observation IDs distinguish modules that share a test family.
@@ -16,8 +27,8 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 - Jev operational evaluation replays pinned engineering incidents and healthy
   controls with separate tuning and heldout groups. Reports distinguish known
   fault matches, independently supported findings, unknown costs and reviewer
-  time. CI runs full evaluations when their inputs change and a small fresh
-  health control otherwise. See [operational evaluation](docs/jev-operational.md).
+  time. Live calibration is explicitly dispatched after evaluation inputs change.
+  See [operational evaluation](docs/jev-operational.md).
 - Jev diagnostics budget the complete serialized request, preserve complete
   evidence while splitting oversized candidate batches, and reuse successful
   partitions. Bounded transient retries share the request deadline; recognized
@@ -80,6 +91,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   verified cleanup. Foreground runs refuse the option.
 
 ### Fixed
+
+- Native crash calibration waits for the applied-effect boundary before crash
+  injection and reaps its blocked host when a scenario fails.
 
 - The built-in PR provider limits authenticated inspection and handoff reads to
   configured workspace repositories plus explicit `read_repositories` entries.

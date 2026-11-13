@@ -518,7 +518,7 @@ def evaluate(needs, *, event, source_sha, tested_sha, workflow, artifacts, catal
     result["jev"] = jev_evidence(artifacts, needs, tested_sha=tested_sha)
     if isinstance(reuse, dict) and not reused:
         result["lifecycle"] = {key: reuse.get(key) for key in
-                               ("decision", "reason", "lookup_seconds", "current_pr", "history", "ambiguous_attempts")}
+                               ("decision", "reason", "lookup_seconds", "current_pr", "history", "ambiguous_attempts", "replacement_run")}
     return result
 
 
