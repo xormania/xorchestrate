@@ -516,3 +516,106 @@ def test_leaving_a_world_reports_a_process_it_could_not_stop(monkeypatch, sentin
         for identity in spared:
             real(identity, 9)
     assert alive(sentinel)
+
+
+# The selector: the world's own home in the environment, or what the world spawned --------------------
+
+def started(argv, *, cwd, env):
+    process = subprocess.Popen(argv, cwd=cwd, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                               stderr=subprocess.DEVNULL)
+    identity = ownership().processes()[process.pid][0]
+    return process, identity
+
+
+def stop(process):
+    if process.poll() is None:
+        process.kill()
+    process.wait(timeout=10)
+
+
+def without_home():
+    return {name: value for name, value in os.environ.items() if name != "XORCHESTRATE_HOME"}
+
+
+@pytest.mark.parametrize("home", ["none", "another"])
+@pytest.mark.parametrize("kind", ["TotalLoss", "teardown"])
+def test_a_process_inside_the_worlds_tree_without_its_home_survives(kind, home, sentinel):
+    other = Path(track(tempfile.mkdtemp(prefix="xo-other-home-")))
+    env = without_home() if home == "none" else {**without_home(), "XORCHESTRATE_HOME": str(other)}
+    with World("detached-process") as world:
+        running(world)
+        inside = world.directory / "inside"
+        inside.mkdir()
+        process, identity = started([sys.executable, "-c", "import time; time.sleep(120)"], cwd=inside, env=env)
+        try:
+            if kind == "TotalLoss":
+                receipt = world.disturb(contract().TotalLoss())
+                assert identity not in receipt.before and alive(identity), "a process without the world's home was taken"
+        except BaseException:
+            stop(process)
+            raise
+    try:
+        assert alive(identity), "leaving the world killed a process without its home"
+        assert alive(sentinel)
+    finally:
+        stop(process)
+        os.rmdir(other)
+
+
+def test_a_process_carrying_the_worlds_home_is_taken_wherever_it_runs(sentinel):
+    outside = Path(track(tempfile.mkdtemp(prefix="xo-outside-")))
+    with World("detached-process") as world:
+        running(world)
+        env = {**without_home(), "XORCHESTRATE_HOME": str(world.cli.home)}
+        process, identity = started([sys.executable, "-c", "import time; time.sleep(120)"], cwd=outside, env=env)
+        try:
+            receipt = world.disturb(contract().TotalLoss())
+            assert identity in receipt.before and not alive(identity), "a process of the world's home was missed"
+        finally:
+            stop(process)
+    os.rmdir(outside)
+    assert alive(sentinel)
+
+
+def test_a_world_whose_home_it_did_not_create_refuses_to_disturb(monkeypatch, sentinel):
+    foreign = Path(track(tempfile.mkdtemp(prefix="xo-foreign-home-")))
+    signalled = []
+    with World("detached-process") as world:
+        running(world)
+        monkeypatch.setattr(world.cli, "home", foreign)
+        with monkeypatch.context() as during:
+            during.setattr(ownership(), "send_signal", lambda identity, number: signalled.append(identity))
+            with pytest.raises((AssertionError, ValueError, RuntimeError)):
+                world.disturb(contract().TotalLoss())
+        assert signalled == [], "a world with a home it did not create signalled something"
+        monkeypatch.undo()
+    os.rmdir(foreign)
+    assert alive(sentinel)
+
+
+NOT_DUMPABLE = ("import ctypes, time; ctypes.CDLL(None).prctl(4, 0, 0, 0, 0);"  # PR_SET_DUMPABLE 0
+                "open(__import__('sys').argv[1], 'w').write('ready'); time.sleep(120)")
+
+
+def test_a_process_whose_environment_cannot_be_read_is_not_a_victim(tmp_path, sentinel):
+    outside = Path(track(tempfile.mkdtemp(prefix="xo-outside-")))
+    ready = tmp_path / "ready"
+    with World("detached-process") as world:
+        running(world)
+        env = {**without_home(), "XORCHESTRATE_HOME": str(world.cli.home)}
+        process, identity = started([sys.executable, "-c", NOT_DUMPABLE, str(ready)], cwd=outside, env=env)
+        try:
+            deadline = time.monotonic() + 10
+            while not ready.exists() and time.monotonic() < deadline:
+                time.sleep(0.05)
+            try:
+                Path(f"/proc/{process.pid}/environ").read_bytes()
+                pytest.skip("this kernel lets the same user read a non-dumpable process's environment")
+            except PermissionError:
+                pass
+            receipt = world.disturb(contract().TotalLoss())
+            assert identity not in receipt.before and alive(identity), "an unreadable environment was taken"
+        finally:
+            stop(process)
+    os.rmdir(outside)
+    assert alive(sentinel)
