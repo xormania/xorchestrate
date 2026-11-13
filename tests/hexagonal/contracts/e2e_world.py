@@ -17,10 +17,9 @@ clients. Scenarios never reach for processes, sockets or sleeps themselves; they
 - ``bridge_hosts()`` lists the running bridge hosts of this project.
 - ``await_(label, predicate, *, timeout=None)`` returns the zero-argument predicate's first truthy value; at the
   deadline (the world's, or ``timeout``) it raises ``WaitExpired`` naming ``label``.
-- ``settle(seconds)`` keeps a fixed quiet interval, until a decision boundary replaces it.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 
@@ -43,6 +42,19 @@ class Receipt:
     effect: Any
     outcome: str
     """``"applied"``, or ``"no_victim"`` when there was nothing to disturb."""
+    selected: dict = field(default_factory=dict)
+    """Why each identity in ``before`` was a victim: ``"home"`` (it carried the world's XORCHESTRATE_HOME),
+    ``"spawned"`` (``spawn`` started it), ``"socket"`` (it holds a listening Unix socket bound inside the world's
+    home) or ``"descendant"`` (it descends from a process selected by another signal)."""
+    ancestors: dict = field(default_factory=dict)
+    """For each victim selected as ``"descendant"``: the identity of the ancestor that ``"home"``, ``"spawned"`` or
+    ``"socket"`` selected, from which this descendant was reached (its root, not a descendant in between)."""
+    leaked: list = field(default_factory=list)
+    """Identities still observed in the world after the disturbance that no signal selected (re-parented away from
+    the world). Identities only; reported, never killed."""
+
+
+SELECTION_SIGNALS = frozenset({"home", "spawned", "socket", "descendant"})
 
 
 class WaitExpired(AssertionError):
@@ -72,8 +84,6 @@ class World(Protocol):
     def bridge_hosts(self) -> list: ...
 
     def await_(self, label, predicate, *, timeout=None): ...
-
-    def settle(self, seconds): ...
 
 
 def awaited_or_none(world, label, predicate):
