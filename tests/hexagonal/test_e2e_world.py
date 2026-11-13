@@ -325,3 +325,39 @@ def test_after_a_total_loss_a_manual_world_awaits_the_recovery_decision_without_
         assert detected["unclean_stop"] is True and detected["selected"] == [], detected
         assert sum(clock.sleeps) < 1, f"the boundary was reached by waiting, not observed: {clock.sleeps}"
         assert alive(sentinel)
+
+
+# Gaps found by planted faults -------------------------------------------------------------------
+
+def test_a_victim_that_survives_the_grace_fails_the_disturbance_naming_its_receipt(monkeypatch, sentinel):
+    monkeypatch.setenv("XO_TEST_TIMEOUT_SCALE", "0.05")
+    with World("detached-process") as world:
+        running(world)
+        with monkeypatch.context() as during:
+            during.setattr(ownership(), "send_signal", lambda identity, number: None)  # the signal never lands
+            with pytest.raises(AssertionError, match="total_loss"):
+                world.disturb(contract().TotalLoss())
+        assert world.processes(), "nothing should have died without a signal"
+        assert alive(sentinel)
+
+
+def test_the_remaining_budget_never_reaches_zero_at_the_deadline():
+    clock = ControlledClock()
+    seen = []
+
+    def predicate():
+        clock.advance(elapsed=31)
+        seen.append(world.remaining())
+        return True
+
+    with World("detached-process", clock=clock, sleep=clock.sleep) as world:
+        world.await_("past the deadline", predicate, timeout=30)
+    assert seen and seen[0] > 0, seen
+
+
+def test_there_is_no_remaining_budget_outside_an_await():
+    clock = ControlledClock()
+    with World("detached-process", clock=clock, sleep=clock.sleep) as world:
+        assert world.remaining() is None
+        world.await_("instant", lambda: True, timeout=5)
+        assert world.remaining() is None, "a finished wait left its budget behind"
