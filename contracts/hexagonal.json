@@ -188,7 +188,8 @@
         "dataclasses",
         "typing",
         "xcontracts.ports",
-        "xcontracts.model"
+        "xcontracts.model",
+        "contextlib"
       ],
       "allow_dynamic": false,
       "forbidden_calls": [
