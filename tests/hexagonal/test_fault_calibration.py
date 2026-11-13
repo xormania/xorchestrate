@@ -752,7 +752,7 @@ PROJECT_SERVER = (
      f"{_HOST_CONTRACT}:{_SWEEP}", f"{_HOST_CONTRACT_TEST}[detached-process-surviving-{_SWEEP}]"),
     ("lost-terminal-record-blocks-the-project", "xorchestrate/cli.py", f"{_TOTAL_LOSS}[detached-process]",
      "PROJECT_SERVER_LOST_TERMINAL_RECORD_NEVER_BLOCKS", None,
-     f"{_SERVER_TESTS}::test_server_locations_are_private_absolute_and_bounded"),
+     f"{_SERVER_TESTS}::test_down_whose_client_gave_up_still_stops_and_status_never_stops"),
 )
 """The project-server area's planted faults (old faults 1-4). The lost-record case credits only the host's
 unrecoverable-terminal refusals in status, never another terminal-host error."""
