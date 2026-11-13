@@ -68,7 +68,15 @@ evidence links and the `CI_REUSE_ENABLED=false` recovery switch. Selected jobs a
 
 Each Python job configures `PYTHONPYCACHEPREFIX` and `UV_PROJECT_ENVIRONMENT` in
 runner temporary storage before validation. uv-managed Python 3.12.16 and uv 0.13.7 are
-selected explicitly. Native `uv lock --check` and the generated validation export
+selected explicitly. Every setup-uv step, including release and Jev workflows,
+supplies the SHA-256 of the uv 0.13.7 Linux x86-64 archive from the
+[GitHub release asset](https://github.com/astral-sh/uv/releases/tag/0.13.7).
+The explicit checksum verifies downloads independently of the action's bundled
+checksum table and the mirror's manifest. `test_release_workflow.py` checks all
+workflow installations against that reviewed identity. Change the version and
+checksum together when updating uv, and review the archive platform when changing
+runner architecture. Action-only updates retain the runtime checksum.
+Native `uv lock --check` and the generated validation export
 check reject dependency-input drift, then `uv sync --locked` installs the chosen
 profile. Validation tools are bootstrapped from the lock before the telemetry
 source build, which uses the installed backend without build isolation. Editable application installation uses `--no-deps --no-build-isolation`

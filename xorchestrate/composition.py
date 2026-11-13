@@ -20,9 +20,13 @@ from .worktrees import bound_worktree, session_worktree
 
 BUILTINS = {
     "telemetry": {"local": "xorchestrate.adapters.telemetry:LocalTelemetry"},
-    # Storage selected inside the local telemetry adapter's ``corpus``/``artifacts`` options.
+    # Components selected inside the local telemetry adapter's options.
     "telemetry_corpus": {"sqlite": "xorchestrate.adapters.telemetry_collector.sqlite:corpus"},
     "telemetry_artifacts": {"filesystem": "xorchestrate.adapters.telemetry_collector.artifacts:filesystem"},
+    "telemetry_operational_sink": {
+        "local": "xorchestrate.adapters.telemetry_export:local_operational_sink",
+        "otlp": "xorchestrate.adapters.telemetry_export:otlp_operational_sink",
+    },
     "state_engine": {"declared": "xorchestrate.adapters.state:ConfiguredStateEngine"},
     "store": {"memory": "xorchestrate.adapters.storage:MemoryStore", "sqlite": "xorchestrate.adapters.storage:SQLiteStore"},
     "providers": {"mcp": "xorchestrate.adapters.capabilities:StdioMCPProvider", "cli": "xorchestrate.adapters.capabilities:CLIProvider",
@@ -63,7 +67,7 @@ DEFAULT_TERMINAL_HOST = {"adapter": "tmux", "fallback": {"adapter": "detached-pr
 
 
 # Adapter kinds that are selected inside another adapter's options, not as sections.
-NESTED = frozenset({"telemetry_corpus", "telemetry_artifacts"})
+NESTED = frozenset({"telemetry_corpus", "telemetry_artifacts", "telemetry_operational_sink"})
 # Adapter kinds the operator layer selects from the user's home (settings.json,
 # instance.json); a project configuration cannot select them.
 OPERATOR = frozenset({"companion", "version_control", "repository_hosting", "terminal_host"})
