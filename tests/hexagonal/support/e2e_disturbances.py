@@ -26,6 +26,8 @@ from tests.hexagonal.contracts.e2e_world import Receipt, ServerLoss, TotalLoss, 
 from tests.hexagonal.support.host_processes import processes_under
 from tests.hexagonal.support.native import wait_for
 
+POLL_SECONDS = .25
+"""Pause between observations of an await: an observation may start a CLI process, so not faster."""
 SIGNAL_GRACE = 10
 """Seconds a killed process may take to disappear before the disturbance counts as incomplete."""
 
@@ -155,7 +157,7 @@ def await_(world, label, predicate, timeout):
     stack = _waits.setdefault(world, [])
     stack.append((clock, clock.monotonic() + budget.effective_timeout))
     try:
-        return wait_for(predicate, timeout, message=label, clock=clock, sleep=world.sleep)
+        return wait_for(predicate, timeout, message=label, clock=clock, sleep=world.sleep, poll_interval=POLL_SECONDS)
     except WaitTimeout as expired:
         raise WaitExpired(label) from expired
     finally:
