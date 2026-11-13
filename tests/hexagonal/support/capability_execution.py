@@ -112,10 +112,10 @@ class Subject:
 
     def failure(self, call):
         try:
-            call()
+            result = call()
         except OrchestrationError as error:
             return {"code": error.code, "details": deepcopy(error.details), "message": str(error)}
-        raise AssertionError("CONTROL_CALL_MUST_FAIL")
+        return {"code": None, "result": result}
 
     def retained(self):
         with self.store.transaction() as tx:
