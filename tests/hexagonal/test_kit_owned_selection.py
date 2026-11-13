@@ -81,10 +81,12 @@ def pid_from(path, timeout=10):
 # The adapter -------------------------------------------------------------------------------------
 
 @pytest.fixture
-def root(tmp_path):
-    directory = tmp_path / "root"
-    directory.mkdir(mode=0o700)
-    return directory
+def root():
+    """A short private directory, so socket paths under it stay within the Unix limit whatever pytest's base."""
+    import shutil
+    directory = Path(track(tempfile.mkdtemp(prefix="xo-root-")))
+    yield directory
+    shutil.rmtree(directory, ignore_errors=True)
 
 
 def select(root, marker, **options):
@@ -131,9 +133,11 @@ def test_a_root_that_is_not_a_real_directory_of_this_user_is_refused(kind, tmp_p
         select(path, (MARKER_KEY, str(path)))
 
 
-PARENT = ("import subprocess, sys, time;"
-          "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(120)']);"
+PARENT = ("import os, subprocess, sys, time;"
+          f"env = {{k: v for k, v in os.environ.items() if k != {MARKER_KEY!r}}};"
+          "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(120)'], env=env);"
           "open(sys.argv[1], 'w').write(str(child.pid)); time.sleep(120)")
+"""A parent whose child carries no marker, so the child can only be selected as a descendant."""
 
 
 def test_within_narrows_and_never_reaches_a_descendant_outside_it(root, started, tmp_path):
@@ -196,6 +200,8 @@ def test_close_ends_the_runs_own_leftovers_and_their_descendants(run, started, t
     parent = started(tmp_path / "child.pid", run, env={MARKER_KEY: str(run)}, program=PARENT.replace(
         "[sys.executable, '-c', 'import time; time.sleep(120)']",
         "[sys.executable, '-c', 'import time; time.sleep(120)', sys.argv[2]]"))
+    child_marker = (Path("/proc") / pid_from(tmp_path / "child.pid").__str__() / "environ").read_bytes()
+    assert MARKER_KEY.encode() + b"=" not in child_marker, "the leftover's child must carry no marker"
     child_pid = pid_from(tmp_path / "child.pid")
     identities = [started.identity(pid) for pid in (own.pid, parent.pid, child_pid)]
     try:
