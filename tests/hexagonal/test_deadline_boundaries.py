@@ -265,12 +265,13 @@ def test_shared_support_harness_allowance_uses_the_opted_in_scale(monkeypatch, m
 @pytest.mark.parametrize("terminal", [False, True], ids=["socket", "terminal"])
 @pytest.mark.parametrize("timeout,scale,expected", [(.005, 1, .005), (.02, 2, .04)])
 def test_terminal_receivers_never_manufacture_a_minimum_timeout(monkeypatch, terminal, timeout, scale, expected):
+    from scripts.testkit.adapters import clock as clock_adapter
     from tests.hexagonal.support import managed_terminals
 
     clock = ControlledClock()
     supplied = []
     monkeypatch.setenv("XO_TEST_TIMEOUT_SCALE", str(scale))
-    monkeypatch.setattr(managed_terminals.time, "monotonic", clock.monotonic)
+    monkeypatch.setattr(clock_adapter.time, "monotonic", clock.monotonic)
     if terminal:
         def select(read, write, errors, timeout):
             supplied.append(timeout)
@@ -393,3 +394,20 @@ def test_composed_suite_preserves_an_independent_timeout_after_cooperative_overr
     with pytest.raises(TimeoutError) as caught:
         suite.wait(lambda run: True, "outer-observation")
     assert caught.value is error
+
+
+@pytest.mark.parametrize("module,function", [("managed_workflow", "await_condition"), ("terminal_host", "wait")])
+def test_shared_support_does_not_add_a_retry_policy_for_safe_conflicts(module, function):
+    from xorchestrate.model import Conflict
+
+    subject = importlib.import_module("tests.hexagonal.support." + module)
+    error = Conflict("predicate conflict", retry_safe=True)
+    attempts = []
+
+    def predicate():
+        attempts.append(True)
+        raise error
+
+    with pytest.raises(Conflict) as caught:
+        getattr(subject, function)(predicate)
+    assert caught.value is error and attempts == [True], "MIGRATED_WAIT_PRESERVES_EXISTING_RETRY_POLICY"
