@@ -49,9 +49,11 @@ class QueueAPI:
         if parsed.path == "/actions/workflows/ci.yml/runs":
             query = parse_qs(parsed.query)
             assert query.get("event") == ["pull_request"]
+            assert query.get("branch") == ["feature"]
             page = int(query.get("page", ["1"])[0])
+            size = int(query.get("per_page", ["100"])[0])
             rows = list(self.runs.values()) if self.listing is None else self.listing
-            return {"total_count": len(rows), "workflow_runs": deepcopy(rows if page == 1 else [])}
+            return {"total_count": len(rows), "workflow_runs": deepcopy(rows[(page - 1) * size:page * size])}
         if parsed.path == "/pulls/17":
             return deepcopy(self.pr)
         if parsed.path == "/git/ref/heads/feature":
