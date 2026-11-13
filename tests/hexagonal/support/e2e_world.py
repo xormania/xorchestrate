@@ -6,6 +6,8 @@ observes status and the project's processes, waits through the shared classified
 disturbances through ``support.e2e_disturbances``. Nothing here decides a scenario's verdict.
 """
 import json
+import os
+import stat
 import subprocess
 import sys
 from contextlib import contextmanager
@@ -131,6 +133,19 @@ class World:
     def bridge_hosts(self):
         return sorted(pid for pid, command in arguments_containing("xorchestrate.bridge")
                       if str(self.cli.directory) in command)
+
+    def socket_files(self):
+        """The Unix socket files present under the world's home, live or left behind by a loss."""
+        found = []
+        for root, _, files in os.walk(self.cli.home):
+            for name in files:
+                path = os.path.join(root, name)
+                try:
+                    if stat.S_ISSOCK(os.lstat(path).st_mode):
+                        found.append(path)
+                except FileNotFoundError:
+                    continue  # a socket removed while listing
+        return sorted(found)
 
     @property
     def ledger(self):
