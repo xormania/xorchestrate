@@ -1,0 +1,108 @@
+{
+  "cases": [
+    {
+      "diagnostic": "STATE_CALIBRATION_GUARD_REFUSAL",
+      "mutation": {
+        "new": "permitted = True  # planted guard bypass",
+        "old": "permitted = True if rule.guard is None else rule.guard(deepcopy(supplied))",
+        "path": "xorchestrate/state.py"
+      },
+      "name": "guard-bypass",
+      "selectors": [
+        "tests/hexagonal/test_state_definition.py::test_state_calibration_guard_refusal",
+        "tests/hexagonal/test_state_definition.py::test_state_calibration_positive_control"
+      ],
+      "target": "tests.hexagonal.test_state_definition::test_state_calibration_guard_refusal",
+      "unaffected": [
+        "tests.hexagonal.test_state_definition::test_state_calibration_positive_control"
+      ]
+    },
+    {
+      "diagnostic": "STATE_CALIBRATION_STALE_VERSION",
+      "mutation": {
+        "new": "        current = tx.get(kind, key)\n        if current is not None and expected_version is not None:\n            expected_version = current.version  # planted loss of caller CAS",
+        "old": "        current = tx.get(kind, key)",
+        "path": "xorchestrate/state.py"
+      },
+      "name": "expected-version-bypass",
+      "selectors": [
+        "tests/hexagonal/test_state_definition.py::test_state_calibration_stale_version",
+        "tests/hexagonal/test_state_definition.py::test_state_calibration_positive_control"
+      ],
+      "target": "tests.hexagonal.test_state_definition::test_state_calibration_stale_version",
+      "unaffected": [
+        "tests.hexagonal.test_state_definition::test_state_calibration_positive_control"
+      ]
+    },
+    {
+      "diagnostic": "STATE_CALIBRATION_REQUIRED_HISTORY",
+      "mutation": {
+        "new": "            pass  # planted loss of required transition history",
+        "old": "            tx.emit(history)",
+        "path": "xorchestrate/state.py"
+      },
+      "name": "history-omission",
+      "selectors": [
+        "tests/hexagonal/test_state_definition.py::test_state_calibration_required_history",
+        "tests/hexagonal/test_state_definition.py::test_state_calibration_positive_control"
+      ],
+      "target": "tests.hexagonal.test_state_definition::test_state_calibration_required_history",
+      "unaffected": [
+        "tests.hexagonal.test_state_definition::test_state_calibration_positive_control"
+      ]
+    },
+    {
+      "diagnostic": "STATE_CALIBRATION_DECLARED_TARGET",
+      "mutation": {
+        "new": "        if False:  # planted target validation bypass",
+        "old": "        if proposed.get(definition.state_field) != decision.target:",
+        "path": "xorchestrate/state.py"
+      },
+      "name": "target-validation-bypass",
+      "selectors": [
+        "tests/hexagonal/test_state_definition.py::test_state_calibration_declared_target",
+        "tests/hexagonal/test_state_definition.py::test_state_calibration_positive_control"
+      ],
+      "target": "tests.hexagonal.test_state_definition::test_state_calibration_declared_target",
+      "unaffected": [
+        "tests.hexagonal.test_state_definition::test_state_calibration_positive_control"
+      ]
+    },
+    {
+      "diagnostic": "STATE_CALIBRATION_APPLICATION_CONSUMES_ENGINE",
+      "mutation": {
+        "new": "if False else tx.put(kind, key, payload)",
+        "old": "if kind in DURABLE_LIFECYCLES else tx.put(kind, key, payload)",
+        "path": "xorchestrate/application.py"
+      },
+      "name": "application-engine-bypass",
+      "selectors": [
+        "tests/hexagonal/test_state_definition.py::test_state_calibration_application_consumes_engine",
+        "tests/hexagonal/test_state_definition.py::test_state_calibration_positive_control"
+      ],
+      "target": "tests.hexagonal.test_state_definition::test_state_calibration_application_consumes_engine",
+      "unaffected": [
+        "tests.hexagonal.test_state_definition::test_state_calibration_positive_control"
+      ]
+    },
+    {
+      "diagnostic": "STATE_CALIBRATION_GUARD_REFUSAL",
+      "expect": "unrelated_failure",
+      "mutation": {
+        "new": "def test_state_calibration_guard_refusal(tmp_path):\n    raise RuntimeError(\"STATE_CALIBRATION_GUARD_REFUSAL\")",
+        "old": "def test_state_calibration_guard_refusal(tmp_path):",
+        "path": "tests/hexagonal/test_state_definition.py"
+      },
+      "name": "unrelated-error-control",
+      "selectors": [
+        "tests/hexagonal/test_state_definition.py::test_state_calibration_guard_refusal",
+        "tests/hexagonal/test_state_definition.py::test_state_calibration_positive_control"
+      ],
+      "target": "tests.hexagonal.test_state_definition::test_state_calibration_guard_refusal",
+      "unaffected": [
+        "tests.hexagonal.test_state_definition::test_state_calibration_positive_control"
+      ]
+    }
+  ],
+  "schema_version": 1
+}
