@@ -5,6 +5,7 @@ streamable-HTTP MCP endpoint, or logs and dies, or stays silent. A fake clock ca
 every timeout and the stop grace, and a fake process table receives every signal.
 """
 
+import contextlib
 import json
 import os
 import signal
@@ -798,3 +799,36 @@ def test_up_on_a_path_inside_a_tree_or_through_a_symlink_serves_the_trees_toplev
     again = ws.run("serena", "up", str(link / "pkg"))
     assert again.code == 0, again.text
     assert "already up" in again.text.lower() and len(ws.launcher.spawns) == 1
+
+
+class RacingStore:
+    """The real store; the first time a key is locked, ``race`` runs first, as an ``up`` finishing just before."""
+
+    def __init__(self, inner, race):
+        self.inner = inner
+        self.race = race
+
+    def __getattr__(self, name):
+        return getattr(self.inner, name)
+
+    @contextlib.contextmanager
+    def lock(self, key):
+        if self.race is not None:
+            race, self.race = self.race, None
+            race()
+        with self.inner.lock(key):
+            yield
+
+
+def test_reap_never_forgets_a_live_server_that_replaced_a_dead_one_after_it_listed(ws):
+    path = ws.new("served")
+    ws.seed_server(path, pid=7_510)
+    ws.processes.kill(7_510)
+    replacement = []
+    store = RacingStore(ws.store(), lambda: replacement.append(ws.seed_server(path, pid=7_600)))
+    result = ws.run("serena", "reap", ports=ws.ports(store=store))
+    assert replacement, "reap never locked the record"
+    assert result.code == 0, result.text
+    saved = ws.saved("served")
+    assert saved is not None and saved.pid == 7_600, "reap deleted the live replacement's record"
+    assert 7_600 not in ws.processes.groups_signalled() and ws.processes.alive(7_600)
