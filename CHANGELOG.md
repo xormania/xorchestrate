@@ -123,6 +123,11 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Added
 
+- Optional developer settings for contributor tools: one declared table of
+  `XORCHESTRATE_DEV_*` keys read from flags, the environment, a git-ignored
+  `.devtools.env` and a user file, with `python3 -m scripts.devconfig show`
+  naming each value's source. The product does not read them. See
+  [developer settings](docs/agent-workflow.md#developer-settings).
 - Calibration fault cases are registered data: one service judges any inventory
   under `scripts/verification/inventories/`, selected by name or by stage (`ci`,
   `pre-draft`, `manual`). The native faults moved there unchanged. See

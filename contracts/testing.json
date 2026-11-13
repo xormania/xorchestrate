@@ -249,6 +249,12 @@
       "modules": {
         "tests/hexagonal/test_agent_guidance.py": "contract"
       }
+    },
+    "devconfig": {
+      "guarantee": "Developer tools read optional local settings from one declared table: namespaced keys with typed values and neutral defaults derived only from HOME, the XDG directories and the main checkout's name; a strict literal KEY=VALUE format that is never executed; precedence flag, environment, the main checkout's git-ignored file, the user file, default, each value explained with its source; a committed example equal to the rendered table; and no reader or importer outside the declared consumers.",
+      "modules": {
+        "tests/hexagonal/test_devconfig.py": "contract"
+      }
     }
   }
 }
