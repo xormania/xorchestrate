@@ -46,12 +46,23 @@ The job also installs the launcher through each offline [install path](../docs/i
 a local git tag and a source directory, and `uv tool run --from <wheel>`) and
 checks the `install_source` each reports, through both `xo` and `xorchestrate`.
 
-CI runs on GitHub-hosted Ubuntu. Pinned actions have read-only repository
+CI runs on GitHub-hosted Ubuntu. Candidate validation uses read-only repository
 permissions. PR open/source/reopen and all edits receive candidate validation;
 eligible deterministic lanes may reuse exact qualified evidence. Static checks
 and both stable required verdicts run even for title/body edits, so the newest
 workflow run can satisfy branch protection. Marking a draft ready preserves its
 existing candidate checks without starting a new run.
+Title/body-only edits share the source candidate's concurrency group without
+cancelling active validation. GitHub coalesces waiting edits into one pending
+run, which qualifies completed source receipts when it starts. A pending
+metadata run with no jobs cannot invalidate those receipts; missing or material
+failed evidence still requires full validation.
+An independent trusted `CI queue cleanup` workflow uses Actions write permission
+to cancel proved older-source runs for the same-repository PR. It rechecks native
+run identities, attempts, the surviving current-head run and canonical source ref
+before each ordinary cancellation. It never executes candidate code or promotes
+cancellation into passing evidence; retained reports separate requests from
+observed run states. Same-head and base-only changes remain untouched.
 Pushes to master and manual runs execute full validation. See
 [PR lifecycle validation](../docs/pr-lifecycle-ci.md) for event handling, original
 evidence links and the `CI_REUSE_ENABLED=false` recovery switch. Selected jobs are:

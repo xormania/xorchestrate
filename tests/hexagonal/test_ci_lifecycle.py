@@ -53,6 +53,21 @@ def test_code_unknown_and_base_edit_events_keep_full_candidate_validation(action
         assert expression(jobs[name].get("if", True), context), "CI_MATERIAL_EVENT_VALIDATES_" + name
     assert expression(jobs["ci-result"]["name"], context) == "CI result"
     assert expression(jobs["architecture-status"]["name"], context) == "Hexagonal architecture"
+    assert expression(workflow()["concurrency"]["cancel-in-progress"], context), \
+        "CI_MATERIAL_EVENT_CAN_REPLACE_CURRENT_WORK"
+
+
+@pytest.mark.parametrize("changes", METADATA_CHANGES)
+@pytest.mark.parametrize("source_action", ("opened", "synchronize", "reopened"))
+def test_same_candidate_metadata_queues_behind_source_validation(changes, source_action):
+    concurrency = workflow()["concurrency"]
+    source, metadata = pr_context(source_action), pr_context("edited", changes)
+    assert expression(concurrency["group"], source) == expression(concurrency["group"], metadata), \
+        "CI_METADATA_MUST_WAIT_IN_THE_SOURCE_CANDIDATE_GROUP"
+    assert not expression(concurrency["cancel-in-progress"], metadata), \
+        "CI_METADATA_MUST_NOT_CANCEL_THE_RUNNING_PRODUCER"
+    assert expression(concurrency["cancel-in-progress"], source), \
+        "CI_SOURCE_EVENTS_RETAIN_CANCELLATION"
 
 
 def test_ready_transition_does_not_reexecute_the_full_ci_workflow():
@@ -71,12 +86,16 @@ def test_delayed_old_source_and_metadata_cannot_cancel_current_validation():
     other_pr = pr_context("synchronize", number=18)
     metadata_new_head = pr_context("edited", {"body": {"from": "old"}}, head="c" * 40)
     metadata_new_base = pr_context("edited", {"body": {"from": "old"}}, base="d" * 40)
+    other_repository = pr_context("synchronize")
+    other_repository["github"]["repository_id"] = 78
     group = expression(concurrency["group"], previous)
     assert group != expression(concurrency["group"], new_head), "CI_DELAYED_OLD_HEAD_CANNOT_CANCEL_CURRENT_HEAD"
     assert group != expression(concurrency["group"], new_base), "CI_DELAYED_OLD_BASE_CANNOT_CANCEL_CURRENT_BASE"
     assert group == expression(concurrency["group"], repeated), "CI_IDENTICAL_CANDIDATE_EVENTS_SHARE_CANCELLATION"
-    assert group != expression(concurrency["group"], metadata), "CI_METADATA_CANNOT_CANCEL_VERIFICATION"
+    assert group == expression(concurrency["group"], metadata), "CI_METADATA_SERIALIZES_WITH_VERIFICATION"
+    assert not expression(concurrency["cancel-in-progress"], metadata), "CI_METADATA_CANNOT_CANCEL_VERIFICATION"
     assert group != expression(concurrency["group"], other_pr)
+    assert group != expression(concurrency["group"], other_repository)
     metadata_group = expression(concurrency["group"], metadata)
     assert metadata_group != expression(concurrency["group"], metadata_new_head), \
         "CI_DELAYED_OLD_METADATA_CANNOT_CANCEL_CURRENT_HEAD"

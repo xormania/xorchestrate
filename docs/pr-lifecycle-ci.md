@@ -24,19 +24,49 @@ Metadata edits therefore run static checks and required verdict qualification.
 Behavioral lanes skip only when existing evidence qualifies or the independently
 guarded documentation-only decision applies. Missing, failed, stale or unavailable
 evidence falls back to execution; it never becomes a skipped required success.
-This bounded repair accepts that overhead rather than introducing a new verdict
-carry-forward mechanism. Strict up-to-date checking remains disabled, and
+Title/body-only edits wait behind active validation of the same candidate before
+the reuse planner runs. Strict up-to-date checking remains disabled, and
 master-push integration validation remains enabled.
 
 Validation concurrency is scoped to repository, PR number, source head and event
-base. A new run may cancel the same candidate's older run; a delayed old-source
-event or manual rerun cannot cancel a newer source or base candidate. Metadata
-events have a separate head/base-scoped group, so editing a description cannot
-cancel source validation or another candidate’s metadata validation.
-Non-PR runs retain cancellation by ref. Already-running work for an older
-candidate can finish. The supersession check below avoids starting its costly
-lanes when a surviving replacement can be proved; there is no custom cancellation
-service.
+base. Source and metadata events share this group. A title/body-only edit has
+`cancel-in-progress: false`, so it waits for active source validation to finish.
+GitHub's default single-pending queue replaces earlier waiting metadata events
+when more edits arrive. The surviving run then captures its candidate, performs
+static checks and qualifies completed receipts through the ordinary reuse path.
+An edit that also changes the base, an unknown edit, or a source event retains
+cancellation within its candidate group. A delayed old-source event or manual
+rerun cannot cancel a newer source or base candidate.
+
+A metadata event can replace a pending source event for the same candidate. If
+no completed qualified producer exists, the surviving event executes full
+validation. Waiting or cancellation never counts as verification. Non-PR runs
+retain cancellation by ref.
+
+The separate `CI queue cleanup` workflow reacts when CI is requested or starts,
+including reruns. It runs only trusted default-branch code at the event's immutable
+SHA, with the narrow Actions write permission needed for ordinary cancellation.
+It never checks out candidate code or consumes candidate artifacts. For
+same-repository PRs, it authenticates the native CI workflow, PR association and
+source branch, then compares the live PR with its canonical source ref. Only an
+active older run for a different source head can be cancelled, and only while the
+triggering current-head CI still survives. Current-head metadata runs can supply
+that replacement because a pending metadata edit may replace a pending source
+event and then perform full validation. A base-only advance cancels nothing.
+
+Each cancellation rereads the old run's identity and attempt, the replacement,
+and the current PR/ref. Missing or changed proof leaves work running. The retained
+`ci-queue-*` report distinguishes a cancellation request from the run state later
+observed; a request does not claim completion or passing evidence. The controller
+does not poll, force-cancel, or change the CI result. It inspects up to 500 recent
+runs on the source branch and reports a truncated history. A delayed stale run
+whose ID is newer than the surviving replacement remains running; neither this
+controller nor the startup guard suppresses that ordering;
+foreign-repository runs are untouched. Requested/start events can produce up to
+two small jobs, coalesced within the triggering run and attempt.
+
+The startup supersession check below also avoids starting costly lanes when a
+surviving replacement can be proved.
 
 The actual checkout stays bound to the event's GitHub check association. Queue
 startup observes the live PR before selecting reuse; collection ends with another
@@ -66,9 +96,13 @@ remain distinct from `canonical_refs`; advanced or unavailable refs never qualif
 current-candidate reuse.
 
 Workflow-generated run titles contain only the event/action, PR number and Git
-identities. They positively identify cancelled metadata runs with **zero jobs in
-their first attempt**, after rereading the current run/attempt, as never-executed
-observations. An empty later retry cannot erase prior behavioral work.
+identities. They positively identify cancelled or queued/pending metadata runs
+with **zero jobs in their first attempt**, after rereading the native run/attempt,
+as never-executed observations. Queued/pending runs must have no conclusion, and
+their job listing is read again after that observation to detect newly started
+work. This allows an active metadata consumer to finish qualifying the original
+producer while another edit waits behind it. An empty later retry cannot erase
+prior behavioral work. Missing attempt ordering still requires ordinary execution.
 Started or unknown work is material. This does not
 guess from owner-supplied PR titles or assume every cancellation is harmless.
 

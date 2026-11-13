@@ -1081,7 +1081,8 @@
         "scripts.ci.release_identity",
         "scripts.ci.result",
         "scripts.ci.candidate",
-        "scripts.ci.reuse"
+        "scripts.ci.reuse",
+        "scripts.ci.queue"
       ],
       "allowed_roles": [
         "ci_tooling"
