@@ -43,6 +43,26 @@ def test_shared_actions_and_runtime_match_ci():
             assert "--python 3.12.16" in step.get("run", "") or "uv sync" not in step.get("run", "")
 
 
+def test_every_uv_download_uses_the_reviewed_archive_checksum():
+    # Digest from the uv 0.13.7 GitHub release asset, independent of the action's
+    # bundled checksum table and the manifest supplied by its download mirror.
+    expected = {"0.13.7": "c5221ff41b7892bfc223543883600125f6a47fe845093e0f5bdff4f359196d83"}
+    installations = []
+    for path in sorted((ROOT / ".github/workflows").glob("*.y*ml")):
+        workflow = json.loads(path.read_text())
+        for job_name, job in workflow["jobs"].items():
+            for step in job.get("steps", []):
+                if step.get("uses", "").startswith("astral-sh/setup-uv@"):
+                    inputs = step.get("with", {})
+                    identity = (path.name, job_name)
+                    version = inputs.get("version")
+                    assert job.get("runs-on") in {"ubuntu-24.04", "ubuntu-latest"}, identity
+                    assert version in expected, (identity, version)
+                    assert inputs.get("checksum") == expected[version], identity
+                    installations.append(identity)
+    assert installations
+
+
 def test_permissions_are_least_privilege_and_only_publish_has_an_id_token():
     assert RELEASE["permissions"] == {}
     assert {job: JOBS[job]["permissions"] for job in JOBS} == {
