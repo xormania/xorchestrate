@@ -72,6 +72,7 @@
       "guarantee": "External session attachment and callbacks preserve connection leases, operation ownership and cleanup across process transports.",
       "modules": {
         "tests/hexagonal/test_external_bridge.py": "adapter",
+        "tests/hexagonal/test_bridge_frames.py": "adapter",
         "tests/hexagonal/test_bridge_turn_contracts.py": "adapter",
         "tests/hexagonal/test_bridge_repair_calibration.py": "calibration"
       }
@@ -157,7 +158,6 @@
         "tests/hexagonal/test_verification_decoders.py": "adapter",
         "tests/hexagonal/test_lifecycle_runner.py": "composition",
         "tests/hexagonal/test_calibration_attribution.py": "calibration",
-        "tests/hexagonal/test_work_calibration.py": "calibration",
         "tests/hexagonal/test_fault_calibration.py": "calibration"
       }
     },

@@ -208,25 +208,38 @@ class Peer:
         data = (json.dumps(packet, allow_nan=False, separators=(",", ":")) + "\n").encode()
         if len(data) > self.max_frame:
             raise bridge_error("Bridge frame exceeds the configured limit.", "bridge_protocol")
-        with self._writer:
-            if self.closed:
-                raise bridge_error("Bridge connection is closed.")
+        try:
+            with self._writer:
+                if self.closed:
+                    raise bridge_error("Bridge connection is closed.")
+                try:
+                    self._write_frame(data)
+                except OSError:
+                    # Fence the stream before another writer can append to a
+                    # partial frame. Cleanup joins the receive thread, which
+                    # may itself be waiting for this writer, so do it outside
+                    # the writer lock.
+                    pending = self._begin_close()
+                    raise
+        except OSError as exc:
+            self._finish_close(pending)
+            raise bridge_error("Bridge write outcome is unknown.", outcome="unknown") from exc
+
+    def _write_frame(self, data):
+        """Write one complete frame while the caller owns the writer lock."""
+        deadline = time.monotonic() + self.timeout
+        remaining = memoryview(data)
+        while remaining:
+            delay = deadline - time.monotonic()
+            if delay <= 0 or not select.select([], [self.socket], [], delay)[1]:
+                raise OSError("write timeout")
             try:
-                deadline = time.monotonic() + self.timeout
-                remaining = memoryview(data)
-                while remaining:
-                    delay = deadline - time.monotonic()
-                    if delay <= 0 or not select.select([], [self.socket], [], delay)[1]:
-                        raise OSError("write timeout")
-                    try:
-                        sent = self.socket.send(remaining, socket.MSG_DONTWAIT)
-                    except BlockingIOError:
-                        continue
-                    if sent <= 0:
-                        raise OSError("closed")
-                    remaining = remaining[sent:]
-            except OSError as exc:
-                raise bridge_error("Bridge write outcome is unknown.", outcome="unknown") from exc
+                sent = self.socket.send(remaining, socket.MSG_DONTWAIT)
+            except BlockingIOError:
+                continue
+            if sent <= 0:
+                raise OSError("closed")
+            remaining = remaining[sent:]
 
     def request(self, method, params):
         key = uuid.uuid4().hex
@@ -314,12 +327,19 @@ class Peer:
         finally:
             self._capacity.release()
 
-    def close(self):
+    def _begin_close(self):
+        """Atomically refuse new writes and detach callers awaiting a result."""
         with self._lock:
             if self.closed:
-                return
+                return None
             self.closed = True
             pending, self._pending = self._pending, {}
+        return pending
+
+    def _finish_close(self, pending):
+        """Release the transport after invalidation, without holding the writer."""
+        if pending is None:
+            return
         try:
             self.socket.shutdown(socket.SHUT_RDWR)
         except OSError:
@@ -334,5 +354,8 @@ class Peer:
             if not future.done():
                 future.set_exception(bridge_error("Bridge connection ended before the outcome was observed.", outcome="unknown"))
         self._executor.shutdown(wait=False, cancel_futures=True)
+
+    def close(self):
+        self._finish_close(self._begin_close())
 
 

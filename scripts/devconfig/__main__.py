@@ -10,7 +10,7 @@ from pathlib import Path
 
 from scripts.devconfig.example import render_example
 from scripts.devconfig.keys import SETTINGS
-from scripts.devconfig.loader import find_main_checkout, load
+from scripts.devconfig.loader import find_checkout, load
 from scripts.devconfig.model import DevConfigError
 
 EXAMPLE_FILE = ".devtools.env.example"
@@ -23,7 +23,7 @@ def _parser() -> argparse.ArgumentParser:
                         help="any path inside the repository (default: the current directory)")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("show", help="print every setting's effective value and where it came from")
-    example = commands.add_parser("example", help="write or check the committed example file")
+    example = commands.add_parser("example", help="write or check this tree's committed example file")
     mode = example.add_mutually_exclusive_group(required=True)
     mode.add_argument("--write", action="store_true")
     mode.add_argument("--check", action="store_true")
@@ -43,7 +43,7 @@ def main(argv: Sequence[str] | None = None, *, env: Mapping[str, str] | None = N
                 print(f"{code}: {key} ({where}) is not a declared setting; ignored", file=sys.stderr)
             print("\n".join(config.explain()))
             return 0
-        target = find_main_checkout(repo) / EXAMPLE_FILE
+        target = find_checkout(repo) / EXAMPLE_FILE
         expected = render_example(SETTINGS)
         if arguments.write:
             target.write_text(expected, encoding="utf-8")
