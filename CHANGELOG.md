@@ -93,6 +93,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Fixed
 
+- A failed bridge frame write closes the connection before another writer can
+  append to the unfinished frame. Awaiting requests retain unknown outcomes;
+  response timeouts after complete writes still allow observation and control.
 - Native crash calibration waits for the applied-effect boundary before crash
   injection and reaps its blocked host when a scenario fails.
 

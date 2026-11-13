@@ -76,6 +76,12 @@ alternative for environments that prohibit Unix socket creation. Both use the
 same bounded bidirectional request/callback protocol, worker limits, frame
 bounds, and request correlation. Neither exposes a network listener.
 
+A failed frame write closes that connection: a later request cannot append to
+an unfinished frame. Requests awaiting replies retain an `unknown` outcome;
+closing the transport does not prove that their effects failed. A response
+timeout after a complete write leaves the connection available for observation
+and control, and a late reply keeps its original request identity.
+
 Callbacks and observations progress without controller polling. Observations
 retain native and client incarnations separately. Known attempt, native turn,
 prompt and call identities bind observations to the corresponding connection.
