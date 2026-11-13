@@ -4,6 +4,7 @@ import pytest
 
 from tests.hexagonal.contracts.capability_execution import (
     default_contract,
+    driver_observation_policy_contract,
     native_receipt_reconciliation_contract,
     query_authority_contract,
     query_contract,
@@ -12,6 +13,7 @@ from tests.hexagonal.contracts.capability_execution import (
     receipt_failure_contract,
     receipt_policy_change_contract,
     receipt_settlement_contract,
+    retained_receipt_new_native_call_contract,
 )
 from tests.hexagonal.support.capability_execution import Subject, configuration_error, configured_subject
 
@@ -50,6 +52,16 @@ def test_receipt_failure_preserves_outcome_without_copying_payloads(store, nativ
 @pytest.mark.parametrize("native", [False, True])
 def test_trusted_policy_changes_cannot_reinterpret_retained_effects_as_fresh_queries(store, native):
     receipt_policy_change_contract(Subject(store, "receipt"), native)
+
+
+def test_retained_receipt_retry_under_new_native_identity_keeps_original_privacy(store):
+    retained_receipt_new_native_call_contract(Subject(store, "receipt", actor="worker"))
+
+
+@pytest.mark.parametrize("boundary", ["observer", "codex"])
+@pytest.mark.parametrize("observation", ["none", "full"])
+def test_driver_observations_apply_policy_outside_application_callback_scope(store, observation, boundary):
+    driver_observation_policy_contract(Subject(store, "journaled", observation, actor="worker"), observation, boundary)
 
 
 def test_receipt_local_settlement_failure_and_reconciliation_keep_payloads_ephemeral(store):

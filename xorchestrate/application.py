@@ -250,6 +250,15 @@ class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
     def record_observation(self, event_type, payload, context, **metadata):
         if observation_suppressed():
             return {"status": "disabled", "receipt": None, "reason": "execution_policy"}
+        if isinstance(event_type, str) and event_type.startswith("native.") and isinstance(payload, dict):
+            try:
+                policy = self._native_observation_policy(context, payload)
+            except Exception:
+                # Optional capture must neither fail the application nor retain
+                # unchecked payloads when its execution policy is unavailable.
+                return {"status": "unavailable", "receipt": None, "reason": "execution_policy_unavailable"}
+            if policy["observation"] == "none":
+                return {"status": "disabled", "receipt": None, "reason": "execution_policy"}
         return self.telemetry_service.record(event_type, payload, context, **metadata)
 
     def _telemetry_authority(self):

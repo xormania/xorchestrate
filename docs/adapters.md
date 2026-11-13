@@ -154,12 +154,16 @@ Native failures retain their verified operation identity so the caller can
 inspect and reconcile the fenced effect. Native reconciliation itself repeats
 only its safe completion receipt after current authorization.
 
-`observation` independently selects `full` (the default) or `none` for the
-application call and its native-tool envelopes. `none` also suppresses nested
-`Application.record_observation` calls on the executing thread; a nested call
-cannot turn capture back on. This is not control over an external process's
-transcript or arbitrary asynchronous adapter telemetry. Configure those sources
-separately. Receipt reconciliation retains the originating observation choice.
+`observation` independently selects `full` (the default) or `none` for optional
+application and typed native-tool telemetry. Required durable native-call and
+native-observation evidence still follows `mode`: journaled calls retain it;
+queries and receipt calls omit payloads. `none` suppresses typed driver
+observations emitted before or after the callback, including queued telemetry,
+and nested `Application.record_observation` calls on the executing thread. A
+nested call cannot turn capture back on. This is not control over an external
+process's transcript or unrelated asynchronous adapter telemetry. Configure
+those sources separately. Receipt retries and reconciliation retain the
+originating observation choice using the actual actor and retained source binding.
 
 An installed provider may expose the provisional `execution_policies()` hook,
 returning this same map with local capability names. Composition qualifies the
