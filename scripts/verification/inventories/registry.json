@@ -30,6 +30,12 @@
       "stages": [
         "manual"
       ]
+    },
+    "project-server": {
+      "file": "project-server.json",
+      "stages": [
+        "manual"
+      ]
     }
   }
 }
