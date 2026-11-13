@@ -1,5 +1,6 @@
 """Nested blockers receive elapsed remainder; independent watchdogs bound old defects."""
 
+import importlib
 import json
 import os
 from types import SimpleNamespace
@@ -193,3 +194,62 @@ def test_composed_suite_retries_do_not_continue_beyond_the_observation_deadline(
         outcome = error
     assert attempts == pytest.approx([0, .01, .02]), "COMPOSED_RETRIES_SHARE_THE_OBSERVATION_BUDGET"
     assert isinstance(outcome, VerificationFailure) and outcome.assertion == "missing-observation"
+
+
+@pytest.mark.parametrize("module,function,error,message", [
+    ("managed_workflow", "await_condition", TimeoutError, "Expected managed workflow transition was not observed"),
+    ("terminal_host", "wait", AssertionError, "condition not reached before the timeout"),
+])
+def test_shared_support_wait_clamps_after_predicate_work(monkeypatch, module, function, error, message):
+    subject = importlib.import_module("tests.hexagonal.support." + module)
+    clock = ControlledClock()
+    polls = []
+    monkeypatch.setenv("XO_TEST_TIMEOUT_SCALE", "1")
+    monkeypatch.setattr(subject.time, "monotonic", clock.monotonic)
+    monkeypatch.setattr(subject.time, "sleep", clock.sleep)
+
+    def predicate():
+        polls.append(clock.elapsed)
+        clock.advance(elapsed=.025, wall=-500)
+        return False
+
+    with pytest.raises(error, match=message):
+        getattr(subject, function)(predicate, timeout=.03)
+    assert clock.sleeps == pytest.approx([.005]), "SHARED_SUPPORT_WAIT_CLAMPS_POST_PREDICATE_REMAINDER"
+    assert polls == [0] and clock.elapsed == pytest.approx(.03)
+
+
+@pytest.mark.parametrize("module,function", [("managed_workflow", "await_condition"), ("terminal_host", "wait")])
+def test_shared_support_wait_preserves_predicate_error_identity(module, function):
+    subject = importlib.import_module("tests.hexagonal.support." + module)
+    failure = RuntimeError("predicate failed independently")
+
+    def predicate():
+        raise failure
+
+    with pytest.raises(RuntimeError) as caught:
+        getattr(subject, function)(predicate)
+    assert caught.value is failure
+
+
+@pytest.mark.parametrize("module,function,returns_value", [
+    ("managed_workflow", "await_condition", True), ("terminal_host", "wait", False),
+])
+def test_shared_support_wait_retains_its_success_return_contract(module, function, returns_value):
+    subject = importlib.import_module("tests.hexagonal.support." + module)
+    value = {"observed": True}
+    assert getattr(subject, function)(lambda: value) == (value if returns_value else None)
+
+
+@pytest.mark.parametrize("module,function,error", [
+    ("managed_workflow", "await_condition", TimeoutError), ("terminal_host", "wait", AssertionError),
+])
+def test_shared_support_harness_allowance_uses_the_opted_in_scale(monkeypatch, module, function, error):
+    subject = importlib.import_module("tests.hexagonal.support." + module)
+    clock = ControlledClock()
+    monkeypatch.setenv("XO_TEST_TIMEOUT_SCALE", "2")
+    monkeypatch.setattr(subject.time, "monotonic", clock.monotonic)
+    monkeypatch.setattr(subject.time, "sleep", clock.sleep)
+    with pytest.raises(error):
+        getattr(subject, function)(lambda: False, timeout=.03)
+    assert clock.elapsed == pytest.approx(.06), "SHARED_HARNESS_ALLOWANCE_APPLIES_CONFIGURED_SCALE"
