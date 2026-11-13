@@ -204,11 +204,12 @@ class HostedSubject:
             host.shutdown()
         except Exception:  # noqa: BLE001 - best effort teardown; the leak guard reports what remains
             pass
-        from scripts.testkit.adapters.ownership import send_signal
-
         if self.base.is_dir():
-            for victim in self.owned():
-                send_signal(victim, signal.SIGKILL)
+            # Best effort, like the shutdown above: the bounded loop waits for what it ends and selects again for
+            # anything that became the subject's own meanwhile; whatever survives is left to the leak guard.
+            from tests.hexagonal.support.e2e_disturbances import kill_until_quiet
+
+            kill_until_quiet(self._selection)
         shutil.rmtree(self.base, ignore_errors=True)
 
 

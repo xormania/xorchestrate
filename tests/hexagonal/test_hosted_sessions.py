@@ -229,13 +229,9 @@ def _end(process, outside):
 
 
 def _fenced(monkeypatch):
-    import os
+    from tests.hexagonal.support.host_processes import fenced_signals
 
-    context = monkeypatch.context()
-    during = context.__enter__()
-    during.setattr(os, "kill", lambda pid, number: pytest.fail(f"raw os.kill({pid}, {number}) is unfenced"))
-    during.setattr(os, "killpg", lambda pgid, number: pytest.fail(f"os.killpg({pgid}, {number}) is unfenced"))
-    return context
+    return fenced_signals(monkeypatch)
 
 
 def test_the_fence_lets_the_fenced_helper_fall_back_to_a_raw_signal_and_nothing_else(monkeypatch):

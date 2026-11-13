@@ -1118,8 +1118,9 @@ def test_total_loss_never_blocks_status_doctor_down_or_the_next_up(cli, monkeypa
     import time
     from pathlib import Path
 
-    from scripts.testkit.adapters.ownership import alive, owned_processes, processes, send_signal
-    from tests.hexagonal.support.host_processes import processes_under, track
+    from scripts.testkit.adapters import ownership
+    from scripts.testkit.adapters.ownership import alive, owned_processes, processes
+    from tests.hexagonal.support.host_processes import fenced_signals, processes_under, track
 
     first = cli.json("up")
     outside = Path(track(tempfile.mkdtemp(prefix="xo-outside-")))
@@ -1128,13 +1129,11 @@ def test_total_loss_never_blocks_status_doctor_down_or_the_next_up(cli, monkeypa
                                  stderr=subprocess.DEVNULL)
     try:
         named = processes()[bystander.pid][0]
-        with monkeypatch.context() as during:
-            during.setattr(os, "kill", lambda pid, number: pytest.fail(f"raw os.kill({pid}, {number}) is unfenced"))
-            during.setattr(os, "killpg", lambda pgid, number: pytest.fail(f"os.killpg({pgid}, {number}) is unfenced"))
+        with fenced_signals(monkeypatch):
             victims = owned_processes(cli.home, ("XORCHESTRATE_HOME", str(cli.home))).selected
             assert first["pid"] in {identity.pid for identity in victims}, "the project server was not selected"
             for identity in victims:
-                send_signal(identity, signal.SIGKILL)
+                ownership.send_signal(identity, signal.SIGKILL)
         assert alive(named), "the simulated failure killed a process outside the project"
         project = [pid for pid, _ in processes_under([cli.directory]) if pid != bystander.pid]
         deadline = time.monotonic() + 10
