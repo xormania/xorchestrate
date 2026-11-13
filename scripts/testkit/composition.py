@@ -363,9 +363,8 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
 
     try:
         env = cache_environment(root)
-        report["environment"] = env
-        if dev_settings is not None:
-            env["dev_settings"] = dev_settings
+        # The report's copy carries the developer-settings record; child commands get only the environment.
+        report["environment"] = env if dev_settings is None else {**env, "dev_settings": dev_settings}
         if timings is not None and shard is None:
             raise ValueError("--timings requires a tests shard")
         if shard is not None:
