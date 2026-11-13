@@ -261,6 +261,66 @@ def test_a_total_loss_takes_the_terminal_host_and_its_terminals_and_nothing_outs
         _end(process, outside)
 
 
+LISTENS_HELD_ON_STDIN = ("import socket, sys\n"
+                         "server = socket.socket(socket.AF_UNIX); server.bind(sys.argv[1]); server.listen()\n"
+                         "sys.stdout.write('ready\\n'); sys.stdout.flush()\n"
+                         "sys.stdin.buffer.read()\n")
+"""A process of the subject by provenance (it listens on a socket inside the subject's base), held on a stdin pipe
+the test owns, so it lives until the test closes it or dies itself, never longer."""
+
+
+def test_a_total_loss_also_ends_a_subject_process_born_after_its_first_selection(subject, monkeypatch):
+    """A container failure leaves nothing of the subject: a process that becomes the subject's own after the loss
+    first selected its victims is ended too, or the loss fails. The test starts exactly one such newcomer itself,
+    right after that first selection, and ends it by identity whatever happens."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    from scripts.testkit.adapters import ownership
+
+    driver = subject.driver()
+    session = driver.start(subject.spec("late"))
+    driver.close()
+    real = ownership.owned_processes
+    newcomers, address = [], subject.base / "late.sock"
+
+    def newcomer_after_the_first_selection(root, marker, **options):
+        selection = real(root, marker, **options)
+        if not newcomers and Path(root) == subject.base:
+            child = subprocess.Popen([sys.executable, "-c", LISTENS_HELD_ON_STDIN, str(address)], stdin=subprocess.PIPE,
+                                     stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+            newcomers.append((child, ownership.processes()[child.pid][0]))
+            assert child.stdout.readline() == b"ready\n", "the newcomer did not start listening"
+        return selection
+
+    process, bystander, outside = _bystander(subject.sessions / "z")
+    try:
+        with monkeypatch.context() as during:
+            during.setattr(ownership, "owned_processes", newcomer_after_the_first_selection)
+            fence = _fenced(monkeypatch)
+            try:
+                subject.lose(session, everything=True)
+                failed = False
+            except AssertionError:
+                failed = True  # raising about it is also acceptable
+            finally:
+                fence.__exit__(None, None, None)
+        assert len(newcomers) == 1, "the loss never selected the subject's processes through the hook"
+        _, newcomer = newcomers[0]
+        assert failed or not ownership.alive(newcomer), "a subject process born after the first selection survived the loss"
+        assert ownership.alive(bystander), "the simulated loss killed a process outside the subject"
+    finally:
+        for child, identity in newcomers:
+            ownership.send_signal(identity, 9)
+            child.stdin.close()
+            child.stdout.close()
+            child.wait(timeout=10)
+        address.unlink(missing_ok=True)
+        _end(process, outside)
+    assert not any(ownership.alive(identity) for _, identity in newcomers), "a newcomer outlived the test"
+
+
 def test_cleanup_reaches_only_the_subjects_own_processes(subject, monkeypatch):
     from scripts.testkit.adapters.ownership import alive
 
