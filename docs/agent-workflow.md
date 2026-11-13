@@ -150,22 +150,25 @@ the files. A value is taken from the first of these that sets it:
 4. `devtools.env` in the `xorchestrate` folder under your XDG config directory;
 5. the declared default.
 
-The files hold plain `KEY=VALUE` lines, comments and blank lines. Values are
-literal text: nothing is expanded or executed, except that a path may start
-with `~/`, and a relative path in a file resolves against that file's folder.
-Any other line is refused with its file and line number, and an unknown name is
-reported and ignored. Keep secrets out of these files.
+The files hold plain `KEY=VALUE` lines, `#` comments and blank lines, in UTF-8.
+Values are literal text: nothing is expanded or executed. Spaces and tabs around
+the name and the value are trimmed and one matching pair of surrounding quotes
+is removed. A path may start with `~` or `~/` (your home from `HOME`), and a
+relative path resolves against the file's folder, or the current directory for
+the environment and flags. An empty value counts as not set, so the next source
+applies. Any other line is refused with its file and line number, and so is a
+`.devtools.env` that git tracks. An unknown name is ignored and reported by
+`show`. Keep secrets out of these files.
 
 ```bash
 python3 -m scripts.devconfig show              # every setting, its value and where it came from
-python3 -m scripts.devconfig example --check   # is .devtools.env.example current?
-python3 -m scripts.devconfig example --write   # regenerate it (in the main checkout)
+python3 -m scripts.devconfig example --check   # is this tree's .devtools.env.example current?
+python3 -m scripts.devconfig example --write   # regenerate it in this tree
 ```
 
 All settings are declared once, with kind, default and description, in
 `scripts/devconfig/keys.py`. The committed `.devtools.env.example` is generated
-from that table, and a test fails when the two differ. Run from a linked work
-tree, `example --write` writes into the main checkout. Add a setting to the
+from that table, and a test fails when the two differ. Add a setting to the
 table only for a location, an external tool's launcher or pin, or a
 machine-dependent number for local runs; a setting that could change what a
 check proves is either not offered or is marked so that runs record it.
