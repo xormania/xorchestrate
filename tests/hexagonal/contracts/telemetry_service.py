@@ -28,3 +28,9 @@ def health_authority_change_contract(subject):
     subject.install_authority_change()
     assert subject.status_failure() == "conflict", "TELEMETRY_STATUS_RECHECKS_AUTHORITY_AFTER_HEALTH"
     assert subject.authority_changed(), "The source report must actually replace the policy"
+
+
+def action_authority_change_contract(subject):
+    subject.install_authorization_change()
+    assert subject.status_failure() == "conflict", "TELEMETRY_ACTION_RECHECKS_INITIAL_AUTHORITY"
+    assert subject.authority_changed(), "Initial authorization must actually replace the policy"

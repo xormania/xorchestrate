@@ -3,6 +3,7 @@
 import pytest
 
 from tests.hexagonal.contracts.telemetry_service import (
+    action_authority_change_contract,
     health_authority_change_contract,
     live_capture_contract,
     live_source_health_contract,
@@ -30,3 +31,11 @@ def test_status_uses_replaced_source_collections_and_bounded_health(telemetry_se
 
 def test_status_rejects_policy_changes_during_source_health_read(telemetry_service):
     health_authority_change_contract(telemetry_service)
+
+
+def test_action_rejects_policy_changes_during_initial_authorization(tmp_path):
+    subject = ServiceFixture(tmp_path)
+    try:
+        action_authority_change_contract(subject)
+    finally:
+        subject.close()

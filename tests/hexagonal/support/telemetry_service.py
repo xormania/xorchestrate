@@ -21,6 +21,15 @@ class HealthSource:
         return deepcopy(self.value)
 
 
+class ChangingAuthority:
+    def __init__(self, replace):
+        self.replace = replace
+
+    def evaluate(self, action, context):
+        self.replace()
+        return RuleGuardrail().evaluate(action, context)
+
+
 class ServiceFixture(Fixture):
     def __init__(self, root, *, boundary="action"):
         super().__init__(root / "original")
@@ -77,3 +86,9 @@ class ServiceFixture(Fixture):
 
     def authority_changed(self):
         return self.app.guardrail is self.changed_policy
+
+    def install_authorization_change(self):
+        self.changed_policy = RuleGuardrail({"default": "deny"})
+        def replace():
+            self.app.guardrail = self.changed_policy
+        self.app.guardrail = ChangingAuthority(replace)
