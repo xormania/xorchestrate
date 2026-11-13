@@ -479,7 +479,12 @@ def test_a_repository_path_that_is_not_a_checkout_is_refused_without_a_traceback
     path = where(world, tmp_path)
     assert world.error(repo=path).code == "NOT_A_REPOSITORY"
     code, output = world.cli("--repo", str(path), "show")
-    assert code == 2 and "NOT_A_REPOSITORY" in output and "Traceback" not in output, (code, output)
+    assert "Traceback" not in output, output
+    if path.is_dir():
+        # show reads files only: a directory outside any repository has settings, just no repository file.
+        assert code == 0 and any(line.startswith("REPO_FILE_SKIPPED: ") for line in output.splitlines()), output
+    else:
+        assert code == 2 and "NOT_A_REPOSITORY" in output, (code, output)
 
 
 def test_without_git_the_repository_cannot_be_found_and_says_so(world, monkeypatch, tmp_path):
@@ -487,8 +492,10 @@ def test_without_git_the_repository_cannot_be_found_and_says_so(world, monkeypat
     empty.mkdir()
     monkeypatch.setenv("PATH", str(empty))
     assert world.error().code == "NOT_A_REPOSITORY"
+    world.repo_file(REPO_VALUE)
     code, output = world.cli("--repo", str(world.main), "show")
-    assert code == 2 and "Traceback" not in output, output
+    assert code == 0 and "Traceback" not in output, output
+    assert "XORCHESTRATE_DEV_SERENA_VERSION=9.9.repo" in output, "show finds the repository file without git"
 
 
 @pytest.mark.parametrize("damage", ["not-utf8", "unreadable"])
