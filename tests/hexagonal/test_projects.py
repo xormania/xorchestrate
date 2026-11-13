@@ -16,7 +16,7 @@ from xorchestrate.instance import companion as records
 from xorchestrate.instance import operations
 from xorchestrate.instance.home import Home, account_home
 from xorchestrate.instance.instance import context_for, load_instance, locate_project, prepare, require_companion
-from xorchestrate.instance.render import render
+from xorchestrate.instance.render import render, repository_references
 from xorchestrate.model import OrchestrationError
 
 ENTRYPOINTS = (["describe"], ["call", "list_work", "--json", "{}"], ["run"], ["serve"], ["connect"], ["up"],
@@ -456,6 +456,52 @@ def test_approval_summary_and_doctor_flag_code_outside_the_approval(project):
     flagged = [check for check in project.json("doctor")["checks"] if check["check"] == "repository_code"]
     assert [check["where"] for check in flagged] == ["guardrail", "providers.local.command"]
     assert all(check["status"] == "warning" for check in flagged)
+
+
+@pytest.mark.parametrize("surface", ["approval", "doctor"])
+@pytest.mark.parametrize("explicit_adapter", [False, True])
+def test_nested_operational_sink_code_is_disclosed_without_import_or_extra_approval(project, surface, explicit_adapter):
+    marker = project.repo / "sink-imported.txt"
+    module = project.repo / "projectsignals.py"
+    module.write_text("from pathlib import Path\nPath(" + repr(str(marker)) + ").write_text('imported')\n"
+                      "raise RuntimeError('inspection must never import a configured sink')\n")
+    telemetry = {"options": {"operational": {"sink": {"adapter": "projectsignals:sink"}}}}
+    if explicit_adapter:
+        telemetry["adapter"] = "local"
+    project.write_config({"version": 1, "telemetry": telemetry}, approved=False)
+    summary = operations.approve(project.repo, project.provisioned.environment)["summary"]
+    expected = {"where": "telemetry.options.operational.sink", "kind": "module", "adapter": "projectsignals:sink"}
+    if surface == "approval":
+        assert summary["repository_code"] == [expected], "APPROVAL_MUST_DISCLOSE_THE_SELECTED_OPERATIONAL_SINK"
+    else:
+        # The approval covers .xorchestrate/, not the external module source.
+        # Editing that source keeps approval valid, with its limitation disclosed.
+        module.write_text(module.read_text() + "# changed outside the approved configuration\n")
+        checks = project.json("doctor")["checks"]
+        flagged = [check for check in checks if check["check"] == "repository_code"]
+        assert [{key: check[key] for key in expected} for check in flagged] == [expected], \
+            "DOCTOR_MUST_DISCLOSE_THE_SELECTED_OPERATIONAL_SINK"
+        assert all(check["status"] == "warning" for check in flagged)
+        assert next(check for check in checks if check["check"] == "approval")["status"] == "ok"
+    assert not marker.exists(), "INSPECTION_MUST_NOT_IMPORT_CONFIGURED_OPERATIONAL_SINK_CODE"
+
+
+@pytest.mark.parametrize("adapter", ["local", "otlp", "xorchestrate.adapters.telemetry_export:local_operational_sink"])
+def test_builtin_operational_sink_selection_does_not_warn_about_external_code(adapter):
+    assert repository_references({"telemetry": {"adapter": "local", "options": {
+        "operational": {"sink": {"adapter": adapter}}}}}) == []
+
+
+def test_operational_sink_reference_detection_does_not_scan_opaque_adapter_data():
+    opaque = {"operational": {"sink": {"adapter": "business.payload:not_a_factory"}}}
+    assert repository_references({
+        "telemetry": {"adapter": "local", "options": {"operational": {"sink": {
+            "adapter": "local", "options": {"payload": opaque}}}}},
+        "providers": {"data": {"adapter": "cli", "options": opaque}},
+        "metadata": opaque,
+    }) == [], "ONLY_DECLARED_OPERATIONAL_SINK_SELECTIONS_CAN_BE_DISCLOSED_AS_CODE"
+    assert repository_references({"telemetry": {"adapter": "custom.collector:factory", "options": opaque}}) == [
+        {"where": "telemetry", "kind": "module", "adapter": "custom.collector:factory"}]
 
 
 def test_a_companion_inside_a_project_is_refused_or_reported(project, tmp_path):
