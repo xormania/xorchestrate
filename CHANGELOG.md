@@ -13,6 +13,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   order for exchange, held-work and native-completion proof. Civil-clock changes
   and report-list reordering no longer create or reverse that proof. See
   [retained observation order](docs/testing-framework.md#retained-observation-order).
+- CI coalesces title/body edits behind same-candidate validation. A separate
+  trusted queue controller cancels proved obsolete source runs while preserving
+  current validation, using ordinary cancellation and retaining observed decisions.
 - Shared native observation waits use injectable monotonic budgets and clamp
   polling sleeps to the remaining allowance. `XO_TEST_TIMEOUT_SCALE` optionally
   expands classified harness allowances; protected product/fault durations stay

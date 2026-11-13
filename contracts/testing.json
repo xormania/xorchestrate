@@ -190,7 +190,7 @@
       }
     },
     "framework": {
-      "guarantee": "Shared execution, resource ownership, configuration, evidence and collection guarantee complete declared plans and honest outcomes for every selected test family. Classified observation waits consume one monotonic budget, preserve retry safety and scale only harness allowances.",
+      "guarantee": "Shared execution, resource ownership, configuration, evidence and collection guarantee complete declared plans and honest outcomes for every selected test family; same-candidate metadata events queue behind source validation and only first-attempt zero-job waiting observations are neutral to qualified evidence reuse; trusted queue cleanup cancels older source runs only after fresh proof of a surviving current-head replacement and preserves incomplete or changed observations. Classified observation waits consume one monotonic budget, preserve retry safety and scale only harness allowances.",
       "modules": {
         "tests/hexagonal/test_testkit_core.py": "contract",
         "tests/hexagonal/test_testkit_temporal_waits.py": "framework",
@@ -219,6 +219,7 @@
         "tests/hexagonal/test_candidate_evidence.py": "contract",
         "tests/hexagonal/test_ci_advice.py": "contract",
         "tests/hexagonal/test_ci_lifecycle.py": "contract",
+        "tests/hexagonal/test_ci_queue.py": "contract",
         "tests/hexagonal/test_testkit_timing_model.py": "composition"
       }
     },
