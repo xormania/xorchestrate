@@ -619,3 +619,158 @@ def test_a_process_whose_environment_cannot_be_read_is_not_a_victim(tmp_path, se
             stop(process)
     os.rmdir(outside)
     assert alive(sentinel)
+
+
+# The selector: a listening Unix socket bound inside the world's home -----------------------------------
+
+def terminal_host_servers(world):
+    """Observation only: the multiplexer server processes placed on a socket under the world's home."""
+    home = str(world.cli.home)
+    return [pid for pid, command in importlib.import_module("tests.hexagonal.support.host_processes")
+            .arguments_containing(".terminals.sock") if home in command and "tmux" in command]
+
+
+def test_the_multiplexer_server_of_the_world_is_taken_on_total_loss(sentinel):
+    with World("multiplexer") as world:
+        running(world)
+        servers = terminal_host_servers(world)
+        assert servers, "the multiplexer world has no terminal host server to judge"
+        table = ownership().processes()
+        identities = [table[pid][0] for pid in servers if pid in table]
+        receipt = world.disturb(contract().TotalLoss())
+        assert set(identities) <= set(receipt.before), "the world's multiplexer server was not taken"
+        assert not any(alive(item) for item in identities)
+        assert alive(sentinel)
+
+
+CONNECTED_CLIENT = ("import os, socket, time; s = socket.socket(socket.AF_UNIX); s.connect(os.environ['TARGET']);"
+                    "open(os.environ['READY'], 'w').write('ready'); time.sleep(120)")
+FILE_HOLDER = ("import os, time; f = open(os.environ['TARGET']); open(os.environ['READY'], 'w').write('ready');"
+               "time.sleep(120)")
+LISTENER = ("import os, socket, time; s = socket.socket(socket.AF_UNIX); s.bind(os.environ['TARGET']); s.listen();"
+            "open(os.environ['READY'], 'w').write('ready'); time.sleep(120)")
+
+
+def ready_process(program, target, tmp_path, name):
+    """A process (no world home in its environment, cwd outside the world) acting on ``target``, once ready."""
+    outside = Path(track(tempfile.mkdtemp(prefix="xo-outside-")))
+    ready = tmp_path / f"{name}.ready"
+    env = {**without_home(), "TARGET": str(target), "READY": str(ready)}
+    process, identity = started([sys.executable, "-c", program], cwd=outside, env=env)
+    deadline = time.monotonic() + 10
+    while not ready.exists() and process.poll() is None and time.monotonic() < deadline:
+        time.sleep(0.05)
+    assert ready.exists(), f"the {name} process did not get ready"
+    return process, identity, outside
+
+
+def server_socket(world):
+    found = [path for path in Path(world.cli.home).rglob("*.sock")
+             if ".terminals" not in path.name and stat.S_ISSOCK(path.lstat().st_mode)]
+    assert found, "the running world has no server socket in its home"
+    return found[0]
+
+
+@pytest.mark.parametrize("kind", ["TotalLoss", "ServerLoss", "teardown"])
+@pytest.mark.parametrize("holder", ["connected-client", "open-file"])
+def test_a_process_that_only_uses_something_inside_the_home_survives(holder, kind, tmp_path, sentinel):
+    with World("detached-process") as world:
+        running(world)
+        if holder == "connected-client":
+            process, identity, outside = ready_process(CONNECTED_CLIENT, server_socket(world), tmp_path, holder)
+        else:
+            held = Path(world.cli.home) / "held.txt"
+            held.write_text("held\n")
+            process, identity, outside = ready_process(FILE_HOLDER, held, tmp_path, holder)
+        try:
+            if kind != "teardown":
+                receipt = world.disturb(getattr(contract(), kind)())
+                assert identity not in receipt.before and alive(identity), f"a {holder} was taken"
+        except BaseException:
+            stop(process)
+            raise
+    try:
+        assert alive(identity), f"leaving the world killed a {holder}"
+        assert alive(sentinel)
+    finally:
+        stop(process)
+        os.rmdir(outside)
+
+
+def test_a_process_listening_on_a_socket_bound_inside_the_home_is_taken(tmp_path, sentinel):
+    with World("detached-process") as world:
+        running(world)
+        process, identity, outside = ready_process(LISTENER, Path(world.cli.home) / "listener.sock", tmp_path,
+                                                   "listener")
+        try:
+            receipt = world.disturb(contract().TotalLoss())
+            assert identity in receipt.before and not alive(identity), "a listener bound inside the home was missed"
+        finally:
+            stop(process)
+            os.rmdir(outside)
+    assert alive(sentinel)
+
+
+def test_a_listener_bound_beside_the_home_on_a_shared_prefix_survives(tmp_path, sentinel):
+    with World("detached-process") as world:
+        running(world)
+        beside = Path(str(world.cli.home) + "x.sock")
+        process, identity, outside = ready_process(LISTENER, beside, tmp_path, "beside")
+        try:
+            receipt = world.disturb(contract().TotalLoss())
+            assert identity not in receipt.before and alive(identity), "a listener outside the home was taken"
+        finally:
+            stop(process)
+            os.rmdir(outside)
+            beside.unlink(missing_ok=True)
+    assert alive(sentinel)
+
+
+# Which signal selected each victim ----------------------------------------------------------------------
+
+def selection(receipt):
+    return dict(getattr(receipt, "selected", {}) or {})
+
+
+def test_a_total_loss_records_which_signal_selected_each_victim(tmp_path, sentinel):
+    with World("detached-process") as world:
+        running(world)
+        spawned = sleeper(world)
+        listener, listening, outside = ready_process(LISTENER, Path(world.cli.home) / "listener.sock", tmp_path,
+                                                     "listener")
+        carrier, carrying = started([sys.executable, "-c", "import time; time.sleep(120)"], cwd=outside,
+                                    env={**without_home(), "XORCHESTRATE_HOME": str(world.cli.home)})
+        try:
+            receipt = world.disturb(contract().TotalLoss())
+            chosen = selection(receipt)
+            assert set(chosen) == set(receipt.before), (chosen, receipt.before)
+            assert set(chosen.values()) <= contract().SELECTION_SIGNALS, chosen
+            assert (chosen.get(spawned), chosen.get(listening), chosen.get(carrying)) == ("spawned", "socket", "home"), \
+                chosen
+        finally:
+            stop(listener)
+            stop(carrier)
+            os.rmdir(outside)
+    assert alive(sentinel)
+
+
+def test_the_multiplexer_server_is_selected_by_its_socket(sentinel):
+    with World("multiplexer") as world:
+        running(world)
+        table = ownership().processes()
+        servers = [table[pid][0] for pid in terminal_host_servers(world) if pid in table]
+        assert servers
+        chosen = selection(world.disturb(contract().TotalLoss()))
+        assert all(chosen.get(item) == "socket" for item in servers), chosen
+        assert alive(sentinel)
+
+
+def test_a_server_loss_records_its_victims_selection_and_no_victim_records_none(sentinel):
+    with World("detached-process") as world:
+        running(world)
+        receipt = world.disturb(contract().ServerLoss())
+        chosen = selection(receipt)
+        assert set(chosen) == set(receipt.before) and set(chosen.values()) <= {"home", "socket"}, chosen
+        empty = world.disturb(contract().ServerLoss())
+        assert empty.outcome == "no_victim" and selection(empty) == {}, empty
+        assert alive(sentinel)
