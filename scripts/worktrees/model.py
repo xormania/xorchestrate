@@ -75,6 +75,7 @@ class Config:
     brief_size_gb: float = 5.0
     owner: str | None = None
     home: str = ""
+    allow_edits: bool = False
 
 
 @dataclass

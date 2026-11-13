@@ -172,6 +172,14 @@ A session's own Serena connection serves the directory the session started in.
 `serena` gives any session symbol tools for another tree without restarting:
 `up` starts one Serena MCP server per tree over local HTTP, with a Serena home
 in the tool's state directory, so your own Serena configuration is untouched.
+A per-tree server is read-only: it offers only Serena's symbol and diagnostic
+tools (no editing, file-reading or shell tools), `up` refuses a server that
+offers more, and edits in a tree go through your ordinary tools. Setting
+`XORCHESTRATE_DEV_SERENA_ALLOW_EDITS=1` restores Serena's full tool set.
+Servers listen on 127.0.0.1 on a port the kernel picks, and Serena's HTTP
+transport has no authentication: on a machine shared with other accounts, any
+local account can reach a running server while it runs, so it can read the
+tree's symbols, and with edits allowed it could edit the tree as you.
 A server counts as up only after it answers a real symbol query (by default an
 overview of the first tracked Python file that defines something; set
 `XORCHESTRATE_DEV_PROBE_TOOL` and `XORCHESTRATE_DEV_PROBE_ARGS` to choose

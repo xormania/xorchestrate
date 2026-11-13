@@ -38,6 +38,10 @@ PROBE_REQUEST_SECONDS = 30.0
 """Longest a single readiness request may wait; a request also never waits past the readiness deadline."""
 MIN_REQUEST_SECONDS = 0.1
 SERVER_MARKER = "start-mcp-server"
+READONLY_CONTEXT = "worktrees-readonly.yml"
+READONLY_TOOLS = ("find_symbol", "get_symbols_overview", "find_referencing_symbols", "find_implementations",
+                  "find_declaration", "get_diagnostics_for_file", "get_diagnostics_for_symbol")
+"""What a per-tree server offers by default: symbol navigation only, no editing, file reading or shell tools."""
 BASE_HINT = "set XORCHESTRATE_DEV_BASE or pass --base"
 COMMAND_HINT = "install Serena's launcher or set XORCHESTRATE_DEV_SERENA_COMMAND"
 
@@ -441,10 +445,11 @@ class SerenaService:
         digest = hashlib.sha256(key.encode()).hexdigest()[:12]
         log = posixpath.join(self.config.state_dir, "logs", f"{posixpath.basename(key)}-{digest}.log")
         self.files.make_dirs(home)
+        context = self.config.serena_context if self.config.allow_edits else self._readonly_context(home)
         env = {**self.env, "SERENA_HOME": home}
         for attempt in range(1, PORT_TRIES + 1):
             port = self.free_port()
-            argv = [self._fill(word, tree, port) for word in self.config.serena_command]
+            argv = [self._fill(word, tree, port, context) for word in self.config.serena_command]
             try:
                 pid = self.launcher.spawn(argv, tree, env, log)
             except FileNotFoundError as error:
@@ -454,6 +459,12 @@ class SerenaService:
             except BaseException:
                 self._stop(pid, self._pgid(pid))
                 raise
+            if status == "ready" and not self.config.allow_edits:
+                extra = self._extra_tools(port)
+                if extra:
+                    self._stop(pid, self._pgid(pid))
+                    return outcome.refuse(Refusal("SERVER_FAILED", "the server offers tools beyond read-only "
+                                                  "navigation: " + ", ".join(extra) + "; log " + log))
             if status == "ready":
                 proc = next((item for item in self.processes.processes() if item.pid == pid), None)
                 state = ServerState(tree=tree, pid=pid, pgid=proc.pgid if proc else pid, port=port, head=head,
@@ -461,6 +472,10 @@ class SerenaService:
                                     argv=tuple(argv), start_time=proc.start_time if proc else None)
                 self.store.save(key, state)
                 outcome.out.append(f"{name}: up on port {port} (pid {pid})")
+                outcome.out.append(f"note: other local accounts can reach 127.0.0.1:{port} while this server runs")
+                if self.config.allow_edits:
+                    outcome.out.append("warning: edits are allowed (XORCHESTRATE_DEV_SERENA_ALLOW_EDITS), so anyone "
+                                       "who reaches the port can edit files in the tree as you")
                 return outcome
             tail = self._tail(log)
             in_use = "address already in use" in tail.lower()
@@ -478,8 +493,35 @@ class SerenaService:
             return outcome
         return outcome  # pragma: no cover - the loop always returns
 
-    def _fill(self, word: str, tree: str, port: int) -> str:
-        for name, value in (("{version}", self.config.serena_version), ("{context}", self.config.serena_context),
+    def _readonly_context(self, home: str) -> str:
+        """Write the tool-owned read-only context (never in the tree) and return its path."""
+        directory = posixpath.join(home, "contexts")
+        path = posixpath.join(directory, READONLY_CONTEXT)
+        self.files.make_dirs(directory)
+        lines = ["description: Read-only navigation of one work tree (scripts.worktrees)",
+                 "prompt: |",
+                 "  This Serena server serves one work tree for navigation only; editing and shell tools are",
+                 "  not available.",
+                 "single_project: true",
+                 "fixed_tools:"] + [f"  - {tool}" for tool in READONLY_TOOLS]
+        self.files.write_text(path, "\n".join(lines) + "\n")
+        return path
+
+    def _extra_tools(self, port: int) -> list[str]:
+        """Tools the server offers beyond the read-only allow-list; an unreadable list counts as unsafe."""
+        session = McpSession(self.transport, f"http://127.0.0.1:{port}/mcp", lambda: PROBE_REQUEST_SECONDS)
+        try:
+            session.open()
+            result = session.request("tools/list", {})
+        except (TransportError, McpError) as error:
+            return [f"(tool list unavailable: {error})"]
+        finally:
+            session.close()
+        offered = [entry.get("name", "") for entry in result.get("tools") or [] if isinstance(entry, dict)]
+        return sorted(set(offered) - set(READONLY_TOOLS))
+
+    def _fill(self, word: str, tree: str, port: int, context: str) -> str:
+        for name, value in (("{version}", self.config.serena_version), ("{context}", context),
                             ("{project}", tree), ("{port}", str(port))):
             word = word.replace(name, value)
         return word
@@ -581,9 +623,12 @@ class SerenaService:
 
     def reap(self) -> Outcome:
         outcome = Outcome()
-        for key, state in self.store.list():
-            name = self.name(state.tree)
+        for key, listed in self.store.list():
+            name = self.name(listed.tree)
             with self.store.lock(key):
+                state = self.store.load(key)  # the record may have changed since it was listed
+                if state is None:
+                    continue
                 if self.ours(state) is None:
                     self.store.delete(key)
                     outcome.out.append(f"{name}: forgot server {state.pid}, which is no longer running")

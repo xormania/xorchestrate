@@ -26,6 +26,9 @@ SETTINGS: tuple[Setting, ...] = (
             "Serena context passed to per-tree servers.", "serena"),
     Setting("XORCHESTRATE_DEV_SERENA_TIMEOUT", "float", "180",
             "Seconds to wait for a per-tree server to answer a symbol lookup.", "serena"),
+    Setting("XORCHESTRATE_DEV_SERENA_ALLOW_EDITS", "int", "0",
+            "1 lets per-tree servers offer Serena's editing tools; anyone reaching the port could then edit "
+            "the tree as you. Default 0: symbol navigation only.", "serena"),
     Setting("XORCHESTRATE_DEV_SERENA_COMMAND", "command", SERENA_COMMAND,
             "Command that starts a per-tree server; the tool fills the braced fields.", "serena"),
     Setting("XORCHESTRATE_DEV_PROBE_TOOL", "str", None,

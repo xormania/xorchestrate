@@ -5,8 +5,10 @@ streamable-HTTP MCP endpoint, or logs and dies, or stays silent. A fake clock ca
 every timeout and the stop grace, and a fake process table receives every signal.
 """
 
+import contextlib
 import json
 import os
+import re
 import signal
 import sys
 import threading
@@ -19,6 +21,7 @@ from tests.hexagonal.support.git_repositories import commit, git
 from tests.hexagonal.support.worktrees import (
     CRASH_TEXT,
     PROBE_FILE,
+    READONLY_TOOL_ORDER,
     FakeLauncher,
     RawEndpoint,
     Workspace,
@@ -61,8 +64,9 @@ def test_up_launches_the_default_command_in_the_tree_and_records_a_ready_server(
     assert result.code == 0, result.text
     (spawn,) = ws.launcher.spawns
     port = port_of(spawn["argv"])
-    assert spawn["argv"] == contract.serena_argv(contract.DEFAULT_SERENA_VERSION, contract.DEFAULT_SERENA_CONTEXT,
-                                                  path, port)
+    readonly = ws.state / "serena-home" / "contexts" / contract.READONLY_CONTEXT
+    assert spawn["argv"] == contract.serena_argv(contract.DEFAULT_SERENA_VERSION, str(readonly), path, port)
+    assert contract.LOOPBACK == spawn["argv"][spawn["argv"].index("--host") + 1]
     assert spawn["cwd"] == str(path)
     assert spawn["env"]["SERENA_HOME"] == str(ws.state / "serena-home")
     assert spawn["log"].startswith(str(ws.state / "logs") + "/") and spawn["log"].endswith(".log")
@@ -77,7 +81,7 @@ def test_up_launches_the_default_command_in_the_tree_and_records_a_ready_server(
 def test_ready_means_initialized_then_a_symbol_query_on_the_first_python_file_with_a_definition(ws):
     _, result = up(ws)
     assert result.code == 0, result.text
-    (initialize,) = calls(ws, "initialize")
+    initialize = calls(ws, "initialize")[0]
     assert initialize["body"]["params"]["protocolVersion"] == contract.PROTOCOL_VERSION
     assert calls(ws, "notifications/initialized")
     probes = calls(ws, "tools/call")
@@ -87,7 +91,8 @@ def test_ready_means_initialized_then_a_symbol_query_on_the_first_python_file_wi
 
 
 def test_the_server_gets_the_given_environment_plus_its_own_home_and_never_file_values(ws):
-    (ws.main / ".devtools.env").write_text("XORCHESTRATE_DEV_SERENA_CONTEXT=from-file\n")
+    (ws.main / ".devtools.env").write_text("XORCHESTRATE_DEV_SERENA_CONTEXT=from-file\n"
+                                           "XORCHESTRATE_DEV_SERENA_ALLOW_EDITS=1\n")
     env = ws.env(UNRELATED_VARIABLE="kept")
     ws.new("served")
     result = ws.run("serena", "up", "served", env=env)
@@ -101,6 +106,7 @@ def test_a_configured_command_and_probe_replace_the_defaults(ws):
     env = ws.env(XORCHESTRATE_DEV_SERENA_COMMAND="my-serena --root {project} --port {port} --pin {version}",
                  XORCHESTRATE_DEV_SERENA_VERSION="7.7.7", XORCHESTRATE_DEV_PROBE_TOOL="find_symbol",
                  XORCHESTRATE_DEV_PROBE_ARGS='{"name_path": "Model"}')
+    ws.mcp.tools = READONLY_TOOL_ORDER
     path = ws.new("custom")
     result = ws.run("serena", "up", "custom", env=env)
     assert result.code == 0, result.text
@@ -318,7 +324,7 @@ def test_tools_prints_one_tool_name_per_line_in_server_order(ws):
     up(ws)
     result = ws.run("serena", "tools", "served")
     assert result.code == 0, result.text
-    assert result.out.strip().splitlines() == list(ws.mcp.tools)
+    assert result.out.strip().splitlines() == list(READONLY_TOOL_ORDER)
 
 
 # check --------------------------------------------------------------------------------------------
@@ -798,3 +804,82 @@ def test_up_on_a_path_inside_a_tree_or_through_a_symlink_serves_the_trees_toplev
     again = ws.run("serena", "up", str(link / "pkg"))
     assert again.code == 0, again.text
     assert "already up" in again.text.lower() and len(ws.launcher.spawns) == 1
+
+
+class RacingStore:
+    """The real store; the first time a key is locked, ``race`` runs first, as an ``up`` finishing just before."""
+
+    def __init__(self, inner, race):
+        self.inner = inner
+        self.race = race
+
+    def __getattr__(self, name):
+        return getattr(self.inner, name)
+
+    @contextlib.contextmanager
+    def lock(self, key):
+        if self.race is not None:
+            race, self.race = self.race, None
+            race()
+        with self.inner.lock(key):
+            yield
+
+
+def test_reap_never_forgets_a_live_server_that_replaced_a_dead_one_after_it_listed(ws):
+    path = ws.new("served")
+    ws.seed_server(path, pid=7_510)
+    ws.processes.kill(7_510)
+    replacement = []
+    store = RacingStore(ws.store(), lambda: replacement.append(ws.seed_server(path, pid=7_600)))
+    result = ws.run("serena", "reap", ports=ws.ports(store=store))
+    assert replacement, "reap never locked the record"
+    assert result.code == 0, result.text
+    saved = ws.saved("served")
+    assert saved is not None and saved.pid == 7_600, "reap deleted the live replacement's record"
+    assert 7_600 not in ws.processes.groups_signalled() and ws.processes.alive(7_600)
+
+
+
+# Read-only by default -------------------------------------------------------------------------------
+
+def test_the_support_read_only_tools_are_the_contracts():
+    assert set(READONLY_TOOL_ORDER) == contract.READONLY_TOOLS
+
+
+def test_up_writes_a_read_only_single_project_context_outside_the_tree(ws):
+    path, result = up(ws)
+    assert result.code == 0, result.text
+    context = ws.state / "serena-home" / "contexts" / contract.READONLY_CONTEXT
+    assert context.is_file(), "the tool wrote no read-only context"
+    text = context.read_text(encoding="utf-8")
+    assert re.search(r"^single_project:\s*true\s*$", text, re.MULTILINE), text
+    listed = set(re.findall(r"^\s*-\s*([A-Za-z_]+)\s*$", text.split("fixed_tools", 1)[1], re.MULTILINE))
+    assert listed == contract.READONLY_TOOLS, text
+    assert git(path, "status", "--porcelain", "--ignored") == ""
+
+
+def test_a_server_offering_an_editing_tool_is_refused_stopped_and_never_recorded(ws):
+    ws.launcher.honour_context = False
+    _, result = up(ws)
+    assert result.code == 1 and "SERVER_FAILED" in codes(result), result.text
+    assert "read_file" in result.text, result.text
+    assert (40_000, signal.SIGTERM) in ws.processes.signals and not ws.processes.alive(40_000)
+    assert ws.saved("served") is None
+
+
+def test_allowing_edits_uses_the_configured_context_and_warns(ws):
+    ws.new("served")
+    result = ws.run("serena", "up", "served", env=ws.env(XORCHESTRATE_DEV_SERENA_ALLOW_EDITS="1"))
+    assert result.code == 0, result.text
+    (spawn,) = ws.launcher.spawns
+    assert spawn["argv"][spawn["argv"].index("--context") + 1] == contract.DEFAULT_SERENA_CONTEXT
+    assert any("edit" in line.lower() for line in result.text.splitlines()), result.text
+    assert ws.saved("served") is not None
+
+
+def test_up_says_where_the_server_listens_and_who_can_reach_it(ws):
+    _, result = up(ws)
+    assert result.code == 0, result.text
+    port = ws.saved("served").port
+    lines = [line for line in result.text.splitlines() if f"{contract.LOOPBACK}:{port}" in line]
+    assert len(lines) == 1 and "accounts" in lines[0].lower(), result.text
