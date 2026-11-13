@@ -182,3 +182,36 @@ def memory_corpus(options, scope):
 
 def memory_artifacts(options, scope):
     return MemoryArtifacts(options)
+
+
+class SelectedOperationalSink:
+    """A configured signal sink with controlled failure and pressure variants."""
+
+    instances = []
+
+    def __init__(self, options, scope):
+        self.options, self.scope = deepcopy(options), scope
+        self.events = []
+        self.entered, self.release = threading.Event(), threading.Event()
+        if not options.get("blocked"):
+            self.release.set()
+        SelectedOperationalSink.instances.append(self)
+
+    def emit(self, signal):
+        self.entered.set()
+        self.release.wait()
+        if self.options.get("fails"):
+            raise RuntimeError("private sink exception must not escape")
+        self.events.append(deepcopy(signal))
+
+
+def operational_sink(options, scope):
+    return SelectedOperationalSink(options, scope)
+
+
+def invalid_operational_sink(options, scope):
+    return object()
+
+
+def raising_operational_sink(options, scope):
+    raise RuntimeError("private configured sink credential")
