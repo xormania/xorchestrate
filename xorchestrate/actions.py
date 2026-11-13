@@ -8,6 +8,7 @@ from copy import deepcopy
 from .acceptance import ACCEPTANCE_ACTIONS
 from .delivery import DELIVERY_ACTIONS
 from .model import action_spec
+from .telemetry_actions import TELEMETRY_OPERATIONS
 
 STRING = {"type": "string", "minLength": 1}
 OBJECT = {"type": "object"}
@@ -94,34 +95,6 @@ ACTIONS = {
     **ACCEPTANCE_ACTIONS,
     **DELIVERY_ACTIONS,
 }
-_TELEMETRY_QUERY = {
-    "after": {"type": "integer", "minimum": 0},
-    "cutoff": {"type": "integer", "minimum": 0},
-    "max_bytes": {"type": "integer", "minimum": 256, "maximum": 1048576},
-    "limit": {"type": "integer", "minimum": 1, "maximum": 1000},
-    "event_type": STRING, "work_id": STRING, "session_id": STRING, "operation_id": STRING,
-    "run_id": STRING, "attempt_id": STRING,
-}
-ACTIONS.update({
-    "telemetry_status": action_spec("Inspect optional capture health and authorized source coverage.", {}, read=True),
-    "telemetry_events": action_spec("Read bounded authorized observations with source provenance.", _TELEMETRY_QUERY, read=True),
-    "telemetry_usage": action_spec("Normalize identified usage while retaining raw quantities and unknown prices.", _TELEMETRY_QUERY, read=True),
-    "telemetry_compare": action_spec("Compare explicitly selected reported result populations with denominators and evidence limits.", {
-        **{key: value for key, value in _TELEMETRY_QUERY.items() if key in {"after", "cutoff", "limit", "max_bytes"}},
-        "baseline_run_id": STRING, "candidate_run_id": STRING, "baseline_work_id": STRING, "candidate_work_id": STRING,
-        "event_types": {"type": "array", "minItems": 1, "items": STRING}, "unit": STRING,
-        "passed_outcomes": {"type": "array", "items": STRING}, "failed_outcomes": {"type": "array", "items": STRING},
-    }, read=True),
-    "telemetry_payload": action_spec("Read a bounded payload belonging to an authorized observation.", {
-        "event_id": STRING, "digest": STRING, "offset": {"type": "integer", "minimum": 0},
-        "limit": {"type": "integer", "minimum": 1, "maximum": 1048576},
-    }, ("event_id",), read=True),
-    "telemetry_snapshot": action_spec("Export a verified snapshot after authorizing the complete evidence closure.",
-        {"destination": STRING}, ("destination",)),
-    "telemetry_verify": action_spec("Verify a local bundle under current authority for its complete evidence closure.",
-        {"destination": STRING}, ("destination",), read=True),
-    "telemetry_restore": action_spec("Restore an authorized verified bundle into a fresh configured destination.",
-        {"bundle": STRING, "destination": STRING}, ("bundle", "destination")),
-})
+ACTIONS.update({"telemetry_" + name: spec for name, spec in TELEMETRY_OPERATIONS.items() if name != "report"})
 ACTIONS.update({name: deepcopy(ACTIONS["start_session"]) for name in ("attach_session", "reconnect_session")})
 ACTIONS["detach_session"] = deepcopy(ACTIONS["stop_session"])

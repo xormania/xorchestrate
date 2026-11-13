@@ -31,7 +31,8 @@ BUILTINS = {
     "state_engine": {"declared": "xorchestrate.adapters.state:ConfiguredStateEngine"},
     "store": {"memory": "xorchestrate.adapters.storage:MemoryStore", "sqlite": "xorchestrate.adapters.storage:SQLiteStore"},
     "providers": {"mcp": "xorchestrate.adapters.capabilities:StdioMCPProvider", "cli": "xorchestrate.adapters.capabilities:CLIProvider",
-        "pr": "xorchestrate.adapters.pr:PullRequestProvider"},
+        "pr": "xorchestrate.adapters.pr:PullRequestProvider",
+        "telemetry": "xorchestrate.adapters.telemetry_provider:TelemetryProvider"},
     "sessions": {
         "jsonrpc": "xorchestrate.adapters.process_sessions:JSONRPCSessionDriver",
         "codex": "xorchestrate.adapters.codex:CodexSessionDriver",
@@ -386,7 +387,7 @@ def _select(kind, specification, base_dir):
     target = BUILTINS[kind].get(adapter, adapter)
     if ":" not in target:
         raise OrchestrationError(f"Unknown {kind} adapter: {adapter}", "configuration_error")
-    if kind in {"providers", "sessions"} and adapter in BUILTINS[kind] and adapter != "pr":
+    if kind in {"providers", "sessions"} and adapter in BUILTINS[kind] and adapter not in {"pr", "telemetry"}:
         options["cwd"] = _resolve_path(base_dir, options.get("cwd", "."), kind, adapter)
     if kind == "sessions" and adapter == "hosted":
         options["directory"] = str(_resolve_path(base_dir, options.get("directory", "hosted"), kind, adapter,
@@ -642,6 +643,9 @@ def build(config=None, base_dir=None, *, project=None, telemetry_defaults=None, 
                     **{key: event[key] for key in ("event_id", "basis", "completeness", "reason") if key in event})
             return None
         for resource in (*providers.values(), *sessions.values(), *evaluators.values()):
+            bind_service = getattr(resource, "bind_telemetry_service", None)
+            if callable(bind_service):
+                bind_service(application.telemetry_service)
             bind_telemetry = getattr(resource, "bind_telemetry", None)
             if callable(bind_telemetry) and telemetry is not None:
                 bind_telemetry(capture)
