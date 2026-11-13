@@ -12,9 +12,11 @@ AUTHOR = "127287135+xormania@users.noreply.github.com"
 class RepositoryView:
     """Repository-relative reads; nothing outside ``root`` is reported as part of it."""
 
-    def __init__(self, root):
+    def __init__(self, root, *, shared_skills, kept_sections):
         self.root = Path(root)
         self.real = Path(os.path.realpath(self.root))
+        self.shared_skills = tuple(shared_skills)
+        self.kept_sections = tuple(kept_sections)
 
     def _path(self, relative):
         return self.root / relative
@@ -89,7 +91,14 @@ Skills live in `.agents/skills`; each has a `SKILL.md`. Read [the guide](guide.m
 Python writes `__pycache__/`, which is not tracked. Run `python -m pytest -q` and
 `tests/**` globs; placeholders like `.agents/skills/<name>/SKILL.md` are not paths.
 Commits are authored by `xor <{AUTHOR}>`.
+
+## Notes
+
+Keep the shared guidance short.
 """
+
+PLANTED_SKILLS = ("alpha", "beta")
+PLANTED_SECTIONS = ("Notes",)
 
 RULES = f"""# Working here
 
@@ -282,7 +291,19 @@ def _withheld_skill(root):
     (root / contract.MIRROR / name).symlink_to(f"../../{contract.SKILLS}/{name}")
 
 
+def _undeclared_skill(root):
+    _write(root, f"{contract.SKILLS}/delta/SKILL.md", SKILL.format(name="delta", description="Not declared."))
+    (root / contract.MIRROR / "delta").symlink_to(f"../../{contract.SKILLS}/delta")
+
+
+def _declared_skill_missing(root):
+    shutil.rmtree(root / contract.SKILLS / "alpha")
+
+
 PLANTS.update({
+    "undeclared-skill": _undeclared_skill,
+    "declared-skill-missing": _declared_skill_missing,
+    "kept-section-removed": lambda root: _replace(root, contract.WORKFLOW, "## Notes", "## Remarks"),
     "withheld-skill": _withheld_skill,
     "withheld-workflow-section": lambda root: _append(
         root, contract.WORKFLOW, f"\n## {contract.WITHHELD_SECTIONS[1]}\n\nTake an inventory first.\n"),
@@ -300,4 +321,4 @@ def planted_tree(base, fault=None):
     root = healthy_tree(Path(base) / "repo")
     if fault is not None:
         PLANTS[fault](root)
-    return RepositoryView(root)
+    return RepositoryView(root, shared_skills=PLANTED_SKILLS, kept_sections=PLANTED_SECTIONS)

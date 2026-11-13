@@ -16,7 +16,8 @@ ROOT = Path(__file__).resolve().parents[2]
 
 @pytest.mark.parametrize("behaviour", sorted(contract.BEHAVIOURS))
 def test_the_repository_satisfies_the_agent_guidance_behaviour(behaviour):
-    contract.require(RepositoryView(ROOT), behaviour)
+    contract.require(RepositoryView(ROOT, shared_skills=contract.SHARED_SKILLS,
+                                    kept_sections=contract.KEPT_SECTIONS), behaviour)
 
 
 def test_a_healthy_tree_passes_every_check(tmp_path):
@@ -42,12 +43,3 @@ def test_each_planted_fault_is_caught_by_its_own_check_alone(tmp_path, fault):
 
 def test_every_declared_fault_has_a_planted_tree():
     assert set(PLANTS) == set(contract.FAULTS)
-
-
-def test_the_repository_shares_exactly_the_generic_skills_and_keeps_its_serena_guidance():
-    view = RepositoryView(ROOT)
-    assert tuple(view.listdir(contract.SKILLS) or ()) == contract.SHARED_SKILLS, view.listdir(contract.SKILLS)
-    assert tuple(view.listdir(contract.MIRROR) or ()) == contract.SHARED_SKILLS, view.listdir(contract.MIRROR)
-    workflow = view.text(contract.WORKFLOW)
-    for title in contract.KEPT_SECTIONS:
-        assert contract.section(workflow, title), f"{contract.WORKFLOW} lost its '{title}' section"
