@@ -227,6 +227,24 @@
       "unaffected": [
         "tests.hexagonal.test_recovery::test_doctor_never_imports_or_constructs_a_store_factory_for_its_recovery_check[unapproved]"
       ]
+    },
+    {
+      "contract": "tests.hexagonal.contracts.recovery_e2e:a_turn_in_flight_at_the_loss_is_left_unresolved_reported_and_never_replayed",
+      "diagnostic": "RECOVERY_IN_FLIGHT_TURN_IS_NEVER_REPLAYED_TO_THE_PEER",
+      "mutation": {
+        "new": "            result = self.call(\"reconnect_session\", arguments, found.actor_id or \"owner\")\n            for pending in self.interrupted_operations({found.session_id}):\n                if pending[\"action\"] == \"send_session\":\n                    with self.store.transaction() as tx:\n                        message = self._require(tx, \"operation\", pending[\"operation_id\"]).data[\"arguments\"][\"message\"]\n                    self.sessions[found.driver].send(result[\"session\"][\"backend\"], message)",
+        "old": "            result = self.call(\"reconnect_session\", arguments, found.actor_id or \"owner\")",
+        "path": "xorchestrate/session_lifecycle.py"
+      },
+      "name": "in-flight-turn-replayed-after-recovery",
+      "selectors": [
+        "tests/hexagonal/test_recovery_end_to_end.py::test_recovery_meets_the_end_to_end_contract[detached-process-a_turn_in_flight_at_the_loss_is_left_unresolved_reported_and_never_replayed]",
+        "tests/hexagonal/test_recovery_end_to_end.py::test_recovery_meets_the_end_to_end_contract[detached-process-after_total_loss_the_default_policy_brings_the_session_back_without_a_call]"
+      ],
+      "target": "tests.hexagonal.test_recovery_end_to_end::test_recovery_meets_the_end_to_end_contract[detached-process-a_turn_in_flight_at_the_loss_is_left_unresolved_reported_and_never_replayed]",
+      "unaffected": [
+        "tests.hexagonal.test_recovery_end_to_end::test_recovery_meets_the_end_to_end_contract[detached-process-after_total_loss_the_default_policy_brings_the_session_back_without_a_call]"
+      ]
     }
   ],
   "schema_version": 1

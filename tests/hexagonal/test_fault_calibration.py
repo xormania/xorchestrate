@@ -593,6 +593,7 @@ _RECOVERY_E2E = "tests.hexagonal.test_recovery_end_to_end"
 _RECOVERY_E2E_CONTRACT = "tests.hexagonal.contracts.recovery_e2e"
 _AFTER_LOSS = "after_total_loss_the_default_policy_brings_the_session_back_without_a_call"
 _SERVER_ONLY = "a_server_only_crash_adopts_the_running_terminal_and_keeps_its_bridge_host"
+_IN_FLIGHT = "a_turn_in_flight_at_the_loss_is_left_unresolved_reported_and_never_replayed"
 
 
 def _e2e(host, scenario):
@@ -652,9 +653,13 @@ RECOVERY = (
      f"{_RECOVERY_TESTS}::test_doctor_never_imports_or_constructs_a_store_factory_for_its_recovery_check[approved]",
      "RECOVERY_DOCTOR_NEVER_IMPORTS_STORE_FACTORY", None,
      f"{_RECOVERY_TESTS}::test_doctor_never_imports_or_constructs_a_store_factory_for_its_recovery_check[unapproved]"),
+    ("in-flight-turn-replayed-after-recovery", _LIFECYCLE, _e2e("detached-process", _IN_FLIGHT),
+     "RECOVERY_IN_FLIGHT_TURN_IS_NEVER_REPLAYED_TO_THE_PEER", f"{_RECOVERY_E2E_CONTRACT}:{_IN_FLIGHT}",
+     _e2e("detached-process", _AFTER_LOSS)),
 )
-"""The recovery area's planted faults (old faults 23-25 and 27-36; 26 dropped as an equivalent mutant)."""
-RECOVERY_MUTATIONS_SHA256 = "fd440a44eeb1a818a16ccb81f4fe7888dea9fe5459abc913c6999f2f41b92669"
+"""The recovery area's planted faults (old faults 23-25 and 27-36; 26 dropped as an equivalent mutant), and a
+replay of the in-flight turn straight through the driver after recovery reconnects."""
+RECOVERY_MUTATIONS_SHA256 = "835c8301e7675a7485bad7dad0f87742ef66627091741ea9dc9ee32c7af5dd8d"
 """sha256 of the canonical JSON of the cases' mutation objects in order: each fault's file, anchor and replacement
 exactly as the old recovery fault script planted them."""
 
