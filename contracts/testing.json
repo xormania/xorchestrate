@@ -197,6 +197,7 @@
         "tests/hexagonal/test_testkit_temporal_waits.py": "framework",
         "tests/hexagonal/test_operation_observation.py": "framework",
         "tests/hexagonal/test_operation_controls.py": "framework",
+        "tests/hexagonal/test_operation_activation_calibration.py": "calibration",
         "tests/hexagonal/test_testkit_command.py": "adapter",
         "tests/hexagonal/test_testkit_sharding.py": "framework",
         "tests/hexagonal/test_testkit_configuration.py": "adapter",
