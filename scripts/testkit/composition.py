@@ -43,8 +43,11 @@ def _selection(suite):
     return COMPONENT_SUITES if suite == "all" else ("static", "tests") if suite == "checks" else (suite,)
 
 
+STAGES = ("ci", "pre-draft", "manual")
+
+
 def _options(*, suite, mode, timeout, check_timeout, config, driver, families, drivers=(), shutdown_grace=10.0,
-             shard=None, timings=None):
+             shard=None, timings=None, inventories=(), stage=None):
     selected = _selection(suite)
     if mode not in MODES:
         raise ValueError("Unknown mode")
@@ -63,16 +66,33 @@ def _options(*, suite, mode, timeout, check_timeout, config, driver, families, d
         raise ValueError("Select --driver or multiple drivers, not both")
     if mode != "native" and (config is not None or driver is not None or drivers):
         raise ValueError("--config and --driver require native mode")
+    if (inventories or stage is not None) and "calibration" not in selected:
+        raise ValueError("--inventory and --stage select calibration inventories in the calibration suite")
+    if inventories and stage is not None:
+        raise ValueError("Select --inventory or --stage, not both")
+    if not isinstance(inventories, (tuple, list)) or any(not isinstance(name, str) or not name for name in inventories):
+        raise ValueError("Calibration inventories must be nonempty names")
+    if stage is not None and stage not in STAGES:
+        raise ValueError("Unknown calibration stage")
     return selected
 
 
-def _ci_inventories(root):
-    """The calibration registry's inventories registered at ci, in registry order."""
+def _calibration_inventories(root, inventories=(), stage=None):
+    """The selected inventories' registry entries: the names in the order given, once each, else those registered at
+    ``stage`` (default ci) in registry order. Only names and stages are read; the suite command validates the files."""
     try:
         entries = json.loads((Path(root) / INVENTORIES / "registry.json").read_text(encoding="utf-8"))["inventories"]
-        return {name: entry for name, entry in entries.items() if "ci" in entry["stages"]}
+        at_stage = {name: entry for name, entry in entries.items() if (stage or "ci") in entry["stages"]}
     except (OSError, UnicodeError, ValueError, KeyError, TypeError, AttributeError) as error:
         raise ValueError("Invalid calibration registry") from error
+    if inventories:
+        unknown = [name for name in dict.fromkeys(inventories) if name not in entries]
+        if unknown:
+            raise ValueError("Unknown calibration inventory: " + ", ".join(unknown))
+        return {name: entries[name] for name in dict.fromkeys(inventories)}
+    if stage is not None and not at_stage:
+        raise ValueError("No calibration inventory is registered at stage " + stage)
+    return at_stage
 
 
 def _brief(root, brief):
@@ -95,7 +115,8 @@ def cache_environment(root):
 
 def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=ROOT, brief=None,
          families=(), check_timeout=600, drivers=(), shutdown_grace=10.0,
-         stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000, shard=None, terminal_host=None, timings=None):
+         stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000, shard=None, terminal_host=None, timings=None,
+         inventories=(), stage=None):
     """Pure check definitions; filesystem preparation belongs to the owning check.
 
     ``terminal_host`` is a product terminal-host selection for acceptance and
@@ -105,7 +126,8 @@ def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=
                                                                                    sort_keys=True))
     selected = _options(suite=suite, mode=mode, timeout=timeout, check_timeout=check_timeout,
                         config=config, driver=driver, families=families, drivers=drivers,
-                        shutdown_grace=shutdown_grace, shard=shard, timings=timings)
+                        shutdown_grace=shutdown_grace, shard=shard, timings=timings, inventories=inventories,
+                        stage=stage)
     limits = validate_limits(max_sessions=max_sessions, max_turns=max_turns, max_tool_calls=max_tool_calls)
     if stories and "stories" not in selected:
         raise ValueError("--story requires a suite containing stories")
@@ -132,9 +154,9 @@ def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=
                 required += (TIMINGS,)
         checks.append(Check("tests", tuple(argv), check_timeout, required))
     if "calibration" in selected:
-        # One check per inventory registered at ci, each run by the same suite command on its own inventory.
-        # The suite command validates the registry and inventory against their schema before any case runs.
-        for inventory, entry in _ci_inventories(root).items():
+        # One check per selected inventory (by default those registered at ci), each run by the same suite command
+        # on its own inventory. The suite command validates the registry and inventory before any case runs.
+        for inventory, entry in _calibration_inventories(root, inventories, stage).items():
             name = inventory + "-calibration"
             argv = (sys.executable, "-m", "scripts.verification.calibrate_suite", "--candidate", str(root),
                     "--out", str(directory / name), "--inventory", inventory)
@@ -293,14 +315,14 @@ def readiness(check, *, root, mode, config=None, driver=None, brief=None, famili
 def preflight(*, suite, mode, config=None, driver=None, timeout=180, root=ROOT,
               families=(), check_timeout=600, brief=None, drivers=(), shutdown_grace=10.0,
               stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000, shard=None, output=None,
-              terminal_host=None, timings=None):
+              terminal_host=None, timings=None, inventories=(), stage=None):
     root = Path(root).resolve()
     cache_environment(root)
     checks = plan(directory=root.parent / "testkit-preflight", suite=suite, mode=mode, config=config,
                   driver=driver, timeout=timeout, root=root, brief=brief, families=families,
                   check_timeout=check_timeout, drivers=drivers, shutdown_grace=shutdown_grace,
                   stories=stories, max_sessions=max_sessions, max_turns=max_turns, max_tool_calls=max_tool_calls,
-                  shard=shard, terminal_host=terminal_host, timings=timings)
+                  shard=shard, terminal_host=terminal_host, timings=timings, inventories=inventories, stage=stage)
     if families:
         try:
             from .adapters.pytest_plugin import load_catalog
@@ -323,7 +345,8 @@ def preflight(*, suite, mode, config=None, driver=None, timeout=180, root=ROOT,
 def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=None,
         timeout=180, root=ROOT, brief=None, families=(), check_timeout=600,
         directory=None, cancellation=None, result_sink=None, shutdown_grace=10.0, drivers=(),
-        stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000, shard=None, terminal_host=None, timings=None):
+        stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000, shard=None, terminal_host=None, timings=None,
+        inventories=(), stage=None):
     root, output = Path(root).resolve(), Path(output).expanduser().resolve()
     if output == root or root in output.parents:
         raise ValueError("Run output must be outside the measured candidate")
@@ -375,13 +398,13 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
                       timeout=timeout, root=root, brief=brief, families=families,
                       check_timeout=check_timeout, drivers=drivers, shutdown_grace=shutdown_grace,
                       stories=stories, max_sessions=max_sessions, max_turns=max_turns, max_tool_calls=max_tool_calls,
-                      shard=shard, terminal_host=terminal_host, timings=timings)
+                      shard=shard, terminal_host=terminal_host, timings=timings, inventories=inventories, stage=stage)
         report["selected_check_ids"] = [check.name for check in checks]
         ready = preflight(suite=suite, mode=mode, config=config, driver=driver, timeout=timeout, root=root,
                           brief=brief, families=families, check_timeout=check_timeout, drivers=drivers,
                           shutdown_grace=shutdown_grace, stories=stories, max_sessions=max_sessions,
                           max_turns=max_turns, max_tool_calls=max_tool_calls, shard=shard, output=directory,
-                          timings=timings)
+                          timings=timings, inventories=inventories, stage=stage)
         write_json(directory / "preflight.json", ready)
         report["preflight"] = ready
         before = candidate_identity(root) if (root / ".git").exists() else None

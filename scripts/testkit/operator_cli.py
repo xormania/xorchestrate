@@ -34,6 +34,10 @@ def parser():
     value.add_argument("--family", action="append", help="Declared behavioral family; repeatable")
     value.add_argument("--shard", metavar="K/N", help="Run one-based balanced shard K of N of the tests suite")
     value.add_argument("--timings", type=Path, help="External timing model for a balanced tests shard")
+    value.add_argument("--inventory", action="append",
+                       help="Calibration inventory to run instead of the ci stage's; repeatable")
+    value.add_argument("--stage", choices=("ci", "pre-draft", "manual"),
+                       help="Run the calibration inventories registered at this stage (default: ci)")
     value.add_argument("--story", action="append", help="Story ID; repeat to select an ordered battery")
     value.add_argument("--max-sessions", type=int, help="Session-start requests admitted per story")
     value.add_argument("--max-turns", type=int, help="Harness turn submissions admitted per story")
@@ -77,6 +81,10 @@ def overrides(args):
         result["drivers"] = args.driver
     if args.family is not None:
         result["families"] = args.family
+    if args.inventory is not None:
+        result["inventories"] = args.inventory
+    if args.stage is not None:
+        result["stage"] = args.stage
     if args.story is not None:
         result["stories"] = args.story
     if args.project is not None or args.language is not None:
