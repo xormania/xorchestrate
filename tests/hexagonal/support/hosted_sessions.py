@@ -16,7 +16,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from tests.hexagonal.support.host_processes import processes_under, track
+from tests.hexagonal.support.host_processes import track
 from xorchestrate.adapters.hosted import HostedSessionDriver
 from xorchestrate.composition import factory_for
 from xorchestrate.ports import TerminalClosure
@@ -113,29 +113,31 @@ class HostedSubject:
     def lose(self, session, *, everything=True):
         """Kill the session outright, cleaning nothing: with ``everything`` (a container failure) every process of
         this subject, the terminal host included; otherwise only the bridge host, by the identity in its receipt."""
-        from xorchestrate.adapters.terminal_support import alive, identity
+        from scripts.testkit.adapters.ownership import Identity, alive, send_signal
 
         if everything:
-            victims = [pid for pid, _ in processes_under([self.sessions])]
+            victims = self.owned()
         else:
             recorded = session["hosted"]["terminal"]["process"]
-            leader = identity(recorded["pid"])
-            victims = [leader.pid] if leader is not None and leader.started == recorded["started"] else []
+            leader = Identity(recorded["pid"], recorded["started"])
+            victims = [leader] if alive(leader) else []
         assert victims, "nothing of the session was running"
-        for pid in victims:
-            try:
-                os.kill(pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
+        for victim in victims:
+            send_signal(victim, signal.SIGKILL)  # fenced: a reused pid is never signalled
         deadline = time.monotonic() + 10
-        if everything:
-            while processes_under([self.sessions]) and time.monotonic() < deadline:
-                time.sleep(0.05)
-            assert processes_under([self.sessions]) == [], "the simulated loss left processes"
-        else:
-            while alive(leader) and time.monotonic() < deadline:
-                time.sleep(0.05)
-            assert not alive(leader), "the bridge host survived"
+        while any(alive(victim) for victim in victims) and time.monotonic() < deadline:
+            time.sleep(0.05)
+        assert not any(alive(victim) for victim in victims), \
+            "the simulated loss left processes" if everything else "the bridge host survived"
+
+    def owned(self):
+        """The subject's own processes: its terminal host (by the socket in its fresh base) and their descendants.
+
+        Never chosen by name or path: a process that merely names the subject's directories is not its own.
+        """
+        from scripts.testkit.adapters.ownership import owned_processes
+
+        return list(owned_processes(self.base, None).selected)
 
     def crash(self, key):
         spec = {"adapter": self.adapter, "placement": self.placement, "options": self.options(),
@@ -191,11 +193,11 @@ class HostedSubject:
             host.shutdown()
         except Exception:  # noqa: BLE001 - best effort teardown; the leak guard reports what remains
             pass
-        for pid, _ in processes_under([self.base]):
-            try:
-                os.kill(pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
+        from scripts.testkit.adapters.ownership import send_signal
+
+        if self.base.is_dir():
+            for victim in self.owned():
+                send_signal(victim, signal.SIGKILL)
         shutil.rmtree(self.base, ignore_errors=True)
 
 

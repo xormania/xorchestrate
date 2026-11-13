@@ -262,8 +262,8 @@ def _holds(pid, inodes):
 def owned_processes(root, marker, *, spawned=(), within=None):
     """This user's processes that provably belong to the caller's run, each with the signal that selected it.
 
-    - ``home``: the initial environment sets ``marker`` (a ``(key, value)`` pair) exactly; only that key is
-      compared, and an unreadable environment means "not selected";
+    - ``home``: the initial environment sets ``marker`` (a ``(key, value)`` pair, or None for no marker)
+      exactly; only that key is compared, and an unreadable environment means "not selected";
     - ``spawned``: one of the caller's still-running ``spawned`` processes;
     - ``socket``: it holds a listening Unix socket whose bound path, resolved, lies inside ``root``;
     - ``descendant``: it descends, through parent links read now, from a process selected above.
@@ -279,8 +279,7 @@ def owned_processes(root, marker, *, spawned=(), within=None):
         raise ValueError(f"refusing to select: {root!s} is not a directory of this user") from error
     if not os.path.isdir(root) or os.path.islink(root) or info.st_uid != os.getuid():
         raise ValueError(f"refusing to select: {root!s} is not a directory of this user")
-    key, value = marker
-    wanted = os.fsencode(key) + b"=" + os.fsencode(str(value))
+    wanted = None if marker is None else os.fsencode(marker[0]) + b"=" + os.fsencode(str(marker[1]))
     snapshot, uid = processes(), os.getuid()
     excluded = _ancestry(snapshot)
     allowed = None if within is None else set(within)
@@ -297,7 +296,7 @@ def owned_processes(root, marker, *, spawned=(), within=None):
         mine.add(pid)
         if allowed is not None and identity not in allowed:
             continue
-        if _carries(pid, wanted):
+        if wanted is not None and _carries(pid, wanted):
             found[identity] = "home"
         elif inodes and _holds(pid, inodes):
             found[identity] = "socket"
