@@ -1,0 +1,175 @@
+{
+  "cases": [
+    {
+      "diagnostic": "OWNER_OUTCOME_B_MUST_REMAIN_REQUIRED",
+      "mutation": {
+        "new": "            selected = set(record.data[\"outcomes\"])\n            tx.put(\"requirements\", basis.key, {**basis.data,\n                \"outcomes\": {key: value for key, value in basis.data[\"outcomes\"].items() if key in selected},\n                \"checks\": {key: value for key, value in basis.data[\"checks\"].items() if set(value[\"outcomes\"]) <= selected}}, basis.version)\n            self._event(tx, \"contribution.updated\", actor, work_id=args[\"work_id\"], contribution_id=current.key)",
+        "old": "            self._event(tx, \"contribution.updated\", actor, work_id=args[\"work_id\"], contribution_id=current.key)",
+        "path": "xorchestrate/acceptance.py"
+      },
+      "name": "b1-cancelled-contribution-erases-owner-outcome-memory",
+      "selectors": [
+        "tests/hexagonal/test_work_acceptance.py::test_full_owner_objective_survives_narrowing_and_cancellation[memory]",
+        "tests/hexagonal/test_work_acceptance.py::test_measurement_replay_is_bound_to_request_and_does_not_reexecute[memory]"
+      ],
+      "target": "tests.hexagonal.test_work_acceptance::test_full_owner_objective_survives_narrowing_and_cancellation[memory]",
+      "unaffected": [
+        "tests.hexagonal.test_work_acceptance::test_measurement_replay_is_bound_to_request_and_does_not_reexecute[memory]"
+      ]
+    },
+    {
+      "diagnostic": "OWNER_OUTCOME_B_MUST_REMAIN_REQUIRED",
+      "mutation": {
+        "new": "            selected = set(record.data[\"outcomes\"])\n            tx.put(\"requirements\", basis.key, {**basis.data,\n                \"outcomes\": {key: value for key, value in basis.data[\"outcomes\"].items() if key in selected},\n                \"checks\": {key: value for key, value in basis.data[\"checks\"].items() if set(value[\"outcomes\"]) <= selected}}, basis.version)\n            self._event(tx, \"contribution.updated\", actor, work_id=args[\"work_id\"], contribution_id=current.key)",
+        "old": "            self._event(tx, \"contribution.updated\", actor, work_id=args[\"work_id\"], contribution_id=current.key)",
+        "path": "xorchestrate/acceptance.py"
+      },
+      "name": "b1-cancelled-contribution-erases-owner-outcome-sqlite",
+      "selectors": [
+        "tests/hexagonal/test_work_acceptance.py::test_full_owner_objective_survives_narrowing_and_cancellation[sqlite]",
+        "tests/hexagonal/test_work_acceptance.py::test_measurement_replay_is_bound_to_request_and_does_not_reexecute[sqlite]"
+      ],
+      "target": "tests.hexagonal.test_work_acceptance::test_full_owner_objective_survives_narrowing_and_cancellation[sqlite]",
+      "unaffected": [
+        "tests.hexagonal.test_work_acceptance::test_measurement_replay_is_bound_to_request_and_does_not_reexecute[sqlite]"
+      ]
+    },
+    {
+      "diagnostic": "BOUND_REQUIRED_MEASUREMENT_MUST_PASS",
+      "mutation": {
+        "new": "\"candidate\": observed.get(\"candidate\") if observed else None, \"bindings\": check.get(\"bindings\", {})",
+        "old": "\"candidate\": candidate[\"candidate\"], \"bindings\": check.get(\"bindings\", {})",
+        "path": "xorchestrate/acceptance.py"
+      },
+      "name": "b2-wrong-observed-candidate-memory",
+      "selectors": [
+        "tests/hexagonal/test_work_acceptance.py::test_insufficient_or_misbound_measurement_cannot_pass[memory-candidate]",
+        "tests/hexagonal/test_work_acceptance.py::test_measurement_replay_is_bound_to_request_and_does_not_reexecute[memory]"
+      ],
+      "target": "tests.hexagonal.test_work_acceptance::test_insufficient_or_misbound_measurement_cannot_pass[memory-candidate]",
+      "unaffected": [
+        "tests.hexagonal.test_work_acceptance::test_measurement_replay_is_bound_to_request_and_does_not_reexecute[memory]"
+      ]
+    },
+    {
+      "diagnostic": "BOUND_REQUIRED_MEASUREMENT_MUST_PASS",
+      "mutation": {
+        "new": "\"candidate\": observed.get(\"candidate\") if observed else None, \"bindings\": check.get(\"bindings\", {})",
+        "old": "\"candidate\": candidate[\"candidate\"], \"bindings\": check.get(\"bindings\", {})",
+        "path": "xorchestrate/acceptance.py"
+      },
+      "name": "b2-wrong-observed-candidate-sqlite",
+      "selectors": [
+        "tests/hexagonal/test_work_acceptance.py::test_insufficient_or_misbound_measurement_cannot_pass[sqlite-candidate]",
+        "tests/hexagonal/test_work_acceptance.py::test_measurement_replay_is_bound_to_request_and_does_not_reexecute[sqlite]"
+      ],
+      "target": "tests.hexagonal.test_work_acceptance::test_insufficient_or_misbound_measurement_cannot_pass[sqlite-candidate]",
+      "unaffected": [
+        "tests.hexagonal.test_work_acceptance::test_measurement_replay_is_bound_to_request_and_does_not_reexecute[sqlite]"
+      ]
+    },
+    {
+      "diagnostic": "ADAPTER_ORIGIN_REQUIRED",
+      "mutation": {
+        "new": "or False",
+        "old": "or operation.get(\"external_result_origin\") != \"adapter\"",
+        "path": "xorchestrate/acceptance.py"
+      },
+      "name": "b2-caller-origin-accepted-as-measurement-memory",
+      "selectors": [
+        "tests/hexagonal/test_work_acceptance.py::test_observation_must_match_retained_adapter_operation[memory]",
+        "tests/hexagonal/test_work_acceptance.py::test_measurement_replay_is_bound_to_request_and_does_not_reexecute[memory]"
+      ],
+      "target": "tests.hexagonal.test_work_acceptance::test_observation_must_match_retained_adapter_operation[memory]",
+      "unaffected": [
+        "tests.hexagonal.test_work_acceptance::test_measurement_replay_is_bound_to_request_and_does_not_reexecute[memory]"
+      ]
+    },
+    {
+      "diagnostic": "ADAPTER_ORIGIN_REQUIRED",
+      "mutation": {
+        "new": "or False",
+        "old": "or operation.get(\"external_result_origin\") != \"adapter\"",
+        "path": "xorchestrate/acceptance.py"
+      },
+      "name": "b2-caller-origin-accepted-as-measurement-sqlite",
+      "selectors": [
+        "tests/hexagonal/test_work_acceptance.py::test_observation_must_match_retained_adapter_operation[sqlite]",
+        "tests/hexagonal/test_work_acceptance.py::test_measurement_replay_is_bound_to_request_and_does_not_reexecute[sqlite]"
+      ],
+      "target": "tests.hexagonal.test_work_acceptance::test_observation_must_match_retained_adapter_operation[sqlite]",
+      "unaffected": [
+        "tests.hexagonal.test_work_acceptance::test_measurement_replay_is_bound_to_request_and_does_not_reexecute[sqlite]"
+      ]
+    },
+    {
+      "diagnostic": "UNRESOLVED_MEASUREMENT_CANNOT_BE_MASKED",
+      "mutation": {
+        "new": "or False",
+        "old": "or (_observation(item.get(\"raw_response\")) or {}).get(\"status\") in {\"pending\", \"running\", \"unknown\", \"uncertain\"}",
+        "path": "xorchestrate/acceptance.py"
+      },
+      "name": "b2-uncertain-measurement-hidden-by-later-pass-memory",
+      "selectors": [
+        "tests/hexagonal/test_work_acceptance.py::test_incomplete_observed_measurement_cannot_be_hidden_by_later_passing_transport[memory-running]",
+        "tests/hexagonal/test_work_acceptance.py::test_measurement_replay_is_bound_to_request_and_does_not_reexecute[memory]"
+      ],
+      "target": "tests.hexagonal.test_work_acceptance::test_incomplete_observed_measurement_cannot_be_hidden_by_later_passing_transport[memory-running]",
+      "unaffected": [
+        "tests.hexagonal.test_work_acceptance::test_measurement_replay_is_bound_to_request_and_does_not_reexecute[memory]"
+      ]
+    },
+    {
+      "diagnostic": "UNRESOLVED_MEASUREMENT_CANNOT_BE_MASKED",
+      "mutation": {
+        "new": "or False",
+        "old": "or (_observation(item.get(\"raw_response\")) or {}).get(\"status\") in {\"pending\", \"running\", \"unknown\", \"uncertain\"}",
+        "path": "xorchestrate/acceptance.py"
+      },
+      "name": "b2-uncertain-measurement-hidden-by-later-pass-sqlite",
+      "selectors": [
+        "tests/hexagonal/test_work_acceptance.py::test_incomplete_observed_measurement_cannot_be_hidden_by_later_passing_transport[sqlite-running]",
+        "tests/hexagonal/test_work_acceptance.py::test_measurement_replay_is_bound_to_request_and_does_not_reexecute[sqlite]"
+      ],
+      "target": "tests.hexagonal.test_work_acceptance::test_incomplete_observed_measurement_cannot_be_hidden_by_later_passing_transport[sqlite-running]",
+      "unaffected": [
+        "tests.hexagonal.test_work_acceptance::test_measurement_replay_is_bound_to_request_and_does_not_reexecute[sqlite]"
+      ]
+    },
+    {
+      "diagnostic": "ASSESSMENT_CONFIGURATION_MUST_REMAIN_CURRENT",
+      "mutation": {
+        "new": "if False:",
+        "old": "if assessment.data.get(\"assessment_configuration_identity\") != snapshot[\"assessment_configuration_identity\"]:",
+        "path": "xorchestrate/acceptance.py"
+      },
+      "name": "b2-stale-assessment-configuration-memory",
+      "selectors": [
+        "tests/hexagonal/test_work_acceptance.py::test_assessment_threshold_change_invalidates_only_decisions_consuming_assessment[memory]",
+        "tests/hexagonal/test_work_acceptance.py::test_measurement_replay_is_bound_to_request_and_does_not_reexecute[memory]"
+      ],
+      "target": "tests.hexagonal.test_work_acceptance::test_assessment_threshold_change_invalidates_only_decisions_consuming_assessment[memory]",
+      "unaffected": [
+        "tests.hexagonal.test_work_acceptance::test_measurement_replay_is_bound_to_request_and_does_not_reexecute[memory]"
+      ]
+    },
+    {
+      "diagnostic": "ASSESSMENT_CONFIGURATION_MUST_REMAIN_CURRENT",
+      "mutation": {
+        "new": "if False:",
+        "old": "if assessment.data.get(\"assessment_configuration_identity\") != snapshot[\"assessment_configuration_identity\"]:",
+        "path": "xorchestrate/acceptance.py"
+      },
+      "name": "b2-stale-assessment-configuration-sqlite",
+      "selectors": [
+        "tests/hexagonal/test_work_acceptance.py::test_assessment_threshold_change_invalidates_only_decisions_consuming_assessment[sqlite]",
+        "tests/hexagonal/test_work_acceptance.py::test_measurement_replay_is_bound_to_request_and_does_not_reexecute[sqlite]"
+      ],
+      "target": "tests.hexagonal.test_work_acceptance::test_assessment_threshold_change_invalidates_only_decisions_consuming_assessment[sqlite]",
+      "unaffected": [
+        "tests.hexagonal.test_work_acceptance::test_measurement_replay_is_bound_to_request_and_does_not_reexecute[sqlite]"
+      ]
+    }
+  ],
+  "schema_version": 1
+}

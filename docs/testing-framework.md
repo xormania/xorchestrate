@@ -264,8 +264,9 @@ Fault cases for calibration are data. An inventory file in
 selected tests, the target test and its declared assertion message, and the tests
 that must stay green. `registry.json` names every inventory and the stages it runs
 at (`ci`, `pre-draft`, `manual`); `schema.json` defines both files, and an
-unregistered file or an unknown name is an error. The `native-calibration` check
-runs the `native` inventory; to run others on demand:
+unregistered file or an unknown name is an error. The calibration suite composes one
+check per inventory registered at `ci` (`native-calibration`, `work-calibration`,
+`state-calibration`), each running that inventory; to run others on demand:
 
 ```bash
 python3 -m scripts.verification.calibrate_suite --candidate . --out <new directory outside the tree> --stage manual
@@ -273,7 +274,7 @@ python3 -m scripts.verification.calibrate_suite --candidate . --out <new directo
 ```
 
 With neither option, the inventories registered at `ci` run. A selection that names
-no inventory (today only `native` is registered, at `ci`) exits 2 with
+no inventory (for example a stage with nothing registered) exits 2 with
 `no_inventory_selected` before anything runs. A case passes when it
 classifies as its expectation: `detected` by default, or `unrelated_failure` for a
 negative control.

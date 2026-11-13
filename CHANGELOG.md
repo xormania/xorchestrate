@@ -125,6 +125,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   registered inventory name instead of a file path, and
   `scripts/verification/faults.json` is gone: register a new inventory file in
   `scripts/verification/inventories/registry.json` and pass its name.
+- The state and work faults are registered inventories too, run at `ci` by the
+  same service; each work fault now runs once per storage adapter. Their
+  separate entry points are gone: run
+  `python -m scripts.verification.calibrate_suite --inventory state` (or `work`).
 - Jev now asks evidence-addressed atomic questions at the source stage and adds
   optional post-test guarantee support and failure triage. Current candidate and
   lane identity, executed inventories and exact failure cases bind the advice;
