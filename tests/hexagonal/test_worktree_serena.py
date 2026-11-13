@@ -6,14 +6,27 @@ every timeout and the stop grace, and a fake process table receives every signal
 """
 
 import json
+import os
 import signal
+import sys
+import threading
 import time
 
 import pytest
 
 from tests.hexagonal.contracts import worktrees as contract
 from tests.hexagonal.support.git_repositories import commit, git
-from tests.hexagonal.support.worktrees import CRASH_TEXT, PROBE_FILE, Workspace
+from tests.hexagonal.support.worktrees import (
+    CRASH_TEXT,
+    PROBE_FILE,
+    FakeLauncher,
+    RawEndpoint,
+    Workspace,
+    json_reply,
+    server_argv,
+    tool,
+    truncated_reply,
+)
 
 
 @pytest.fixture
@@ -53,7 +66,7 @@ def test_up_launches_the_default_command_in_the_tree_and_records_a_ready_server(
     assert spawn["cwd"] == str(path)
     assert spawn["env"]["SERENA_HOME"] == str(ws.state / "serena-home")
     assert spawn["log"].startswith(str(ws.state / "logs") + "/") and spawn["log"].endswith(".log")
-    state = ws.store().load("served")
+    state = ws.saved("served")
     assert (state.tree, state.port, state.head, state.version) == (str(path), port, git(path, "rev-parse", "HEAD"),
                                                                    contract.DEFAULT_SERENA_VERSION)
     assert state.pid in ws.processes.procs and state.last_call is None
@@ -94,7 +107,7 @@ def test_a_configured_command_and_probe_replace_the_defaults(ws):
     (spawn,) = ws.launcher.spawns
     assert spawn["argv"] == ["my-serena", "--root", str(path), "--port", str(port_of(spawn["argv"])), "--pin", "7.7.7"]
     assert calls(ws, "tools/call")[-1]["body"]["params"] == {"name": "find_symbol", "arguments": {"name_path": "Model"}}
-    assert ws.store().load("custom").version == "7.7.7"
+    assert ws.saved("custom").version == "7.7.7"
 
 
 def test_without_a_probe_file_or_configured_probe_up_refuses_before_launching(tmp_path, monkeypatch):
@@ -117,7 +130,7 @@ def test_a_server_that_answers_without_a_real_symbol_result_is_never_ready(ws, p
     assert len(ws.launcher.spawns) == 1
     pid = 40_000
     assert (pid, signal.SIGTERM) in ws.processes.signals and not ws.processes.alive(pid)
-    assert ws.store().load("served") is None and ws.state_files() == []
+    assert ws.saved("served") is None and ws.state_files() == []
     assert ws.clock.now() - start >= contract.DEFAULT_TIMEOUT
     assert time.monotonic() - wall < 30, "waiting must go through the clock"
 
@@ -130,7 +143,7 @@ def test_a_silent_server_fails_at_the_configured_timeout_and_is_stopped(ws):
     assert result.code == 1 and "SERVER_FAILED" in codes(result), result.text
     assert 30 <= ws.clock.now() - start < contract.DEFAULT_TIMEOUT
     assert ws.processes.groups_signalled(signal.SIGTERM) == [40_000]
-    assert ws.store().load("served") is None and path.is_dir()
+    assert ws.saved("served") is None and path.is_dir()
 
 
 def test_a_server_that_exits_early_fails_with_its_log_tail_and_no_retry(ws):
@@ -138,7 +151,7 @@ def test_a_server_that_exits_early_fails_with_its_log_tail_and_no_retry(ws):
     _, result = up(ws)
     assert result.code == 1 and "SERVER_FAILED" in codes(result), result.text
     assert CRASH_TEXT.splitlines()[-1] in result.text
-    assert len(ws.launcher.spawns) == 1 and ws.store().load("served") is None
+    assert len(ws.launcher.spawns) == 1 and ws.saved("served") is None
 
 
 def test_an_address_in_use_is_retried_on_a_new_port_up_to_three_tries(ws):
@@ -147,14 +160,14 @@ def test_an_address_in_use_is_retried_on_a_new_port_up_to_three_tries(ws):
     assert result.code == 0, result.text
     ports = [port_of(spawn["argv"]) for spawn in ws.launcher.spawns]
     assert len(ports) == contract.PORT_TRIES and len(set(ports)) == contract.PORT_TRIES, ports
-    assert ws.store().load("served").port == ports[-1]
+    assert ws.saved("served").port == ports[-1]
 
 
 def test_three_addresses_in_use_fail_without_a_fourth_try(ws):
     ws.launcher.script = ["address_in_use"] * 4
     _, result = up(ws)
     assert result.code == 1 and "SERVER_FAILED" in codes(result), result.text
-    assert len(ws.launcher.spawns) == contract.PORT_TRIES and ws.store().load("served") is None
+    assert len(ws.launcher.spawns) == contract.PORT_TRIES and ws.saved("served") is None
 
 
 def test_without_serena_up_says_so_and_the_tree_commands_still_work(ws):
@@ -196,7 +209,7 @@ def test_down_terminates_the_server_group_and_its_descendants_groups_then_forget
     assert ws.processes.groups_signalled(signal.SIGTERM)[:1] == [7_300]
     assert set(ws.processes.groups_signalled()) == {7_300, 7_302}, ws.processes.signals
     assert ws.processes.alive(9_000), "an unrelated process was signalled"
-    assert ws.store().load("served") is None
+    assert ws.saved("served") is None
 
 
 def test_down_kills_what_survives_the_grace_measured_on_the_clock(ws):
@@ -210,7 +223,7 @@ def test_down_kills_what_survives_the_grace_measured_on_the_clock(ws):
     assert (7_300, signal.SIGKILL) in ws.processes.signals
     kill = ws.processes.signals.index((7_300, signal.SIGKILL))
     assert all(sig == signal.SIGTERM for _, sig in ws.processes.signals[:kill])
-    assert not ws.processes.alive(7_300) and ws.store().load("served") is None
+    assert not ws.processes.alive(7_300) and ws.saved("served") is None
 
 
 def test_down_never_signals_a_group_shared_with_an_unrelated_process(ws):
@@ -221,7 +234,7 @@ def test_down_never_signals_a_group_shared_with_an_unrelated_process(ws):
     assert 9_100 not in ws.processes.groups_signalled() and ws.processes.alive(9_100)
     assert "9100" in result.text
     assert 7_300 in ws.processes.groups_signalled(signal.SIGTERM)
-    assert ws.store().load("served") is None, "the server itself is gone, so its state is too"
+    assert ws.saved("served") is None, "the server itself is gone, so its state is too"
 
 
 def test_down_without_a_server_is_a_quiet_success(ws):
@@ -255,9 +268,9 @@ def test_reap_forgets_dead_servers_stops_servers_of_missing_trees_and_keeps_heal
     git(ws.main, "worktree", "remove", orphan)
     result = ws.run("serena", "reap")
     assert result.code == 0, result.text
-    assert ws.store().load("dead") is None and ws.store().load("orphan") is None
+    assert ws.saved("dead") is None and ws.saved("orphan") is None
     assert (7_520, signal.SIGTERM) in ws.processes.signals and not ws.processes.alive(7_520)
-    assert ws.store().load("healthy") is not None and ws.processes.alive(7_500)
+    assert ws.saved("healthy") is not None and ws.processes.alive(7_500)
     assert 7_500 not in ws.processes.groups_signalled()
     assert "dead" in result.text and "orphan" in result.text
 
@@ -280,7 +293,7 @@ def test_call_initializes_notifies_calls_and_closes_one_session(ws, mode):
     session = {request["session"] for request in ws.mcp.requests[1:]}
     assert len(session) == 1 and None not in session
     assert ws.mcp.requests[2]["body"]["params"] == {"name": "find_symbol", "arguments": {"name_path": "Model"}}
-    assert ws.store().load("served").last_call == ws.clock.now()
+    assert ws.saved("served").last_call == ws.clock.now()
 
 
 @pytest.mark.parametrize("failure", ["call_error", "rpc_error"])
@@ -318,7 +331,7 @@ def test_check_passes_for_a_healthy_server(ws):
 
 
 def _not_up(ws, path):
-    ws.store().delete("served")
+    ws.store().delete(ws.key("served"))
 
 
 def _not_answering(ws, path):
@@ -327,7 +340,7 @@ def _not_answering(ws, path):
 
 
 def _project_mismatch(ws, path):
-    state = ws.store().load("served")
+    state = ws.saved("served")
     proc = ws.processes.procs[state.pid]
     argv = list(proc.argv)
     argv[argv.index("--project") + 1] = str(ws.main)
@@ -394,3 +407,368 @@ def test_state_is_json_the_tool_can_read_back_and_never_written_before_ready(ws)
     assert ws.run("serena", "up", "served").code == 0
     files = ws.state_files()
     assert files and all(json.loads(path.read_text()) for path in files)
+
+
+# Server identity: a recorded pid is ours only while the same process holds it ----------------------
+
+IMPOSTOR = 2_345
+
+
+def impostor(ws, path, *, cwd=None):
+    """State for a server at pid 2345, but pid 2345 is now an unrelated tmux with children in its group."""
+    state = ws.make_state(path, pid=IMPOSTOR, pgid=IMPOSTOR, port=1, head=git(path, "rev-parse", "HEAD"),
+                          version=contract.DEFAULT_SERENA_VERSION, started=ws.clock.now(), last_call=None,
+                          argv=tuple(server_argv(path, 1)), start_time=None)
+    ws.store().save(ws.key(path), state)
+    ws.processes.add(IMPOSTOR, pgid=IMPOSTOR, cwd=cwd or ws.base, argv=["tmux", "new-session", "-d"])
+    ws.processes.add(IMPOSTOR + 1, ppid=IMPOSTOR, pgid=IMPOSTOR, cwd=cwd or ws.base, argv=["bash"])
+    ws.processes.add(IMPOSTOR + 2, ppid=IMPOSTOR + 1, pgid=IMPOSTOR + 2, cwd=cwd or ws.base, argv=["vim"])
+    return state
+
+
+def unrelated_signalled(ws):
+    return [(pgid, sig) for pgid, sig in ws.processes.signals if pgid in (IMPOSTOR, IMPOSTOR + 2)]
+
+
+@pytest.mark.parametrize("command", ["down", "reap", "up"])
+def test_a_recorded_pid_now_running_something_else_is_forgotten_and_never_signalled(ws, command):
+    path = ws.new("served")
+    impostor(ws, path)
+    argv = ("serena", "reap") if command == "reap" else ("serena", command, "served")
+    result = ws.run(*argv)
+    assert unrelated_signalled(ws) == [], ws.processes.signals
+    assert all(ws.processes.alive(pid) for pid in (IMPOSTOR, IMPOSTOR + 1, IMPOSTOR + 2))
+    if command == "up":
+        assert result.code == 0, result.text
+        assert ws.saved("served").pid != IMPOSTOR and len(ws.launcher.spawns) == 1
+    else:
+        assert result.code == 0, result.text
+        assert ws.saved("served") is None, "the stale state was kept"
+
+
+def test_a_recorded_pid_with_the_same_command_but_another_start_time_is_not_our_server(ws):
+    path = ws.new("served")
+    ws.seed_server(path, pid=7_300, start_time=111)
+    ws.processes.add(7_300, cwd=path, argv=server_argv(path, 1), start_time=222)
+    result = ws.run("serena", "down", "served")
+    assert result.code == 0, result.text
+    assert ws.processes.signals == [] and ws.processes.alive(7_300)
+    assert ws.saved("served") is None
+
+
+def test_a_matching_command_and_start_time_is_our_server(ws):
+    path = ws.new("served")
+    ws.seed_server(path, pid=7_300, start_time=111)
+    result = ws.run("serena", "down", "served")
+    assert result.code == 0, result.text
+    assert (7_300, signal.SIGTERM) in ws.processes.signals and ws.saved("served") is None
+
+
+def test_up_records_the_spawned_command_and_the_process_start_time(ws):
+    path, result = up(ws)
+    assert result.code == 0, result.text
+    state = ws.saved("served")
+    (spawn,) = ws.launcher.spawns
+    assert tuple(getattr(state, "argv", ())) == tuple(spawn["argv"])
+    assert getattr(state, "start_time", None) == FakeLauncher.START_TIME_BASE + state.pid
+
+
+@pytest.mark.parametrize("pgid", [0, 1])
+def test_down_never_signals_process_group_zero_or_one(ws, pgid):
+    path = ws.new("served")
+    ws.seed_server(path, pid=7_300, pgid=pgid)
+    result = ws.run("serena", "down", "served")
+    assert result.code in (0, 1), result.text
+    assert [group for group in ws.processes.groups_signalled() if group <= 1] == [], ws.processes.signals
+
+
+def test_procfs_reads_the_start_time_and_treats_zombies_as_dead(tmp_path):
+    from tests.hexagonal.support.worktrees import fake_proc
+    root = fake_proc(tmp_path / "proc", {
+        201: (1, 201, "serena", ["serena"], str(tmp_path), []),
+        202: (201, 201, "worker", ["worker"], str(tmp_path), []),
+        203: (201, 201, "gone", ["gone"], str(tmp_path), []),
+    }, states={202: "Z", 203: "X"}, start_times={201: 987654})
+    table = tool("adapters.procfs").ProcFs(root)
+    found = {proc.pid: proc for proc in table.processes()}
+    assert getattr(found[201], "start_time", None) == 987654
+    assert table.alive(201) and not table.alive(202) and not table.alive(203)
+
+
+# Repositories sharing one state directory -----------------------------------------------------------
+
+@pytest.fixture
+def pair(tmp_path, monkeypatch):
+    alpha = Workspace(tmp_path / "alpha", monkeypatch)
+    beta = Workspace(tmp_path / "beta", monkeypatch, share=alpha)
+    yield alpha, beta
+    alpha.close()
+
+
+def test_repositories_sharing_a_state_directory_never_touch_each_others_servers(pair):
+    alpha, beta = pair
+    alpha_tree, beta_tree = alpha.new("feat/x"), beta.new("feat/x")
+    assert alpha.run("serena", "up", "feat/x").code == 0
+    server = alpha.saved("feat/x")
+    assert server is not None and server.tree == str(alpha_tree)
+    assert beta.saved("feat/x") is None
+    down = beta.run("serena", "down", "feat/x")
+    assert down.code == 0, down.text
+    removed = beta.run("remove", "feat/x")
+    assert removed.code == 0, removed.text
+    assert not beta_tree.exists() and alpha_tree.is_dir()
+    assert alpha.processes.signals == [] and alpha.processes.alive(server.pid)
+    assert alpha.saved("feat/x") == server
+
+
+def test_repositories_sharing_a_state_directory_keep_separate_servers_and_logs(pair):
+    alpha, beta = pair
+    alpha.new("feat/x")
+    beta.new("feat/x")
+    assert alpha.run("serena", "up", "feat/x").code == 0
+    second = beta.run("serena", "up", "feat/x")
+    assert second.code == 0, second.text
+    assert "already up" not in second.text.lower()
+    first_spawn, second_spawn = alpha.launcher.spawns
+    assert first_spawn["log"] != second_spawn["log"]
+    assert alpha.saved("feat/x").pid != beta.saved("feat/x").pid
+    listing = alpha.run("serena", "ls")
+    assert "feat/x" in [line.split()[0] for line in listing.out.splitlines() if line.strip()], listing.out
+
+
+def test_a_state_recorded_for_another_tree_is_not_ours(ws, tmp_path):
+    path = ws.new("served")
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    state = ws.make_state(elsewhere, pid=7_300, pgid=7_300, port=1, head="0" * 40,
+                          version=contract.DEFAULT_SERENA_VERSION, started=ws.clock.now(), last_call=None,
+                          argv=tuple(server_argv(elsewhere, 1)), start_time=None)
+    ws.store().save(ws.key(path), state)
+    ws.processes.add(7_300, cwd=elsewhere, argv=server_argv(elsewhere, 1))
+    result = ws.run("serena", "down", "served")
+    assert result.code == 0, result.text
+    assert ws.processes.signals == [] and ws.processes.alive(7_300)
+
+
+# Readiness: bounded over the real transport, and nothing escapes with a live server -------------------
+
+def run_bounded(ws, seconds, *argv, **kwargs):
+    """``ws.run`` in a thread; a run still going after ``seconds`` of wall time is a failure (its endpoints are
+    closed first so the thread can finish)."""
+    box = {}
+
+    def target():
+        try:
+            box["result"] = ws.run(*argv, **kwargs)
+        except BaseException as error:  # noqa: BLE001 - reported to the test below
+            box["error"] = error
+
+    thread = threading.Thread(target=target, daemon=True)
+    started = time.monotonic()
+    thread.start()
+    thread.join(seconds)
+    elapsed = time.monotonic() - started
+    if thread.is_alive():
+        ws.launcher.stop_all()
+        thread.join(30)
+        pytest.fail(f"{' '.join(argv)} was still waiting after {seconds} s of wall time")
+    if "error" in box:
+        raise box["error"]
+    return box["result"], elapsed
+
+
+def test_the_readiness_timeout_holds_over_the_real_transport_when_the_endpoint_never_replies(ws):
+    ws.launcher.script = ["hang"]
+    ws.new("served")
+    timeout, slack = 2, 8
+    result, elapsed = run_bounded(ws, timeout + slack, "serena", "up", "served",
+                                  env=ws.env(XORCHESTRATE_DEV_SERENA_TIMEOUT=str(timeout)))
+    assert result.code == 1 and "SERVER_FAILED" in codes(result), result.text
+    assert elapsed < timeout + slack
+    assert (40_000, signal.SIGTERM) in ws.processes.signals and not ws.processes.alive(40_000)
+    assert ws.saved("served") is None
+
+
+def test_the_transport_post_honours_a_per_call_timeout():
+    endpoint = RawEndpoint(0)
+    port = endpoint.listener.getsockname()[1]
+    try:
+        started = time.monotonic()
+        with pytest.raises(tool("ports").TransportError):
+            tool("adapters.mcp").UrllibMcp().post(f"http://127.0.0.1:{port}/mcp", {"jsonrpc": "2.0"}, None,
+                                                  timeout=0.5)
+        assert time.monotonic() - started < 5
+    finally:
+        endpoint.stop()
+
+
+@pytest.mark.parametrize("reply", [truncated_reply(), json_reply([1, 2])],
+                         ids=["truncated-body", "json-list-of-numbers"])
+def test_an_unreadable_reply_is_not_ready_and_the_server_is_stopped_at_the_timeout(ws, reply):
+    ws.launcher.script = ["raw"]
+    ws.launcher.raw_reply = reply
+    ws.new("served")
+    try:
+        result = ws.run("serena", "up", "served", env=ws.env(XORCHESTRATE_DEV_SERENA_TIMEOUT="5"))
+    except Exception as error:  # noqa: BLE001 - the defect being pinned
+        pytest.fail(f"up raised {error!r}; server alive: {ws.processes.alive(40_000)}, "
+                    f"recorded: {ws.saved('served') is not None}")
+    assert result.code == 1 and "SERVER_FAILED" in codes(result), result.text
+    assert (40_000, signal.SIGTERM) in ws.processes.signals and not ws.processes.alive(40_000)
+    assert ws.saved("served") is None
+
+
+class Exploding:
+    """A transport that raises ``error`` on every request."""
+
+    def __init__(self, error):
+        self.error = error
+
+    def post(self, url, body, session, timeout=None):
+        raise self.error
+
+    def delete(self, url, session):
+        pass
+
+
+@pytest.mark.parametrize("error", [KeyboardInterrupt, RuntimeError], ids=["interrupt", "unexpected"])
+def test_any_other_exception_during_readiness_stops_the_spawned_server_and_propagates(ws, error):
+    ws.launcher.script = ["silent"]
+    ws.new("served")
+    with pytest.raises(error):
+        ws.run("serena", "up", "served", ports=ws.ports(transport=Exploding(error("planted"))))
+    assert (40_000, signal.SIGTERM) in ws.processes.signals and not ws.processes.alive(40_000)
+    assert ws.saved("served") is None
+
+
+# Logs: each spawn attempt starts its own ---------------------------------------------------------------
+
+def test_the_launcher_starts_each_log_afresh(tmp_path):
+    log = tmp_path / "logs" / "tree.log"
+    log.parent.mkdir()
+    log.write_text("ERROR: address already in use\n", encoding="utf-8")
+    pid = tool("adapters.launcher").PopenLauncher().spawn(
+        [sys.executable, "-c", "print('second attempt')"], str(tmp_path), dict(os.environ), str(log))
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        try:
+            done, _ = os.waitpid(pid, os.WNOHANG)
+        except ChildProcessError:
+            break
+        if done:
+            break
+        time.sleep(0.05)
+    text = log.read_text(encoding="utf-8")
+    assert "second attempt" in text and "address already in use" not in text, text
+
+
+class CountingLauncher:
+    def __init__(self):
+        self.inner = tool("adapters.launcher").PopenLauncher()
+        self.spawns = []
+
+    def spawn(self, argv, cwd, env, log):
+        self.spawns.append(list(argv))
+        return self.inner.spawn(argv, cwd, env, log)
+
+
+def test_a_stale_address_in_use_line_in_an_old_log_does_not_cause_a_retry(ws):
+    ws.new("served")
+    command = f"{sys.executable} -c \"print('planted: another failure')\" {{port}}"
+    env = ws.env(XORCHESTRATE_DEV_SERENA_COMMAND=command, XORCHESTRATE_DEV_SERENA_TIMEOUT="30")
+    launcher = CountingLauncher()
+    real = ws.ports(launcher=launcher, processes=tool("adapters.procfs").ProcFs(), clock=None)
+    first = ws.run("serena", "up", "served", env=env, ports=real)
+    assert first.code == 1 and "SERVER_FAILED" in codes(first), first.text
+    log = first.text.split("; log ", 1)[1].split()[0]
+    with open(log, "a", encoding="utf-8") as handle:
+        handle.write("ERROR: [Errno 98] address already in use\n")
+    launcher.spawns.clear()
+    second = ws.run("serena", "up", "served", env=env, ports=real)
+    assert second.code == 1 and "SERVER_FAILED" in codes(second), second.text
+    assert len(launcher.spawns) == 1, launcher.spawns
+    assert "exited before answering" in second.text and "address already in use" not in second.text.lower()
+
+
+# Locking, stopping and zombies ------------------------------------------------------------------------
+
+def test_two_concurrent_ups_on_one_tree_start_one_server(ws):
+    ws.new("served")
+    main = tool("__main__").main
+    argv = ["--repo", str(ws.main), "--root", str(ws.root), "--state-dir", str(ws.state), "serena", "up", "served"]
+    second_reached_spawn = threading.Event()
+    first = threading.Event()
+
+    def on_spawn(_argv):
+        if not first.is_set():
+            first.set()
+            second_reached_spawn.wait(2)
+        else:
+            second_reached_spawn.set()
+
+    ws.launcher.on_spawn = on_spawn
+    codes_seen = []
+
+    def target():
+        codes_seen.append(main(argv, env=ws.env(), ports=ws.ports()))
+
+    threads = [threading.Thread(target=target, daemon=True) for _ in range(2)]
+    threads[0].start()
+    assert first.wait(30)
+    threads[1].start()
+    for thread in threads:
+        thread.join(60)
+    assert codes_seen == [0, 0]
+    assert len(ws.launcher.spawns) == 1, ws.launcher.spawns
+
+
+def test_down_waits_briefly_on_the_clock_for_a_killed_server_to_die(ws):
+    path = ws.new("served")
+    ws.seed_server(path, pid=7_300)
+    ws.processes.ignore_term.add(7_300)
+    ws.processes.linger[7_300] = 0.2
+    result = ws.run("serena", "down", "served")
+    assert result.code == 0, result.text
+    assert (7_300, signal.SIGKILL) in ws.processes.signals
+    assert not ws.processes.alive(7_300) and ws.saved("served") is None
+
+
+def test_a_server_that_survives_sigkill_fails_after_a_bounded_wait(ws):
+    path = ws.new("served")
+    ws.seed_server(path, pid=7_300)
+    ws.processes.ignore_term.add(7_300)
+    ws.processes.ignore_kill.add(7_300)
+    start = ws.clock.now()
+    result = ws.run("serena", "down", "served")
+    assert result.code == 1 and "SERVER_FAILED" in codes(result), result.text
+    assert ws.clock.now() - start <= 2 * contract.GRACE_SECONDS
+    assert ws.saved("served") is not None
+
+
+def test_zombie_members_do_not_hold_the_grace(ws):
+    path = ws.new("served")
+    family(ws, path)
+    ws.processes.zombie_on_term.add(7_301)
+    start = ws.clock.now()
+    result = ws.run("serena", "down", "served")
+    assert result.code == 0, result.text
+    assert ws.clock.now() - start < contract.GRACE_SECONDS
+    assert ws.processes.groups_signalled(signal.SIGKILL) == [], ws.processes.signals
+    assert ws.saved("served") is None
+
+
+# A path inside a tree means the tree ---------------------------------------------------------------------
+
+def test_up_on_a_path_inside_a_tree_or_through_a_symlink_serves_the_trees_toplevel(ws):
+    path = ws.new("served")
+    result = ws.run("serena", "up", str(path / "pkg"))
+    assert result.code == 0, result.text
+    (spawn,) = ws.launcher.spawns
+    assert spawn["cwd"] == os.path.realpath(path)
+    assert spawn["argv"][spawn["argv"].index("--project") + 1] == os.path.realpath(path)
+    assert ws.saved("served") is not None
+    link = ws.base / "link"
+    link.symlink_to(path)
+    again = ws.run("serena", "up", str(link / "pkg"))
+    assert again.code == 0, again.text
+    assert "already up" in again.text.lower() and len(ws.launcher.spawns) == 1
