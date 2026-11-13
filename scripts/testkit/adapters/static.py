@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
+import re
+import shutil
 import sys
 import tomllib
 from dataclasses import replace
@@ -13,16 +16,23 @@ from .evidence import candidate_inputs, digest, file_identity, write_json
 from .identity import effective_inputs, repository_path
 
 ACTIVE_ROOTS = ("xorchestrate", "scripts", "tests", ".github")
-STATIC_SUITES = ("static", "security")
+STATIC_SUITES = ("static", "security", "dependency-audit")
 CHECK_SUITES = {
-    "ruff": frozenset(STATIC_SUITES),
+    "ruff": frozenset({"static", "security"}),
     "syntax": frozenset({"static"}),
     "architecture": frozenset({"static"}),
-    "secret-scan": frozenset(STATIC_SUITES),
+    "secret-scan": frozenset({"static", "security"}),
+    "zizmor": frozenset({"static", "security"}),
+    "dependency-audit": frozenset({"security", "dependency-audit"}),
 }
 STATIC_IDS = tuple(CHECK_SUITES)
 SYNTAX_SCRIPT = Path(__file__).with_name("syntax.py").resolve()
 SECRET_SCAN_SCRIPT = Path(__file__).with_name("secret_scan.py").resolve()
+ZIZMOR_SCRIPT = Path(__file__).with_name("zizmor.py").resolve()
+ZIZMOR_VERSION = "1.32.0"
+DEPENDENCY_AUDIT_SCRIPT = Path(__file__).with_name("dependency_audit.py").resolve()
+UV_VERSION = "0.13.7"
+OSV_SERVICE_URL = "https://api.osv.dev/"
 
 
 def definitions(*, directory, timeout=600, suites=("static",)):
@@ -43,6 +53,15 @@ def definitions(*, directory, timeout=600, suites=("static",)):
                               str(directory / "inputs-secret-scan.json"), "--output",
                               str(directory / "secret-scan.json")), timeout,
               (str(SECRET_SCAN_SCRIPT), "contracts/security.json")),
+        Check("zizmor", (sys.executable, str(ZIZMOR_SCRIPT), "--manifest",
+                          str(directory / "inputs-zizmor.json"), "--output",
+                          str(directory / "zizmor.json"), "--cache-dir",
+                          str(directory / "zizmor-cache")), timeout,
+              (str(ZIZMOR_SCRIPT), "contracts/zizmor.yml", ".github/requirements-ci.txt")),
+        Check("dependency-audit", (sys.executable, str(DEPENDENCY_AUDIT_SCRIPT), "--manifest",
+                                    str(directory / "inputs-dependency-audit.json"), "--output",
+                                    str(directory / "dependency-audit.json"), "--service-url", OSV_SERVICE_URL), timeout,
+              (str(DEPENDENCY_AUDIT_SCRIPT), "pyproject.toml", "uv.lock")),
     )
     return tuple(check for check in checks if CHECK_SUITES[check.name] & selected)
 
@@ -122,7 +141,80 @@ def _ruff_configuration(root):
     return paths
 
 
-def static_manifest(name, *, root, directory, runner, env, timeout=600):
+def _zizmor_executable(env):
+    """Select the scanner from explicit PATH or the active interpreter environment."""
+    selected = None
+    if "PATH" in env:
+        path = env["PATH"]
+        if not isinstance(path, str):
+            raise ValueError("Explicit Zizmor PATH must be a string")
+        selected = shutil.which("zizmor", path=path)
+        if selected is None:
+            raise ValueError("Explicit PATH contains no Zizmor executable")
+    else:
+        sibling = Path(sys.executable).with_name("zizmor")
+        if sibling.is_file() and os.access(sibling, os.X_OK):
+            selected = str(sibling)
+        else:
+            selected = shutil.which("zizmor")
+    if selected is None:
+        raise ValueError("Zizmor executable is unavailable")
+    executable = Path(selected).resolve(strict=True)
+    if not executable.is_file() or not os.access(executable, os.X_OK):
+        raise ValueError("Zizmor executable is unavailable")
+    return str(executable)
+
+
+def _uv_executable(env):
+    """Select the pinned runtime manager from the explicit execution environment."""
+    selected = None
+    if "PATH" in env:
+        path = env["PATH"]
+        if not isinstance(path, str):
+            raise ValueError("Explicit uv PATH must be a string")
+        selected = shutil.which("uv", path=path)
+        if selected is None:
+            raise ValueError("Explicit PATH contains no uv executable")
+    else:
+        selected = shutil.which("uv")
+    if selected is None:
+        raise ValueError("uv executable is unavailable")
+    executable = Path(selected).resolve(strict=True)
+    if not executable.is_file() or not os.access(executable, os.X_OK):
+        raise ValueError("uv executable is unavailable")
+    return str(executable)
+
+
+def _zizmor_sources(root):
+    directory = root / ".github/workflows"
+    if not directory.exists():
+        raise ValueError("Zizmor selected no workflow files")
+    resolved = directory.resolve(strict=True)
+    if not resolved.is_relative_to(root) or not resolved.is_dir():
+        raise ValueError("Zizmor workflow directory resolves outside the candidate")
+    sources = []
+    for path in directory.iterdir():
+        if path.suffix not in {".yml", ".yaml"}:
+            continue
+        if path.is_dir() and not path.is_symlink():
+            continue
+        _, relative, _ = repository_path(root, path)
+        sources.append(relative)
+    sources.sort()
+    if not sources:
+        raise ValueError("Zizmor selected no workflow files")
+    return sources
+
+
+def _zizmor_pin(path):
+    pins = [line.strip().split("==", 1)[1] for line in Path(path).read_text().splitlines()
+            if line.strip().startswith("zizmor==")]
+    if len(pins) != 1 or not pins[0]:
+        raise ValueError("Zizmor requires one exact requirements-ci.txt pin")
+    return pins[0]
+
+
+def static_manifest(name, *, root, directory, runner, env, timeout=600, service_url=OSV_SERVICE_URL):
     """Resolve current membership using the checker's own selection where needed.
 
     Ruff's bounded ``--show-files`` observes its configured/default exclusions.
@@ -130,10 +222,11 @@ def static_manifest(name, *, root, directory, runner, env, timeout=600):
     configuration cannot silently alter lint coverage. Syntax and architecture
     retain their declared Python traversal, including examined ignored files.
     Secret scanning follows all cached and nonignored untracked candidate files.
+    Zizmor receives only explicit, top-level GitHub workflow files.
     """
     root, directory = Path(root).resolve(), Path(directory).resolve()
     configs = []
-    tool = {"python": sys.version}
+    tool: dict[str, object] = {"python": sys.version}
     if name == "ruff":
         roots = _active_directories(root)
         configs = [*_ruff_configuration(root), ".github/requirements-ci.txt"]
@@ -205,6 +298,64 @@ def static_manifest(name, *, root, directory, runner, env, timeout=600):
         }
         tool["secret_scanner"] = {"path": str(SECRET_SCAN_SCRIPT), **file_identity(SECRET_SCAN_SCRIPT)}
         tool["security_policy"] = {"id": policy["id"], "version": policy["version"]}
+    elif name == "zizmor":
+        sources = _zizmor_sources(root)
+        configs = ["contracts/zizmor.yml", ".github/requirements-ci.txt"]
+        for configuration in configs:
+            repository_path(root, configuration)
+        executable = _zizmor_executable(env)
+        version = _command(
+            runner,
+            (sys.executable, str(ZIZMOR_SCRIPT), "--probe-version", "--executable", executable),
+            root=root,
+            env=env,
+            timeout=timeout,
+        ).strip()
+        pin = _zizmor_pin(root / configs[1])
+        if pin != ZIZMOR_VERSION or version != "zizmor " + pin:
+            raise ValueError(
+                "Installed Zizmor does not match the single requirements-ci.txt pin: " + version
+            )
+        selection = {
+            "roots": [".github/workflows"],
+            "method": "sorted explicit top-level *.{yml,yaml}",
+            "recursive": False,
+            "offline": True,
+            "strict_collection": True,
+            "format": "json-v1",
+            "persona": "regular",
+            "executable": executable,
+            "version": version,
+        }
+        tool["zizmor"] = version
+        tool["zizmor_executable"] = executable
+        tool["zizmor_wrapper"] = {"path": str(ZIZMOR_SCRIPT), **file_identity(ZIZMOR_SCRIPT)}
+    elif name == "dependency-audit":
+        sources = ["uv.lock"]
+        configs = ["pyproject.toml"]
+        for selected in (*sources, *configs):
+            repository_path(root, selected)
+        executable = _uv_executable(env)
+        reported = _command(runner, (executable, "--version"), root=root, env=env, timeout=timeout).strip()
+        if re.fullmatch(r"uv " + re.escape(UV_VERSION) + r"(?: \([^\r\n]+\))?", reported) is None:
+            raise ValueError("Installed uv version does not match the pinned 0.13.7 runtime manager: " + reported)
+        version = "uv " + UV_VERSION
+        selection = {
+            "groups": "all",
+            "extras": "all",
+            "target": "universal",
+            "service_format": "osv",
+            "service_url": service_url,
+            "output_format": "json",
+            "preview_features": "audit-command,json-output",
+            "executable": executable,
+            "version": version,
+        }
+        tool["uv"] = version
+        tool["uv_executable"] = executable
+        tool["dependency_audit_wrapper"] = {
+            "path": str(DEPENDENCY_AUDIT_SCRIPT), **file_identity(DEPENDENCY_AUDIT_SCRIPT),
+        }
     else:
         raise ValueError("Unknown static check: " + name)
     manifest = effective_inputs(root, [*sources, *configs, *_tool_sources(root, name)],
@@ -215,8 +366,10 @@ def static_manifest(name, *, root, directory, runner, env, timeout=600):
 def prepare_static(check, *, root, directory, runner, env):
     """Freeze selected command inputs and preserve the manifest consumed by syntax."""
     root, directory = Path(root).resolve(), Path(directory).resolve()
+    service_url = (check.argv[check.argv.index("--service-url") + 1]
+                   if check.name == "dependency-audit" else OSV_SERVICE_URL)
     manifest = static_manifest(check.name, root=root, directory=directory, runner=runner,
-                               env=env, timeout=check.timeout)
+                               env=env, timeout=check.timeout, service_url=service_url)
     write_json(directory / ("inputs-" + check.name + ".json"), manifest)
     if check.name == "ruff":
         argv = [*check.argv[:check.argv.index("ruff.toml")], str(root / "ruff.toml")]
@@ -224,6 +377,10 @@ def prepare_static(check, *, root, directory, runner, env):
         # Explicit files freeze tool membership after the tool's own discovery.
         argv.extend(str(root / name) for name in manifest["sources"])
         check = replace(check, argv=tuple(argv))
+    elif check.name == "zizmor":
+        check = replace(check, argv=(*check.argv, "--executable", manifest["tool"]["zizmor_executable"]))
+    elif check.name == "dependency-audit":
+        check = replace(check, argv=(*check.argv, "--executable", manifest["tool"]["uv_executable"]))
     return check, manifest
 
 
@@ -244,6 +401,44 @@ def _reported_files(report, manifest, *, complete):
     if complete and set(observed) != set(manifest["sources"]):
         raise ValueError("Successful static report does not account for every selected source")
     return observed
+
+
+def _dependency_packages(root):
+    """Independently reconstruct the normalized auditable lock inventory."""
+    document = tomllib.loads((Path(root) / "uv.lock").read_text(encoding="utf-8"))
+    rows = document.get("package")
+    if not isinstance(rows, list):
+        raise ValueError("Dependency-audit lock contains no package inventory")
+    packages = []
+    for row in rows:
+        if not isinstance(row, dict) or not isinstance(row.get("source"), dict):
+            raise ValueError("Dependency-audit lock contains a malformed package")
+        source = row["source"]
+        if "editable" in source:
+            continue
+        name, version = row.get("name"), row.get("version")
+        if not isinstance(name, str) or not name or not isinstance(version, str) or not version:
+            raise ValueError("Dependency-audit lock package lacks name and version")
+        if set(source) == {"registry"} and isinstance(source["registry"], str) and source["registry"]:
+            kind, identity = "registry", source["registry"]
+        elif set(source) == {"git"} and isinstance(source["git"], str):
+            kind, identity = "git", source["git"].rsplit("#", 1)[-1]
+            if re.fullmatch(r"[0-9a-f]{40}", identity) is None:
+                raise ValueError("Dependency-audit Git source lacks an exact commit")
+        else:
+            raise ValueError("Dependency-audit lock has an unsupported package source")
+        packages.append({
+            "name": name,
+            "version": version,
+            "source_kind": kind,
+            "source_identity": identity,
+            "match_basis": "pypi-name-version",
+        })
+    packages.sort(key=lambda item: (item["name"], item["version"]))
+    identities = [(item["name"], item["version"]) for item in packages]
+    if not packages or len(identities) != len(set(identities)):
+        raise ValueError("Dependency-audit package inventory is empty or duplicated")
+    return packages
 
 
 def bind_static_report(name, *, directory, manifest):
@@ -282,6 +477,194 @@ def bind_static_report(name, *, directory, manifest):
             if filename not in allowed:
                 raise ValueError("Ruff reported an unselected source: " + filename)
         binding.update(status="passed" if not report else "failed", findings=len(report))
+    elif name == "dependency-audit":
+        expected_fields = {
+            "schema_version", "status", "enforcement", "effective_input_sha256", "files",
+            "scanner", "service", "selection", "packages", "findings", "limitations", "execution",
+        }
+        if not isinstance(report, dict) or set(report) != expected_fields or report.get("schema_version") != 1:
+            raise ValueError("Unsupported structured dependency-audit report")
+        statuses = {"observed", "concern", "unavailable", "error"}
+        if report.get("status") not in statuses or report.get("enforcement") != "advisory":
+            raise ValueError("Malformed dependency-audit status or enforcement")
+        if report.get("effective_input_sha256") != manifest["content_sha256"]:
+            raise ValueError("Dependency-audit report belongs to another effective-input manifest")
+
+        root = Path(manifest["root"])
+        if (manifest.get("sources") != ["uv.lock"]
+                or manifest.get("scope", {}).get("configuration") != ["pyproject.toml"]):
+            raise ValueError("Dependency-audit manifest has no exact project and lock selection")
+        expected_files = []
+        for selected in ("pyproject.toml", "uv.lock"):
+            identity = manifest.get("files", {}).get(selected)
+            if not isinstance(identity, dict):
+                raise ValueError("Dependency-audit manifest has an incomplete input identity")
+            current = digest((root / selected).read_bytes())
+            if current != identity.get("content_sha256"):
+                raise ValueError("Dependency-audit input changed after effective-input capture")
+            expected_files.append({"path": selected, "sha256": current})
+        if report.get("files") != expected_files:
+            raise ValueError("Dependency-audit report has incomplete or foreign file evidence")
+
+        selection = manifest.get("scope", {}).get("selection", {})
+        tool = manifest.get("tool", {})
+        if (tool.get("uv") != "uv " + UV_VERSION
+                or selection.get("version") != tool.get("uv")
+                or selection.get("executable") != tool.get("uv_executable")
+                or selection.get("groups") != "all"
+                or selection.get("extras") != "all"
+                or selection.get("target") != "universal"
+                or selection.get("service_format") != "osv"
+                or selection.get("output_format") != "json"
+                or selection.get("preview_features") != "audit-command,json-output"):
+            raise ValueError("Dependency-audit report has no exact bound tool policy")
+        if report.get("scanner") != {"name": "uv", "version": UV_VERSION, "output_schema": "preview"}:
+            raise ValueError("Dependency-audit report identifies another scanner")
+        service_url = selection.get("service_url")
+        if not isinstance(service_url, str) or not service_url:
+            raise ValueError("Dependency-audit manifest has no OSV service URL")
+        if report.get("service") != {"format": "osv", "url": service_url}:
+            raise ValueError("Dependency-audit report identifies another advisory service")
+        if report.get("limitations") != [
+            "git-source-name-version-match",
+            "mutable-osv-data",
+            "short-response-completeness-unverified",
+        ]:
+            raise ValueError("Dependency-audit report omits its declared evidence limitations")
+
+        packages = _dependency_packages(root)
+        if report.get("packages") != packages or any(set(item) != {
+                "name", "version", "source_kind", "source_identity", "match_basis",
+        } for item in report.get("packages", [])):
+            raise ValueError("Dependency-audit report has a foreign or malformed package selection")
+        if report.get("selection") != {
+            "groups": "all", "extras": "all", "target": "universal", "audited_packages": len(packages),
+        }:
+            raise ValueError("Dependency-audit report has an unsupported universal selection")
+
+        execution = report.get("execution")
+        if not isinstance(execution, dict) or set(execution) != {"native_exit", "argv", "stdout", "stderr"}:
+            raise ValueError("Dependency-audit report has malformed execution evidence")
+        expected_argv = [
+            tool["uv_executable"], "--preview-features", "audit-command,json-output", "audit", "--locked",
+            "--output-format", "json", "--no-progress", "--no-python-downloads",
+            "--service-format", "osv", "--service-url", service_url,
+        ]
+        if execution.get("argv") != expected_argv:
+            raise ValueError("Dependency-audit report used another invocation")
+        native_exit = execution.get("native_exit")
+        if not isinstance(native_exit, int) or isinstance(native_exit, bool) or native_exit < 0:
+            raise ValueError("Dependency-audit report has an invalid native exit status")
+        for stream in ("stdout", "stderr"):
+            evidence = execution.get(stream)
+            if (not isinstance(evidence, dict) or set(evidence) != {"bytes", "sha256"}
+                    or not isinstance(evidence["bytes"], int) or isinstance(evidence["bytes"], bool)
+                    or evidence["bytes"] < 0 or re.fullmatch(r"[0-9a-f]{64}", evidence.get("sha256", "")) is None):
+                raise ValueError("Dependency-audit report has malformed raw-stream identity")
+
+        findings = report.get("findings")
+        if not isinstance(findings, list):
+            raise ValueError("Dependency-audit report has no structured findings")
+        expected_finding_fields = {
+            "kind", "id", "aliases", "package", "version", "fixed_versions", "published", "modified", "status",
+        }
+        selected_packages = {(item["name"], item["version"]) for item in packages}
+        identities = []
+        for finding in findings:
+            if not isinstance(finding, dict) or set(finding) != expected_finding_fields:
+                raise ValueError("Dependency-audit finding has an unsupported shape")
+            if finding["kind"] != "vulnerability" or finding["status"] != "affected":
+                raise ValueError("Dependency-audit finding has an unsupported determination")
+            if (finding["package"], finding["version"]) not in selected_packages:
+                raise ValueError("Dependency-audit finding names an unselected package")
+            if not isinstance(finding["id"], str) or not finding["id"]:
+                raise ValueError("Dependency-audit finding has no identifier")
+            for field in ("aliases", "fixed_versions"):
+                values = finding[field]
+                if (not isinstance(values, list) or values != sorted(values) or len(values) != len(set(values))
+                        or any(not isinstance(item, str) or not item for item in values)):
+                    raise ValueError("Dependency-audit finding has malformed " + field)
+            for field in ("published", "modified"):
+                if finding[field] is not None and (not isinstance(finding[field], str) or not finding[field]):
+                    raise ValueError("Dependency-audit finding has an invalid timestamp")
+            identities.append((finding["package"], finding["version"], finding["id"]))
+        if identities != sorted(identities) or len(identities) != len(set(identities)):
+            raise ValueError("Dependency-audit findings are not deterministic and unique")
+        status = report["status"]
+        if ((status == "observed" and (native_exit != 0 or findings))
+                or (status == "concern" and (native_exit != 1 or not findings))
+                or (status == "unavailable" and (native_exit != 2 or findings))
+                or (status == "error" and findings)):
+            raise ValueError("Dependency-audit status contradicts its native outcome")
+        binding.update(status="passed" if status == "observed" else "failed", findings=len(findings))
+    elif name == "zizmor":
+        expected_fields = {"schema_version", "status", "effective_input_sha256", "files", "findings"}
+        if not isinstance(report, dict) or set(report) != expected_fields or report.get("schema_version") != 1:
+            raise ValueError("Unsupported structured Zizmor report")
+        if report.get("status") not in {"passed", "failed"} or not isinstance(report.get("findings"), list):
+            raise ValueError("Malformed Zizmor report status/findings")
+        if report.get("effective_input_sha256") != manifest["content_sha256"]:
+            raise ValueError("Zizmor report belongs to another effective-input manifest")
+        entries = report.get("files")
+        if not isinstance(entries, list) or any(
+                not isinstance(item, dict) or set(item) != {"path", "sha256"} for item in entries):
+            raise ValueError("Zizmor file evidence requires exactly path and sha256")
+        if entries != sorted(entries, key=lambda item: item["path"]):
+            raise ValueError("Zizmor file evidence is not deterministic")
+        observed = _reported_files(report, manifest, complete=True)
+
+        configurations = ["contracts/zizmor.yml", ".github/requirements-ci.txt"]
+        if manifest.get("scope", {}).get("configuration") != configurations:
+            raise ValueError("Zizmor manifest has no bound policy configuration")
+        root = Path(manifest["root"])
+        for configuration in configurations:
+            identity = manifest.get("files", {}).get(configuration)
+            if not isinstance(identity, dict):
+                raise ValueError("Zizmor manifest has an incomplete policy configuration")
+            if digest((root / configuration).read_bytes()) != identity.get("content_sha256"):
+                raise ValueError("Zizmor policy configuration changed after effective-input capture")
+        pin = _zizmor_pin(root / configurations[1])
+        selection = manifest.get("scope", {}).get("selection", {})
+        tool = manifest.get("tool", {})
+        if (pin != ZIZMOR_VERSION or tool.get("zizmor") != "zizmor " + pin
+                or selection.get("version") != tool.get("zizmor")
+                or selection.get("executable") != tool.get("zizmor_executable")
+                or selection.get("offline") is not True
+                or selection.get("strict_collection") is not True
+                or selection.get("format") != "json-v1"
+                or selection.get("persona") != "regular"):
+            raise ValueError("Zizmor report has no exact bound tool policy")
+
+        expected_finding_fields = {"path", "line", "column", "rule", "severity", "confidence"}
+        severities, confidences = {"informational", "low", "medium", "high"}, {"low", "medium", "high"}
+        identities = []
+        for finding in report["findings"]:
+            if not isinstance(finding, dict) or set(finding) != expected_finding_fields:
+                raise ValueError("Zizmor findings have an unsupported shape")
+            if finding["path"] not in observed:
+                raise ValueError("Zizmor finding names an unselected workflow")
+            for coordinate in ("line", "column"):
+                value = finding[coordinate]
+                if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
+                    raise ValueError("Zizmor finding requires positive source coordinates")
+            rule = finding["rule"]
+            if not isinstance(rule, str) or re.fullmatch(r"[a-z0-9][a-z0-9-]*", rule) is None:
+                raise ValueError("Zizmor finding names an invalid rule")
+            if finding["severity"] not in severities or finding["confidence"] not in confidences:
+                raise ValueError("Zizmor finding has invalid determinations")
+            identities.append(tuple(finding[field] for field in sorted(expected_finding_fields)))
+        if len(identities) != len(set(identities)):
+            raise ValueError("Zizmor report repeats a finding")
+        ordered = sorted(report["findings"], key=lambda item: (
+            item["path"], item["line"], item["column"], item["rule"],
+            item["severity"], item["confidence"],
+        ))
+        if report["findings"] != ordered:
+            raise ValueError("Zizmor findings are not deterministic")
+        passed = report["status"] == "passed"
+        if passed == bool(report["findings"]):
+            raise ValueError("Zizmor status contradicts its findings")
+        binding.update(status=report["status"], findings=len(report["findings"]))
     elif name == "secret-scan":
         expected_fields = {"schema_version", "status", "effective_input_sha256", "files", "findings"}
         if not isinstance(report, dict) or set(report) != expected_fields or report.get("schema_version") != 1:

@@ -9,6 +9,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- Telemetry capture and operations share an application-independent service with
+  explicit authority, projection and live source collaborators. Existing actions,
+  resource visibility, bounded reads and bundle authorization are preserved.
 - Exchange receipts and the independent multi-harness checker use retained store
   order for exchange, held-work and native-completion proof. Civil-clock changes
   and report-list reordering no longer create or reverse that proof. See
@@ -142,6 +145,17 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   redacted secret scanning. The existing static suite and CI lane run it once;
   `contracts/security.json` owns detection policy and same-line
   `secret-scan: allow` exceptions.
+- The shared security and static suites add pinned Zizmor 1.32.0 workflow
+  analysis. It scans explicit top-level GitHub workflow files offline with strict
+  collection, applies the reviewed exact exceptions in `contracts/zizmor.yml`,
+  and retains candidate-bound normalized findings without republishing workflow
+  source. The existing static CI lane runs it once; no new hosted status is added.
+- The test kit adds an explicit `dependency-audit` suite and includes it in the
+  focused `security` view. Pinned uv 0.13.7 observes the universal locked package
+  selection against OSV and retains redacted, candidate-bound advisory evidence.
+  CI runs the network-dependent observation once after deterministic static
+  validation, in a bounded non-blocking step with a separate artifact and no new
+  lane or required status.
 - Work-tree maintenance: `python3 -m scripts.worktrees report` judges every
   tree and scratch or run directory, and `prune --apply` removes only what it
   can prove safe, keeping and reporting everything else. See

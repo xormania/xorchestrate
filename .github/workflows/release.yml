@@ -51,7 +51,7 @@
         },
         {
           "name": "Install pinned validation runtime manager",
-          "uses": "astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78",
+          "uses": "astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2",
           "with": {
             "version": "0.13.7",
             "enable-cache": false,
@@ -128,7 +128,7 @@
           "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/package-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\"\nprintf 'UV_PROJECT_ENVIRONMENT=%s\\n' \"$RUNNER_TEMP/package-builder\" >> \"$GITHUB_ENV\""
         },
         {
-          "uses": "astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78",
+          "uses": "astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2",
           "with": {
             "version": "0.13.7",
             "enable-cache": false,
@@ -140,7 +140,7 @@
           "run": "python3 -m scripts.ci.dependencies check\nuv sync --locked --managed-python --python 3.12.16 --no-default-groups --group validation --no-install-project"
         },
         {
-          "uses": "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
+          "uses": "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333",
           "with": {
             "name": "distributions",
             "path": "${{ runner.temp }}/dist"
@@ -179,7 +179,7 @@
       },
       "steps": [
         {
-          "uses": "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
+          "uses": "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333",
           "with": {
             "name": "distributions",
             "path": "dist"
@@ -209,14 +209,14 @@
       },
       "steps": [
         {
-          "uses": "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
+          "uses": "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333",
           "with": {
             "name": "distributions",
             "path": "${{ runner.temp }}/dist"
           }
         },
         {
-          "uses": "actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131",
+          "uses": "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333",
           "with": {
             "name": "release-identity",
             "path": "${{ runner.temp }}/identity"

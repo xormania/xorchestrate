@@ -21,6 +21,9 @@ def static_subject(root):
     shutil.copyfile(ROOT / "ruff.toml", root / "ruff.toml")
     (root / "contracts").mkdir(exist_ok=True)
     shutil.copyfile(ROOT / "contracts/security.json", root / "contracts/security.json")
+    zizmor_policy = ROOT / "contracts/zizmor.yml"
+    if zizmor_policy.is_file():
+        shutil.copyfile(zizmor_policy, root / "contracts/zizmor.yml")
     (root / ".github").mkdir(exist_ok=True)
     shutil.copyfile(ROOT / ".github/requirements-ci.txt", root / ".github/requirements-ci.txt")
     for relative in ("xorchestrate/subject.py", "scripts/subject.py", "tests/hexagonal/support/subject.py"):

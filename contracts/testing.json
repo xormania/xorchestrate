@@ -201,6 +201,8 @@
         "tests/hexagonal/test_stories.py": "composition",
         "tests/hexagonal/test_static_checks.py": "adapter",
         "tests/hexagonal/test_security_testkit.py": "adapter",
+        "tests/hexagonal/test_dependency_audit.py": "adapter",
+        "tests/hexagonal/test_workflow_security.py": "adapter",
         "tests/hexagonal/test_testkit_integration.py": "composition",
         "tests/hexagonal/test_acceptance_testkit.py": "composition",
         "tests/hexagonal/test_test_framework.py": "framework",
@@ -230,6 +232,7 @@
       "guarantee": "Telemetry capture, queries, preservation and optional export retain scoped evidence, gaps and original action outcomes; the in-tree collector keeps immutable, integrity-checked corpus and artifact storage behind selected adapters and reads existing corpora and bundles.",
       "modules": {
         "tests/hexagonal/test_telemetry.py": "composition",
+        "tests/hexagonal/test_telemetry_service.py": "composition",
         "tests/hexagonal/test_telemetry_bundle_receipts.py": "composition",
         "tests/hexagonal/test_telemetry_preservation.py": "adapter",
         "tests/hexagonal/test_telemetry_publication.py": "adapter",

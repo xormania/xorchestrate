@@ -24,19 +24,35 @@ uv sync --locked --no-default-groups --group validation --extra test --no-instal
 uv pip install --python "$UV_PROJECT_ENVIRONMENT/bin/python" --no-deps --no-build-isolation -e .
 export PATH="$UV_PROJECT_ENVIRONMENT/bin:$PATH"
 python3 -m scripts.testkit run --suite security
+# Or observe only locked dependencies rather than the whole security view:
+python3 -m scripts.testkit run --suite dependency-audit
 python3 -m scripts.testkit run --suite static
 python3 -m scripts.testkit run --suite checks
 ```
 
-`security` is a focused view of the shared Ruff check and candidate-complete
-secret scan. The scan applies `contracts/security.json` to tracked and nonignored
-untracked files, including binary bytes; a same-line `secret-scan: allow` marker
-permits an intentional match without widening the exception. Its structured
-evidence identifies files and findings without republishing matched credentials.
+`security` is a focused view of the shared Ruff check, candidate-complete secret
+scan, pinned Zizmor workflow analysis and an advisory dependency observation.
+The secret scan applies
+`contracts/security.json` to tracked and nonignored untracked files, including
+binary bytes; a same-line `secret-scan: allow` marker permits an intentional match
+without widening the exception. Zizmor 1.32.0 examines the explicit top-level
+`.github/workflows/*.yml` and `*.yaml` selection offline, with strict collection
+and the reviewed exact exceptions in `contracts/zizmor.yml`. Structured evidence
+identifies selected file bytes and normalized findings without republishing
+matched credentials or workflow source.
+`dependency-audit` uses the pinned uv 0.13.7 runtime manager to observe every
+non-editable package in the universal lock against OSV. It requires network
+access and moving service data, remains advisory in CI, and reports an empty
+result as an observation with explicit completeness limits rather than a clean
+bill of health. Remote prose and URLs are not republished.
+Concern, unavailable service or malformed service evidence makes a local
+`dependency-audit` or `security` run nonzero; CI alone treats that observation
+as non-blocking.
 `static` adds current-source syntax validation and architecture enforcement;
 `tests` runs the cataloged behavioral tests; `checks` combines `static` and
-`tests`. `checks` and the default/`--suite all` composition include the security
-checks once through `static`.
+`tests`. The deterministic Ruff, secret-scan and Zizmor checks run once through
+`static`; the network-dependent dependency audit is excluded from `static`,
+`checks` and the default/`--suite all` composition.
 Local and CI runs use the same [testing framework](docs/testing-framework.md),
 shared contracts, fixtures and evidence services. See [live tests](docs/live-testkit.md)
 for authenticated native configuration.
