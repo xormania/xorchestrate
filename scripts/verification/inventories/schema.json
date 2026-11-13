@@ -61,7 +61,7 @@
         "diagnostic": {"type": "string", "minLength": 1},
         "unaffected": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/test_id"}},
         "expect": {"enum": ["detected", "unrelated_failure"]},
-        "contract": {"type": "string", "pattern": "^[A-Za-z_][\\w.]*:[A-Za-z_]\\w*$"}
+        "contract": {"type": "string", "pattern": "^[A-Za-z_]\\w*(\\.[A-Za-z_]\\w*)*:[A-Za-z_]\\w*$"}
       }
     }
   }

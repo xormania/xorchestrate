@@ -124,6 +124,23 @@ def _contract_function(root: Path, contract: str):
     return None
 
 
+NESTED_SCOPES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.ClassDef)
+
+
+def _own_nodes(function):
+    """The function's own statements and expressions, not those of scopes nested inside it.
+
+    The observer credits an assertion raised in the contract function's own code only, so an assertion in
+    a nested function, lambda or class must not satisfy the tree check either.
+    """
+    pending = list(ast.iter_child_nodes(function))
+    while pending:
+        node = pending.pop()
+        yield node
+        if not isinstance(node, NESTED_SCOPES):
+            pending.extend(ast.iter_child_nodes(node))
+
+
 def check_inventory_tree(inventory: Inventory, root: Path) -> None:
     """Refuse a case whose declared contract function is absent or does not assert its diagnostic.
 
@@ -139,5 +156,5 @@ def check_inventory_tree(inventory: Inventory, root: Path) -> None:
         if function is None:
             raise InventoryError("contract_not_found", label + " declares " + case.contract)
         if not any(isinstance(node, ast.Assert) and isinstance(node.msg, ast.Constant)
-                   and node.msg.value == case.diagnostic for node in ast.walk(function)):
+                   and node.msg.value == case.diagnostic for node in _own_nodes(function)):
             raise InventoryError("diagnostic_not_in_contract", label)
