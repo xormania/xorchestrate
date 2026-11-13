@@ -1,9 +1,12 @@
 """Semantic process gates require their own operation's activation receipt."""
 import json
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+from threading import Barrier
 
 import pytest
 
+from tests.hexagonal.support.native import ControlledCallbacks
 from tests.hexagonal.support.operation_controls import ProcessOperation
 from tests.hexagonal.support.operation_observation import ObservationError
 
@@ -59,3 +62,32 @@ def test_separate_controls_cannot_share_a_release_path_or_challenge(tmp_path):
     assert left.arguments["tail_entered"] != right.arguments["tail_entered"]
     assert first.arguments["operation_observation"]["token"] != second.arguments["operation_observation"]["token"], \
         "GATE_CHALLENGES_DISTINGUISH_SOURCE_INCARNATIONS"
+
+
+@pytest.mark.parametrize("overlap", [False, True], ids=["repeated", "overlapping"])
+def test_one_prepared_operation_has_one_callback_activation(overlap):
+    callbacks = ControlledCallbacks(labels=())
+    callbacks.prepare("target", False)
+    barrier = Barrier(2) if overlap else None
+
+    def invoke_once():
+        if barrier is not None:
+            barrier.wait(timeout=2)
+        try:
+            callbacks.invoke("hold", {"nonce": "target"}, None)
+        except ValueError:
+            return "refused"
+        return "invoked"
+
+    if overlap:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [pool.submit(invoke_once) for _ in range(2)]
+            results = [future.result(timeout=2) for future in futures]
+    else:
+        results = [invoke_once(), invoke_once()]
+    assert sorted(results) == ["invoked", "refused"], "CALLBACK_OPERATION_CANNOT_INVOKE_TWICE"
+    assert callbacks.finished == ["target"]
+    assert callbacks.activation("target")["operation"] == "target"
+    callbacks.prepare("different", False)
+    callbacks.invoke("hold", {"nonce": "different"}, None)
+    assert callbacks.finished == ["target", "different"], "DISTINCT_CALLBACK_OPERATIONS_REMAIN_INDEPENDENT"
