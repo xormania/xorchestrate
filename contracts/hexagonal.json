@@ -328,7 +328,8 @@
       "modules": [
         "scripts.testkit",
         "scripts.testkit.model",
-        "scripts.testkit.ports"
+        "scripts.testkit.ports",
+        "scripts.testkit.waits"
       ],
       "allowed_roles": [
         "testkit_foundation"

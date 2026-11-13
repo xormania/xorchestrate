@@ -198,6 +198,53 @@ deselections and outcomes. Explicit subsets are reported as subsets. An empty
 selection, missing declared module, duplicate ownership or unclassified module
 is an error; none receives a successful empty result.
 
+## Bounded observation waits
+
+Shared native observations use `tests.hexagonal.support.native.wait_for`, backed
+by `scripts.testkit.waits.bounded_wait` and the existing `Clock.monotonic` port.
+The wait checks a semantic predicate, such as a fixture acknowledgement, against
+one elapsed-time budget. False observations and explicitly retry-safe `Conflict`
+errors consume that same budget. Other errors propagate immediately. Each sleep
+is clamped to the remaining allowance; no new poll starts at or after its deadline.
+
+`WaitBudget` requires an explicit classification:
+
+| Classification | Meaning | Timeout scale |
+| --- | --- | --- |
+| `harness_allowance` | Time allowed to observe a test precondition or completion | Applied |
+| `product_guarantee` | A duration whose value is part of the behavior being checked | Ignored |
+| `fault_control` | A deliberate timeout/delay used to produce a scenario | Ignored |
+
+The native helper defaults to `harness_allowance`. Set `XO_TEST_TIMEOUT_SCALE`
+to a positive finite factor for a slower environment, or pass `timeout_scale`
+explicitly to override it. For example, `XO_TEST_TIMEOUT_SCALE=2 python3 -m
+scripts.testkit run --suite tests` doubles this helper's observation allowances.
+This setting does not scale product timeouts, fixture fault delays, arbitrary
+literal waits, command/run deadlines, or polling intervals. Existing callers
+retain their nominal timeout unless the factor is selected. An explicit
+`classification="product_guarantee"` or `"fault_control"` preserves its duration
+even with a selected factor. Invalid settings fail before any predicate or sleep.
+
+Timeouts remain `AssertionError` instances and keep the caller's message. Their
+`details` retain classification, requested/effective seconds, configured/applied
+factor, elapsed seconds, attempt count and retry count. Normal test-kit run and
+command receipts retain an explicitly set environment factor; that configured
+factor alone does not say which classified budget used it. Direct pytest keeps
+the timeout diagnostic but has no enclosing test-kit command receipt.
+
+This is a cooperative observation wait, not an interrupting deadline. A predicate
+already running must bound its own I/O; its truthy result is returned even if it
+finishes late. A scheduler may also wake after the requested sleep. Classification
+protects a duration from scaling, but does not itself assert product latency:
+measure and check that guarantee independently at the intended boundary.
+
+Tests can inject `clock` and `sleep` into the native helper, or pass them to
+`bounded_wait` with a classified budget. Independent elapsed and wall-clock
+controls exercise clock steps without physical waiting. Those controls govern
+the polling loop only; they do not virtualize subprocesses or external I/O, and
+do not replace the surrounding test command's real timeout. A fake sleeper that
+never advances its clock can stall the loop.
+
 See [selectable local stories](local-stories.md) for the story catalog, bounded
 controller requests, native callback selection and managed tmux automation.
 
