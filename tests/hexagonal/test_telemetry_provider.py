@@ -80,7 +80,7 @@ def test_provider_queries_are_fresh_even_with_a_repeated_key(provider):
 
 def test_provider_preserves_global_telemetry_read_authorization_even_for_empty_sources(provider):
     provider.deny(["telemetry_events"])
-    assert provider.refusal("events") == "denied"
+    assert provider.refusal("events") == "denied", "TELEMETRY_PROVIDER_MUST_APPLY_SERVICE_ENTRY_AUTHORITY"
 
 
 def test_report_records_caller_provenance_without_copying_payload_to_state(provider):
