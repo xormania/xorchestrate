@@ -728,8 +728,7 @@
     "verification_entrypoints": {
       "modules": [
         "scripts.verification.__main__",
-        "scripts.verification.calibrate_suite",
-        "scripts.verification.calibrate_state"
+        "scripts.verification.calibrate_suite"
       ],
       "allowed_roles": [
         "verification_foundation",
@@ -1209,57 +1208,6 @@
       ],
       "allow_dynamic": true
     },
-    "test_calibration": {
-      "modules": [
-        "tests.hexagonal.calibrate_work_acceptance"
-      ],
-      "allowed_roles": [
-        "foundation",
-        "core",
-        "work_acceptance",
-        "inspection",
-        "adapters",
-        "composition",
-        "operator",
-        "entrypoints",
-        "testkit_foundation",
-        "testkit_core",
-        "testkit_adapters",
-        "testkit_configuration",
-        "verification_foundation",
-        "verification_core",
-        "verification_decoders",
-        "verification_composition",
-        "verification_fixture",
-        "verification_calibration",
-        "verification_runner",
-        "verification_entrypoints",
-        "acceptance_foundation",
-        "acceptance_fixture",
-        "acceptance_runner",
-        "acceptance_entrypoints",
-        "testkit_composition",
-        "testkit_entrypoints",
-        "architecture_foundation",
-        "architecture_core",
-        "architecture_adapters",
-        "architecture_entrypoints",
-        "test_contracts",
-        "test_fixtures",
-        "test_support",
-        "test_calibration",
-        "telemetry",
-        "telemetry_views"
-      ],
-      "allowed_external": [
-        "stdlib:*",
-        "pytest",
-        "jsonschema",
-        "referencing",
-        "controlled_gates"
-      ],
-      "allow_dynamic": true
-    },
     "test_collection": {
       "modules": [
         "tests.hexagonal.test_*"
@@ -1300,7 +1248,6 @@
         "test_contracts",
         "test_fixtures",
         "test_support",
-        "test_calibration",
         "telemetry",
         "telemetry_views",
         "package_acceptance",
@@ -1358,7 +1305,6 @@
         "test_contracts",
         "test_fixtures",
         "test_support",
-        "test_calibration",
         "test_pytest_wiring",
         "telemetry",
         "telemetry_views"

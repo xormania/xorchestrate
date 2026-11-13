@@ -1,8 +1,8 @@
 """One calibration service runs any registered fault inventory with one verdict policy.
 
 The service is judged with scripted trials; the loader with throwaway registry directories; the real
-registry against the source tree it mutates; and the migrated native inventory by a real run whose
-verdicts must equal today's.
+registry against the source tree it mutates; and the migrated native, work and state inventories by real
+runs whose verdicts must equal those of the entry points they replace.
 """
 
 import ast
@@ -384,6 +384,93 @@ def test_the_migrated_native_inventory_gives_todays_verdicts_on_this_candidate(t
     assert report["same_candidate"] is True and report["passed"] is True
 
 
+# The state and work inventories ---------------------------------------------------------------------
+
+STATE = ("guard-bypass", "expected-version-bypass", "history-omission", "target-validation-bypass",
+         "application-engine-bypass", "unrelated-error-control")
+"""The five FAULTS of scripts/verification/calibrate_state.py at f165bb7, then its UNRELATED_ERROR control."""
+STATE_CASES_SHA256 = "0421ce0408fb7cb1611b7bf61b8f3f897a850745b1c5b2b1f7c3a806eb94e59d"
+"""sha256 of the canonical JSON (sorted keys, compact) of those six cases as dicts, the control carrying
+``"expect": "unrelated_failure"`` and no other case an ``expect`` key."""
+
+WORK_IDS = ("b1-cancelled-contribution-erases-owner-outcome", "b2-wrong-observed-candidate",
+            "b2-caller-origin-accepted-as-measurement", "b2-uncertain-measurement-hidden-by-later-pass",
+            "b2-stale-assessment-configuration")
+"""The CASES ids of tests/hexagonal/calibrate_work_acceptance.py at f165bb7, lowercased for the schema."""
+WORK = tuple(f"{case_id}-{store}" for case_id in WORK_IDS for store in ("memory", "sqlite"))
+WORK_CONTROL = "test_measurement_replay_is_bound_to_request_and_does_not_reexecute"
+WORK_CASES_SHA256 = "d2ac7d02284b449211f03928353a4c216e166d6893b0ad50f7ae4611d6590f63"
+"""sha256 of the canonical JSON of the ten work cases: per old case and per store (memory, then sqlite),
+mutation ``xorchestrate/acceptance.py`` before/after verbatim, selectors the target node then the control
+node on that store, the old assertion as diagnostic, the control node as the only unaffected test, and no
+``expect`` key. The two value-parametrized tests take ``candidate`` and ``running``."""
+
+
+def _canonical_sha256(name):
+    import hashlib
+    cases = json.loads((INVENTORIES / f"{name}.json").read_text())["cases"]
+    return hashlib.sha256(json.dumps(cases, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def test_the_real_registry_holds_native_work_and_state_at_ci_in_that_order():
+    registry, inventories = _real()
+    assert list(registry.items()) == [("native", ("ci",)), ("work", ("ci",)), ("state", ("ci",))], registry
+    assert tuple(case.name for case in inventories["state"].cases) == STATE
+    assert tuple(case.name for case in inventories["work"].cases) == WORK
+
+
+def test_the_state_inventory_is_calibrate_states_cases_verbatim():
+    _, inventories = _real()
+    assert [case.expect for case in inventories["state"].cases] == ["detected"] * 5 + ["unrelated_failure"]
+    assert _canonical_sha256("state") == STATE_CASES_SHA256
+
+
+def test_the_work_inventory_is_the_old_work_cases_split_by_store():
+    _, inventories = _real()
+    for fault in inventories["work"].cases:
+        store = fault.name.rsplit("-", 1)[1]
+        node = fault.target.split("::", 1)[1]
+        assert node.split("[", 1)[1].startswith(store), (fault.name, fault.target)
+        assert fault.unaffected == (f"tests.hexagonal.test_work_acceptance::{WORK_CONTROL}[{store}]",), fault.name
+        assert {module_form(selector) for selector in fault.selectors} == {fault.target, *fault.unaffected}
+        assert fault.mutation.path == "xorchestrate/acceptance.py" and fault.expect == "detected"
+    assert _canonical_sha256("work") == WORK_CASES_SHA256
+
+
+@pytest.mark.parametrize("name,expected", ids=["state", "work"], argvalues=[
+    ("state", tuple((name, "detected") for name in STATE[:-1]) + (("unrelated-error-control", "unrelated_failure"),)),
+    ("work", tuple((name, "detected") for name in WORK)),
+])
+def test_the_migrated_inventory_gives_the_old_verdicts_on_this_candidate(tmp_path, name, expected):
+    """Parity: a real run through the service classifies every case as the old entry point did."""
+    trials = __import__("scripts.verification.__main__", fromlist=["run_trial"])
+    from scripts.testkit.adapters.evidence import candidate_identity
+    _, inventories = _real()
+    candidate = candidate_identity(ROOT)["content_sha256"]
+    report = service().calibrate_inventory(inventories[name], trial=trials.run_trial(ROOT, tmp_path / "out"),
+                                           sink=Recorder(), candidate_sha256=candidate)
+    assert tuple((row["name"], row["classification"]) for row in report["results"]) == expected, report["results"]
+    assert report["same_candidate"] is True and report["passed"] is True
+
+
+OLD_ENTRY_POINTS = ("scripts/verification/calibrate_state.py", "tests/hexagonal/calibrate_work_acceptance.py")
+
+
+def test_the_old_state_and_work_entry_points_are_gone_and_unnamed():
+    import importlib.util
+    for path in OLD_ENTRY_POINTS:
+        assert not (ROOT / path).exists(), path
+        assert importlib.util.find_spec(path[:-3].replace("/", ".")) is None, path
+    names = [path.rsplit("/", 1)[1][:-3] for path in OLD_ENTRY_POINTS]
+    tracked = subprocess.run(["git", "ls-files", "-z"], cwd=ROOT, capture_output=True, check=True).stdout
+    here = "tests/hexagonal/test_fault_calibration.py"
+    naming = sorted(
+        path for path in tracked.decode().split("\0")
+        if path and path != here and not path.startswith("docs/archive/") and (ROOT / path).is_file()
+        and any(name in (ROOT / path).read_text(encoding="utf-8", errors="replace") for name in names))
+    assert naming == [], "old entry points are still named in: " + ", ".join(naming)
+
+
 # The command line and the composed check ------------------------------------------------------------
 
 def cli(*arguments, cwd=ROOT):
@@ -421,6 +508,39 @@ def test_the_composed_native_calibration_check_runs_the_native_inventory(tmp_pat
     assert check.argv == (sys.executable, "-m", "scripts.verification.calibrate_suite", "--candidate",
                           str(composition.ROOT), "--out", str(tmp_path / "native-calibration"),
                           "--inventory", "native"), check.argv
+
+
+def test_composition_builds_one_calibration_check_per_ci_registered_inventory(tmp_path):
+    from scripts.testkit import composition
+    files = loader()
+    registry = files.load_registry(INVENTORIES)
+    checks = [item for item in composition.plan(directory=tmp_path, suite="calibration", mode="protocol-fixture")
+              if item.name.endswith("-calibration")]
+    ci = files.select(registry, stage="ci")
+    assert [check.name for check in checks] == [f"{name}-calibration" for name in ci]
+    assert [check.name for check in checks] == ["native-calibration", "work-calibration", "state-calibration"]
+    entries = json.loads((INVENTORIES / "registry.json").read_text())["inventories"]
+    for name, check in zip(ci, checks):
+        assert check.argv == (sys.executable, "-m", "scripts.verification.calibrate_suite", "--candidate",
+                              str(composition.ROOT), "--out", str(tmp_path / f"{name}-calibration"),
+                              "--inventory", name), check.argv
+        assert set(check.required) == {"scripts/verification/calibrate_suite.py",
+                                       "scripts/verification/inventories/" + entries[name]["file"]}, check.required
+
+
+def test_composition_leaves_out_inventories_not_registered_at_ci(tmp_path):
+    """Every real inventory is at ci, so only a registry with other stages shows the stage filter."""
+    from scripts.testkit import composition
+    root = tmp_path / "candidate"
+    inventory_directory(root / "scripts/verification/inventories",
+                        registry={"schema_version": 1, "inventories": {
+                            "early": {"file": "early.json", "stages": ["ci", "manual"]},
+                            "later": {"file": "later.json", "stages": ["pre-draft", "manual"]}}},
+                        inventories={"early.json": {"schema_version": 1, "cases": []},
+                                     "later.json": {"schema_version": 1, "cases": []}})
+    checks = [item.name for item in composition.plan(directory=tmp_path / "out", suite="calibration",
+                                                     mode="protocol-fixture", root=root)]
+    assert checks == ["early-calibration"], checks
 
 
 def test_the_suite_report_holds_each_inventory_report(tmp_path):
