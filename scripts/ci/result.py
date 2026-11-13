@@ -395,6 +395,8 @@ def shard_evidence(artifacts, workflow, *, tested_sha, catalog, directories=None
     catalog_hash = hashlib.sha256(canonical).hexdigest()
     expected_modules = {module for family in catalog["families"].values() for module in family["modules"]}
     modules, cases, families, rows = set(), set(), {}, []
+    require_timings = workflow["jobs"]["application-tests"].get("env", {}).get("CI_TIMINGS_REQUIRED") == "true"
+    timing_digest = None
     for index in indices:
         artifact = f"framework-tests-python-3.12-shard-{index}-of-{total}"
         directory = (directories or {}).get(artifact, artifacts / artifact)
@@ -429,9 +431,24 @@ def shard_evidence(artifacts, workflow, *, tested_sha, catalog, directories=None
         if (check.get("status") != "passed" or bound.get("sha256") != hashlib.sha256(path.read_bytes()).hexdigest()
                 or bound.get("selected") != len(selected)):
             raise ValueError("Shard inventory is not the qualified artifact: " + artifact)
+        model_digest = shard.get("timings_sha256")
+        if require_timings or model_digest is not None:
+            frozen = path.parent / "timings.json"
+            timing = report.get("timings", {})
+            if (not _sha(model_digest) or frozen.is_symlink() or not frozen.is_file()
+                    or frozen.stat().st_size > candidate_evidence.MAX_JSON
+                    or hashlib.sha256(frozen.read_bytes()).hexdigest() != model_digest
+                    or not isinstance(timing, dict) or timing.get("sha256") != model_digest
+                    or not isinstance(bound.get("shard"), dict)
+                    or bound["shard"].get("timings_sha256") != model_digest
+                    or timing_digest is not None and timing_digest != model_digest):
+                raise ValueError("Shards do not share one qualified timing snapshot: " + artifact)
+            timing_digest = model_digest
         outcomes = dict(Counter(case["outcome"] for case in selected))
         rows.append({"artifact": artifact, "shard": f"{index}/{total}", "selected": len(selected),
                      "outcomes": outcomes, "command_seconds": check.get("duration_seconds")})
+        if model_digest is not None:
+            rows[-1]["timings_sha256"] = model_digest
         for case in selected:
             if case["family"] not in catalog["families"] or case["path"] not in catalog["families"][case["family"]]["modules"]:
                 raise ValueError("Shard case has foreign family ownership")

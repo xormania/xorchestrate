@@ -16,7 +16,7 @@ uv pip install --python "$UV_PROJECT_ENVIRONMENT/bin/python" --no-deps --no-buil
 export PATH="$UV_PROJECT_ENVIRONMENT/bin:$PATH"
 python3 -m scripts.testkit run --suite static
 python3 -m scripts.testkit run --suite tests
-python3 -m scripts.testkit run --suite tests --shard 1/4   # one of four shards
+python3 -m scripts.testkit run --suite tests --shard 1/8   # one of eight hosted shards
 python3 -m scripts.testkit run --suite checks
 python3 -m scripts.testkit run --suite calibration
 python3 -m scripts.testkit run --suite multi-harness
@@ -85,11 +85,19 @@ updates, runtime/build exports and separately labeled fresh-resolution checks.
 Static checks run once in their own job, after the initial candidate context is available. They run regardless of the documentation-only decision. The Jev diagnostic
 calculation remains independent and does not add a second deterministic gate.
 The `tests` suite is the longest validation, so it runs as parallel shards
-balanced by the committed `contracts/test-timings.json`. The shard count N is
-defined once, as the matrix value `shards` of the `application-tests` job (currently 4);
+balanced by one shared timing snapshot, with committed `contracts/test-timings.json`
+as the fallback. The shard count N is defined once, as the matrix value `shards`
+of the `application-tests` job (currently 8);
 job and step names, the `--shard` argument and artifact names all reference it,
 and the `shard` list must be 1..N. A framework test enforces both. Shards use
 `fail-fast: false` so one failing shard does not hide the others' results.
+The paths job resolves timing history from successful default-branch push CI and
+uploads one immutable per-attempt plan. Every shard uses that artifact ID and
+freezes the same model in its own evidence; the aggregate rejects mixed or changed
+models. After qualification, complete fresh JUnit measurements publish the next
+model. Skipped/reused/incomplete runs carry the inherited model forward. Timing
+publication cannot turn a failed required result green and is not a required
+check. See [automatic timing refresh](../docs/testing-framework.md#sharding-the-tests-suite).
 The tests shard, calibration and protocol suite steps have explicit eligibility conditions:
 successful checkout/interpreter/dependency setup and a run that has not been
 cancelled. In the verification job a calibration failure does not skip the protocol suite or erase

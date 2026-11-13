@@ -23,12 +23,13 @@ from ..stories import select_stories, validate_limits
 from . import terminal_selection
 from .configuration import capture_storage, local_capture
 from .evidence import write_json
+from .shard_timings import timing_source
 
-FIELDS = frozenset({"schema_version", "suite", "mode", "drivers", "families", "shard", "config", "brief",
+FIELDS = frozenset({"schema_version", "suite", "mode", "drivers", "families", "shard", "timings", "config", "brief",
                     "timeout", "check_timeout", "run_timeout", "shutdown_grace", "output",
                     "environment", "interpreter", "stories", "max_sessions", "max_turns", "max_tool_calls", "project",
                     "terminal_host", "keep_after_run"})
-PATH_FIELDS = ("config", "brief", "output", "environment", "interpreter")
+PATH_FIELDS = ("config", "brief", "output", "environment", "interpreter", "timings")
 PROJECT_TOOLS = {"rust": ("rustc", "cargo"), "python": ("python3",), "php": ("php", "composer")}
 
 
@@ -61,7 +62,7 @@ def load_profile(path, *, root, overrides=None):
     if unknown:
         raise ValueError("Unknown profile fields: " + ", ".join(sorted(unknown)))
     values = {"schema_version": 1, "suite": "all", "mode": "protocol-fixture", "drivers": [],
-              "families": [], "shard": None, "stories": [], "max_sessions": 2, "max_turns": 4, "max_tool_calls": 5000,
+              "families": [], "shard": None, "timings": None, "stories": [], "max_sessions": 2, "max_turns": 4, "max_tool_calls": 5000,
               "config": None, "project": None, "brief": str(root / "docs/implementation/owner-brief.md"),
               "timeout": 180, "check_timeout": 600, "run_timeout": None, "shutdown_grace": 10,
               "output": "runs", "environment": "environment", "interpreter": None,
@@ -123,6 +124,10 @@ def load_profile(path, *, root, overrides=None):
     if values["families"] and values["suite"] not in {"tests", "checks", "all"}:
         raise ValueError("families require a suite containing tests")
     suite_shard(values["suite"], values["shard"])
+    if values["timings"] is not None:
+        if values["shard"] is None:
+            raise ValueError("timings requires a tests shard")
+        timing_source(root, values["timings"], external=True)
     values["profile_path"] = str(path)
     values["root"] = str(root)
     return values

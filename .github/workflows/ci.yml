@@ -33,7 +33,9 @@
         "context": "${{ steps.candidate.outputs.context }}",
         "reuse": "${{ steps.reuse.outputs.reuse || 'false' }}",
         "reuse_plan": "${{ steps.reuse.outputs.reuse_plan }}",
-        "superseded": "${{ steps.reuse.outputs.superseded || 'false' }}"
+        "superseded": "${{ steps.reuse.outputs.superseded || 'false' }}",
+        "timings_artifact": "${{ steps.timings-upload.outputs.artifact-id }}",
+        "timings_sha256": "${{ steps.timings.outputs.sha256 }}"
       },
       "steps": [
         {
@@ -113,6 +115,26 @@
           "with": {
             "name": "candidate-context--attempt-${{ github.run_attempt }}",
             "path": "${{ runner.temp }}/ci-context/context.json",
+            "if-no-files-found": "error",
+            "retention-days": 30
+          }
+        },
+        {
+          "name": "Resolve one shared test timing snapshot",
+          "id": "timings",
+          "env": {
+            "GITHUB_TOKEN": "${{ github.token }}",
+            "TIMINGS_BRANCH": "${{ github.event.repository.default_branch }}"
+          },
+          "run": "python3 -I -B scripts/ci/timings.py select --root . --context \"$RUNNER_TEMP/ci-context/context.json\" --branch \"$TIMINGS_BRANCH\" --output \"$RUNNER_TEMP/ci-timings\" --github-output \"$GITHUB_OUTPUT\""
+        },
+        {
+          "name": "Retain the shared test timing snapshot",
+          "id": "timings-upload",
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+          "with": {
+            "name": "ci-test-timing-plan--attempt-${{ github.run_attempt }}",
+            "path": "${{ runner.temp }}/ci-timings/",
             "if-no-files-found": "error",
             "retention-days": 30
           }
@@ -214,10 +236,14 @@
             1,
             2,
             3,
-            4
+            4,
+            5,
+            6,
+            7,
+            8
           ],
           "shards": [
-            4
+            8
           ]
         }
       },
@@ -229,6 +255,15 @@
             "fetch-depth": 0
           },
           "id": "checkout"
+        },
+        {
+          "name": "Read the shared test timing snapshot",
+          "id": "timings",
+          "uses": "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333",
+          "with": {
+            "artifact-ids": "${{ needs.paths.outputs.timings_artifact }}",
+            "path": "${{ runner.temp }}/ci-timings"
+          }
         },
         {
           "name": "Configure external Python cache",
@@ -264,7 +299,10 @@
         {
           "name": "Run tests shard ${{ matrix.shard }}/${{ matrix.shards }}",
           "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
-          "run": "mkdir -p \"$RUNNER_TEMP/xor-checks\"\ngit show -s --format='%H%n%T%n%P' HEAD > \"$RUNNER_TEMP/xor-checks/identity.txt\"\npython3 -m scripts.testkit run --suite tests --shard \"${{ matrix.shard }}/${{ matrix.shards }}\" --output \"$RUNNER_TEMP/xor-checks/tests\" --check-timeout 600"
+          "run": "printf '%s  %s\\n' \"$CI_TIMINGS_SHA256\" \"$RUNNER_TEMP/ci-timings/timings.json\" | sha256sum --check --status\nmkdir -p \"$RUNNER_TEMP/xor-checks\"\ngit show -s --format='%H%n%T%n%P' HEAD > \"$RUNNER_TEMP/xor-checks/identity.txt\"\npython3 -m scripts.testkit run --suite tests --shard \"${{ matrix.shard }}/${{ matrix.shards }}\" --timings \"$RUNNER_TEMP/ci-timings/timings.json\" --output \"$RUNNER_TEMP/xor-checks/tests\" --check-timeout 600",
+          "env": {
+            "CI_TIMINGS_SHA256": "${{ needs.paths.outputs.timings_sha256 }}"
+          }
         },
         {
           "name": "Record unavailable tests shard",
@@ -283,7 +321,8 @@
         }
       ],
       "env": {
-        "CI_CANDIDATE_CONTEXT": "${{ needs.paths.outputs.context }}"
+        "CI_CANDIDATE_CONTEXT": "${{ needs.paths.outputs.context }}",
+        "CI_TIMINGS_REQUIRED": "true"
       }
     },
     "application": {
@@ -614,6 +653,36 @@
           },
           "run": "mkdir -p \"$RUNNER_TEMP/ci-result\"\nprintf '%s\\n' \"$JOB_OUTCOMES\" > \"$RUNNER_TEMP/ci-result/needs.json\"\nprintf '%s\\n' \"$CI_CANDIDATE_CONTEXT\" > \"$RUNNER_TEMP/ci-result/context.json\"\nif [ -z \"$CI_REUSE_PLAN\" ]; then\n  CI_REUSE_PLAN='{\"schema_version\":1,\"decision\":\"execute\",\"reason\":\"planning_unavailable\",\"history\":[]}'\nfi\nprintf '%s\\n' \"$CI_REUSE_PLAN\" > \"$RUNNER_TEMP/ci-result/reuse-plan.json\"\ncollection_status=0\npython3 -I -B scripts/ci/candidate.py collect --output \"$RUNNER_TEMP/ci-result/metadata.json\" --artifacts \"$RUNNER_TEMP/ci-result-inputs\" --workflow .github/workflows/ci.yml --needs \"$RUNNER_TEMP/ci-result/needs.json\" || collection_status=$?\npython3 -I -B scripts/ci/result.py --needs \"$RUNNER_TEMP/ci-result/needs.json\" --workflow .github/workflows/ci.yml --catalog contracts/testing.json --artifacts \"$RUNNER_TEMP/ci-result-inputs\" --event \"$EVENT_NAME\" --source-sha \"$SOURCE_SHA\" --tested-sha \"$TESTED_SHA\" --run-url \"$RUN_URL\" --context \"$RUNNER_TEMP/ci-result/context.json\" --metadata \"$RUNNER_TEMP/ci-result/metadata.json\" --reuse-plan \"$RUNNER_TEMP/ci-result/reuse-plan.json\" --summary \"$GITHUB_STEP_SUMMARY\" --output \"$RUNNER_TEMP/ci-result/result.json\"\nexit \"$collection_status\"",
           "id": "qualification"
+        },
+        {
+          "name": "Read the inherited timing snapshot",
+          "id": "timings",
+          "if": "always()",
+          "continue-on-error": true,
+          "uses": "actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333",
+          "with": {
+            "artifact-ids": "${{ needs.paths.outputs.timings_artifact }}",
+            "path": "${{ runner.temp }}/ci-timings"
+          }
+        },
+        {
+          "name": "Publish qualified test timings for later runs",
+          "id": "timings-publish",
+          "if": "always()",
+          "continue-on-error": true,
+          "run": "python3 -I -B scripts/ci/timings.py publish --root . --context \"$RUNNER_TEMP/ci-result/context.json\" --metadata \"$RUNNER_TEMP/ci-result/metadata.json\" --result \"$RUNNER_TEMP/ci-result/result.json\" --artifacts \"$RUNNER_TEMP/ci-result-inputs\" --inherited \"$RUNNER_TEMP/ci-timings\" --output \"$RUNNER_TEMP/ci-next-timings\""
+        },
+        {
+          "name": "Retain test timings for the next CI run",
+          "if": "always() && steps.timings-publish.outcome == 'success'",
+          "continue-on-error": true,
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+          "with": {
+            "name": "ci-test-timings--attempt-${{ github.run_attempt }}",
+            "path": "${{ runner.temp }}/ci-next-timings/",
+            "if-no-files-found": "warn",
+            "retention-days": 30
+          }
         },
         {
           "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",

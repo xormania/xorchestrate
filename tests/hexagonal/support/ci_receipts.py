@@ -27,24 +27,27 @@ def write_json(path, document):
     path.write_text(json.dumps(document) + "\n")
 
 
-def shard_receipts(root):
-    catalog = {"id": "ci-control", "families": {"behavior": {
-        "guarantee": "Two independent behavioral modules execute once.",
-        "modules": {"tests/a.py": "contract", "tests/b.py": "adapter"},
+def shard_receipts(root, *, count=2):
+    modules = ["tests/a.py", "tests/b.py"] if count == 2 else [
+        f"tests/test_shard_{index}.py" for index in range(1, count + 1)]
+    catalog = {"schema_version": 1, "id": "ci-control", "roots": ["tests"], "families": {"behavior": {
+        "guarantee": "Independent behavioral modules execute once.",
+        "modules": {module: "contract" for module in modules},
     }}}
     catalog_hash = hashlib.sha256(json.dumps(catalog, sort_keys=True, separators=(",", ":"),
                                             allow_nan=False).encode()).hexdigest()
-    workflow = {"jobs": {"application-tests": {"strategy": {"matrix": {"shards": [2], "shard": [1, 2]}}}}}
-    for index, module in enumerate(("tests/a.py", "tests/b.py"), 1):
-        directory = root / f"framework-tests-python-3.12-shard-{index}-of-2" / "run"
+    workflow = {"jobs": {"application-tests": {"strategy": {"matrix": {
+        "shards": [count], "shard": list(range(1, count + 1))}}}}}
+    for index, module in enumerate(modules, 1):
+        directory = root / f"framework-tests-python-3.12-shard-{index}-of-{count}" / "run"
         inventory = {"schema_version": 1, "status": "passed", "exit_status": 0,
                      "catalog_id": catalog["id"], "catalog_sha256": catalog_hash,
-                     "shard": {"index": index, "count": 2, "modules": [module]}, "selected": 1,
+                     "shard": {"index": index, "count": count, "modules": [module]}, "selected": 1,
                      "cases": [{"id": module + "::test_observable_behavior", "path": module,
                                 "family": "behavior", "selected": True, "outcome": "passed"}]}
         write_json(directory / "inventory.json", inventory)
         write_json(directory / "report.json", {
-            "schema_version": 2, "suite": "tests", "shard": f"{index}/2", "status": "passed",
+            "schema_version": 2, "suite": "tests", "shard": f"{index}/{count}", "status": "passed",
             "checks": [{"name": "tests", "status": "passed", "duration_seconds": 1.25,
                         "tool_report": {"sha256": hashlib.sha256((directory / "inventory.json").read_bytes()).hexdigest(),
                                         "selected": 1}}],

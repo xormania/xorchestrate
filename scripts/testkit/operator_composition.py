@@ -25,11 +25,12 @@ from .adapters.managed_process import ManagedWorker
 from .adapters.managed_store import ManagedStore, owner_alive
 from .adapters.native_evidence import collection_supplement
 from .adapters.ownership import processes_naming, send_signal, subreaper
+from .adapters.shard_timings import timing_source, verify_timings
 from .composition import ROOT, preflight, run
 from .composition import plan as check_plan
 from .operator import FINISHED, decide, project
 
-RUN_FIELDS = ("suite", "mode", "config", "brief", "drivers", "families", "shard", "timeout", "check_timeout",
+RUN_FIELDS = ("suite", "mode", "config", "brief", "drivers", "families", "shard", "timings", "timeout", "check_timeout",
               "stories", "max_sessions", "max_turns", "max_tool_calls", "terminal_host")
 PROBE_STORY = "native-handshake"
 
@@ -90,7 +91,9 @@ def prepare_run(settings, *, parent=None):
             dependencies[package] = None
     settings["runtime"] = {"python": sys.version, "dependencies": dependencies}
     store.initialize(settings)
-    sources = {name: settings[name] for name in ("config", "brief", "profile_path")
+    if settings.get("shard") is not None:
+        settings["timings"] = str(timing_source(root, settings.get("timings"), external=True))
+    sources = {name: settings[name] for name in ("config", "brief", "profile_path", "timings")
                if settings.get(name) and Path(settings[name]).is_file()}
     snapshots, snapshot_errors = {}, {}
     for name, source in sources.items():
@@ -105,6 +108,10 @@ def prepare_run(settings, *, parent=None):
         write_json(directory / "inputs" / "manifest.json", snapshots)
     if "brief" in snapshots:
         settings["brief"] = snapshots["brief"]["path"]
+    if "timings" in snapshots:
+        settings["timings"] = snapshots["timings"]["path"]
+        settings["timings_sha256"] = snapshots["timings"]["sha256"]
+        Path(settings["timings"]).chmod(0o400)
     if "config" in snapshots:
         settings["config"] = snapshots["config"]["path"]
         try:
@@ -233,6 +240,9 @@ def worker(directory):
         write_json(event_directory / f"{sequence:08d}.json", {**event, "sequence": sequence, "recorded_at": now()})
 
     try:
+        timing_snapshot = plan.get("input_snapshots", {}).get("timings")
+        if timing_snapshot:
+            verify_timings(Path(plan["root"]), plan["timings"], timing_snapshot["sha256"])
         report = run(directory=directory / "checks", output=directory, root=Path(plan["root"]),
                      cancellation=cancellation, result_sink=publish,
                      shutdown_grace=plan.get("shutdown_grace", 10), **execution_options(plan))
@@ -509,7 +519,8 @@ def probe(settings, runner):
     operator's account, which is why this is never implied by plain ``doctor``.
     """
     probe_selection(settings)
-    selected = {**settings, "suite": "stories", "stories": [PROBE_STORY], "families": [], "shard": None}
+    selected = {**settings, "suite": "stories", "stories": [PROBE_STORY], "families": [], "shard": None,
+                "timings": None}
     report = foreground(selected, runner)
     return {"status": "passed" if report.get("status") == "passed" else "failed", "story": PROBE_STORY,
             "directory": report.get("directory"),
@@ -529,6 +540,11 @@ def repeat_settings(directory, overrides):
             if digest(saved.read_bytes()) != snapshot["sha256"]:
                 raise ValueError("Saved configuration snapshot differs from its recorded input")
             settings.update(config=str(saved), config_source_base=snapshot["source_base"])
+    if "timings" not in overrides:
+        snapshot = prior.get("input_snapshots", {}).get("timings")
+        if snapshot:
+            verify_timings(Path(prior["root"]), snapshot["path"], snapshot["sha256"])
+            settings["timings"] = snapshot["path"]
     settings.update(root=str(ROOT), interpreter=sys.executable)
     return settings
 

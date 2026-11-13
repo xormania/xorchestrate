@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from scripts.ci import result as subject
+from tests.hexagonal.support import timing_model
 from tests.hexagonal.support.ci_candidate import (
     artifact_zip,
     candidate_repository,
@@ -123,6 +124,23 @@ def test_complete_distinct_shards_reconcile_to_the_catalog_and_report_families(t
     assert [row["shard"] for row in rows] == ["1/2", "2/2"]
     assert [row["selected"] for row in rows] == [1, 1]
     assert families == {"behavior": {"passed": 2}}
+
+
+def test_eight_current_ci_shards_qualify_one_exact_frozen_timing_model(tmp_path):
+    workflow, catalog = timing_model.shard_receipts(tmp_path)
+    rows, families = subject.shard_evidence(tmp_path, workflow, tested_sha="a" * 40, catalog=catalog)
+    assert [row["shard"] for row in rows] == [f"{index}/8" for index in range(1, 9)]
+    assert families == {"behavior": {"passed": 8}}
+
+
+@pytest.mark.parametrize("fault", ["different_models", "tampered_model", "missing_model", "bound_model", "report_model"])
+def test_current_ci_aggregate_rejects_unshared_or_unbound_timing_models(tmp_path, fault):
+    workflow, catalog = timing_model.shard_receipts(tmp_path, count=2)
+    assert subject.shard_evidence(tmp_path, workflow, tested_sha="a" * 40, catalog=catalog)[1] == {
+        "behavior": {"passed": 2}}, "healthy model-bound shards qualify first"
+    timing_model.damage_shard_model(tmp_path, fault)
+    with pytest.raises(ValueError, match="[Tt]iming|model"):
+        subject.shard_evidence(tmp_path, workflow, tested_sha="a" * 40, catalog=catalog)
 
 
 @pytest.mark.parametrize("defect", ("missing-inventory", "foreign-source", "foreign-catalog",

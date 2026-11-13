@@ -1,0 +1,255 @@
+{
+  "schema_version": 1,
+  "source_base": "6321e1b01788f08b9c549f8740c27c6201ee2ff4",
+  "runtime": {
+    "python": "3.12.14",
+    "pytest": "9.2.0",
+    "ruff": "0.16.8"
+  },
+  "weight_refresh": {
+    "method": "Per-module median JUnit durations across three successful hosted master CI runs; newly introduced modules retain the declared default until a complete fresh run measures them.",
+    "source_artifacts": [
+      {
+        "run_id": 43164413234,
+        "artifact_id": 13919895531,
+        "job_id": 131002908227
+      },
+      {
+        "run_id": 43164413234,
+        "artifact_id": 13919208498,
+        "job_id": 131002908283
+      },
+      {
+        "run_id": 43164413234,
+        "artifact_id": 13918934122,
+        "job_id": 131002908288
+      },
+      {
+        "run_id": 43164413234,
+        "artifact_id": 13918978692,
+        "job_id": 131002908391
+      },
+      {
+        "run_id": 43330712885,
+        "artifact_id": 13995595487,
+        "job_id": 131574553212
+      },
+      {
+        "run_id": 43330712885,
+        "artifact_id": 13994853823,
+        "job_id": 131574553236
+      },
+      {
+        "run_id": 43330712885,
+        "artifact_id": 13994614194,
+        "job_id": 131574553352
+      },
+      {
+        "run_id": 43330712885,
+        "artifact_id": 13994793969,
+        "job_id": 131574553359
+      },
+      {
+        "run_id": 43158430318,
+        "artifact_id": 13916967403,
+        "job_id": 130984064654
+      },
+      {
+        "run_id": 43158430318,
+        "artifact_id": 13917615501,
+        "job_id": 130984064670
+      },
+      {
+        "run_id": 43158430318,
+        "artifact_id": 13916528012,
+        "job_id": 130984064700
+      },
+      {
+        "run_id": 43158430318,
+        "artifact_id": 13917785039,
+        "job_id": 130984064746
+      }
+    ],
+    "output_sha256": "e8068d45820c6829422b8564732d4cbe4364c57bb6c6ddb129987b5fa9082f9e"
+  },
+  "predecessor_regression": {
+    "command": [
+      "python3",
+      "-m",
+      "pytest",
+      "-p",
+      "no:cacheprovider",
+      "-q",
+      "tests/hexagonal/test_testkit_sharding.py::test_ci_defines_the_shard_count_once_and_keeps_the_application_aggregate_name"
+    ],
+    "red": "4 == 8: hosted application verification uses eight balanced shards",
+    "green": "1 passed"
+  },
+  "fault_detection": [
+    {
+      "fault": "foreign-donor",
+      "path": "scripts/ci/timings.py",
+      "replace": {
+        "old": "for side in (\"repository\", \"head_repository\")",
+        "new": "for side in (\"repository\",)"
+      },
+      "command": [
+        "python3",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "-q",
+        "tests/hexagonal/test_testkit_sharding.py::test_unusable_timing_history_keeps_the_committed_model[fork]",
+        "tests/hexagonal/test_testkit_sharding.py::test_timing_history_selects_one_authenticated_model_without_changing_the_candidate",
+        "tests/hexagonal/test_testkit_sharding.py::test_complete_eight_shard_measurements_refresh_only_the_next_plan"
+      ],
+      "green_exit": 0,
+      "red_exit": 1,
+      "green_summary": "3 passed in 0.14s",
+      "red_summary": "1 failed, 2 passed in 0.09s"
+    },
+    {
+      "fault": "model-digest",
+      "path": "scripts/ci/timings.py",
+      "replace": {
+        "old": "or snapshot.get(\"timings_sha256\") != _digest(document)",
+        "new": "or False"
+      },
+      "command": [
+        "python3",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "-q",
+        "tests/hexagonal/test_testkit_sharding.py::test_unusable_timing_history_keeps_the_committed_model[model_digest]",
+        "tests/hexagonal/test_testkit_sharding.py::test_timing_history_selects_one_authenticated_model_without_changing_the_candidate",
+        "tests/hexagonal/test_testkit_sharding.py::test_complete_eight_shard_measurements_refresh_only_the_next_plan"
+      ],
+      "green_exit": 0,
+      "red_exit": 1,
+      "green_summary": "3 passed in 0.12s",
+      "red_summary": "1 failed, 2 passed in 0.09s"
+    },
+    {
+      "fault": "docs-replace",
+      "path": "scripts/ci/timings.py",
+      "replace": {
+        "old": "if result.get(\"documentation_only\"):",
+        "new": "if False and result.get(\"documentation_only\"):"
+      },
+      "command": [
+        "python3",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "-q",
+        "tests/hexagonal/test_testkit_sharding.py::test_incomplete_or_unexecuted_measurements_preserve_the_inherited_model[documentation]",
+        "tests/hexagonal/test_testkit_sharding.py::test_timing_history_selects_one_authenticated_model_without_changing_the_candidate",
+        "tests/hexagonal/test_testkit_sharding.py::test_complete_eight_shard_measurements_refresh_only_the_next_plan"
+      ],
+      "green_exit": 0,
+      "red_exit": 1,
+      "green_summary": "3 passed in 0.12s",
+      "red_summary": "1 failed, 2 passed in 0.14s"
+    },
+    {
+      "fault": "foreign-reference",
+      "path": "scripts/ci/timings.py",
+      "replace": {
+        "old": "if len(matches) != 1 or any(matches[0].get(key) != value for key, value in reference.items()):",
+        "new": "if len(matches) != 1:"
+      },
+      "command": [
+        "python3",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "-q",
+        "tests/hexagonal/test_testkit_sharding.py::test_incomplete_or_unexecuted_measurements_preserve_the_inherited_model[foreign_reference]",
+        "tests/hexagonal/test_testkit_sharding.py::test_timing_history_selects_one_authenticated_model_without_changing_the_candidate",
+        "tests/hexagonal/test_testkit_sharding.py::test_complete_eight_shard_measurements_refresh_only_the_next_plan"
+      ],
+      "green_exit": 0,
+      "red_exit": 1,
+      "green_summary": "3 passed in 0.13s",
+      "red_summary": "1 failed, 2 passed in 0.10s"
+    },
+    {
+      "fault": "executor_source_reopened",
+      "path": "scripts/testkit/composition.py",
+      "healthy_exit": 0,
+      "red_exit": 1,
+      "healthy_source_sha256": "b688997b34f5cb690d011cfc9b431e8e47ca139c5398c53e2eb14d103b04c2e3",
+      "fault_source_sha256": "c52b5a4c83fd3c686f92f199edb4845579e153af53a998e8fc40563a890879be",
+      "command": [
+        "python3",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "-q",
+        "tests/hexagonal/test_testkit_timing_model.py::test_execution_and_independent_binder_use_the_same_frozen_external_weights"
+      ],
+      "green_summary": "1 passed, 1 warning in 0.41s",
+      "red_summary": "1 failed, 1 warning in 0.07s"
+    },
+    {
+      "fault": "expected_digest_ignored",
+      "path": "scripts/testkit/adapters/pytest_plugin.py",
+      "healthy_exit": 0,
+      "red_exit": 1,
+      "healthy_source_sha256": "1c857f57e69827345240ed20d07614d37d325e5882da9c79cbfde829244df1cb",
+      "fault_source_sha256": "681c2000927b1bb43c6036813982a61181470e48f57243b007cd0c8e287f3642",
+      "command": [
+        "python3",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "-q",
+        "tests/hexagonal/test_testkit_timing_model.py::test_independent_binder_rejects_another_model_even_after_a_successful_command[expected_digest]"
+      ],
+      "green_summary": "1 passed, 1 warning in 0.34s",
+      "red_summary": "1 failed, 1 warning in 0.32s"
+    },
+    {
+      "fault": "aggregate_guard_bypassed",
+      "path": "scripts/ci/result.py",
+      "healthy_exit": 0,
+      "red_exit": 1,
+      "healthy_source_sha256": "5faab89264d8448cff1e0228f7d476ea20576c9dc976509ad483afe1828d5993",
+      "fault_source_sha256": "d1dcfbb1af89bfd5c963b4872ef636de1763e4ccba5d518d44d6a77eceb03b31",
+      "command": [
+        "python3",
+        "-m",
+        "pytest",
+        "-p",
+        "no:cacheprovider",
+        "-q",
+        "tests/hexagonal/test_ci_result.py",
+        "-k",
+        "current_ci_aggregate"
+      ],
+      "green_summary": "5 passed, 115 deselected, 1 warning in 0.24s",
+      "red_summary": "5 failed, 115 deselected, 1 warning in 0.15s"
+    }
+  ],
+  "limitations": [
+    "These controlled witnesses establish selection, trust, evidence and preservation behavior; they do not establish hosted speed gains.",
+    "Automatic intake only selects successful default-branch push CI; first hosted activation requires merge.",
+    "Source digests bind the pre-integration mutation witnesses; unchanged assertions are rerun on the integrated candidate."
+  ],
+  "integrated_base": "f020efa7a9caa46cc8a0ba74eed860cd19db16ab",
+  "verification": {
+    "focused": "212 passed, including sharding, timing model, CI aggregate and framework boundary cases after integrating current master",
+    "shared_static": "Ruff, syntax and architecture passed; candidate integrity unchanged",
+    "commands": [
+      "python3 -m pytest -p no:cacheprovider -q tests/hexagonal/test_testkit_sharding.py tests/hexagonal/test_testkit_timing_model.py tests/hexagonal/test_ci_result.py tests/hexagonal/test_testkit_boundaries.py",
+      "python3 -m scripts.testkit run --suite static --output OUT --check-timeout 120"
+    ]
+  }
+}
