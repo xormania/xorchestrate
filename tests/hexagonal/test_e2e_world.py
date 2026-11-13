@@ -724,3 +724,53 @@ def test_a_listener_bound_beside_the_home_on_a_shared_prefix_survives(tmp_path, 
             os.rmdir(outside)
             beside.unlink(missing_ok=True)
     assert alive(sentinel)
+
+
+# Which signal selected each victim ----------------------------------------------------------------------
+
+def selection(receipt):
+    return dict(getattr(receipt, "selected", {}) or {})
+
+
+def test_a_total_loss_records_which_signal_selected_each_victim(tmp_path, sentinel):
+    with World("detached-process") as world:
+        running(world)
+        spawned = sleeper(world)
+        listener, listening, outside = ready_process(LISTENER, Path(world.cli.home) / "listener.sock", tmp_path,
+                                                     "listener")
+        carrier, carrying = started([sys.executable, "-c", "import time; time.sleep(120)"], cwd=outside,
+                                    env={**without_home(), "XORCHESTRATE_HOME": str(world.cli.home)})
+        try:
+            receipt = world.disturb(contract().TotalLoss())
+            chosen = selection(receipt)
+            assert set(chosen) == set(receipt.before), (chosen, receipt.before)
+            assert set(chosen.values()) <= contract().SELECTION_SIGNALS, chosen
+            assert (chosen.get(spawned), chosen.get(listening), chosen.get(carrying)) == ("spawned", "socket", "home"), \
+                chosen
+        finally:
+            stop(listener)
+            stop(carrier)
+            os.rmdir(outside)
+    assert alive(sentinel)
+
+
+def test_the_multiplexer_server_is_selected_by_its_socket(sentinel):
+    with World("multiplexer") as world:
+        running(world)
+        table = ownership().processes()
+        servers = [table[pid][0] for pid in terminal_host_servers(world) if pid in table]
+        assert servers
+        chosen = selection(world.disturb(contract().TotalLoss()))
+        assert all(chosen.get(item) == "socket" for item in servers), chosen
+        assert alive(sentinel)
+
+
+def test_a_server_loss_records_its_victims_selection_and_no_victim_records_none(sentinel):
+    with World("detached-process") as world:
+        running(world)
+        receipt = world.disturb(contract().ServerLoss())
+        chosen = selection(receipt)
+        assert set(chosen) == set(receipt.before) and set(chosen.values()) <= {"home", "socket"}, chosen
+        empty = world.disturb(contract().ServerLoss())
+        assert empty.outcome == "no_victim" and selection(empty) == {}, empty
+        assert alive(sentinel)
