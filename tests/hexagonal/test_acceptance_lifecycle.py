@@ -53,6 +53,8 @@ def test_the_worker_never_sees_the_controllers_multiplexer_markers(tmp_path, mon
     """The host strips its own nesting markers, so a native worker started from inside one is not confused."""
     monkeypatch.setenv("TMUX", "/tmp/unrelated-server,1,0")
     monkeypatch.setenv("TMUX_PANE", "%9")
+    # Run from inside a hosted terminal or a worker, the variable would be inherited and hide its own absence.
+    monkeypatch.delenv("XORCHESTRATE_TERMINAL_HOST", raising=False)
     seen = tmp_path / "seen.json"
     code = (f"import json,os; from pathlib import Path; Path({str(seen)!r}).write_text(json.dumps("
             "{k: os.environ.get(k) for k in ('TMUX_PANE', 'XORCHESTRATE_TERMINAL_HOST')})); "
