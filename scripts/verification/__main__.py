@@ -73,8 +73,8 @@ def observed_pytest(root, output, selectors, *, junit=None, timeout=120):
     return record
 
 
-def calibrate(root, output, mutation, selectors, target, diagnostic, unaffected):
-    """Run a passing control and exactly one source mutation in isolated copies."""
+def _trial(root, output, mutation, selectors):
+    """Run a passing control and exactly one source mutation in isolated copies; no verdict."""
     output = Path(output).resolve()
     identity, control, mutant = calibration_workspace(root, output, mutation)
     records, cases = {}, {}
@@ -82,11 +82,43 @@ def calibrate(root, output, mutation, selectors, target, diagnostic, unaffected)
         junit = output / (name + ".xml")
         records[name] = observed_pytest(directory, output / (name + "-run"), selectors, junit=junit)
         cases[name] = junit_cases(junit) if junit.exists() else {}
-    result = classify(cases["control"], cases["mutant"], target, diagnostic, unaffected,
-                      control_exit=records["control"]["exit_status"], mutant_exit=records["mutant"]["exit_status"])
-    result.update(candidate_sha256=identity["content_sha256"], mutation_sha256=digest(canonical(mutation)),
-                  assertion_observer_sha256=records["control"]["assertion_observer_sha256"],
-                  commands=records, finished_at=now())
+    return {"control_cases": cases["control"], "mutant_cases": cases["mutant"],
+            "control_exit": records["control"]["exit_status"], "mutant_exit": records["mutant"]["exit_status"],
+            "mutation_applied": True, "candidate_sha256": identity["content_sha256"],
+            "mutation_sha256": digest(canonical(mutation)),
+            "assertion_observer_sha256": records["control"]["assertion_observer_sha256"], "commands": records}
+
+
+def run_trial(root, output):
+    """The calibration service's trial adapter: each case runs under ``output/<case id>``.
+
+    The raw record, with its commands, stays beside the case's snapshot,
+    patch and pytest results; the service reports only the verdict.
+    """
+    def trial(case, case_id):
+        mutation = {"path": case.mutation.path, "old": case.mutation.old, "new": case.mutation.new}
+        directory = Path(output) / case_id
+        try:
+            record = _trial(root, directory, mutation, list(case.selectors))
+        except Exception as error:
+            # Private evidence of why the case could not run; the report keeps only a typed reason.
+            directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+            (directory / "trial-error.log").write_text(str(error) + "\n", encoding="utf-8")
+            raise
+        write_json(directory / "trial.json", {**record, "finished_at": now()})
+        return record
+    return trial
+
+
+def calibrate(root, output, mutation, selectors, target, diagnostic, unaffected):
+    """Run a passing control and exactly one source mutation in isolated copies."""
+    output = Path(output).resolve()
+    record = _trial(root, output, mutation, selectors)
+    result = classify(record["control_cases"], record["mutant_cases"], target, diagnostic, unaffected,
+                      control_exit=record["control_exit"], mutant_exit=record["mutant_exit"])
+    result.update(candidate_sha256=record["candidate_sha256"], mutation_sha256=record["mutation_sha256"],
+                  assertion_observer_sha256=record["assertion_observer_sha256"],
+                  commands=record["commands"], finished_at=now())
     write_json(output / "calibration.json", result)
     return result
 

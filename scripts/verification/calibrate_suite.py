@@ -1,36 +1,68 @@
-"""Repeat the reviewed native/delivery critical faults on one exact candidate."""
+"""Run registered fault inventories on one exact candidate.
+
+Selects inventories by name or by stage (default: those registered at ci),
+runs each case through the calibration service with the isolated trial
+adapter, and writes one suite report. Exits 2 for an unknown or unregistered
+inventory, or for a selection that names no inventory, before any case runs.
+"""
 import argparse
 import json
+import sys
 from pathlib import Path
 
 from scripts.testkit.adapters.evidence import candidate_identity, now, verify_candidate, write_json
 
-from .__main__ import calibrate
+from .__main__ import run_trial
+from .fault_calibration import calibrate_inventory
+from .inventory_files import InventoryError, load_inventory, load_registry, select
+
+INVENTORIES = Path(__file__).with_name("inventories")
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--candidate', type=Path, default=Path.cwd())
-    parser.add_argument('--out', type=Path, required=True)
-    parser.add_argument('--inventory', type=Path, default=Path(__file__).with_name('faults.json'))
+    parser.add_argument("--candidate", type=Path, default=Path.cwd())
+    parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--registry-dir", type=Path, default=INVENTORIES)
+    which = parser.add_mutually_exclusive_group()
+    which.add_argument("--inventory", action="append", default=[], help="registered inventory name; repeatable")
+    which.add_argument("--stage", choices=("ci", "pre-draft", "manual"))
     args = parser.parse_args(argv)
-    args.out.mkdir(parents=True, exist_ok=False)
-    candidate = candidate_identity(args.candidate)
-    results = []
-    for case in json.loads(args.inventory.read_text()):
-        try:
-            result = calibrate(args.candidate, args.out / case['name'], case['mutation'], case['selectors'],
-                               case['target'], case['diagnostic'], case['unaffected'])
-        except Exception as error:
-            result = {'classification': 'setup_error', 'error': str(error)}
-        results.append({'name': case['name'], **result})
-    integrity = verify_candidate(args.candidate, candidate)
-    report = {'candidate': candidate, 'results': results, 'finished_at': now(), 'candidate_integrity': integrity,
-              'passed': integrity['passed'] and all(row['classification'] == 'detected' for row in results)}
-    write_json(args.out / 'suite.json', report)
-    print(json.dumps({'passed': report['passed'], 'results': [(r['name'], r['classification']) for r in results]}))
-    return 0 if report['passed'] else 1
+    root, output = args.candidate.resolve(), args.out.resolve()
+    if output == root or root in output.parents:
+        parser.error("--out must be outside the candidate tree")
+    try:
+        names = select(load_registry(args.registry_dir), names=args.inventory, stage=args.stage)
+        inventories = [load_inventory(args.registry_dir, name) for name in names]
+    except InventoryError as error:
+        print(error.code, file=sys.stderr)
+        return 2
+    if not inventories:
+        print("no_inventory_selected", file=sys.stderr)
+        return 2
+    output.mkdir(parents=True, exist_ok=False)
+    candidate = candidate_identity(root)
+    reports = {}
+    for inventory in inventories:
+        progress, events = output / (inventory.name + ".progress.json"), []
+
+        def sink(event, progress=progress, events=events):
+            # Rewritten after every case, so a run cut short still leaves each finished verdict.
+            events.append(event)
+            write_json(progress, events)
+
+        reports[inventory.name] = calibrate_inventory(
+            inventory, trial=run_trial(root, output / inventory.name), sink=sink,
+            candidate_sha256=candidate["content_sha256"])
+    integrity = verify_candidate(root, candidate)
+    passed = bool(reports) and integrity["passed"] and all(report["passed"] for report in reports.values())
+    write_json(output / "suite.json", {"candidate": candidate, "candidate_integrity": integrity,
+                                       "inventories": reports, "passed": passed, "finished_at": now()})
+    print(json.dumps({"passed": passed, "results": {
+        name: [(row["name"], row["classification"]) for row in report["results"]]
+        for name, report in reports.items()}}))
+    return 0 if passed else 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     raise SystemExit(main())

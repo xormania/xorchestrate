@@ -223,6 +223,7 @@ controller requests, native callback selection and managed tmux automation.
 | Install script sandbox with fake `uv`, `curl` and `sudo` programs | `tests/hexagonal/support/install_script.py` |
 | Committed store per data version, its regeneration command and pre-versioned store construction | `tests/fixtures/stores/`, `tests/hexagonal/support/store_fixtures.py` |
 | Snapshot, exact mutation, trusted assertion observer and captured calibration command | Shared services in `scripts/verification/__main__.py` using the kit's evidence/command adapters |
+| Fault inventories, their registry and the stages each runs at; one service judging any inventory | `scripts/verification/inventories/` (data), `scripts/verification/fault_calibration.py` (service), `inventory_files.py` (loader) and `calibrate_suite.py` (command line) |
 | Hex dependency and forbidden protocol-literal checks | One generic `scripts/architecture` engine and `contracts/hexagonal.json` |
 
 Tests do not import other collected test modules as fixture libraries. Shared
@@ -257,6 +258,25 @@ Failed scenarios also kill and reap their own blocked host if graceful terminati
 cannot finish. The unknown-effect and no-replay assertions are unchanged; the
 [boundary regression receipt](ci-evidence/native-calibration-boundary.json)
 records the delayed-fixture reproduction and retained fault detection.
+
+Fault cases for calibration are data. An inventory file in
+`scripts/verification/inventories/` holds cases only: one exact source edit, the
+selected tests, the target test and its declared assertion message, and the tests
+that must stay green. `registry.json` names every inventory and the stages it runs
+at (`ci`, `pre-draft`, `manual`); `schema.json` defines both files, and an
+unregistered file or an unknown name is an error. The `native-calibration` check
+runs the `native` inventory; to run others on demand:
+
+```bash
+python3 -m scripts.verification.calibrate_suite --candidate . --out <new directory outside the tree> --stage manual
+python3 -m scripts.verification.calibrate_suite --candidate . --out <new directory outside the tree> --inventory native
+```
+
+With neither option, the inventories registered at `ci` run. A selection that names
+no inventory (today only `native` is registered, at `ci`) exits 2 with
+`no_inventory_selected` before anything runs. A case passes when it
+classifies as its expectation: `detected` by default, or `unrelated_failure` for a
+negative control.
 
 ## Consolidation and completion evidence
 

@@ -646,17 +646,35 @@
     "verification_calibration": {
       "modules": [
         "scripts.verification.calibration",
-        "scripts.verification.pytest_calibration"
+        "scripts.verification.pytest_calibration",
+        "scripts.verification.fault_calibration"
       ],
       "allowed_roles": [
         "verification_foundation",
-        "verification_calibration"
+        "verification_calibration",
+        "testkit_foundation"
       ],
       "allowed_external": [
         "stdlib:*",
         "pytest"
       ],
-      "allow_dynamic": true
+      "allow_dynamic": false
+    },
+    "verification_inventory": {
+      "modules": [
+        "scripts.verification.inventory_files"
+      ],
+      "allowed_roles": [
+        "verification_foundation",
+        "verification_calibration",
+        "verification_inventory",
+        "testkit_foundation"
+      ],
+      "allowed_external": [
+        "stdlib:*",
+        "jsonschema"
+      ],
+      "allow_dynamic": false
     },
     "verification_runner": {
       "modules": [
@@ -709,11 +727,13 @@
         "testkit_adapters",
         "testkit_configuration",
         "verification_calibration",
+        "verification_inventory",
         "verification_entrypoints"
       ],
       "allowed_external": [
         "stdlib:*",
-        "pytest"
+        "pytest",
+        "jsonschema"
       ],
       "allow_dynamic": true
     },

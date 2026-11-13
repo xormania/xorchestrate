@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "xorchestrate.calibration.inventories",
+  "description": "The calibration registry names each fault inventory and the stages it runs at; an inventory file holds cases only.",
+  "$defs": {
+    "name": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+    "test_id": {"type": "string", "pattern": "^[^-\\s][^\\s]*::[^\\s]+$"},
+    "registry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "inventories"],
+      "properties": {
+        "schema_version": {"const": 1},
+        "inventories": {
+          "type": "object",
+          "propertyNames": {"$ref": "#/$defs/name"},
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["file", "stages"],
+            "properties": {
+              "file": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*\\.json$"},
+              "stages": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {"enum": ["ci", "pre-draft", "manual"]}
+              }
+            }
+          }
+        }
+      }
+    },
+    "inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "cases"],
+      "properties": {
+        "schema_version": {"const": 1},
+        "cases": {"type": "array", "items": {"$ref": "#/$defs/case"}}
+      }
+    },
+    "case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "mutation", "selectors", "target", "diagnostic", "unaffected"],
+      "properties": {
+        "name": {"$ref": "#/$defs/name"},
+        "mutation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "old", "new"],
+          "properties": {
+            "path": {"type": "string", "minLength": 1, "not": {"pattern": "(^/|^\\.\\.(/|$)|/\\.\\.(/|$))"}},
+            "old": {"type": "string", "minLength": 1},
+            "new": {"type": "string"}
+          }
+        },
+        "selectors": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/test_id"}},
+        "target": {"$ref": "#/$defs/test_id"},
+        "diagnostic": {"type": "string", "minLength": 1},
+        "unaffected": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/test_id"}},
+        "expect": {"enum": ["detected", "unrelated_failure"]}
+      }
+    }
+  }
+}

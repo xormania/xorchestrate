@@ -124,6 +124,8 @@ def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=
                              ("state-calibration", "scripts.verification.calibrate_state")):
             options = ("--output", str(directory / name)) if name == "work-calibration" else (
                 "--candidate", str(root), "--out", str(directory / name))
+            if name == "native-calibration":
+                options += ("--inventory", "native")
             checks.append(Check(name, (sys.executable, "-m", module, *options), check_timeout,
                                 (module.replace(".", "/") + ".py",)))
     if "acceptance" in selected:
