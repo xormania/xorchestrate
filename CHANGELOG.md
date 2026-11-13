@@ -122,6 +122,14 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   missing evidence abstains, source spans remain reviewable, and deterministic
   CI qualification stays unchanged when a lane or the provider fails.
 
+- Shared development skills for agents working on this repository (run-checks,
+  red-first, pr-ready, crash-recovery, team-roles, serena) in `.agents/skills`,
+  mirrored for Claude Code through relative symlinks in `.claude/skills`. They
+  point at the existing guides and at the new
+  [agent workflow](docs/agent-workflow.md), which covers team roles, crash
+  recovery for contributors and using Serena. A Serena project configuration
+  (`.serena/project.yml`, python language server, tools interface) is
+  included; connecting Serena stays a per-machine step.
 - `hosted` session adapter: a native session runs in a bridge host that
   Xorchestrate opens in the project's terminal host. It survives the server,
   can be attached to, and is reconnected (or resumed in a fresh terminal from

@@ -9,6 +9,11 @@ __pycache__/
 .ruff_cache/
 .claude/settings.local.json
 
+# Serena's per-machine cache, memories and local overrides
+.serena/cache/
+.serena/memories/
+.serena/project.local.yml
+
 # Local runtime state and editable-install metadata
 .xorchestrate/
 # Example projects track their configuration like any project.
