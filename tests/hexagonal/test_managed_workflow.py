@@ -166,7 +166,7 @@ def test_kept_terminals_outlive_a_killed_supervisor_until_close_adopts_and_ends_
     try:
         refused, _ = workflow.command("run", "--suite", "multi-harness", "--mode", "fixture", "--keep-after-run",
                                       "--output", str(workflow.outside / "runs"))
-        assert refused.returncode != 0 and "managed runs" in refused.stdout + refused.stderr
+        assert refused.returncode != 0 and "managed runs" in refused.stdout + refused.stderr, "TESTKIT_KEEP_IS_REFUSED_IN_THE_FOREGROUND"
         started, launch = workflow.command("start", "--detach", "--suite", "multi-harness", "--mode", "fixture",
                                            "--timeout", "5", "--shutdown-grace", "1", "--keep-after-run",
                                            "--output", str(workflow.outside / "runs"))
@@ -239,7 +239,7 @@ def test_an_endpoint_named_in_the_plan_is_removed_only_when_it_is_the_runs_own(t
     link.symlink_to(elsewhere)
     try:
         for refused in (elsewhere, wrong_name, link):
-            assert remove_endpoint(refused) is False and refused.exists(), refused
+            assert remove_endpoint(refused) is False and refused.exists(), "TESTKIT_FOREIGN_ENDPOINTS_ARE_NEVER_REMOVED"
         assert remove_endpoint(own) is True and not own.exists()
         assert remove_endpoint(own) is True, "an endpoint already gone is fine"
     finally:
