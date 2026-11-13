@@ -254,7 +254,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 - Operational telemetry accepts a nested `sink` adapter selection, including
   trusted installed factories, through the existing composition resolver.
   Current flat local/OTLP options keep working; sampling, bounded dispatch and
-  local corpus capture remain shared. See [telemetry options](docs/telemetry.md#configuration-options).
+  local corpus capture remain shared. Approval summaries and `doctor` disclose
+  external sink factory references without importing their code. See
+  [telemetry options](docs/telemetry.md#configuration-options).
 - `telemetry_status` reports a bounded `cause` when telemetry is unavailable.
 - A shared project server, so several agent harnesses use one application,
   state store and set of live sessions (see

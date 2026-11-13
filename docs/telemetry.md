@@ -142,6 +142,11 @@ Omit `operational` to disable export; a disabled nested sink is refused.
 `telemetry_operational_sink` is an internal nested kind, not a project section or
 a public xcontracts kind.
 
+Project approval summaries and `doctor` list external operational sink factories
+as `repository_code` without importing them. As with other configured factories,
+source outside `.xorchestrate/` remains outside the configuration approval hash;
+see [trust and approval](projects.md#trust-and-approval).
+
 ### Storage adapters
 
 Corpus and artifact storage are selected like other adapters, with `adapter`, an
