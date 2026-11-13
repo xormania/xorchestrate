@@ -389,3 +389,17 @@ def test_a_run_executes_exactly_the_selected_inventories(tmp_path, monkeypatch):
     preflight = json.loads((Path(report["directory"]) / "preflight.json").read_text(encoding="utf-8"))
     assert [check["name"] for check in preflight["checks"]] == ["recovery-calibration"], preflight
     assert len(launched) == 1 and launched[0][launched[0].index("--inventory") + 1] == "recovery", launched
+
+
+def test_a_profile_plans_a_repeated_inventory_once_in_first_occurrence_order(tmp_path):
+    """--profile with a repeated --inventory runs as the same flags do without a profile."""
+    from scripts.testkit.adapters import profiles
+    from scripts.testkit.operator_composition import execution_options
+
+    profile = tmp_path / "profile.json"
+    profile.write_text(json.dumps({"schema_version": 1, "suite": "calibration"}), encoding="utf-8")
+    values = profiles.load_profile(profile, root=composition.ROOT,
+                                   overrides={"inventories": ["recovery", "native", "recovery"]})
+    assert values["inventories"] == ["recovery", "native"], values["inventories"]
+    checks = composition.plan(directory=tmp_path / "plan", **execution_options(values))
+    assert [check.name for check in _calibration(checks)] == ["recovery-calibration", "native-calibration"]
