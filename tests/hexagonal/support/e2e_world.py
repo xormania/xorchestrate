@@ -106,6 +106,10 @@ class World:
     def status(self):
         return self.cli.json("status")
 
+    def settle(self, seconds):
+        """A fixed quiet interval, kept until a decision boundary replaces it."""
+        e2e_disturbances.settle(seconds)
+
     def disturb(self, value):
         return e2e_disturbances.apply(value, self)
 
