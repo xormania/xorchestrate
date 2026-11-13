@@ -233,6 +233,7 @@
         "tests/hexagonal/test_telemetry_collector_artifacts.py": "adapter",
         "tests/hexagonal/test_telemetry_collector_storage.py": "adapter",
         "tests/hexagonal/test_telemetry_collector_selection.py": "composition",
+        "tests/hexagonal/test_telemetry_operational_selection.py": "composition",
         "tests/hexagonal/test_telemetry_collector_compatibility.py": "adapter",
         "tests/hexagonal/test_telemetry_snapshots.py": "composition"
       }
