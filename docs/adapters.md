@@ -78,7 +78,10 @@ store described by `snapshot_source`/`bundle_source`), so a third-party
 collector is not supported yet and `telemetry` is not in `xcontracts.KINDS`.
 `state_engine` also accepts a `module:factory`, but its interface is
 Xorchestrate's lifecycle engine, not a published port, and may change with
-any release. The local collector's `corpus`/`artifacts` storage and the
+any release. The local collector's `corpus`/`artifacts` storage and operational
+signal sinks are selected through its injected resolver, with factories called
+as `factory(options, CollectorScope)`; see [telemetry options](telemetry.md#configuration-options).
+Those nested kinds and the
 client transports (`ClientTransport`, `ClientConnection`, `PeerIdentity`) are
 internal as well, and so are the pull request delivery ports
 (`PullRequestHost`, `PullRequestWorkspace`), `TerminalHost` and
