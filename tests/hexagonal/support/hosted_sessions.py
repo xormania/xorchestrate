@@ -116,28 +116,35 @@ class HostedSubject:
         from scripts.testkit.adapters.ownership import Identity, alive, send_signal
 
         if everything:
-            victims = self.owned()
-        else:
-            recorded = session["hosted"]["terminal"]["process"]
-            leader = Identity(recorded["pid"], recorded["started"])
-            victims = [leader] if alive(leader) else []
-        assert victims, "nothing of the session was running"
-        for victim in victims:
-            send_signal(victim, signal.SIGKILL)  # fenced: a reused pid is never signalled
+            # Selected afresh on every pass, so a process that became the subject's own meanwhile is ended too.
+            from tests.hexagonal.support.e2e_disturbances import kill_until_quiet
+
+            victims, _, survivors = kill_until_quiet(self._selection)
+            assert victims, "nothing of the session was running"
+            assert not survivors, f"the simulated loss left {len(survivors)} of the subject's processes alive"
+            return
+        recorded = session["hosted"]["terminal"]["process"]
+        leader = Identity(recorded["pid"], recorded["started"])
+        assert alive(leader), "nothing of the session was running"
+        send_signal(leader, signal.SIGKILL)  # fenced: a reused pid is never signalled
         deadline = time.monotonic() + 10
-        while any(alive(victim) for victim in victims) and time.monotonic() < deadline:
+        while alive(leader) and time.monotonic() < deadline:
             time.sleep(0.05)
-        assert not any(alive(victim) for victim in victims), \
-            "the simulated loss left processes" if everything else "the bridge host survived"
+        assert not alive(leader), "the bridge host survived"
 
     def owned(self):
         """The subject's own processes: its terminal host (by the socket in its fresh base) and their descendants.
 
         Never chosen by name or path: a process that merely names the subject's directories is not its own.
         """
-        from scripts.testkit.adapters.ownership import owned_processes
+        return list(self._selection()[0])
 
-        return list(owned_processes(self.base, None).selected)
+    def _selection(self):
+        """``(selected, ancestors)`` of the subject's own processes, read now through the kit's provenance selection."""
+        from scripts.testkit.adapters import ownership
+
+        selection = ownership.owned_processes(self.base, None)
+        return selection.selected, selection.ancestors
 
     def crash(self, key):
         spec = {"adapter": self.adapter, "placement": self.placement, "options": self.options(),
