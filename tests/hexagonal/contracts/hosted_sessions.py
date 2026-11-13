@@ -26,18 +26,22 @@ def refuses(code, call):
     raise AssertionError(f"expected refusal {code}")
 
 
-def attempt(call):
-    """``(value, None)`` when ``call()`` returns, ``(None, error)`` when it is refused with a coded error.
+def attempt(call, codes):
+    """``(value, None)`` when ``call()`` returns, ``(None, error)`` when it is refused with one of ``codes``.
 
-    An error without a ``code`` is not a refusal and propagates, so an environment failure is never read as the
-    outcome a calibrated check asserts on.
+    Only the refusals the caller names are outcomes. Any other error, coded or not, propagates, so a runtime
+    failure such as a session that cannot start is never read as the outcome a calibrated check asserts on.
     """
     try:
         return call(), None
-    except Exception as error:  # noqa: BLE001 - only coded errors are outcomes; others propagate below
-        if not hasattr(error, "code"):
+    except Exception as error:  # noqa: BLE001 - only the named refusals are outcomes; others propagate below
+        if getattr(error, "code", None) not in codes:
             raise
         return None, error
+
+
+UNRECOVERABLE = ("terminal_not_recoverable", "terminal_identity_mismatch")
+"""The host's refusals for a terminal it cannot give back; a vanished conversation is reopened instead."""
 
 
 def converses(driver, session, text):
@@ -53,8 +57,8 @@ def start_converses_and_detach_only_detaches(subject):
         session = driver.start(subject.spec("talk"))
         converses(driver, session, "hello")
         assert subject.terminal_running(session)
-        _, refused = attempt(lambda: driver.detach(session))
-        assert refused is None and subject.terminal_running(session), "HOSTED_DETACH_ONLY_DETACHES"
+        driver.detach(session)
+        assert subject.terminal_running(session), "HOSTED_DETACH_ONLY_DETACHES"
         driver.close()
         assert subject.terminal_running(session), "closing the runtime only detaches"
         other = subject.driver()
@@ -100,7 +104,7 @@ class _Loss:
 
     def reconnect(self):
         self.other = self.subject.driver()
-        return attempt(lambda: self.other.reconnect(self.session, self.subject.spec("loss")))
+        return self.other.reconnect(self.session, self.subject.spec("loss"))
 
     def continues(self, reopened):
         assert self.subject.native_id(reopened) == self.subject.native_id(self.session), "with the same state"
@@ -116,7 +120,7 @@ class _Loss:
 def reconnect_reopens_a_vanished_conversation_without_manual_cleanup(subject):
     loss = _Loss(subject, everything=True)
     try:
-        reopened, refused = loss.reconnect()
+        reopened, refused = attempt(loss.reconnect, UNRECOVERABLE)
         assert refused is None and subject.terminal_running(reopened), "HOSTED_RECONNECT_REOPENS_VANISHED"
         loss.continues(reopened)
     finally:
@@ -126,8 +130,8 @@ def reconnect_reopens_a_vanished_conversation_without_manual_cleanup(subject):
 def reconnect_replaces_a_crashed_bridge_host_in_a_living_terminal_host(subject):
     loss = _Loss(subject, everything=False)
     try:
-        reopened, refused = loss.reconnect()
-        assert refused is None and subject.terminal_running(reopened), "HOSTED_RECONNECT_REPLACES_CRASHED_BRIDGE_HOST"
+        reopened = loss.reconnect()
+        assert subject.terminal_running(reopened), "a crashed bridge host is replaced in its living terminal host"
         loss.continues(reopened)
     finally:
         loss.close()
@@ -189,12 +193,7 @@ def the_specification_never_reaches_process_arguments(subject):
 def without_a_bound_host_start_is_refused(subject):
     driver = subject.unbound()
     try:
-        try:
-            driver.start(subject.spec("nowhere"))
-            outcome = "started"
-        except Exception as error:  # noqa: BLE001 - an unbound driver touches no host or process: any error is its own
-            outcome = getattr(error, "code", type(error).__name__)
-        assert outcome == "terminal_host_unavailable", "HOSTED_UNBOUND_START_REFUSED"
+        refuses("terminal_host_unavailable", lambda: driver.start(subject.spec("nowhere")))
     finally:
         driver.close()
 

@@ -692,9 +692,6 @@ HOSTED = (
     ("vanished-terminal-not-reopened",
      ("detached-process", "reconnect_reopens_a_vanished_conversation_without_manual_cleanup"),
      "HOSTED_RECONNECT_REOPENS_VANISHED", ("detached-process", _UNBOUND)),
-    ("exited-terminal-reused", ("multiplexer", "reconnect_replaces_a_crashed_bridge_host_in_a_living_terminal_host"),
-     "HOSTED_RECONNECT_REPLACES_CRASHED_BRIDGE_HOST",
-     ("detached-process", "reconnect_replaces_a_crashed_bridge_host_in_a_living_terminal_host")),
     ("unverified-cleanup-reported-verified", ("detached-process", "unverified_cleanup_is_reported_and_nothing_is_removed"),
      "HOSTED_UNVERIFIED_CLEANUP_REPORTED", ("detached-process", _UNBOUND)),
     ("failed-start-returns-terminal-output",
@@ -702,12 +699,15 @@ HOSTED = (
      "HOSTED_FAILED_START_KEEPS_OUTPUT_PRIVATE", ("detached-process", _UNBOUND)),
     ("specification-on-command-line", ("detached-process", "the_specification_never_reaches_process_arguments"),
      "HOSTED_SPECIFICATION_NEVER_IN_ARGUMENTS", ("detached-process", _UNBOUND)),
-    ("unbound-driver-starts", ("detached-process", _UNBOUND), "HOSTED_UNBOUND_START_REFUSED",
-     ("detached-process", "unverified_cleanup_is_reported_and_nothing_is_removed")),
 )
-"""The hosted-session area's planted faults (old faults 15-22), all in xorchestrate/adapters/hosted.py."""
-HOSTED_MUTATIONS_SHA256 = "690f916aea1033d5ac6f1699c11de716634c070c9729230f39c709584d6498ec"
-"""sha256 of the canonical JSON of the cases' mutation objects in order, as the old hosted fault script planted them."""
+"""The hosted-session area's planted faults: old faults 15-17 and 19-21, all in xorchestrate/adapters/hosted.py.
+
+18 (an exited terminal reused) and 22 (an unbound driver starts anyway) are not converted: 18 shows only as
+session_start_failed, which a broken environment raises too, and 22 only as an uncoded crash, never a start.
+16's planted close no longer adopts the terminal first, since that adopt was refused before anything closed."""
+HOSTED_MUTATIONS_SHA256 = "63f187a5c89c25c9652cb8300924790847b0cbf59cb1864b4c89e66f4658fe99"
+"""sha256 of the canonical JSON of the cases' mutation objects in order: the old hosted fault script's, with 16's
+adopt line removed."""
 
 
 def test_the_registry_holds_the_hosted_inventory_at_the_manual_stage_after_recovery():
