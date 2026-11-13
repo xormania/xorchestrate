@@ -8,6 +8,7 @@ reads the real checkout's settings file or the user's own file.
 
 import importlib
 import json
+import os
 import shutil
 import stat
 import sys
@@ -18,7 +19,7 @@ import pytest
 
 from tests.hexagonal.contracts import devconfig as contract
 from tests.hexagonal.support.dev_defaults import SEAMS, accepts_dev, with_dev
-from tests.hexagonal.support.devconfig import SettingsWorld
+from tests.hexagonal.support.devconfig import SettingsWorld, no_processes, resolved
 from tests.hexagonal.support.git_repositories import REPOSITORY_NAME
 from tests.hexagonal.support.managed_profiles import ROOT, dev_shell_subject, profile_file, run_shell
 from tests.hexagonal.support.source_scan import imports, tracked
@@ -343,3 +344,33 @@ def test_the_live_testkit_guide_documents_the_new_default_and_the_precedence():
     assert contract.LEGACY_OUTPUT_NAME not in text
     assert OUTPUT in text
     assert "TMPDIR" in text and "PATH" in text
+
+
+# Loading settings for the kit starts no process ----------------------------------------------------
+
+@pytest.mark.parametrize("where", ["main", "linked"])
+def test_the_kit_loads_developer_settings_without_starting_a_process(world, monkeypatch, where):
+    repo = world.main if where == "main" else world.tree
+    world.repo_file("XORCHESTRATE_DEV_TESTKIT_OUTPUT=kit-runs\n")
+    monkeypatch.setattr(os, "environ", {**world.env()})
+    with no_processes(monkeypatch):
+        loaded = kit("adapters.profiles").load_dev(repo)
+    assert loaded is not None
+    assert resolved(loaded) == resolved(world.load(repo))
+    assert loaded.get(OUTPUT) == world.main / "kit-runs"
+
+
+@pytest.mark.parametrize("action", ["doctor", "plan"])
+def test_doctor_and_plan_load_the_checkouts_settings_without_starting_a_process(monkeypatch, tmp_path, capsys, action):
+    cli = kit("operator_cli")
+    composition = kit("composition")
+    calls = []
+    real = cli.profiles.load_dev
+    monkeypatch.setattr(cli.profiles, "load_dev", lambda root: calls.append(root) or real(root))
+    with no_processes(monkeypatch) as attempts:
+        code = cli.main([action, "--suite", "static", "--output", str(tmp_path / "runs")],
+                        direct_runner=composition.run, preflight=composition.preflight)
+    report = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
+    assert attempts == [], attempts
+    assert calls, "the kit did not look for developer settings"
+    assert code == 0 and report.get("status") == "passed", report

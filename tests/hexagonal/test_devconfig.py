@@ -16,7 +16,15 @@ from pathlib import Path
 import pytest
 
 from tests.hexagonal.contracts import devconfig as contract
-from tests.hexagonal.support.devconfig import ROOT, SettingsWorld, devconfig, names_someone
+from tests.hexagonal.support.devconfig import (
+    ROOT,
+    SettingsWorld,
+    devconfig,
+    load_by_files,
+    names_someone,
+    no_processes,
+    resolved,
+)
 from tests.hexagonal.support.git_repositories import REPOSITORY_NAME, git
 
 
@@ -560,3 +568,139 @@ def test_a_settings_file_tracked_by_git_is_refused(world):
     assert error.code == "ENV_FILE_TRACKED" and str(path) in str(error.detail), (error.code, error.detail)
     code, output = world.cli("show")
     assert code == 2 and "ENV_FILE_TRACKED" in output, output
+
+
+# Discovery by plain file reads: no process, same answers as git ---------------------------------------
+
+SKIPPED = "REPO_FILE_SKIPPED"
+REPO_VALUE = "XORCHESTRATE_DEV_SERENA_VERSION=9.9.repo\n"
+USER_VALUE = "XORCHESTRATE_DEV_SERENA_CONTEXT=user-context\n"
+
+
+def by_files(world, monkeypatch, repo, env=None):
+    with no_processes(monkeypatch):
+        return load_by_files(repo, env=world.env() if env is None else env)
+
+
+def skipped(config):
+    return [warning for warning in config.warnings if warning[0] == SKIPPED]
+
+
+def submodule(world, tmp_path):
+    inner_origin = tmp_path / "inner"
+    git(tmp_path, "init", "-q", "-b", "trunk", inner_origin)
+    (inner_origin / "mod.py").write_text("X = 1\n")
+    git(inner_origin, "add", "-A")
+    git(inner_origin, "commit", "-q", "-m", "inner")
+    git(world.main, "-c", "protocol.file.allow=always", "submodule", "add", "-q", inner_origin, "sub")
+    return world.main / "sub"
+
+
+@pytest.mark.parametrize("where", ["main", "linked", "inside", "submodule"])
+def test_file_discovery_starts_no_process_and_matches_git_discovery(world, monkeypatch, tmp_path, where):
+    repo = {"main": world.main, "linked": world.tree, "inside": world.tree / "pkg"}.get(where)
+    if where == "submodule":
+        repo = submodule(world, tmp_path)
+        world.repo_file("XORCHESTRATE_DEV_SERENA_VERSION=9.9.sub\n", where=repo)
+    world.repo_file(REPO_VALUE)
+    world.user_file(USER_VALUE)
+    files = by_files(world, monkeypatch, repo)
+    assert resolved(files) == resolved(world.load(repo)), where
+    expected = "9.9.sub" if where == "submodule" else "9.9.repo"
+    assert files.get("XORCHESTRATE_DEV_SERENA_VERSION") == expected
+    assert files.source("XORCHESTRATE_DEV_SERENA_VERSION").kind == "repo_file"
+
+
+def _bare_tree(world, tmp_path):
+    bare = tmp_path / "shared.git"
+    git(tmp_path, "clone", "-q", "--bare", world.main, bare)
+    tree = tmp_path / "bare-linked"
+    git(bare, "worktree", "add", "-q", "-b", "elsewhere", tree)
+    return tree
+
+
+def _plain(world, tmp_path):
+    plain = tmp_path / "plain-dir"
+    plain.mkdir()
+    return plain
+
+
+@pytest.mark.parametrize("make", [_bare_tree, _plain], ids=["bare-common-dir", "no-repository"])
+def test_without_a_main_checkout_file_discovery_skips_only_the_repository_file(world, monkeypatch, tmp_path, make):
+    repo = make(world, tmp_path)
+    (repo / ".devtools.env").write_text(REPO_VALUE)
+    world.user_file(USER_VALUE)
+    env = world.env(XORCHESTRATE_DEV_BASE="from-env")
+    try:
+        config = by_files(world, monkeypatch, repo, env)
+    except devconfig("model").DevConfigError as error:
+        pytest.fail(f"file discovery refused instead of skipping the repository file: {error}")
+    assert [(code, line) for code, _, line, _ in skipped(config)] == [(SKIPPED, None)], config.warnings
+    assert config.source("XORCHESTRATE_DEV_SERENA_VERSION").kind == "default"
+    assert config.get("XORCHESTRATE_DEV_SERENA_CONTEXT") == "user-context"
+    assert config.get("XORCHESTRATE_DEV_BASE") == "from-env"
+    assert config.get("XORCHESTRATE_DEV_WORKTREE_ROOT").name == repo.name
+
+
+def test_file_discovery_refuses_a_tracked_repository_file_from_the_index(world, monkeypatch):
+    world.repo_file(REPO_VALUE)
+    git(world.main, "add", "-f", ".devtools.env")
+    with pytest.raises(devconfig("model").DevConfigError) as refused:
+        by_files(world, monkeypatch, world.tree)
+    assert refused.value.code == "ENV_FILE_TRACKED"
+
+
+@pytest.mark.parametrize("tracked", [False, True], ids=["untracked", "tracked"])
+def test_file_discovery_reads_index_version_three(world, monkeypatch, tracked):
+    world.repo_file(REPO_VALUE)
+    if tracked:
+        git(world.main, "add", "-f", ".devtools.env")
+    git(world.main, "update-index", "--index-version", "3")
+    if tracked:
+        with pytest.raises(devconfig("model").DevConfigError) as refused:
+            by_files(world, monkeypatch, world.main)
+        assert refused.value.code == "ENV_FILE_TRACKED"
+    else:
+        assert by_files(world, monkeypatch, world.main).get("XORCHESTRATE_DEV_SERENA_VERSION") == "9.9.repo"
+
+
+def _index_v4(world, tmp_path):
+    git(world.main, "update-index", "--index-version", "4")
+    return world.main
+
+
+def _damaged(world, tmp_path):
+    index = world.main / ".git" / "index"
+    data = index.read_bytes()
+    index.write_bytes(data[:len(data) // 2])
+    return world.main
+
+
+def _sha256(world, tmp_path):
+    repo = tmp_path / "sha256-repo"
+    git(tmp_path, "init", "-q", "--object-format=sha256", "-b", "trunk", repo)
+    (repo / "a.txt").write_text("a\n")
+    git(repo, "add", "a.txt")
+    git(repo, "commit", "-q", "-m", "a")
+    return repo
+
+
+@pytest.mark.parametrize("make", [_index_v4, _damaged, _sha256], ids=["index-v4", "damaged-index", "sha256"])
+def test_an_index_file_discovery_cannot_read_skips_the_repository_file(world, monkeypatch, tmp_path, make):
+    repo = make(world, tmp_path)
+    (repo / ".devtools.env").write_text(REPO_VALUE)
+    try:
+        config = by_files(world, monkeypatch, repo)
+    except devconfig("model").DevConfigError as error:
+        pytest.fail(f"an unreadable index refused instead of skipping the repository file: {error}")
+    assert [code for code, *_ in skipped(config)] == [SKIPPED], config.warnings
+    assert config.source("XORCHESTRATE_DEV_SERENA_VERSION").kind == "default"
+
+
+def test_a_checkout_without_an_index_has_nothing_tracked(world, monkeypatch, tmp_path):
+    repo = tmp_path / "fresh"
+    git(tmp_path, "init", "-q", "-b", "trunk", repo)
+    assert not (repo / ".git" / "index").exists()
+    (repo / ".devtools.env").write_text(REPO_VALUE)
+    config = by_files(world, monkeypatch, repo)
+    assert config.get("XORCHESTRATE_DEV_SERENA_VERSION") == "9.9.repo" and skipped(config) == []
