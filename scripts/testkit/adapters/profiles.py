@@ -31,6 +31,56 @@ FIELDS = frozenset({"schema_version", "suite", "mode", "drivers", "families", "s
                     "terminal_host", "keep_after_run"})
 PATH_FIELDS = ("config", "brief", "output", "environment", "interpreter", "timings")
 PROJECT_TOOLS = {"rust": ("rustc", "cargo"), "python": ("python3",), "php": ("php", "composer")}
+DEV_OUTPUT = "XORCHESTRATE_DEV_TESTKIT_OUTPUT"
+DEV_PROFILE = "XORCHESTRATE_DEV_TESTKIT_PROFILE"
+DEV_INTERPRETER = "XORCHESTRATE_DEV_TESTKIT_INTERPRETER"
+DEV_NATIVE_CONFIG = "XORCHESTRATE_DEV_NATIVE_CONFIG"
+DEV_TERMINAL_BINARY = "XORCHESTRATE_DEV_TERMINAL_BINARY"
+DEV_SECTION = "testkit"
+
+
+def load_dev(root):
+    """The developer settings for ``root``, or None when the layer or a repository is unavailable.
+
+    Developer settings sit beneath flags and profiles as machine-level defaults; a candidate copy
+    without the layer or outside a repository simply has none. A settings file that is present but
+    invalid is still an error.
+    """
+    try:
+        from scripts.devconfig.loader import load
+        from scripts.devconfig.model import DevConfigError
+    except ImportError:
+        return None
+    try:
+        return load(Path(root), env=os.environ)
+    except DevConfigError as error:
+        if error.code == "NOT_A_REPOSITORY":
+            return None
+        raise ValueError(f"developer settings: {error.code}: {error.detail}") from None
+
+
+def dev_value(dev, key):
+    """A developer setting's value only when something set it; a default never overrides kit behaviour."""
+    if dev is None or dev.source(key).kind == "default":
+        return None
+    return dev.get(key)
+
+
+def dev_record(dev):
+    """The developer settings that shaped a run: set test-kit settings and every evidence setting."""
+    if dev is None:
+        return {}
+    from scripts.devconfig.keys import SETTINGS
+
+    return {setting.key: {"value": dev.display(setting.key), "source": dev.source(setting.key).describe()}
+            for setting in SETTINGS
+            if setting.evidence or (setting.section == DEV_SECTION and dev.source(setting.key).kind != "default")}
+
+
+def default_terminal_host(binary):
+    """The product's default host selection with ``binary`` as its executable option."""
+    selection = terminal_selection.parse(None)
+    return {**selection, "options": {**(selection.get("options") or {}), "binary": str(binary)}}
 
 
 def _external(path, root, name):
@@ -48,8 +98,12 @@ def _strings(value, name):
     return list(value)
 
 
-def load_profile(path, *, root, overrides=None):
-    """Validate one profile and resolve paths against its containing directory."""
+def load_profile(path, *, root, overrides=None, dev=None):
+    """Validate one profile and resolve paths against its containing directory.
+
+    ``dev`` (loaded developer settings) fills only fields that neither the profile nor the
+    overrides set: the output directory, the native configuration and the terminal binary.
+    """
     root, path = Path(root).resolve(), Path(path).expanduser().resolve()
     with path.open(encoding="utf-8") as stream:
         source = json.load(stream)
@@ -68,6 +122,13 @@ def load_profile(path, *, root, overrides=None):
               "output": "runs", "environment": "environment", "interpreter": None,
               "terminal_host": None, "keep_after_run": False,
               **source, **overrides}
+    given = set(source) | set(overrides)
+    if "output" not in given and dev_value(dev, DEV_OUTPUT) is not None:
+        values["output"] = str(dev_value(dev, DEV_OUTPUT))
+    if "config" not in given and values["mode"] == "native" and dev_value(dev, DEV_NATIVE_CONFIG) is not None:
+        values["config"] = str(dev_value(dev, DEV_NATIVE_CONFIG))
+    if "terminal_host" not in given and dev_value(dev, DEV_TERMINAL_BINARY) is not None:
+        values["terminal_host"] = default_terminal_host(dev_value(dev, DEV_TERMINAL_BINARY))
     if type(values["schema_version"]) is not int or values["schema_version"] != 1:
         raise ValueError("Unsupported profile schema_version; expected 1")
     if values["suite"] not in SUITES or values["mode"] not in MODES:
@@ -288,8 +349,11 @@ def doctor(profile_path, *, root, overrides=None):
             "profile": profile, "readiness": observations, "authentication": "not probed"}
 
 
-def bootstrap(argv=None, *, root=None):
-    """Select a configured interpreter before importing the application CLI."""
+def bootstrap(argv=None, *, root=None, dev=None):
+    """Select a configured interpreter before importing the application CLI.
+
+    Without --profile or --from, a profile from the developer settings selects it.
+    """
     argv = list(sys.argv[1:] if argv is None else argv)
     root = Path(root or Path(__file__).resolve().parents[3]).resolve()
     if sys.version_info < (3, 12):
@@ -309,13 +373,17 @@ def bootstrap(argv=None, *, root=None):
         elif argument.startswith("--from="):
             source_run = argument.split("=", 1)[1]
     action = argv[0] if argv else None
+    controls = {"status", "watch", "attach", "wait", "stop", "close", "collect", "verify"}
+    if profile_path is None and source_run is None and action not in controls:
+        configured = dev_value(load_dev(root) if dev is None else dev, DEV_PROFILE)
+        profile_path = None if configured is None else str(configured)
     interpreter = None
     if profile_path is not None and action != "setup":
-        profile = load_profile(profile_path, root=root)
+        profile = load_profile(profile_path, root=root, dev=dev)
         interpreter = profile["interpreter"]
         if action == "doctor" and not Path(interpreter).is_file():
             interpreter = None
-    elif action in {"status", "watch", "attach", "wait", "stop", "close", "collect", "verify"}:
+    elif action in controls:
         source_run = next((argument for argument in argv[1:] if not argument.startswith("-")), None)
     if interpreter is None and source_run is not None:
         saved = json.loads((Path(source_run).expanduser().resolve() / "plan.json").read_text(encoding="utf-8"))

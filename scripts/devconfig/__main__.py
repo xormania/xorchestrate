@@ -23,6 +23,8 @@ def _parser() -> argparse.ArgumentParser:
                         help="any path inside the repository (default: the current directory)")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("show", help="print every setting's effective value and where it came from")
+    get = commands.add_parser("get", help="print one setting's effective value (empty when unset)")
+    get.add_argument("key")
     example = commands.add_parser("example", help="write or check this tree's committed example file")
     mode = example.add_mutually_exclusive_group(required=True)
     mode.add_argument("--write", action="store_true")
@@ -35,6 +37,9 @@ def main(argv: Sequence[str] | None = None, *, env: Mapping[str, str] | None = N
     env = os.environ if env is None else env
     repo = arguments.repo or Path.cwd()
     try:
+        if arguments.command == "get":
+            print(load(repo, env=env).display(arguments.key))
+            return 0
         if arguments.command == "show":
             config = load(repo, env=env)
             for warning in config.warnings:

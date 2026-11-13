@@ -114,6 +114,10 @@ class DevConfig:
         self._setting(key)
         return self._sources[key]
 
+    def display(self, key: str) -> str:
+        """The value as text: what ``show`` and ``get`` print and runs record ("" when unset)."""
+        return _display(self._setting(key), self.get(key))
+
     def explain(self) -> list[str]:
         return [f"{key}={_display(setting, self._values[key])}  # {self._sources[key].describe()}"
                 for key, setting in self._settings.items()]
@@ -257,4 +261,5 @@ def _path(raw: str, source: Source, env: Mapping[str, str]) -> Path:
     if not path.is_absolute():
         base = Path(source.path).parent if source.path else Path(os.getcwd())
         path = base / path
-    return path.resolve(strict=False)
+    # Normalized but never resolved: a configured symbolic link (a virtualenv's python, say) stays as given.
+    return Path(os.path.normpath(os.path.abspath(path)))

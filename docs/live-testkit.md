@@ -34,12 +34,29 @@ python3 -m scripts.testkit run
 
 The default runs every component suite: static checks, behavioral tests and calibration
 followed by both live suites and the `stories` battery, with real application processes and deterministic protocol peers. It does not contact vendor models. Each invocation creates a
-fresh private run under `../xorchestrate-runs/`, prints its directory and writes
+fresh private run under the XDG state directory (by default
+`~/.local/state/xorchestrate/runs/<checkout name>/`), prints its directory and writes
 `report.json`. `--output /path/outside/checkout` changes that reusable parent.
 No manual copying of the owner brief, creation of criteria or selection of a new
 run directory is needed. The brief is copied and hash-bound when its check is
 prepared. Unavailable live prerequisites or a missing brief block the affected
 checks while independent static/tests checks continue; the aggregate still fails.
+
+### Where defaults come from
+
+Each test-kit setting is taken from the first of: the command-line flag, the
+field an operator profile sets, an optional
+[developer setting](agent-workflow.md#developer-settings), the built-in default. The
+developer settings the kit reads are `XORCHESTRATE_DEV_TESTKIT_OUTPUT` (the run parent),
+`XORCHESTRATE_DEV_TESTKIT_PROFILE` (used when no `--profile` or `--from` is given),
+`XORCHESTRATE_DEV_TESTKIT_INTERPRETER` (fresh runs without a profile),
+`XORCHESTRATE_DEV_PYCACHE_PREFIX` (the bytecode cache `scripts/proof.sh` uses when
+`PYTHONPYCACHEPREFIX` is unset), `XORCHESTRATE_DEV_NATIVE_CONFIG` (native mode without
+`--config`) and `XORCHESTRATE_DEV_TERMINAL_BINARY` (the default terminal host's
+executable). Every run records the developer settings that shaped it in its plan or
+report; the native configuration and terminal binary are always recorded, because
+they can change what a run proves. Temporary files follow `TMPDIR`, and tools such as
+git, uv and the terminal multiplexer are found on `PATH`; set those as usual.
 
 Keep one private native application config, starting from
 [`native-config.example.json`](../scripts/verification/native-config.example.json).
