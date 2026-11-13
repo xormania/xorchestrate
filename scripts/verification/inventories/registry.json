@@ -18,6 +18,12 @@
       "stages": [
         "ci"
       ]
+    },
+    "recovery": {
+      "file": "recovery.json",
+      "stages": [
+        "ci"
+      ]
     }
   }
 }
