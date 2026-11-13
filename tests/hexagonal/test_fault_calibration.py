@@ -674,6 +674,65 @@ def test_the_recovery_inventory_is_the_old_faults_with_standard_checks():
     assert hashlib.sha256(canonical.encode()).hexdigest() == RECOVERY_MUTATIONS_SHA256
 
 
+_HOSTED_TESTS = "tests.hexagonal.test_hosted_sessions"
+_HOSTED_CONTRACT = "tests.hexagonal.contracts.hosted_sessions"
+
+
+def _hosted(host, scenario):
+    return f"{_HOSTED_TESTS}::test_hosted_sessions_meet_the_contract[{host}-{scenario}]"
+
+
+_UNBOUND = "without_a_bound_host_start_is_refused"
+HOSTED = (
+    # name, target scenario and host, diagnostic, unaffected scenario and host; every case declares its scenario
+    ("stop-removes-saved-state", ("detached-process", "stop_closes_the_terminal_keeps_the_state_and_resume_reopens_it"),
+     "HOSTED_STOP_KEEPS_PRIVATE_STATE", ("detached-process", "start_converses_and_detach_only_detaches")),
+    ("detach-closes-the-terminal", ("detached-process", "start_converses_and_detach_only_detaches"),
+     "HOSTED_DETACH_ONLY_DETACHES", ("detached-process", _UNBOUND)),
+    ("vanished-terminal-not-reopened",
+     ("detached-process", "reconnect_reopens_a_vanished_conversation_without_manual_cleanup"),
+     "HOSTED_RECONNECT_REOPENS_VANISHED", ("detached-process", _UNBOUND)),
+    ("exited-terminal-reused", ("multiplexer", "reconnect_replaces_a_crashed_bridge_host_in_a_living_terminal_host"),
+     "HOSTED_RECONNECT_REPLACES_CRASHED_BRIDGE_HOST",
+     ("detached-process", "reconnect_replaces_a_crashed_bridge_host_in_a_living_terminal_host")),
+    ("unverified-cleanup-reported-verified", ("detached-process", "unverified_cleanup_is_reported_and_nothing_is_removed"),
+     "HOSTED_UNVERIFIED_CLEANUP_REPORTED", ("detached-process", _UNBOUND)),
+    ("failed-start-returns-terminal-output",
+     ("detached-process", "a_failed_start_keeps_its_output_private_and_says_where_the_log_is"),
+     "HOSTED_FAILED_START_KEEPS_OUTPUT_PRIVATE", ("detached-process", _UNBOUND)),
+    ("specification-on-command-line", ("detached-process", "the_specification_never_reaches_process_arguments"),
+     "HOSTED_SPECIFICATION_NEVER_IN_ARGUMENTS", ("detached-process", _UNBOUND)),
+    ("unbound-driver-starts", ("detached-process", _UNBOUND), "HOSTED_UNBOUND_START_REFUSED",
+     ("detached-process", "unverified_cleanup_is_reported_and_nothing_is_removed")),
+)
+"""The hosted-session area's planted faults (old faults 15-22), all in xorchestrate/adapters/hosted.py."""
+HOSTED_MUTATIONS_SHA256 = "690f916aea1033d5ac6f1699c11de716634c070c9729230f39c709584d6498ec"
+"""sha256 of the canonical JSON of the cases' mutation objects in order, as the old hosted fault script planted them."""
+
+
+def test_the_registry_holds_the_hosted_inventory_at_the_manual_stage_after_recovery():
+    """Converted old faults enter at the manual stage; promoting an inventory is an edit of the registry."""
+    registry, _ = _real()
+    assert list(registry)[4] == "hosted" and registry["hosted"] == ("manual",), registry
+
+
+def test_the_hosted_inventory_is_the_old_faults_with_standard_checks():
+    import hashlib
+    _, inventories = _real()
+    found = tuple((case.name, case.mutation.path, case.target, case.diagnostic, case.contract, case.unaffected)
+                  for case in inventories["hosted"].cases)
+    expected = tuple((name, "xorchestrate/adapters/hosted.py", _hosted(*target), diagnostic,
+                      f"{_HOSTED_CONTRACT}:{target[1]}", (_hosted(*unaffected),))
+                     for name, target, diagnostic, unaffected in HOSTED)
+    assert found == expected, found
+    for fault in inventories["hosted"].cases:
+        assert {module_form(selector) for selector in fault.selectors} == {fault.target, *fault.unaffected}, fault.name
+        assert fault.expect == "detected", fault.name
+    mutations = json.loads((INVENTORIES / "hosted.json").read_text())["cases"]
+    canonical = json.dumps([item["mutation"] for item in mutations], sort_keys=True, separators=(",", ":"))
+    assert hashlib.sha256(canonical.encode()).hexdigest() == HOSTED_MUTATIONS_SHA256
+
+
 @pytest.mark.parametrize("name,expected", ids=["state", "work"], argvalues=[
     ("state", tuple((name, "detected") for name in STATE[:-1]) + (("unrelated-error-control", "unrelated_failure"),)),
     ("work", tuple((name, "detected") for name in WORK)),
