@@ -1,0 +1,231 @@
+{
+  "cases": [
+    {
+      "contract": "tests.hexagonal.contracts.recovery:manual_policy_reconnects_nothing_and_reconciles_what_cannot_reconnect",
+      "diagnostic": "RECOVERY_MANUAL_POLICY_RECONNECTS_NOTHING",
+      "mutation": {
+        "new": "selected = [session.session_id for session in interrupted if session.can_reconnect]",
+        "old": "selected = list(policy.select(list(interrupted))) if policy is not None and interrupted else []",
+        "path": "xorchestrate/server.py"
+      },
+      "name": "recovery-policy-ignored",
+      "selectors": [
+        "tests/hexagonal/test_recovery.py::test_recovery_meets_the_contract[manual_policy_reconnects_nothing_and_reconciles_what_cannot_reconnect]",
+        "tests/hexagonal/test_recovery.py::test_recovery_meets_the_contract[default_policy_recovers_from_durable_state_alone]"
+      ],
+      "target": "tests.hexagonal.test_recovery::test_recovery_meets_the_contract[manual_policy_reconnects_nothing_and_reconciles_what_cannot_reconnect]",
+      "unaffected": [
+        "tests.hexagonal.test_recovery::test_recovery_meets_the_contract[default_policy_recovers_from_durable_state_alone]"
+      ]
+    },
+    {
+      "contract": "tests.hexagonal.contracts.recovery:manual_policy_reconnects_nothing_and_reconciles_what_cannot_reconnect",
+      "diagnostic": "RECOVERY_MANUAL_RECONCILES_DEAD_SESSIONS",
+      "mutation": {
+        "new": "reconcile = []",
+        "old": "reconcile = [session.session_id for session in interrupted if not session.can_reconnect]",
+        "path": "xorchestrate/server.py"
+      },
+      "name": "manual-leaves-dead-sessions-active",
+      "selectors": [
+        "tests/hexagonal/test_recovery.py::test_recovery_meets_the_contract[manual_policy_reconnects_nothing_and_reconciles_what_cannot_reconnect]",
+        "tests/hexagonal/test_recovery.py::test_recovery_meets_the_contract[pending_effects_are_never_replayed]"
+      ],
+      "target": "tests.hexagonal.test_recovery::test_recovery_meets_the_contract[manual_policy_reconnects_nothing_and_reconciles_what_cannot_reconnect]",
+      "unaffected": [
+        "tests.hexagonal.test_recovery::test_recovery_meets_the_contract[pending_effects_are_never_replayed]"
+      ]
+    },
+    {
+      "contract": "tests.hexagonal.contracts.recovery:default_policy_recovers_from_durable_state_alone",
+      "diagnostic": "RECOVERY_DISCONNECT_REASON_RECORDED",
+      "mutation": {
+        "new": "\"connection_state\": \"closed\", \"disconnect_reason\": None}",
+        "old": "\"connection_state\": \"closed\", \"disconnect_reason\": reason}",
+        "path": "xorchestrate/session_lifecycle.py"
+      },
+      "name": "disconnect-reason-not-recorded",
+      "selectors": [
+        "tests/hexagonal/test_recovery.py::test_recovery_meets_the_contract[default_policy_recovers_from_durable_state_alone]",
+        "tests/hexagonal/test_recovery.py::test_recovery_meets_the_contract[pending_effects_are_never_replayed]"
+      ],
+      "target": "tests.hexagonal.test_recovery::test_recovery_meets_the_contract[default_policy_recovers_from_durable_state_alone]",
+      "unaffected": [
+        "tests.hexagonal.test_recovery::test_recovery_meets_the_contract[pending_effects_are_never_replayed]"
+      ]
+    },
+    {
+      "contract": "tests.hexagonal.contracts.recovery:one_failure_stops_neither_the_others_nor_the_server",
+      "diagnostic": "RECOVERY_ONE_FAILURE_STOPS_NO_OTHER",
+      "mutation": {
+        "new": "                except OrchestrationError as error:\n                    raise\n                    if error.code == \"operation_unresolved\":",
+        "old": "                except OrchestrationError as error:\n                    if error.code == \"operation_unresolved\":",
+        "path": "xorchestrate/session_lifecycle.py"
+      },
+      "name": "one-failure-stops-the-rest",
+      "selectors": [
+        "tests/hexagonal/test_recovery.py::test_recovery_meets_the_contract[one_failure_stops_neither_the_others_nor_the_server]",
+        "tests/hexagonal/test_recovery.py::test_recovery_meets_the_contract[pending_effects_are_never_replayed]"
+      ],
+      "target": "tests.hexagonal.test_recovery::test_recovery_meets_the_contract[one_failure_stops_neither_the_others_nor_the_server]",
+      "unaffected": [
+        "tests.hexagonal.test_recovery::test_recovery_meets_the_contract[pending_effects_are_never_replayed]"
+      ]
+    },
+    {
+      "contract": "tests.hexagonal.contracts.recovery:explicit_recover_acts_only_where_its_caller_is_authorised",
+      "diagnostic": "RECOVERY_RECOVER_RESPECTS_CALLER_AUTHORITY",
+      "mutation": {
+        "new": "                    if False:",
+        "old": "                    if caller is not None and not self._may_recover(caller, found):",
+        "path": "xorchestrate/session_lifecycle.py"
+      },
+      "name": "recover-ignores-caller-authority",
+      "selectors": [
+        "tests/hexagonal/test_recovery.py::test_recovery_meets_the_contract[explicit_recover_acts_only_where_its_caller_is_authorised]",
+        "tests/hexagonal/test_recovery.py::test_recovery_meets_the_contract[the_automatic_run_acts_as_the_runtime]"
+      ],
+      "target": "tests.hexagonal.test_recovery::test_recovery_meets_the_contract[explicit_recover_acts_only_where_its_caller_is_authorised]",
+      "unaffected": [
+        "tests.hexagonal.test_recovery::test_recovery_meets_the_contract[the_automatic_run_acts_as_the_runtime]"
+      ]
+    },
+    {
+      "diagnostic": "RECOVERY_STARTS_ON_UP",
+      "mutation": {
+        "new": "                pass",
+        "old": "                server.start_recovery(unclean_stop)",
+        "path": "xorchestrate/cli.py"
+      },
+      "name": "up-never-starts-recovery",
+      "selectors": [
+        "tests/hexagonal/test_recovery_end_to_end.py::test_after_total_loss_the_default_policy_brings_the_session_back_without_a_call[detached-process]",
+        "tests/hexagonal/test_recovery_end_to_end.py::test_recovery_within_is_true_once_a_report_exists_and_nothing_runs"
+      ],
+      "target": "tests.hexagonal.test_recovery_end_to_end::test_after_total_loss_the_default_policy_brings_the_session_back_without_a_call[detached-process]",
+      "unaffected": [
+        "tests.hexagonal.test_recovery_end_to_end::test_recovery_within_is_true_once_a_report_exists_and_nothing_runs"
+      ]
+    },
+    {
+      "diagnostic": "RECOVERY_ADOPTS_RUNNING_TERMINAL",
+      "mutation": {
+        "new": "        if terminal is not None:",
+        "old": "        if terminal is not None and not terminal.running:",
+        "path": "xorchestrate/adapters/hosted.py"
+      },
+      "name": "running-terminal-reopened",
+      "selectors": [
+        "tests/hexagonal/test_recovery_end_to_end.py::test_a_server_only_crash_adopts_the_running_terminal_and_keeps_its_bridge_host[detached-process]",
+        "tests/hexagonal/test_recovery_end_to_end.py::test_after_total_loss_the_default_policy_brings_the_session_back_without_a_call[detached-process]"
+      ],
+      "target": "tests.hexagonal.test_recovery_end_to_end::test_a_server_only_crash_adopts_the_running_terminal_and_keeps_its_bridge_host[detached-process]",
+      "unaffected": [
+        "tests.hexagonal.test_recovery_end_to_end::test_after_total_loss_the_default_policy_brings_the_session_back_without_a_call[detached-process]"
+      ]
+    },
+    {
+      "diagnostic": "RECOVERY_RECOVER_WEIGHS_WORK_BINDING",
+      "mutation": {
+        "new": "                    pass\n                context = self._context(caller, arguments)",
+        "old": "                    arguments[\"work_id\"] = found.work_id\n                context = self._context(caller, arguments)",
+        "path": "xorchestrate/session_lifecycle.py"
+      },
+      "name": "recover-ignores-work-binding",
+      "selectors": [
+        "tests/hexagonal/test_recovery.py::test_an_explicit_recover_weighs_the_sessions_work_binding_for_the_caller",
+        "tests/hexagonal/test_recovery.py::test_recovery_meets_the_contract[explicit_recover_acts_only_where_its_caller_is_authorised]"
+      ],
+      "target": "tests.hexagonal.test_recovery::test_an_explicit_recover_weighs_the_sessions_work_binding_for_the_caller",
+      "unaffected": [
+        "tests.hexagonal.test_recovery::test_recovery_meets_the_contract[explicit_recover_acts_only_where_its_caller_is_authorised]"
+      ]
+    },
+    {
+      "diagnostic": "RECOVERY_SERVE_LOOP_WAITS_FOR_RECOVERY",
+      "mutation": {
+        "new": "            pass",
+        "old": "            self._stop_recovery()  # Before the caller closes the runtime's drivers and store.",
+        "path": "xorchestrate/server.py"
+      },
+      "name": "shutdown-does-not-wait-for-recovery",
+      "selectors": [
+        "tests/hexagonal/test_recovery.py::test_a_server_interrupted_during_recovery_waits_for_the_session_in_hand_before_it_returns",
+        "tests/hexagonal/test_recovery.py::test_recovery_running_belongs_to_the_live_runtime_not_to_durable_state"
+      ],
+      "target": "tests.hexagonal.test_recovery::test_a_server_interrupted_during_recovery_waits_for_the_session_in_hand_before_it_returns",
+      "unaffected": [
+        "tests.hexagonal.test_recovery::test_recovery_running_belongs_to_the_live_runtime_not_to_durable_state"
+      ]
+    },
+    {
+      "diagnostic": "RECOVERY_STOPPING_TAKES_NO_MORE_SESSIONS",
+      "mutation": {
+        "new": "                if False:",
+        "old": "                if stopping is not None and stopping():",
+        "path": "xorchestrate/session_lifecycle.py"
+      },
+      "name": "recovery-takes-sessions-while-stopping",
+      "selectors": [
+        "tests/hexagonal/test_recovery.py::test_a_server_stopping_during_recovery_waits_for_the_session_in_hand_and_takes_no_more",
+        "tests/hexagonal/test_recovery.py::test_recovery_running_belongs_to_the_live_runtime_not_to_durable_state"
+      ],
+      "target": "tests.hexagonal.test_recovery::test_a_server_stopping_during_recovery_waits_for_the_session_in_hand_and_takes_no_more",
+      "unaffected": [
+        "tests.hexagonal.test_recovery::test_recovery_running_belongs_to_the_live_runtime_not_to_durable_state"
+      ]
+    },
+    {
+      "diagnostic": "RECOVERY_RUNNING_BELONGS_TO_LIVE_RUNTIME",
+      "mutation": {
+        "new": "                pass",
+        "old": "                self._running_recoveries.discard(token)",
+        "path": "xorchestrate/session_lifecycle.py"
+      },
+      "name": "running-outlives-recovery",
+      "selectors": [
+        "tests/hexagonal/test_recovery.py::test_recovery_running_belongs_to_the_live_runtime_not_to_durable_state",
+        "tests/hexagonal/test_recovery.py::test_an_explicit_recover_weighs_the_sessions_work_binding_for_the_caller"
+      ],
+      "target": "tests.hexagonal.test_recovery::test_recovery_running_belongs_to_the_live_runtime_not_to_durable_state",
+      "unaffected": [
+        "tests.hexagonal.test_recovery::test_an_explicit_recover_weighs_the_sessions_work_binding_for_the_caller"
+      ]
+    },
+    {
+      "diagnostic": "RECOVERY_DOCTOR_SKIPS_UNAPPROVED_STORE",
+      "mutation": {
+        "new": "    if False:",
+        "old": "    if not approved:",
+        "path": "xorchestrate/instance/doctor.py"
+      },
+      "name": "doctor-opens-unapproved-store",
+      "selectors": [
+        "tests/hexagonal/test_recovery.py::test_doctor_does_not_open_a_built_in_store_of_unapproved_configuration",
+        "tests/hexagonal/test_recovery.py::test_doctor_never_imports_or_constructs_a_store_factory_for_its_recovery_check[approved]"
+      ],
+      "target": "tests.hexagonal.test_recovery::test_doctor_does_not_open_a_built_in_store_of_unapproved_configuration",
+      "unaffected": [
+        "tests.hexagonal.test_recovery::test_doctor_never_imports_or_constructs_a_store_factory_for_its_recovery_check[approved]"
+      ]
+    },
+    {
+      "diagnostic": "RECOVERY_DOCTOR_NEVER_IMPORTS_STORE_FACTORY",
+      "mutation": {
+        "new": "        if False:",
+        "old": "        if selection.adapter not in BUILTINS[\"store\"]:",
+        "path": "xorchestrate/instance/doctor.py"
+      },
+      "name": "doctor-constructs-store-factory",
+      "selectors": [
+        "tests/hexagonal/test_recovery.py::test_doctor_never_imports_or_constructs_a_store_factory_for_its_recovery_check[approved]",
+        "tests/hexagonal/test_recovery.py::test_doctor_never_imports_or_constructs_a_store_factory_for_its_recovery_check[unapproved]"
+      ],
+      "target": "tests.hexagonal.test_recovery::test_doctor_never_imports_or_constructs_a_store_factory_for_its_recovery_check[approved]",
+      "unaffected": [
+        "tests.hexagonal.test_recovery::test_doctor_never_imports_or_constructs_a_store_factory_for_its_recovery_check[unapproved]"
+      ]
+    }
+  ],
+  "schema_version": 1
+}

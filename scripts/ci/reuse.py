@@ -70,8 +70,10 @@ def run_title(context, action):
 
 
 def unstarted_metadata(run, jobs, context):
-    """Positively identify cancelled metadata observations that never ran behavior."""
-    return (run.get("run_attempt") == 1 and run.get("status") == "completed" and run.get("conclusion") == "cancelled"
+    """Identify first-attempt metadata observations that have never started work."""
+    cancelled = run.get("status") == "completed" and run.get("conclusion") == "cancelled"
+    pending = run.get("status") in {"queued", "pending"} and run.get("conclusion") is None
+    return (run.get("run_attempt") == 1 and (cancelled or pending)
             and jobs == [] and any(run.get("display_title") == run_title(context, action)
                                    for action in METADATA_ACTIONS))
 
@@ -134,7 +136,8 @@ def select_run(runs, current, inspect, *, runtime, enabled=True):
                            "status": run.get("status"), "conclusion": run.get("conclusion")}
             fallback["history"].append(observation)
             if unstarted_metadata(run, bundle.get("jobs"), current):
-                observation["classification"] = "superseded_unstarted_metadata"
+                observation["classification"] = ("superseded_unstarted_metadata" if run.get("status") == "completed"
+                                                 else "pending_unstarted_metadata")
                 irrelevant.add(run["id"])
                 continue
             original = bundle.get("context")
@@ -353,7 +356,13 @@ def inspect_producer(current, run, workflow, token, directory, qualifier, catalo
     latest_jobs = _pages(current, token, f"/actions/runs/{identifier}/attempts/{attempt}/jobs", "jobs")
     if unstarted_metadata(run, latest_jobs, current):
         observed = _get(current, token, f"/actions/runs/{identifier}")
-        if observed.get("id") != identifier or not unstarted_metadata(observed, latest_jobs, current):
+        if observed.get("id") != identifier or observed.get("run_attempt") != attempt:
+            raise ValueError("Metadata run changed before its empty first attempt was established")
+        if run.get("status") in {"queued", "pending"} or observed.get("status") in {"queued", "pending"}:
+            # A waiting run can start between the first job listing and native
+            # run observation, including starting and then being cancelled.
+            latest_jobs = _pages(current, token, f"/actions/runs/{identifier}/attempts/{attempt}/jobs", "jobs")
+        if not unstarted_metadata(observed, latest_jobs, current):
             raise ValueError("Metadata run changed before its empty first attempt was established")
         return {"jobs": [], "run": observed}
     artifact_rows = _pages(current, token, f"/actions/runs/{identifier}/artifacts", "artifacts")
