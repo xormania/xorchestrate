@@ -674,13 +674,16 @@ def test_the_recovery_inventory_is_the_old_faults_with_standard_checks():
     assert hashlib.sha256(canonical.encode()).hexdigest() == RECOVERY_MUTATIONS_SHA256
 
 
-@pytest.mark.parametrize("name,expected", ids=["state", "work", "recovery"], argvalues=[
+@pytest.mark.parametrize("name,expected", ids=["state", "work"], argvalues=[
     ("state", tuple((name, "detected") for name in STATE[:-1]) + (("unrelated-error-control", "unrelated_failure"),)),
     ("work", tuple((name, "detected") for name in WORK)),
-    ("recovery", tuple((row[0], "detected") for row in RECOVERY)),
 ])
 def test_the_migrated_inventory_gives_the_old_verdicts_on_this_candidate(tmp_path, name, expected):
-    """Parity: a real run through the service classifies every case as the old entry point did."""
+    """Parity: a real run through the service classifies every case as the old entry point did.
+
+    Real runs are for inventories registered at ci; an inventory at another stage keeps only the cheap tree
+    checks in this module (schema, exact anchors, target among the selectors, one assert site where credited).
+    """
     trials = __import__("scripts.verification.__main__", fromlist=["run_trial"])
     from scripts.testkit.adapters.evidence import candidate_identity
     _, inventories = _real()
