@@ -168,6 +168,7 @@ def stale_sockets_left_by_a_total_loss_never_block_recovery(world):
     client.kill()
     receipt = world.disturb(TotalLoss(keep_sockets=True))
     assert receipt.outcome == "applied", receipt
+    assert world.socket_files(), "the loss left a stale socket behind, or the scenario proves nothing"
     assert world.up()["started"] is True, "a stale endpoint does not stop the server starting"
     recovery = world.await_("recovery finished after up", lambda: _finished(world))
     mapped = recovered_map(recovery["report"])
@@ -191,6 +192,7 @@ def a_second_loss_while_a_session_is_being_reconnected_brings_it_back_exactly_on
         taking = [item for item in sessions(watcher).values()
                   if (item.get("resume_source") or {}).get("session_id") == original["id"]]
         assert [item["status"] for item in taking] == ["starting"], taking
+        interrupted = taking[0]["id"]
         operation = watcher.call("get_operation", {"operation_id": taking[0]["pending_operation"]})["operation"]
         assert (operation["action"], operation["status"]) == ("reconnect_session", "pending"), operation
     receipt = world.disturb(TotalLoss())
@@ -207,6 +209,7 @@ def a_second_loss_while_a_session_is_being_reconnected_brings_it_back_exactly_on
         live = sorted(key for key in family if listed[key]["status"] in {"starting", "active"})
         assert live == recovered, {key: listed[key]["status"] for key in family}
         # A replacement killed mid-reconnect keeps its outcome uncertain rather than guessed; the operator sees it.
+        assert listed[interrupted]["status"] == "unknown", listed[interrupted]
         uncertain = sorted(key for key in family if listed[key]["status"] == "unknown")
         shown = _mentioned(recovery) | _mentioned(world.status())
         assert set(uncertain) <= shown, {"uncertain": uncertain, "shown to the operator": sorted(shown)}

@@ -15,6 +15,7 @@ clients. Scenarios never reach for processes, sockets or sleeps themselves; they
 - ``up()``, ``down()`` (detaching), ``recover()`` and ``status()`` return the command's JSON reply.
 - ``disturb(value)`` applies a disturbance and returns a ``Receipt``.
 - ``bridge_hosts()`` lists the running bridge hosts of this project.
+- ``socket_files()`` lists the Unix socket files present under the world's home, live or left behind.
 - ``await_(label, predicate, *, timeout=None)`` returns the zero-argument predicate's first truthy value; at the
   deadline (the world's, or ``timeout``) it raises ``WaitExpired`` naming ``label``.
 - ``hold(stage)`` arms a gate in the session peer at ``stage`` (``"resume"``: the peer is asked to continue a
@@ -80,6 +81,8 @@ class World(Protocol):
     def disturb(self, value) -> Receipt: ...
 
     def bridge_hosts(self) -> list: ...
+
+    def socket_files(self) -> list: ...
 
     def await_(self, label, predicate, *, timeout=None): ...
 
