@@ -896,3 +896,44 @@ def test_a_re_parented_process_left_in_the_world_is_reported_as_leaked_and_left_
         finally:
             ownership().send_signal(orphan, 9)
     assert alive(sentinel)
+
+
+GRANDPARENT = ("import subprocess, sys, time;"
+               "child = subprocess.Popen([sys.executable, '-c', sys.argv[3], sys.argv[1], sys.argv[2]], cwd=sys.argv[1]);"
+               "time.sleep(120)")
+FORKING_CHILD = ("import subprocess, sys, time;"
+                 "grandchild = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(120)'], cwd=sys.argv[1]);"
+                 "open(sys.argv[2], 'w').write(str(grandchild.pid)); time.sleep(120)")
+
+
+def test_descendants_are_taken_transitively_and_name_the_selected_root(tmp_path, sentinel):
+    outside = Path(track(tempfile.mkdtemp(prefix="xo-outside-")))
+    with World("detached-process") as world:
+        running(world)
+        root = world.spawn([sys.executable, "-c", GRANDPARENT, str(outside), str(tmp_path / "grandchild.pid"),
+                            FORKING_CHILD])
+        grandchild_pid = pid_from(tmp_path / "grandchild.pid")
+        table = ownership().processes()
+        grandchild = table[grandchild_pid][0]
+        child = table[table[grandchild_pid][1]][0]
+        try:
+            receipt = world.disturb(contract().TotalLoss())
+            chosen, ancestry = selection(receipt), dict(getattr(receipt, "ancestors", {}) or {})
+            assert {child, grandchild} <= set(receipt.before), "the walk did not reach the grandchild"
+            assert chosen.get(child) == chosen.get(grandchild) == "descendant", chosen
+            assert ancestry.get(child) == root and ancestry.get(grandchild) == root, ancestry
+            assert not alive(child) and not alive(grandchild)
+        finally:
+            ownership().send_signal(grandchild, 9)
+            ownership().send_signal(child, 9)
+    os.rmdir(outside)
+    assert alive(sentinel)
+
+
+def test_nothing_is_reported_leaked_when_every_world_process_was_taken(sentinel):
+    with World("detached-process") as world:
+        running(world)
+        sleeper(world)
+        receipt = world.disturb(contract().TotalLoss())
+        assert list(getattr(receipt, "leaked", []) or []) == [], receipt
+        assert alive(sentinel)
