@@ -1019,3 +1019,27 @@ def test_a_kill_pass_is_not_handed_victims_already_gone(monkeypatch):
     victims, _, survivors = disturbances._kill_until_quiet("unused-home")
     assert survivors == [] and set(victims) == {first, second}, (victims, survivors)
     assert signalled == [first, second], f"a kill pass was handed a victim already gone: {signalled}"
+
+
+def test_the_kill_loop_returns_only_once_its_victims_are_gone(monkeypatch):
+    """A signalled process takes a moment to disappear: the shared loop waits until each victim it signalled is
+    seen gone before it returns, so a caller that checks at once finds nothing left. No world and no process: the
+    stand-in victim stays alive for two more observations after its signal."""
+    disturbances = importlib.import_module("tests.hexagonal.support.e2e_disturbances")
+    victim = ownership().Identity(1001, 11)
+    looks, dying = [{victim: "home"}], {}
+
+    def signal(identity, number):
+        dying.setdefault(identity, 2)
+
+    def alive(identity):
+        if identity not in dying:
+            return True
+        dying[identity] -= 1
+        return dying[identity] >= 0
+
+    monkeypatch.setattr(ownership(), "send_signal", signal)
+    monkeypatch.setattr(ownership(), "alive", alive)
+    _, _, survivors = disturbances.kill_until_quiet(lambda: (looks.pop(0) if looks else {}, {}))
+    assert survivors == [], survivors
+    assert dying.get(victim, 0) < 0, "the loop returned before its victim was seen gone"
