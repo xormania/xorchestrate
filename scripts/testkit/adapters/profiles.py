@@ -241,7 +241,7 @@ def doctor(profile_path, *, root, overrides=None):
     try:
         details = _interpreter_details(interpreter)
         observations.append({"name": "interpreter", "passed": True, "path": interpreter, **details})
-        required_dependencies = {"ruff"} if profile["suite"] == "static" else {"jsonschema"}
+        required_dependencies = {"ruff"} if profile["suite"] in {"static", "security"} else {"jsonschema"}
         if profile["suite"] in {"all", "checks"}:
             required_dependencies.add("ruff")
         if profile["suite"] in {"all", "checks", "tests"}:

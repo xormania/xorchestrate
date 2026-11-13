@@ -9,18 +9,27 @@ from dataclasses import replace
 from pathlib import Path
 
 from ..model import Check
-from .evidence import digest, file_identity, write_json
+from .evidence import candidate_inputs, digest, file_identity, write_json
 from .identity import effective_inputs, repository_path
 
 ACTIVE_ROOTS = ("xorchestrate", "scripts", "tests", ".github")
-STATIC_IDS = ("ruff", "syntax", "architecture")
+STATIC_SUITES = ("static", "security")
+CHECK_SUITES = {
+    "ruff": frozenset(STATIC_SUITES),
+    "syntax": frozenset({"static"}),
+    "architecture": frozenset({"static"}),
+    "secret-scan": frozenset(STATIC_SUITES),
+}
+STATIC_IDS = tuple(CHECK_SUITES)
 SYNTAX_SCRIPT = Path(__file__).with_name("syntax.py").resolve()
+SECRET_SCAN_SCRIPT = Path(__file__).with_name("secret_scan.py").resolve()
 
 
-def definitions(*, directory, timeout=600):
-    """Declare stable checks without reading source or preparing another suite."""
+def definitions(*, directory, timeout=600, suites=("static",)):
+    """Declare each stable check once when any of its requested suite views applies."""
     directory = Path(directory).resolve()
-    return (
+    selected = {suites} if isinstance(suites, str) else set(suites)
+    checks = (
         Check("ruff", (sys.executable, "-m", "ruff", "check", "--config", "ruff.toml",
                        "--no-cache", "--no-fix", "--no-respect-gitignore", "--output-format", "json",
                        "--output-file", str(directory / "ruff.json"), *ACTIVE_ROOTS), timeout,
@@ -30,7 +39,12 @@ def definitions(*, directory, timeout=600):
               (str(SYNTAX_SCRIPT),)),
         Check("architecture", (sys.executable, "-m", "scripts.architecture", "--output",
                                str(directory / "architecture.json")), timeout, ("contracts/hexagonal.json",)),
+        Check("secret-scan", (sys.executable, str(SECRET_SCAN_SCRIPT), "--manifest",
+                              str(directory / "inputs-secret-scan.json"), "--output",
+                              str(directory / "secret-scan.json")), timeout,
+              (str(SECRET_SCAN_SCRIPT), "contracts/security.json")),
     )
+    return tuple(check for check in checks if CHECK_SUITES[check.name] & selected)
 
 
 def _active_directories(root):
@@ -115,6 +129,7 @@ def static_manifest(name, *, root, directory, runner, env, timeout=600):
     Git ignores are explicitly disabled within the active roots so global Git
     configuration cannot silently alter lint coverage. Syntax and architecture
     retain their declared Python traversal, including examined ignored files.
+    Secret scanning follows all cached and nonignored untracked candidate files.
     """
     root, directory = Path(root).resolve(), Path(directory).resolve()
     configs = []
@@ -157,6 +172,39 @@ def static_manifest(name, *, root, directory, runner, env, timeout=600):
                 raise ValueError("Unsafe architecture source root")
         sources = _python_sources(root, roots, initializers=True)
         selection = {"roots": roots, "method": "architecture recursive *.py plus package initializers"}
+    elif name == "secret-scan":
+        inputs = candidate_inputs(root)
+        sources, non_file_entries = [], {}
+        for relative, identity in inputs["files"].items():
+            path = root / relative
+            resolved = path.resolve(strict=True)
+            if not resolved.is_relative_to(root):
+                raise ValueError("Secret scan input resolves outside the candidate: " + relative)
+            if resolved.is_file():
+                sources.append(relative)
+            elif path.is_symlink() and resolved.is_dir():
+                # Git records a directory link as one candidate entry. Its
+                # in-repository target files have their own candidate paths;
+                # bind the link itself without pretending it has file bytes.
+                non_file_entries[relative] = identity
+            else:
+                raise ValueError("Secret scan input is not a regular file or directory link: " + relative)
+        sources.sort()
+        if not sources:
+            raise ValueError("Secret scan selected no files from the candidate")
+        configs = ["contracts/security.json"]
+        from .secret_scan import load_policy
+
+        policy, _ = load_policy((root / configs[0]).read_bytes())
+        selection = {
+            "method": "git ls-files --cached --others --exclude-standard",
+            "tracked": True,
+            "nonignored_untracked": True,
+            "deleted": inputs["deleted"],
+            "non_file_entries": non_file_entries,
+        }
+        tool["secret_scanner"] = {"path": str(SECRET_SCAN_SCRIPT), **file_identity(SECRET_SCAN_SCRIPT)}
+        tool["security_policy"] = {"id": policy["id"], "version": policy["version"]}
     else:
         raise ValueError("Unknown static check: " + name)
     manifest = effective_inputs(root, [*sources, *configs, *_tool_sources(root, name)],
@@ -234,6 +282,46 @@ def bind_static_report(name, *, directory, manifest):
             if filename not in allowed:
                 raise ValueError("Ruff reported an unselected source: " + filename)
         binding.update(status="passed" if not report else "failed", findings=len(report))
+    elif name == "secret-scan":
+        expected_fields = {"schema_version", "status", "effective_input_sha256", "files", "findings"}
+        if not isinstance(report, dict) or set(report) != expected_fields or report.get("schema_version") != 1:
+            raise ValueError("Unsupported structured secret-scan report")
+        if report.get("status") not in {"passed", "failed"} or not isinstance(report.get("findings"), list):
+            raise ValueError("Malformed secret-scan report status/findings")
+        if report.get("effective_input_sha256") != manifest["content_sha256"]:
+            raise ValueError("Secret-scan report belongs to another effective-input manifest")
+        entries = report.get("files")
+        if not isinstance(entries, list) or any(not isinstance(item, dict) or set(item) != {"path", "sha256"}
+                                                for item in entries):
+            raise ValueError("Secret-scan file evidence requires exactly path and sha256")
+        observed = _reported_files(report, manifest, complete=True)
+
+        policy_name = "contracts/security.json"
+        configuration = manifest.get("scope", {}).get("configuration")
+        policy_identity = manifest.get("files", {}).get(policy_name)
+        if configuration != [policy_name] or not isinstance(policy_identity, dict):
+            raise ValueError("Secret-scan manifest has no bound security policy")
+        policy_raw = (Path(manifest["root"]) / policy_name).read_bytes()
+        if digest(policy_raw) != policy_identity.get("content_sha256"):
+            raise ValueError("Secret-scan policy changed after effective-input capture")
+        from .secret_scan import load_policy
+
+        policy, _ = load_policy(policy_raw)
+        rule_ids = {rule["id"] for rule in policy["rules"]}
+        for finding in report["findings"]:
+            if not isinstance(finding, dict) or set(finding) != {"path", "line", "rule"}:
+                raise ValueError("Secret-scan findings require exactly path, line and rule")
+            if finding["path"] not in observed:
+                raise ValueError("Secret-scan finding names an unselected source")
+            if (not isinstance(finding["line"], int) or isinstance(finding["line"], bool)
+                    or finding["line"] <= 0):
+                raise ValueError("Secret-scan finding requires a positive line number")
+            if not isinstance(finding["rule"], str) or finding["rule"] not in rule_ids:
+                raise ValueError("Secret-scan finding names an unknown rule")
+        passed = report["status"] == "passed"
+        if passed == bool(report["findings"]):
+            raise ValueError("Secret-scan status contradicts its findings")
+        binding.update(status=report["status"], findings=len(report["findings"]))
     else:
         if not isinstance(report, dict) or report.get("schema_version") != 1:
             raise ValueError("Unsupported structured static report")
