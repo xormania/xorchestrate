@@ -47,7 +47,8 @@ class Receipt:
     ``"spawned"`` (``spawn`` started it), ``"socket"`` (it holds a listening Unix socket bound inside the world's
     home) or ``"descendant"`` (it descends from a process selected by another signal)."""
     ancestors: dict = field(default_factory=dict)
-    """For each victim selected as ``"descendant"``: the identity of its nearest ancestor that was already selected."""
+    """For each victim selected as ``"descendant"``: the identity of the ancestor that ``"home"``, ``"spawned"`` or
+    ``"socket"`` selected, from which this descendant was reached (its root, not a descendant in between)."""
     leaked: list = field(default_factory=list)
     """Identities still observed in the world after the disturbance that no signal selected (re-parented away from
     the world). Identities only; reported, never killed."""
