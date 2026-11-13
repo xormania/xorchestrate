@@ -301,3 +301,25 @@ def test_a_disturbance_never_signals_outside_the_world(monkeypatch, sentinel):
         assert_applied(receipt, "total_loss")
         assert signalled and set(signalled) <= set(receipt.before), "a signal went to a process the receipt omits"
         assert sentinel not in signalled
+
+
+# The recovery decision as an observed boundary ----------------------------------------------------
+
+def recovery_decided(world):
+    """The server's startup recovery decision is recorded and nothing is running for it (manual policy)."""
+    recovery = world.status().get("recovery") or {}
+    detected = recovery.get("detected")
+    return detected if detected is not None and not recovery.get("running") else None
+
+
+def test_after_a_total_loss_a_manual_world_awaits_the_recovery_decision_without_a_fixed_pause(sentinel):
+    clock = ControlledClock()
+    with World("detached-process", clock=clock, sleep=clock.sleep) as world:
+        world.save(policy="manual")
+        world.up()
+        world.disturb(contract().TotalLoss())
+        world.up()
+        detected = world.await_("recovery decided", lambda: recovery_decided(world), timeout=30)
+        assert detected["unclean_stop"] is True and detected["selected"] == [], detected
+        assert sum(clock.sleeps) < 1, f"the boundary was reached by waiting, not observed: {clock.sleeps}"
+        assert alive(sentinel)
