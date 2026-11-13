@@ -8,6 +8,7 @@ from copy import deepcopy
 from .inspection import DELIVERY_RECORDS
 from .model import Conflict, OrchestrationError, action_spec, canonical_digest, public_error_code, record_view
 from .outcomes import before_effect, completed_effect_result, effect_outcome
+from .store_events import retained_events
 
 S = {"type": "string", "minLength": 1}
 DELIVERY_ACTIONS = {
@@ -92,6 +93,20 @@ class DeliveryMixin:
             message = self._require(tx, "message", delivery.data["message_id"])
             candidates = [record_view(r) for r in tx.list("session") if r.data.get("actor_id") == delivery.data["recipient"]
                 and r.data.get("status") == "active" and (not message.data.get("work_id") or r.data.get("work_id") == message.data.get("work_id"))]
+            # Only the store's original creation event witnesses order. Record
+            # metadata and UTC labels cannot supply or override that witness.
+            pending = {session["id"]: session for session in candidates}
+            for session in candidates:
+                session.pop("creation_sequence", None)
+            if pending:
+                for event in retained_events(tx):
+                    key = event.get("record_id")
+                    if event.get("type") == "session.created" and isinstance(key, str):
+                        session = pending.pop(key, None)
+                        if session is not None:
+                            session["creation_sequence"] = event["seq"]
+                    if not pending:
+                        break
         selected = self.session_selection.select(record_view(message), delivery.data["recipient"], deepcopy(candidates))
         if selected is None:
             return {"delivery": record_view(delivery), "deferred": "no_active_session"}

@@ -186,7 +186,8 @@ def test_after_total_loss_the_default_policy_brings_the_session_back_without_a_c
     client.process.kill()
     total_loss(cli)
     assert cli.json("up")["started"] is True
-    mapped = recovered_map(finished_recovery(cli)["report"])
+    assert recovery_within(cli, 60), "RECOVERY_STARTS_ON_UP"
+    mapped = recovered_map(cli.json("status")["recovery"]["report"])
     assert list(mapped) == [original["id"]], mapped
     after = Client(cli)
     try:
@@ -260,7 +261,7 @@ def test_a_server_only_crash_adopts_the_running_terminal_and_keeps_its_bridge_ho
     cli.json("up")
     mapped = recovered_map(finished_recovery(cli)["report"])
     assert original["id"] in mapped, mapped
-    assert bridge_hosts(cli) == hosts, "the running terminal was adopted: the same bridge host process serves it"
+    assert bridge_hosts(cli) == hosts, "RECOVERY_ADOPTS_RUNNING_TERMINAL"
     after = Client(cli)
     try:
         assert_continues(after, original, mapped[original["id"]])

@@ -28,7 +28,7 @@ from .shard_timings import timing_source
 FIELDS = frozenset({"schema_version", "suite", "mode", "drivers", "families", "shard", "timings", "config", "brief",
                     "timeout", "check_timeout", "run_timeout", "shutdown_grace", "output",
                     "environment", "interpreter", "stories", "max_sessions", "max_turns", "max_tool_calls", "project",
-                    "terminal_host", "keep_after_run"})
+                    "terminal_host", "keep_after_run", "inventories", "stage"})
 PATH_FIELDS = ("config", "brief", "output", "environment", "interpreter", "timings")
 PROJECT_TOOLS = {"rust": ("rustc", "cargo"), "python": ("python3",), "php": ("php", "composer")}
 
@@ -46,6 +46,11 @@ def _strings(value, name):
     if len(value) != len(set(value)):
         raise ValueError(f"{name} must not contain duplicate selections")
     return list(value)
+
+
+def _first_occurrences(value, name):
+    """Nonempty strings, each kept once in the order first given, as the command line's selection is planned."""
+    return _strings(list(dict.fromkeys(value)) if isinstance(value, (tuple, list)) else value, name)
 
 
 def load_profile(path, *, root, overrides=None):
@@ -66,7 +71,7 @@ def load_profile(path, *, root, overrides=None):
               "config": None, "project": None, "brief": str(root / "docs/implementation/owner-brief.md"),
               "timeout": 180, "check_timeout": 600, "run_timeout": None, "shutdown_grace": 10,
               "output": "runs", "environment": "environment", "interpreter": None,
-              "terminal_host": None, "keep_after_run": False,
+              "terminal_host": None, "keep_after_run": False, "inventories": [], "stage": None,
               **source, **overrides}
     if type(values["schema_version"]) is not int or values["schema_version"] != 1:
         raise ValueError("Unsupported profile schema_version; expected 1")
@@ -75,6 +80,7 @@ def load_profile(path, *, root, overrides=None):
     values["drivers"] = _strings(values["drivers"], "drivers")
     values["families"] = _strings(values["families"], "families")
     values["stories"] = _strings(values["stories"], "stories")
+    values["inventories"] = _first_occurrences(values["inventories"], "inventories")
     validate_limits(**{name: values[name] for name in ("max_sessions", "max_turns", "max_tool_calls")})
     if values["stories"] and values["suite"] not in {"stories", "all"}:
         raise ValueError("stories require a suite containing stories")

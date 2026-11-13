@@ -47,11 +47,12 @@
       }
     },
     "delivery": {
-      "guarantee": "Queued messages, delivery attempts, retries and recovery preserve recipient scope, effect uncertainty and causal receipts.",
+      "guarantee": "Queued messages, delivery attempts, retries and recovery preserve recipient scope, effect uncertainty and causal receipts; default session selection follows witnessed creation order independently of UTC labels, with explicit legacy fallback.",
       "modules": {
         "tests/hexagonal/test_delivery.py": "contract",
         "tests/hexagonal/test_delivery_adversarial.py": "contract",
-        "tests/hexagonal/test_delivery_scope.py": "contract"
+        "tests/hexagonal/test_delivery_scope.py": "contract",
+        "tests/hexagonal/test_session_selection.py": "contract"
       }
     },
     "sessions": {
@@ -188,9 +189,10 @@
       }
     },
     "framework": {
-      "guarantee": "Shared execution, resource ownership, configuration, evidence and collection guarantee complete declared plans and honest outcomes for every selected test family.",
+      "guarantee": "Shared execution, resource ownership, configuration, evidence and collection guarantee complete declared plans and honest outcomes for every selected test family. Classified observation waits consume one monotonic budget, preserve retry safety and scale only harness allowances.",
       "modules": {
         "tests/hexagonal/test_testkit_core.py": "contract",
+        "tests/hexagonal/test_testkit_temporal_waits.py": "framework",
         "tests/hexagonal/test_testkit_command.py": "adapter",
         "tests/hexagonal/test_testkit_sharding.py": "framework",
         "tests/hexagonal/test_testkit_configuration.py": "adapter",
@@ -246,7 +248,7 @@
       }
     },
     "agent-guidance": {
-      "guarantee": "Shared agent skills have one source that every harness location mirrors by relative symlink, front matter a strict YAML reader accepts, guidance pointers and section anchors that resolve, and no local paths, session identifiers or foreign emails in the skills, the workflow guidance or the Serena project; the importing instruction file loads the repository rules, whose agent workflow section points at the skills; the Serena project selects the python language server and the tools interface, honours .gitignore, ships Serena's own .gitignore and ignores its cache, memories and local overrides.",
+      "guarantee": "Shared agent skills have one source that every harness location mirrors by relative symlink, front matter a strict YAML reader accepts, guidance pointers and section anchors that resolve, and no local paths, session identifiers or foreign emails in the skills, the workflow guidance or the Serena project; the importing instruction file loads the repository rules, whose agent workflow section points at the skills; the Serena project selects the python language server and the tools interface, honours .gitignore, ships Serena's own .gitignore and ignores its cache, memories and local overrides. The shared guidance stays generic: exactly the shared skills, no section, rules wording or pointer describing one contributor's own team of sessions or its crash recovery.",
       "modules": {
         "tests/hexagonal/test_agent_guidance.py": "contract"
       }

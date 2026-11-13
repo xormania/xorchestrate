@@ -34,6 +34,9 @@ Local and CI runs use the same [testing framework](docs/testing-framework.md),
 shared contracts, fixtures and evidence services. See [live tests](docs/live-testkit.md)
 for authenticated native configuration.
 
+The [timing and ordering work](docs/timing-ordering-work.md) records the current
+repair slices, reviewed temporal uses and remaining environment qualification.
+
 For reusable local setup, managed terminals, cancellation, evidence collection
 and fresh repetition, use the [managed proof workflow](docs/managed-proofs.md)
 through `scripts/proof.sh`. Native proofs run locally with your configured,

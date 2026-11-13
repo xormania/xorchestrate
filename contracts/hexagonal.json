@@ -62,6 +62,7 @@
         "xorchestrate.schema",
         "xorchestrate.session_lifecycle",
         "xorchestrate.state",
+        "xorchestrate.store_events",
         "xorchestrate.worktrees"
       ],
       "allowed_roles": [
@@ -331,7 +332,8 @@
       "modules": [
         "scripts.testkit",
         "scripts.testkit.model",
-        "scripts.testkit.ports"
+        "scripts.testkit.ports",
+        "scripts.testkit.waits"
       ],
       "allowed_roles": [
         "testkit_foundation"
