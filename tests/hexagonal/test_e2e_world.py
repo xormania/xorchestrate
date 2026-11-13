@@ -183,10 +183,12 @@ def test_a_gate_holds_its_peer_until_released(sentinel):
         assert alive(sentinel)
 
 
-def test_a_gate_still_held_at_exit_is_released_in_cleanup():
-    with World("detached-process") as world:
+def test_a_gate_still_held_at_exit_is_released_in_cleanup(tmp_path):
+    gates = tmp_path / "gates"
+    with World("detached-process", gates=gates) as world:
         gate = world.hold("hang")
         arguments = dict(gate.arguments)
+        assert Path(arguments["hang_gate"]).parent == gates and not Path(arguments["hang_gate"]).exists()
     assert Path(arguments["hang_gate"]).exists(), "a held gate was left closed when the world ended"
 
 
