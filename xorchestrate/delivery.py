@@ -243,17 +243,46 @@ class DeliveryMixin:
             return {"delivery": record_view(updated)}
 
     def observe_native(self, driver_name, context, observation):
-        retained = self._observe_native(driver_name, context, observation)
-        self.record_observation("native." + str(retained["observation"].get("kind", "observation")),
-            retained["observation"], {**context, "driver": driver_name, "work_id": retained.get("work_id"),
-                "session_id": retained["session_id"], "native_id": retained["observation"].get("native_id"),
-                "incarnation": retained["observation"].get("incarnation")}, event_id="native:" + retained["id"])
+        policy = self._native_observation_policy(context, observation, driver_name=driver_name)
+        retained = self._observe_native(driver_name, context, observation, policy=policy)
+        if policy["observation"] != "none":
+            self.record_observation("native." + str(retained["observation"].get("kind", "observation")),
+                retained["observation"], {**context, "driver": driver_name, "work_id": retained.get("work_id"),
+                    "session_id": retained["session_id"], "native_id": retained["observation"].get("native_id"),
+                    "incarnation": retained["observation"].get("incarnation")}, event_id="native:" + retained["id"])
         return retained
 
-    def _observe_native(self, driver_name, context, observation):
+    def _native_observation_policy(self, context, observation, *, driver_name=None):
+        """Bind typed driver observations to actor and retained native identity.
+
+        Drivers observe their raw arguments before composition injects an
+        application idempotency key. A previously bound native call supplies
+        its retained policy without reconstructing vendor-specific keys.
+        """
+        actor = context.get("actor")
+        policy = self.execution_policy(observation.get("action"), observation.get("arguments"), actor=actor)
+        session_id = context.get("session_id")
+        native_id, incarnation, call_id = (observation.get(key) for key in ("native_id", "incarnation", "call_id"))
+        if not all(isinstance(value, str) and value for value in (session_id, native_id, incarnation, call_id)):
+            return policy
+        with self.store.transaction() as tx:
+            session = tx.get("session", session_id)
+            if session is None or (driver_name is not None and session.data["driver"] != driver_name):
+                return policy
+            name = session.data["driver"]
+            previous = tx.get("native_call", canonical_digest([name, native_id, call_id]))
+        if previous and previous.data.get("execution_mode") in {"query", "receipt"} and all(
+            previous.data.get(key) == value for key, value in (("session_id", session_id), ("native_id", native_id),
+                ("incarnation", incarnation), ("created_by", actor), ("action", observation.get("action")))):
+            return deepcopy(previous.data.get("execution_policy",
+                {"mode": previous.data["execution_mode"], "observation": "none"}))
+        return policy
+
+    def _observe_native(self, driver_name, context, observation, *, policy=None):
         """Trusted driver boundary. Never exposed as an application action."""
         context, observation = deepcopy(context), deepcopy(observation)
-        if self.execution_policy(observation.get("action"), observation.get("arguments"))["mode"] != "journaled":
+        policy = policy or self._native_observation_policy(context, observation, driver_name=driver_name)
+        if policy["mode"] != "journaled":
             source = observation
             observation = {key: source[key] for key in ("kind", "native_id", "incarnation", "call_id", "phase", "action", "at")
                 if key in source}
@@ -299,11 +328,12 @@ class DeliveryMixin:
 
     def invoke_native(self, driver_name, action_name, arguments, context, *, replay_only=False):
         """Durably fence semantic native call IDs even for non-idempotent actions."""
-        policy = self.execution_policy(action_name, arguments)
-        if policy["mode"] == "journaled":
-            with self.store.transaction() as tx:
-                previous = tx.get("native_call", canonical_digest([driver_name, context["native_id"], context["call_id"]]))
-            if previous and previous.data.get("execution_mode") in {"query", "receipt"}:
+        configured = self.execution_policy(action_name, arguments)
+        policy = self.execution_policy(action_name, arguments, actor=context["actor"])
+        with self.store.transaction() as tx:
+            previous = tx.get("native_call", canonical_digest([driver_name, context["native_id"], context["call_id"]]))
+        if previous and previous.data.get("execution_mode") in {"query", "receipt"}:
+            if previous.data["execution_mode"] != configured["mode"]:
                 raise Conflict("A native call cannot change its retained execution policy.")
         if policy["mode"] != "journaled":
             with observation_scope(policy):
@@ -440,6 +470,7 @@ class DeliveryMixin:
                         "status": "pending", "session_id": context["session_id"], "native_id": context["native_id"],
                         "incarnation": context["incarnation"], "call_id": context["call_id"], "action": action_name,
                         "arguments": binding, "work_id": context.get("work_id"), "execution_mode": policy["mode"],
+                        "execution_policy": deepcopy(policy),
                         "result_retained": False}, identity)
         if previous:
             # Queries reauthorize and observe current state. Receipt effects use
