@@ -17,6 +17,7 @@ clients. Scenarios never reach for processes, sockets or sleeps themselves; they
 - ``bridge_hosts()`` lists the running bridge hosts of this project.
 - ``await_(label, predicate, *, timeout=None)`` returns the zero-argument predicate's first truthy value; at the
   deadline (the world's, or ``timeout``) it raises ``WaitExpired`` naming ``label``.
+- ``settle(seconds)`` keeps a fixed quiet interval, until a decision boundary replaces it.
 """
 
 from dataclasses import dataclass
@@ -71,6 +72,8 @@ class World(Protocol):
     def bridge_hosts(self) -> list: ...
 
     def await_(self, label, predicate, *, timeout=None): ...
+
+    def settle(self, seconds): ...
 
 
 def awaited_or_none(world, label, predicate):
