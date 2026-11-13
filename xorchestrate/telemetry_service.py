@@ -8,6 +8,7 @@ operation before calling these methods. Views retain per-resource authorization.
 
 from .model import OrchestrationError
 from .telemetry import TelemetryViews, dispatch_pressure, record_observation
+from .telemetry_actions import TELEMETRY_OPERATIONS
 
 
 class TelemetryService:
@@ -35,6 +36,40 @@ class TelemetryService:
 
     def record(self, event_type, payload, context, **metadata):
         return record_observation(self._sink(), event_type, payload, context, **metadata)
+
+    def invoke(self, name, arguments, actor):
+        """Authorize a provider entrypoint in addition to its resource checks.
+
+        The provider has validated the shared schema and supplied its trusted
+        caller. Legacy application handlers retain their existing authorization
+        boundary and call the operation methods directly.
+        """
+        if name not in TELEMETRY_OPERATIONS:
+            raise OrchestrationError("Unknown telemetry operation.", "not_found")
+        authority = self._authority()
+        context = self._context(actor, arguments)
+        self._authorize("telemetry_" + name, context)
+        with self._store.transaction() as tx:
+            self._verify_context(tx, context)
+        if name == "report":
+            return self._report(arguments, actor, context)
+        result = getattr(self, name)(arguments, actor)
+        if name not in {"snapshot", "restore"}:
+            with self._store.transaction() as tx:
+                self._verify_context(tx, context)
+            if self._authority() != authority:
+                raise OrchestrationError("Telemetry authority changed during the read.", "conflict")
+        return result
+
+    def _report(self, arguments, actor, context):
+        # The verified context resolves the owning work of a session. Never copy
+        # caller-claimed actor, native, operation or producer identity into it.
+        scope = {"actor": actor, "action": "telemetry_report"}
+        for resource in ("work", "session"):
+            if context.get(resource):
+                scope[resource + "_id"] = context[resource]["id"]
+        return self.record("telemetry.reported", {"name": arguments["name"], "payload": arguments["payload"]},
+                           scope, basis="reported")
 
     def _read(self, operation):
         authority = self._authority()

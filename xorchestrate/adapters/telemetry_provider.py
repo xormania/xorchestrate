@@ -48,7 +48,7 @@ class TelemetryProvider:
             raise OrchestrationError("Telemetry requires the authenticated caller context.", "invalid_arguments")
         if self._service is None:
             raise OrchestrationError("Telemetry service has not been bound.", "telemetry_unavailable")
-        return getattr(self._service, name)(deepcopy(arguments), actor)
+        return self._service.invoke(name, deepcopy(arguments), actor)
 
     def close(self):
         # The runtime owns the shared collector and its lifetime.
