@@ -140,6 +140,11 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   same service; each work fault now runs once per storage adapter. Their
   separate entry points are gone: run
   `python -m scripts.verification.calibrate_suite --inventory state` (or `work`).
+- A calibration case may declare the contract function that holds its check
+  (`"contract": "module:function"`); an assertion there is credited only for that
+  case. Calibrated checks follow one standard: an UPPER_SNAKE ID asserted at one
+  site, with `refusal(call, code)` for refusal guarantees. Three native
+  diagnostics are renamed to UPPER_SNAKE.
 - Jev now asks evidence-addressed atomic questions at the source stage and adds
   optional post-test guarantee support and failure triage. Current candidate and
   lane identity, executed inventories and exact failure cases bind the advice;
