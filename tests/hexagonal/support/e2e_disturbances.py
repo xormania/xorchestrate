@@ -171,9 +171,17 @@ def _kill_until_quiet(home, spawned=()):
             break
         victims.update(fresh)
         ancestry.update({child: root for child, root in ancestors.items() if child in fresh})
-        survivors = _kill(list(victims))
+        survivors = _kill(list(fresh))  # earlier passes' victims are gone: a pass that left a survivor stopped
         if survivors:
             break
+    if not survivors:
+        # Bounded passes are no proof of quiet: look once more; anything new or still alive is a survivor.
+        found, ancestors = _victims(home, spawned)
+        survivors = [identity for identity in found if identity not in victims or ownership.alive(identity)]
+        for identity in survivors:
+            victims.setdefault(identity, found[identity])
+            if identity in ancestors:
+                ancestry.setdefault(identity, ancestors[identity])
     return victims, ancestry, survivors
 
 

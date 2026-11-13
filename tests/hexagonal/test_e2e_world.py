@@ -937,3 +937,81 @@ def test_nothing_is_reported_leaked_when_every_world_process_was_taken(sentinel)
         receipt = world.disturb(contract().TotalLoss())
         assert list(getattr(receipt, "leaked", []) or []) == [], receipt
         assert alive(sentinel)
+
+
+# Newcomers that keep arriving -----------------------------------------------------------------------
+
+NEWCOMERS_PER_CALL = 4
+"""Newcomers started per disturbance or teardown: one after each look, at most this many."""
+NEWCOMERS_IN_ALL = 8
+"""Newcomers the test may start in all, whatever the disturbance does."""
+HELD_ON_STDIN = "import sys; sys.stdin.buffer.read()"
+"""A newcomer's program: it lives until the test closes its stdin or dies itself, never longer."""
+
+
+def test_world_processes_that_keep_appearing_fail_the_disturbance_and_teardown(monkeypatch, sentinel):
+    """A process carrying the world's home appears after every look the disturbance takes, so no look is ever the
+    last: the bounded passes running out must not count as quiet. The disturbance fails rather than report
+    applied and leaves the sockets alone, and teardown fails the same way.
+
+    The test starts each newcomer itself, right after a look returns, with a fixed cap; each one is held on a
+    stdin pipe the test owns and is killed and waited by identity before the world's own teardown runs.
+    """
+    disturbances = importlib.import_module("tests.hexagonal.support.e2e_disturbances")
+    outside = Path(track(tempfile.mkdtemp(prefix="xo-outside-")))
+    newcomers, per_call = [], []
+    real_victims = disturbances._victims
+
+    def newcomer_after_each_look(home, spawned=()):
+        found = real_victims(home, spawned)
+        if per_call[-1] < NEWCOMERS_PER_CALL and len(newcomers) < NEWCOMERS_IN_ALL:
+            process = subprocess.Popen([sys.executable, "-c", HELD_ON_STDIN], cwd=outside,
+                                       env={**without_home(), "XORCHESTRATE_HOME": str(home)},
+                                       stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            newcomers.append((process, ownership().processes()[process.pid][0]))
+            per_call[-1] += 1
+        return found
+
+    with World("detached-process") as world:
+        running(world)
+        sockets = sockets_under(world.directory)
+        try:
+            with monkeypatch.context() as during:
+                during.setattr(disturbances, "_victims", newcomer_after_each_look)
+                per_call.append(0)
+                with pytest.raises(AssertionError):
+                    world.disturb(contract().TotalLoss())
+                assert sockets and sockets_under(world.directory) == sockets, "a failed disturbance removed the sockets"
+                per_call.append(0)
+                with pytest.raises(AssertionError):
+                    disturbances.reap(world)
+        finally:
+            for process, identity in newcomers:
+                ownership().send_signal(identity, 9)
+                process.stdin.close()
+                process.wait(timeout=10)
+    os.rmdir(outside)
+    assert all(1 <= count <= NEWCOMERS_PER_CALL for count in per_call) and len(newcomers) <= NEWCOMERS_IN_ALL, \
+        (per_call, len(newcomers))
+    assert not any(alive(identity) for _, identity in newcomers), "a newcomer outlived the test"
+    assert alive(sentinel)
+
+
+def test_a_kill_pass_is_not_handed_victims_already_gone(monkeypatch):
+    """Each pass kills only what its own look found new: a victim an earlier pass already killed is not handed
+    to the kill again. No world and no process: the looks, liveness and signals are recorded stand-ins."""
+    disturbances = importlib.import_module("tests.hexagonal.support.e2e_disturbances")
+    first, second = ownership().Identity(1001, 11), ownership().Identity(1002, 12)
+    looks = [{first: "home"}, {second: "home"}]
+    live, signalled = {first, second}, []
+
+    def signal(identity, number):
+        signalled.append(identity)
+        live.discard(identity)
+
+    monkeypatch.setattr(disturbances, "_victims", lambda home, spawned=(): (looks.pop(0) if looks else {}, {}))
+    monkeypatch.setattr(ownership(), "alive", lambda identity: identity in live)
+    monkeypatch.setattr(ownership(), "send_signal", signal)
+    victims, _, survivors = disturbances._kill_until_quiet("unused-home")
+    assert survivors == [] and set(victims) == {first, second}, (victims, survivors)
+    assert signalled == [first, second], f"a kill pass was handed a victim already gone: {signalled}"
