@@ -774,3 +774,68 @@ def test_a_server_loss_records_its_victims_selection_and_no_victim_records_none(
         empty = world.disturb(contract().ServerLoss())
         assert empty.outcome == "no_victim" and selection(empty) == {}, empty
         assert alive(sentinel)
+
+
+# Gaps found by planted faults in the selector ---------------------------------------------------------
+
+@pytest.mark.parametrize("variant", ["sibling", "nested", "embedded"])
+def test_a_home_that_only_resembles_the_worlds_is_not_a_victim(variant, sentinel):
+    outside = Path(track(tempfile.mkdtemp(prefix="xo-outside-")))
+    with World("detached-process") as world:
+        running(world)
+        home = str(world.cli.home)
+        lookalike = {"sibling": home + "x", "nested": home + "/nested", "embedded": "/prefix" + home}[variant]
+        process, identity = started([sys.executable, "-c", "import time; time.sleep(120)"], cwd=outside,
+                                    env={**without_home(), "XORCHESTRATE_HOME": lookalike})
+        try:
+            receipt = world.disturb(contract().TotalLoss())
+            assert identity not in receipt.before and alive(identity), f"a {variant} look-alike home was taken"
+        finally:
+            stop(process)
+    os.rmdir(outside)
+    assert alive(sentinel)
+
+
+BOUND_ONLY = ("import os, socket, time; s = socket.socket(socket.AF_UNIX); s.bind(os.environ['TARGET']);"
+              "open(os.environ['READY'], 'w').write('ready'); time.sleep(120)")
+
+
+def test_a_socket_bound_inside_the_home_but_not_listening_does_not_select(tmp_path, sentinel):
+    with World("detached-process") as world:
+        running(world)
+        process, identity, outside = ready_process(BOUND_ONLY, Path(world.cli.home) / "bound.sock", tmp_path, "bound")
+        try:
+            receipt = world.disturb(contract().TotalLoss())
+            assert identity not in receipt.before and alive(identity), "a bound, non-listening socket selected"
+        finally:
+            stop(process)
+            os.rmdir(outside)
+    assert alive(sentinel)
+
+
+def test_a_server_loss_without_a_server_reports_no_victim_while_other_world_processes_run(sentinel):
+    outside = Path(track(tempfile.mkdtemp(prefix="xo-outside-")))
+    with World("detached-process") as world:
+        running(world)
+        process, carrier = started([sys.executable, "-c", "import time; time.sleep(120)"], cwd=outside,
+                                   env={**without_home(), "XORCHESTRATE_HOME": str(world.cli.home)})
+        try:
+            assert_applied(world.disturb(contract().ServerLoss()), "server_loss")
+            receipt = world.disturb(contract().ServerLoss())
+            assert receipt.outcome == "no_victim" and alive(carrier), receipt
+        finally:
+            stop(process)
+    os.rmdir(outside)
+    assert alive(sentinel)
+
+
+def test_a_timeout_the_wait_never_handed_out_propagates_unchanged():
+    clock = ControlledClock()
+
+    def predicate():
+        raise subprocess.TimeoutExpired("an unrelated command", 99)
+
+    with World("detached-process", clock=clock, sleep=clock.sleep) as world:
+        with pytest.raises(subprocess.TimeoutExpired) as raised:
+            world.await_("unrelated timeout", predicate, timeout=30)
+    assert not isinstance(raised.value, contract().WaitExpired)
