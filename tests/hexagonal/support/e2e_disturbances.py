@@ -29,6 +29,8 @@ from tests.hexagonal.contracts.e2e_world import Receipt, ServerLoss, TotalLoss, 
 from tests.hexagonal.support.native import wait_for
 
 HOME_KEY = b"XORCHESTRATE_HOME="
+LISTENING = 0x10000
+"""``__SO_ACCEPTCON`` in /proc/net/unix: the socket accepts connections, i.e. it was bound and listens."""
 POLL_SECONDS = .25
 """Pause between observations of an await: an observation may start a CLI process, so not faster."""
 SIGNAL_GRACE = 10
@@ -57,16 +59,58 @@ def _has_home(pid, expected):
 
 
 def _fresh_home(world_home, directory):
-    """The world's home as bytes, if it is a directory inside the world's own directory; else refuse."""
+    """The world's home, if it is a directory inside the world's own directory; else refuse."""
     home, root = os.path.realpath(world_home), os.path.realpath(directory)
     if not home.startswith(root + os.sep) or not os.path.isdir(home):
         raise AssertionError("refusing to disturb: the world's home is not a fresh directory of its own")
-    return os.fsencode(str(world_home))
+    return str(world_home)
+
+
+def _listening_inodes(home):
+    """Inodes of listening Unix sockets whose bound path, resolved, lies inside the resolved ``home``."""
+    root = os.path.realpath(home) + os.sep
+    found = set()
+    try:
+        lines = Path("/proc/net/unix").read_text(encoding="utf-8", errors="replace").splitlines()[1:]
+    except OSError:
+        return found
+    for line in lines:
+        fields = line.split(None, 7)
+        if len(fields) < 8 or fields[7].startswith("@"):
+            continue  # unbound, or an abstract name that is no path at all
+        try:
+            listening = int(fields[3], 16) & LISTENING
+        except ValueError:
+            continue
+        if listening and os.path.realpath(fields[7]).startswith(root):
+            found.add(fields[6])
+    return found
+
+
+def _holds(pid, inodes):
+    """Whether process ``pid`` itself holds one of the listening sockets ``inodes``."""
+    try:
+        descriptors = os.listdir(f"/proc/{pid}/fd")
+    except OSError:
+        return False
+    for descriptor in descriptors:
+        try:
+            link = os.readlink(f"/proc/{pid}/fd/{descriptor}")
+        except OSError:
+            continue
+        if link.startswith("socket:[") and link[8:-1] in inodes:
+            return True
+    return False
 
 
 def _victims(home, spawned=()):
-    """Identities of this user's processes carrying ``home`` (bytes), plus the still-running spawned ones."""
+    """This user's processes of the world, each with the signal that selected it.
+
+    ``home``: carries the world's exact home; ``socket``: holds a listening socket bound inside it;
+    ``spawned``: started by the world itself.
+    """
     uid, table = os.getuid(), ownership.processes()
+    marker, inodes = os.fsencode(home), _listening_inodes(home)
     found = {}
     for pid, (identity, _, state) in table.items():
         if state == "Z" or pid == os.getpid():
@@ -76,12 +120,14 @@ def _victims(home, spawned=()):
                 continue
         except OSError:
             continue
-        if _has_home(pid, home):
-            found[identity] = None
+        if _has_home(pid, marker):
+            found[identity] = "home"
+        elif inodes and _holds(pid, inodes):
+            found[identity] = "socket"
     for process in spawned:
         if process.poll() is None and process.pid in table:
-            found[table[process.pid][0]] = None
-    return list(found)
+            found.setdefault(table[process.pid][0], "spawned")
+    return found
 
 
 def _kill(identities):
@@ -97,22 +143,23 @@ def _kill(identities):
 
 
 def _kill_until_quiet(home, spawned=()):
-    """Kill every victim, again for any that appeared meanwhile; return (all victims, survivors)."""
-    victims, survivors = [], []
+    """Kill every victim, again for any that appeared meanwhile; return (victims with signals, survivors)."""
+    victims, survivors = {}, []
     for _ in range(3):
-        fresh = [identity for identity in _victims(home, spawned) if identity not in victims]
+        fresh = {identity: why for identity, why in _victims(home, spawned).items() if identity not in victims}
         if not fresh:
             break
-        victims += fresh
-        survivors = _kill(victims)
+        victims.update(fresh)
+        survivors = _kill(list(victims))
         if survivors:
             break
     return victims, survivors
 
 
 def _receipt(kind, target, before, effect):
+    """``before`` maps each victim's identity to the signal that selected it."""
     receipt = Receipt(kind=kind, target=target, before=list(before), effect=list(effect),
-                      outcome="applied" if before else "no_victim")
+                      outcome="applied" if before else "no_victim", selected=dict(before))
     if effect:
         raise AssertionError(f"the disturbance left {len(effect)} of its victims alive: {receipt}")
     return receipt
@@ -145,8 +192,8 @@ def _server_loss(value, world):
     candidates = _victims(home)
     status = world.cli.json("status", expect=0) if candidates and _server_up(world) else {}
     pid = status.get("pid")
-    before = [identity for identity in candidates if identity.pid == pid]
-    return _receipt("server_loss", str(world.directory), before, _kill(before))
+    before = {identity: why for identity, why in candidates.items() if identity.pid == pid}
+    return _receipt("server_loss", str(world.directory), before, _kill(list(before)))
 
 
 def _server_up(world):
@@ -242,7 +289,7 @@ def remaining(world):
 
 def reap(world):
     """Teardown: stop every process carrying the world's home and every process it spawned; report survivors."""
-    _, survivors = _kill_until_quiet(os.fsencode(str(world.cli.home)), world.spawned)
+    _, survivors = _kill_until_quiet(str(world.cli.home), world.spawned)
     if survivors:
         raise AssertionError(f"the world's teardown left {len(survivors)} of its processes alive")
 
