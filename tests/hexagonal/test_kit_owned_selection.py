@@ -270,3 +270,21 @@ def test_the_end_to_end_world_selects_through_the_kit(monkeypatch):
         home = str(world.cli.home)
         world.disturb(contract.TotalLoss())
     assert any(root == home and marker == ("XORCHESTRATE_HOME", home) for root, marker, _ in calls), calls
+
+
+def test_a_root_owned_by_another_user_is_refused(started):
+    foreign = Path(tempfile.gettempdir())
+    if foreign.stat().st_uid == os.getuid():
+        pytest.skip("the temporary directory belongs to this user here; no foreign directory to use")
+    with pytest.raises(ValueError, match="refusing"):
+        select(foreign, (MARKER_KEY, str(foreign)))
+
+
+def test_close_without_its_endpoint_ends_nothing_and_reports_what_it_found(run, started):
+    import shutil
+    terminals = importlib.import_module("scripts.testkit.adapters.terminals")
+    shutil.rmtree(terminals.run_endpoint(run, composition().ENDPOINT_PREFIX))
+    leftover = started.identity(started(run, env={MARKER_KEY: str(run)}).pid)
+    result = close(run)
+    assert alive(leftover), "close ended a process with no endpoint left to anchor its provenance"
+    assert result["cleanup"]["remaining_processes"] == 1 and not result["cleanup"]["verified"], result
