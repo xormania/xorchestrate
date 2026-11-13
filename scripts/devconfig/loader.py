@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import json
 import math
-import struct
 import os
 import pwd
 import shlex
+import struct
 import subprocess
 from collections.abc import Callable, Iterable, Mapping
 from pathlib import Path
