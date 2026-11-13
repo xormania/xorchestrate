@@ -302,3 +302,39 @@ predates a commit or a change to `.serena/project.yml`; restart it with
 `serena up` after a branch switch or pull. Without Serena's launcher, `serena`
 says so and the tree commands still work; `XORCHESTRATE_DEV_SERENA_COMMAND`
 replaces the launch command.
+
+### Keeping trees and scratch space in check
+
+Work trees, clean copies and run directories pile up. `report` shows what is
+there and what can go; `prune` removes only what it can prove safe.
+
+```bash
+python3 -m scripts.worktrees report             # every tree and scratch, run or extra directory
+python3 -m scripts.worktrees report --brief     # one line when something needs attention, else nothing
+python3 -m scripts.worktrees prune              # what prune would do; changes nothing
+python3 -m scripts.worktrees prune --apply
+python3 -m scripts.worktrees scratch new copy   # a marked scratch directory for a clean copy; prints its path
+python3 -m scripts.worktrees scratch rm <path>
+```
+
+`report` judges each tree: `REMOVABLE` when it holds commits of its own that
+are merged into the remote's default branch (or a pull request from it was
+merged there), it is clean, has no stash, is unlocked and nothing works in it;
+`NEEDS_LOOK` with the reason when it is dirty, unpushed, stashed, locked,
+merged but in use, idle for `XORCHESTRATE_DEV_IDLE_DAYS`, or registered without
+its directory, and for any unregistered checkout under the root; `KEEP`
+otherwise, including a fresh tree with no commits yet. `--offline` skips the
+GitHub lookup; `--brief` is always offline, never fails, and counts only
+reclaimable space, so a session-start hook can call it.
+
+`prune --apply` fetches, re-checks each removable tree just before removing it
+the same way `remove` does, drops a missing tree's registration only when it is
+unlocked and its branch tip is on its origin branch (after saving a backup),
+stops servers whose tree is gone, and deletes marked scratch directories older
+than `XORCHESTRATE_DEV_SCRATCH_MAX_AGE_HOURS` and run directories (holding a
+`plan.json`, not a git checkout) under `XORCHESTRATE_DEV_RUN_ROOTS` older than
+`XORCHESTRATE_DEV_RUN_MAX_AGE_DAYS`, when nothing uses them. It never deletes
+an orphan checkout, an unmarked entry or anything under
+`XORCHESTRATE_DEV_EXTRA_ROOTS`, which are listed for information only. A root
+that is `/`, your home directory, or overlaps a checkout or the tool's state is
+refused.
