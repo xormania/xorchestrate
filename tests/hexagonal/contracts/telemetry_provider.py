@@ -63,6 +63,18 @@ def report_resource_authority_contract(subject):
     assert not subject.events(event_type="telemetry.reported")
 
 
+def report_session_scope_contract(subject):
+    actual = subject.create_work("Actual session work")
+    claimed = subject.create_work("Conflicting claimed work")
+    session = subject.session_for(actual)
+    result = subject.invoke("report", {"name": "session report", "payload": {"value": 1},
+        "work_id": claimed, "session_id": session}, key="session-report")
+    assert result["result"]["status"] == "recorded"
+    row, = subject.events(event_type="telemetry.reported")
+    assert row["context"]["session_id"] == session
+    assert row["context"]["work_id"] == actual, "TELEMETRY_REPORT_SCOPE_MUST_USE_RESOLVED_SESSION_WORK"
+
+
 def protected_bundle_contract(subject):
     work = subject.create_work("Private bundle source")
     subject.capture("fixture.bundle", {"content": "protected bundle payload"}, {"work_id": work}, event_id="bundle-source")

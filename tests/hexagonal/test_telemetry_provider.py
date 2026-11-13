@@ -15,6 +15,7 @@ from tests.hexagonal.contracts.telemetry_provider import (
     provider_discovery_contract,
     report_provenance_contract,
     report_resource_authority_contract,
+    report_session_scope_contract,
     restored_bundle_contract,
     shared_capture_contract,
 )
@@ -77,12 +78,21 @@ def test_provider_queries_are_fresh_even_with_a_repeated_key(provider):
     fresh_query_contract(provider)
 
 
+def test_provider_preserves_global_telemetry_read_authorization_even_for_empty_sources(provider):
+    provider.deny(["telemetry_events"])
+    assert provider.refusal("events") == "denied"
+
+
 def test_report_records_caller_provenance_without_copying_payload_to_state(provider):
     report_provenance_contract(provider)
 
 
 def test_report_authorizes_its_nested_resource_scope(provider):
     report_resource_authority_contract(provider)
+
+
+def test_report_uses_the_resolved_session_scope_instead_of_conflicting_caller_work(provider):
+    report_session_scope_contract(provider)
 
 
 @pytest.mark.parametrize("field,value", [

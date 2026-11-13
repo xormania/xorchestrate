@@ -3,6 +3,7 @@
 import json
 from copy import deepcopy
 
+from tests.hexagonal.support.application import Sessions
 from tests.hexagonal.support.telemetry import Fixture
 from xorchestrate.adapters.policies import RuleGuardrail
 from xorchestrate.model import OrchestrationError, record_view
@@ -64,6 +65,11 @@ class ProviderFixture(Fixture):
 
     def collector_count(self):
         return self.app.telemetry.status()["event_count"]
+
+    def session_for(self, work_id):
+        self.app.sessions["agent"] = Sessions()
+        return self.app.call("start_session", {"driver": "agent", "specification": {},
+            "work_id": work_id, "idempotency_key": "report-session"})["session"]["id"]
 
     def bundle_path(self, name):
         return self.root / "corpus" / "exports" / name
