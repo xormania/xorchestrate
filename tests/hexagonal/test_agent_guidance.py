@@ -42,3 +42,12 @@ def test_each_planted_fault_is_caught_by_its_own_check_alone(tmp_path, fault):
 
 def test_every_declared_fault_has_a_planted_tree():
     assert set(PLANTS) == set(contract.FAULTS)
+
+
+def test_the_repository_shares_exactly_the_generic_skills_and_keeps_its_serena_guidance():
+    view = RepositoryView(ROOT)
+    assert tuple(view.listdir(contract.SKILLS) or ()) == contract.SHARED_SKILLS, view.listdir(contract.SKILLS)
+    assert tuple(view.listdir(contract.MIRROR) or ()) == contract.SHARED_SKILLS, view.listdir(contract.MIRROR)
+    workflow = view.text(contract.WORKFLOW)
+    for title in contract.KEPT_SECTIONS:
+        assert contract.section(workflow, title), f"{contract.WORKFLOW} lost its '{title}' section"

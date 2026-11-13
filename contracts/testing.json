@@ -244,7 +244,7 @@
       }
     },
     "agent-guidance": {
-      "guarantee": "Shared agent skills have one source that every harness location mirrors by relative symlink, front matter a strict YAML reader accepts, guidance pointers and section anchors that resolve, and no local paths, session identifiers or foreign emails in the skills, the workflow guidance or the Serena project; the importing instruction file loads the repository rules, whose agent workflow section points at the skills; the Serena project selects the python language server and the tools interface, honours .gitignore, ships Serena's own .gitignore and ignores its cache, memories and local overrides.",
+      "guarantee": "Shared agent skills have one source that every harness location mirrors by relative symlink, front matter a strict YAML reader accepts, guidance pointers and section anchors that resolve, and no local paths, session identifiers or foreign emails in the skills, the workflow guidance or the Serena project; the importing instruction file loads the repository rules, whose agent workflow section points at the skills; the Serena project selects the python language server and the tools interface, honours .gitignore, ships Serena's own .gitignore and ignores its cache, memories and local overrides. The shared guidance stays generic: exactly the shared skills, no section, rules wording or pointer describing one contributor's own team of sessions or its crash recovery.",
       "modules": {
         "tests/hexagonal/test_agent_guidance.py": "contract"
       }

@@ -276,6 +276,25 @@ PLANTS = {
 }
 
 
+def _withheld_skill(root):
+    name = contract.WITHHELD_SKILLS[0]
+    _write(root, f"{contract.SKILLS}/{name}/SKILL.md", SKILL.format(name=name, description="How the team works."))
+    (root / contract.MIRROR / name).symlink_to(f"../../{contract.SKILLS}/{name}")
+
+
+PLANTS.update({
+    "withheld-skill": _withheld_skill,
+    "withheld-workflow-section": lambda root: _append(
+        root, contract.WORKFLOW, f"\n## {contract.WITHHELD_SECTIONS[1]}\n\nTake an inventory first.\n"),
+    "rules-describe-the-team": lambda root: _replace(
+        root, contract.RULES, "mirrored for each harness.", "mirrored for each harness. Work as a team of sessions."),
+    "pointer-to-withheld-section": lambda root: _append(
+        root, "docs/guide.md", "\nSee [the roles](agent-workflow.md#team-roles).\n"),
+    "pointer-to-withheld-skill": lambda root: _append(
+        root, contract.RULES, f"\nAfter a failure use `{contract.SKILLS}/crash-recovery`.\n"),
+})
+
+
 def planted_tree(base, fault=None):
     """A healthy tree under ``base/repo``, with one planted fault when ``fault`` is named."""
     root = healthy_tree(Path(base) / "repo")

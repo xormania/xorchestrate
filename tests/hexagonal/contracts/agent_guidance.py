@@ -28,7 +28,18 @@ BEHAVIOURS = {
     "B5": "the Serena project selects the python language server, the tools interface and .gitignore; Serena's own "
           ".gitignore is present and its cache, memories and local overrides are ignored",
     "B6": "the importing instruction file loads the rules, and the rules' Agent workflow section points at the skills",
+    "B7": "the shared guidance stays generic: no skill, workflow section, rules wording or pointer describes one "
+          "contributor's own team of sessions or its crash recovery",
 }
+
+SHARED_SKILLS = ("pr-ready", "red-first", "run-checks", "serena")
+"""The skills this repository shares with every contributor's harness."""
+KEPT_SECTIONS = ("Serena",)
+"""Workflow guidance sections the shared guidance keeps."""
+WITHHELD_SKILLS = ("team-roles", "crash-recovery")
+WITHHELD_SECTIONS = ("Team roles", "Crash recovery for contributors")
+WITHHELD_WORDING = re.compile(r"(?i)\bteam of (?:agent )?sessions\b|\bcrash(?:es|ed)?\b|\bteam roles?\b")
+"""How xor runs its own team of sessions and recovers it stays in local notes, not in the public guidance."""
 
 # Planted faults: name -> (the behaviour that must catch it, text its finding must name, other behaviours the
 # same change genuinely breaks). Every other behaviour must stay clean.
@@ -72,6 +83,11 @@ FAULTS = {
     "section-missing": ("B6", SECTION),
     "section-without-skills": ("B6", SKILLS),
     "section-points-at-missing-document": ("B6", "docs/vanished.md"),
+    "withheld-skill": ("B7", f"{SKILLS}/team-roles"),
+    "withheld-workflow-section": ("B7", "Crash recovery for contributors"),
+    "rules-describe-the-team": ("B7", "team of sessions"),
+    "pointer-to-withheld-section": ("B7", "agent-workflow.md#team-roles"),
+    "pointer-to-withheld-skill": ("B7", f"{SKILLS}/crash-recovery"),
 }
 
 
@@ -546,6 +562,40 @@ def rules_reach_every_harness(view):
     return found
 
 
+# B7 -------------------------------------------------------------------------------------------------
+
+def _guidance_texts(view):
+    """Every shared guidance text: the skills, everything under docs, the rules and the importing file."""
+    paths = [*view.files_under(SKILLS), *[path for path in view.files_under("docs") if path.endswith(".md")],
+             RULES, IMPORTER]
+    return [(path, view.text(path)) for path in paths if view.text(path) is not None]
+
+
+def generic_guidance(view):
+    found = []
+    for name in WITHHELD_SKILLS:
+        for folder in (SKILLS, MIRROR):
+            if view.link(f"{folder}/{name}")["present"]:
+                found.append(f"{folder}/{name} is a contributor-team skill; it belongs in local notes")
+    workflow = view.text(WORKFLOW) or ""
+    for title in WITHHELD_SECTIONS:
+        if section(workflow, title) is not None:
+            found.append(f"{WORKFLOW} has a '{title}' section; it belongs in local notes")
+    rules = view.text(RULES)
+    body = None if rules is None else section(rules, SECTION)
+    if body is not None:
+        for match in WITHHELD_WORDING.finditer(body):
+            found.append(f"{RULES} '{SECTION}' section describes a contributor's team: '{match.group(0)}'")
+    withheld_anchors = [f"agent-workflow.md#{slug(title)}" for title in WITHHELD_SECTIONS]
+    withheld_paths = [f"skills/{name}" for name in WITHHELD_SKILLS]
+    for path, text in _guidance_texts(view):
+        for pointer in [*withheld_anchors, *withheld_paths]:
+            if pointer in text and not (pointer.startswith("skills/") and path.startswith(f"{SKILLS}/{pointer[7:]}/")):
+                shown = f"{SKILLS}/{pointer[7:]}" if pointer.startswith("skills/") else pointer
+                found.append(f"{path} points at {shown}, which is withheld from the shared guidance")
+    return found
+
+
 CHECKS = {
     "B1": well_formed_skills,
     "B2": mirrored_skills,
@@ -553,4 +603,5 @@ CHECKS = {
     "B4": nothing_local,
     "B5": serena_project,
     "B6": rules_reach_every_harness,
+    "B7": generic_guidance,
 }
