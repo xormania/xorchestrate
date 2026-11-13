@@ -839,3 +839,60 @@ def test_a_timeout_the_wait_never_handed_out_propagates_unchanged():
         with pytest.raises(subprocess.TimeoutExpired) as raised:
             world.await_("unrelated timeout", predicate, timeout=30)
     assert not isinstance(raised.value, contract().WaitExpired)
+
+
+# The selector: descendants of selected processes --------------------------------------------------------
+
+FORKING_PARENT = ("import subprocess, sys, time;"
+                  "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(120)'], cwd=sys.argv[1]);"
+                  "open(sys.argv[2], 'w').write(str(child.pid)); time.sleep(120)")
+DOUBLE_FORK = ("import os, sys, time\n"
+               "if os.fork() == 0:\n"
+               "    os.setsid()\n"
+               "    if os.fork() == 0:\n"
+               "        os.chdir(sys.argv[1]); open(sys.argv[2], 'w').write(str(os.getpid())); time.sleep(120)\n"
+               "    os._exit(0)\n"
+               "time.sleep(120)\n")
+
+
+def pid_from(path, timeout=10):
+    deadline = time.monotonic() + timeout
+    while not (path.exists() and path.read_text().strip()) and time.monotonic() < deadline:
+        time.sleep(0.05)
+    return int(path.read_text())
+
+
+def test_a_child_of_a_selected_process_is_taken_as_its_descendant(tmp_path, sentinel):
+    outside = Path(track(tempfile.mkdtemp(prefix="xo-outside-")))
+    with World("detached-process") as world:
+        running(world)
+        parent = world.spawn([sys.executable, "-c", FORKING_PARENT, str(outside), str(tmp_path / "child.pid")])
+        child_pid = pid_from(tmp_path / "child.pid")
+        child = ownership().processes()[child_pid][0]
+        try:
+            receipt = world.disturb(contract().TotalLoss())
+            assert child in receipt.before and not alive(child), "a child of a world process was missed"
+            assert selection(receipt).get(child) == "descendant", selection(receipt)
+            assert dict(getattr(receipt, "ancestors", {}) or {}).get(child) == parent, receipt
+        finally:
+            ownership().send_signal(child, 9)
+    os.rmdir(outside)
+    assert alive(sentinel), "a child of the test runner that the world did not spawn was taken"
+
+
+def test_a_re_parented_process_left_in_the_world_is_reported_as_leaked_and_left_alone(tmp_path, sentinel):
+    with World("detached-process") as world:
+        running(world)
+        hideout = world.directory / "hideout"
+        hideout.mkdir()
+        world.spawn([sys.executable, "-c", DOUBLE_FORK, str(hideout), str(tmp_path / "orphan.pid")])
+        orphan_pid = pid_from(tmp_path / "orphan.pid")
+        orphan = ownership().processes()[orphan_pid][0]
+        try:
+            receipt = world.disturb(contract().TotalLoss())
+            leaked = list(getattr(receipt, "leaked", []) or [])
+            assert orphan not in receipt.before, "an unselected re-parented process was killed"
+            assert orphan in leaked and alive(orphan), receipt
+        finally:
+            ownership().send_signal(orphan, 9)
+    assert alive(sentinel)
