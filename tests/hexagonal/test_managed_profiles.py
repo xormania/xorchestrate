@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from scripts.testkit.adapters import profiles
 from scripts.testkit.adapters.profiles import doctor, load_profile, setup
 from tests.hexagonal.contracts.managed_profiles import INVALID_PROFILES
 from tests.hexagonal.support.managed_profiles import ROOT, profile_file, run_shell, shell_subject
@@ -73,10 +74,69 @@ def test_doctor_is_read_only_and_identifies_its_dependency_interpreter(tmp_path)
     report = doctor(profile, root=ROOT)
     assert profile.read_bytes() == before
     assert report["authentication"] == "not probed"
-    assert [item["name"] for item in report["readiness"]] == ["interpreter", "jsonschema", "pytest", "ruff"]
+    assert [item["name"] for item in report["readiness"]] == [
+        "interpreter", "jsonschema", "pytest", "ruff", "zizmor",
+    ]
     assert all(item["observation_interpreter"] == sys.executable
                for item in report["readiness"][1:])
     assert not (profile.parent / "runs").exists()
+
+
+@pytest.mark.parametrize("suite", ["static", "security", "checks", "all"])
+def test_doctor_requires_selected_interpreters_zizmor_without_launching_it(tmp_path, monkeypatch, suite):
+    programs = tmp_path / "selected-environment" / "bin"
+    programs.mkdir(parents=True)
+    interpreter = programs / "python"
+    interpreter.write_text(
+        f"#!{sys.executable}\nimport os,sys\nos.execv({sys.executable!r}, [{sys.executable!r}, *sys.argv[1:]])\n",
+        encoding="utf-8",
+    )
+    interpreter.chmod(0o700)
+    launched = tmp_path / "zizmor-launched"
+    zizmor = programs / "zizmor"
+    zizmor.write_text(
+        f"#!{sys.executable}\nfrom pathlib import Path\nPath({str(launched)!r}).write_text('launched')\n",
+        encoding="utf-8",
+    )
+    zizmor.chmod(0o700)
+    profile = profile_file(tmp_path / "settings", {"suite": suite, "interpreter": str(interpreter)})
+    monkeypatch.setattr(profiles.terminal_selection, "readiness", lambda *args, **kwargs: {
+        "name": "terminal_host", "passed": True,
+    })
+
+    report = doctor(profile, root=ROOT)
+
+    matches = [item for item in report["readiness"] if item["name"] == "zizmor"]
+    assert len(matches) == 1, "doctor must report the selected interpreter's Zizmor executable"
+    readiness = matches[0]
+    assert readiness["required"] is True and readiness["passed"] is True
+    assert readiness["observation_interpreter"] == str(interpreter)
+    assert not launched.exists(), "doctor must inspect the selected environment without executing Zizmor"
+
+
+def test_setup_returns_the_post_install_zizmor_detail_from_the_selected_interpreter(tmp_path, monkeypatch):
+    profile = profile_file(tmp_path / "settings", {"suite": "security"})
+    observed = []
+
+    def details(interpreter):
+        observed.append(str(interpreter))
+        return {
+            "version": [3, 12, 16], "virtual": True, "executable": str(interpreter),
+            "dependencies": {
+                "jsonschema": True, "pytest": True, "ruff": True, "zizmor": len(observed) > 1,
+            },
+            "collector": {"status": "ready", "sqlite_version": "3.53.1"},
+        }
+
+    installed = []
+    monkeypatch.setattr(profiles, "_interpreter_details", details)
+    monkeypatch.setattr(profiles.subprocess, "run", lambda command, **kwargs: installed.append(list(command)))
+
+    result = setup(profile, root=ROOT, install=True)
+
+    assert len(observed) == 2 and observed[0] == observed[1] == sys.executable
+    assert len(installed) == 1 and installed[0][-2:] == ["-r", str(ROOT / ".github/requirements-ci.txt")]
+    assert result["python"]["dependencies"]["zizmor"] is True
 
 
 def test_real_shell_preserves_arguments_spaces_and_child_startup_cache(tmp_path):

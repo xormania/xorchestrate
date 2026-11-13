@@ -33,7 +33,7 @@ def test_all_plan_is_the_same_named_checks_as_individual_suites(tmp_path, mode):
     separately = sum((composition.plan(suite=suite, **options) for suite in composition.COMPONENT_SUITES), ())
     assert together == separately
     assert [check.name for check in together] == [
-        "ruff", "syntax", "architecture", "secret-scan", "tests", "native-calibration",
+        "ruff", "syntax", "architecture", "secret-scan", "zizmor", "tests", "native-calibration",
         "work-calibration", "state-calibration", "acceptance", "multi-harness",
     ] + [c.name for c in composition.plan(suite="stories", **options)]
     assert len({check.name for check in together}) == len(together)
@@ -52,12 +52,14 @@ def test_all_plan_is_the_same_named_checks_as_individual_suites(tmp_path, mode):
 def test_checks_plan_selects_declared_family_and_retains_inventory(tmp_path):
     checks = composition.plan(directory=tmp_path, suite="checks", mode="protocol-fixture",
                               families=("state",), check_timeout=37)
-    assert [check.name for check in checks] == ["ruff", "syntax", "architecture", "secret-scan", "tests"]
+    assert [check.name for check in checks] == [
+        "ruff", "syntax", "architecture", "secret-scan", "zizmor", "tests",
+    ]
     tests = next(check for check in checks if check.name == "tests")
     assert tests.argv[-2:] == ("--test-family", "state")
     assert "--test-inventory" in tests.argv
     assert all(check.timeout == 37 for check in checks)
-    assert checks[:4] == composition.plan(directory=tmp_path, suite="static", mode="protocol-fixture",
+    assert checks[:5] == composition.plan(directory=tmp_path, suite="static", mode="protocol-fixture",
                                           check_timeout=37)
     assert (tests,) == composition.plan(directory=tmp_path, suite="tests", mode="protocol-fixture",
                                         families=("state",), check_timeout=37)
@@ -131,7 +133,9 @@ def test_static_doctor_needs_no_test_discovery_or_native_setup(monkeypatch):
     monkeypatch.setattr(subprocess, "Popen", unrelated_dependency)
     report = composition.preflight(suite="static", mode="native")
     assert report["status"] == "passed"
-    assert [row["name"] for row in report["checks"]] == ["ruff", "syntax", "architecture", "secret-scan"]
+    assert [row["name"] for row in report["checks"]] == [
+        "ruff", "syntax", "architecture", "secret-scan", "zizmor",
+    ]
 
 
 @pytest.mark.parametrize("fault", ["missing-native", "missing-brief", "preparation"])
