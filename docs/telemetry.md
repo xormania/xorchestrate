@@ -250,10 +250,69 @@ publishing archived bundles is not provided; keep the companion private.
 
 ## Operations
 
-The application exposes these telemetry operations: `telemetry_status`,
-`telemetry_events`, `telemetry_usage`, `telemetry_compare`, `telemetry_payload`,
-`telemetry_snapshot`, `telemetry_verify` and `telemetry_restore`. The operator
-tools with similar names in the historical Agentscient runtime are distinct.
+Telemetry is available through a regular capability provider. Select it in the
+project configuration, independently of the collector's `telemetry` section:
+
+```json
+{"providers": {"telemetry": {"adapter": "telemetry"}}}
+```
+
+The provider name is configurable: a selection named `observations` exposes
+`observations/events`. `enabled: false` disables that provider without stopping
+automatic collection. `options.operations` can select a nonempty list of exposed
+operation names; omitted, it exposes all nine below. Discovery and invocation use
+the ordinary provider guardrail checks. Existing work, session, operation and
+bundle-closure authorization still applies within the service.
+
+| Capability | Execution |
+|---|---|
+| `telemetry/status`, `telemetry/events`, `telemetry/payload` | Fresh authorized query |
+| `telemetry/usage`, `telemetry/compare`, `telemetry/verify` | Fresh authorized query |
+| `telemetry/snapshot`, `telemetry/restore`, `telemetry/report` | Keyed effect with a payload-free completion receipt |
+
+```bash
+xorchestrate call capabilities --json '{"provider":"telemetry"}'
+xorchestrate call invoke --json '{"capability":"telemetry/events","arguments":{"limit":20}}'
+xorchestrate call invoke --json '{"capability":"telemetry/snapshot","arguments":{"destination":"episode-1"},"idempotency_key":"snapshot-episode-1"}'
+```
+
+Queries return `{"result": ...}` and recheck current authority on each call. They
+do not copy their result into operation records or acceptance evidence. The three
+effects require an idempotency key. Their first response contains `result` and
+`operation_id`; repeating a completed key returns only its completion status and
+`result_retained: false`. A lost response never causes an uncertain effect to run
+again. Inspect the corpus or bundle with a fresh query to recover its current
+authorized view.
+
+These defaults come from trusted installed provider code through the shared
+capability execution policy. They omit application and native-tool capture of
+telemetry requests/results, preventing these envelopes from recursively copying
+the corpus. A trusted `capability_execution` configuration can override the
+defaults; choosing full retention or observation deliberately permits those
+copies. This policy does not control a harness's own transcripts.
+
+The existing `telemetry_status`, `telemetry_events`, `telemetry_usage`,
+`telemetry_compare`, `telemetry_payload`, `telemetry_snapshot`, `telemetry_verify`
+and `telemetry_restore` application actions remain compatibility entrypoints to
+the same service. Their schemas and response shapes are unchanged. The operator
+commands for snapshots and companion archives retain their existing scope.
+
+### Caller reports
+
+`telemetry/report` accepts `name`, an object `payload`, and optional `work_id` or
+`session_id`. For example:
+
+```bash
+xorchestrate call invoke --json '{"capability":"telemetry/report","arguments":{"name":"manual-check","payload":{"outcome":"pass"}},"idempotency_key":"manual-check-1"}'
+```
+
+The service writes a fixed `telemetry.reported` event with `basis: reported` and
+the actual caller's identity. Names and payloads remain reported content; they
+cannot declare an observed runtime event, choose another actor or producer, or
+create acceptance evidence. Resource-scoped reports require current authorization
+for that scope. A configuration with an explicit source filter must include
+`telemetry` to accept reports. The result contains the collector's actual capture
+status and receipt, including disabled or unavailable states.
 
 ## Capture and reads
 

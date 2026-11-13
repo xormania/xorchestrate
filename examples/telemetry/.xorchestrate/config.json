@@ -5,5 +5,10 @@
       "dataset_id": "agent-work",
       "artifact_threshold_bytes": 65536
     }
+  },
+  "providers": {
+    "telemetry": {
+      "adapter": "telemetry"
+    }
   }
 }

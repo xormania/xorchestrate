@@ -7,6 +7,13 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ## Unreleased
 
+### Added
+
+- A selectable `telemetry` capability provider exposes authorized queries, bundle
+  operations and caller reports through ordinary discovery and invocation.
+  Capture, storage and exporters remain separately configured. Legacy telemetry
+  actions delegate to the same service. See [telemetry operations](docs/telemetry.md#operations).
+
 ### Changed
 
 - Exchange receipts and the independent multi-harness checker use retained store

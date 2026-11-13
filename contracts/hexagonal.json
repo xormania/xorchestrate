@@ -167,7 +167,8 @@
     },
     "telemetry": {
       "modules": [
-        "xorchestrate.telemetry"
+        "xorchestrate.telemetry",
+        "xorchestrate.telemetry_actions"
       ],
       "allowed_roles": [
         "foundation",
