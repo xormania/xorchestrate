@@ -16,7 +16,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from tests.hexagonal.support.host_processes import processes_under, track
+from tests.hexagonal.support.host_processes import track
 from xorchestrate.adapters.hosted import HostedSessionDriver
 from xorchestrate.composition import factory_for
 from xorchestrate.ports import TerminalClosure
@@ -111,31 +111,44 @@ class HostedSubject:
         return self.sessions.is_dir() and any(path.is_file() for path in self.sessions.rglob("*state*"))
 
     def lose(self, session, *, everything=True):
-        """Kill the session outright, cleaning nothing: with ``everything`` (a container failure) every process of
-        this subject, the terminal host included; otherwise only the bridge host, by the identity in its receipt."""
-        from xorchestrate.adapters.terminal_support import alive, identity
+        """Kill the session outright, cleaning nothing.
+
+        With ``everything`` (a container failure): end what provenance selects as the subject's own (its terminal
+        host by the socket in its base, and their descendants), selected afresh over at most three passes and a
+        final look, and fail if any of those survive. A process provenance cannot select is not reached. Otherwise
+        only the bridge host, by the identity in its receipt."""
+        from scripts.testkit.adapters.ownership import Identity, alive, send_signal
 
         if everything:
-            victims = [pid for pid, _ in processes_under([self.sessions])]
-        else:
-            recorded = session["hosted"]["terminal"]["process"]
-            leader = identity(recorded["pid"])
-            victims = [leader.pid] if leader is not None and leader.started == recorded["started"] else []
-        assert victims, "nothing of the session was running"
-        for pid in victims:
-            try:
-                os.kill(pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
+            # Selected afresh on every pass, so a process that became the subject's own meanwhile is ended too.
+            from tests.hexagonal.support.e2e_disturbances import kill_until_quiet
+
+            victims, _, survivors = kill_until_quiet(self._selection)
+            assert victims, "nothing of the session was running"
+            assert not survivors, f"the simulated loss left {len(survivors)} of the subject's processes alive"
+            return
+        recorded = session["hosted"]["terminal"]["process"]
+        leader = Identity(recorded["pid"], recorded["started"])
+        assert alive(leader), "nothing of the session was running"
+        send_signal(leader, signal.SIGKILL)  # fenced: a reused pid is never signalled
         deadline = time.monotonic() + 10
-        if everything:
-            while processes_under([self.sessions]) and time.monotonic() < deadline:
-                time.sleep(0.05)
-            assert processes_under([self.sessions]) == [], "the simulated loss left processes"
-        else:
-            while alive(leader) and time.monotonic() < deadline:
-                time.sleep(0.05)
-            assert not alive(leader), "the bridge host survived"
+        while alive(leader) and time.monotonic() < deadline:
+            time.sleep(0.05)
+        assert not alive(leader), "the bridge host survived"
+
+    def owned(self):
+        """The subject's own processes: its terminal host (by the socket in its fresh base) and their descendants.
+
+        Never chosen by name or path: a process that merely names the subject's directories is not its own.
+        """
+        return list(self._selection()[0])
+
+    def _selection(self):
+        """``(selected, ancestors)`` of the subject's own processes, read now through the kit's provenance selection."""
+        from scripts.testkit.adapters import ownership
+
+        selection = ownership.owned_processes(self.base, None)
+        return selection.selected, selection.ancestors
 
     def crash(self, key):
         spec = {"adapter": self.adapter, "placement": self.placement, "options": self.options(),
@@ -191,11 +204,12 @@ class HostedSubject:
             host.shutdown()
         except Exception:  # noqa: BLE001 - best effort teardown; the leak guard reports what remains
             pass
-        for pid, _ in processes_under([self.base]):
-            try:
-                os.kill(pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
+        if self.base.is_dir():
+            # Best effort, like the shutdown above: the bounded loop waits for what it ends and selects again for
+            # anything that became the subject's own meanwhile; whatever survives is left to the leak guard.
+            from tests.hexagonal.support.e2e_disturbances import kill_until_quiet
+
+            kill_until_quiet(self._selection)
         shutil.rmtree(self.base, ignore_errors=True)
 
 

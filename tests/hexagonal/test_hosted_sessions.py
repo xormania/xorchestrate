@@ -202,3 +202,263 @@ def test_hosted_sessions_are_bounded_by_max_sessions_counting_detached_terminals
     finally:
         first.close()
         hosted.cleanup()
+
+
+# -- kills reach only the subject's own processes ---------------------------------------------------
+
+def _bystander(named):
+    """A same-user process outside the subject whose arguments merely name ``named``."""
+    import subprocess
+    import sys
+    import tempfile
+    from pathlib import Path
+
+    from scripts.testkit.adapters.ownership import processes
+    from tests.hexagonal.support.host_processes import track
+
+    outside = Path(track(tempfile.mkdtemp(prefix="xo-outside-")))
+    process = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(120)", str(named)], cwd=outside,
+                               stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return process, processes()[process.pid][0], outside
+
+
+def _end(process, outside):
+    process.kill()
+    process.wait(timeout=10)
+    outside.rmdir()
+
+
+def _fenced(monkeypatch):
+    from tests.hexagonal.support.host_processes import fenced_signals
+
+    return fenced_signals(monkeypatch)
+
+
+def test_the_fence_lets_the_fenced_helper_fall_back_to_a_raw_signal_and_nothing_else(monkeypatch):
+    """Where pidfd_open is missing or denied, ``send_signal`` falls back to ``os.kill`` after its own identity
+    check: inside the fence that signal passes, while a raw ``os.kill`` from anywhere else still fails."""
+    import os
+    import signal
+    import subprocess
+    import sys
+
+    from scripts.testkit.adapters import ownership
+
+    def unavailable(pid, *flags):
+        raise OSError("planted: pidfd_open is unavailable here")
+
+    child = subprocess.Popen([sys.executable, "-c", "import sys; sys.stdin.buffer.read()"], stdin=subprocess.PIPE,
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    identity = ownership.processes()[child.pid][0]
+    try:
+        with monkeypatch.context() as during:
+            during.setattr(os, "pidfd_open", unavailable)
+            fence = _fenced(monkeypatch)
+            try:
+                with pytest.raises(pytest.fail.Exception, match="unfenced"):
+                    os.kill(child.pid, 0)  # a raw signal outside the helper, harmless if it got through
+                ownership.send_signal(identity, signal.SIGKILL)
+            finally:
+                fence.__exit__(None, None, None)
+        assert child.wait(timeout=10) == -signal.SIGKILL, "the helper's fallback signal did not reach the child"
+    finally:
+        ownership.send_signal(identity, signal.SIGKILL)
+        child.stdin.close()
+        child.wait(timeout=10)
+    assert not ownership.alive(identity), "the child outlived the test"
+
+
+def test_a_total_loss_takes_the_terminal_host_and_its_terminals_and_nothing_outside(subject, monkeypatch):
+    from scripts.testkit.adapters.ownership import alive, processes
+    from tests.hexagonal.support.host_processes import processes_under
+
+    driver = subject.driver()
+    session = driver.start(subject.spec("loss"))
+    driver.close()
+    process, bystander, outside = _bystander(subject.sessions / "x")
+    try:
+        table = processes()
+        own = [table[pid][0] for pid, _ in processes_under([subject.base]) if pid in table and pid != process.pid]
+        assert own, "nothing of the subject was running"
+        fence = _fenced(monkeypatch)
+        try:
+            subject.lose(session, everything=True)
+        finally:
+            fence.__exit__(None, None, None)
+        assert alive(bystander), "the simulated loss killed a process outside the subject"
+        assert not any(alive(item) for item in own), "the terminal host or a terminal survived the loss"
+    finally:
+        _end(process, outside)
+
+
+LISTENS_HELD_ON_STDIN = ("import socket, sys\n"
+                         "server = socket.socket(socket.AF_UNIX); server.bind(sys.argv[1]); server.listen()\n"
+                         "sys.stdout.write('ready\\n'); sys.stdout.flush()\n"
+                         "sys.stdin.buffer.read()\n")
+"""A process of the subject by provenance (it listens on a socket inside the subject's base), held on a stdin pipe
+the test owns, so it lives until the test closes it or dies itself, never longer."""
+
+
+class _Newcomers:
+    """Starts a process that becomes the subject's own right after each selection of the subject's processes, up to
+    ``arrivals`` of them; each is held on a stdin pipe the test owns and is ended by identity in ``end``."""
+
+    def __init__(self, subject, arrivals):
+        from scripts.testkit.adapters import ownership
+
+        self.subject, self.arrivals, self.real, self.started = subject, arrivals, ownership.owned_processes, []
+
+    def after_a_selection(self, root, marker, **options):
+        import subprocess
+        import sys
+        from pathlib import Path
+
+        from scripts.testkit.adapters import ownership
+
+        selection = self.real(root, marker, **options)
+        if len(self.started) < self.arrivals and Path(root) == self.subject.base:
+            address = self.subject.base / f"late-{len(self.started)}.sock"
+            child = subprocess.Popen([sys.executable, "-c", LISTENS_HELD_ON_STDIN, str(address)], stdin=subprocess.PIPE,
+                                     stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+            self.started.append((child, ownership.processes()[child.pid][0], address))
+            assert child.stdout.readline() == b"ready\n", "the newcomer did not start listening"
+        return selection
+
+    @property
+    def identities(self):
+        return [identity for _, identity, _ in self.started]
+
+    def end(self):
+        from scripts.testkit.adapters import ownership
+
+        for child, identity, address in self.started:
+            ownership.send_signal(identity, 9)
+            child.stdin.close()
+            child.stdout.close()
+            child.wait(timeout=10)
+            address.unlink(missing_ok=True)
+
+
+@pytest.mark.parametrize("arrivals", [1, 4], ids=["after-the-first-selection", "after-every-selection"])
+def test_a_total_loss_ends_subject_processes_born_after_it_selects_or_fails(subject, monkeypatch, arrivals):
+    """A container failure leaves nothing of the subject. The test itself starts a process that becomes the
+    subject's own right after a selection the loss makes, up to ``arrivals`` of them, and ends each by identity
+    whatever happens.
+
+    After the first selection only: that newcomer is ended too, or the loss fails. After every selection: some
+    newcomer always arrives after the loss's last look, so the loss must fail rather than return as if total.
+    """
+    from scripts.testkit.adapters import ownership
+
+    driver = subject.driver()
+    session = driver.start(subject.spec("late"))
+    driver.close()
+    newcomers = _Newcomers(subject, arrivals)
+    process, bystander, outside = _bystander(subject.sessions / "z")
+    try:
+        with monkeypatch.context() as during:
+            during.setattr(ownership, "owned_processes", newcomers.after_a_selection)
+            fence = _fenced(monkeypatch)
+            try:
+                subject.lose(session, everything=True)
+                failed = False
+            except AssertionError:
+                failed = True
+            finally:
+                fence.__exit__(None, None, None)
+        assert newcomers.started, "the loss never selected the subject's processes through the hook"
+        assert len(newcomers.started) <= arrivals, newcomers.started
+        if arrivals == 1:
+            assert failed or not ownership.alive(newcomers.identities[0]), \
+                "a subject process born after the first selection survived the loss"
+        else:
+            assert failed, "a loss that left a subject process alive returned as if it were total"
+        assert ownership.alive(bystander), "the simulated loss killed a process outside the subject"
+    finally:
+        newcomers.end()
+        _end(process, outside)
+    assert not any(ownership.alive(identity) for identity in newcomers.identities), "a newcomer outlived the test"
+
+
+def test_cleanup_reaches_only_the_subjects_own_processes(subject, monkeypatch):
+    from scripts.testkit.adapters.ownership import alive
+
+    process, bystander, outside = _bystander(subject.base / "y")
+    try:
+        fence = _fenced(monkeypatch)
+        try:
+            subject.cleanup()
+        finally:
+            fence.__exit__(None, None, None)
+        assert alive(bystander), "cleanup killed a process outside the subject"
+    finally:
+        _end(process, outside)
+
+
+class _FailingShutdown:
+    """The subject's real host, except that shutdown fails, so cleanup has to stop what is left itself."""
+
+    def __init__(self, host):
+        self.host = host
+
+    def __getattr__(self, name):
+        return getattr(self.host, name)
+
+    def shutdown(self):
+        raise RuntimeError("planted: the terminal host did not shut down")
+
+
+def test_cleanup_kills_what_a_failed_shutdown_left_and_nothing_outside(subject, monkeypatch):
+    from scripts.testkit.adapters.ownership import alive, processes
+    from tests.hexagonal.support.host_processes import processes_under
+
+    driver = subject.driver()
+    driver.start(subject.spec("cleanup"))
+    driver.close()
+    process, bystander, outside = _bystander(subject.base / "z")
+    try:
+        table = processes()
+        own = [table[pid][0] for pid, _ in processes_under([subject.base]) if pid in table and pid != process.pid]
+        assert own, "nothing of the subject was running"
+        real_host = subject.host
+        monkeypatch.setattr(subject, "host", lambda: _FailingShutdown(real_host()))
+        fence = _fenced(monkeypatch)
+        try:
+            subject.cleanup()
+        finally:
+            fence.__exit__(None, None, None)
+        assert alive(bystander), "cleanup killed a process outside the subject"
+        assert not any(alive(item) for item in own), "cleanup left the subject's processes running"
+    finally:
+        _end(process, outside)
+
+
+def test_cleanup_also_ends_a_subject_process_born_after_its_first_selection(subject, monkeypatch):
+    """When the terminal host fails to shut down, cleanup stops what is left itself: a process that becomes the
+    subject's own after cleanup first selected its victims is ended too. Cleanup is best effort (the leak guard
+    reports what it cannot stop), so it is not required to fail; one newcomer, after the first selection only."""
+    from scripts.testkit.adapters import ownership
+
+    driver = subject.driver()
+    driver.start(subject.spec("late-cleanup"))
+    driver.close()
+    newcomers = _Newcomers(subject, 1)
+    process, bystander, outside = _bystander(subject.sessions / "z")
+    try:
+        real_host = subject.host
+        with monkeypatch.context() as during:
+            during.setattr(subject, "host", lambda: _FailingShutdown(real_host()))
+            during.setattr(ownership, "owned_processes", newcomers.after_a_selection)
+            fence = _fenced(monkeypatch)
+            try:
+                subject.cleanup()
+            finally:
+                fence.__exit__(None, None, None)
+        assert newcomers.started, "cleanup never selected the subject's processes through the hook"
+        assert not ownership.alive(newcomers.identities[0]), \
+            "a subject process born after cleanup's first selection survived it"
+        assert ownership.alive(bystander), "cleanup killed a process outside the subject"
+    finally:
+        newcomers.end()
+        _end(process, outside)
+    assert not any(ownership.alive(identity) for identity in newcomers.identities), "a newcomer outlived the test"

@@ -399,3 +399,25 @@ def test_close_without_its_endpoint_ends_nothing_and_reports_what_it_found(run, 
     result = close(run)
     assert alive(leftover), "close ended a process with no endpoint left to anchor its provenance"
     assert result["cleanup"]["remaining_processes"] == 1 and not result["cleanup"]["verified"], result
+
+
+def test_without_a_marker_nothing_is_selected_as_home(root, started, tmp_path):
+    spawned = started()
+    ready = tmp_path / "ready"
+    listener = started(root / "listen.sock", ready, program=(
+        "import socket, sys, time; s = socket.socket(socket.AF_UNIX); s.bind(sys.argv[1]); s.listen();"
+        "open(sys.argv[2], 'w').write('ready'); time.sleep(120)"))
+    deadline = time.monotonic() + 10
+    while not ready.exists() and time.monotonic() < deadline:
+        time.sleep(0.05)
+    marked = started.identity(started(env={MARKER_KEY: str(root)}).pid)
+    parent = started(tmp_path / "child.pid", env={MARKER_KEY: str(root)}, program=PARENT, cwd=None)
+    child_pid = pid_from(tmp_path / "child.pid")
+    try:
+        chosen = select(root, None, spawned=[spawned, parent]).selected
+        assert chosen.get(started.identity(spawned.pid)) == "spawned", chosen
+        assert chosen.get(started.identity(listener.pid)) == "socket", chosen
+        assert chosen.get(started.identity(child_pid)) == "descendant", chosen
+        assert marked not in chosen and "home" not in chosen.values(), chosen
+    finally:
+        os.kill(child_pid, signal.SIGKILL)

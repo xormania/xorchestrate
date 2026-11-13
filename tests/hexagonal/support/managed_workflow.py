@@ -11,7 +11,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from scripts.testkit.adapters.ownership import Identity, alive, processes, send_signal
+from scripts.testkit.adapters.ownership import Identity, alive, send_signal
 
 SOURCE = Path(__file__).resolve().parents[3]
 
@@ -39,6 +39,14 @@ def json_lines(output):
         if isinstance(value, dict):
             result.append(value)
     return result
+
+
+def _command(pid):
+    """A process's command line as text, or empty if it is gone (used only to choose among owned processes)."""
+    try:
+        return Path(f"/proc/{pid}/cmdline").read_bytes().replace(b"\0", b" ").decode(errors="replace")
+    except OSError:
+        return ""
 
 
 def owner_running(owner):
@@ -104,12 +112,16 @@ class PublicWorkflow:
         return json.loads((directory / "state.json").read_text())
 
     def freeze(self, directory):
-        # The run's state names no process (the terminal host exposes none); find the worker by its command line.
-        from tests.hexagonal.support.host_processes import arguments_containing
+        # The run's state names no process (the terminal host exposes none). Its own processes are selected by
+        # provenance (its marker and its private endpoint); the command line only chooses the worker among them.
+        from scripts.testkit.adapters.ownership import owned_processes
+        from scripts.testkit.adapters.terminals import run_endpoint
+        from scripts.testkit.operator_composition import ENDPOINT_PREFIX, RUN_MARKER
 
-        found = [pid for pid, command in arguments_containing(str(directory)) if " _worker " in f" {command} "]
+        owned = owned_processes(run_endpoint(directory, ENDPOINT_PREFIX), (RUN_MARKER, str(directory))).selected
+        found = [identity for identity in owned if " _worker " in f" {_command(identity.pid)} "]
         assert len(found) == 1, found
-        identity = processes()[found[0]][0]
+        identity = found[0]
         send_signal(identity, signal.SIGSTOP)
         self.frozen.append(identity)
         return identity

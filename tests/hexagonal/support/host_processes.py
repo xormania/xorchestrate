@@ -19,6 +19,52 @@ def track(path):
     return path
 
 
+class _FencedSignals:
+    """While active, a raw ``os.kill`` or ``os.killpg`` fails the test, except the one the kit's fenced
+    ``ownership.send_signal`` makes itself, after its identity check, where no pidfd is available."""
+
+    def __init__(self, monkeypatch):
+        import pytest
+
+        from scripts.testkit.adapters import ownership
+
+        self._context = monkeypatch.context()
+        during = self._context.__enter__()
+        inside = []
+        real_send, real_kill = ownership.send_signal, os.kill
+
+        def fenced_send(identity, number):
+            inside.append(identity)
+            try:
+                return real_send(identity, number)
+            finally:
+                inside.pop()
+
+        def kill(pid, number):
+            if not inside:
+                pytest.fail(f"raw os.kill({pid}, {number}) is unfenced")
+            return real_kill(pid, number)
+
+        during.setattr(ownership, "send_signal", fenced_send)
+        during.setattr(os, "kill", kill)
+        during.setattr(os, "killpg", lambda pgid, number: pytest.fail(f"os.killpg({pgid}, {number}) is unfenced"))
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return self._context.__exit__(*exc)
+
+
+def fenced_signals(monkeypatch):
+    """Fence raw signals for a test: active from this call until ``__exit__`` (or the end of a ``with`` block).
+
+    Only a signal sent through ``ownership.send_signal``, looked up on the module at call time, may reach
+    ``os.kill``; anything else fails the test.
+    """
+    return _FencedSignals(monkeypatch)
+
+
 def _ancestors():
     pids, pid = set(), os.getpid()
     while pid > 1:

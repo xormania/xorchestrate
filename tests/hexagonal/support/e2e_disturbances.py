@@ -76,10 +76,18 @@ def _kill(identities):
 
 
 def _kill_until_quiet(home, spawned=()):
-    """Kill every victim, again for any that appeared meanwhile; return (victims, ancestors, survivors)."""
+    """Kill every victim of the world, again for any that appeared meanwhile; see ``kill_until_quiet``."""
+    return kill_until_quiet(lambda: _victims(home, spawned))
+
+
+def kill_until_quiet(select):
+    """Kill what ``select()`` returns, again for any that appeared meanwhile; return (victims, ancestors, survivors).
+
+    ``select`` returns ``({identity: why}, {descendant: selected ancestor})`` by provenance, freshly on each call.
+    """
     victims, ancestry, survivors = {}, {}, []
     for _ in range(3):
-        found, ancestors = _victims(home, spawned)
+        found, ancestors = select()
         fresh = {identity: why for identity, why in found.items() if identity not in victims}
         if not fresh:
             break
@@ -90,7 +98,7 @@ def _kill_until_quiet(home, spawned=()):
             break
     if not survivors:
         # Bounded passes are no proof of quiet: look once more; anything new or still alive is a survivor.
-        found, ancestors = _victims(home, spawned)
+        found, ancestors = select()
         survivors = [identity for identity in found if identity not in victims or ownership.alive(identity)]
         for identity in survivors:
             victims.setdefault(identity, found[identity])
