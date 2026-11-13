@@ -148,7 +148,9 @@ def test_a_hosted_stop_closes_the_terminal_when_the_bridge_host_does_not_answer_
     from tests.hexagonal.support.hosted_sessions import hosted_subject
 
     hosted = hosted_subject("detached-process")
-    first = _hosted_driver(hosted, timeout=1)
+    # One request timeout serves the starts' attach and activate as well as the unanswered stop; 1 s let a slow
+    # start reply under load fail the test, so the stop gives up after 5 s instead.
+    first = _hosted_driver(hosted, timeout=5)
     try:
         session = first.start(hosted.spec("unanswered"))
         os.kill(session["hosted"]["terminal"]["process"]["pid"], signal.SIGSTOP)  # the bridge host stops answering
