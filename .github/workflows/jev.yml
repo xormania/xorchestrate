@@ -111,7 +111,8 @@
           "with": {
             "version": "0.13.7",
             "enable-cache": true,
-            "cache-dependency-glob": "trusted/uv.lock"
+            "cache-dependency-glob": "trusted/uv.lock",
+            "checksum": "c5221ff41b7892bfc223543883600125f6a47fe845093e0f5bdff4f359196d83"
           }
         },
         {

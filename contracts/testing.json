@@ -28,7 +28,7 @@
       }
     },
     "release": {
-      "guarantee": "A release tag, the package version, the xork alias version and its exact pin, and the changelog agree before publishing, and both distributions are built, accepted and published together; the launcher, under either command name, reports how it or its alias was installed and the matching upgrade command; the install script provides uv and installs the launcher without elevated privileges.",
+      "guarantee": "A release tag, the package version, the xork alias version and its exact pin, and the changelog agree before publishing, and both distributions are built, accepted and published together; the launcher, under either command name, reports how it or its alias was installed and the matching upgrade command; the install script provides uv and installs the launcher without elevated privileges; workflow uv downloads verify the reviewed archive checksum before executing the runtime.",
       "modules": {
         "tests/hexagonal/test_release_identity.py": "contract",
         "tests/hexagonal/test_release_workflow.py": "contract",
