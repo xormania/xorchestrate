@@ -9,8 +9,9 @@ from pathlib import Path
 import pytest
 
 from ..catalog import LAYERS, select_families, validate_catalog
-from ..sharding import TIMINGS, parse_shard, shard_plan, validate_timings
+from ..sharding import TIMINGS, parse_shard, shard_plan
 from .evidence import canonical, digest, write_json
+from .shard_timings import read_timings
 
 
 def pytest_addoption(parser):
@@ -58,19 +59,21 @@ def load_catalog(root):
 
 def load_timings(root, path=None):
     """Return the default weight and recorded per-module seconds used for sharding."""
-    source = Path(path) if path is not None else Path(root) / TIMINGS
-    return validate_timings(json.loads(source.read_text()))
+    _, default, weights, _ = read_timings(root, path)
+    return default, weights
 
 
-def shard_selection(root, selected, shard, timings=None):
+def shard_selection(root, selected, shard, timings=None, timings_sha256=None):
     """Restrict an existing family/layer selection to one balanced shard."""
     parsed = parse_shard(shard)
     if parsed is None:
         return selected, None
-    default, weights = load_timings(root, timings)
+    _, default, weights, sha256 = read_timings(root, timings)
+    if timings_sha256 is not None and sha256 != timings_sha256:
+        raise ValueError("Test timings changed after the shard model was frozen")
     plan = shard_plan(selected, parsed, weights=weights, default=default)
     chosen = {path: entry for path, entry in selected.items() if path in set(plan["modules"])}
-    return chosen, {"index": parsed[0], "count": parsed[1], "default_seconds": default,
+    return chosen, {"index": parsed[0], "count": parsed[1], "default_seconds": default, "timings_sha256": sha256,
                     "candidate_modules": len(selected), **plan}
 
 

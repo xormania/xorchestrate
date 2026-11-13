@@ -33,6 +33,7 @@ def parser():
     value.add_argument("--driver", action="append", help="Native acceptance driver; repeat to select several")
     value.add_argument("--family", action="append", help="Declared behavioral family; repeatable")
     value.add_argument("--shard", metavar="K/N", help="Run one-based balanced shard K of N of the tests suite")
+    value.add_argument("--timings", type=Path, help="External timing model for a balanced tests shard")
     value.add_argument("--story", action="append", help="Story ID; repeat to select an ordered battery")
     value.add_argument("--max-sessions", type=int, help="Session-start requests admitted per story")
     value.add_argument("--max-turns", type=int, help="Harness turn submissions admitted per story")
@@ -67,7 +68,7 @@ def _attach_host(selection, placement):
 
 def overrides(args):
     result = {}
-    for field in ("suite", "mode", "config", "brief", "shard", "timeout", "check_timeout", "run_timeout", "shutdown_grace", "output", "max_sessions", "max_turns", "max_tool_calls", "terminal_host",
+    for field in ("suite", "mode", "config", "brief", "shard", "timings", "timeout", "check_timeout", "run_timeout", "shutdown_grace", "output", "max_sessions", "max_turns", "max_tool_calls", "terminal_host",
                   "keep_after_run"):
         item = getattr(args, field)
         if item is not None:
@@ -93,7 +94,7 @@ def settings(args):
         return managed.repeat_settings(args.source, explicit)
     if args.profile:
         return profiles.load_profile(args.profile, root=ROOT, overrides=explicit)
-    return {"suite": "all", "mode": "protocol-fixture", "drivers": [], "families": [], "shard": None,
+    return {"suite": "all", "mode": "protocol-fixture", "drivers": [], "families": [], "shard": None, "timings": None,
             "config": None, "brief": str(ROOT / "docs/implementation/owner-brief.md"),
             "stories": [], "max_sessions": 2, "max_turns": 4, "max_tool_calls": 5000,
             "timeout": 180, "check_timeout": 600, "shutdown_grace": 10, "run_timeout": None,

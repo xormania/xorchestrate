@@ -411,7 +411,8 @@
         "scripts.testkit.adapters.managed_process",
         "scripts.testkit.adapters.terminals",
         "scripts.testkit.adapters.diagnostics",
-        "scripts.testkit.adapters.supervised_run"
+        "scripts.testkit.adapters.supervised_run",
+        "scripts.testkit.adapters.shard_timings"
       ],
       "allowed_roles": [
         "testkit_foundation",
@@ -1159,7 +1160,9 @@
         "test_support",
         "telemetry",
         "telemetry_views",
-        "ci_tooling"
+        "ci_tooling",
+        "ci_timings",
+        "testkit_pytest"
       ],
       "allowed_external": [
         "stdlib:*",
@@ -1265,7 +1268,8 @@
         "test_calibration",
         "telemetry",
         "telemetry_views",
-        "package_acceptance"
+        "package_acceptance",
+        "ci_timings"
       ],
       "allowed_external": [
         "stdlib:*",
@@ -1373,6 +1377,19 @@
         "stdlib:*"
       ],
       "allow_dynamic": false
+    },
+    "ci_timings": {
+      "modules": [
+        "scripts.ci.timings"
+      ],
+      "allowed_roles": [
+        "ci_tooling",
+        "testkit_foundation"
+      ],
+      "allowed_external": [
+        "stdlib:*"
+      ],
+      "allow_dynamic": true
     }
   }
 }

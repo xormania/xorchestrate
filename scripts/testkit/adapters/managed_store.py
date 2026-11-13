@@ -340,7 +340,7 @@ class ManagedStore:
             if supplement.get("status") == "partial":
                 receipt["status"] = "partial"
         safe_plan = {key: plan[key] for key in ("schema_version", "suite", "mode", "driver", "drivers", "families", "shard",
-                                               "timeout", "check_timeout", "run_timeout") if key in plan}
+                                               "timings_sha256", "timeout", "check_timeout", "run_timeout") if key in plan}
         payloads["state.json"] = json.dumps(_redact(state), indent=2, sort_keys=True).encode() + b"\n"
         payloads["plan-summary.json"] = json.dumps(safe_plan, indent=2, sort_keys=True).encode() + b"\n"
         payloads["inventory.json"] = json.dumps(receipt, indent=2, sort_keys=True).encode() + b"\n"

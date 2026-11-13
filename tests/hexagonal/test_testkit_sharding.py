@@ -1,5 +1,6 @@
 """Balanced, complete and deterministic sharding of the cataloged tests suite."""
 
+import hashlib
 import json
 import random
 import re
@@ -7,6 +8,7 @@ import subprocess
 
 import pytest
 
+from scripts.ci import timings as ci_timings
 from scripts.testkit import __main__ as cli
 from scripts.testkit import composition
 from scripts.testkit.adapters import profiles
@@ -180,6 +182,7 @@ def test_ci_defines_the_shard_count_once_and_keeps_the_application_aggregate_nam
     assert shards["strategy"]["fail-fast"] is False
     matrix = shards["strategy"]["matrix"]
     (count,) = matrix["shards"]
+    assert count == 8, "hosted application verification uses eight balanced shards"
     assert matrix["shard"] == list(range(1, count + 1)), "every shard index of N runs exactly once"
     # Every shard reference derives from the matrix count; no literal count can drift.
     text = json.dumps({key: value for key, value in shards.items() if key != "strategy"})
@@ -212,3 +215,166 @@ def test_application_aggregate_passes_only_when_every_shard_passed(tmp_path, tes
     result = subprocess.run(["/bin/bash", "-e", "-c", step["run"]], cwd=tmp_path, capture_output=True, text=True,
                             env={"TESTS_RESULT": tests_result}, timeout=10)
     assert (result.returncode == 0) == (tests_result == "success"), result.stdout
+
+
+def test_ci_resolves_one_model_for_every_shard_and_publishes_only_for_later_runs():
+    workflow = json.loads((composition.ROOT / ".github/workflows/ci.yml").read_text())
+    jobs = workflow["jobs"]
+    resolvers = [(name, step) for name, job in jobs.items() for step in job.get("steps", [])
+                 if "scripts/ci/timings.py select" in step.get("run", "")]
+    assert len(resolvers) == 1 and resolvers[0][0] == "paths", "one resolver freezes the model before fan-out"
+    paths, shards, aggregate = (jobs[name] for name in ("paths", "application-tests", "ci-result"))
+    resolver = resolvers[0][1]
+    assert paths["outputs"]["timings_sha256"] == "${{ steps." + resolver["id"] + ".outputs.sha256 }}"
+    upload = next(step for step in paths["steps"] if "ci-test-timing-plan" in step.get("with", {}).get("name", ""))
+    assert paths["outputs"]["timings_artifact"] == "${{ steps." + upload["id"] + ".outputs.artifact-id }}"
+    assert upload["with"].get("overwrite", False) is False, "the shared plan stays immutable"
+    assert shards["env"]["CI_TIMINGS_REQUIRED"] == "true"
+    for job in (shards, aggregate):
+        download = next(step for step in job["steps"] if step.get("id") == "timings")
+        assert download["with"]["artifact-ids"] == "${{ needs.paths.outputs.timings_artifact }}"
+        assert "name" not in download["with"], "all consumers read the resolved artifact identity"
+    execute = next(step for step in shards["steps"] if "--suite tests" in step.get("run", ""))
+    assert execute["env"]["CI_TIMINGS_SHA256"] == "${{ needs.paths.outputs.timings_sha256 }}"
+    assert "sha256sum --check --status" in execute["run"]
+    assert '--timings "$RUNNER_TEMP/ci-timings/timings.json"' in execute["run"]
+    publisher = next(step for step in aggregate["steps"] if "scripts/ci/timings.py publish" in step.get("run", ""))
+    assert publisher.get("continue-on-error") is True, "timing refresh cannot override the deterministic verdict"
+    assert '--inherited "$RUNNER_TEMP/ci-timings"' in publisher["run"]
+    assert '--output "$RUNNER_TEMP/ci-next-timings"' in publisher["run"]
+
+
+def test_timing_history_selects_one_authenticated_model_without_changing_the_candidate(tmp_path, monkeypatch):
+    project = fixture.timing_project(tmp_path / "project")
+    history = fixture.TimingHistory()
+    history.document["modules"]["tests/test_alpha_mid.py"] = 100.0
+    history.snapshot["timings_sha256"] = hashlib.sha256(fixture.model_bytes(history.document)).hexdigest()
+    history.repack()
+    monkeypatch.setattr(ci_timings.candidate, "api_bytes", history.archive)
+    committed = (project / "contracts/test-timings.json").read_bytes()
+    output = tmp_path / "selected"
+    snapshot = ci_timings.select(project, history.context, output, token="timing-test-token", get=history.get)
+    assert snapshot["status"] == "selected", snapshot
+    assert json.loads((output / "timings.json").read_text()) == history.document
+    assert snapshot["timings_sha256"] == hashlib.sha256((output / "timings.json").read_bytes()).hexdigest()
+    assert snapshot["selected_from"]["run_id"] == 101 and snapshot["publication"] is None
+    assert (project / "contracts/test-timings.json").read_bytes() == committed
+    assert all("/repos/xormania/xorchestrate/" in url for url in history.requests)
+
+
+@pytest.mark.parametrize("fault", ("wrong_repository", "fork", "failed_run", "failed_job", "expired", "digest",
+                                  "malformed_model", "model_digest", "publication", "workflow", "branch", "oversized"))
+def test_unusable_timing_history_keeps_the_committed_model(tmp_path, monkeypatch, fault):
+    project = fixture.timing_project(tmp_path / "project")
+    history = fixture.TimingHistory()
+    if fault == "wrong_repository":
+        history.run["repository"]["id"] = 999
+    elif fault == "fork":
+        history.run["head_repository"] = {"id": 999, "full_name": "foreign/xorchestrate"}
+    elif fault == "failed_run":
+        history.run["conclusion"] = "failure"
+    elif fault == "failed_job":
+        history.job["conclusion"] = "failure"
+    elif fault == "expired":
+        history.artifact["expired"] = True
+    elif fault == "digest":
+        history.artifact["digest"] = "sha256:" + "0" * 64
+    elif fault == "workflow":
+        history.run["path"] = ".github/workflows/foreign.yml"
+    elif fault == "branch":
+        history.run["head_branch"] = "unreviewed"
+    elif fault == "oversized":
+        history.artifact["size_in_bytes"] = ci_timings.candidate.MAX_ARCHIVE + 1
+    else:
+        if fault == "malformed_model":
+            history.document["default_seconds"] = True
+            history.snapshot["timings_sha256"] = hashlib.sha256(fixture.model_bytes(history.document)).hexdigest()
+        elif fault == "model_digest":
+            history.snapshot["timings_sha256"] = "0" * 64
+        else:
+            history.snapshot["publication"]["run_attempt"] = 2
+        history.repack()
+    monkeypatch.setattr(ci_timings.candidate, "api_bytes", history.archive)
+    output = tmp_path / "selected"
+    snapshot = ci_timings.select(project, history.context, output, token="timing-test-token", get=history.get)
+    assert snapshot["status"] == "fallback", (fault, snapshot)
+    assert json.loads((output / "timings.json").read_text()) == fixture.timings()
+    assert snapshot["source"]["kind"] == "committed"
+
+
+def test_unavailable_timing_history_still_freezes_a_usable_fallback(tmp_path):
+    project = fixture.timing_project(tmp_path / "project")
+    history = fixture.TimingHistory()
+    def unavailable(url):
+        raise OSError("history is unavailable")
+    output = tmp_path / "selected"
+    snapshot = ci_timings.select(project, history.context, output, get=unavailable)
+    assert snapshot["status"] == "fallback"
+    assert snapshot["timings_sha256"] == hashlib.sha256((output / "timings.json").read_bytes()).hexdigest()
+
+
+def test_complete_eight_shard_measurements_refresh_only_the_next_plan(tmp_path, monkeypatch):
+    project, artifacts = tmp_path / "project", tmp_path / "artifacts"
+    context, metadata, result = fixture.timing_publication(project, artifacts)
+    committed = fixture.timings()
+    fixture.write_json(project / "contracts/test-timings.json", committed)
+    inherited, output = tmp_path / "inherited", tmp_path / "next"
+    ci_timings.select(project, context, inherited, get=lambda url: {"workflow_runs": []})
+    before = {str(path.relative_to(project)): path.read_bytes() for path in project.rglob("*") if path.is_file()}
+    snapshot = ci_timings.publish(project, context, metadata, result, artifacts, inherited, output)
+    assert snapshot["status"] == "updated", snapshot
+    model = json.loads((output / "timings.json").read_text())
+    expected = {f"tests/test_shard_{index}.py": float(index) for index in range(1, 9)}
+    assert model == {"schema_version": 1, "default_seconds": 4.5, "modules": expected}
+    assert snapshot["timings_sha256"] == hashlib.sha256((output / "timings.json").read_bytes()).hexdigest()
+    assert len(snapshot["source"]["shards"]) == 8
+    assert partition(expected, 4, weights=expected, default=4.5) != partition(expected, 4, default=2.0)
+    assert {str(path.relative_to(project)): path.read_bytes() for path in project.rglob("*") if path.is_file()} == before
+    assert json.loads((inherited / "timings.json").read_text()) == committed, "current selection remains frozen"
+    history = fixture.TimingHistory(model)
+    history.run.update(id=context["producer"]["run_id"], head_sha=context["source_sha"])
+    history.job.update(run_id=history.run["id"], head_sha=history.run["head_sha"])
+    history.snapshot = snapshot
+    history.repack()
+    history.artifact["workflow_run"].update(id=history.run["id"], head_sha=history.run["head_sha"])
+    consumer = fixture.candidate_context(302)
+    monkeypatch.setattr(ci_timings.candidate, "api_bytes", history.archive)
+    next_plan = tmp_path / "following-run"
+    selected = ci_timings.select(project, consumer, next_plan, token="timing-test-token", get=history.get)
+    assert selected["status"] == "selected", selected
+    assert (next_plan / "timings.json").read_bytes() == (output / "timings.json").read_bytes()
+    assert selected["timings_sha256"] == snapshot["timings_sha256"]
+
+
+@pytest.mark.parametrize("fault", ("documentation", "reused", "failed", "partial", "expired",
+                                  "foreign_reference", "failed_case", "missing_junit"))
+def test_incomplete_or_unexecuted_measurements_preserve_the_inherited_model(tmp_path, fault):
+    project, artifacts = tmp_path / "project", tmp_path / "artifacts"
+    context, metadata, result = fixture.timing_publication(project, artifacts)
+    fixture.write_json(project / "contracts/test-timings.json", fixture.timings())
+    inherited, output = tmp_path / "inherited", tmp_path / "next"
+    ci_timings.select(project, context, inherited, get=lambda url: {"workflow_runs": []})
+    if fault == "documentation":
+        result["documentation_only"] = True
+    elif fault == "reused":
+        result["reuse"] = {"decision": "reuse"}
+    elif fault == "failed":
+        result["status"] = "failed"
+    elif fault == "partial":
+        metadata["jobs"].pop()
+    elif fault == "expired":
+        metadata["artifacts"][0]["expired"] = True
+    elif fault == "foreign_reference":
+        result["evidence_references"][0]["artifact_id"] += 10
+    else:
+        directory = artifacts / "framework-tests-python-3.12-shard-1-of-8--attempt-1/run"
+        if fault == "missing_junit":
+            (directory / "tests.xml").unlink()
+        else:
+            inventory = json.loads((directory / "inventory.json").read_text())
+            inventory["cases"][0]["outcome"] = "failed"
+            fixture.write_json(directory / "inventory.json", inventory)
+    snapshot = ci_timings.publish(project, context, metadata, result, artifacts, inherited, output)
+    assert snapshot["status"] == "preserved", (fault, snapshot)
+    assert (output / "timings.json").read_bytes() == (inherited / "timings.json").read_bytes()
+    assert snapshot["source"]["kind"] == "committed"

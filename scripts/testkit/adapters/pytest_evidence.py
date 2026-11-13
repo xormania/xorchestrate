@@ -16,7 +16,7 @@ def _count(actual, expected, label):
         raise ValueError("Pytest inventory has inconsistent " + label)
 
 
-def bind_pytest_report(*, root, directory, families=(), shard=None, exit_status):
+def bind_pytest_report(*, root, directory, families=(), shard=None, timings=None, timings_sha256=None, exit_status):
     """Retain a checked inventory without changing native process outcomes.
 
     The test-kit runs the catalog's test roots, optionally selecting families and
@@ -34,7 +34,8 @@ def bind_pytest_report(*, root, directory, families=(), shard=None, exit_status)
     if not isinstance(report, dict) or type(report.get("schema_version")) is not int or report["schema_version"] != 1:
         raise ValueError("Pytest inventory requires schema_version 1")
     catalog, assignments = load_catalog(root)
-    selected_modules, expected_shard = shard_selection(root, select_families(assignments, families), shard)
+    selected_modules, expected_shard = shard_selection(root, select_families(assignments, families), shard,
+                                                      timings, timings_sha256)
     reported_shard = report.get("shard")
     if expected_shard is None:
         if reported_shard is not None:

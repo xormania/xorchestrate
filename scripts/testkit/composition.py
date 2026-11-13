@@ -21,6 +21,7 @@ from .adapters.evidence import (
     verify_candidate,
     write_json,
 )
+from .adapters.shard_timings import freeze_timings, timing_source, verify_timings
 from .adapters.static import STATIC_IDS
 from .core import execute_checks, required_inputs, validate_checks
 from .model import COMPONENT_SUITES, MODES, SUITES, Check
@@ -42,7 +43,7 @@ def _selection(suite):
 
 
 def _options(*, suite, mode, timeout, check_timeout, config, driver, families, drivers=(), shutdown_grace=10.0,
-             shard=None):
+             shard=None, timings=None):
     selected = _selection(suite)
     if mode not in MODES:
         raise ValueError("Unknown mode")
@@ -52,6 +53,8 @@ def _options(*, suite, mode, timeout, check_timeout, config, driver, families, d
     if families and "tests" not in selected:
         raise ValueError("--family selects pytest families in the tests suite")
     suite_shard(suite, shard)
+    if timings is not None and shard is None:
+        raise ValueError("--timings requires a tests shard")
     if (not isinstance(drivers, (tuple, list)) or any(not isinstance(d, str) or not d for d in drivers)
             or len(drivers) != len(set(drivers))):
         raise ValueError("Acceptance drivers must be unique nonempty names")
@@ -79,7 +82,7 @@ def cache_environment(root):
 
 def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=ROOT, brief=None,
          families=(), check_timeout=600, drivers=(), shutdown_grace=10.0,
-         stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000, shard=None, terminal_host=None):
+         stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000, shard=None, terminal_host=None, timings=None):
     """Pure check definitions; filesystem preparation belongs to the owning check.
 
     ``terminal_host`` is a product terminal-host selection for acceptance and
@@ -89,7 +92,7 @@ def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=
                                                                                    sort_keys=True))
     selected = _options(suite=suite, mode=mode, timeout=timeout, check_timeout=check_timeout,
                         config=config, driver=driver, families=families, drivers=drivers,
-                        shutdown_grace=shutdown_grace, shard=shard)
+                        shutdown_grace=shutdown_grace, shard=shard, timings=timings)
     limits = validate_limits(max_sessions=max_sessions, max_turns=max_turns, max_tool_calls=max_tool_calls)
     if stories and "stories" not in selected:
         raise ValueError("--story requires a suite containing stories")
@@ -108,7 +111,12 @@ def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=
         required = ("contracts/testing.json", "tests/conftest.py")
         if shard is not None:
             argv += ["--test-shard", shard]
-            required += (TIMINGS,)
+            if timings is not None:
+                source = timing_source(root, timings, external=True)
+                argv += ["--test-timings", str(source)]
+                required += (str(source),)
+            else:
+                required += (TIMINGS,)
         checks.append(Check("tests", tuple(argv), check_timeout, required))
     if "calibration" in selected:
         for name, module in (("native-calibration", "scripts.verification.calibrate_suite"),
@@ -229,7 +237,7 @@ def _run_location(output):
 
 
 def readiness(check, *, root, mode, config=None, driver=None, brief=None, families=(), shard=None, output=None,
-              terminal_host=None):
+              terminal_host=None, timings=None):
     """One side-effect-free prerequisite definition for doctor and execution.
 
     ``output`` is the evidence root (or run directory) the selected checks will
@@ -246,11 +254,12 @@ def readiness(check, *, root, mode, config=None, driver=None, brief=None, famili
             from .catalog import select_families
 
             _, assignments = load_catalog(root)
-            chosen, shard_plan = shard_selection(root, select_families(assignments, families), shard)
+            chosen, shard_plan = shard_selection(root, select_families(assignments, families), shard, timings)
             items.append({"name": "test_catalog", "passed": True, "modules": len(assignments)})
             if shard_plan is not None:
                 items.append({"name": "test_shard", "passed": True, "shard": shard, "modules": len(chosen),
-                              "estimated_seconds": shard_plan["estimated_seconds"]})
+                              "estimated_seconds": shard_plan["estimated_seconds"],
+                              "timings_sha256": shard_plan["timings_sha256"]})
         if check.name == "acceptance" or check.name.startswith(("acceptance:", "story:")):
             items.append(_terminal_host_readiness(terminal_host))
             if output is not None:
@@ -270,14 +279,14 @@ def readiness(check, *, root, mode, config=None, driver=None, brief=None, famili
 def preflight(*, suite, mode, config=None, driver=None, timeout=180, root=ROOT,
               families=(), check_timeout=600, brief=None, drivers=(), shutdown_grace=10.0,
               stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000, shard=None, output=None,
-              terminal_host=None):
+              terminal_host=None, timings=None):
     root = Path(root).resolve()
     cache_environment(root)
     checks = plan(directory=root.parent / "testkit-preflight", suite=suite, mode=mode, config=config,
                   driver=driver, timeout=timeout, root=root, brief=brief, families=families,
                   check_timeout=check_timeout, drivers=drivers, shutdown_grace=shutdown_grace,
                   stories=stories, max_sessions=max_sessions, max_turns=max_turns, max_tool_calls=max_tool_calls,
-                  shard=shard, terminal_host=terminal_host)
+                  shard=shard, terminal_host=terminal_host, timings=timings)
     if families:
         try:
             from .adapters.pytest_plugin import load_catalog
@@ -291,7 +300,7 @@ def preflight(*, suite, mode, config=None, driver=None, timeout=180, root=ROOT,
         else:
             select_families(assignments, families)
     rows = [readiness(check, root=root, mode=mode, config=config, driver=driver, brief=brief, families=families,
-                      shard=shard, output=output, terminal_host=terminal_host) for check in checks]
+                      shard=shard, output=output, terminal_host=terminal_host, timings=timings) for check in checks]
     return {"status": "passed" if all(row["status"] == "passed" for row in rows) else "setup_error",
             "suite": suite, "mode": mode, "shard": shard, "checks": rows,
             "authentication": "verified by live callbacks only" if mode == "native" else "not used"}
@@ -300,7 +309,7 @@ def preflight(*, suite, mode, config=None, driver=None, timeout=180, root=ROOT,
 def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=None,
         timeout=180, root=ROOT, brief=None, families=(), check_timeout=600,
         directory=None, cancellation=None, result_sink=None, shutdown_grace=10.0, drivers=(),
-        stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000, shard=None, terminal_host=None):
+        stories=(), max_sessions=2, max_turns=4, max_tool_calls=5000, shard=None, terminal_host=None, timings=None):
     root, output = Path(root).resolve(), Path(output).expanduser().resolve()
     if output == root or root in output.parents:
         raise ValueError("Run output must be outside the measured candidate")
@@ -343,16 +352,22 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
     try:
         env = cache_environment(root)
         report["environment"] = env
+        if timings is not None and shard is None:
+            raise ValueError("--timings requires a tests shard")
+        if shard is not None:
+            report["timings"] = freeze_timings(root, directory, timings)
+            timings = report["timings"]["path"]
         checks = plan(directory=directory, suite=suite, mode=mode, config=config, driver=driver,
                       timeout=timeout, root=root, brief=brief, families=families,
                       check_timeout=check_timeout, drivers=drivers, shutdown_grace=shutdown_grace,
                       stories=stories, max_sessions=max_sessions, max_turns=max_turns, max_tool_calls=max_tool_calls,
-                      shard=shard, terminal_host=terminal_host)
+                      shard=shard, terminal_host=terminal_host, timings=timings)
         report["selected_check_ids"] = [check.name for check in checks]
         ready = preflight(suite=suite, mode=mode, config=config, driver=driver, timeout=timeout, root=root,
                           brief=brief, families=families, check_timeout=check_timeout, drivers=drivers,
                           shutdown_grace=shutdown_grace, stories=stories, max_sessions=max_sessions,
-                          max_turns=max_turns, max_tool_calls=max_tool_calls, shard=shard, output=directory)
+                          max_turns=max_turns, max_tool_calls=max_tool_calls, shard=shard, output=directory,
+                          timings=timings)
         write_json(directory / "preflight.json", ready)
         report["preflight"] = ready
         before = candidate_identity(root) if (root / ".git").exists() else None
@@ -375,8 +390,10 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
         resolved, manifests = {}, {}
 
         def prepare(check):
+            if check.name == "tests" and shard is not None:
+                verify_timings(root, timings, report["timings"]["sha256"])
             row = readiness(check, root=root, mode=mode, config=config, driver=driver, brief=brief, families=families,
-                            shard=shard, output=directory, terminal_host=terminal_host)
+                            shard=shard, output=directory, terminal_host=terminal_host, timings=timings)
             if row["status"] != "passed":
                 raise ValueError(row["reason"])
             prepared = check
@@ -417,7 +434,9 @@ def run(*, output, suite="all", mode="protocol-fixture", config=None, driver=Non
 
                 try:
                     row["tool_report"] = bind_pytest_report(root=root, directory=directory,
-                                                           families=families, shard=shard, exit_status=result.exit)
+                                                           families=families, shard=shard, timings=timings,
+                                                           timings_sha256=report.get("timings", {}).get("sha256"),
+                                                           exit_status=result.exit)
                 except Exception as error:
                     row["evidence_error"] = str(error)
                     if row["status"] == "passed":

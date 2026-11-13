@@ -127,12 +127,31 @@ error rather than an empty pass. `--shard` is accepted only with `--suite tests`
 direct pytest takes `--test-shard K/N`.
 
 Assignment is deterministic: longest-processing-time first, heaviest module on the
-currently lightest shard, ties broken by module path and shard index. Weights come
-from the committed [`contracts/test-timings.json`](../contracts/test-timings.json)
+currently lightest shard, ties broken by module path and shard index. Local weights default
+to the committed [`contracts/test-timings.json`](../contracts/test-timings.json)
 (module path to seconds, including setup and teardown). A module without a recorded
 duration, such as a newly added one, gets the file's `default_seconds` (the median
 recorded duration) and is assigned like any other; entries for removed modules are
 ignored. Timings only affect balance, never coverage.
+
+CI uses eight shards and resolves one shared timing snapshot before they start.
+The latest usable successful default-branch push supplies its published model;
+unavailable, expired or invalid history falls back to the committed weights.
+Every shard downloads the same artifact ID. `--timings PATH` accepts an external
+model with `--suite tests --shard K/N`; execution freezes its exact bytes in the
+run evidence and passes them to both pytest and independent qualification.
+Inventories retain `timings_sha256`, and the aggregate verifies identical frozen
+models across the complete shard set. The checkout is never rewritten.
+
+After complete fresh shard evidence qualifies, CI publishes new per-module JUnit
+durations for subsequent runs. Documentation skips, reused behavioral evidence,
+failures and incomplete measurements preserve the inherited model. Publication
+is advisory; only successful default-branch push runs can supply future models.
+This shared-snapshot and skipped-run preservation pattern adapts
+[UXor PR #133](https://github.com/xormania/uxor/pull/133), using Xorchestrate's
+authenticated run/attempt and bounded artifact intake. Model selection and
+publication receipts live in `ci-test-timing-plan--attempt-N` and
+`ci-test-timings--attempt-N` artifacts. There are no automatic source commits.
 
 Regenerate the timings when the balance drifts, from one unsharded run or from
 every shard's JUnit (for example the CI shard artifacts):
@@ -192,6 +211,7 @@ controller requests, native callback selection and managed tmux automation.
 | Catalog validation and selection | `scripts/testkit/catalog.py` |
 | Shard specification, balanced module partition and timings format | `scripts/testkit/sharding.py`, `contracts/test-timings.json` |
 | Timings regeneration from JUnit | `scripts/testkit/adapters/timings.py`, `python3 -m scripts.testkit.timings` |
+| Shared CI timing snapshot and automatic measurement refresh | `scripts/ci/timings.py`, `scripts/testkit/adapters/shard_timings.py` |
 | Pytest discovery, markers and inventory | `scripts/testkit/adapters/pytest_plugin.py` |
 | Command execution, named results, check receipts and resource ownership | `scripts/testkit/{model,ports,core}.py` and execution adapters |
 | Independent expected behavior and reusable scenario inventories | `tests/hexagonal/contracts/` |
