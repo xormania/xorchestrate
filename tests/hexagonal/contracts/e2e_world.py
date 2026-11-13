@@ -17,6 +17,8 @@ clients. Scenarios never reach for processes, sockets or sleeps themselves; they
 - ``bridge_hosts()`` lists the running bridge hosts of this project.
 - ``await_(label, predicate, *, timeout=None)`` returns the zero-argument predicate's first truthy value; at the
   deadline (the world's, or ``timeout``) it raises ``WaitExpired`` naming ``label``.
+- ``settle(seconds)`` keeps a fixed quiet interval, until a decision boundary replaces it.
+
 - ``hold(stage)`` arms a gate in the session peer at ``stage`` (``"resume"``: the peer is asked to continue a
   conversation) before the action that reaches it, and returns a ``Gate``: ``entered()`` is true once the peer is
   waiting there, ``release()`` lets it and every later arrival through.
@@ -76,6 +78,8 @@ class World(Protocol):
     def bridge_hosts(self) -> list: ...
 
     def await_(self, label, predicate, *, timeout=None): ...
+
+    def settle(self, seconds): ...
 
     def hold(self, stage): ...
 

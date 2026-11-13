@@ -108,8 +108,8 @@ def under_manual_nothing_is_reconnected_until_recover(world):
     original = world.start(client)
     _lost(world, client)
     world.up()
-    status = world.await_("manual recovery detected the loss",
-                          lambda: (lambda value: value if value["recovery"].get("detected") else None)(world.status()))
+    world.settle(2)  # long enough for a reconnect the manual policy must never make; slice 2 replaces it
+    status = world.status()
     assert status["recovery"]["detected"]["selected"] == [], status["recovery"]
     assert any(item["session_id"] == original["id"] for item in status["sessions_needing_reconnect"]), status
     assert world.bridge_hosts() == [], "nothing was reconnected"
