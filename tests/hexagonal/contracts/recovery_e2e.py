@@ -179,8 +179,12 @@ def stale_sockets_left_by_a_total_loss_never_block_recovery(world):
     world.down()
 
 
-def a_second_loss_while_a_session_is_being_reconnected_brings_it_back_exactly_once(world):
-    """The project dies again while recovery has a session in hand; the next up finishes it, once."""
+def _interrupted_by_a_second_loss(world):
+    """The project dies again while recovery has the session in hand at the peer's resume; the next up recovers it.
+
+    Returns the original session, the replacement that was interrupted (``interrupted``) and the final recovery.
+    Nothing but the first turn ("before") reaches the session peer on the way.
+    """
     world.save()
     client = world.client()
     original = world.start(client)
@@ -200,21 +204,111 @@ def a_second_loss_while_a_session_is_being_reconnected_brings_it_back_exactly_on
     gate.release()
     world.up()
     recovery = world.await_("recovery finished after the second up", lambda: _finished(world))
+    return original, interrupted, recovery
+
+
+def _lineage_view(world, client, original, recovery):
+    """The original's lineage after ``recovery``, observed but not judged: what was recovered, what lives, what is
+    uncertain and what the operator is shown."""
     mapped = recovered_map(recovery["report"])
+    listed = sessions(client)
+    family = lineage(listed, original["id"])
+    return {"listed": listed, "family": family,
+            "recovered": [replacement for source, replacement in mapped.items() if source in family],
+            "live": sorted(key for key in family if listed[key]["status"] in {"starting", "active"}),
+            "uncertain": sorted(key for key in family if listed[key]["status"] == "unknown"),
+            "shown": _mentioned(recovery) | _mentioned(world.status())}
+
+
+def _one_live_successor(world, client, original, recovery):
+    """Exactly one live session in the original's lineage, the one ``recovery`` recovered; returns it and the listing.
+
+    Members killed mid-reconnect keep an uncertain outcome rather than a guessed one, and the operator sees each.
+    """
+    view = _lineage_view(world, client, original, recovery)
+    assert len(view["recovered"]) == 1 and view["live"] == view["recovered"], \
+        {key: view["listed"][key]["status"] for key in view["family"]}
+    assert set(view["uncertain"]) <= view["shown"], {"uncertain": view["uncertain"], "shown": sorted(view["shown"])}
+    return view["recovered"][0], view["listed"]
+
+
+def _peer_took_the_first_turn_once(world, original):
+    delivered = [entry["text"] for entry in world.peer_received(original)]
+    assert delivered.count("before") == 1, delivered
+
+
+def a_second_loss_while_a_session_is_being_reconnected_brings_it_back_exactly_once(world):
+    """The project dies again while recovery has a session in hand; the next up finishes it, once."""
+    original, interrupted, recovery = _interrupted_by_a_second_loss(world)
     with world.client() as after:
-        listed = sessions(after)
-        family = lineage(listed, original["id"])
-        recovered = [replacement for source, replacement in mapped.items() if source in family]
-        assert len(recovered) == 1, mapped
-        live = sorted(key for key in family if listed[key]["status"] in {"starting", "active"})
-        assert live == recovered, {key: listed[key]["status"] for key in family}
-        # A replacement killed mid-reconnect keeps its outcome uncertain rather than guessed; the operator sees it.
+        successor, listed = _one_live_successor(world, after, original, recovery)
         assert listed[interrupted]["status"] == "unknown", listed[interrupted]
-        uncertain = sorted(key for key in family if listed[key]["status"] == "unknown")
-        shown = _mentioned(recovery) | _mentioned(world.status())
-        assert set(uncertain) <= shown, {"uncertain": uncertain, "shown to the operator": sorted(shown)}
-        assert_continues(after, original, recovered[0])
+        assert_continues(after, original, successor)
     assert len(world.bridge_hosts()) == 1, "exactly one bridge host serves the conversation"
+    world.down()
+
+
+def a_third_unclean_restart_with_an_unknown_replacement_brings_the_session_back_once(world):
+    """Another total loss after a recovery that left an unknown replacement: still one live session, nothing replayed."""
+    original, interrupted, _ = _interrupted_by_a_second_loss(world)
+    receipt = world.disturb(TotalLoss())
+    assert receipt.outcome == "applied", receipt
+    world.up()
+    recovery = world.await_("recovery finished after the third up", lambda: _finished(world))
+    with world.client() as after:
+        view = _lineage_view(world, after, original, recovery)
+        assert len(view["recovered"]) == 1 and view["live"] == view["recovered"], \
+            "RECOVERY_THIRD_RESTART_KEEPS_ONE_LIVE_SESSION"
+        assert set(view["uncertain"]) <= view["shown"], "RECOVERY_UNKNOWN_REPLACEMENT_STAYS_REPORTED"
+        successor, listed = view["recovered"][0], view["listed"]
+        assert listed[interrupted]["status"] == "unknown", listed[interrupted]
+        assert len(world.bridge_hosts()) == 1, "no second terminal or bridge host for the conversation"
+        _peer_took_the_first_turn_once(world, original)
+        assert_continues(after, original, successor)
+    world.down()
+
+
+def resolving_an_unknown_replacement_as_failed_leaves_one_live_session(world):
+    """The operator settles the interrupted reconnect as failed: it leaves reconciliation, and one session lives on."""
+    original, interrupted, recovery = _interrupted_by_a_second_loss(world)
+    with world.client() as operator:
+        record = sessions(operator)[interrupted]
+        operation_id = record.get("pending_operation") or record["start_operation_id"]
+        operation = operator.call("get_operation", {"operation_id": operation_id})["operation"]
+        listed_before = world.status()["recovery"].get("needs_reconciliation")
+        assert interrupted in _mentioned(listed_before), {"interrupted": interrupted, "listed": listed_before}
+        operator.call("resolve_operation", {"operation_id": operation_id, "expected_version": operation["version"],
+                                            "outcome": "failed", "reason": "the replacement was lost mid-reconnect"})
+        needing = _mentioned(world.status()["recovery"].get("needs_reconciliation", []))
+        assert interrupted not in needing, "RECOVERY_FAILED_RESOLUTION_LEAVES_RECONCILIATION"
+        _one_live_successor(world, operator, original, recovery)
+        _peer_took_the_first_turn_once(world, original)
+    assert len(world.bridge_hosts()) == 1, "exactly one bridge host serves the conversation"
+    world.down()
+
+
+def an_unknown_replacement_is_never_completed_into_a_second_live_session(world):
+    """Asked to record the interrupted reconnect as completed, the product never leaves two live sessions."""
+    original, interrupted, recovery = _interrupted_by_a_second_loss(world)
+    with world.client() as operator:
+        record = sessions(operator)[interrupted]
+        operation_id = record.get("pending_operation") or record["start_operation_id"]
+        operation = operator.call("get_operation", {"operation_id": operation_id})["operation"]
+        reply = operator.attempt("resolve_operation", {
+            "operation_id": operation_id, "expected_version": operation["version"], "outcome": "completed",
+            "reason": "asserted without an adapter receipt"})
+        outcome = ("refused " + str(reply.get("error", {}).get("code"))) if reply.get("error") else "accepted"
+        if reply.get("error"):
+            # A refused completion changes nothing: the replacement stays uncertain and listed for reconciliation.
+            assert sessions(operator)[interrupted]["status"] == "unknown", sessions(operator)[interrupted]
+            still = world.status()["recovery"].get("needs_reconciliation")
+            assert interrupted in _mentioned(still), {"interrupted": interrupted, "listed": still}
+        listed = sessions(operator)
+        family = lineage(listed, original["id"])
+        live = sorted(key for key in family if listed[key]["status"] in {"starting", "active"})
+        assert len(live) == 1, ("PRODUCT DEFECT for xor: completing an interrupted reconnect left two live sessions "
+                                f"for one conversation ({outcome}): " + str({key: listed[key]["status"] for key in family}))
+    assert len(world.bridge_hosts()) == 1, f"exactly one bridge host serves the conversation ({outcome})"
     world.down()
 
 
@@ -223,4 +317,7 @@ CHECKS = (after_total_loss_the_default_policy_brings_the_session_back_without_a_
           under_manual_nothing_is_reconnected_until_recover,
           a_server_only_crash_adopts_the_running_terminal_and_keeps_its_bridge_host,
           stale_sockets_left_by_a_total_loss_never_block_recovery,
-          a_second_loss_while_a_session_is_being_reconnected_brings_it_back_exactly_once)
+          a_second_loss_while_a_session_is_being_reconnected_brings_it_back_exactly_once,
+          a_third_unclean_restart_with_an_unknown_replacement_brings_the_session_back_once,
+          resolving_an_unknown_replacement_as_failed_leaves_one_live_session,
+          an_unknown_replacement_is_never_completed_into_a_second_live_session)

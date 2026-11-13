@@ -51,6 +51,15 @@ class Client:
         assert not reply["result"].get("isError"), str(content)[:300]
         return content
 
+    def attempt(self, name, arguments):
+        """The tool's structured reply, refused or not; a refusal carries ``error`` and never raises here."""
+        reply = self.channel.request(rpc(next(self.ids), "tools/call", {"name": name, "arguments": arguments}))
+        content = reply["result"].get("structuredContent", {})
+        if reply["result"].get("isError") and "error" not in content:
+            # A refusal without structured detail is still a refusal, never an acceptance.
+            content = {**content, "error": {"code": None, "message": "refused without structured content"}}
+        return content
+
     def send_without_waiting(self, name, arguments):
         self.channel.send(rpc(next(self.ids), "tools/call", {"name": name, "arguments": arguments}))
 
