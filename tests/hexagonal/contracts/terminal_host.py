@@ -493,7 +493,7 @@ def inventory_sees_everything_and_takes_nothing(subject):
             expected["orphan"] = (True, False)
         seen = host.inventory()
         assert [item.name for item in seen] == sorted(expected), seen
-        assert {item.name: (item.running, item.held) for item in seen} == expected, seen
+        assert {item.name: (item.running, item.held) for item in seen} == expected, "TERMINAL_HOST_INVENTORY_REPORTS_WHO_HOLDS"
         if host.survives_controller:
             probe = subject.host("inventory")
             assert {item.name: item.held for item in probe.inventory()} == dict.fromkeys(expected, False)
@@ -516,7 +516,7 @@ def sweep_removes_only_exited_terminals_nobody_here_holds(subject):
         subject.crash("sweep", "orphan-exited", subject.programs.exits(0))
         subject.crash("sweep", "orphan-running", subject.programs.waits())
         subject.wait(lambda: any(item.name == "orphan-exited" and not item.running for item in host.inventory()), 10)
-        assert host.sweep() == ["orphan-exited"]
+        assert host.sweep() == ["orphan-exited"], "TERMINAL_HOST_SWEEP_REMOVES_ONLY_EXITED_ORPHANS"
         names = {item.name: item.running for item in host.inventory()}
         assert names == {"held-exited": False, "orphan-running": True}, names
         assert host.sweep() == [], "sweeping twice removes nothing more"

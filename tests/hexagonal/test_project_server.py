@@ -1088,7 +1088,7 @@ def test_down_lets_a_stopped_servers_process_end_on_its_own(directory, adapter, 
         down.finish()
     finally:
         down.close()
-    assert ended.read_text() == "finished", "down closed a server that was ending on its own"
+    assert ended.exists() and ended.read_text() == "finished", "PROJECT_SERVER_DOWN_LETS_AN_ENDING_SERVER_FINISH"
     assert files.read_terminal_record() is None
     observer = cli.ServerTerminals(files, environ)
     try:
@@ -1118,6 +1118,9 @@ def test_total_loss_never_blocks_status_doctor_down_or_the_next_up(cli):
     assert list((cli.home / "servers").glob("*.terminal.json")), "the failure left the terminal record behind"
 
     status = cli.json("status", expect=3)
+    refused = status["terminal_host"].get("error", {}).get("code")
+    assert refused not in {"terminal_not_recoverable", "terminal_identity_mismatch"}, \
+        "PROJECT_SERVER_LOST_TERMINAL_RECORD_NEVER_BLOCKS"
     assert status["running"] is False and "error" not in status["terminal_host"], status
     doctor = cli.run("doctor")
     report = json.loads(doctor.stdout)

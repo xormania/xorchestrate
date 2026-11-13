@@ -733,6 +733,54 @@ def test_the_hosted_inventory_is_the_old_faults_with_standard_checks():
     assert hashlib.sha256(canonical.encode()).hexdigest() == HOSTED_MUTATIONS_SHA256
 
 
+_SERVER_TESTS = "tests.hexagonal.test_project_server"
+_HOST_CONTRACT_TEST = "tests.hexagonal.test_terminal_host::test_adapters_meet_the_contract"
+_HOST_CONTRACT = "tests.hexagonal.contracts.terminal_host"
+_ENDING = f"{_SERVER_TESTS}::test_down_lets_a_stopped_servers_process_end_on_its_own"
+_TOTAL_LOSS = f"{_SERVER_TESTS}::test_total_loss_never_blocks_status_doctor_down_or_the_next_up"
+_INVENTORY = "inventory_sees_everything_and_takes_nothing"
+_SWEEP = "sweep_removes_only_exited_terminals_nobody_here_holds"
+PROJECT_SERVER = (
+    # name, mutated file, target, diagnostic, declared contract function, unaffected neighbour
+    ("down-closes-an-ending-server", "xorchestrate/cli.py", f"{_ENDING}[detached-process]",
+     "PROJECT_SERVER_DOWN_LETS_AN_ENDING_SERVER_FINISH", None, f"{_TOTAL_LOSS}[detached-process]"),
+    ("inventory-claims-every-terminal-held", "xorchestrate/adapters/tmux.py",
+     f"{_HOST_CONTRACT_TEST}[multiplexer-surviving-{_INVENTORY}]", "TERMINAL_HOST_INVENTORY_REPORTS_WHO_HOLDS",
+     f"{_HOST_CONTRACT}:{_INVENTORY}", f"{_HOST_CONTRACT_TEST}[detached-process-surviving-{_INVENTORY}]"),
+    ("sweep-removes-running-terminals", "xorchestrate/adapters/tmux.py",
+     f"{_HOST_CONTRACT_TEST}[multiplexer-surviving-{_SWEEP}]", "TERMINAL_HOST_SWEEP_REMOVES_ONLY_EXITED_ORPHANS",
+     f"{_HOST_CONTRACT}:{_SWEEP}", f"{_HOST_CONTRACT_TEST}[detached-process-surviving-{_SWEEP}]"),
+    ("lost-terminal-record-blocks-the-project", "xorchestrate/cli.py", f"{_TOTAL_LOSS}[detached-process]",
+     "PROJECT_SERVER_LOST_TERMINAL_RECORD_NEVER_BLOCKS", None,
+     f"{_SERVER_TESTS}::test_server_locations_are_private_absolute_and_bounded"),
+)
+"""The project-server area's planted faults (old faults 1-4). The lost-record case credits only the host's
+unrecoverable-terminal refusals in status, never another terminal-host error."""
+PROJECT_SERVER_MUTATIONS_SHA256 = "6522b3c5c7d842141942ad8924a04ea1c3aaf4c360fcaef5281b5201ad906f58"
+"""sha256 of the canonical JSON of the cases' mutation objects in order, as the old project-server fault script
+planted them."""
+
+
+def test_the_registry_holds_the_project_server_inventory_at_the_manual_stage_after_hosted():
+    registry, _ = _real()
+    assert list(registry)[5] == "project-server" and registry["project-server"] == ("manual",), registry
+
+
+def test_the_project_server_inventory_is_the_old_faults_with_standard_checks():
+    import hashlib
+    _, inventories = _real()
+    found = tuple((case.name, case.mutation.path, case.target, case.diagnostic, case.contract, case.unaffected)
+                  for case in inventories["project-server"].cases)
+    assert found == tuple((name, path, target, diagnostic, contract, (unaffected,))
+                          for name, path, target, diagnostic, contract, unaffected in PROJECT_SERVER), found
+    for fault in inventories["project-server"].cases:
+        assert {module_form(selector) for selector in fault.selectors} == {fault.target, *fault.unaffected}, fault.name
+        assert fault.expect == "detected", fault.name
+    mutations = json.loads((INVENTORIES / "project-server.json").read_text())["cases"]
+    canonical = json.dumps([item["mutation"] for item in mutations], sort_keys=True, separators=(",", ":"))
+    assert hashlib.sha256(canonical.encode()).hexdigest() == PROJECT_SERVER_MUTATIONS_SHA256
+
+
 @pytest.mark.parametrize("name,expected", ids=["state", "work"], argvalues=[
     ("state", tuple((name, "detected") for name in STATE[:-1]) + (("unrelated-error-control", "unrelated_failure"),)),
     ("work", tuple((name, "detected") for name in WORK)),
