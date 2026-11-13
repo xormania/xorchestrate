@@ -334,3 +334,17 @@ class OtlpOperationalSink:
         partial = response.get("partialSuccess", {})
         if partial and (partial.get("errorMessage") or any(int(value) for key, value in partial.items() if key.startswith("rejected"))):
             raise ValueError("OTLP collector rejected operational signals")
+
+
+def local_operational_sink(options, scope):
+    """Construct the bounded local sink through the collector factory convention."""
+    if not isinstance(options, dict) or options.keys() - {"capacity"}:
+        raise ValueError("invalid local operational sink options")
+    return LocalOperationalSink(capacity=options.get("capacity", 1000))
+
+
+def otlp_operational_sink(options, scope):
+    """Construct the explicit, bounded OTLP sink through the same convention."""
+    if not isinstance(options, dict) or options.keys() - {"endpoint", "timeout"}:
+        raise ValueError("invalid OTLP operational sink options")
+    return OtlpOperationalSink(options.get("endpoint", ""), timeout=options.get("timeout", 1.0))

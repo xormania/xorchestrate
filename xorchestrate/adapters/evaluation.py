@@ -15,6 +15,7 @@ from dataclasses import asdict
 
 from ..model import JSON, Assessment, OrchestrationError, public_error_code
 from ..ports import CapabilityProvider
+from ..provider_results import ProviderResultError, read_provider_result
 from .telemetry_capture import TelemetryDispatch, TelemetrySource, capture_origin, observe_telemetry, observe_wire
 
 
@@ -160,21 +161,12 @@ class ToolEvaluator(_TelemetryEvaluator):
         except (OSError, TimeoutError):
             raise OrchestrationError("The assessment capability is unavailable.", "evaluation_unavailable") from None
         observe_telemetry(observer, "evaluator.result", {"result": result}, origin, secrets=secrets)
-        if not isinstance(result, dict):
-            raise _invalid("Assessment capability must return an object.")
-        if result.get("isError"):
-            raise OrchestrationError("The assessment capability reported an error.", "evaluation_unavailable")
-        if "structuredContent" in result:
-            result = result["structuredContent"]
-        elif "content" in result and "outcome" not in result:
-            content = result["content"]
-            if (not isinstance(content, list) or len(content) != 1 or not isinstance(content[0], dict)
-                    or content[0].get("type") != "text" or not isinstance(content[0].get("text"), str)):
-                raise _invalid("Assessment MCP content needs exactly one JSON text block or structuredContent.")
-            try:
-                result = json.loads(content[0]["text"])
-            except (ValueError, RecursionError):
-                raise _invalid("Assessment capability returned invalid JSON text.") from None
+        try:
+            result = read_provider_result(result, direct_field="outcome")
+        except ProviderResultError as error:
+            if error.reason == "reported_error":
+                raise OrchestrationError("The assessment capability reported an error.", "evaluation_unavailable") from None
+            raise _invalid("Assessment capability returned an invalid result object or envelope.") from None
         return checked_assessment(result)
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
