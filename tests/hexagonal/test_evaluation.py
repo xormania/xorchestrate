@@ -46,10 +46,33 @@ class ToolEvaluatorTests(unittest.TestCase):
                 evaluator.close()
                 self.assertFalse(provider.closed)
 
+    def test_direct_assessment_business_content_is_not_a_transport_envelope(self):
+        result = {"outcome": "ready", "content": {"artifact": "report.json"}, "evidence": [{"source": "check"}]}
+        provider = FixtureProvider(result)
+        answer = ToolEvaluator({"provider": "p", "capability": "reason"}, {"p": provider}).assess("question", {})
+        self.assertEqual(answer.outcome, "ready")
+        self.assertEqual(answer.evidence, ({"source": "check"},))
+        self.assertEqual(provider.result, result)
+
+    def test_ambiguous_or_nonfinite_mcp_json_cannot_supply_an_assessment(self):
+        for text in ('{"outcome":"blocked","outcome":"ready"}',
+                     '{"outcome":"ready","details":{"count":0,"count":1}}',
+                     '{"outcome":"ready","discarded":NaN}'):
+            provider = FixtureProvider({"content": [{"type": "text", "text": text}]})
+            with self.subTest(text=text):
+                with self.assertRaises(OrchestrationError) as caught:
+                    ToolEvaluator({"provider": "p", "capability": "reason"}, {"p": provider}).assess("question", {})
+                self.assertEqual(caught.exception.code, "evaluation_invalid")
+
     def test_errors_remain_distinct_without_exposing_provider_message(self):
         for result, code in (({"outcome": "pass", "confidence": True}, "evaluation_invalid"),
                              ({"outcome": "pass", "confidence": float("nan")}, "evaluation_invalid"),
                              ({"content": [{"type": "text", "text": "probably fine"}]}, "evaluation_invalid"),
+                             ({"content": [{"type": "image", "text": '{"outcome":"ready"}'}]}, "evaluation_invalid"),
+                             ({"content": [{"type": "text", "text": '{"outcome":"ready"}'},
+                                           {"type": "text", "text": "extra"}]}, "evaluation_invalid"),
+                             ({"structuredContent": None, "content": [{"type": "text", "text": '{"outcome":"ready"}'}]},
+                              "evaluation_invalid"),
                              ({"isError": True}, "evaluation_unavailable"),
                              (OrchestrationError("secret provider diagnostic", "capability_failed"), "evaluation_unavailable")):
             provider = FixtureProvider(result)

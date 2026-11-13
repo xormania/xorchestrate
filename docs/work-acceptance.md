@@ -109,7 +109,13 @@ Its result must contain a measurement observation:
 ```
 
 The result may be a direct CLI object, MCP `structuredContent`, or one JSON text
-block. The application preserves the raw provider response, its digest, the
+block. Acceptance and tool evaluation share a pure result reader; their domain
+validators remain separate. A reported `isError` refuses the result, and explicit
+`structuredContent` takes precedence over other fields. Otherwise a direct
+`measurement` (or an assessment's `outcome`) remains a direct payload even when
+it also has ordinary business `content`. JSON text must have unique fields and
+finite values; duplicate assessment fields are refused rather than resolved by
+their order. The application preserves the raw provider response, its digest, the
 adapter-origin operation, requested binding, requirement revision, candidate
 revision, and resolved provider configuration identity. Requested values are
 never filled into missing observation fields. Use `bindings` only for applicable

@@ -1,7 +1,8 @@
 # Agent workflow
 
 How agents work on this repository together, how a contributor recovers after a
-crash, and how to use Serena here. [AGENTS.md](../AGENTS.md) carries the
+crash, how developer tools read optional local settings, and how to use Serena
+here. [AGENTS.md](../AGENTS.md) carries the
 repository's rules and takes precedence over this document; xor's current
 direction takes precedence over both.
 
@@ -131,6 +132,46 @@ not check. Flag anything at risk as soon as you find it rather than waiting for
 the full sweep. The checks cannot see damage to an ignored file, a truncated
 untracked file that is not empty, or work that existed only in a lost session's
 memory.
+
+## Developer settings
+
+Developer tools in `scripts/` that opt in read optional local settings through
+`scripts.devconfig`. Nothing requires them: every setting has a neutral default
+derived from your home and XDG directories and the checkout's name. The product
+never reads them, and checks run in CI do not depend on them.
+
+Each setting is a `XORCHESTRATE_DEV_*` name, the same in the environment and in
+the files. A value is taken from the first of these that sets it:
+
+1. a command-line flag of the tool, where it offers one;
+2. the environment;
+3. `.devtools.env` in the main checkout (git-ignored; linked work trees read the
+   main checkout's file, never one of their own);
+4. `devtools.env` in the `xorchestrate` folder under your XDG config directory;
+5. the declared default.
+
+The files hold plain `KEY=VALUE` lines, `#` comments and blank lines, in UTF-8.
+Values are literal text: nothing is expanded or executed. Spaces and tabs around
+the name and the value are trimmed and one matching pair of surrounding quotes
+is removed. A path may start with `~` or `~/` (your home from `HOME`), and a
+relative path resolves against the file's folder, or the current directory for
+the environment and flags. An empty value counts as not set, so the next source
+applies. Any other line is refused with its file and line number, and so is a
+`.devtools.env` that git tracks. An unknown name is ignored and reported by
+`show`. Keep secrets out of these files.
+
+```bash
+python3 -m scripts.devconfig show              # every setting, its value and where it came from
+python3 -m scripts.devconfig example --check   # is this tree's .devtools.env.example current?
+python3 -m scripts.devconfig example --write   # regenerate it in this tree
+```
+
+All settings are declared once, with kind, default and description, in
+`scripts/devconfig/keys.py`. The committed `.devtools.env.example` is generated
+from that table, and a test fails when the two differ. Add a setting to the
+table only for a location, an external tool's launcher or pin, or a
+machine-dependent number for local runs; a setting that could change what a
+check proves is either not offered or is marked so that runs record it.
 
 ## Serena
 

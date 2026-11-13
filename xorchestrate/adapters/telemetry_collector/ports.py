@@ -1,8 +1,9 @@
-"""Storage ports used by the collector and the local telemetry adapter.
+"""Storage and operational sink ports used by the local telemetry adapter.
 
-Composition selects the implementations by name (``telemetry_corpus`` and
-``telemetry_artifacts``); the collector never names a concrete store. A factory
-receives its validated options object and the collector's ``CollectorScope``.
+Composition selects the implementations by name (``telemetry_corpus``,
+``telemetry_artifacts`` and ``telemetry_operational_sink``); the collector never
+names a concrete store. A factory receives its validated options object and the
+collector's ``CollectorScope``.
 """
 
 from __future__ import annotations
@@ -75,5 +76,17 @@ class TelemetryArtifacts(Protocol):
     def verify(self, ref: ArtifactRef) -> bool: ...
 
 
+class OperationalSink(Protocol):
+    """Optional protected operational signals, independent of corpus durability.
+
+    The collector's bounded dispatch owns delivery to ``emit``. Factories and
+    sinks bound their own construction and emission work; this interface does
+    not supply a background-resource or shutdown lifecycle.
+    """
+
+    def emit(self, signal: dict) -> None: ...
+
+
 CorpusFactory = Callable[[dict, CollectorScope], TelemetryCorpusStorage]
 ArtifactsFactory = Callable[[dict, CollectorScope], TelemetryArtifacts]
+OperationalSinkFactory = Callable[[dict, CollectorScope], OperationalSink]
