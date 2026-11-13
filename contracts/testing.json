@@ -256,6 +256,7 @@
       "guarantee": "Configured request allowances include admission, transport writes and response reads without resetting between phases; expiry preserves effect uncertainty and fences partial streams.",
       "modules": {
         "tests/hexagonal/test_runtime_request_budgets.py": "adapter",
+        "tests/hexagonal/test_runtime_budget_options.py": "adapter",
         "tests/hexagonal/test_hosted_request_budgets.py": "adapter",
         "tests/hexagonal/test_socket_request_budgets.py": "adapter"
       }

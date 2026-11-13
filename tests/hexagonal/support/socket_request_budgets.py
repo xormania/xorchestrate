@@ -122,6 +122,24 @@ def descriptor(path, *, address="/unused/gateway.sock", transport="unix", timeou
     return path
 
 
+def gateway_admission(monkeypatch, handler, *, fragment_delay):
+    """Run the real request handler with independently timed inbound fragments."""
+    from xorchestrate.adapters.native_gateway import LocalGateway
+
+    gateway = LocalGateway(handler, {"gateway_timeout": 1, "max_frame_bytes": 4096})
+    try:
+        request_type = gateway.server.RequestHandlerClass
+        packet = {"token": gateway.token, "action": "tools/call", "payload": {"marker": "admitted"}}
+    finally:
+        # No listener or service thread participates in the controlled timing;
+        # the normal socketserver handler setup/handle/finish path still runs.
+        gateway.close()
+    clock, connection = scripted_socket(monkeypatch,
+        fragments=split_response(json.dumps(packet).encode() + b"\n", fragment_delay))
+    request_type(connection, ("127.0.0.1", 0), gateway.server)
+    return clock, connection
+
+
 class ConnectedSocket:
     """Use a real socketpair at the Unix client's already-connected boundary."""
 

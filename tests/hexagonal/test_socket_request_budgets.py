@@ -148,6 +148,34 @@ def test_gateway_healthy_fragmented_authentication_result_and_failure_envelopes(
     assert connection.closed
 
 
+def test_gateway_server_does_not_admit_a_frame_after_its_total_budget(monkeypatch):
+    calls = []
+
+    def handle(action, payload):
+        calls.append((action, payload))
+        return {"accepted": True}
+
+    clock, connection = fixture.gateway_admission(monkeypatch, handle, fragment_delay=0.3)
+    assert calls == [], "individual fragments must not renew the server's frame-admission budget"
+    assert clock.elapsed == pytest.approx(1)
+    if connection.sent:
+        assert [json.loads(raw) for raw in connection.sent] == [
+            {"error": {"code": "gateway_error", "message": "Native gateway request failed"}}]
+
+
+def test_gateway_server_admits_a_complete_authenticated_frame_within_budget(monkeypatch):
+    calls = []
+
+    def handle(action, payload):
+        calls.append((action, payload))
+        return {"accepted": True}
+
+    clock, connection = fixture.gateway_admission(monkeypatch, handle, fragment_delay=0.1)
+    assert calls == [("tools/call", {"marker": "admitted"})]
+    assert clock.elapsed == pytest.approx(0.4)
+    assert [json.loads(raw) for raw in connection.sent] == [{"result": {"accepted": True}}]
+
+
 @pytest.mark.parametrize("control", [False, True])
 def test_real_unix_fragments_do_not_renew_request_timeout(monkeypatch, control):
     with fixture.fragmented_unix(monkeypatch, control=control) as peer:
