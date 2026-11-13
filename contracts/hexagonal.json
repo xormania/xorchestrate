@@ -720,7 +720,8 @@
     },
     "worktrees_core": {
       "modules": [
-        "scripts.worktrees.core"
+        "scripts.worktrees.core",
+        "scripts.worktrees.maintenance"
       ],
       "allowed_roles": [
         "worktrees_foundation",
@@ -736,6 +737,8 @@
         "signal",
         "typing",
         "urllib.parse",
+        "re",
+        "time",
         "contextlib",
         "hashlib"
       ],

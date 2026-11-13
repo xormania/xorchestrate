@@ -61,3 +61,18 @@ def forced_git_calls(calls):
 def codes_in(text, codes):
     """The codes from ``codes`` that appear as whole words in ``text``."""
     return {code for code in codes if re.search(rf"(?<![A-Z_]){code}(?![A-Z_])", text)}
+
+
+VERDICTS = ("MAIN", "NEEDS_LOOK", "REMOVABLE", "KEEP")
+REASONS = frozenset({"MISSING_DIR", "ORPHAN_DIR", "DIRTY", "UNPUSHED", "STASH", "LOCKED", "IN_USE_MERGED", "IDLE"})
+TREE_KEYS = frozenset({"path", "branch", "head", "last_commit_age_s", "last_use", "size", "merged", "on_origin",
+                       "clean", "stash", "locked", "in_use", "serena", "verdict", "reasons"})
+SIZE_KEYS = frozenset({"total", "serena", "venv", "build"})
+DIR_KEYS = frozenset({"path", "kind", "size", "age_s", "marked", "recognised", "in_use", "expired"})
+TOTAL_KEYS = frozenset({"size", "removable", "needs_look", "expired"})
+DIR_KINDS = frozenset({"scratch", "extra", "run"})
+SCRATCH_MARK = ".scratch.json"
+RUN_MARK = "plan.json"
+LABEL = r"[A-Za-z0-9][A-Za-z0-9._-]*"
+STAMP = r"\d{8}T\d{6}Z"
+DAY = 86_400

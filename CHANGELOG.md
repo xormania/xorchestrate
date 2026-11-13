@@ -138,6 +138,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Added
 
+- Work-tree maintenance: `python3 -m scripts.worktrees report` judges every
+  tree and scratch or run directory, and `prune --apply` removes only what it
+  can prove safe, keeping and reporting everything else. See
+  [keeping trees and scratch space in check](docs/agent-workflow.md#keeping-trees-and-scratch-space-in-check).
 - Optional work-tree tool for contributors: `python3 -m scripts.worktrees`
   creates and safely removes git work trees and runs one Serena server per
   tree over local HTTP, so a session can use symbol tools on any tree. See

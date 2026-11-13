@@ -34,6 +34,21 @@ def _parser() -> argparse.ArgumentParser:
         serena.add_parser(action, help=text).add_argument("tree", help="branch under the root, or a path")
     serena.add_parser("ls", help="list recorded servers")
     serena.add_parser("reap", help="forget dead servers and stop servers whose tree is gone")
+    report = commands.add_parser("report", help="judge every tree and scratch directory; changes nothing")
+    form = report.add_mutually_exclusive_group()
+    form.add_argument("--brief", action="store_true", help="one line when something needs attention, else nothing")
+    form.add_argument("--json", action="store_true")
+    report.add_argument("--offline", action="store_true", help="judge without asking GitHub")
+    prune = commands.add_parser("prune", help="remove what the report measures safe (dry run unless --apply)")
+    prune.add_argument("--apply", action="store_true")
+    prune.add_argument("--offline", action="store_true", help="skip the fetch and GitHub")
+    scratch = commands.add_parser("scratch", help="marked scratch directories").add_subparsers(dest="action",
+                                                                                                required=True)
+    scratch_new = scratch.add_parser("new", help="create a marked scratch directory and print its path")
+    scratch_new.add_argument("label", nargs="?", default=None)
+    scratch_new.add_argument("--owner", default=None)
+    scratch.add_parser("rm", help="delete a marked, unused scratch directory").add_argument("path")
+    scratch.add_parser("ls", help="list scratch directories")
     call = serena.add_parser("call", help="call one tool on a tree's server")
     call.add_argument("tree")
     call.add_argument("tool")
@@ -43,14 +58,32 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None, *, env: Mapping[str, str] | None = None,
          ports: Ports | None = None) -> int:
-    arguments = _parser().parse_args(argv)
+    parser = _parser()
+    arguments, extra = parser.parse_known_args(argv)
+    if extra:
+        # A scratch label that looks like an option is still a label, refused by its own rule.
+        if arguments.command == "scratch" and arguments.action == "new" and arguments.label is None \
+                and len(extra) == 1:
+            arguments.label = extra[0]
+        else:
+            parser.error(f"unrecognized arguments: {' '.join(extra)}")
     env = dict(os.environ if env is None else env)
     flags = {ROOT_KEY: arguments.root, STATE_KEY: arguments.state_dir}
+    if arguments.command == "report" and arguments.brief:
+        return _brief(arguments, env, flags, ports)
     try:
         services = build(arguments.repo or Path.cwd(), env, flags, ports)
     except DevConfigError as error:
         print(f"{error.code}: {error.detail}", file=sys.stderr)
         return 2
+    if arguments.command in ("report", "prune", "scratch"):
+        unsafe = services.maintenance.unsafe_root()
+        if unsafe:
+            print(unsafe.line(), file=sys.stderr)
+            return 2
+    if arguments.command == "report" and arguments.json:
+        print(json.dumps(services.maintenance.report_json(arguments.offline), indent=2, sort_keys=True))
+        return 0
     outcome = _dispatch(arguments, services)
     for line in outcome.err:
         print(line, file=sys.stderr)
@@ -59,7 +92,33 @@ def main(argv: Sequence[str] | None = None, *, env: Mapping[str, str] | None = N
     return outcome.code
 
 
+def _brief(arguments: argparse.Namespace, env: Mapping[str, str], flags: Mapping[str, str | None],
+           ports: Ports | None) -> int:
+    """At most one line and always success, so a session-start hook can call it."""
+    try:
+        maintenance = build(arguments.repo or Path.cwd(), env, flags, ports).maintenance
+        unsafe = maintenance.unsafe_root()
+        line = f"worktrees: report unavailable ({unsafe.code})" if unsafe else maintenance.brief()
+    except Exception as error:  # noqa: BLE001 - the brief form must never fail its caller
+        code = getattr(error, "code", type(error).__name__)
+        line = f"worktrees: report unavailable ({code})"
+    if line:
+        print(line)
+    return 0
+
+
 def _dispatch(arguments: argparse.Namespace, services) -> Outcome:
+    if arguments.command == "report":
+        return services.maintenance.report(arguments.offline)
+    if arguments.command == "prune":
+        return services.maintenance.prune(arguments.apply, arguments.offline)
+    if arguments.command == "scratch":
+        maintenance = services.maintenance
+        if arguments.action == "new":
+            return maintenance.scratch_new(arguments.label or "", arguments.owner or services.config.owner)
+        if arguments.action == "rm":
+            return maintenance.scratch_rm(str(Path(arguments.path).absolute()))
+        return maintenance.scratch_ls()
     if arguments.command == "new":
         return services.trees.new(arguments.branch, arguments.base)
     if arguments.command == "remove":
