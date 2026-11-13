@@ -24,7 +24,7 @@ from .adapters.evidence import candidate_identity, digest, now, write_json
 from .adapters.managed_process import ManagedWorker
 from .adapters.managed_store import ManagedStore, owner_alive
 from .adapters.native_evidence import collection_supplement
-from .adapters.ownership import processes_naming, send_signal, subreaper
+from .adapters.ownership import owned_processes, processes_naming, send_signal, subreaper
 from .adapters.shard_timings import timing_source, verify_timings
 from .composition import ROOT, preflight, run
 from .composition import plan as check_plan
@@ -315,20 +315,44 @@ def managed_worker(directory, plan):
                          interpreter=plan["interpreter"], grace=plan.get("shutdown_grace", 10), keep_after_run=keep)
 
 
+RUN_MARKER = "XORCHESTRATE_PROOF_DIRECTORY"
+"""Set to the run directory in the environment of what a managed run launches (``ManagedWorker``)."""
+
+
+def _selected(directory, placement, within=None):
+    try:
+        return set(owned_processes(placement["socket"].parent, (RUN_MARKER, str(directory)), within=within).selected)
+    except ValueError:
+        return set()  # no private endpoint left to anchor provenance: report, never end
+
+
+def _ending(directory, placement):
+    """What close may end: named by the run and selected by its provenance (the name only narrows)."""
+    return sorted(_selected(directory, placement, within=processes_naming(directory)), key=lambda item: item.pid)
+
+
+def _leftovers(directory, placement):
+    """Everything of the run still alive: what names it or carries its marker."""
+    return set(processes_naming(directory)) | _selected(directory, placement)
+
+
 def close_without_supervisor(directory, state):
     """Close a finished run whose supervisor is gone: end its host at the recorded placement, then stop leftovers.
 
     Kept terminals are adopted from their receipts first. ``shutdown`` reaches
-    terminals no live controller holds; anything still naming the run (an
-    owned host does not end with a supervisor that was killed outright) is
-    stopped by identity. Cleanup is reported from what is actually left.
+    terminals no live controller holds. A leftover (an owned host does not end
+    with a supervisor that was killed outright) is stopped by identity only if
+    it names the run and the run's marker, a socket in its private endpoint or
+    descent from one of those selects it; anything else that names the run or
+    carries its marker is reported, never ended. Cleanup is reported from what
+    is actually left.
     """
     directory = Path(directory)
     terminal = state.get("terminal") or {}
     keep = bool(terminal.get("keep_after_run"))
     plan = read_json(directory / "plan.json")
     placement = host_placement(directory, plan)
-    before = processes_naming(directory)
+    before = _leftovers(directory, placement)
     found = bool(before) or placement["socket"].exists()
     adopted, errors = [], []
     # The run's harness can rewrite plan.json: a built-in host name only, at an endpoint that is still the run's own.
@@ -358,16 +382,16 @@ def close_without_supervisor(directory, state):
         finally:
             host.close()
     for number in (signal.SIGTERM, signal.SIGKILL):
-        survivors = processes_naming(directory)
+        survivors = _ending(directory, placement)
         for identity in survivors:
             send_signal(identity, number)
         deadline = time.monotonic() + 3
         while survivors and time.monotonic() < deadline:
             time.sleep(.05)
-            survivors = processes_naming(directory)
+            survivors = _ending(directory, placement)
         if not survivors:
             break
-    remaining = processes_naming(directory)
+    remaining = _leftovers(directory, placement)
     if not remove_endpoint(placement["socket"].parent):  # the derived one: never what the plan names
         errors.append("endpoint_not_owned")
     cleanup = {"verified": not remaining and not errors and not placement["socket"].exists(),

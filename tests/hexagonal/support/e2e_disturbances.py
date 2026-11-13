@@ -1,6 +1,7 @@
 """Named disturbances, stage gates and bounded waits for end-to-end worlds, implemented once.
 
-Kills act only on the world's own processes. A victim is a process of the current user that
+Kills act only on the world's own processes, selected by the test kit's ``ownership.owned_processes`` (one
+implementation for the kit and the tests). A victim is a process of the current user that
 - ``home``: has an initial environment setting ``XORCHESTRATE_HOME`` to exactly this world's home (a fresh
   temporary path the world created); only that one key is read, compared and discarded, and an unreadable
   environment means "not a victim";
@@ -35,9 +36,7 @@ from tests.hexagonal.contracts.e2e_world import Receipt, ServerLoss, TotalLoss, 
 from tests.hexagonal.support.host_processes import processes_under
 from tests.hexagonal.support.native import wait_for
 
-HOME_KEY = b"XORCHESTRATE_HOME="
-LISTENING = 0x10000
-"""``__SO_ACCEPTCON`` in /proc/net/unix: the socket accepts connections, i.e. it was bound and listens."""
+HOME_KEY = "XORCHESTRATE_HOME"
 POLL_SECONDS = .25
 """Pause between observations of an await: an observation may start a CLI process, so not faster."""
 SIGNAL_GRACE = 10
@@ -51,20 +50,6 @@ _handed = weakref.WeakKeyDictionary()
 
 # Victims -------------------------------------------------------------------------------------------------
 
-def _has_home(pid, expected):
-    """Whether process ``pid``'s initial environment sets the home key to exactly ``expected``.
-
-    Reads only that key; the environment block is never kept, logged or returned.
-    """
-    try:
-        with open(f"/proc/{pid}/environ", "rb") as source:
-            block = source.read()
-    except OSError:
-        return False
-    wanted = HOME_KEY + expected
-    return any(entry == wanted for entry in block.split(b"\0"))
-
-
 def _fresh_home(world_home, directory):
     """The world's home, if it is a directory inside the world's own directory; else refuse."""
     home, root = os.path.realpath(world_home), os.path.realpath(directory)
@@ -73,81 +58,10 @@ def _fresh_home(world_home, directory):
     return str(world_home)
 
 
-def _listening_inodes(home):
-    """Inodes of listening Unix sockets whose bound path, resolved, lies inside the resolved ``home``."""
-    root = os.path.realpath(home) + os.sep
-    found = set()
-    try:
-        lines = Path("/proc/net/unix").read_text(encoding="utf-8", errors="replace").splitlines()[1:]
-    except OSError:
-        return found
-    for line in lines:
-        fields = line.split(None, 7)
-        if len(fields) < 8 or fields[7].startswith("@"):
-            continue  # unbound, or an abstract name that is no path at all
-        try:
-            listening = int(fields[3], 16) & LISTENING
-        except ValueError:
-            continue
-        if listening and os.path.realpath(fields[7]).startswith(root):
-            found.add(fields[6])
-    return found
-
-
-def _holds(pid, inodes):
-    """Whether process ``pid`` itself holds one of the listening sockets ``inodes``."""
-    try:
-        descriptors = os.listdir(f"/proc/{pid}/fd")
-    except OSError:
-        return False
-    for descriptor in descriptors:
-        try:
-            link = os.readlink(f"/proc/{pid}/fd/{descriptor}")
-        except OSError:
-            continue
-        if link.startswith("socket:[") and link[8:-1] in inodes:
-            return True
-    return False
-
-
 def _victims(home, spawned=()):
-    """This user's processes of the world: ``({identity: signal}, {descendant: selected ancestor})``.
-
-    ``home``: carries the world's exact home; ``socket``: holds a listening socket bound inside it;
-    ``spawned``: started by the world itself; ``descendant``: a child, through parent links read now, of a
-    process already selected by one of those three, never of anything else (not the test runner or shell).
-    """
-    uid, table = os.getuid(), ownership.processes()
-    marker, inodes = os.fsencode(home), _listening_inodes(home)
-    mine, found = set(), {}
-    for pid, (identity, _, state) in table.items():
-        if state == "Z" or pid == os.getpid():
-            continue
-        try:
-            if os.stat(f"/proc/{pid}").st_uid != uid:
-                continue
-        except OSError:
-            continue
-        mine.add(pid)
-        if _has_home(pid, marker):
-            found[identity] = "home"
-        elif inodes and _holds(pid, inodes):
-            found[identity] = "socket"
-    for process in spawned:
-        if process.poll() is None and process.pid in table:
-            found.setdefault(table[process.pid][0], "spawned")
-    children = {}
-    for pid in mine:
-        children.setdefault(table[pid][1], []).append(pid)
-    ancestors, pending = {}, [(identity, identity) for identity in found]
-    while pending:
-        parent, root = pending.pop()
-        for pid in children.get(parent.pid, ()):
-            child = table[pid][0]
-            if child not in found:
-                found[child], ancestors[child] = "descendant", root
-                pending.append((child, root))
-    return found, ancestors
+    """The world's processes, selected once for the kit and the tests by ``ownership.owned_processes``."""
+    selection = ownership.owned_processes(home, (HOME_KEY, home), spawned=spawned)
+    return selection.selected, selection.ancestors
 
 
 def _kill(identities):
