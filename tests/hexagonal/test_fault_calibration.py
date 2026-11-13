@@ -528,6 +528,21 @@ def test_composition_builds_one_calibration_check_per_ci_registered_inventory(tm
                                        "scripts/verification/inventories/" + entries[name]["file"]}, check.required
 
 
+def test_composition_leaves_out_inventories_not_registered_at_ci(tmp_path):
+    """Every real inventory is at ci, so only a registry with other stages shows the stage filter."""
+    from scripts.testkit import composition
+    root = tmp_path / "candidate"
+    inventory_directory(root / "scripts/verification/inventories",
+                        registry={"schema_version": 1, "inventories": {
+                            "early": {"file": "early.json", "stages": ["ci", "manual"]},
+                            "later": {"file": "later.json", "stages": ["pre-draft", "manual"]}}},
+                        inventories={"early.json": {"schema_version": 1, "cases": []},
+                                     "later.json": {"schema_version": 1, "cases": []}})
+    checks = [item.name for item in composition.plan(directory=tmp_path / "out", suite="calibration",
+                                                     mode="protocol-fixture", root=root)]
+    assert checks == ["early-calibration"], checks
+
+
 def test_the_suite_report_holds_each_inventory_report(tmp_path):
     """A real CLI run on a throwaway registry with one detected and one escaped case."""
     repository = git_repository(tmp_path / "repo")
