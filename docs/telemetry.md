@@ -45,6 +45,14 @@ xorchestrate call telemetry_events --json '{"limit":20}'
 Use the persistent `run` or MCP `serve` interface for native sessions. The same
 application operations are available through both input adapters.
 
+The runtime's `TelemetryService` owns these operations and automatic observation
+intake. The application actions delegate to it; authorized views still enforce
+current resource visibility and bundle operations authorize their complete
+evidence closure. The service receives explicit storage, projection and authority
+collaborators, with live suppliers for capture and source health. It does not
+construct adapters or depend on the application facade. This changes no action
+name, configuration format, stored event schema or collector lifecycle.
+
 ## Configuration options
 
 The top-level `telemetry` section takes `adapter` (built-in `local`), `options`
