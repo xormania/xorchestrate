@@ -241,17 +241,21 @@ def repository_references(config):
     """
     found = []
 
-    def adapter(where, specification):
+    def adapter(where, specification, *, descend=True):
         if not isinstance(specification, dict):
             return
         target = specification.get("adapter")
         if isinstance(target, str) and ":" in target and not target.startswith("xorchestrate."):
             found.append({"where": where, "kind": "module", "adapter": target})
         options = specification.get("options")
-        if isinstance(options, dict):
+        if descend and isinstance(options, dict):
             for nested in ("corpus", "artifacts", "session"):
                 if isinstance(options.get(nested), dict):
                     adapter(f"{where}.options.{nested}", options[nested])
+            if where == "telemetry" and specification.get("adapter", "local") == "local":
+                operational = options.get("operational")
+                if isinstance(operational, dict):
+                    adapter(f"{where}.options.operational.sink", operational.get("sink"), descend=False)
 
     for section in ADAPTER_SECTIONS:
         adapter(section, config.get(section))
