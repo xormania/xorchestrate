@@ -3,6 +3,7 @@ from copy import deepcopy
 from datetime import datetime
 
 from .model import VerificationFailure
+from .order import EvidenceOrder, display_order
 from .ports import NativeObservationDecoder
 
 
@@ -19,7 +20,7 @@ def observation_peer(record, peer_sessions):
     return peer
 
 
-def decode_observations(observations, peer_sessions, session_records, mode, decoders, *, effects=None):
+def decode_observations(observations, peer_sessions, session_records, mode, decoders, *, effects=None, ordering=None):
     """Preserve each raw observation and explicit claim around adapter facts.
 
     Peers and decoder origins are supplied by composition. This module knows the
@@ -57,6 +58,7 @@ def decode_observations(observations, peer_sessions, session_records, mode, deco
                         fact["persisted_" + kind] = deepcopy(saved[embedded["id"]])
             facts.append({**deepcopy(fact), **identity,
                           "at": fact.get("at", item.get("at", record.get("created_at"))),
+                          "order": ordering.created("native_observation", record["id"]) if ordering else None,
                           "expected_origin": decoders[peer].origin,
                           "raw_ref": {"kind": "native_observation", "id": record["id"]},
                           "raw_observation_id": record["id"], "raw_observation": deepcopy(record)})
@@ -64,6 +66,7 @@ def decode_observations(observations, peer_sessions, session_records, mode, deco
 
 
 def normalize(raw, peer_sessions, provider_events, mode, *, decoders: dict[str, NativeObservationDecoder]):
+    ordering = EvidenceOrder(raw)
     by_session = {value["session_id"]: peer for peer, value in peer_sessions.items()}
     for records in raw.values():
         if not isinstance(records, list):
@@ -80,7 +83,7 @@ def normalize(raw, peer_sessions, provider_events, mode, *, decoders: dict[str, 
 
     for fact in decode_observations(observations, peer_sessions, session_records, mode, decoders,
             effects={"message": {row["id"]: row for row in raw.get("messages", [])},
-                     "evidence": {row["id"]: row for row in raw.get("evidence", [])}}):
+                     "evidence": {row["id"]: row for row in raw.get("evidence", [])}}, ordering=ordering):
         # Turn facts are consumed independently by the completion ledger. Keep
         # this established application event sequence free of protocol ticks.
         if fact["event"] == "native_turn":
@@ -132,12 +135,14 @@ def normalize(raw, peer_sessions, provider_events, mode, *, decoders: dict[str, 
         if not peer or record.get("origin") != "adapter" or record.get("stale"):
             continue
         if item.get("phase") == "requested":
-            add("tool_called", peer, record["created_at"], **call_data(record))
+            add("tool_called", peer, record["created_at"], order=ordering.created("native_observation", record["id"]),
+                **call_data(record))
             if item.get("action") == "invoke":
                 provider_calls.append(record)
         if item.get("phase") != "completed":
             continue
-        add("tool_completed", peer, record["created_at"], **call_data(record))
+        add("tool_completed", peer, record["created_at"], order=ordering.created("native_observation", record["id"]),
+            **call_data(record))
         result, args = item.get("result", {}), item.get("arguments", {})
         if item.get("action") == "send_message":
             message = messages.get(result.get("message", {}).get("id"))
@@ -147,7 +152,7 @@ def normalize(raw, peer_sessions, provider_events, mode, *, decoders: dict[str, 
             recipients = message.get("recipients", [])
             if not payload.get("case_id") or len(recipients) != 1:
                 continue
-            add("queued", peer, message["created_at"], **call_data(record),
+            add("queued", peer, message["created_at"], order=ordering.created("message", message["id"]), **call_data(record),
                 message={
                 "id": message["id"], "to": recipients[0], **payload})
         elif item.get("action") == "record_result":
@@ -161,7 +166,8 @@ def normalize(raw, peer_sessions, provider_events, mode, *, decoders: dict[str, 
                 report = {key: payload.get(key) for key in ("phase", "case_id", "nonce", "memory", "peer")}
             else:
                 continue
-            add("report", peer, saved["created_at"], **call_data(record), report=report)
+            add("report", peer, saved["created_at"], order=ordering.created("evidence", saved["id"]),
+                **call_data(record), report=report)
     for attempt in raw["attempts"]:
         # An unresolved/new attempt must survive even if its session is absent
         # or superseded; dropping it would let historical success mask it.
@@ -171,9 +177,9 @@ def normalize(raw, peer_sessions, provider_events, mode, *, decoders: dict[str, 
                   "native_id": attempt.get("native_id"), "recipient": attempt.get("recipient"),
                   "attempt_sequence": attempt.get("sequence"), "status": attempt.get("status"),
                   "origin": attempt.get("origin"), "submission": attempt.get("submission")}
-        add("attempt", peer, attempt["created_at"], **fields)
+        add("attempt", peer, attempt["created_at"], order=ordering.created("delivery_attempt", attempt["id"]), **fields)
         if attempt.get("status") == "submitted" and attempt.get("origin") == "adapter" and attempt.get("submission", {}).get("submitted") is True:
-            add("submitted", peer, attempt["finished_at"], **fields, state="submitted")
+            add("submitted", peer, attempt["finished_at"], order=ordering.submitted(attempt["id"]), **fields, state="submitted")
     for event in provider_events:
         peer = event["peer"]
         matching = []
@@ -189,7 +195,7 @@ def normalize(raw, peer_sessions, provider_events, mode, *, decoders: dict[str, 
         data = {k: v for k, v in event.items() if k not in {"event", "peer", "at"}}
         if matching:
             data.update(call_data(matching[0]))
-        add(event["event"], peer, event["at"], **data)
+        add(event["event"], peer, event["at"], order=ordering.provider(event), **data)
     def observed_time(event):
         try:
             value = datetime.fromisoformat(event["at"])
@@ -199,5 +205,8 @@ def normalize(raw, peer_sessions, provider_events, mode, *, decoders: dict[str, 
         except (KeyError, TypeError, ValueError) as error:
             raise VerificationFailure("invalid_observation_timestamp") from error
 
-    events.sort(key=observed_time)
+    # Preserve timestamp validation as a format check, never an ordering oracle.
+    for event in events:
+        observed_time(event)
+    events.sort(key=display_order)
     return [{**event, "seq": index + 1} for index, event in enumerate(events)]

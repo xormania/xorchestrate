@@ -139,3 +139,91 @@ default in your home), never into the repository.
   `--project <checkout>` instead for that harness.
 - Unverified: whether pyright starts on a machine without Node on its path, and
   whether each harness starts MCP servers in the session's directory.
+
+## Work trees and per-tree Serena (optional tool)
+
+`python3 -m scripts.worktrees` is an optional convenience for contributors who
+work in several git work trees at once. Nothing in the repository requires it.
+It reads its settings through the [developer settings](#developer-settings);
+`--root` and `--state-dir` override the work-tree root and the tool's state
+directory for one command, and `--repo` names the repository (by default the
+one containing the current directory; inside a linked tree it means the main
+checkout).
+
+```bash
+python3 -m scripts.worktrees new feat/example          # tree at <root>/feat/example, from the remote's default branch
+python3 -m scripts.worktrees remove feat/example       # only when clean, unlocked, unused and pushed or merged
+python3 -m scripts.worktrees serena up feat/example    # one Serena server for that tree
+python3 -m scripts.worktrees serena call feat/example find_symbol '{"name_path_pattern": "TerminalHost"}'
+python3 -m scripts.worktrees serena check feat/example # before trusting its answers
+python3 -m scripts.worktrees serena down feat/example
+```
+
+`new` starts the branch from the remote's default branch (or
+`XORCHESTRATE_DEV_BASE`, or `--base`) with no upstream, after a fetch. It
+refuses, changing nothing, when the directory or branch exists or the base
+cannot be resolved. `remove` refuses a tree that has uncommitted or untracked
+changes, is locked, has a stash entry made on its branch, has a process working
+in it, or holds commits that are neither pushed nor merged. It never forces;
+it deletes the branch only when merged into the base, and only if the branch
+still points where it did.
+
+A session's own Serena connection serves the directory the session started in.
+`serena` gives any session symbol tools for another tree without restarting:
+`up` starts one Serena MCP server per tree over local HTTP, with a Serena home
+in the tool's state directory, so your own Serena configuration is untouched.
+A per-tree server is read-only: it offers only Serena's symbol and diagnostic
+tools (no editing, file-reading or shell tools), `up` refuses a server that
+offers more, and edits in a tree go through your ordinary tools. Setting
+`XORCHESTRATE_DEV_SERENA_ALLOW_EDITS=1` restores Serena's full tool set.
+Servers listen on 127.0.0.1 on a port the kernel picks, and Serena's HTTP
+transport has no authentication: on a machine shared with other accounts, any
+local account can reach a running server while it runs, so it can read the
+tree's symbols, and with edits allowed it could edit the tree as you.
+A server counts as up only after it answers a real symbol query (by default an
+overview of the first tracked Python file that defines something; set
+`XORCHESTRATE_DEV_PROBE_TOOL` and `XORCHESTRATE_DEV_PROBE_ARGS` to choose
+another). `call` and `tools` use it from the shell, `ls` lists servers, `reap`
+forgets dead ones and stops servers whose tree is gone, and `down` stops a
+server and its language server. `check` reports a server that does not answer,
+serves another directory, has a twin, runs a different Serena version, or
+predates a commit or a change to `.serena/project.yml`; restart it with
+`serena up` after a branch switch or pull. Without Serena's launcher, `serena`
+says so and the tree commands still work; `XORCHESTRATE_DEV_SERENA_COMMAND`
+replaces the launch command.
+
+### Keeping trees and scratch space in check
+
+Work trees, clean copies and run directories pile up. `report` shows what is
+there and what can go; `prune` removes only what it can prove safe.
+
+```bash
+python3 -m scripts.worktrees report             # every tree and scratch, run or extra directory
+python3 -m scripts.worktrees report --brief     # one line when something needs attention, else nothing
+python3 -m scripts.worktrees prune              # what prune would do; changes nothing
+python3 -m scripts.worktrees prune --apply
+python3 -m scripts.worktrees scratch new copy   # a marked scratch directory for a clean copy; prints its path
+python3 -m scripts.worktrees scratch rm <path>
+```
+
+`report` judges each tree: `REMOVABLE` when it holds commits of its own that
+are merged into the remote's default branch (or a pull request from it was
+merged there), it is clean, has no stash, is unlocked and nothing works in it;
+`NEEDS_LOOK` with the reason when it is dirty, unpushed, stashed, locked,
+merged but in use, idle for `XORCHESTRATE_DEV_IDLE_DAYS`, or registered without
+its directory, and for any unregistered checkout under the root; `KEEP`
+otherwise, including a fresh tree with no commits yet. `--offline` skips the
+GitHub lookup; `--brief` is always offline, never fails, and counts only
+reclaimable space, so a session-start hook can call it.
+
+`prune --apply` fetches, re-checks each removable tree just before removing it
+the same way `remove` does, drops a missing tree's registration only when it is
+unlocked and its branch tip is on its origin branch (after saving a backup),
+stops servers whose tree is gone, and deletes marked scratch directories older
+than `XORCHESTRATE_DEV_SCRATCH_MAX_AGE_HOURS` and run directories (holding a
+`plan.json`, not a git checkout) under `XORCHESTRATE_DEV_RUN_ROOTS` older than
+`XORCHESTRATE_DEV_RUN_MAX_AGE_DAYS`, when nothing uses them. It never deletes
+an orphan checkout, an unmarked entry or anything under
+`XORCHESTRATE_DEV_EXTRA_ROOTS`, which are listed for information only. A root
+that is `/`, your home directory, or overlaps a checkout or the tool's state is
+refused.

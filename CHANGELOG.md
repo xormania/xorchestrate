@@ -9,6 +9,13 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- Exchange receipts and the independent multi-harness checker use retained store
+  order for exchange, held-work and native-completion proof. Civil-clock changes
+  and report-list reordering no longer create or reverse that proof. See
+  [retained observation order](docs/testing-framework.md#retained-observation-order).
+- CI coalesces title/body edits behind same-candidate validation. A separate
+  trusted queue controller cancels proved obsolete source runs while preserving
+  current validation, using ordinary cancellation and retaining observed decisions.
 - Shared native observation waits use injectable monotonic budgets and clamp
   polling sleeps to the remaining allowance. `XO_TEST_TIMEOUT_SCALE` optionally
   expands classified harness allowances; protected product/fault durations stay
@@ -131,6 +138,14 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Added
 
+- Work-tree maintenance: `python3 -m scripts.worktrees report` judges every
+  tree and scratch or run directory, and `prune --apply` removes only what it
+  can prove safe, keeping and reporting everything else. See
+  [keeping trees and scratch space in check](docs/agent-workflow.md#keeping-trees-and-scratch-space-in-check).
+- Optional work-tree tool for contributors: `python3 -m scripts.worktrees`
+  creates and safely removes git work trees and runs one Serena server per
+  tree over local HTTP, so a session can use symbol tools on any tree. See
+  [work trees and per-tree Serena](docs/agent-workflow.md#work-trees-and-per-tree-serena-optional-tool).
 - Optional developer settings for contributor tools: one declared table of
   `XORCHESTRATE_DEV_*` keys read from flags, the environment, a git-ignored
   `.devtools.env` and a user file, with `python3 -m scripts.devconfig show`
@@ -426,6 +441,12 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   `migrate-config` on the installed launcher.
 
 ### Upgrade notes
+
+- **Verification evidence:** new multi-harness runs retain ordering envelope
+  version 1. Older captures without committed order witnesses cannot qualify
+  temporal assertions; rerun the relevant scenario rather than reconstructing
+  order from timestamps. The receipt policy receives an additional internal
+  `events` field; public delivery inspection and persisted data version are unchanged.
 
 - **CI policy:** edited/readiness PR events now run current observations.
   `CI_REUSE_ENABLED=false` disables behavioral reuse without weakening ordinary

@@ -48,6 +48,11 @@ class DeliveryMixin:
             "sessions": sessions, "messages": [record_view(r) for r in tx.list("message")],
             "all_attempts": [record_view(r) for r in tx.list("delivery_attempt")],
             "observations": [record_view(r) for r in tx.list("native_observation")],
+            # Only creation witnesses used by the receipt policy participate in
+            # its snapshot. Unrelated log traffic must not invalidate a read.
+            # Public get_delivery still projects only DELIVERY_RECORDS.
+            "events": [event for event in retained_events(tx)
+                       if event.get("type") in {"message.created", "evidence.created"}],
             "receipts": [record_view(r) for r in tx.list("delivery_receipt") if r.data["message_id"] == message_id]}
 
     def _get_delivery(self, args, actor, context):

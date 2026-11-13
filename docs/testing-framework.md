@@ -347,6 +347,39 @@ assert `refusal(call, code)` from `tests/hexagonal/contracts/calibrated.py`, whi
 answers whether the call was refused with that code and never asserts itself. Other
 assertions and `pytest.raises` stay as they are; they are not calibrated checks.
 
+### Retained observation order
+
+The multi-harness snapshot retains an `ordering` envelope, version 1, with a
+capture-local `source_id` and the store's committed event log. Message/evidence
+creation, native observation creation and successful delivery-attempt transitions
+resolve to their actual store sequences. The verification provider synchronously
+records its own source identity, local counter and boundary marker in that log
+before publishing a hold or work event. Capture reads the published provider
+prefix before the store snapshot, so every included provider event already has
+its committed witness.
+
+This measures order at the shared persistence/fixture boundary. It does not infer
+the occurrence order of arbitrary remote events or compare clocks across hosts.
+Raw record-list position, report arrival, UTC timestamps and the normalized
+display `seq` are not proof of order. Equal or regressing civil timestamps leave
+the ordering verdict unchanged. Native turn completion and aggregate idle may
+come from the same raw observation; that shared boundary is explicitly allowed.
+
+The offline checker uses the retained envelope without a live clock. Missing
+required witnesses, an unsupported envelope version or mixed capture domains
+cannot qualify an ordering assertion. Earlier evidence without these witnesses
+remains inspectable, but cannot be upgraded by sorting its timestamps. Regenerate
+the relevant composed run to qualify it. Identity, unresolved-call and missing
+effect controls remain independent vetoes; lack of timing proof does not erase
+contradictory records.
+
+The product's exchange receipt policy independently uses the existing
+`message.created` and `evidence.created` store events. Its internal snapshot adds
+only those creation witnesses, so unrelated event traffic does not invalidate
+the receipt snapshot. Public `get_delivery` projection does not expose the event
+log. No persisted data-version migration is needed; custom receipt policies may
+ignore the additional internal `events` field.
+
 ## Consolidation and completion evidence
 
 The test-framework consolidation (PR #12) established the following outcomes:

@@ -16,8 +16,6 @@ from pathlib import Path
 
 from tests.hexagonal.support.git_repositories import isolate, linked_tree, make_repository
 
-ROOT = Path(__file__).resolve().parents[3]
-
 
 def personal_markers():
     """This machine's account name (as a path component), home directory and host name, read at run time.

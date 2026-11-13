@@ -13,9 +13,11 @@ from threading import Event
 from uuid import uuid4
 
 from scripts.verification.checker import verify
+from scripts.verification.multi_harness import snapshot
 from tests.hexagonal.contracts.completion import CompletionObservation
 from tests.hexagonal.support.native import application_message, peer_options, wait_for
 from tests.hexagonal.support.native import retry as call
+from tests.hexagonal.support.temporal_evidence import StoreOrder
 from xorchestrate.adapters.bridge_host import SessionBridgeHost
 from xorchestrate.adapters.claude import ClaudeSessionDriver
 from xorchestrate.adapters.codex import CodexSessionDriver
@@ -26,15 +28,6 @@ from xorchestrate.model import Capability
 
 def await_condition(predicate, reason):
     return wait_for(predicate, timeout=12, message="fixture synchronization: " + reason)
-
-
-def snapshot(app):
-    kinds = {"sessions": "session", "messages": "message", "attempts": "delivery_attempt",
-             "observations": "native_observation", "evidence": "evidence", "operations": "operation",
-             "receipts": "delivery_receipt", "native_calls": "native_call"}
-    with app.store.transaction() as tx:
-        return {key: [{**deepcopy(row.data), "id": row.key, "version": row.version}
-                      for row in tx.list(kind)] for key, kind in kinds.items()}
 
 
 def sha256_json(value):
@@ -211,8 +204,10 @@ class ComposedCompletionFixture:
             "id": "controlled-false-idle-" + uuid4().hex, "session_id": identity["session_id"],
             "origin": "adapter", "stale": False, "created_at": at, "created_by": self.peer.name, "observation": {
                 **identity, "kind": "activity", "source": self.peer.activity_source, "at": at, "state": "idle"}})
+        StoreOrder(evidence["run"]["raw_records"]).created("native_observation", evidence["run"]["raw_records"]["observations"][-1])
         unchanged = deepcopy(evidence["run"]["raw_records"])
         unchanged["observations"].pop()
+        unchanged["ordering"]["events"].pop()
         assert unchanged == original, "negative control must preserve every original raw record"
         (self.directory / ("capture-%02d-false-idle.json" % self.capture_sequence)).write_text(json.dumps(evidence, indent=2))
         return evidence

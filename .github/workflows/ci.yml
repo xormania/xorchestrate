@@ -20,8 +20,8 @@
     "contents": "read"
   },
   "concurrency": {
-    "group": "ci-${{ github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body) && format('metadata-{0}-{1}-{2}-{3}', github.repository_id, github.event.pull_request.number, github.event.pull_request.head.sha, github.event.pull_request.base.sha) || (github.event_name == 'pull_request' && format('pr-{0}-{1}-{2}-{3}', github.repository_id, github.event.pull_request.number, github.event.pull_request.head.sha, github.event.pull_request.base.sha) || github.ref) }}",
-    "cancel-in-progress": true
+    "group": "ci-${{ github.event_name == 'pull_request' && format('pr-{0}-{1}-{2}-{3}', github.repository_id, github.event.pull_request.number, github.event.pull_request.head.sha, github.event.pull_request.base.sha) || github.ref }}",
+    "cancel-in-progress": "${{ !(github.event_name == 'pull_request' && github.event.action == 'edited' && !github.event.changes.base && (github.event.changes.title || github.event.changes.body)) }}"
   },
   "jobs": {
     "paths": {

@@ -38,6 +38,7 @@ SLICE_A = {
     "XORCHESTRATE_DEV_SERENA_COMMAND": ("command", SERENA_COMMAND, "serena"),
     "XORCHESTRATE_DEV_PROBE_TOOL": ("str", None, "serena"),
     "XORCHESTRATE_DEV_PROBE_ARGS": ("json", None, "serena"),
+    "XORCHESTRATE_DEV_SERENA_ALLOW_EDITS": ("int", "0", "serena"),
 }
 """Key -> (kind, default template, section) for slice A's settings."""
 
@@ -76,3 +77,18 @@ def resolve_default(template, env, repo_name):
 
 def user_file(env):
     return f"{xdg(env, 'XDG_CONFIG_HOME')}/{NAMESPACE}/devtools.env"
+
+
+SLICE_B = {
+    "XORCHESTRATE_DEV_SCRATCH_ROOT": ("path", "{XDG_CACHE_HOME}/xorchestrate/scratch", "maintenance"),
+    "XORCHESTRATE_DEV_EXTRA_ROOTS": ("json", None, "maintenance"),
+    "XORCHESTRATE_DEV_RUN_ROOTS": ("json", None, "maintenance"),
+    "XORCHESTRATE_DEV_IDLE_DAYS": ("float", "7", "maintenance"),
+    "XORCHESTRATE_DEV_SCRATCH_MAX_AGE_HOURS": ("float", "24", "maintenance"),
+    "XORCHESTRATE_DEV_RUN_MAX_AGE_DAYS": ("float", "7", "maintenance"),
+    "XORCHESTRATE_DEV_BRIEF_SIZE_GB": ("float", "5", "maintenance"),
+    "XORCHESTRATE_DEV_OWNER": ("str", None, "maintenance"),
+}
+"""Key -> (kind, default template, section) for slice B's maintenance settings."""
+LIST_KEYS = ("XORCHESTRATE_DEV_EXTRA_ROOTS", "XORCHESTRATE_DEV_RUN_ROOTS")
+"""JSON lists of directories; every entry absolute or starting with ``~/``."""

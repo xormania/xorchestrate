@@ -12,6 +12,7 @@ import pytest
 
 from scripts.verification.checker import normalize, verify
 from tests.hexagonal.support.raw_evidence import raw_exchange, select_explicit_work
+from tests.hexagonal.support.temporal_evidence import StoreOrder
 
 
 def check(inputs):
@@ -71,6 +72,9 @@ def test_latest_success_is_selected_without_erasing_unsuccessful_history():
     assert check(inputs)["status"] == "passed"
     attempts = inputs[0]["raw_records"]["attempts"]
     attempts.append({**deepcopy(attempts[0]), "id": "later", "sequence": 2})
+    order = StoreOrder(inputs[0]["raw_records"])
+    order.created("delivery_attempt", attempts[-1])
+    order.submitted(attempts[-1])
     assert check(inputs)["cases"][0]["evidence"]["attempt_ids"][0] == "later"
     attempts[0]["status"] = "unknown"
     assert check(inputs)["status"] == "passed"
@@ -79,7 +83,8 @@ def test_latest_success_is_selected_without_erasing_unsuccessful_history():
 def test_unfinished_work_requires_reply_before_completion():
     inputs = raw_exchange("work_exchange")
     assert check(inputs)["status"] == "passed"
-    inputs[0]["provider_events"][1]["at"] = "2026-10-24T00:00:07+00:00"
+    order = StoreOrder(inputs[0]["raw_records"])
+    order.place(order.marker(inputs[0]["provider_events"][1]), order.creation("message", "reply"))
     assert_rejected(inputs, "reply_after_work_completion")
 
 
@@ -88,7 +93,10 @@ def test_busy_tool_requires_submission_during_hold_but_can_reply_after_release()
     result = check(inputs)
     assert result["status"] == "passed", result
     assert result["cases"][0]["evidence"]["timing"]["reply_before_hold_finished"] is False
-    inputs[0]["provider_events"][1]["at"] = "2026-10-24T00:00:01+00:00"
+    order = StoreOrder(inputs[0]["raw_records"])
+    submitted = next(row for row in order.events if row.get("type") == "state.transition"
+                     and row.get("subject", {}).get("key") == "attempt-challenge")
+    order.place(order.marker(inputs[0]["provider_events"][1]), submitted)
     assert_rejected(inputs, "submission_outside_tool_hold")
 
 
@@ -131,10 +139,12 @@ def test_explicit_null_native_argument_cannot_be_erased():
     assert_rejected(inputs, "native_call_missing_or_misbound")
 
 
-def test_equal_work_reply_and_completion_timestamps_do_not_prove_before():
+def test_equal_timestamps_cannot_rescue_work_completion_before_reply():
     inputs = raw_exchange("work_exchange")
     assert check(inputs)["status"] == "passed"
     inputs[0]["provider_events"][1]["at"] = inputs[0]["raw_records"]["messages"][1]["created_at"]
+    order = StoreOrder(inputs[0]["raw_records"])
+    order.place(order.marker(inputs[0]["provider_events"][1]), order.creation("message", "reply"))
     assert_rejected(inputs, "reply_after_work_completion")
 
 
@@ -189,10 +199,14 @@ def test_native_argument_comparison_preserves_json_types(before, after):
     assert_rejected(inputs, "native_call_missing_or_misbound")
 
 
-def test_observed_timestamp_order_uses_timezone_offsets():
+def test_submission_order_cannot_borrow_timezone_timestamp_sorting():
     inputs = raw_exchange("work_exchange")
     assert check(inputs)["status"] == "passed"
     inputs[0]["provider_events"][0]["at"] = "2026-10-23T23:59:59-12:00"
+    order = StoreOrder(inputs[0]["raw_records"])
+    submitted = next(row for row in order.events if row.get("type") == "state.transition"
+                     and row.get("subject", {}).get("key") == "attempt-challenge")
+    order.place(order.marker(inputs[0]["provider_events"][0]), submitted, after=True)
     assert_rejected(inputs, "submission_outside_unfinished_work")
 
 

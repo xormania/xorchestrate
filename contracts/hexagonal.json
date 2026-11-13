@@ -11,6 +11,7 @@
     "scripts/architecture",
     "scripts/ci",
     "scripts/devconfig",
+    "scripts/worktrees",
     "tests"
   ],
   "roles": {
@@ -518,7 +519,8 @@
     "verification_core": {
       "modules": [
         "scripts.verification.core",
-        "scripts.verification.evidence"
+        "scripts.verification.evidence",
+        "scripts.verification.order"
       ],
       "allowed_roles": [
         "verification_foundation",
@@ -688,6 +690,107 @@
       ],
       "allowed_roles": [
         "devconfig"
+      ],
+      "allowed_external": [
+        "stdlib:*"
+      ],
+      "allow_dynamic": false
+    },
+    "worktrees_foundation": {
+      "modules": [
+        "scripts.worktrees",
+        "scripts.worktrees.model",
+        "scripts.worktrees.ports"
+      ],
+      "allowed_roles": [
+        "worktrees_foundation"
+      ],
+      "allowed_external": [
+        "__future__",
+        "collections",
+        "dataclasses",
+        "typing",
+        "contextlib"
+      ],
+      "allow_dynamic": false,
+      "forbidden_calls": [
+        "open",
+        "input",
+        "print"
+      ]
+    },
+    "worktrees_core": {
+      "modules": [
+        "scripts.worktrees.core",
+        "scripts.worktrees.maintenance"
+      ],
+      "allowed_roles": [
+        "worktrees_foundation",
+        "worktrees_core"
+      ],
+      "allowed_external": [
+        "__future__",
+        "ast",
+        "collections",
+        "dataclasses",
+        "json",
+        "posixpath",
+        "signal",
+        "typing",
+        "urllib.parse",
+        "re",
+        "time",
+        "contextlib",
+        "hashlib"
+      ],
+      "allow_dynamic": false,
+      "forbidden_calls": [
+        "open",
+        "input",
+        "print"
+      ]
+    },
+    "worktrees_adapters": {
+      "modules": [
+        "scripts.worktrees.adapters",
+        "scripts.worktrees.adapters.*"
+      ],
+      "allowed_roles": [
+        "worktrees_foundation",
+        "worktrees_adapters"
+      ],
+      "allowed_external": [
+        "stdlib:*"
+      ],
+      "allow_dynamic": false
+    },
+    "worktrees_composition": {
+      "modules": [
+        "scripts.worktrees.composition"
+      ],
+      "allowed_roles": [
+        "devconfig",
+        "worktrees_foundation",
+        "worktrees_core",
+        "worktrees_adapters",
+        "worktrees_composition"
+      ],
+      "allowed_external": [
+        "stdlib:*"
+      ],
+      "allow_dynamic": false
+    },
+    "worktrees_entrypoints": {
+      "modules": [
+        "scripts.worktrees.__main__"
+      ],
+      "allowed_roles": [
+        "devconfig",
+        "worktrees_foundation",
+        "worktrees_core",
+        "worktrees_adapters",
+        "worktrees_composition",
+        "worktrees_entrypoints"
       ],
       "allowed_external": [
         "stdlib:*"
@@ -1084,7 +1187,8 @@
         "scripts.ci.release_identity",
         "scripts.ci.result",
         "scripts.ci.candidate",
-        "scripts.ci.reuse"
+        "scripts.ci.reuse",
+        "scripts.ci.queue"
       ],
       "allowed_roles": [
         "ci_tooling"
@@ -1202,7 +1306,12 @@
         "ci_tooling",
         "ci_timings",
         "testkit_pytest",
-        "devconfig"
+        "devconfig",
+        "worktrees_foundation",
+        "worktrees_core",
+        "worktrees_adapters",
+        "worktrees_composition",
+        "worktrees_entrypoints"
       ],
       "allowed_external": [
         "stdlib:*",
@@ -1258,7 +1367,12 @@
         "telemetry_views",
         "package_acceptance",
         "ci_timings",
-        "devconfig"
+        "devconfig",
+        "worktrees_foundation",
+        "worktrees_core",
+        "worktrees_adapters",
+        "worktrees_composition",
+        "worktrees_entrypoints"
       ],
       "allowed_external": [
         "stdlib:*",

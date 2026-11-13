@@ -22,6 +22,15 @@ def _payload(message):
     return body.get("verification", {}) if isinstance(body, dict) else {}
 
 
+def _creation_order(snapshot, kind, record):
+    """Use store-owned creation order, independently of the external checker."""
+    matches = [event for event in snapshot.get("events", [])
+               if event.get("type") == kind + ".created" and event.get("record_id") == record["id"]]
+    require(len(matches) == 1 and type(matches[0].get("seq")) is int and matches[0]["seq"] > 0,
+            "exchange_order_missing")
+    return matches[0]["seq"]
+
+
 def _session(snapshot, session_id):
     return next((session for session in snapshot["sessions"] if session["id"] == session_id), None)
 
@@ -192,8 +201,8 @@ def evaluate_exchange(snapshot, recipient, expectation):
             lambda result, complete=True: _effect_matches(result, "evidence", receipt, sender, complete=complete))
         require(receipt_call["session_id"] == reply_submitted["session_id"]
                 and receipt_call["incarnation"] == reply_submitted["incarnation"], "receipt_delivery_incarnation_mismatch")
-        require(challenge.get("created_at") and reply.get("created_at") and receipt.get("created_at")
-                and challenge["created_at"] <= reply["created_at"] <= receipt["created_at"], "exchange_event_order")
+        require(_creation_order(snapshot, "message", challenge) < _creation_order(snapshot, "message", reply)
+                < _creation_order(snapshot, "evidence", receipt), "exchange_event_order")
         return {"verified": True, "diagnostics": [], "message_id": challenge["id"], "reply_id": reply["id"],
                 "receipt_evidence_id": receipt["id"], "submissions": [submitted, reply_submitted],
                 "native_calls": [challenge_call, reply_call, receipt_call],

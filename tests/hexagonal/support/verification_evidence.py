@@ -24,7 +24,8 @@ def proof_chain():
     case = {"id": "case", "source": "codex", "target": "grok", "kind": "exchange"}
     events = []
     def add(event, peer, **data):
-        value = {"seq": len(events) + 1, "event": event, "peer": peer, **sessions[peer], **data}
+        value = {"seq": len(events) + 1, "order": {"source": "fixture-store", "seq": len(events) + 1},
+                 "event": event, "peer": peer, **sessions[peer], **data}
         events.append(value)
         return value
     def callback(peer, tool, args, event, **data):

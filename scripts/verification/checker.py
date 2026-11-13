@@ -11,6 +11,7 @@ from .model import VerificationFailure as VerificationFailure
 from .model import canonical as canonical
 from .model import digest as digest
 from .model import require as require
+from .order import EvidenceOrder
 
 PEERS = ("codex", "claude", "grok")
 identity_matches = core.identity_matches
@@ -64,7 +65,8 @@ def _native_facts(raw, sessions, mode, decoders):
     return decode_observations(raw.get("observations", []), sessions,
         {row["id"]: row for row in raw.get("sessions", [])}, mode, decoders,
         effects={"message": {row["id"]: row for row in raw.get("messages", [])},
-                 "evidence": {row["id"]: row for row in raw.get("evidence", [])}})
+                 "evidence": {row["id"]: row for row in raw.get("evidence", [])}},
+        ordering=EvidenceOrder(raw) if "ordering" in raw else None)
 
 
 def _prepare(run, cases, decoders):
