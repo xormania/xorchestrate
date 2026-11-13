@@ -2,7 +2,8 @@
 
 The service receives explicit storage, projection and current-authority
 collaborators. It neither owns an application facade nor selects infrastructure.
-Driving entrypoints validate their input schemas before calling these methods.
+Driving entrypoints validate their input schemas and authorize the requested
+operation before calling these methods. Views retain per-resource authorization.
 """
 
 from .model import OrchestrationError
