@@ -56,6 +56,13 @@ def test_the_table_declares_slice_a_settings_with_their_kinds_defaults_and_secti
     assert {key: declared.get(key) for key in contract.SLICE_A} == contract.SLICE_A
 
 
+def test_the_table_declares_the_test_kit_settings_and_marks_the_evidence_ones():
+    declared = {setting.key: setting for setting in settings()}
+    assert {key: (declared[key].kind, declared[key].default, declared[key].section) if key in declared else None
+            for key in contract.SLICE_C} == contract.SLICE_C
+    assert {setting.key for setting in settings() if setting.evidence} == contract.EVIDENCE_KEYS
+
+
 # Defaults -----------------------------------------------------------------------------------------
 
 @pytest.mark.parametrize("xdg", [False, True], ids=["home", "xdg"])
@@ -80,7 +87,7 @@ def test_scalar_defaults_are_typed_and_unset_defaults_are_none(world):
     for key in ("XORCHESTRATE_DEV_BASE", "XORCHESTRATE_DEV_PROBE_TOOL", "XORCHESTRATE_DEV_PROBE_ARGS"):
         assert config.get(key) is None, key
     assert list(config.warnings) == []
-    assert config.evidence() == {}
+    assert config.evidence() == {key: {"value": "", "source": "default"} for key in contract.EVIDENCE_KEYS}
 
 
 # Precedence ---------------------------------------------------------------------------------------
@@ -168,6 +175,32 @@ def test_path_values_expand_home_and_resolve_relative_to_their_source(world, mon
     assert config.get("XORCHESTRATE_DEV_STATE_DIR") == world.base / "from" / "cwd"
     assert config.get("XORCHESTRATE_DEV_WORKTREE_ROOT") == world.base / "flag" / "cwd"
     assert config.get("XORCHESTRATE_DEV_WORKTREE_ROOT").is_absolute()
+
+
+def test_path_values_are_normalized_but_never_follow_symlinks(world, tmp_path):
+    target = tmp_path / "real" / "python3.12"
+    target.parent.mkdir()
+    target.write_text("")
+    link = world.main / "env" / "bin" / "python"
+    link.parent.mkdir(parents=True)
+    link.symlink_to(target)
+    config = world.load(env=world.env(XORCHESTRATE_DEV_STATE_DIR=link))
+    assert config.get("XORCHESTRATE_DEV_STATE_DIR") == link
+    world.repo_file("XORCHESTRATE_DEV_STATE_DIR=env/lib/../bin/python\n")
+    config = world.load()
+    assert config.get("XORCHESTRATE_DEV_STATE_DIR") == link, "normalized against the file, link kept"
+
+
+def test_get_prints_one_typed_value_or_nothing_and_refuses_an_unknown_key(world):
+    code, output = world.cli("get", "XORCHESTRATE_DEV_SERENA_VERSION")
+    assert (code, output) == (0, "2.1.0\n")
+    world.repo_file("XORCHESTRATE_DEV_PYCACHE_PREFIX=~/cache-here\n")
+    code, output = world.cli("get", "XORCHESTRATE_DEV_PYCACHE_PREFIX")
+    assert (code, output) == (0, f"{world.home / 'cache-here'}\n")
+    code, output = world.cli("get", "XORCHESTRATE_DEV_TESTKIT_PROFILE")
+    assert (code, output) == (0, "\n")
+    code, output = world.cli("get", "XORCHESTRATE_DEV_NO_SUCH_SETTING")
+    assert code == 2 and "UNKNOWN_SETTING" in output, output
 
 
 # The file format ----------------------------------------------------------------------------------

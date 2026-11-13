@@ -200,6 +200,7 @@
         "tests/hexagonal/test_acceptance_testkit.py": "composition",
         "tests/hexagonal/test_test_framework.py": "framework",
         "tests/hexagonal/test_managed_profiles.py": "adapter",
+        "tests/hexagonal/test_testkit_dev_defaults.py": "composition",
         "tests/hexagonal/test_managed_store.py": "adapter",
         "tests/hexagonal/test_managed_terminals.py": "adapter",
         "tests/hexagonal/test_managed_workflow.py": "composition",
