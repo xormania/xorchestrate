@@ -184,7 +184,11 @@ class FakeProcessTable:
 
 
 class FakeGithub:
-    """Merged pull-request heads by branch; ``raises`` simulates no gh, no network or an API error."""
+    """Merged pull-request heads by branch; ``raises`` simulates no gh, no network or an API error.
+
+    ``heads[branch]`` is a head sha (a pull request merged into whatever base is asked about) or a
+    ``(sha, base)`` pair (merged into ``base`` only). ``calls`` records ``(branch, base)``.
+    """
 
     def __init__(self):
         self.heads = {}
@@ -192,13 +196,24 @@ class FakeGithub:
         self.calls = []
         self.on_call = {}
 
-    def merged_pr_head(self, branch):
-        self.calls.append(branch)
+    def merged_pr_head(self, branch, base=None):
+        self.calls.append((branch, base))
         if branch in self.on_call:
             self.on_call.pop(branch)()
         if self.raises:
             raise OSError("gh: network unreachable")
-        return self.heads.get(branch)
+        entry = self.heads.get(branch)
+        if isinstance(entry, tuple):
+            sha, into = entry
+            return sha if into == base else None
+        return entry
+
+
+class ZeroDisk:
+    """Disk usage that walks nothing, for tests whose roots must never be measured."""
+
+    def size(self, path):
+        return 0
 
 
 @dataclass
@@ -608,9 +623,10 @@ class Fleet:
     """Trees and directories in every state the maintenance report distinguishes.
 
     Trees: ``merged`` (merge commit), ``squash`` (squash merge, GitHub knows its head), ``keep`` (pushed,
-    unmerged, recent), ``unpushed``, ``idle`` (pushed, unmerged, last used 8 days ago), ``dirty``, ``stash``,
-    ``locked``, ``busy`` (merged but a process works in it), ``missing`` and ``missing-locked`` (pushed,
-    directory deleted), and an unregistered ``orphan`` directory under the root.
+    unmerged, recent), ``unpushed``, ``idle`` (pushed, unmerged, last used 8 days ago), ``dirty``, ``stash``
+    and ``locked`` (no commits of their own), ``busy`` (merged with a commit of its own, but a process works
+    in it), ``missing`` and ``missing-locked`` (pushed, directory deleted), and an unregistered ``orphan``
+    directory under the root.
     Directories: marked and unmarked scratch, recognised and unrecognised runs, extra entries, old and new.
     """
 
@@ -633,7 +649,11 @@ class Fleet:
             push(trees[name], name)
         trees["unpushed"] = ws.new("unpushed")
         commit(trees["unpushed"], "local.txt", "local\n")
-        for name in ("dirty", "stash", "locked", "busy"):
+        trees["busy"] = ws.new("busy")
+        commit(trees["busy"], "busy.txt", "b\n")
+        push(trees["busy"], "busy")
+        merge_on_origin(ws, "busy")
+        for name in ("dirty", "stash", "locked"):
             trees[name] = ws.new(name)
         (trees["dirty"] / "untracked.txt").write_text("x\n")
         (trees["stash"] / "README.md").write_text("stashed\n")
