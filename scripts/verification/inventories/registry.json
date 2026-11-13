@@ -6,6 +6,18 @@
       "stages": [
         "ci"
       ]
+    },
+    "work": {
+      "file": "work.json",
+      "stages": [
+        "ci"
+      ]
+    },
+    "state": {
+      "file": "state.json",
+      "stages": [
+        "ci"
+      ]
     }
   }
 }

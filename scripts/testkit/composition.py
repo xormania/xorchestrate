@@ -29,6 +29,7 @@ from .sharding import TIMINGS, suite_shard
 from .stories import select_stories, validate_limits
 
 ROOT = Path(__file__).resolve().parents[2]
+INVENTORIES = "scripts/verification/inventories"
 LIVE_IDS = ("acceptance", "multi-harness")
 
 
@@ -63,6 +64,15 @@ def _options(*, suite, mode, timeout, check_timeout, config, driver, families, d
     if mode != "native" and (config is not None or driver is not None or drivers):
         raise ValueError("--config and --driver require native mode")
     return selected
+
+
+def _ci_inventories(root):
+    """The calibration registry's inventories registered at ci, in registry order."""
+    try:
+        entries = json.loads((Path(root) / INVENTORIES / "registry.json").read_text(encoding="utf-8"))["inventories"]
+        return {name: entry for name, entry in entries.items() if "ci" in entry["stages"]}
+    except (OSError, UnicodeError, ValueError, KeyError, TypeError, AttributeError) as error:
+        raise ValueError("Invalid calibration registry") from error
 
 
 def _brief(root, brief):
@@ -119,15 +129,14 @@ def plan(*, directory, suite, mode, config=None, driver=None, timeout=180, root=
                 required += (TIMINGS,)
         checks.append(Check("tests", tuple(argv), check_timeout, required))
     if "calibration" in selected:
-        for name, module in (("native-calibration", "scripts.verification.calibrate_suite"),
-                             ("work-calibration", "tests.hexagonal.calibrate_work_acceptance"),
-                             ("state-calibration", "scripts.verification.calibrate_state")):
-            options = ("--output", str(directory / name)) if name == "work-calibration" else (
-                "--candidate", str(root), "--out", str(directory / name))
-            if name == "native-calibration":
-                options += ("--inventory", "native")
-            checks.append(Check(name, (sys.executable, "-m", module, *options), check_timeout,
-                                (module.replace(".", "/") + ".py",)))
+        # One check per inventory registered at ci, each run by the same suite command on its own inventory.
+        # The suite command validates the registry and inventory against their schema before any case runs.
+        for inventory, entry in _ci_inventories(root).items():
+            name = inventory + "-calibration"
+            argv = (sys.executable, "-m", "scripts.verification.calibrate_suite", "--candidate", str(root),
+                    "--out", str(directory / name), "--inventory", inventory)
+            checks.append(Check(name, argv, check_timeout,
+                                ("scripts/verification/calibrate_suite.py", INVENTORIES + "/" + entry["file"])))
     if "acceptance" in selected:
         for selected_driver in drivers or (driver,):
             check_id = "acceptance:" + quote(selected_driver, safe="") if drivers else "acceptance"
