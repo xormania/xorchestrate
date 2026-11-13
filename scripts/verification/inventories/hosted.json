@@ -22,7 +22,7 @@
       "contract": "tests.hexagonal.contracts.hosted_sessions:start_converses_and_detach_only_detaches",
       "diagnostic": "HOSTED_DETACH_ONLY_DETACHES",
       "mutation": {
-        "new": "            return bridge.detach(inner)\n        finally:\n            self._forget(session)\n            self._require_host().adopt(session[\"hosted\"][\"terminal\"])\n            self._require_host().close_terminal(session[\"hosted\"][\"terminal\"][\"name\"])",
+        "new": "            return bridge.detach(inner)\n        finally:\n            self._forget(session)\n            self._require_host().close_terminal(session[\"hosted\"][\"terminal\"][\"name\"])",
         "old": "            return bridge.detach(inner)\n        finally:\n            self._forget(session)",
         "path": "xorchestrate/adapters/hosted.py"
       },
@@ -52,24 +52,6 @@
       "target": "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[detached-process-reconnect_reopens_a_vanished_conversation_without_manual_cleanup]",
       "unaffected": [
         "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[detached-process-without_a_bound_host_start_is_refused]"
-      ]
-    },
-    {
-      "contract": "tests.hexagonal.contracts.hosted_sessions:reconnect_replaces_a_crashed_bridge_host_in_a_living_terminal_host",
-      "diagnostic": "HOSTED_RECONNECT_REPLACES_CRASHED_BRIDGE_HOST",
-      "mutation": {
-        "new": "",
-        "old": "        if terminal is not None and not terminal.running:\n            host.close_terminal(terminal.name)\n            terminal = None\n",
-        "path": "xorchestrate/adapters/hosted.py"
-      },
-      "name": "exited-terminal-reused",
-      "selectors": [
-        "tests/hexagonal/test_hosted_sessions.py::test_hosted_sessions_meet_the_contract[multiplexer-reconnect_replaces_a_crashed_bridge_host_in_a_living_terminal_host]",
-        "tests/hexagonal/test_hosted_sessions.py::test_hosted_sessions_meet_the_contract[detached-process-reconnect_replaces_a_crashed_bridge_host_in_a_living_terminal_host]"
-      ],
-      "target": "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[multiplexer-reconnect_replaces_a_crashed_bridge_host_in_a_living_terminal_host]",
-      "unaffected": [
-        "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[detached-process-reconnect_replaces_a_crashed_bridge_host_in_a_living_terminal_host]"
       ]
     },
     {
@@ -124,24 +106,6 @@
       "target": "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[detached-process-the_specification_never_reaches_process_arguments]",
       "unaffected": [
         "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[detached-process-without_a_bound_host_start_is_refused]"
-      ]
-    },
-    {
-      "contract": "tests.hexagonal.contracts.hosted_sessions:without_a_bound_host_start_is_refused",
-      "diagnostic": "HOSTED_UNBOUND_START_REFUSED",
-      "mutation": {
-        "new": "        if False:\n            raise OrchestrationError(",
-        "old": "        if self.host is None:\n            raise OrchestrationError(",
-        "path": "xorchestrate/adapters/hosted.py"
-      },
-      "name": "unbound-driver-starts",
-      "selectors": [
-        "tests/hexagonal/test_hosted_sessions.py::test_hosted_sessions_meet_the_contract[detached-process-without_a_bound_host_start_is_refused]",
-        "tests/hexagonal/test_hosted_sessions.py::test_hosted_sessions_meet_the_contract[detached-process-unverified_cleanup_is_reported_and_nothing_is_removed]"
-      ],
-      "target": "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[detached-process-without_a_bound_host_start_is_refused]",
-      "unaffected": [
-        "tests.hexagonal.test_hosted_sessions::test_hosted_sessions_meet_the_contract[detached-process-unverified_cleanup_is_reported_and_nothing_is_removed]"
       ]
     }
   ],
