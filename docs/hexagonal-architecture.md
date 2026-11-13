@@ -50,6 +50,7 @@ modules that it assembles:
 | --- | --- |
 | `actions.py` | The public action catalogue and its closed input schemas |
 | `effects.py` | The effect journal: intent before I/O, outcome retention, replay and reconciliation through reservation, application and release hooks supplied by the host |
+| `capability_execution.py` | Trusted execution and observation selections; detached policy validation, bounded receipt shapes and private call observation scope |
 | `session_lifecycle.py` | Session start, attach, reconnect, resume, send, poll, stop and detach, including the session effect hooks |
 | `delivery.py` | Routing-to-native delivery, native observations and exchange verification |
 | `assessment.py` | `WorkAssessment`: triage and escalation through configured evaluators; like acceptance, it depends only on contracts and host callbacks |

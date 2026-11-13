@@ -20,7 +20,8 @@
         "xorchestrate",
         "xorchestrate.model",
         "xorchestrate.ports",
-        "xorchestrate.provider_results"
+        "xorchestrate.provider_results",
+        "xorchestrate.outcomes"
       ],
       "allowed_roles": [
         "foundation"
@@ -57,13 +58,13 @@
         "xorchestrate.effects",
         "xorchestrate.exchange",
         "xorchestrate.lifecycles",
-        "xorchestrate.outcomes",
         "xorchestrate.pr",
         "xorchestrate.schema",
         "xorchestrate.session_lifecycle",
         "xorchestrate.state",
         "xorchestrate.store_events",
-        "xorchestrate.worktrees"
+        "xorchestrate.worktrees",
+        "xorchestrate.capability_execution"
       ],
       "allowed_roles": [
         "foundation",
@@ -168,6 +169,7 @@
     "telemetry": {
       "modules": [
         "xorchestrate.telemetry",
+        "xorchestrate.telemetry_actions",
         "xorchestrate.telemetry_service"
       ],
       "allowed_roles": [
@@ -186,7 +188,8 @@
         "dataclasses",
         "typing",
         "xcontracts.ports",
-        "xcontracts.model"
+        "xcontracts.model",
+        "contextlib"
       ],
       "allow_dynamic": false,
       "forbidden_calls": [

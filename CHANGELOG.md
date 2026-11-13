@@ -15,6 +15,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   carries its marker but is not ended counts as remaining, so `cleanup.verified` can now be false where
   it was true. An orphaned check command whose worker has died is reported as remaining, not ended.
   The end-to-end world and the test kit share this selection (`ownership.owned_processes`).
+- Capability invocation supports trusted `query` and `receipt` execution policies.
+  Queries return fresh authorized results without effect records; receipt effects
+  retain fencing and outcome without copying argument or result payloads into the
+  orchestration journal or native-call records. See [adapter execution policies](docs/adapters.md#capability-execution-and-retention).
 - Telemetry capture and operations share an application-independent service with
   explicit authority, projection and live source collaborators. Existing actions,
   resource visibility, bounded reads and bundle authorization are preserved.
@@ -147,6 +151,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Added
 
+- A selectable `telemetry` capability provider exposes authorized queries, bundle
+  operations and caller reports through ordinary discovery and invocation.
+  Capture, storage and exporters remain separately configured. Legacy telemetry
+  actions delegate to the same service. See [telemetry operations](docs/telemetry.md#operations).
 - The test kit adds a focused `--suite security` view and candidate-complete,
   redacted secret scanning. The existing static suite and CI lane run it once;
   `contracts/security.json` owns detection policy and same-line
@@ -466,6 +474,18 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Upgrade notes
 
+- **Telemetry provider:** opt in with `providers.<name>.adapter: telemetry`;
+  `options.operations` optionally limits its exposed operations. Existing capture
+  configuration and legacy telemetry actions keep their meaning. No corpus or
+  bundle migration is needed. Explicit source filters must include `telemetry`
+  for caller reports.
+- **Capability execution:** the optional top-level `capability_execution` section
+  selects exact provider/capability policies; installed providers may supply
+  defaults through `execution_policies()`. Existing providers remain journaled.
+  `invoke` now advertises an optional key because queries do not require one;
+  journaled and receipt effects still refuse calls without a key. Receipt-mode
+  records add optional policy metadata and discard payloads by design; no stored
+  data migration, lifecycle definition change or xcontracts port change is needed.
 - **Verification evidence:** new multi-harness runs retain ordering envelope
   version 1. Older captures without committed order witnesses cannot qualify
   temporal assertions; rerun the relevant scenario rather than reconstructing
