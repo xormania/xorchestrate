@@ -101,6 +101,7 @@ The `operational` object accepts only these fields:
 
 | Field | Default | Validation and meaning |
 | --- | --- | --- |
+| `sink` | none | Explicit nested sink selection: `{"adapter": "local", "options": {"capacity": 1000}}`, `otlp`, or a trusted installed `module:factory`. Cannot be combined with the flat `adapter`, `endpoint`, `timeout` or `capacity` fields below. |
 | `adapter` | `local` | `local` keeps a bounded in-process signal buffer; `otlp` exports OTLP/HTTP JSON. |
 | `endpoint` | none | Required for `otlp`: an `http` or `https` base URL with a host and no query, fragment or user information. A trailing `/` is removed and `/v1/traces`, `/v1/metrics` or `/v1/logs` is appended per signal. |
 | `timeout` | `1.0` | `otlp` request timeout in seconds; greater than 0 and at most 60. No retry. |
@@ -112,6 +113,39 @@ The `operational` object accepts only these fields:
 
 An invalid `operational` object marks operational export unavailable in
 `telemetry_status`; it does not disable the local corpus.
+
+The flat `adapter`, `endpoint`, `timeout` and `capacity` fields remain supported.
+With `sink`, put those adapter-specific options inside `sink.options`; sampling
+and dispatch limits remain in `operational`. For example:
+
+```json
+"operational": {
+  "sink": {"adapter": "my_package.telemetry:signals", "options": {"destination": "diagnostics"}},
+  "trace_sample_rate": 0.25,
+  "max_pending": 64,
+  "max_bytes": 8388608,
+  "drain_timeout": 0.05
+}
+```
+
+Composition resolves the sink through the same trusted adapter resolver as the
+corpus and artifacts. Its factory is called as `factory(options, scope)`, where
+`scope` is the collector's `CollectorScope`; it returns an
+[`OperationalSink`](../xorchestrate/adapters/telemetry_collector/ports.py) with
+`emit(signal)`. Signals have already passed the shared safe metadata mapping and
+span sampling; source prompts and results are not supplied to the sink. Factories
+and sinks bound their own construction and emission work. The interface provides
+no background-resource or shutdown lifecycle; the collector owns its existing
+bounded delivery worker and drain. A factory failure, missing `emit`, or emission
+failure cannot remove local corpus observations or change an application result.
+Omit `operational` to disable export; a disabled nested sink is refused.
+`telemetry_operational_sink` is an internal nested kind, not a project section or
+a public xcontracts kind.
+
+Project approval summaries and `doctor` list external operational sink factories
+as `repository_code` without importing them. As with other configured factories,
+source outside `.xorchestrate/` remains outside the configuration approval hash;
+see [trust and approval](projects.md#trust-and-approval).
 
 ### Storage adapters
 
@@ -386,7 +420,8 @@ remains pending.
 
 The optional [`operational` object](#configuration-options) inside local
 telemetry options selects `{"adapter":"local"}` for bounded in-process diagnostics
-or `{"adapter":"otlp","endpoint":"<base URL>"}` for OTLP/HTTP export.
+or `{"adapter":"otlp","endpoint":"<base URL>"}` for OTLP/HTTP export. The
+equivalent nested `sink` selection also accepts trusted installed factories.
 `trace_sample_rate` affects operational spans only. Remote
 export uses its own bounded dispatch; a blocked endpoint does not block the
 observed action or remove durable local observations. No endpoint is inferred or
