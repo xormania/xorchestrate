@@ -188,7 +188,7 @@
       }
     },
     "framework": {
-      "guarantee": "Shared execution, resource ownership, configuration, evidence and collection guarantee complete declared plans and honest outcomes for every selected test family.",
+      "guarantee": "Shared execution, resource ownership, configuration, evidence and collection guarantee complete declared plans and honest outcomes for every selected test family; same-candidate metadata events queue behind source validation and only first-attempt zero-job waiting observations are neutral to qualified evidence reuse.",
       "modules": {
         "tests/hexagonal/test_testkit_core.py": "contract",
         "tests/hexagonal/test_testkit_command.py": "adapter",
