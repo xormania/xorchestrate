@@ -259,8 +259,8 @@ class CliEnvironment:
         return subprocess.run(self.command(*arguments), capture_output=True, cwd=cwd or self.repo,
                               env=environment or self.environment, timeout=timeout)
 
-    def json(self, *arguments, expect=0, environment=None, cwd=None):
-        result = self.run(*arguments, environment=environment, cwd=cwd)
+    def json(self, *arguments, expect=0, environment=None, cwd=None, timeout=60):
+        result = self.run(*arguments, timeout=timeout, environment=environment, cwd=cwd)
         assert result.returncode == expect, (result.returncode, result.stdout, result.stderr)
         return json.loads(result.stdout if expect in (0, 3) else result.stderr)
 

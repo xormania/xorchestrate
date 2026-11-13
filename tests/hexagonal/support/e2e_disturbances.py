@@ -82,7 +82,7 @@ def await_(world, label, predicate, timeout):
     A predicate's own failure propagates unchanged.
     """
     try:
-        return wait_for(predicate, timeout, message=label, clock=world.clock, sleep=world.sleep)
+        return wait_for(predicate, timeout, message=label, clock=world.clock, sleep=world.sleep, poll_interval=.25)
     except WaitTimeout as expired:
         raise WaitExpired(label) from expired
 
@@ -90,3 +90,8 @@ def await_(world, label, predicate, timeout):
 def remaining(world):
     """The seconds left of the wait in progress; the next slice ties this to the active wait budget."""
     return None
+
+
+def hold(world, stage):
+    """A controlled gate at ``stage`` in ``world.gates``; the next slice implements it."""
+    raise NotImplementedError("controlled gates arrive with the disturbance slice")
