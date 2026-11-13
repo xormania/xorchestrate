@@ -12,6 +12,7 @@ from contextlib import contextmanager
 import pytest
 
 from scripts.testkit.adapters.ownership import processes
+from scripts.testkit.core import ResourceScope
 from tests.hexagonal.contracts.project_server import INITIALIZED, initialize, rpc
 from tests.hexagonal.support import e2e_disturbances
 from tests.hexagonal.support.host_processes import arguments_containing, processes_under
@@ -67,9 +68,11 @@ class Client:
 class World:
     """One project on one real terminal host, with the resumable deterministic session peer."""
 
-    def __init__(self, cli, host, *, clock=None, sleep=None, gates):
+    def __init__(self, cli, host, *, clock=None, sleep=None, gates, scope=None):
         self.cli = cli
         self.host = host
+        self.scope = ResourceScope() if scope is None else scope
+        """This world's own cleanup (held gates and the like), closed before the project is shut down."""
         self.clock, self.sleep = clock, sleep
         self.gates = gates
         """The directory of this world's controlled gates (see ``hold``)."""
@@ -164,6 +167,7 @@ def world(host, *, clock=None, sleep=None, gates=None):
     directory for controlled gates; by default one inside the world, removed with it.
     """
     with short_directory() as directory:
+        scope = ResourceScope()
         cli = CliEnvironment(directory, terminal_host={"adapter": HOSTS[host]})
         try:
             probe = cli.json("status", expect=3)["terminal_host"]
@@ -172,7 +176,8 @@ def world(host, *, clock=None, sleep=None, gates=None):
             cli.options["sessions"] = _session_options()
             gate_directory = directory / "gates" if gates is None else gates
             gate_directory.mkdir(parents=True, exist_ok=True)
-            yield World(cli, host, clock=clock, sleep=sleep, gates=gate_directory)
+            yield World(cli, host, clock=clock, sleep=sleep, gates=gate_directory, scope=scope)
         finally:
+            scope.close()  # release anything held first, so shutting the project down cannot stall on it
             cli.cleanup()
             e2e_disturbances.reap(directory)
