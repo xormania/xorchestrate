@@ -63,11 +63,11 @@
       "name": "lost-terminal-record-blocks-the-project",
       "selectors": [
         "tests/hexagonal/test_project_server.py::test_total_loss_never_blocks_status_doctor_down_or_the_next_up[detached-process]",
-        "tests/hexagonal/test_project_server.py::test_server_locations_are_private_absolute_and_bounded"
+        "tests/hexagonal/test_project_server.py::test_down_whose_client_gave_up_still_stops_and_status_never_stops"
       ],
       "target": "tests.hexagonal.test_project_server::test_total_loss_never_blocks_status_doctor_down_or_the_next_up[detached-process]",
       "unaffected": [
-        "tests.hexagonal.test_project_server::test_server_locations_are_private_absolute_and_bounded"
+        "tests.hexagonal.test_project_server::test_down_whose_client_gave_up_still_stops_and_status_never_stops"
       ]
     }
   ],
