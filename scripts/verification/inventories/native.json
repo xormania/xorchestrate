@@ -64,7 +64,7 @@
         "tests/hexagonal/test_external_bridge.py::test_bridge_config_and_catalog_cannot_be_overridden_by_attachment"
       ],
       "target": "tests.hexagonal.test_external_bridge::test_external_detach_does_not_terminate_host_and_reconnect_retains_context[codex]",
-      "diagnostic": "external_detach_must_not_terminate_native_process",
+      "diagnostic": "EXTERNAL_DETACH_MUST_NOT_TERMINATE_NATIVE_PROCESS",
       "unaffected": [
         "tests.hexagonal.test_external_bridge::test_bridge_config_and_catalog_cannot_be_overridden_by_attachment"
       ]
@@ -81,7 +81,7 @@
         "tests/hexagonal/test_external_bridge.py::test_bridge_rejects_manufactured_receipts_and_changed_configuration"
       ],
       "target": "tests.hexagonal.test_external_bridge::test_actual_host_crash_preserves_unknown_applied_effect_without_replay",
-      "diagnostic": "killed_host_must_preserve_unknown_effect",
+      "diagnostic": "KILLED_HOST_MUST_PRESERVE_UNKNOWN_EFFECT",
       "unaffected": [
         "tests.hexagonal.test_external_bridge::test_bridge_rejects_manufactured_receipts_and_changed_configuration"
       ]
@@ -98,7 +98,7 @@
         "tests/hexagonal/test_transport_progress.py::test_out_of_order_responses_remain_bound_to_their_request"
       ],
       "target": "tests.hexagonal.test_transport_progress::test_callback_after_submission_ack_progresses_without_poll",
-      "diagnostic": "post_ack_callback_progress",
+      "diagnostic": "POST_ACK_CALLBACK_PROGRESS",
       "unaffected": [
         "tests.hexagonal.test_transport_progress::test_out_of_order_responses_remain_bound_to_their_request"
       ]

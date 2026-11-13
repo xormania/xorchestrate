@@ -11,16 +11,19 @@ def exception_type(message):
     return str(message).split("\n", 1)[0].partition(":")[0]
 
 
-def assertion_detected(message, expected, attribution=None):
+def assertion_detected(message, expected, attribution=None, contract=None):
     """The executed AssertionError must carry the exact declared marker.
 
     JUnit's message attribute is the exception summary. Its body also includes
     unevaluated assertion source, so using that body would credit helper errors.
+    Without a declared contract only the target test's own assertion counts;
+    with one, only an assertion in that contract function counts.
     """
+    credited = "contract_assertion" if contract else "target_assertion"
     return (bool(expected) and str(message).split("\n", 1)[0] == "AssertionError: " + expected
             and isinstance(attribution, dict) and attribution.get("phase") == "call"
             and attribution.get("exception_type") == "AssertionError"
-            and attribution.get("target_assertion") is True)
+            and attribution.get(credited) is True)
 
 
 def assertion_attribution(item):
@@ -59,12 +62,13 @@ def junit_cases(path):
     return cases
 
 
-def classify(control, mutant, target, diagnostic, unaffected=(), *, mutation_applied=True,
+def classify(control, mutant, target, diagnostic, unaffected=(), *, contract=None, mutation_applied=True,
              control_exit=0, mutant_exit=1):
     """Classify one isolated fault using exact assertion identity and diagnostic.
 
     Both maps come from raw case records. The caller retains the mutation patch,
     measured candidate/checker and full command records beside this decision.
+    ``contract`` is the case's declared contract function, if any.
     """
     detail = {"target": target, "expected_diagnostic": diagnostic,
               "unaffected": list(unaffected), "mutation_applied": mutation_applied}
@@ -87,6 +91,7 @@ def classify(control, mutant, target, diagnostic, unaffected=(), *, mutation_app
         return {**detail, "classification": "escaped_fault"}
     target_case = mutant[target]
     if (mutant_exit == 1 and failures == {target} and target_case["status"] == "failed"
-            and assertion_detected(target_case.get("failure_message", ""), diagnostic, target_case.get("attribution"))):
+            and assertion_detected(target_case.get("failure_message", ""), diagnostic, target_case.get("attribution"),
+                                   contract)):
         return {**detail, "classification": "detected"}
     return {**detail, "classification": "unrelated_failure"}

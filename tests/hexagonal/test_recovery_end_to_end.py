@@ -112,6 +112,17 @@ def finished_recovery(cli, timeout=60):
     raise AssertionError(f"recovery did not finish: {cli.json('status')['recovery']}")
 
 
+def recovery_within(cli, timeout):
+    """Whether recovery finished (a report, nothing running) before ``timeout``; never raises at the deadline."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        recovery = cli.json("status")["recovery"]
+        if recovery.get("report") and not recovery.get("running"):
+            return True
+        time.sleep(0.25)
+    return False
+
+
 class ScriptedStatus:
     """A CLI whose ``status`` reports the scripted recovery states in turn, then the last one forever."""
 
