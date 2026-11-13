@@ -421,3 +421,18 @@ def test_a_serena_server_in_the_tree_whose_state_records_no_command_counts_as_in
     assert result.code == 1 and "IN_USE" in codes(result), result.text
     assert "2400" in result.text and ws.processes.signals == [] and path.is_dir()
     assert (refs(ws), trees(ws)) == before
+
+
+def test_the_fixture_repository_is_built_with_the_test_identity_only(tmp_path, monkeypatch):
+    """A global git identity must never reach the fixture: CI has none, and a developer's would hide that."""
+    leaky = tmp_path / "leaky-gitconfig"
+    leaky.write_text("[user]\n\tname = Leak\n\temail = leak@example.invalid\n\tuseConfigOnly = true\n")
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(leaky))
+    for name in ("GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL"):
+        monkeypatch.delenv(name, raising=False)
+    workspace = Workspace(tmp_path / "isolated", monkeypatch)
+    try:
+        authors = git(workspace.main, "log", "--format=%ae %ce").splitlines()
+        assert authors and all("leak@" not in line for line in authors), authors
+    finally:
+        workspace.close()

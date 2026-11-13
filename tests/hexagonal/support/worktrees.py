@@ -448,12 +448,14 @@ class Workspace:
         base = Path(base)
         base.mkdir(parents=True, exist_ok=True)
         self.base = base
-        self.origin, self.main = make_repository(base, files)
-        self.root = base / "trees"
         if share is None:
+            # Isolate before any git runs, so the fixture repository never sees the user's own git setup.
             self.home = base / "home"
             self.home.mkdir()
             isolate(monkeypatch, self.home)
+        self.origin, self.main = make_repository(base, files)
+        self.root = base / "trees"
+        if share is None:
             self.state = base / "state"
             self.clock = FakeClock()
             self.events = []
