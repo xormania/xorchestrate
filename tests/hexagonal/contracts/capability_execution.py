@@ -97,6 +97,53 @@ def receipt_policy_change_contract(subject, native=False):
     assert private_absent(subject.retained())
 
 
+def retained_receipt_new_native_call_contract(subject):
+    subject.make_native()
+    original = subject.invoke(native=True)
+    subject.reconstruct("journaled", "full")
+    subject.native_context["call_id"] = "new-native-retry"
+    repeated = subject.invoke(native=True)
+    assert repeated == {"operation_id": original["operation_id"], "status": "completed", "result_retained": False}
+    assert subject.provider.calls == 1, "RETAINED_RECEIPT_RETRY_MUST_NOT_REPEAT_EFFECT"
+    retained = subject.retained()
+    assert private_absent(retained), "RETAINED_RECEIPT_RETRY_MUST_NOT_COPY_PRIVATE_PAYLOADS"
+    assert all(context["actor"] == subject.actor for context in subject.provider.contexts)
+    assert {row["created_by"] for row in retained["native_call"]} == {subject.actor}
+    assert {row["call_id"] for row in retained["native_call"]} == {"provider-call", "new-native-retry"}
+
+
+def driver_observation_policy_contract(subject, observation, boundary):
+    subject.make_native()
+    if boundary == "codex":
+        response = subject.codex_callback()
+        assert response["result"]["invocation"]["result"]["payload"] == "PRIVATE_PROVIDER_RESULT"
+        assert response["observed"] == [("native_tool_call", 0), ("native_tool_result", 1)], \
+            "CONTROL_DRIVER_OBSERVATIONS_MUST_BRACKET_ACTUAL_CALLBACK"
+        assert response["health"]["pending"] == 0
+        assert subject.provider.contexts[0]["actor"] == subject.actor
+    else:
+        subject.observe_driver_envelopes()
+    retained = subject.retained()
+    rows = [row for row in retained["native_observation"]
+            if row["observation"]["kind"] in {"native_tool_call", "native_tool_result"}]
+    assert {row["observation"]["kind"] for row in rows} == {"native_tool_call", "native_tool_result"}
+    assert all(row["created_by"] == subject.actor and row["driver"] == "agent" and not row["stale"] for row in rows)
+    assert all(row["session_id"] == subject.native_context["session_id"]
+               and row["observation"]["native_id"] == subject.native_context["native_id"]
+               and row["observation"]["incarnation"] == subject.native_context["incarnation"] for row in rows)
+    source_data = {"observations": rows, "capture": retained["capture"]}
+    durable = json.dumps(rows)
+    assert "PRIVATE_PROVIDER_ARGUMENT" in durable and "PRIVATE_PROVIDER_RESULT" in durable, \
+        "CONTROL_JOURNALED_MODE_MUST_KEEP_NATIVE_CORRECTNESS_EVIDENCE"
+    if observation == "none":
+        assert not retained["capture"], "DRIVER_OBSERVATION_NONE_MUST_SUPPRESS_OPTIONAL_CAPTURE"
+    else:
+        encoded = json.dumps(source_data)
+        assert "PRIVATE_PROVIDER_ARGUMENT" in encoded and "PRIVATE_PROVIDER_RESULT" in encoded, \
+            "CONTROL_FULL_DRIVER_CAPTURE_MUST_KEEP_REQUEST_AND_RESULT"
+        assert {event["event_type"] for event in retained["capture"]} >= {"native.native_tool_call", "native.native_tool_result"}
+
+
 def receipt_settlement_contract(subject):
     subject.fail_settlement()
     failure = subject.failure(subject.invoke)
