@@ -5,6 +5,7 @@ are separate records; a successful queue write or RPC never creates a receipt.
 """
 from copy import deepcopy
 
+from .capability_execution import effect_receipt, observation_scope, private_error, request_binding
 from .inspection import DELIVERY_RECORDS
 from .model import Conflict, OrchestrationError, action_spec, canonical_digest, public_error_code, record_view
 from .outcomes import before_effect, completed_effect_result, effect_outcome
@@ -252,6 +253,16 @@ class DeliveryMixin:
     def _observe_native(self, driver_name, context, observation):
         """Trusted driver boundary. Never exposed as an application action."""
         context, observation = deepcopy(context), deepcopy(observation)
+        if self.execution_policy(observation.get("action"), observation.get("arguments"))["mode"] != "journaled":
+            source = observation
+            observation = {key: source[key] for key in ("kind", "native_id", "incarnation", "call_id", "phase", "action", "at")
+                if key in source}
+            observation["arguments"] = request_binding(source.get("arguments", {}))
+            if "result" in source:
+                result = source["result"]
+                observation["result"] = {"result_retained": False}
+                if isinstance(result, dict) and isinstance(result.get("operation_id"), str):
+                    observation["result"]["operation_id"] = result["operation_id"]
         session_id = context.get("session_id")
         if not session_id:
             raise OrchestrationError("Native observation has no application session binding.", "session_identity")
@@ -286,6 +297,19 @@ class DeliveryMixin:
 
     def invoke_native(self, driver_name, action_name, arguments, context, *, replay_only=False):
         """Durably fence semantic native call IDs even for non-idempotent actions."""
+        policy = self.execution_policy(action_name, arguments)
+        if policy["mode"] == "journaled":
+            with self.store.transaction() as tx:
+                previous = tx.get("native_call", canonical_digest([driver_name, context["native_id"], context["call_id"]]))
+            if previous and previous.data.get("execution_mode") in {"query", "receipt"}:
+                raise Conflict("A native call cannot change its retained execution policy.")
+        if policy["mode"] != "journaled":
+            with observation_scope(policy):
+                return self._invoke_private_native(driver_name, action_name, arguments, context, policy, replay_only)
+        with observation_scope(policy):
+            return self._invoke_journaled_native(driver_name, action_name, arguments, context, replay_only=replay_only)
+
+    def _invoke_journaled_native(self, driver_name, action_name, arguments, context, *, replay_only=False):
         with before_effect():
             identity = canonical_digest([driver_name, context["native_id"], context["call_id"]])
             fingerprint = canonical_digest([action_name, arguments, context["session_id"], context["incarnation"], context["actor"]])
@@ -388,6 +412,68 @@ class DeliveryMixin:
             if completed:
                 raise error from original_error
             raise
+        return result
+
+    def _invoke_private_native(self, driver_name, action_name, arguments, context, policy, replay_only):
+        """Fence a private call's identity without copying its payload or result."""
+        with before_effect():
+            identity = canonical_digest([driver_name, context["native_id"], context["call_id"]])
+            fingerprint = canonical_digest([action_name, arguments, context["session_id"], context["incarnation"], context["actor"]])
+            binding = request_binding(arguments)
+            native = {key: context[key] for key in ("native_id", "incarnation", "call_id")}
+            native.update(kind="application_tool", action=action_name, arguments=binding)
+            with self.store.transaction() as tx:
+                self._verify_native_source(tx, context, context["actor"])
+                previous = tx.get("native_call", identity)
+                if previous:
+                    if previous.data["fingerprint"] != fingerprint or previous.data.get("execution_mode") != policy["mode"]:
+                        raise Conflict("A native call identity was reused with different bindings or execution policy.")
+                    if previous.data["status"] != "completed":
+                        raise OrchestrationError("This native call has no completed outcome to repeat.", "native_call_unresolved",
+                            {"outcome": previous.data.get("effect_outcome", "unknown")})
+                else:
+                    if replay_only:
+                        raise OrchestrationError("The native replay has no retained completed application call.", "native_call_unresolved")
+                    self._create(tx, "native_call", context["actor"], {"fingerprint": fingerprint,
+                        "status": "pending", "session_id": context["session_id"], "native_id": context["native_id"],
+                        "incarnation": context["incarnation"], "call_id": context["call_id"], "action": action_name,
+                        "arguments": binding, "work_id": context.get("work_id"), "execution_mode": policy["mode"],
+                        "result_retained": False}, identity)
+        if previous:
+            # Queries reauthorize and observe current state. Receipt effects use
+            # their operation fence and return only the retained status receipt.
+            return self.call(action_name, arguments, actor=context["actor"], native_context=context,
+                replay_only=policy["mode"] == "receipt")
+        completed = False
+        try:
+            with before_effect():
+                self.observe_native(driver_name, context, {**native, "phase": "requested"})
+            result = self.call(action_name, arguments, actor=context["actor"], native_context=context)
+            completed = True
+            receipt = (effect_receipt(result["operation_id"]) if policy["mode"] == "receipt"
+                       else {"result_retained": False})
+            self.observe_native(driver_name, context, {**native, "phase": "completed", "result": receipt})
+            with self.store.transaction() as tx:
+                row = self._require(tx, "native_call", identity)
+                self._transition(tx, row, "complete", {**row.data, "status": "completed",
+                    "effect_outcome": "completed", "result": receipt}, context["actor"])
+        except Exception as original:
+            error = private_error(original)
+            outcome = "completed" if completed else ("failed" if policy["mode"] == "query" else effect_outcome(error))
+            if completed:
+                error = OrchestrationError("The capability completed, but native-call settlement needs reconciliation.",
+                    "result_unapplied", {"outcome": "completed", "result_retained": False})
+            try:
+                with self.store.transaction() as tx:
+                    row = self._require(tx, "native_call", identity)
+                    if row.data["status"] == "pending":
+                        definite = outcome in {"not_started", "failed"}
+                        self._transition(tx, row, "fail" if definite else "uncertain", {**row.data,
+                            "status": "failed" if definite else "unknown", "effect_outcome": outcome,
+                            "error": public_error_code(error)}, context["actor"])
+            except Exception:
+                error.details = {**error.details, "recording_error": "outcome_retention_failed"}
+            raise error from original
         return result
 
     def _native_observations(self, args, actor, context):

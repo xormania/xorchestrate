@@ -9,6 +9,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- Capability invocation supports trusted `query` and `receipt` execution policies.
+  Queries return fresh authorized results without effect records; receipt effects
+  retain fencing and outcome without copying argument or result payloads into the
+  orchestration journal or native-call records. See [adapter execution policies](docs/adapters.md#capability-execution-and-retention).
 - Exchange receipts and the independent multi-harness checker use retained store
   order for exchange, held-work and native-completion proof. Civil-clock changes
   and report-list reordering no longer create or reverse that proof. See
@@ -446,6 +450,13 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Upgrade notes
 
+- **Capability execution:** the optional top-level `capability_execution` section
+  selects exact provider/capability policies; installed providers may supply
+  defaults through `execution_policies()`. Existing providers remain journaled.
+  `invoke` now advertises an optional key because queries do not require one;
+  journaled and receipt effects still refuse calls without a key. Receipt-mode
+  records add optional policy metadata and discard payloads by design; no stored
+  data migration, lifecycle definition change or xcontracts port change is needed.
 - **Verification evidence:** new multi-harness runs retain ordering envelope
   version 1. Older captures without committed order witnesses cannot qualify
   temporal assertions; rerun the relevant scenario rather than reconstructing
