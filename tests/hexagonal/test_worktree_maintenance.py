@@ -711,3 +711,44 @@ def test_a_failed_delete_alone_makes_prune_exit_one(ws):
     finally:
         stuck.chmod(0o700)
     assert result.code == 1 and str(entry) in result.err, result.text
+
+
+def _advance_default_branch(ws):
+    """A newer commit on the origin's default branch, landed without a merge commit."""
+    tip = commit(ws.main, "later-on-trunk.txt", "later\n")
+    git(ws.main, "push", "-q", "origin", DEFAULT_BRANCH)
+    return tip
+
+
+def _fresh_then_fast_forwarded(ws):
+    tree = ws.new("advanced")
+    _advance_default_branch(ws)
+    git(tree, "fetch", "-q", "origin")
+    git(tree, "merge", "-q", "--ff-only", f"origin/{DEFAULT_BRANCH}")
+    return tree
+
+
+def _work_landed_by_fast_forward(ws):
+    tree = ws.new("landed-ff")
+    commit(tree, "work.txt", "w\n")
+    push(tree, "landed-ff")
+    git(ws.main, "fetch", "-q", "origin")
+    git(ws.main, "merge", "-q", "--ff-only", "origin/landed-ff")
+    git(ws.main, "push", "-q", "origin", DEFAULT_BRANCH)
+    return tree
+
+
+@pytest.mark.parametrize("make", [_fresh_then_fast_forwarded, _work_landed_by_fast_forward],
+                         ids=["fresh-fast-forwarded", "fast-forward-merge"])
+def test_a_tip_on_the_default_branchs_first_parent_history_is_kept_with_its_ignored_files(ws, make):
+    tree = make(ws)
+    branch = git(tree, "rev-parse", "--abbrev-ref", "HEAD")
+    tip = git(tree, "rev-parse", "HEAD")
+    assert git(ws.main, "merge-base", "--is-ancestor", tip, f"origin/{DEFAULT_BRANCH}", check=False).returncode == 0
+    (tree / "notes").mkdir()
+    (tree / "notes" / "todo.log").write_text("ignored work\n")
+    row = by_path(rows_of(ws)["trees"])[str(tree)]
+    assert row["verdict"] == "KEEP" and row["merged"] is False, row
+    result = guarded(ws, "prune", "--apply")
+    assert tree.is_dir() and (tree / "notes" / "todo.log").read_text() == "ignored work\n", result.text
+    assert git(ws.main, "rev-parse", f"refs/heads/{branch}") == tip, "the branch was deleted"
