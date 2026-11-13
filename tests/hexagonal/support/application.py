@@ -94,13 +94,14 @@ def application(store=None, *, provider=None, driver=None, providers=None, sessi
                 clock=None, identifiers=None, acceptance=None, session_fallbacks=None,
                 receipt_policy=None, session_selection=None, delivery_scheduler=None,
                 retry_policy=None, provider_configurations=None,
-                evaluator_configurations=None, state_engine=None):
+                evaluator_configurations=None, state_engine=None, capability_execution=None):
     """One composition boundary for controlled application port implementations."""
     if provider is not None and providers is not None:
         raise ValueError("Select provider or providers, not both")
     if driver is not None and sessions is not None:
         raise ValueError("Select driver or sessions, not both")
     sequence = itertools.count(1)
+    execution = {} if capability_execution is None else {"capability_execution": capability_execution}
     return Application(
         store=store if store is not None else make_store(),
         providers=providers if providers is not None else ({"tools": provider} if provider is not None else {}),
@@ -116,7 +117,7 @@ def application(store=None, *, provider=None, driver=None, providers=None, sessi
         delivery_scheduler=delivery_scheduler if delivery_scheduler is not None else DeliverySchedule(),
         retry_policy=retry_policy if retry_policy is not None else DefiniteFailureRetry(),
         provider_configurations=provider_configurations,
-        evaluator_configurations=evaluator_configurations, state_engine=state_engine,
+        evaluator_configurations=evaluator_configurations, state_engine=state_engine, **execution,
     )
 
 

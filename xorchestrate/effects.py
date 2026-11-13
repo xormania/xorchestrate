@@ -16,6 +16,7 @@ silently retried. The host owns what an effect targets through four hooks:
 from copy import deepcopy
 from typing import Any, Callable
 
+from .capability_execution import effect_receipt, private_error
 from .model import (
     JSON,
     Conflict,
@@ -53,10 +54,13 @@ class EffectJournalMixin:
         try:
             raw = perform(operation)
         except Exception as error:
+            if operation.data.get("execution_mode") == "receipt":
+                error = private_error(error)
             known_outcome = effect_outcome(error)
             if known_outcome == "completed":
                 retained = completed_effect_result(error)
-                recording_error = self._retain_completed_effect(key, actor, error, retained)
+                recording_error = self._retain_completed_effect(key, actor, error, retained,
+                    private=operation.data.get("execution_mode") == "receipt")
                 raise OrchestrationError("The adapter completed, but its result needs reconciliation.", "result_unapplied", {
                     "operation_id": key, "outcome": "completed", **retained,
                     "recording_error": recording_error}) from error
@@ -66,7 +70,8 @@ class EffectJournalMixin:
             try:
                 self._fail_effect(key, error, status)
             except Exception as storage_error:
-                recording_error = public_error_message(storage_error)
+                recording_error = ("Outcome retention is unavailable." if operation.data.get("execution_mode") == "receipt"
+                    else public_error_message(storage_error))
             cause = public_error(error)
             raise OrchestrationError(public_error_message(error), "operation_unknown" if unknown else "operation_failed", {
                 "operation_id": key, "outcome": status, "cause": cause["code"],
@@ -81,24 +86,31 @@ class EffectJournalMixin:
                 if current.data["status"] != "pending":
                     raise Conflict("The operation was reconciled while its external call was in progress.")
                 result = self._apply_effect(tx, current, raw)
-                self._transition(tx, current, "complete", {**current.data, "status": "completed", "result": result,
-                    "external_result": deepcopy(raw), "external_result_origin": "adapter", "finished_at": self.clock()}, actor)
+                retained = ({"result": effect_receipt(key)} if current.data.get("execution_mode") == "receipt"
+                    else {"result": result, "external_result": deepcopy(raw), "external_result_origin": "adapter"})
+                self._transition(tx, current, "complete", {**current.data, "status": "completed", **retained,
+                    "finished_at": self.clock()}, actor)
                 self._event(tx, "operation.completed", actor, operation_id=key, work_id=current.data.get("work_id"))
                 return result
         except Exception as error:
             # The external effect succeeded even if a local write did not. Preserve
             # that result for reconciliation instead of labelling it a failed call.
-            recording_error = self._retain_completed_effect(key, actor, error, {"external_result": deepcopy(raw)})
+            retained = {} if operation.data.get("execution_mode") == "receipt" else {"external_result": deepcopy(raw)}
+            recording_error = self._retain_completed_effect(key, actor, error, retained,
+                private=operation.data.get("execution_mode") == "receipt")
             raise OrchestrationError("The external effect completed, but its result needs reconciliation.", "result_unapplied", {
-                "operation_id": key, "outcome": "completed", "external_result": deepcopy(raw),
+                "operation_id": key, "outcome": "completed", **retained,
                 "recording_error": recording_error,
             }) from error
 
-    def _retain_completed_effect(self, key, actor, error, retained):
+    def _retain_completed_effect(self, key, actor, error, retained, *, private=False):
         """Keep adapter completion distinct from uncertainty without forcing settlement."""
         try:
             with self.store.transaction() as tx:
                 current = self._require(tx, "operation", key)
+                private = private or current.data.get("execution_mode") == "receipt"
+                if private:
+                    retained, error = {}, private_error(error)
                 changes = {"effect_outcome": "completed", "application_error": public_error_message(error),
                            "application_error_schema_version": 1}
                 if current.data["status"] in {"pending", "unknown"}:
@@ -113,7 +125,8 @@ class EffectJournalMixin:
         except Exception as storage_error:
             # The caller still receives the actual outcome and response if
             # persistence or an independently configured retention rule refuses.
-            return public_error_message(storage_error)
+            return ("Outcome retention is unavailable." if private
+                    else public_error_message(storage_error))
         return None
 
     @staticmethod
@@ -138,6 +151,8 @@ class EffectJournalMixin:
             if operation.data["status"] != "pending":
                 return
             details = public_error(error)
+            if operation.data.get("execution_mode") == "receipt":
+                details = public_error(private_error(error))
             self._transition(tx, operation, "uncertain" if status == "unknown" else "fail",
                 {**operation.data, "status": status, "error": details, "error_schema_version": 1,
                  "finished_at": self.clock()}, operation.data["actor"])
@@ -159,11 +174,14 @@ class EffectJournalMixin:
             data = {**operation.data, "status": args["outcome"], "resolved_by": actor, "resolution": args["reason"], "finished_at": self.clock()}
             if args["outcome"] == "completed":
                 self._check_reconciliation(operation, args)
-                if "result" not in args and "external_result" not in operation.data:
+                private = operation.data.get("execution_mode") == "receipt"
+                if not private and "result" not in args and "external_result" not in operation.data:
                     raise OrchestrationError("A verified external result is required to resolve completion.")
-                raw = args["result"] if "result" in args else operation.data["external_result"]
+                raw = args.get("result", operation.data.get("external_result", {}))
                 origin = "caller" if "result" in args else operation.data.get("external_result_origin")
-                data.update({"result": self._apply_effect(tx, operation, raw, reconciling=True), "external_result": deepcopy(raw), "external_result_origin": origin})
+                result = self._apply_effect(tx, operation, raw, reconciling=True)
+                data.update({"result": effect_receipt(operation.key)} if private else {
+                    "result": result, "external_result": deepcopy(raw), "external_result_origin": origin})
             else:
                 self._release_effect(tx, operation, "failed")
                 data["error"] = {"message": args["reason"], "code": "reconciled_failure"}

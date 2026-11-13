@@ -63,7 +63,8 @@
         "xorchestrate.session_lifecycle",
         "xorchestrate.state",
         "xorchestrate.store_events",
-        "xorchestrate.worktrees"
+        "xorchestrate.worktrees",
+        "xorchestrate.capability_execution"
       ],
       "allowed_roles": [
         "foundation",
