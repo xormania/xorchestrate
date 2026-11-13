@@ -1,0 +1,75 @@
+{
+  "cases": [
+    {
+      "diagnostic": "PROJECT_SERVER_DOWN_LETS_AN_ENDING_SERVER_FINISH",
+      "mutation": {
+        "new": "        while False and terminal is not None and terminal.running and time.monotonic() < deadline:",
+        "old": "        while terminal is not None and terminal.running and time.monotonic() < deadline:",
+        "path": "xorchestrate/cli.py"
+      },
+      "name": "down-closes-an-ending-server",
+      "selectors": [
+        "tests/hexagonal/test_project_server.py::test_down_lets_a_stopped_servers_process_end_on_its_own[detached-process]",
+        "tests/hexagonal/test_project_server.py::test_total_loss_never_blocks_status_doctor_down_or_the_next_up[detached-process]"
+      ],
+      "target": "tests.hexagonal.test_project_server::test_down_lets_a_stopped_servers_process_end_on_its_own[detached-process]",
+      "unaffected": [
+        "tests.hexagonal.test_project_server::test_total_loss_never_blocks_status_doctor_down_or_the_next_up[detached-process]"
+      ]
+    },
+    {
+      "contract": "tests.hexagonal.contracts.terminal_host:inventory_sees_everything_and_takes_nothing",
+      "diagnostic": "TERMINAL_HOST_INVENTORY_REPORTS_WHO_HOLDS",
+      "mutation": {
+        "new": "InventoryItem(pane.name, not self._exited(pane), True)",
+        "old": "InventoryItem(pane.name, not self._exited(pane), self._holds(pane))",
+        "path": "xorchestrate/adapters/tmux.py"
+      },
+      "name": "inventory-claims-every-terminal-held",
+      "selectors": [
+        "tests/hexagonal/test_terminal_host.py::test_adapters_meet_the_contract[multiplexer-surviving-inventory_sees_everything_and_takes_nothing]",
+        "tests/hexagonal/test_terminal_host.py::test_adapters_meet_the_contract[detached-process-surviving-inventory_sees_everything_and_takes_nothing]"
+      ],
+      "target": "tests.hexagonal.test_terminal_host::test_adapters_meet_the_contract[multiplexer-surviving-inventory_sees_everything_and_takes_nothing]",
+      "unaffected": [
+        "tests.hexagonal.test_terminal_host::test_adapters_meet_the_contract[detached-process-surviving-inventory_sees_everything_and_takes_nothing]"
+      ]
+    },
+    {
+      "contract": "tests.hexagonal.contracts.terminal_host:sweep_removes_only_exited_terminals_nobody_here_holds",
+      "diagnostic": "TERMINAL_HOST_SWEEP_REMOVES_ONLY_EXITED_ORPHANS",
+      "mutation": {
+        "new": "            if pane.host != self.name or self._holds(pane):",
+        "old": "            if pane.host != self.name or self._holds(pane) or not self._exited(pane):",
+        "path": "xorchestrate/adapters/tmux.py"
+      },
+      "name": "sweep-removes-running-terminals",
+      "selectors": [
+        "tests/hexagonal/test_terminal_host.py::test_adapters_meet_the_contract[multiplexer-surviving-sweep_removes_only_exited_terminals_nobody_here_holds]",
+        "tests/hexagonal/test_terminal_host.py::test_adapters_meet_the_contract[detached-process-surviving-sweep_removes_only_exited_terminals_nobody_here_holds]"
+      ],
+      "target": "tests.hexagonal.test_terminal_host::test_adapters_meet_the_contract[multiplexer-surviving-sweep_removes_only_exited_terminals_nobody_here_holds]",
+      "unaffected": [
+        "tests.hexagonal.test_terminal_host::test_adapters_meet_the_contract[detached-process-surviving-sweep_removes_only_exited_terminals_nobody_here_holds]"
+      ]
+    },
+    {
+      "diagnostic": "PROJECT_SERVER_LOST_TERMINAL_RECORD_NEVER_BLOCKS",
+      "mutation": {
+        "new": "            raise",
+        "old": "            if error.code in {\"terminal_not_recoverable\", \"terminal_identity_mismatch\"}:\n                self.files.remove_terminal_record()\n                return None\n            raise",
+        "path": "xorchestrate/cli.py"
+      },
+      "name": "lost-terminal-record-blocks-the-project",
+      "selectors": [
+        "tests/hexagonal/test_project_server.py::test_total_loss_never_blocks_status_doctor_down_or_the_next_up[detached-process]",
+        "tests/hexagonal/test_project_server.py::test_server_locations_are_private_absolute_and_bounded"
+      ],
+      "target": "tests.hexagonal.test_project_server::test_total_loss_never_blocks_status_doctor_down_or_the_next_up[detached-process]",
+      "unaffected": [
+        "tests.hexagonal.test_project_server::test_server_locations_are_private_absolute_and_bounded"
+      ]
+    }
+  ],
+  "schema_version": 1
+}
