@@ -24,9 +24,9 @@ def _kill_all(directory):
             pass
 
 
-def reap(directory):
-    """Teardown: nothing of the project outlives its world."""
-    _kill_all(directory)
+def reap(world):
+    """Teardown: nothing of the world's project outlives it."""
+    _kill_all(world.directory)
 
 
 def settle(seconds):
