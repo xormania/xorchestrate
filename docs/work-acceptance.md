@@ -181,7 +181,7 @@ those verification states explicit in the evidence handoff.
 
 ```bash
 python -m pytest -p no:cacheprovider --test-family work-acceptance --test-family verification --test-family architecture -q
-python tests/hexagonal/calibrate_work_acceptance.py --output .xorchestrate/calibration/UNIQUE_RUN
+python -m scripts.verification.calibrate_suite --inventory work --out /absolute/new-work-calibration
 ```
 
 The suite exercises both storage adapters, configured policy substitution,
@@ -192,7 +192,8 @@ brief. The historical completion tests supplied behavior and failure-case
 patterns; the active application does not import the historical runtime.
 
 The calibration command copies the measured application and tests to isolated
-snapshots, retains their hashes and archive, and plants five targeted mutations.
+snapshots, retains their hashes and archive, and plants five targeted mutations,
+each once per storage adapter (the `work` inventory).
 Each run requires a clean passing baseline, its exact expected assertion failure,
 and passing unaffected controls. Raw output, pytest XML, commands, timestamps,
 and mutation patches are retained. Setup errors, unrelated failures, skipped or

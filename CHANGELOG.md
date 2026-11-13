@@ -93,6 +93,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Fixed
 
+- A failed bridge frame write closes the connection before another writer can
+  append to the unfinished frame. Awaiting requests retain unknown outcomes;
+  response timeouts after complete writes still allow observation and control.
 - Native crash calibration waits for the applied-effect boundary before crash
   injection and reaps its blocked host when a scenario fails.
 
@@ -117,6 +120,15 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Added
 
+- Optional work-tree tool for contributors: `python3 -m scripts.worktrees`
+  creates and safely removes git work trees and runs one Serena server per
+  tree over local HTTP, so a session can use symbol tools on any tree. See
+  [work trees and per-tree Serena](docs/agent-workflow.md#work-trees-and-per-tree-serena-optional-tool).
+- Optional developer settings for contributor tools: one declared table of
+  `XORCHESTRATE_DEV_*` keys read from flags, the environment, a git-ignored
+  `.devtools.env` and a user file, with `python3 -m scripts.devconfig show`
+  naming each value's source. The product does not read them. See
+  [developer settings](docs/agent-workflow.md#developer-settings).
 - Calibration fault cases are registered data: one service judges any inventory
   under `scripts/verification/inventories/`, selected by name or by stage (`ci`,
   `pre-draft`, `manual`). The native faults moved there unchanged. See
@@ -125,6 +137,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   registered inventory name instead of a file path, and
   `scripts/verification/faults.json` is gone: register a new inventory file in
   `scripts/verification/inventories/registry.json` and pass its name.
+- The state and work faults are registered inventories too, run at `ci` by the
+  same service; each work fault now runs once per storage adapter. Their
+  separate entry points are gone: run
+  `python -m scripts.verification.calibrate_suite --inventory state` (or `work`).
 - Jev now asks evidence-addressed atomic questions at the source stage and adds
   optional post-test guarantee support and failure triage. Current candidate and
   lane identity, executed inventories and exact failure cases bind the advice;

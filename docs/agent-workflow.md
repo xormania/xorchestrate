@@ -1,7 +1,8 @@
 # Agent workflow
 
 How agents work on this repository together, how a contributor recovers after a
-crash, and how to use Serena here. [AGENTS.md](../AGENTS.md) carries the
+crash, how developer tools read optional local settings, and how to use Serena
+here. [AGENTS.md](../AGENTS.md) carries the
 repository's rules and takes precedence over this document; xor's current
 direction takes precedence over both.
 
@@ -132,6 +133,46 @@ the full sweep. The checks cannot see damage to an ignored file, a truncated
 untracked file that is not empty, or work that existed only in a lost session's
 memory.
 
+## Developer settings
+
+Developer tools in `scripts/` that opt in read optional local settings through
+`scripts.devconfig`. Nothing requires them: every setting has a neutral default
+derived from your home and XDG directories and the checkout's name. The product
+never reads them, and checks run in CI do not depend on them.
+
+Each setting is a `XORCHESTRATE_DEV_*` name, the same in the environment and in
+the files. A value is taken from the first of these that sets it:
+
+1. a command-line flag of the tool, where it offers one;
+2. the environment;
+3. `.devtools.env` in the main checkout (git-ignored; linked work trees read the
+   main checkout's file, never one of their own);
+4. `devtools.env` in the `xorchestrate` folder under your XDG config directory;
+5. the declared default.
+
+The files hold plain `KEY=VALUE` lines, `#` comments and blank lines, in UTF-8.
+Values are literal text: nothing is expanded or executed. Spaces and tabs around
+the name and the value are trimmed and one matching pair of surrounding quotes
+is removed. A path may start with `~` or `~/` (your home from `HOME`), and a
+relative path resolves against the file's folder, or the current directory for
+the environment and flags. An empty value counts as not set, so the next source
+applies. Any other line is refused with its file and line number, and so is a
+`.devtools.env` that git tracks. An unknown name is ignored and reported by
+`show`. Keep secrets out of these files.
+
+```bash
+python3 -m scripts.devconfig show              # every setting, its value and where it came from
+python3 -m scripts.devconfig example --check   # is this tree's .devtools.env.example current?
+python3 -m scripts.devconfig example --write   # regenerate it in this tree
+```
+
+All settings are declared once, with kind, default and description, in
+`scripts/devconfig/keys.py`. The committed `.devtools.env.example` is generated
+from that table, and a test fails when the two differ. Add a setting to the
+table only for a location, an external tool's launcher or pin, or a
+machine-dependent number for local runs; a setting that could change what a
+check proves is either not offered or is marked so that runs record it.
+
 ## Serena
 
 [Serena](https://github.com/oraios/serena) is an MCP server that gives an agent
@@ -217,3 +258,47 @@ default in your home), never into the repository.
   `--project <checkout>` instead for that harness.
 - Unverified: whether pyright starts on a machine without Node on its path, and
   whether each harness starts MCP servers in the session's directory.
+
+## Work trees and per-tree Serena (optional tool)
+
+`python3 -m scripts.worktrees` is an optional convenience for contributors who
+work in several git work trees at once. Nothing in the repository requires it.
+It reads its settings through the [developer settings](#developer-settings);
+`--root` and `--state-dir` override the work-tree root and the tool's state
+directory for one command, and `--repo` names the repository (by default the
+one containing the current directory; inside a linked tree it means the main
+checkout).
+
+```bash
+python3 -m scripts.worktrees new feat/example          # tree at <root>/feat/example, from the remote's default branch
+python3 -m scripts.worktrees remove feat/example       # only when clean, unlocked, unused and pushed or merged
+python3 -m scripts.worktrees serena up feat/example    # one Serena server for that tree
+python3 -m scripts.worktrees serena call feat/example find_symbol '{"name_path_pattern": "TerminalHost"}'
+python3 -m scripts.worktrees serena check feat/example # before trusting its answers
+python3 -m scripts.worktrees serena down feat/example
+```
+
+`new` starts the branch from the remote's default branch (or
+`XORCHESTRATE_DEV_BASE`, or `--base`) with no upstream, after a fetch. It
+refuses, changing nothing, when the directory or branch exists or the base
+cannot be resolved. `remove` refuses a tree that has uncommitted or untracked
+changes, is locked, has a stash entry made on its branch, has a process working
+in it, or holds commits that are neither pushed nor merged. It never forces;
+it deletes the branch only when merged into the base, and only if the branch
+still points where it did.
+
+A session's own Serena connection serves the directory the session started in.
+`serena` gives any session symbol tools for another tree without restarting:
+`up` starts one Serena MCP server per tree over local HTTP, with a Serena home
+in the tool's state directory, so your own Serena configuration is untouched.
+A server counts as up only after it answers a real symbol query (by default an
+overview of the first tracked Python file that defines something; set
+`XORCHESTRATE_DEV_PROBE_TOOL` and `XORCHESTRATE_DEV_PROBE_ARGS` to choose
+another). `call` and `tools` use it from the shell, `ls` lists servers, `reap`
+forgets dead ones and stops servers whose tree is gone, and `down` stops a
+server and its language server. `check` reports a server that does not answer,
+serves another directory, has a twin, runs a different Serena version, or
+predates a commit or a change to `.serena/project.yml`; restart it with
+`serena up` after a branch switch or pull. Without Serena's launcher, `serena`
+says so and the tree commands still work; `XORCHESTRATE_DEV_SERENA_COMMAND`
+replaces the launch command.

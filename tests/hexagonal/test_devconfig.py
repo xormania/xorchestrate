@@ -17,7 +17,7 @@ import pytest
 
 from tests.hexagonal.contracts import devconfig as contract
 from tests.hexagonal.support.devconfig import SettingsWorld, devconfig, names_someone
-from tests.hexagonal.support.git_repositories import REPOSITORY_NAME
+from tests.hexagonal.support.git_repositories import REPOSITORY_NAME, git
 from tests.hexagonal.support.source_scan import ROOT, imports, namespace_uses, tracked
 
 
@@ -271,7 +271,7 @@ def test_the_committed_example_is_the_rendered_table_byte_for_byte():
     assert committed.read_text(encoding="utf-8") == _example()
 
 
-def test_the_local_settings_file_is_ignored_and_the_example_istracked():
+def test_the_local_settings_file_is_ignored_and_the_example_is_tracked():
     ignored = subprocess.run(["git", "check-ignore", "-q", contract.REPO_FILE], cwd=ROOT)
     assert ignored.returncode == 0, f"{contract.REPO_FILE} must be git-ignored"
     tracked = subprocess.run(["git", "ls-files", "--error-unmatch", contract.EXAMPLE_FILE], cwd=ROOT,
@@ -279,17 +279,19 @@ def test_the_local_settings_file_is_ignored_and_the_example_istracked():
     assert tracked.returncode == 0, f"{contract.EXAMPLE_FILE} must be tracked"
 
 
-def test_the_example_command_writes_at_the_main_checkout_and_checks_for_drift(world):
+def test_the_example_command_writes_and_checks_the_current_trees_copy(world):
+    """The example is tracked, so each branch has its own copy; a linked tree never touches the main checkout's."""
     code, output = world.cli("example", "--check", cwd=world.tree)
     assert code == 1, (code, output)
     code, output = world.cli("example", "--write", cwd=world.tree)
     assert code == 0, output
-    written = world.main / contract.EXAMPLE_FILE
+    written = world.tree / contract.EXAMPLE_FILE
     assert written.read_text(encoding="utf-8") == _example()
-    assert not (world.tree / contract.EXAMPLE_FILE).exists()
+    assert not (world.main / contract.EXAMPLE_FILE).exists(), "the main checkout's copy was written"
     assert world.cli("example", "--check", cwd=world.tree)[0] == 0
+    assert world.cli("example", "--check", cwd=world.main)[0] == 1, "each tree checks its own copy"
     written.write_text(written.read_text(encoding="utf-8") + "# drift\n", encoding="utf-8")
-    assert world.cli("example", "--check")[0] == 1
+    assert world.cli("example", "--check", cwd=world.tree)[0] == 1
 
 
 def test_show_prints_one_line_per_setting_with_its_source(world):
@@ -336,3 +338,163 @@ def test_the_settings_layer_uses_the_standard_library_only_and_names_no_one():
         assert not names_someone(text, contract.HOME_PATHS), path
         uses = namespace_uses(text, contract.NAMESPACE, contract.PREFIX)
         assert uses == [], (path, uses)
+
+
+# Review findings: repository discovery, robustness and edge values -----------------------------------
+
+def _bare_with_tree(base):
+    bare = base / "bare.git"
+    git(base, "init", "-q", "--bare", "-b", "trunk", bare)
+    seed = base / "seed"
+    seed.mkdir()
+    git(seed, "init", "-q", "-b", "trunk")
+    (seed / "f.txt").write_text("x\n")
+    git(seed, "add", "-A")
+    git(seed, "commit", "-q", "-m", "seed")
+    git(seed, "push", "-q", str(bare), "trunk")
+    tree = base / "from-bare"
+    git(bare, "worktree", "add", "-q", tree, "trunk")
+    return tree
+
+
+def test_a_bare_main_repository_is_not_a_checkout_to_read_settings_from(world):
+    tree = _bare_with_tree(world.base)
+    error = world.error(repo=tree)
+    assert error.code == "NOT_A_REPOSITORY", error.detail
+
+
+def test_a_submodule_is_its_own_checkout_named_after_itself(world, monkeypatch):
+    library = world.base / "library-source"
+    library.mkdir()
+    git(library, "init", "-q", "-b", "trunk")
+    (library / "lib.py").write_text("X = 1\n")
+    git(library, "add", "-A")
+    git(library, "commit", "-q", "-m", "lib")
+    git(world.main, "-c", "protocol.file.allow=always", "submodule", "add", "-q", str(library), "inner-lib")
+    inner = world.main / "inner-lib"
+    (inner / ".devtools.env").write_text("XORCHESTRATE_DEV_SERENA_CONTEXT=from-submodule\n")
+    assert devconfig("loader").find_main_checkout(inner) == inner.resolve()
+    config = world.load(inner)
+    assert config.get("XORCHESTRATE_DEV_WORKTREE_ROOT").name == "inner-lib"
+    assert config.get("XORCHESTRATE_DEV_SERENA_CONTEXT") == "from-submodule"
+
+
+def test_the_main_checkout_is_the_first_registered_tree_whatever_git_dir_says(world, monkeypatch):
+    other = world.base / "elsewhere"
+    other.mkdir()
+    git(other, "init", "-q")
+    monkeypatch.setenv("GIT_DIR", str(other / ".git"))
+    monkeypatch.setenv("GIT_WORK_TREE", str(other))
+    monkeypatch.setenv("GIT_COMMON_DIR", str(other / ".git"))
+    assert devconfig("loader").find_main_checkout(world.tree) == world.main.resolve()
+    world.repo_file("XORCHESTRATE_DEV_SERENA_CONTEXT=from-main\n")
+    assert world.load(world.tree).get("XORCHESTRATE_DEV_SERENA_CONTEXT") == "from-main"
+
+
+def _not_a_repository(world, tmp):
+    plain = tmp / "plain"
+    plain.mkdir()
+    return plain
+
+
+def _a_file(world, tmp):
+    path = tmp / "file.txt"
+    path.write_text("x")
+    return path
+
+
+@pytest.mark.parametrize("where", [lambda world, tmp: tmp / "missing", _a_file, _not_a_repository],
+                         ids=["missing", "file", "not-a-repository"])
+def test_a_repository_path_that_is_not_a_checkout_is_refused_without_a_traceback(world, tmp_path, where):
+    path = where(world, tmp_path)
+    assert world.error(repo=path).code == "NOT_A_REPOSITORY"
+    code, output = world.cli("--repo", str(path), "show")
+    assert code == 2 and "NOT_A_REPOSITORY" in output and "Traceback" not in output, (code, output)
+
+
+def test_without_git_the_repository_cannot_be_found_and_says_so(world, monkeypatch, tmp_path):
+    empty = tmp_path / "no-programs"
+    empty.mkdir()
+    monkeypatch.setenv("PATH", str(empty))
+    assert world.error().code == "NOT_A_REPOSITORY"
+    code, output = world.cli("--repo", str(world.main), "show")
+    assert code == 2 and "Traceback" not in output, output
+
+
+@pytest.mark.parametrize("damage", ["not-utf8", "unreadable"])
+def test_an_unreadable_settings_file_is_refused_naming_it(world, damage):
+    import os
+    path = world.repo_file("XORCHESTRATE_DEV_BASE=x\n")
+    if damage == "not-utf8":
+        path.write_bytes(b"XORCHESTRATE_DEV_BASE=\xff\xfe\n")
+    else:
+        if os.geteuid() == 0:
+            pytest.skip("permissions do not bind the superuser")
+        path.chmod(0)
+    try:
+        error = world.error()
+        assert error.code == "ENV_FILE_INVALID" and str(path) in str(error.detail), (error.code, error.detail)
+        code, output = world.cli("show")
+        assert code == 2 and "Traceback" not in output, output
+    finally:
+        path.chmod(0o644)
+
+
+def test_home_comes_from_the_given_environment_else_the_account_database(world, monkeypatch, tmp_path):
+    import pwd
+    monkeypatch.setenv("HOME", str(tmp_path / "process-home"))
+    key = "XORCHESTRATE_DEV_STATE_DIR"
+    given = world.load(env=world.env())
+    assert given.get(key) == world.home / ".local/state/xorchestrate/worktrees"
+    for env in ({"PATH": world.env()["PATH"]}, {"PATH": world.env()["PATH"], "HOME": ""}):
+        account = Path(pwd.getpwuid(__import__("os").getuid()).pw_dir)
+        assert world.load(env=env).get(key) == (account / ".local/state/xorchestrate/worktrees").resolve()
+
+
+def test_a_relative_xdg_directory_counts_as_unset(world):
+    config = world.load(env=world.env(XDG_STATE_HOME="relative/state", XDG_CONFIG_HOME="relative/config"))
+    assert config.get("XORCHESTRATE_DEV_STATE_DIR") == world.home / ".local/state/xorchestrate/worktrees"
+    world.user_file("XORCHESTRATE_DEV_SERENA_CONTEXT=from-home-config\n")
+    config = world.load(env=world.env(XDG_CONFIG_HOME="relative/config"))
+    assert config.get("XORCHESTRATE_DEV_SERENA_CONTEXT") == "from-home-config"
+
+
+def test_an_empty_value_means_not_set_at_that_level(world):
+    world.repo_file("XORCHESTRATE_DEV_STATE_DIR=/from/file\nXORCHESTRATE_DEV_BASE=\nXORCHESTRATE_DEV_SERENA_TIMEOUT=\n")
+    config = world.load(env=world.env(XORCHESTRATE_DEV_STATE_DIR="", XORCHESTRATE_DEV_SERENA_CONTEXT=""))
+    assert config.get("XORCHESTRATE_DEV_STATE_DIR") == Path("/from/file")
+    assert config.source("XORCHESTRATE_DEV_STATE_DIR").kind == "repo_file"
+    assert config.get("XORCHESTRATE_DEV_BASE") is None and config.source("XORCHESTRATE_DEV_BASE").kind == "default"
+    assert config.get("XORCHESTRATE_DEV_SERENA_TIMEOUT") == 180.0
+    assert config.get("XORCHESTRATE_DEV_SERENA_CONTEXT") == "claude-code"
+
+
+def test_a_byte_order_mark_and_windows_line_ends_are_accepted():
+    parse = devconfig("parser").parse_env_file
+    values, _ = parse("\ufeffXORCHESTRATE_DEV_BASE=origin/x\r\nXORCHESTRATE_DEV_PROBE_TOOL=find\r\n", "f")
+    assert values["XORCHESTRATE_DEV_BASE"] == ("origin/x", 1)
+    assert values["XORCHESTRATE_DEV_PROBE_TOOL"] == ("find", 2)
+
+
+def test_lines_split_only_on_newline():
+    parse = devconfig("parser").parse_env_file
+    values, _ = parse("XORCHESTRATE_DEV_BASE=a\fb\u2028c\x85d\nXORCHESTRATE_DEV_PROBE_TOOL=t\n", "f")
+    assert values["XORCHESTRATE_DEV_BASE"] == ("a\fb\u2028c\x85d", 1)
+    assert values["XORCHESTRATE_DEV_PROBE_TOOL"] == ("t", 2)
+
+
+@pytest.mark.parametrize("value", ["nan", "inf", "-inf", "NaN", "Infinity"])
+def test_a_number_must_be_finite(world, value):
+    world.repo_file(f"XORCHESTRATE_DEV_SERENA_TIMEOUT={value}\n")
+    error = world.error()
+    assert error.code == "TYPE_INVALID" and "XORCHESTRATE_DEV_SERENA_TIMEOUT" in str(error.detail)
+
+
+def test_a_settings_file_tracked_by_git_is_refused(world):
+    path = world.repo_file("XORCHESTRATE_DEV_SERENA_COMMAND=echo injected {port}\n")
+    git(world.main, "add", "-f", ".devtools.env")
+    git(world.main, "commit", "-q", "-m", "commit the local settings")
+    error = world.error()
+    assert error.code == "ENV_FILE_TRACKED" and str(path) in str(error.detail), (error.code, error.detail)
+    code, output = world.cli("show")
+    assert code == 2 and "ENV_FILE_TRACKED" in output, output

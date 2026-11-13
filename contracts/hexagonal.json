@@ -10,6 +10,8 @@
     "scripts/verification",
     "scripts/architecture",
     "scripts/ci",
+    "scripts/devconfig",
+    "scripts/worktrees",
     "tests"
   ],
   "roles": {
@@ -676,6 +678,114 @@
       ],
       "allow_dynamic": false
     },
+    "devconfig": {
+      "modules": [
+        "scripts.devconfig",
+        "scripts.devconfig.*"
+      ],
+      "allowed_roles": [
+        "devconfig"
+      ],
+      "allowed_external": [
+        "stdlib:*"
+      ],
+      "allow_dynamic": false
+    },
+    "worktrees_foundation": {
+      "modules": [
+        "scripts.worktrees",
+        "scripts.worktrees.model",
+        "scripts.worktrees.ports"
+      ],
+      "allowed_roles": [
+        "worktrees_foundation"
+      ],
+      "allowed_external": [
+        "__future__",
+        "collections",
+        "dataclasses",
+        "typing"
+      ],
+      "allow_dynamic": false,
+      "forbidden_calls": [
+        "open",
+        "input",
+        "print"
+      ]
+    },
+    "worktrees_core": {
+      "modules": [
+        "scripts.worktrees.core"
+      ],
+      "allowed_roles": [
+        "worktrees_foundation",
+        "worktrees_core"
+      ],
+      "allowed_external": [
+        "__future__",
+        "ast",
+        "collections",
+        "dataclasses",
+        "json",
+        "posixpath",
+        "signal",
+        "typing",
+        "urllib.parse"
+      ],
+      "allow_dynamic": false,
+      "forbidden_calls": [
+        "open",
+        "input",
+        "print"
+      ]
+    },
+    "worktrees_adapters": {
+      "modules": [
+        "scripts.worktrees.adapters",
+        "scripts.worktrees.adapters.*"
+      ],
+      "allowed_roles": [
+        "worktrees_foundation",
+        "worktrees_adapters"
+      ],
+      "allowed_external": [
+        "stdlib:*"
+      ],
+      "allow_dynamic": false
+    },
+    "worktrees_composition": {
+      "modules": [
+        "scripts.worktrees.composition"
+      ],
+      "allowed_roles": [
+        "devconfig",
+        "worktrees_foundation",
+        "worktrees_core",
+        "worktrees_adapters",
+        "worktrees_composition"
+      ],
+      "allowed_external": [
+        "stdlib:*"
+      ],
+      "allow_dynamic": false
+    },
+    "worktrees_entrypoints": {
+      "modules": [
+        "scripts.worktrees.__main__"
+      ],
+      "allowed_roles": [
+        "devconfig",
+        "worktrees_foundation",
+        "worktrees_core",
+        "worktrees_adapters",
+        "worktrees_composition",
+        "worktrees_entrypoints"
+      ],
+      "allowed_external": [
+        "stdlib:*"
+      ],
+      "allow_dynamic": false
+    },
     "verification_runner": {
       "modules": [
         "scripts.verification.multi_harness",
@@ -714,8 +824,7 @@
     "verification_entrypoints": {
       "modules": [
         "scripts.verification.__main__",
-        "scripts.verification.calibrate_suite",
-        "scripts.verification.calibrate_state"
+        "scripts.verification.calibrate_suite"
       ],
       "allowed_roles": [
         "verification_foundation",
@@ -1182,7 +1291,13 @@
         "telemetry_views",
         "ci_tooling",
         "ci_timings",
-        "testkit_pytest"
+        "testkit_pytest",
+        "devconfig",
+        "worktrees_foundation",
+        "worktrees_core",
+        "worktrees_adapters",
+        "worktrees_composition",
+        "worktrees_entrypoints"
       ],
       "allowed_external": [
         "stdlib:*",
@@ -1191,57 +1306,6 @@
         "referencing",
         "controlled_gates",
         "xcontracts"
-      ],
-      "allow_dynamic": true
-    },
-    "test_calibration": {
-      "modules": [
-        "tests.hexagonal.calibrate_work_acceptance"
-      ],
-      "allowed_roles": [
-        "foundation",
-        "core",
-        "work_acceptance",
-        "inspection",
-        "adapters",
-        "composition",
-        "operator",
-        "entrypoints",
-        "testkit_foundation",
-        "testkit_core",
-        "testkit_adapters",
-        "testkit_configuration",
-        "verification_foundation",
-        "verification_core",
-        "verification_decoders",
-        "verification_composition",
-        "verification_fixture",
-        "verification_calibration",
-        "verification_runner",
-        "verification_entrypoints",
-        "acceptance_foundation",
-        "acceptance_fixture",
-        "acceptance_runner",
-        "acceptance_entrypoints",
-        "testkit_composition",
-        "testkit_entrypoints",
-        "architecture_foundation",
-        "architecture_core",
-        "architecture_adapters",
-        "architecture_entrypoints",
-        "test_contracts",
-        "test_fixtures",
-        "test_support",
-        "test_calibration",
-        "telemetry",
-        "telemetry_views"
-      ],
-      "allowed_external": [
-        "stdlib:*",
-        "pytest",
-        "jsonschema",
-        "referencing",
-        "controlled_gates"
       ],
       "allow_dynamic": true
     },
@@ -1285,11 +1349,16 @@
         "test_contracts",
         "test_fixtures",
         "test_support",
-        "test_calibration",
         "telemetry",
         "telemetry_views",
         "package_acceptance",
-        "ci_timings"
+        "ci_timings",
+        "devconfig",
+        "worktrees_foundation",
+        "worktrees_core",
+        "worktrees_adapters",
+        "worktrees_composition",
+        "worktrees_entrypoints"
       ],
       "allowed_external": [
         "stdlib:*",
@@ -1342,7 +1411,6 @@
         "test_contracts",
         "test_fixtures",
         "test_support",
-        "test_calibration",
         "test_pytest_wiring",
         "telemetry",
         "telemetry_views"
