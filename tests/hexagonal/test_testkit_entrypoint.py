@@ -353,3 +353,22 @@ def test_the_command_line_carries_both_selections_into_the_run():
 def test_the_guides_say_when_to_select_inventories_or_a_stage(document):
     text = (composition.ROOT / document).read_text(encoding="utf-8")
     assert "--suite calibration --inventory" in text and "--stage" in text, document
+
+
+@pytest.mark.parametrize("selection", [{"inventories": ["recovery"]}, {"stage": "manual"}], ids=["inventory", "stage"])
+def test_a_profile_run_carries_the_selection_into_its_plan(tmp_path, selection):
+    """A selection given with --profile reaches the plan exactly as it does without one."""
+    from scripts.testkit.adapters import profiles
+    from scripts.testkit.operator_composition import execution_options
+
+    profile = tmp_path / "profile.json"
+    profile.write_text(json.dumps({"schema_version": 1, "suite": "calibration"}), encoding="utf-8")
+    values = profiles.load_profile(profile, root=composition.ROOT, overrides=selection)
+    for name, value in selection.items():
+        assert values[name] == value, values
+    plain = profiles.load_profile(profile, root=composition.ROOT)
+    assert (plain["inventories"], plain["stage"]) == ([], None), "a profile without a selection selects nothing"
+    checks = composition.plan(directory=tmp_path / "plan", **execution_options(values))
+    expected = ["recovery-calibration"] if "inventories" in selection else [
+        f"{name}-calibration" for name, entry in _registered().items() if "manual" in entry["stages"]]
+    assert [check.name for check in _calibration(checks)] == expected
