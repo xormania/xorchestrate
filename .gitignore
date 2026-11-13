@@ -26,3 +26,6 @@ __pycache__/
 # SQLite sidecars created when a committed fixture store is opened in place
 tests/fixtures/stores/*-wal
 tests/fixtures/stores/*-shm
+
+# Optional local developer settings (scripts/devconfig); the example is committed
+.devtools.env
