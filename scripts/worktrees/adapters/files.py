@@ -57,5 +57,6 @@ class LocalFiles:
             directories[:] = [name for name in directories if name != ".git"]
             found += [os.path.join(current, name) for name in directories if name in names]
         return sorted(found)
+
     def real_path(self, path: str) -> str:
         return os.path.realpath(path)

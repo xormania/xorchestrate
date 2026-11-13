@@ -94,6 +94,9 @@ class FileSystem(Protocol):
     def find_dirs(self, root: str, names: frozenset[str]) -> list[str]:
         """Directories under ``root`` with one of ``names``, not following links and not entering .git."""
 
+    def real_path(self, path: str) -> str:
+        """``path`` made absolute with every symbolic link resolved (missing parts kept as given)."""
+
 
 class Github(Protocol):
     def merged_pr_head(self, branch: str) -> str | None:
@@ -103,8 +106,6 @@ class Github(Protocol):
 class DiskUsage(Protocol):
     def size(self, path: str) -> int:
         """Apparent size in bytes of the regular files under ``path``, not following links."""
-    def real_path(self, path: str) -> str:
-        """``path`` made absolute with every symbolic link resolved (missing parts kept as given)."""
 
 
 class PortPicker(Protocol):
