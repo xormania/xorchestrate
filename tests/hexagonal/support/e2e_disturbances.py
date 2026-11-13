@@ -1,14 +1,20 @@
 """Named disturbances, stage gates and bounded waits for end-to-end worlds, implemented once.
 
-Kills act only on the world's own processes. A victim is a process of the current user whose initial
-environment sets ``XORCHESTRATE_HOME`` to exactly this world's home (a fresh temporary path the world
-created), or a process the world spawned itself. Nothing is chosen by working directory, path prefix or
-command line. Only that one environment key is read, compared and discarded; an unreadable environment
-means "not a victim". Each victim's identity (pid and start time) is captured at selection, and the kill
-goes through the test kit's fenced ``send_signal``, so a reused pid is never signalled.
+Kills act only on the world's own processes. A victim is a process of the current user that
+- ``home``: has an initial environment setting ``XORCHESTRATE_HOME`` to exactly this world's home (a fresh
+  temporary path the world created); only that one key is read, compared and discarded, and an unreadable
+  environment means "not a victim";
+- ``spawned``: was started by the world itself;
+- ``socket``: itself holds a listening Unix socket whose bound path, resolved, lies inside that home;
+- ``descendant``: descends, through parent links read at selection, from a process selected above.
+Nothing is chosen by working directory, path prefix or command line. Each victim's identity (pid and start
+time) is captured at selection, and the kill goes through the test kit's fenced ``send_signal``, so a reused
+pid is never signalled. Observation by path (``host_processes.processes_under``) is used here only to report
+leaks; it matches command lines and must never select a process to kill.
 
-Each disturbance returns a ``Receipt`` naming the identities it found (``before``) and those still alive
-afterwards (``effect``); a survivor is a failure. Gates hold a peer at a named stage through the shared
+Each disturbance returns a ``Receipt`` naming the identities it found (``before``), why each was selected,
+those still alive afterwards (``effect``) and anything left in the world unselected (``leaked``); a survivor
+is a failure. Gates hold a peer at a named stage through the shared
 process-side ``controlled_gates.wait_gate`` and are released by the world's cleanup scope. Waits use the
 shared classified wait budget; while one runs, ``remaining`` gives the seconds left so the world's blocking
 calls can use them as their timeout.
@@ -316,7 +322,7 @@ def remaining(world):
 # Teardown -----------------------------------------------------------------------------------------------
 
 def reap(world):
-    """Teardown: stop every process carrying the world's home and every process it spawned; report survivors."""
+    """Teardown: stop every process of the world, selected as for a total loss; report survivors."""
     _, _, survivors = _kill_until_quiet(str(world.cli.home), world.spawned)
     if survivors:
         raise AssertionError(f"the world's teardown left {len(survivors)} of its processes alive")
