@@ -14,7 +14,9 @@ import time
 from contextlib import ExitStack, contextmanager
 from pathlib import Path
 
+from scripts.testkit.adapters.clock import SystemClock
 from scripts.testkit.core import ResourceScope
+from scripts.testkit.waits import WaitBudget, bounded_wait
 from tests.hexagonal.support.work_acceptance import MeasuringProvider, accept, make_app, measure, setup_work
 from xorchestrate.adapters.acp import ACPSessionDriver
 from xorchestrate.adapters.bridge_host import SessionBridgeHost
@@ -77,19 +79,23 @@ def complete_json_lines(path):
     return [json.loads(line) for line in text[:text.rfind("\n") + 1].splitlines()]
 
 
-def wait_for(predicate, timeout=5, *, message="Expected native observation did not arrive"):
-    """Wait on observations with one deadline; only explicitly safe reads retry."""
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
+def wait_for(predicate, timeout=5, *, message="Expected native observation did not arrive",
+             clock=None, sleep=None, poll_interval=.01, classification="harness_allowance", timeout_scale=None):
+    """Observe with a classified allowance; retry only explicitly safe conflicts.
+
+    XO_TEST_TIMEOUT_SCALE applies here to harness allowances only. An explicit
+    timeout_scale takes precedence. Predicates must bound their own I/O: the
+    shared wait cannot preempt them and accepts a late truthy observation.
+    """
+    if timeout_scale is None:
         try:
-            result = predicate()
-            if result:
-                return result
-        except Conflict as error:
-            if error.details.get("retry_safe") is not True:
-                raise
-        time.sleep(.01)
-    raise AssertionError(message)
+            timeout_scale = float(os.environ.get("XO_TEST_TIMEOUT_SCALE", "1"))
+        except ValueError as error:
+            raise ValueError("XO_TEST_TIMEOUT_SCALE must be a positive finite number") from error
+    budget = WaitBudget(timeout, classification, scale=timeout_scale)
+    return bounded_wait(predicate, budget, clock=SystemClock() if clock is None else clock,
+                        sleep=time.sleep if sleep is None else sleep, poll_interval=poll_interval, message=message,
+                        retryable=lambda error: isinstance(error, Conflict) and error.details.get("retry_safe") is True)
 
 
 class ControlledCallbacks:

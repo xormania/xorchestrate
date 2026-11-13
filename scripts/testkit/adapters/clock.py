@@ -1,4 +1,4 @@
-"""Wall-clock effects for the injected test-kit clock port."""
+"""Monotonic elapsed-time effects for the injected test-kit clock port."""
 
 import time
 

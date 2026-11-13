@@ -9,6 +9,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- Shared native observation waits use injectable monotonic budgets and clamp
+  polling sleeps to the remaining allowance. `XO_TEST_TIMEOUT_SCALE` optionally
+  expands classified harness allowances; protected product/fault durations stay
+  unchanged. Timeout diagnostics retain the effective budget and retry counts.
 - Acceptance and tool evaluation share semantic provider-result decoding while
   preserving the exact raw evidence. Direct measurements can include business
   `content`; MCP assessment JSON text with duplicate fields is now refused.
