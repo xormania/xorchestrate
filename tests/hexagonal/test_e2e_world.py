@@ -937,3 +937,36 @@ def test_nothing_is_reported_leaked_when_every_world_process_was_taken(sentinel)
         receipt = world.disturb(contract().TotalLoss())
         assert list(getattr(receipt, "leaked", []) or []) == [], receipt
         assert alive(sentinel)
+
+
+# Newcomers that keep arriving -----------------------------------------------------------------------
+
+KEEPS_SPAWNING = ("import os, subprocess, sys, time\n"
+                  "env = dict(os.environ, XORCHESTRATE_HOME=sys.argv[1])\n"
+                  "while True:\n"
+                  "    subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(120)'], env=env,\n"
+                  "                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)\n"
+                  "    time.sleep(0.02)\n")
+
+
+def test_world_processes_that_keep_appearing_fail_the_disturbance_and_teardown(sentinel):
+    """A spawner outside the world (no home, not spawned by it) keeps starting processes that carry its home:
+    a disturbance never reaches quiet, so it must fail rather than report applied, and leave the sockets alone."""
+    disturbances = importlib.import_module("tests.hexagonal.support.e2e_disturbances")
+    outside = Path(track(tempfile.mkdtemp(prefix="xo-outside-")))
+    with World("detached-process") as world:
+        running(world)
+        sockets = sockets_under(world.directory)
+        spawner, _ = started([sys.executable, "-c", KEEPS_SPAWNING, str(world.cli.home)], cwd=outside,
+                             env=without_home())
+        try:
+            time.sleep(0.3)
+            with pytest.raises(AssertionError):
+                world.disturb(contract().TotalLoss())
+            assert sockets and sockets_under(world.directory) == sockets, "a failed disturbance removed the sockets"
+            with pytest.raises(AssertionError):
+                disturbances.reap(world)
+        finally:
+            stop(spawner)
+    os.rmdir(outside)
+    assert alive(sentinel)
