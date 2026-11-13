@@ -15,8 +15,10 @@ import importlib
 import io
 import json
 import os
+import shutil
 import signal
 import threading
+import time
 import uuid
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -59,8 +61,10 @@ class RecordingGit:
 
 
 class FakeClock:
-    def __init__(self, start=1_000_000.0):
-        self.time = start
+    """Starts at the real time, so file modification times and ages agree; only ``sleep`` moves it."""
+
+    def __init__(self, start=None):
+        self.time = time.time() if start is None else start
         self.sleeps = []
 
     def now(self):
@@ -107,6 +111,24 @@ class FakeProcessTable:
 
     def groups_signalled(self, sig=None):
         return [pgid for pgid, sent in self.signals if sig is None or sent == sig]
+
+
+class FakeGithub:
+    """Merged pull-request heads by branch; ``raises`` simulates no gh, no network or an API error."""
+
+    def __init__(self):
+        self.heads = {}
+        self.raises = False
+        self.calls = []
+        self.on_call = {}
+
+    def merged_pr_head(self, branch):
+        self.calls.append(branch)
+        if branch in self.on_call:
+            self.on_call.pop(branch)()
+        if self.raises:
+            raise OSError("gh: network unreachable")
+        return self.heads.get(branch)
 
 
 @dataclass
@@ -307,6 +329,7 @@ class Workspace:
         self.processes = FakeProcessTable(self.events)
         self.mcp = McpBehaviour()
         self.launcher = FakeLauncher(self.processes, self.mcp)
+        self.github = FakeGithub()
         self._git = None
 
     @property
@@ -323,7 +346,7 @@ class Workspace:
 
     def ports(self, **overrides):
         values = {"git": self.git, "processes": self.processes, "launcher": self.launcher, "transport": None,
-                  "clock": self.clock, "store": None}
+                  "clock": self.clock, "store": None, "github": self.github, "disk": None}
         values.update(overrides)
         return tool("composition").Ports(**values)
 
@@ -381,3 +404,113 @@ class Workspace:
 
     def close(self):
         self.launcher.stop_all()
+
+
+DAY = 86_400
+
+
+def age(path, seconds, now):
+    """Set ``path``'s access and modification times to ``seconds`` before ``now``."""
+    os.utime(path, (now - seconds, now - seconds))
+
+
+def admin_dir(tree):
+    return Path(git(tree, "rev-parse", "--absolute-git-dir"))
+
+
+def push(tree, branch):
+    git(tree, "push", "-q", "origin", branch)
+
+
+def merge_on_origin(ws, branch, *, squash=False):
+    """Land ``branch`` on the origin's default branch: a merge commit, or a squash copy that is no ancestor."""
+    git(ws.main, "fetch", "-q", "origin")
+    if squash:
+        git(ws.main, "merge", "-q", "--squash", f"origin/{branch}")
+        git(ws.main, "commit", "-q", "-m", f"squash {branch}")
+    else:
+        git(ws.main, "merge", "-q", "--no-ff", "-m", f"merge {branch}", f"origin/{branch}")
+    git(ws.main, "push", "-q", "origin", DEFAULT_BRANCH)
+
+
+class Fleet:
+    """Trees and directories in every state the maintenance report distinguishes.
+
+    Trees: ``merged`` (merge commit), ``squash`` (squash merge, GitHub knows its head), ``keep`` (pushed,
+    unmerged, recent), ``unpushed``, ``idle`` (pushed, unmerged, last used 8 days ago), ``dirty``, ``stash``,
+    ``locked``, ``busy`` (merged but a process works in it), ``missing`` and ``missing-locked`` (pushed,
+    directory deleted), and an unregistered ``orphan`` directory under the root.
+    Directories: marked and unmarked scratch, recognised and unrecognised runs, extra entries, old and new.
+    """
+
+    def __init__(self, ws):
+        self.ws = ws
+        now = ws.clock.now()
+        trees = {}
+        trees["merged"] = ws.new("merged")
+        commit(trees["merged"], "merged.txt", "m\n")
+        push(trees["merged"], "merged")
+        merge_on_origin(ws, "merged")
+        trees["squash"] = ws.new("squash")
+        self.squash_tip = commit(trees["squash"], "squash.txt", "s\n")
+        push(trees["squash"], "squash")
+        merge_on_origin(ws, "squash", squash=True)
+        ws.github.heads["squash"] = self.squash_tip
+        for name in ("keep", "idle", "missing", "missing-locked"):
+            trees[name] = ws.new(name)
+            commit(trees[name], f"{name}.txt", name + "\n")
+            push(trees[name], name)
+        trees["unpushed"] = ws.new("unpushed")
+        commit(trees["unpushed"], "local.txt", "local\n")
+        for name in ("dirty", "stash", "locked", "busy"):
+            trees[name] = ws.new(name)
+        (trees["dirty"] / "untracked.txt").write_text("x\n")
+        (trees["stash"] / "README.md").write_text("stashed\n")
+        git(trees["stash"], "stash", "push", "-q")
+        git(ws.main, "worktree", "lock", trees["locked"])
+        ws.processes.add(8_800, cwd=trees["busy"], argv=["bash"])
+        admin = admin_dir(trees["idle"])
+        for path in (admin / "index", admin / "logs" / "HEAD"):
+            age(path, 8 * DAY, now)
+        git(ws.main, "worktree", "lock", trees["missing-locked"])
+        self.missing_admin = {name: admin_dir(trees[name]) for name in ("missing", "missing-locked")}
+        for name in ("missing", "missing-locked"):
+            shutil.rmtree(trees[name])
+        orphan = ws.root / "orphan"
+        orphan.mkdir(parents=True)
+        (orphan / ".git").write_text("gitdir: /nonexistent/worktrees/orphan\n")
+        trees["orphan"] = orphan
+        self.trees = trees
+
+        self.scratch = ws.base / "scratch"
+        self.runs = ws.base / "runs"
+        self.extra = ws.base / "extra"
+        self.dirs = {}
+        for name, created in (("old-marked", now - 2 * DAY), ("new-marked", now - 3600), ("busy-marked", now - 2 * DAY)):
+            path = self.scratch / f"{name}-20260101T000000Z"
+            path.mkdir(parents=True)
+            (path / ".scratch.json").write_text(json.dumps({"owner": None, "created": created, "purpose": name}))
+            self.dirs[name] = path
+        ws.processes.add(8_900, cwd=self.dirs["busy-marked"], argv=["bash"])
+        self.dirs["unmarked-old"] = self.scratch / "unmarked-old"
+        self.dirs["unmarked-old"].mkdir()
+        age(self.dirs["unmarked-old"], 30 * DAY, now)
+        for name, seconds, recognised in (("run-old", 30 * DAY, True), ("run-new", 60, True),
+                                          ("notarun-old", 30 * DAY, False)):
+            path = self.runs / name
+            path.mkdir(parents=True)
+            target = path / "plan.json" if recognised else path / "other.txt"
+            target.write_text("{}")
+            age(target, seconds, now)
+            age(path, seconds, now)
+            self.dirs[name] = path
+        for name, seconds in (("extra-old", 30 * DAY), ("extra-new", 60)):
+            path = self.extra / name
+            path.mkdir(parents=True)
+            age(path, seconds, now)
+            self.dirs[name] = path
+
+    def env(self, **extra):
+        return self.ws.env(XORCHESTRATE_DEV_SCRATCH_ROOT=self.scratch,
+                           XORCHESTRATE_DEV_RUN_ROOTS=json.dumps([str(self.runs)]),
+                           XORCHESTRATE_DEV_EXTRA_ROOTS=json.dumps([str(self.extra)]), **extra)
