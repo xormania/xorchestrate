@@ -16,6 +16,7 @@ class Proc:
     cwd: str
     argv: tuple[str, ...]
     open_paths: tuple[str, ...]
+    start_time: int | None = None
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,8 @@ class ServerState:
     version: str
     started: float
     last_call: float | None
+    argv: tuple[str, ...] = ()
+    start_time: int | None = None
 
 
 @dataclass(frozen=True)

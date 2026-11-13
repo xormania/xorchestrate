@@ -704,7 +704,8 @@
         "__future__",
         "collections",
         "dataclasses",
-        "typing"
+        "typing",
+        "contextlib"
       ],
       "allow_dynamic": false,
       "forbidden_calls": [
@@ -730,7 +731,9 @@
         "posixpath",
         "signal",
         "typing",
-        "urllib.parse"
+        "urllib.parse",
+        "contextlib",
+        "hashlib"
       ],
       "allow_dynamic": false,
       "forbidden_calls": [

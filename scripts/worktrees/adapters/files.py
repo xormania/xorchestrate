@@ -21,3 +21,6 @@ class LocalFiles:
 
     def make_dirs(self, path: str) -> None:
         os.makedirs(path, exist_ok=True)
+
+    def real_path(self, path: str) -> str:
+        return os.path.realpath(path)
