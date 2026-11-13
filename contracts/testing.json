@@ -229,6 +229,7 @@
       "guarantee": "Telemetry capture, queries, preservation and optional export retain scoped evidence, gaps and original action outcomes; the in-tree collector keeps immutable, integrity-checked corpus and artifact storage behind selected adapters and reads existing corpora and bundles.",
       "modules": {
         "tests/hexagonal/test_telemetry.py": "composition",
+        "tests/hexagonal/test_telemetry_provider.py": "composition",
         "tests/hexagonal/test_telemetry_bundle_receipts.py": "composition",
         "tests/hexagonal/test_telemetry_preservation.py": "adapter",
         "tests/hexagonal/test_telemetry_publication.py": "adapter",
