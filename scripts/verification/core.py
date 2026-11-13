@@ -9,9 +9,9 @@ when testing whether candidate changes preserved the owner requirements.
 from __future__ import annotations
 
 import itertools
-from datetime import datetime
 
 from .model import VerificationFailure, canonical, digest, require
+from .order import latest_observation, position, precedes
 
 
 class VerificationContext:
@@ -298,7 +298,7 @@ def exchange_evidence(events, case, nonce, memory, sessions, context):
                     and e.get("report") == {"phase": "received", "case_id": case_id, "nonce": nonce,
                                             "memory": memory, "peer": target}), None)
     require(receipt, "sender_receipt_missing")
-    require(challenge["seq"] < reply["seq"] < receipt["seq"], "exchange_event_order")
+    require(precedes(challenge, reply) and precedes(reply, receipt), "exchange_event_order")
     submissions = []
     for message, recipient in ((challenge, target), (reply, source)):
         attempts = [e for e in events if e.get("event") == "attempt"
@@ -324,11 +324,11 @@ def exchange_evidence(events, case, nonce, memory, sessions, context):
         require(all(latest.get(k) == submitted.get(k) for k in
                     ("message_id", "attempt_id", "peer", "session_id", "native_id", "incarnation")),
                 "delivery_attempt_missing_or_misbound")
-        require(message["seq"] < submitted["seq"], "submission_before_message")
+        require(precedes(message, submitted), "submission_before_message")
         submissions.append(submitted)
     observed = [context.callback(events, event, sessions) for event in (challenge, reply, receipt)]
-    timing = {"challenge_ack_after_reply": submissions[0]["seq"] > reply["seq"],
-              "reply_ack_after_receipt": submissions[1]["seq"] > receipt["seq"]}
+    timing = {"challenge_ack_after_reply": precedes(reply, submissions[0]),
+              "reply_ack_after_receipt": precedes(receipt, submissions[1])}
     if case["kind"] == "busy":
         started = next((e for e in events if e.get("event") == "hold_started" and
                         e.get("peer") == target and e.get("case_id") == case_id), None)
@@ -336,18 +336,14 @@ def exchange_evidence(events, case, nonce, memory, sessions, context):
                          e.get("peer") == target and e.get("case_id") == case_id and e.get("released") is True), None)
         require(started and finished, "outstanding_tool_hold_missing")
         context.callback(events, started, sessions)
-        require(started["seq"] < submissions[0]["seq"] < finished["seq"], "submission_outside_tool_hold")
-        timing["reply_before_hold_finished"] = reply["seq"] < finished["seq"]
+        require(precedes(started, submissions[0]) and precedes(submissions[0], finished), "submission_outside_tool_hold")
+        timing["reply_before_hold_finished"] = precedes(reply, finished)
     if case["kind"] == "work_exchange":
         started = next((e for e in events if e.get("event") == "work_started" and e.get("peer") == target), None)
         finished = next((e for e in events if e.get("event") == "work_completed" and e.get("peer") == target), None)
-        require(started and finished and started["seq"] < submissions[0]["seq"] < finished["seq"],
+        require(started and finished and precedes(started, submissions[0]) and precedes(submissions[0], finished),
                 "submission_outside_unfinished_work")
-        timing["reply_before_work_completed"] = reply["seq"] < finished["seq"]
-        if reply.get("at") is not None and finished.get("at") is not None:
-            # Equal timestamps do not prove "before"; normalized insertion order
-            # is not a replacement for an independently observed deadline.
-            timing["reply_before_work_completed"] = datetime.fromisoformat(reply["at"]) < datetime.fromisoformat(finished["at"])
+        timing["reply_before_work_completed"] = precedes(reply, finished)
         require(timing["reply_before_work_completed"], "reply_after_work_completion")
     return {"event_seqs": [challenge["seq"], submissions[0]["seq"], reply["seq"], submissions[1]["seq"], receipt["seq"]],
             "native_seqs": [e["seq"] for e in observed], "timing": timing,
@@ -535,19 +531,18 @@ def completed_native_turns(facts, sessions, peer, latest):
         else:
             require(isinstance(turn, str) and turn, "completion_turn_identity_missing")
         require(all(value == turn for value in fact.get("turn_claims", {}).values()), "completion_turn_identity_mismatch")
-        at = datetime.fromisoformat(fact["at"])
-        require(at.tzinfo is not None and at.utcoffset() is not None, "invalid_observation_timestamp")
+        source, sequence = position(fact)
+        require(source == position(latest)[0], "ordering_domain_mismatch")
         if phase == "submitted":
             submitted.add(turn)
         else:
-            transitions.append((at, phase, turn))
+            transitions.append((sequence, phase, turn, fact))
     if not transitions and not submitted:
         return
-    cutoff = datetime.fromisoformat(latest["at"])
     active, finished, seen = set(), set(), {}
     anonymous, uncertain = 0, False
-    for at, phase, turn in sorted(transitions, key=lambda row: (row[0], row[1], row[2] or "")):
-        previous = seen.setdefault((at, turn), phase)
+    for sequence, phase, turn, fact in sorted(transitions, key=lambda row: (row[0], row[1], row[2] or "")):
+        previous = seen.setdefault((sequence, turn), phase)
         require(previous == phase, "completion_turn_order_ambiguous")
         if turn is None:
             if phase == "start":
@@ -555,7 +550,7 @@ def completed_native_turns(facts, sessions, peer, latest):
                 uncertain = uncertain or anonymous > 1
             elif anonymous:
                 anonymous -= 1
-                require(at <= cutoff, "completion_before_turn_finished")
+                require(precedes(fact, latest, inclusive=True), "completion_before_turn_finished")
             else:
                 uncertain = True
             continue
@@ -564,7 +559,7 @@ def completed_native_turns(facts, sessions, peer, latest):
         elif phase == "end":
             require(turn in active or turn in finished or turn in submitted, "completion_turn_unbound")
             if turn not in finished:
-                require(at <= cutoff, "completion_before_turn_finished")
+                require(precedes(fact, latest, inclusive=True), "completion_before_turn_finished")
             active.discard(turn)
             finished.add(turn)
     require(not active and submitted <= finished and not anonymous and not uncertain, "completion_native_turn_unresolved")
@@ -578,17 +573,17 @@ def completion_evidence(own, run, peer):
                 and event.get("basis") == "native"
                 and event.get("incarnation") == session["incarnation"]
                 and (event.get("session_id") == session["session_id"] or event.get("native_id") == session["native_id"])]
-    latest = max(activity, key=lambda event: event["seq"]) if activity else None
+    latest = latest_observation(activity)
     calls = [event for event in own if event.get("event") == "tool_called"]
     require(latest and latest.get("state") == "idle" and calls
-            and latest["seq"] > max(event["seq"] for event in calls), "native_completion_missing")
+            and all(precedes(event, latest) for event in calls), "native_completion_missing")
     require(native_claims_match(latest, sessions, source_actor=True), "completion_activity_identity_mismatch")
     completed = [event for event in own if event.get("event") == "tool_completed"]
     keys = ("call_id", "tool", "arguments", "session_id", "native_id", "incarnation", "callback_actor")
     for call in calls:
         require(identity_matches(call, sessions) and call.get("call_id"), "completion_callback_identity")
         matches = [event for event in completed if all(canonical(event.get(key)) == canonical(call.get(key)) for key in keys)
-                   and call["seq"] < event["seq"] < latest["seq"]]
+                   and precedes(call, event) and precedes(event, latest)]
         require(len(matches) == 1, "completion_callback_unresolved")
 
     raw = run.get("raw_records", {})

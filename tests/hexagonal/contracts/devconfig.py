@@ -17,10 +17,11 @@ COMMAND_PLACEHOLDERS = frozenset({"version", "context", "project", "port"})
 REPO_FILE = ".devtools.env"
 EXAMPLE_FILE = ".devtools.env.example"
 
-CONSUMERS = ("scripts/devconfig/", "scripts/worktrees/")
+CONSUMERS = ("scripts/devconfig/", "scripts/worktrees/", "scripts/testkit/")
 """The only source trees allowed to read developer settings; a new consumer is one entry here."""
 CONSUMER_ROLES = frozenset({"devconfig", "worktrees_foundation", "worktrees_core", "worktrees_adapters",
-                            "worktrees_composition", "worktrees_entrypoints", "test_support", "test_collection"})
+                            "worktrees_composition", "worktrees_entrypoints", "test_support", "test_collection",
+                            "testkit_configuration", "testkit_composition", "testkit_entrypoints"})
 """Architecture roles allowed to depend on the ``devconfig`` role."""
 
 SERENA_COMMAND = ("uvx --python 3.12 --from serena-agent=={version} serena start-mcp-server --context {context}"
@@ -37,8 +38,26 @@ SLICE_A = {
     "XORCHESTRATE_DEV_SERENA_COMMAND": ("command", SERENA_COMMAND, "serena"),
     "XORCHESTRATE_DEV_PROBE_TOOL": ("str", None, "serena"),
     "XORCHESTRATE_DEV_PROBE_ARGS": ("json", None, "serena"),
+    "XORCHESTRATE_DEV_SERENA_ALLOW_EDITS": ("int", "0", "serena"),
 }
 """Key -> (kind, default template, section) for slice A's settings."""
+
+SLICE_C = {
+    "XORCHESTRATE_DEV_TESTKIT_OUTPUT": ("path", "{XDG_STATE_HOME}/xorchestrate/runs/{repo_name}", "testkit"),
+    "XORCHESTRATE_DEV_TESTKIT_PROFILE": ("path", None, "testkit"),
+    "XORCHESTRATE_DEV_TESTKIT_INTERPRETER": ("path", None, "testkit"),
+    "XORCHESTRATE_DEV_PYCACHE_PREFIX": ("path", None, "testkit"),
+    "XORCHESTRATE_DEV_NATIVE_CONFIG": ("path", None, "testkit"),
+    "XORCHESTRATE_DEV_TERMINAL_BINARY": ("path", None, "testkit"),
+}
+"""Key -> (kind, default template, section) for the test kit's settings (slice C)."""
+EVIDENCE_KEYS = frozenset({"XORCHESTRATE_DEV_NATIVE_CONFIG", "XORCHESTRATE_DEV_TERMINAL_BINARY",
+                           "XORCHESTRATE_DEV_TESTKIT_INTERPRETER", "XORCHESTRATE_DEV_TESTKIT_PROFILE"})
+"""Settings that can change what a run proves (they select an executable or a configuration); every run
+records them whatever their source."""
+TESTKIT_SECTION = "testkit"
+LEGACY_OUTPUT_NAME = "xorchestrate-runs"
+"""The test kit's former output folder beside the checkout; no default points there any more."""
 
 HOME_PATHS = ("/home/", "/Users/")
 """Absolute home-directory prefixes; no tool default, example or source names any one account's home."""
@@ -58,3 +77,18 @@ def resolve_default(template, env, repo_name):
 
 def user_file(env):
     return f"{xdg(env, 'XDG_CONFIG_HOME')}/{NAMESPACE}/devtools.env"
+
+
+SLICE_B = {
+    "XORCHESTRATE_DEV_SCRATCH_ROOT": ("path", "{XDG_CACHE_HOME}/xorchestrate/scratch", "maintenance"),
+    "XORCHESTRATE_DEV_EXTRA_ROOTS": ("json", None, "maintenance"),
+    "XORCHESTRATE_DEV_RUN_ROOTS": ("json", None, "maintenance"),
+    "XORCHESTRATE_DEV_IDLE_DAYS": ("float", "7", "maintenance"),
+    "XORCHESTRATE_DEV_SCRATCH_MAX_AGE_HOURS": ("float", "24", "maintenance"),
+    "XORCHESTRATE_DEV_RUN_MAX_AGE_DAYS": ("float", "7", "maintenance"),
+    "XORCHESTRATE_DEV_BRIEF_SIZE_GB": ("float", "5", "maintenance"),
+    "XORCHESTRATE_DEV_OWNER": ("str", None, "maintenance"),
+}
+"""Key -> (kind, default template, section) for slice B's maintenance settings."""
+LIST_KEYS = ("XORCHESTRATE_DEV_EXTRA_ROOTS", "XORCHESTRATE_DEV_RUN_ROOTS")
+"""JSON lists of directories; every entry absolute or starting with ``~/``."""

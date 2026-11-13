@@ -6,15 +6,15 @@ that test instead of breaking collection.
 
 import contextlib
 import importlib
+import inspect
 import io
 import os
 import pwd
 import socket
+import subprocess
 from pathlib import Path
 
 from tests.hexagonal.support.git_repositories import isolate, linked_tree, make_repository
-
-ROOT = Path(__file__).resolve().parents[3]
 
 
 def personal_markers():
@@ -96,3 +96,45 @@ class SettingsWorld:
         finally:
             os.chdir(previous)
         return code, out.getvalue()
+
+
+PROCESS_STARTERS = (("subprocess", "Popen"), ("os", "fork"), ("os", "forkpty"), ("os", "posix_spawn"),
+                    ("os", "posix_spawnp"), ("os", "system"), ("os", "popen"), ("os", "execv"), ("os", "execve"),
+                    ("os", "execvp"), ("os", "execvpe"))
+"""Every standard-library way a Python process starts another program."""
+
+
+class ProcessLaunched(AssertionError):
+    pass
+
+
+@contextlib.contextmanager
+def no_processes(monkeypatch):
+    """Inside the block, starting any process fails the test with the attempted call."""
+    attempts = []
+
+    def refuse(name):
+        def starter(*args, **kwargs):
+            attempts.append((name, args[:1]))
+            raise ProcessLaunched(f"a process was started: {name}{args[:1]}")
+        return starter
+
+    with monkeypatch.context() as patch:
+        for module, name in PROCESS_STARTERS:
+            target = subprocess if module == "subprocess" else os
+            if hasattr(target, name):
+                patch.setattr(target, name, refuse(f"{module}.{name}"))
+        yield attempts
+
+
+def load_by_files(repo, *, env, flags=None):
+    """``load(..., discovery="files")``; before the loader has that mode, its default discovery runs instead,
+    so a test then fails on its own assertion (a started process, a refusal) rather than an unknown keyword."""
+    load = devconfig("loader").load
+    extra = {"discovery": "files"} if "discovery" in inspect.signature(load).parameters else {}
+    return load(repo, env=env, flags=flags or {}, **extra)
+
+
+def resolved(config):
+    """Everything a load produced that callers see: each value with its source, and the warnings."""
+    return config.explain(), list(config.warnings)

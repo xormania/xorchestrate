@@ -107,9 +107,12 @@ class IdentityEvidenceAdapter:
                           {"message": {"id": kind, "work_id": "session-work", "created_by": encoding.peer,
                                        "sender": encoding.peer}}, saved)
         rows["effect"] = saved
-        self.raw["attempts"].append({"id": "delivery-" + kind, "message_id": kind, "recipient": recipient.peer,
+        attempt = {"id": "delivery-" + kind, "message_id": kind, "recipient": recipient.peer,
                                     **self.sessions[recipient.peer], "status": "submitted", "sequence": 1,
-                                    "origin": "adapter", "submission": {"submitted": True}, "created_at": self._at(), "finished_at": self._at()})
+                                    "origin": "adapter", "submission": {"submitted": True}, "created_at": self._at(), "finished_at": self._at()}
+        self.raw["attempts"].append(attempt)
+        self.observations.order.created("delivery_attempt", attempt)
+        self.observations.order.submitted(attempt)
         return rows
 
     def _exchange(self):
@@ -309,7 +312,8 @@ class ProductReceiptEvidenceAdapter(IdentityEvidenceAdapter):
     def evaluate(self):
         expectation = {"run_id": "identity-run", "case_id": "exchange", "nonce": "fresh-nonce",
                        "memory": "retained-memory", "sender": self.source.peer, "recipient": self.target.peer}
-        snapshot = {**self.raw, "message": self.raw["messages"][0], "all_attempts": self.raw["attempts"]}
+        snapshot = {**self.raw, "message": self.raw["messages"][0], "all_attempts": self.raw["attempts"],
+                    "events": deepcopy(self.raw["ordering"]["events"])}
         decision = evaluate_exchange(snapshot, self.target.peer, expectation)
         return IdentityOutcome(decision["verified"], frozenset(decision["diagnostics"]), decision)
 

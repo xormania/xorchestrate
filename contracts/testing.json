@@ -47,11 +47,12 @@
       }
     },
     "delivery": {
-      "guarantee": "Queued messages, delivery attempts, retries and recovery preserve recipient scope, effect uncertainty and causal receipts.",
+      "guarantee": "Queued messages, delivery attempts, retries and recovery preserve recipient scope, effect uncertainty and causal receipts; default session selection follows witnessed creation order independently of UTC labels, with explicit legacy fallback.",
       "modules": {
         "tests/hexagonal/test_delivery.py": "contract",
         "tests/hexagonal/test_delivery_adversarial.py": "contract",
-        "tests/hexagonal/test_delivery_scope.py": "contract"
+        "tests/hexagonal/test_delivery_scope.py": "contract",
+        "tests/hexagonal/test_session_selection.py": "contract"
       }
     },
     "sessions": {
@@ -157,6 +158,7 @@
         "tests/hexagonal/test_verification.py": "calibration",
         "tests/hexagonal/test_calibrated_checks.py": "calibration",
         "tests/hexagonal/test_verification_decoders.py": "adapter",
+        "tests/hexagonal/test_temporal_evidence.py": "contract",
         "tests/hexagonal/test_lifecycle_runner.py": "composition",
         "tests/hexagonal/test_calibration_attribution.py": "calibration",
         "tests/hexagonal/test_fault_calibration.py": "calibration"
@@ -188,9 +190,10 @@
       }
     },
     "framework": {
-      "guarantee": "Shared execution, resource ownership, configuration, evidence and collection guarantee complete declared plans and honest outcomes for every selected test family.",
+      "guarantee": "Shared execution, resource ownership, configuration, evidence and collection guarantee complete declared plans and honest outcomes for every selected test family; same-candidate metadata events queue behind source validation and only first-attempt zero-job waiting observations are neutral to qualified evidence reuse; trusted queue cleanup cancels older source runs only after fresh proof of a surviving current-head replacement and preserves incomplete or changed observations. Classified observation waits consume one monotonic budget, preserve retry safety and scale only harness allowances.",
       "modules": {
         "tests/hexagonal/test_testkit_core.py": "contract",
+        "tests/hexagonal/test_testkit_temporal_waits.py": "framework",
         "tests/hexagonal/test_testkit_command.py": "adapter",
         "tests/hexagonal/test_testkit_sharding.py": "framework",
         "tests/hexagonal/test_testkit_configuration.py": "adapter",
@@ -202,6 +205,7 @@
         "tests/hexagonal/test_acceptance_testkit.py": "composition",
         "tests/hexagonal/test_test_framework.py": "framework",
         "tests/hexagonal/test_managed_profiles.py": "adapter",
+        "tests/hexagonal/test_testkit_dev_defaults.py": "composition",
         "tests/hexagonal/test_managed_store.py": "adapter",
         "tests/hexagonal/test_managed_terminals.py": "adapter",
         "tests/hexagonal/test_managed_workflow.py": "composition",
@@ -217,6 +221,7 @@
         "tests/hexagonal/test_candidate_evidence.py": "contract",
         "tests/hexagonal/test_ci_advice.py": "contract",
         "tests/hexagonal/test_ci_lifecycle.py": "contract",
+        "tests/hexagonal/test_ci_queue.py": "contract",
         "tests/hexagonal/test_testkit_timing_model.py": "composition"
       }
     },
@@ -247,7 +252,7 @@
       }
     },
     "agent-guidance": {
-      "guarantee": "Shared agent skills have one source that every harness location mirrors by relative symlink, front matter a strict YAML reader accepts, guidance pointers and section anchors that resolve, and no local paths, session identifiers or foreign emails in the skills, the workflow guidance or the Serena project; the importing instruction file loads the repository rules, whose agent workflow section points at the skills; the Serena project selects the python language server and the tools interface, honours .gitignore, ships Serena's own .gitignore and ignores its cache, memories and local overrides.",
+      "guarantee": "Shared agent skills have one source that every harness location mirrors by relative symlink, front matter a strict YAML reader accepts, guidance pointers and section anchors that resolve, and no local paths, session identifiers or foreign emails in the skills, the workflow guidance or the Serena project; the importing instruction file loads the repository rules, whose agent workflow section points at the skills; the Serena project selects the python language server and the tools interface, honours .gitignore, ships Serena's own .gitignore and ignores its cache, memories and local overrides. The shared guidance stays generic: exactly the shared skills, no section, rules wording or pointer describing one contributor's own team of sessions or its crash recovery.",
       "modules": {
         "tests/hexagonal/test_agent_guidance.py": "contract"
       }
@@ -256,6 +261,14 @@
       "guarantee": "Developer tools read optional local settings from one declared table: namespaced keys with typed values and neutral defaults derived only from HOME, the XDG directories and the main checkout's name; a strict literal KEY=VALUE format that is never executed; precedence flag, environment, the main checkout's git-ignored file, the user file, default, each value explained with its source; a committed example equal to the rendered table; and no reader or importer outside the declared consumers.",
       "modules": {
         "tests/hexagonal/test_devconfig.py": "contract"
+      }
+    },
+    "worktrees": {
+      "guarantee": "The optional work-tree tool creates trees under a configurable root from the remote's default branch and removes them only when clean, unlocked, unstashed, unused and pushed or merged, never forcing or pruning; it runs one Serena server per tree over local HTTP that counts as up only after a real symbol answer, retries a taken port, stops its whole process family without touching shared groups, reports drift by code, works with Serena absent by saying so, passes the server only the given environment plus its own home, and is required by nothing else in the repository. Its maintenance report judges every tree, orphan and scratch, run or extra directory by the first matching verdict, accepts squash merges only on matching GitHub evidence, and stays one line or silent in brief form; prune changes nothing without --apply, re-checks each tree before removing it, backs up a dropped registration, never deletes orphans or unmarked entries, and leaves for review what it cannot prove safe.",
+      "modules": {
+        "tests/hexagonal/test_worktree_trees.py": "composition",
+        "tests/hexagonal/test_worktree_serena.py": "composition",
+        "tests/hexagonal/test_worktree_maintenance.py": "composition"
       }
     }
   }

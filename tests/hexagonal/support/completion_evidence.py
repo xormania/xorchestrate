@@ -1,11 +1,14 @@
 """Raw completion evidence builders independent of verdict implementation."""
 
 from scripts.testkit.adapters.evidence import canonical, digest
+from tests.hexagonal.support.temporal_evidence import StoreOrder
 
 
 def completion_input(peer="claude"):
     identity = {"session_id": peer + "-app", "native_id": peer + "-native", "incarnation": peer + "-epoch"}
     records = []
+    raw = {"observations": records, "messages": [], "evidence": [], "attempts": []}
+    order = StoreOrder(raw)
     def add(kind, *, at=None, **fields):
         index = len(records) + 1
         source = "claude/Stop" if peer == "claude" else peer
@@ -15,6 +18,7 @@ def completion_input(peer="claude"):
                   "origin": "adapter", "stale": False, "created_by": peer, "created_at": at or f"2026-10-24T00:00:{index:02}+00:00",
                   "observation": {**identity, "kind": kind, "source": source, **fields}}
         records.append(record)
+        order.created("native_observation", record)
         return record
     def turn(phase, name):
         if peer == "claude":
@@ -39,7 +43,7 @@ def completion_input(peer="claude"):
     criteria = {"required_cases": [{"id": "completion-" + peer, "kind": "completion", "peer": peer}]}
     fixture = {"batches": []}
     bindings = {"criteria_sha256": digest(canonical(criteria)), "fixture_sha256": digest(canonical(fixture))}
-    run = {"mode": "protocol-fixture", "raw_records": {"observations": records, "messages": [], "evidence": [], "attempts": []},
+    run = {"mode": "protocol-fixture", "raw_records": raw,
            "sessions": {peer: identity}, "bindings": bindings, "executed_cases": ["completion-" + peer]}
     return (run, criteria, bindings, fixture), add
 

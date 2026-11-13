@@ -26,6 +26,9 @@ class Setting:
     section: str
     evidence: bool = False
     json_type: type | None = None
+    trust: str | None = None
+    """``"executable"`` or ``"config"`` for a path that selects what runs: it must then exist as a regular
+    file owned by the user or root and not writable by others (and be executable, for ``"executable"``)."""
 
 
 @dataclass(frozen=True)

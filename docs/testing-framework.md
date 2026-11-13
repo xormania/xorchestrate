@@ -215,6 +215,53 @@ deselections and outcomes. Explicit subsets are reported as subsets. An empty
 selection, missing declared module, duplicate ownership or unclassified module
 is an error; none receives a successful empty result.
 
+## Bounded observation waits
+
+Shared native observations use `tests.hexagonal.support.native.wait_for`, backed
+by `scripts.testkit.waits.bounded_wait` and the existing `Clock.monotonic` port.
+The wait checks a semantic predicate, such as a fixture acknowledgement, against
+one elapsed-time budget. False observations and explicitly retry-safe `Conflict`
+errors consume that same budget. Other errors propagate immediately. Each sleep
+is clamped to the remaining allowance; no new poll starts at or after its deadline.
+
+`WaitBudget` requires an explicit classification:
+
+| Classification | Meaning | Timeout scale |
+| --- | --- | --- |
+| `harness_allowance` | Time allowed to observe a test precondition or completion | Applied |
+| `product_guarantee` | A duration whose value is part of the behavior being checked | Ignored |
+| `fault_control` | A deliberate timeout/delay used to produce a scenario | Ignored |
+
+The native helper defaults to `harness_allowance`. Set `XO_TEST_TIMEOUT_SCALE`
+to a positive finite factor for a slower environment, or pass `timeout_scale`
+explicitly to override it. For example, `XO_TEST_TIMEOUT_SCALE=2 python3 -m
+scripts.testkit run --suite tests` doubles this helper's observation allowances.
+This setting does not scale product timeouts, fixture fault delays, arbitrary
+literal waits, command/run deadlines, or polling intervals. Existing callers
+retain their nominal timeout unless the factor is selected. An explicit
+`classification="product_guarantee"` or `"fault_control"` preserves its duration
+even with a selected factor. Invalid settings fail before any predicate or sleep.
+
+Timeouts remain `AssertionError` instances and keep the caller's message. Their
+`details` retain classification, requested/effective seconds, configured/applied
+factor, elapsed seconds, attempt count and retry count. Normal test-kit run and
+command receipts retain an explicitly set environment factor; that configured
+factor alone does not say which classified budget used it. Direct pytest keeps
+the timeout diagnostic but has no enclosing test-kit command receipt.
+
+This is a cooperative observation wait, not an interrupting deadline. A predicate
+already running must bound its own I/O; its truthy result is returned even if it
+finishes late. A scheduler may also wake after the requested sleep. Classification
+protects a duration from scaling, but does not itself assert product latency:
+measure and check that guarantee independently at the intended boundary.
+
+Tests can inject `clock` and `sleep` into the native helper, or pass them to
+`bounded_wait` with a classified budget. Independent elapsed and wall-clock
+controls exercise clock steps without physical waiting. Those controls govern
+the polling loop only; they do not virtualize subprocesses or external I/O, and
+do not replace the surrounding test command's real timeout. A fake sleeper that
+never advances its clock can stall the loop.
+
 See [selectable local stories](local-stories.md) for the story catalog, bounded
 controller requests, native callback selection and managed tmux automation.
 
@@ -284,16 +331,25 @@ that must stay green. `registry.json` names every inventory and the stages it ru
 at (`ci`, `pre-draft`, `manual`); `schema.json` defines both files, and an
 unregistered file or an unknown name is an error. The calibration suite composes one
 check per inventory registered at `ci` (`native-calibration`, `work-calibration`,
-`state-calibration`), each running that inventory; to run others on demand:
+`state-calibration`), each running that inventory. Select others by name or stage:
 
 ```bash
-python3 -m scripts.verification.calibrate_suite --candidate . --out <new directory outside the tree> --stage manual
+python3 -m scripts.testkit run --suite calibration --inventory recovery   # repeatable
+python3 -m scripts.testkit run --suite calibration --stage manual
 python3 -m scripts.verification.calibrate_suite --candidate . --out <new directory outside the tree> --inventory native
 ```
 
-With neither option, the inventories registered at `ci` run. A selection that names
-no inventory (for example a stage with nothing registered) exits 2 with
-`no_inventory_selected` before anything runs. A case passes when it
+When to run what: inventories registered at `ci` run on every CI run. Run a
+`manual` inventory with `--suite calibration --inventory <name>` when a change
+touches the source its cases anchor into (each case's `mutation.path` in its
+inventory file names the file), and before a release; the owner of that change runs it. Every
+registered inventory, whatever its stage, is checked without running its cases
+(schema, anchors, targets, one assertion site) in every default tests run.
+
+With neither option, the inventories registered at `ci` run. The test kit refuses
+an unknown name or a stage with nothing registered as a setup error before
+anything runs; `calibrate_suite` itself exits 2 with `no_inventory_selected` for an
+empty selection. A case passes when it
 classifies as its expectation: `detected` by default, or `unrelated_failure` for a
 negative control.
 
@@ -308,6 +364,39 @@ not hold (`contract_not_found`) or that does not assert the ID
 assert `refusal(call, code)` from `tests/hexagonal/contracts/calibrated.py`, which
 answers whether the call was refused with that code and never asserts itself. Other
 assertions and `pytest.raises` stay as they are; they are not calibrated checks.
+
+### Retained observation order
+
+The multi-harness snapshot retains an `ordering` envelope, version 1, with a
+capture-local `source_id` and the store's committed event log. Message/evidence
+creation, native observation creation and successful delivery-attempt transitions
+resolve to their actual store sequences. The verification provider synchronously
+records its own source identity, local counter and boundary marker in that log
+before publishing a hold or work event. Capture reads the published provider
+prefix before the store snapshot, so every included provider event already has
+its committed witness.
+
+This measures order at the shared persistence/fixture boundary. It does not infer
+the occurrence order of arbitrary remote events or compare clocks across hosts.
+Raw record-list position, report arrival, UTC timestamps and the normalized
+display `seq` are not proof of order. Equal or regressing civil timestamps leave
+the ordering verdict unchanged. Native turn completion and aggregate idle may
+come from the same raw observation; that shared boundary is explicitly allowed.
+
+The offline checker uses the retained envelope without a live clock. Missing
+required witnesses, an unsupported envelope version or mixed capture domains
+cannot qualify an ordering assertion. Earlier evidence without these witnesses
+remains inspectable, but cannot be upgraded by sorting its timestamps. Regenerate
+the relevant composed run to qualify it. Identity, unresolved-call and missing
+effect controls remain independent vetoes; lack of timing proof does not erase
+contradictory records.
+
+The product's exchange receipt policy independently uses the existing
+`message.created` and `evidence.created` store events. Its internal snapshot adds
+only those creation witnesses, so unrelated event traffic does not invalidate
+the receipt snapshot. Public `get_delivery` projection does not expose the event
+log. No persisted data-version migration is needed; custom receipt policies may
+ignore the additional internal `events` field.
 
 ## Consolidation and completion evidence
 
