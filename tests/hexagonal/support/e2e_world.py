@@ -5,6 +5,7 @@ through the real CLI and project server (``CliEnvironment``), talks MCP through 
 observes status and the project's processes, waits through the shared classified wait budget, and applies named
 disturbances through ``support.e2e_disturbances``. Nothing here decides a scenario's verdict.
 """
+import json
 import subprocess
 import sys
 from contextlib import contextmanager
@@ -131,6 +132,19 @@ class World:
         return sorted(pid for pid, command in arguments_containing("xorchestrate.bridge")
                       if str(self.cli.directory) in command)
 
+    @property
+    def ledger(self):
+        """The session peer's delivery record for this world (see ``fixtures/session_server.py``)."""
+        return self.directory / "peer-ledger.jsonl"
+
+    def peer_received(self, session):
+        """What the session peer took delivery of for ``session``'s conversation, in delivery order."""
+        native_id = session["backend"]["native_id"]
+        if not self.ledger.exists():
+            return []
+        entries = [json.loads(line) for line in self.ledger.read_text(encoding="utf-8").splitlines() if line]
+        return [entry for entry in entries if entry["native_id"] == native_id]
+
     def processes(self):
         """The project's live processes: identities under its directory."""
         return processes_under([self.cli.directory])
@@ -151,9 +165,12 @@ class World:
         return processes()[process.pid][0]
 
 
-def _session_options():
+def _session_options(ledger, gates):
+    """The resumable deterministic peer, told where to record deliveries and where its gates are."""
+    environment = {"XORCHESTRATE_FIXTURE_LEDGER": str(ledger), "XORCHESTRATE_FIXTURE_GATES": str(gates)}
     return {"agent": {"adapter": "hosted", "options": {"session": {
-        "adapter": "codex", "options": {"command": [sys.executable, str(SESSION_FIXTURE), "codex"], "timeout": 10}}}}}
+        "adapter": "codex", "options": {"command": [sys.executable, str(SESSION_FIXTURE), "codex"], "timeout": 10,
+                                        "env": environment}}}}}
 
 
 @contextmanager
@@ -169,9 +186,9 @@ def world(host, *, clock=None, sleep=None, gates=None):
             probe = cli.json("status", expect=3)["terminal_host"]
             if probe.get("error") or probe.get("adapter") != HOSTS[host]:
                 pytest.skip(f"terminal host unavailable: {probe}")
-            cli.options["sessions"] = _session_options()
             gate_directory = directory / "gates" if gates is None else gates
             gate_directory.mkdir(parents=True, exist_ok=True)
+            cli.options["sessions"] = _session_options(directory / "peer-ledger.jsonl", gate_directory)
             yield World(cli, host, clock=clock, sleep=sleep, gates=gate_directory)
         finally:
             cli.cleanup()

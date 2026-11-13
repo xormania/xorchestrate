@@ -5,6 +5,9 @@ import os
 import sys
 import time
 import uuid
+from pathlib import Path
+
+from controlled_gates import wait_gate
 
 mode = sys.argv[1]
 protocol = "codex" if mode.startswith("codex") else "acp" if mode.startswith("acp") else "jsonrpc"
@@ -12,6 +15,24 @@ native_id = "fixture-" + uuid.uuid4().hex
 start_params = {}
 events = []
 authentication = None
+LEDGER = os.environ.get("XORCHESTRATE_FIXTURE_LEDGER")
+"""Optional: a file the peer appends each delivered turn to, as an independent record of what it received."""
+GATES = os.environ.get("XORCHESTRATE_FIXTURE_GATES")
+"""Optional: a directory of controlled gates; a stage holds only while ``<stage>.armed`` exists there."""
+
+
+def record_delivery(text):
+    if LEDGER:
+        with open(LEDGER, "a", encoding="utf-8") as ledger:
+            ledger.write(json.dumps({"native_id": native_id, "text": text}) + "\n")
+            ledger.flush()
+            os.fsync(ledger.fileno())
+
+
+def hold(stage):
+    if GATES and (Path(GATES) / (stage + ".armed")).exists():
+        wait_gate({stage + "_gate": str(Path(GATES) / (stage + ".gate")),
+                   stage + "_entered": str(Path(GATES) / (stage + ".entered"))}, stage)
 
 
 def write(**fields):
@@ -52,12 +73,14 @@ for line in sys.stdin:
         else:
             if method in ("thread/resume", "session/load"):
                 native_id = params.get("threadId", params.get("sessionId"))
+                hold("resume")
                 if mode == "codex_mismatch":
                     native_id = "not-the-resumed-thread"
             result = {"thread": {"id": native_id}} if protocol == "codex" else {"sessionId": native_id} if protocol == "acp" else {"session_id": native_id}
     elif method in ("session/send", "turn/start", "session/prompt"):
         message = params.get("message", {})
         text = message.get("text", "") if protocol == "jsonrpc" else params.get("input", params.get("prompt"))[0]["text"]
+        record_delivery(text)
         if text == "hang":
             time.sleep(5)
         elif text == "exit":
