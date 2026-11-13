@@ -55,15 +55,35 @@ def saturated_client(timeout=.05):
 
 
 @contextlib.contextmanager
-def partial_host():
+def partial_host(frame=b'{"ready":'):
     reader, writer = os.pipe()
     stream = os.fdopen(reader, "r")
-    os.write(writer, b'{"ready":')
+    os.write(writer, frame)
     process = SimpleNamespace(stdout=stream, pid=1234, poll=lambda: None)
     try:
         yield process, lambda: os.close(writer)
     finally:
         stream.close()
+
+
+@contextlib.contextmanager
+def responding_client(response):
+    request_reader, request_writer = os.pipe()
+    response_reader, response_writer = os.pipe()
+    request = os.fdopen(request_writer, "wb", buffering=0)
+    reply = os.fdopen(response_reader, "rb", buffering=0)
+    os.write(response_writer, response)
+    client = Client.__new__(Client)
+    client.process = SimpleNamespace(stdin=request, stdout=reply)
+    client.deadline = time.monotonic() + 1
+    client.buffer, client.identifier, client.budget = b"", 0, None
+    try:
+        yield client, request_reader
+    finally:
+        request.close()
+        reply.close()
+        os.close(request_reader)
+        os.close(response_writer)
 
 
 class PhaseChild:

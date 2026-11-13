@@ -1,5 +1,7 @@
 """Nested blockers receive elapsed remainder; independent watchdogs bound old defects."""
 
+import json
+import os
 from types import SimpleNamespace
 
 import pytest
@@ -14,6 +16,7 @@ from tests.hexagonal.support.deadline_boundaries import (
     PhaseGroup,
     guarded_call,
     partial_host,
+    responding_client,
     saturated_client,
 )
 from tests.hexagonal.support.temporal_waits import ControlledClock
@@ -106,3 +109,87 @@ def test_world_refuses_a_new_cli_call_after_its_wait_budget_is_spent(tmp_path, m
         expired = True
     assert not launches, "EXHAUSTED_WAIT_MUST_NOT_LAUNCH_ANOTHER_COMMAND"
     assert expired
+
+
+def test_acceptance_pipe_exchange_keeps_request_and_buffered_reply_boundaries():
+    responses = b'{"id":1,"result":{"first":true}}\n{"id":2,"result":{"second":true}}\n'
+    with responding_client(responses) as (client, reader):
+        assert client.call("first", {"one": 1}) == {"first": True}
+        assert client.call("second", {"two": 2}) == {"second": True}
+        requests = [json.loads(row) for row in os.read(reader, 65536).splitlines()]
+    assert requests == [{"jsonrpc": "2.0", "id": 1, "method": "first", "params": {"one": 1}},
+                        {"jsonrpc": "2.0", "id": 2, "method": "second", "params": {"two": 2}}]
+
+
+def test_lifecycle_complete_readiness_frame_is_a_healthy_control(tmp_path, monkeypatch):
+    deferred = []
+    resources = SimpleNamespace(defer=lambda name, close: deferred.append((name, close)))
+    with partial_host(b'{"ready":true}\n') as (process, release):
+        monkeypatch.setattr(lifecycle.subprocess, "Popen", lambda *args, **kwargs: process)
+        completed, outcome = guarded_call(
+            lambda: lifecycle._host(tmp_path / "config", "peer", "endpoint", tmp_path, .5, resources), release)
+    for name, close in deferred:
+        if name != "external_host":
+            close()
+    assert completed and outcome[0] is process
+    assert json.loads((tmp_path / "host-launch.json").read_text())["ready"] == {"ready": True}
+
+
+def test_composed_suite_clamps_observation_sleep_after_work_consumes_budget(monkeypatch):
+    from scripts.verification import multi_harness
+
+    clock = ControlledClock()
+    suite = multi_harness.ComposedSuite.__new__(multi_harness.ComposedSuite)
+    suite.timeout = .03
+    suite.call = lambda *args, **kwargs: clock.advance(elapsed=.025, wall=500)
+    suite.raw_run = lambda: {}
+    saved = []
+    suite.save = lambda: saved.append(clock.elapsed)
+    monkeypatch.setattr(multi_harness.time, "monotonic", clock.monotonic)
+    monkeypatch.setattr(multi_harness.time, "sleep", clock.sleep)
+    with pytest.raises(VerificationFailure) as caught:
+        suite.wait(lambda run: False, "missing-observation")
+    assert clock.sleeps == pytest.approx([.005]), "COMPOSED_WAIT_SLEEP_USES_POST_OBSERVATION_REMAINDER"
+    assert saved == pytest.approx([.03])
+    assert caught.value.assertion == "missing-observation"
+
+
+def test_composed_suite_still_accepts_a_late_truthy_cooperative_observation(monkeypatch):
+    from scripts.verification import multi_harness
+
+    clock = ControlledClock()
+    suite = multi_harness.ComposedSuite.__new__(multi_harness.ComposedSuite)
+    suite.timeout = .03
+    suite.call = lambda *args, **kwargs: clock.advance(elapsed=.04)
+    suite.raw_run = lambda: {"observed": True}
+    monkeypatch.setattr(multi_harness.time, "monotonic", clock.monotonic)
+    monkeypatch.setattr(multi_harness.time, "sleep", clock.sleep)
+    result = suite.wait(lambda run: run, "missing-observation")
+    assert result == {"observed": True} and clock.sleeps == []
+
+
+def test_composed_suite_retries_do_not_continue_beyond_the_observation_deadline(monkeypatch):
+    from scripts.verification import multi_harness
+    from xorchestrate.model import Conflict
+
+    clock = ControlledClock()
+    suite = multi_harness.ComposedSuite.__new__(multi_harness.ComposedSuite)
+    suite.timeout = .025
+    attempts = []
+
+    def conflict(*args, **kwargs):
+        attempts.append(clock.elapsed)
+        raise Conflict("safe retry", retry_safe=True)
+
+    suite.application = SimpleNamespace(call=conflict)
+    suite.raw_run = lambda: {}
+    suite.save = lambda: None
+    monkeypatch.setattr(multi_harness.time, "monotonic", clock.monotonic)
+    monkeypatch.setattr(multi_harness.time, "sleep", clock.sleep)
+    outcome = None
+    try:
+        suite.wait(lambda run: False, "missing-observation")
+    except Exception as error:
+        outcome = error
+    assert attempts == pytest.approx([0, .01, .02]), "COMPOSED_RETRIES_SHARE_THE_OBSERVATION_BUDGET"
+    assert isinstance(outcome, VerificationFailure) and outcome.assertion == "missing-observation"
