@@ -590,6 +590,15 @@ def test_the_work_inventory_is_the_old_work_cases_split_by_store():
 
 _RECOVERY_TESTS = "tests.hexagonal.test_recovery"
 _RECOVERY_E2E = "tests.hexagonal.test_recovery_end_to_end"
+_RECOVERY_E2E_CONTRACT = "tests.hexagonal.contracts.recovery_e2e"
+_AFTER_LOSS = "after_total_loss_the_default_policy_brings_the_session_back_without_a_call"
+_SERVER_ONLY = "a_server_only_crash_adopts_the_running_terminal_and_keeps_its_bridge_host"
+
+
+def _e2e(host, scenario):
+    return f"{_RECOVERY_E2E}::test_recovery_meets_the_end_to_end_contract[{host}-{scenario}]"
+
+
 _RECOVERY_CONTRACT = "tests.hexagonal.contracts.recovery"
 _SERVER, _LIFECYCLE = "xorchestrate/server.py", "xorchestrate/session_lifecycle.py"
 _MANUAL = "manual_policy_reconnects_nothing_and_reconciles_what_cannot_reconnect"
@@ -615,14 +624,11 @@ RECOVERY = (
      "RECOVERY_RECOVER_RESPECTS_CALLER_AUTHORITY",
      f"{_RECOVERY_CONTRACT}:explicit_recover_acts_only_where_its_caller_is_authorised",
      _scenario("the_automatic_run_acts_as_the_runtime")),
-    ("up-never-starts-recovery", "xorchestrate/cli.py",
-     f"{_RECOVERY_E2E}::test_after_total_loss_the_default_policy_brings_the_session_back_without_a_call[detached-process]",
-     "RECOVERY_STARTS_ON_UP", None,
-     f"{_RECOVERY_E2E}::test_recovery_within_is_true_once_a_report_exists_and_nothing_runs"),
-    ("running-terminal-reopened", "xorchestrate/adapters/hosted.py",
-     f"{_RECOVERY_E2E}::test_a_server_only_crash_adopts_the_running_terminal_and_keeps_its_bridge_host[detached-process]",
-     "RECOVERY_ADOPTS_RUNNING_TERMINAL", None,
-     f"{_RECOVERY_E2E}::test_after_total_loss_the_default_policy_brings_the_session_back_without_a_call[detached-process]"),
+    ("up-never-starts-recovery", "xorchestrate/cli.py", _e2e("detached-process", _AFTER_LOSS), "RECOVERY_STARTS_ON_UP",
+     f"{_RECOVERY_E2E_CONTRACT}:{_AFTER_LOSS}", _scenario(_DEFAULT)),
+    ("running-terminal-reopened", "xorchestrate/adapters/hosted.py", _e2e("detached-process", _SERVER_ONLY),
+     "RECOVERY_ADOPTS_RUNNING_TERMINAL", f"{_RECOVERY_E2E_CONTRACT}:{_SERVER_ONLY}",
+     _e2e("detached-process", _AFTER_LOSS)),
     ("recover-ignores-work-binding", _LIFECYCLE,
      f"{_RECOVERY_TESTS}::test_an_explicit_recover_weighs_the_sessions_work_binding_for_the_caller",
      "RECOVERY_RECOVER_WEIGHS_WORK_BINDING", None, _scenario("explicit_recover_acts_only_where_its_caller_is_authorised")),
