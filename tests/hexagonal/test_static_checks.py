@@ -133,6 +133,16 @@ def test_successful_process_requires_a_complete_bound_tool_report(tmp_path, name
 
 def test_documented_launcher_keeps_cold_and_warm_cache_outputs_external(tmp_path):
     root = static_subject(tmp_path / "candidate")
+    write_source(root, ".github/workflows/cache-control.yml", """name: cache control
+on:
+  workflow_dispatch:
+permissions: {}
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo safe
+""")
     # The actual launcher and checker adapters run from this isolated candidate.
     for relative in ("scripts/testkit", "scripts/architecture", "scripts/ci"):
         shutil.copytree(ROOT / relative, root / relative, ignore=shutil.ignore_patterns("__pycache__"))

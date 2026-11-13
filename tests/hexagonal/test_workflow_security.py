@@ -211,6 +211,7 @@ def test_zizmor_refuses_a_workflow_symlink_that_escapes_the_candidate(tmp_path):
 
 def test_zizmor_invocation_is_offline_strict_and_scrubs_github_tokens(tmp_path):
     root = _workflow_subject(tmp_path / "candidate")
+    write_source(root, ".github/workflows/another.yaml", SAFE_WORKFLOW.replace("name: safe", "name: another"))
     programs, observation = _fake_zizmor(tmp_path)
     environment = _environment(
         tmp_path, programs=programs, FAKE_ZIZMOR_OBSERVATION=str(observation),
@@ -233,7 +234,11 @@ def test_zizmor_invocation_is_offline_strict_and_scrubs_github_tokens(tmp_path):
     assert argv[argv.index("--config") + 1] == str(root / "contracts/zizmor.yml")
     cache = Path(argv[argv.index("--cache-dir") + 1]).resolve()
     assert not cache.is_relative_to(root)
-    assert str(root / ".github/workflows/control.yml") in argv
+    workflows = [
+        str(root / ".github/workflows/another.yaml"),
+        str(root / ".github/workflows/control.yml"),
+    ]
+    assert argv[-len(workflows):] == workflows, "Zizmor must scan every bound workflow in sorted order"
     assert report["status"] == "passed" and report["findings"] == []
     _assert_complete_file_evidence(report, manifest)
 
@@ -259,7 +264,8 @@ def test_zizmor_refuses_an_installed_version_that_disagrees_with_the_exact_pin(t
 
 
 def test_strict_zizmor_collection_refuses_a_malformed_workflow_without_a_normalized_verdict(tmp_path):
-    root = _workflow_subject(tmp_path / "candidate", "name: malformed\non: [\n")
+    canary = "malformed-" + "workflow-canary"
+    root = _workflow_subject(tmp_path / "candidate", f"name: {canary}\non: [\n")
     directory = tmp_path / "evidence"
     prepared, _, runner, environment = _prepare(root, directory, tmp_path)
 
@@ -267,6 +273,8 @@ def test_strict_zizmor_collection_refuses_a_malformed_workflow_without_a_normali
 
     assert result.exit in {1, 2, 3}, "collection failure must not be mistaken for a finding verdict"
     assert not (directory / "zizmor.json").exists()
+    assert canary not in result.stdout
+    assert canary not in result.stderr
 
 
 @pytest.mark.parametrize("corruption", [
