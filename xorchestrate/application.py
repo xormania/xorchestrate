@@ -114,8 +114,11 @@ class Application(SessionLifecycleMixin, EffectJournalMixin, DeliveryMixin):
         self.assessment = deepcopy(assessment if assessment is not None else {})
         self.inspection = InspectionProjector(store, self._context, self._authorize, self._verify_context)
         self.telemetry_service = TelemetryService(
-            sink=lambda: self.telemetry, store=store, context=self._context, authorize=self._authorize,
-            verify=self._verify_context, projector=self.inspection, authority=self._telemetry_authority,
+            sink=lambda: self.telemetry, store=store,
+            context=lambda actor, arguments: self._context(actor, arguments),
+            authorize=lambda action, context: self._authorize(action, context),
+            verify=lambda tx, context: self._verify_context(tx, context),
+            projector=self.inspection, authority=lambda: self._telemetry_authority(),
             resources=lambda: (("providers", self.providers), ("sessions", self.sessions), ("evaluators", self.evaluators)),
         )
         self.work_acceptance = WorkAcceptance(
