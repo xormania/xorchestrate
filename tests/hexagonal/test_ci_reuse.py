@@ -825,27 +825,41 @@ def test_waiting_metadata_requires_native_first_attempt_zero_job_proof(producer_
         assert_execute(plan)
 
 
-def test_waiting_metadata_that_acquires_a_job_during_recheck_remains_material(producer_api, tmp_path, monkeypatch):
+@pytest.mark.parametrize("cancelled_after_start", (False, True))
+def test_waiting_metadata_that_acquires_a_job_during_recheck_remains_material(
+        producer_api, tmp_path, monkeypatch, cancelled_after_start):
     producer_api.summary(201)
     metadata = producer_api.metadata[201]
     metadata["run"].update(status="pending", conclusion=None)
     metadata["jobs"] = []
     metadata["artifacts"] = []
     native_pages = subject._pages
+    native_get = subject._get
     reads = 0
+
+    def get(context, token, path):
+        if cancelled_after_start and path == "/actions/runs/201":
+            metadata["run"].update(status="completed", conclusion="cancelled")
+            metadata["jobs"] = [{"id": 20150, "run_attempt": 1, "status": "completed", "conclusion": "cancelled"}]
+        return native_get(context, token, path)
 
     def pages(context, token, path, key):
         nonlocal reads
         if path == "/actions/runs/201/attempts/1/jobs":
             reads += 1
-            if reads == 2:
+            if reads == 2 and not cancelled_after_start:
                 metadata["jobs"] = [{"id": 20150, "run_attempt": 1, "status": "in_progress"}]
         return native_pages(context, token, path, key)
 
     monkeypatch.setattr(subject, "_pages", pages)
-    runs = [producer_api.metadata[101]["run"], metadata["run"]]
+    monkeypatch.setattr(subject, "_get", get)
+    # Listing and native API responses are separate JSON objects. Keep the
+    # cached pending observation independent of the peer's advancing state.
+    runs = [deepcopy(producer_api.metadata[101]["run"]), deepcopy(metadata["run"])]
     plan = subject.select_run(runs, producer_api.current,
-        lambda run: producer_api.inspect(run["id"], tmp_path / f"observed-{run['id']}"), runtime=producer_api.runtime)
+        lambda run: subject.inspect_producer(producer_api.current, run, producer_api.workflow, "fixture-token",
+            tmp_path / "waiting", aggregate.evaluate, producer_api.catalog) if run["id"] == 201
+            else producer_api.inspect(101, tmp_path / "original"), runtime=producer_api.runtime)
     assert_execute(plan)
     assert reads >= 2, "CI_WAITING_JOB_START_WITNESS_WAS_OBSERVED"
 
