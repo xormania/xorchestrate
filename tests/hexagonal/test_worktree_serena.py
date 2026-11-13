@@ -446,6 +446,32 @@ def test_a_recorded_pid_now_running_something_else_is_forgotten_and_never_signal
         assert ws.saved("served") is None, "the stale state was kept"
 
 
+def legacy_server(ws, path, pid=2_400):
+    """A state written without the process identity (no argv, no start time) for a pid that IS a Serena server."""
+    state = ws.make_state(path, pid=pid, pgid=pid, port=1, head=git(path, "rev-parse", "HEAD"),
+                          version=contract.DEFAULT_SERENA_VERSION, started=ws.clock.now(), last_call=None,
+                          argv=(), start_time=None)
+    ws.store().save(ws.key(path), state)
+    ws.processes.add(pid, pgid=pid, cwd=path, argv=server_argv(path, 1))
+    return state
+
+
+@pytest.mark.parametrize("command", ["down", "reap", "up"])
+def test_a_state_without_a_recorded_command_is_never_trusted_even_for_a_serena_server(ws, command):
+    path = ws.new("served")
+    legacy_server(ws, path)
+    argv = ("serena", "reap") if command == "reap" else ("serena", command, "served")
+    result = ws.run(*argv)
+    assert result.code == 0, result.text
+    assert 2_400 not in ws.processes.groups_signalled(), ws.processes.signals
+    assert ws.processes.alive(2_400)
+    saved = ws.saved("served")
+    if command == "up":
+        assert saved is not None and saved.pid != 2_400 and len(ws.launcher.spawns) == 1
+    else:
+        assert saved is None, "the untrusted state was kept"
+
+
 def test_a_recorded_pid_with_the_same_command_but_another_start_time_is_not_our_server(ws):
     path = ws.new("served")
     ws.seed_server(path, pid=7_300, start_time=111)

@@ -339,8 +339,9 @@ class SerenaService:
     def ours(self, state: ServerState, tree: str | None = None, table: list[Proc] | None = None) -> Proc | None:
         """The live process of a recorded server, or None when the pid now belongs to anything else.
 
-        The process must run the recorded command (or, like it, a Serena server) and, when both are
-        known, have the recorded start time; a state recorded for another tree is never ours.
+        The state must record the spawned command; the process must run it (or, like it, a Serena
+        server) and, when both are known, have the recorded start time. A state recorded for
+        another tree is never ours.
         """
         if state.pid <= 1 or (tree is not None and self.files.real_path(state.tree) != self.files.real_path(tree)):
             return None
@@ -348,8 +349,10 @@ class SerenaService:
         proc = next((item for item in table if item.pid == state.pid), None)
         if proc is None or not self.processes.alive(state.pid):
             return None
+        if not state.argv:
+            return None  # a record without the spawned command is never trusted
         same_command = tuple(proc.argv) == tuple(state.argv)
-        both_servers = SERVER_MARKER in proc.argv and (not state.argv or SERVER_MARKER in state.argv)
+        both_servers = SERVER_MARKER in proc.argv and SERVER_MARKER in state.argv
         if not (same_command or both_servers):
             return None
         if state.start_time is not None and proc.start_time is not None and proc.start_time != state.start_time:
