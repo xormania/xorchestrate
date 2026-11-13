@@ -200,6 +200,13 @@
           "run": "python3 -m scripts.testkit run --suite static --output \"$RUNNER_TEMP/xor-static\" --check-timeout 120"
         },
         {
+          "name": "Observe locked dependency advisories",
+          "if": "!cancelled() && steps.checkout.outcome == 'success' && steps.cache.outcome == 'success' && steps.python.outcome == 'success' && steps.dependencies.outcome == 'success'",
+          "continue-on-error": true,
+          "timeout-minutes": 2,
+          "run": "python3 -m scripts.testkit run --suite dependency-audit --output \"$RUNNER_TEMP/xor-dependency-audit\" --check-timeout 90"
+        },
+        {
           "name": "Record unavailable static validation",
           "if": "!cancelled() && (steps.checkout.outcome != 'success' || steps.cache.outcome != 'success' || steps.python.outcome != 'success' || steps.dependencies.outcome != 'success')",
           "run": "mkdir -p \"$RUNNER_TEMP/xor-static\"\ncat > \"$RUNNER_TEMP/xor-static/setup.json\" <<'JSON'\n{\"status\":\"setup_error\",\"selected_suites\":[\"static\"],\"launched\":false,\"reason\":\"CI checkout, cache, interpreter or dependency setup did not succeed\"}\nJSON"
@@ -211,6 +218,16 @@
             "name": "static-checks-python-3.12--attempt-${{ github.run_attempt }}",
             "path": "${{ runner.temp }}/xor-static/**/*.json\n${{ runner.temp }}/xor-static/**/*.log\n${{ runner.temp }}/xor-static/**/*.txt\n!${{ runner.temp }}/xor-static/**/snapshot/**",
             "if-no-files-found": "error",
+            "retention-days": 30
+          }
+        },
+        {
+          "uses": "actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9",
+          "if": "always()",
+          "with": {
+            "name": "dependency-audit--attempt-${{ github.run_attempt }}",
+            "path": "${{ runner.temp }}/xor-dependency-audit/**/*.json\n${{ runner.temp }}/xor-dependency-audit/**/*.log\n${{ runner.temp }}/xor-dependency-audit/**/*.txt",
+            "if-no-files-found": "warn",
             "retention-days": 30
           }
         }

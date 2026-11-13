@@ -26,8 +26,11 @@ uv sync --locked --no-default-groups --group validation --extra test --no-instal
 uv pip install --python "$UV_PROJECT_ENVIRONMENT/bin/python" --no-deps --no-build-isolation -e .
 export PATH="$UV_PROJECT_ENVIRONMENT/bin:$PATH"
 
-# Focused security view: Ruff, candidate-complete secret scan and workflow analysis.
+# Focused security view: deterministic security checks plus the dependency observation.
 python3 -m scripts.testkit run --suite security
+
+# Or run only the network-dependent dependency observation, not both commands.
+python3 -m scripts.testkit run --suite dependency-audit
 
 # Security checks, current-source syntax and deterministic architecture.
 python3 -m scripts.testkit run --suite static
@@ -55,7 +58,7 @@ python3 -m scripts.testkit run --suite acceptance
 python3 -m scripts.testkit stories
 python3 -m scripts.testkit run --suite stories --story work-acceptance --timeout 60
 
-# Every component suite; security checks run once through static.
+# Every component suite; deterministic security checks run once through static.
 python3 -m scripts.testkit run
 ```
 
@@ -69,9 +72,15 @@ credentials. Managed setup installs both validation tools for its selected
 interpreter; `doctor` checks that environment's Zizmor executable without
 launching the scanner. `--family` filters behavioral tests only; it never reduces
 static coverage. The default composition runs each selected check once.
-`security` is a focused view rather than another component: `static`, `checks`
-and the default/all composition include its Ruff, secret-scan and Zizmor checks
-once through `static`.
+`security` is a focused view rather than another component: it adds the
+network-dependent dependency observation to Ruff, secret-scan and Zizmor.
+`dependency-audit` selects only that observation. `static`, `checks` and the
+default/all composition include the deterministic Ruff, secret-scan and Zizmor
+checks once through `static`; they intentionally exclude dependency auditing so
+their established offline result remains reproducible.
+Concern, unavailable service or malformed evidence makes the focused local suite
+nonzero. Advisory means the hosted observation is retained with
+`continue-on-error`; it does not convert local failures into passing results.
 
 ## Jev advisory stages
 
@@ -206,6 +215,25 @@ only long enough to normalize it, then publishes candidate-bound file hashes and
 path/location/rule/severity/confidence findings; workflow snippets and fixes are
 not copied into the report or outer command output.
 
+The dependency audit binds `pyproject.toml`, `uv.lock`, the exact uv 0.13.7
+executable and every non-editable package in the universal lock selection. It
+runs uv's preview audit command once against the configured OSV endpoint; ambient
+`UV_*` policy and GitHub token variables cannot silently narrow the invocation or
+reach the service. Registry packages are identified by locked name and version.
+Git packages additionally retain their locked commit while acknowledging that
+the advisory lookup can match only the PyPI name and version.
+
+The normalized report retains package identities, vulnerability IDs and aliases,
+fixed versions and advisory timestamps, plus hashes and byte counts for the raw
+tool streams. It does not retain remote summaries, descriptions, references or
+URLs. A vulnerability produces `concern`; service or preview-schema failure
+produces `unavailable` or `error`, never an empty success. An empty response is
+`observed`, not a claim of safety or completeness: OSV data is mutable, uv 0.13.7
+does not let the wrapper prove that a short batch response covered every query,
+and Git-source matching is name/version based. CI retains this evidence in a
+separate artifact from the deterministic static receipt and does not use it as a
+required verdict.
+
 `--output /path/outside/checkout` selects a reusable evidence parent; each invocation
 allocates a private run directory. `--check-timeout` bounds each deterministic or
 calibration command. `--timeout` retains the live scenario timeout. Native harness
@@ -288,6 +316,7 @@ controller requests, native callback selection and managed tmux automation.
 | Ruff policy and validation dependency pin | `ruff.toml`, `pyproject.toml` validation group; generated `.github/requirements-ci.txt` |
 | Secret detection policy and same-line allowances | `contracts/security.json`; shared static and secret-scan adapters |
 | Workflow-analysis policy and validation dependency pin | `contracts/zizmor.yml`, `pyproject.toml` validation group; generated `.github/requirements-ci.txt`; shared static and Zizmor adapters |
+| Locked dependency advisory observation | `pyproject.toml`, `uv.lock`, pinned uv 0.13.7 and the moving OSV service; shared static and dependency-audit adapters |
 | Catalog validation and selection | `scripts/testkit/catalog.py` |
 | Shard specification, balanced module partition and timings format | `scripts/testkit/sharding.py`, `contracts/test-timings.json` |
 | Timings regeneration from JUnit | `scripts/testkit/adapters/timings.py`, `python3 -m scripts.testkit.timings` |

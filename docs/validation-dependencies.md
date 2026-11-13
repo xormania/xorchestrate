@@ -44,6 +44,16 @@ that environment's Python without executing the scanner; this keeps reusable
 profiles independent of whether the environment's `bin` directory is active on
 the caller's `PATH`.
 
+Dependency auditing uses the already pinned uv 0.13.7 runtime manager itself, not
+another Python validation dependency, so it does not add a declaration to
+`pyproject.toml`, `uv.lock` or `.github/requirements-ci.txt`. Test-kit preparation
+resolves uv from the explicit execution environment, verifies its exact version,
+and binds `pyproject.toml` plus `uv.lock` before invoking the preview audit command.
+CI gets that executable from the checksum-pinned `setup-uv` step. The resulting
+OSV observation is network- and time-dependent advisory evidence; it neither
+changes the resolved baseline nor replaces the offline dependency consistency
+check above.
+
 Update the reviewed baseline intentionally:
 
 ```sh

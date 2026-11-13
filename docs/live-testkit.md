@@ -89,8 +89,10 @@ For managed native prompts, use `start` and `attach`: the existing native launch
 exposes an owned interactive terminal with input/output separate from MCP pipes.
 Seeing an outer worker pane alone does not establish native prompt access.
 
-Use `--suite security` for the focused Ruff and secret-scan view, or
-`--suite static` to add syntax and architecture checks. Use `--suite acceptance`
+Use `--suite security` for the focused Ruff, secret-scan, Zizmor and
+network-dependent dependency-advisory view; use `--suite dependency-audit` for
+only the last observation. Use `--suite static` for the deterministic three
+security checks plus syntax and architecture. Use `--suite acceptance`
 for terminal-host/MCP callbacks and persistence, or
 `--suite multi-harness` for the existing 46-case communication, controlled work
 and lifecycle suite. `--timeout` controls each scenario's existing timeout; the

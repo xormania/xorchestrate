@@ -147,6 +147,12 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   collection, applies the reviewed exact exceptions in `contracts/zizmor.yml`,
   and retains candidate-bound normalized findings without republishing workflow
   source. The existing static CI lane runs it once; no new hosted status is added.
+- The test kit adds an explicit `dependency-audit` suite and includes it in the
+  focused `security` view. Pinned uv 0.13.7 observes the universal locked package
+  selection against OSV and retains redacted, candidate-bound advisory evidence.
+  CI runs the network-dependent observation once after deterministic static
+  validation, in a bounded non-blocking step with a separate artifact and no new
+  lane or required status.
 - Work-tree maintenance: `python3 -m scripts.worktrees report` judges every
   tree and scratch or run directory, and `prune --apply` removes only what it
   can prove safe, keeping and reporting everything else. See
