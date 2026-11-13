@@ -13,7 +13,6 @@ them as their timeout.
 import os
 import signal
 import stat
-import time
 import weakref
 from dataclasses import dataclass
 from pathlib import Path
@@ -183,6 +182,3 @@ def reap(directory):
     _kill(_identities(directory))
 
 
-def settle(seconds):
-    """A fixed pause kept from the original scenarios until an observed boundary replaces it."""
-    time.sleep(seconds)
