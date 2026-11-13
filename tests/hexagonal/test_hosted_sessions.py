@@ -274,3 +274,41 @@ def test_cleanup_reaches_only_the_subjects_own_processes(subject, monkeypatch):
         assert alive(bystander), "cleanup killed a process outside the subject"
     finally:
         _end(process, outside)
+
+
+class _FailingShutdown:
+    """The subject's real host, except that shutdown fails, so cleanup has to stop what is left itself."""
+
+    def __init__(self, host):
+        self.host = host
+
+    def __getattr__(self, name):
+        return getattr(self.host, name)
+
+    def shutdown(self):
+        raise RuntimeError("planted: the terminal host did not shut down")
+
+
+def test_cleanup_kills_what_a_failed_shutdown_left_and_nothing_outside(subject, monkeypatch):
+    from scripts.testkit.adapters.ownership import alive, processes
+    from tests.hexagonal.support.host_processes import processes_under
+
+    driver = subject.driver()
+    driver.start(subject.spec("cleanup"))
+    driver.close()
+    process, bystander, outside = _bystander(subject.base / "z")
+    try:
+        table = processes()
+        own = [table[pid][0] for pid, _ in processes_under([subject.base]) if pid in table and pid != process.pid]
+        assert own, "nothing of the subject was running"
+        real_host = subject.host
+        monkeypatch.setattr(subject, "host", lambda: _FailingShutdown(real_host()))
+        fence = _fenced(monkeypatch)
+        try:
+            subject.cleanup()
+        finally:
+            fence.__exit__(None, None, None)
+        assert alive(bystander), "cleanup killed a process outside the subject"
+        assert not any(alive(item) for item in own), "cleanup left the subject's processes running"
+    finally:
+        _end(process, outside)
