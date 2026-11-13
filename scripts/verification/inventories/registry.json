@@ -24,6 +24,12 @@
       "stages": [
         "manual"
       ]
+    },
+    "hosted": {
+      "file": "hosted.json",
+      "stages": [
+        "manual"
+      ]
     }
   }
 }
