@@ -275,6 +275,8 @@ def resolving_an_unknown_replacement_as_failed_leaves_one_live_session(world):
         record = sessions(operator)[interrupted]
         operation_id = record.get("pending_operation") or record["start_operation_id"]
         operation = operator.call("get_operation", {"operation_id": operation_id})["operation"]
+        listed_before = world.status()["recovery"].get("needs_reconciliation")
+        assert interrupted in _mentioned(listed_before), {"interrupted": interrupted, "listed": listed_before}
         operator.call("resolve_operation", {"operation_id": operation_id, "expected_version": operation["version"],
                                             "outcome": "failed", "reason": "the replacement was lost mid-reconnect"})
         needing = _mentioned(world.status()["recovery"].get("needs_reconciliation", []))
@@ -296,6 +298,11 @@ def an_unknown_replacement_is_never_completed_into_a_second_live_session(world):
             "operation_id": operation_id, "expected_version": operation["version"], "outcome": "completed",
             "reason": "asserted without an adapter receipt"})
         outcome = ("refused " + str(reply.get("error", {}).get("code"))) if reply.get("error") else "accepted"
+        if reply.get("error"):
+            # A refused completion changes nothing: the replacement stays uncertain and listed for reconciliation.
+            assert sessions(operator)[interrupted]["status"] == "unknown", sessions(operator)[interrupted]
+            still = world.status()["recovery"].get("needs_reconciliation")
+            assert interrupted in _mentioned(still), {"interrupted": interrupted, "listed": still}
         listed = sessions(operator)
         family = lineage(listed, original["id"])
         live = sorted(key for key in family if listed[key]["status"] in {"starting", "active"})

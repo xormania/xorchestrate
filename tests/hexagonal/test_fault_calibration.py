@@ -668,7 +668,9 @@ RECOVERY = (
 """The recovery area's planted faults (old faults 23-25 and 27-36; 26 dropped as an equivalent mutant), and a
 replay of the in-flight turn straight through the driver after recovery reconnects; an unknown replacement taken
 as reconnectable; and a resolved operation still listed for reconciliation. Whether every unknown replacement stays
-reported is identified but not calibrated: three separate code paths name it, so no single planted fault fails it."""
+reported is identified but not calibrated: three separate code paths name it, so no single planted fault fails it.
+The reconnectable-replacement fault already shows at the second restart (a replacement starts without a backend), so
+the second-loss scenario likely detects it too; its case shows the third restart's check fails, not that only it does."""
 RECOVERY_MUTATIONS_SHA256 = "326003fb6e84343acb09f73b50d2b92f8493102e0a25fadad13153c48aaa6942"
 """sha256 of the canonical JSON of the cases' mutation objects in order: each fault's file, anchor and replacement
 exactly as the old recovery fault script planted them."""
