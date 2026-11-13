@@ -272,3 +272,36 @@ def test_ctrl_c_on_the_supervisor_finishes_unsuccessfully_with_verified_cleanup(
         await_condition(lambda: processes_naming(directory) == [], timeout=20)
     finally:
         workflow.close()
+
+
+def test_freeze_stops_the_runs_own_worker_and_never_a_look_alike_outside_the_run(tmp_path):
+    """The worker is chosen among the run's own processes; a command line that only looks like it is never stopped."""
+    import subprocess
+    import sys
+    import tempfile
+    from pathlib import Path
+
+    from scripts.testkit.adapters.ownership import processes
+    from tests.hexagonal.support.host_processes import track
+
+    candidate = isolated_candidate(tmp_path / "candidate")
+    workflow = PublicWorkflow(candidate, tmp_path / "operator")
+    outside = Path(track(tempfile.mkdtemp(prefix="xo-outside-")))
+    look_alike = None
+    try:
+        directory, launch = workflow.start(timeout=60)
+        assert launch["status"] == "launched"
+        look_alike = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(120)", "_worker", str(directory)],
+                                      cwd=outside, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                      stderr=subprocess.DEVNULL)
+        impostor = processes()[look_alike.pid][0]
+        frozen = workflow.freeze(directory)
+        assert frozen != impostor, "freeze chose a look-alike outside the run"
+        state = Path(f"/proc/{look_alike.pid}/stat").read_text().rsplit(") ", 1)[1].split()[0]
+        assert state != "T", "a process outside the run was stopped"
+    finally:
+        workflow.close()
+        if look_alike is not None:
+            look_alike.kill()
+            look_alike.wait(timeout=10)
+        outside.rmdir()

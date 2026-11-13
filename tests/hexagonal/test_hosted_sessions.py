@@ -202,3 +202,75 @@ def test_hosted_sessions_are_bounded_by_max_sessions_counting_detached_terminals
     finally:
         first.close()
         hosted.cleanup()
+
+
+# -- kills reach only the subject's own processes ---------------------------------------------------
+
+def _bystander(named):
+    """A same-user process outside the subject whose arguments merely name ``named``."""
+    import subprocess
+    import sys
+    import tempfile
+    from pathlib import Path
+
+    from scripts.testkit.adapters.ownership import processes
+    from tests.hexagonal.support.host_processes import track
+
+    outside = Path(track(tempfile.mkdtemp(prefix="xo-outside-")))
+    process = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(120)", str(named)], cwd=outside,
+                               stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return process, processes()[process.pid][0], outside
+
+
+def _end(process, outside):
+    process.kill()
+    process.wait(timeout=10)
+    outside.rmdir()
+
+
+def _fenced(monkeypatch):
+    import os
+
+    context = monkeypatch.context()
+    during = context.__enter__()
+    during.setattr(os, "kill", lambda pid, number: pytest.fail(f"raw os.kill({pid}, {number}) is unfenced"))
+    during.setattr(os, "killpg", lambda pgid, number: pytest.fail(f"os.killpg({pgid}, {number}) is unfenced"))
+    return context
+
+
+def test_a_total_loss_takes_the_terminal_host_and_its_terminals_and_nothing_outside(subject, monkeypatch):
+    from scripts.testkit.adapters.ownership import alive, processes
+    from tests.hexagonal.support.host_processes import processes_under
+
+    driver = subject.driver()
+    session = driver.start(subject.spec("loss"))
+    driver.close()
+    process, bystander, outside = _bystander(subject.sessions / "x")
+    try:
+        table = processes()
+        own = [table[pid][0] for pid, _ in processes_under([subject.base]) if pid in table and pid != process.pid]
+        assert own, "nothing of the subject was running"
+        fence = _fenced(monkeypatch)
+        try:
+            subject.lose(session, everything=True)
+        finally:
+            fence.__exit__(None, None, None)
+        assert alive(bystander), "the simulated loss killed a process outside the subject"
+        assert not any(alive(item) for item in own), "the terminal host or a terminal survived the loss"
+    finally:
+        _end(process, outside)
+
+
+def test_cleanup_reaches_only_the_subjects_own_processes(subject, monkeypatch):
+    from scripts.testkit.adapters.ownership import alive
+
+    process, bystander, outside = _bystander(subject.base / "y")
+    try:
+        fence = _fenced(monkeypatch)
+        try:
+            subject.cleanup()
+        finally:
+            fence.__exit__(None, None, None)
+        assert alive(bystander), "cleanup killed a process outside the subject"
+    finally:
+        _end(process, outside)

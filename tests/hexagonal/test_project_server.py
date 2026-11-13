@@ -1105,23 +1105,48 @@ def test_down_lets_a_stopped_servers_process_end_on_its_own(directory, adapter, 
         observer.close()
 
 
-def test_total_loss_never_blocks_status_doctor_down_or_the_next_up(cli):
-    """A container failure kills every process at once and cleans nothing; the project still starts again unaided."""
-    import signal
-    import time
+def test_total_loss_never_blocks_status_doctor_down_or_the_next_up(cli, monkeypatch):
+    """A container failure kills every process at once and cleans nothing; the project still starts again unaided.
 
-    from tests.hexagonal.support.host_processes import processes_under
+    The kill reaches only the project's own processes: a same-user process outside it whose arguments merely
+    name the project's directory survives, and no signal bypasses the fenced, identity-checked send.
+    """
+    import signal
+    import subprocess
+    import sys
+    import tempfile
+    import time
+    from pathlib import Path
+
+    from scripts.testkit.adapters.ownership import alive, processes
+    from tests.hexagonal.support.host_processes import processes_under, track
 
     first = cli.json("up")
-    victims = {pid for pid, _ in processes_under([cli.directory])} | {first["pid"]}
-    assert len(victims) >= 1
-    for pid in victims:
-        with contextlib.suppress(ProcessLookupError):
-            os.kill(pid, signal.SIGKILL)
-    deadline = time.monotonic() + 10
-    while processes_under([cli.directory]) and time.monotonic() < deadline:
-        time.sleep(0.05)
-    assert processes_under([cli.directory]) == [], "the simulated failure left processes"
+    outside = Path(track(tempfile.mkdtemp(prefix="xo-outside-")))
+    bystander = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(120)", str(cli.directory) + "/x"],
+                                 cwd=outside, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                 stderr=subprocess.DEVNULL)
+    try:
+        named = processes()[bystander.pid][0]
+        with monkeypatch.context() as during:
+            during.setattr(os, "kill", lambda pid, number: pytest.fail(f"raw os.kill({pid}, {number}) is unfenced"))
+            during.setattr(os, "killpg", lambda pgid, number: pytest.fail(f"os.killpg({pgid}, {number}) is unfenced"))
+            victims = {pid for pid, _ in processes_under([cli.directory])} | {first["pid"]}
+            assert len(victims) >= 1
+            for pid in victims:
+                with contextlib.suppress(ProcessLookupError):
+                    os.kill(pid, signal.SIGKILL)
+        assert alive(named), "the simulated failure killed a process outside the project"
+        project = [pid for pid, _ in processes_under([cli.directory]) if pid != bystander.pid]
+        deadline = time.monotonic() + 10
+        while project and time.monotonic() < deadline:
+            time.sleep(0.05)
+            project = [pid for pid, _ in processes_under([cli.directory]) if pid != bystander.pid]
+        assert project == [], "the simulated failure left processes"
+    finally:
+        bystander.kill()
+        bystander.wait(timeout=10)
+        outside.rmdir()
     assert list((cli.home / "servers").glob("*.terminal.json")), "the failure left the terminal record behind"
 
     status = cli.json("status", expect=3)
