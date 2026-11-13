@@ -8,6 +8,7 @@ consumers reads developer settings.
 
 import ast
 import json
+import os
 import re
 import shlex
 import subprocess
@@ -292,6 +293,24 @@ def test_the_example_command_writes_and_checks_the_current_trees_copy(world):
     written.write_text(written.read_text(encoding="utf-8") + "# drift\n", encoding="utf-8")
     assert world.cli("example", "--check", cwd=world.tree)[0] == 1
 
+
+
+@pytest.mark.parametrize("target", ["existing", "dangling"])
+def test_example_write_never_follows_a_symlinked_example_out_of_the_checkout(world, tmp_path, target):
+    """A branch can track the example as a symlink; writing must not replace or create what it points to."""
+    victim = tmp_path / "outside" / "victim.txt"
+    victim.parent.mkdir()
+    if target == "existing":
+        victim.write_text("precious\n", encoding="utf-8")
+    example = world.tree / contract.EXAMPLE_FILE
+    example.symlink_to(victim)
+    code, output = world.cli("example", "--write", cwd=world.tree)
+    assert code != 0 and "Traceback" not in output, (code, output)
+    if target == "existing":
+        assert victim.read_text(encoding="utf-8") == "precious\n", "the symlink's target was overwritten"
+    else:
+        assert not victim.exists(), "a file was created through the symlink"
+    assert example.is_symlink() and Path(os.readlink(example)) == victim, "the symlink itself was changed"
 
 def test_show_prints_one_line_per_setting_with_its_source(world):
     world.repo_file("XORCHESTRATE_DEV_SERENA_CONTEXT=shown\n")
