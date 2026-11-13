@@ -48,6 +48,11 @@ def _strings(value, name):
     return list(value)
 
 
+def _first_occurrences(value, name):
+    """Nonempty strings, each kept once in the order first given, as the command line's selection is planned."""
+    return _strings(list(dict.fromkeys(value)) if isinstance(value, (tuple, list)) else value, name)
+
+
 def load_profile(path, *, root, overrides=None):
     """Validate one profile and resolve paths against its containing directory."""
     root, path = Path(root).resolve(), Path(path).expanduser().resolve()
@@ -75,7 +80,7 @@ def load_profile(path, *, root, overrides=None):
     values["drivers"] = _strings(values["drivers"], "drivers")
     values["families"] = _strings(values["families"], "families")
     values["stories"] = _strings(values["stories"], "stories")
-    values["inventories"] = _strings(values["inventories"], "inventories")
+    values["inventories"] = _first_occurrences(values["inventories"], "inventories")
     validate_limits(**{name: values[name] for name in ("max_sessions", "max_turns", "max_tool_calls")})
     if values["stories"] and values["suite"] not in {"stories", "all"}:
         raise ValueError("stories require a suite containing stories")
