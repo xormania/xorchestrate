@@ -1,7 +1,7 @@
 {
-  "version": 1,
+  "version": 2,
   "baseline": "e2511f622db04467d7d153708c6d82b32b34cb92",
-  "coverage": "Initial reviewed hotspots; not an exhaustive count of deadlines or complete acceptance coverage.",
+  "coverage": "Historical initial hotspots plus a completed grouped review of the deadline categories below at 314e979. This is a purpose/boundary inventory, not a literal count, executed coverage claim, or certification of arbitrary external calls.",
   "entries": [
     {
       "id": "session-selection",
@@ -19,7 +19,8 @@
       "existing_test_module": "tests/hexagonal/test_delivery.py",
       "slice": "session-order",
       "planned_action": "Replace time-as-order with existing session.created commit witness; declare legacy preference.",
-      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage"
+      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage",
+      "current_disposition": "Implemented before this review: latest eligible session uses store-owned session.created witnesses; UTC is descriptive."
     },
     {
       "id": "product-exchange",
@@ -37,7 +38,8 @@
       "existing_test_module": "tests/hexagonal/test_delivery.py",
       "slice": "evidence-order",
       "planned_action": "Use explicit creation witnesses; identity and effect binding remain independently required.",
-      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage"
+      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage",
+      "current_disposition": "Implemented before this review: persisted exchange witnesses establish order; UTC is descriptive."
     },
     {
       "id": "normalizer",
@@ -55,7 +57,8 @@
       "existing_test_module": "tests/hexagonal/test_verification.py",
       "slice": "evidence-order",
       "planned_action": "Carry actual order witnesses; presentation order cannot manufacture cross-source causality.",
-      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage"
+      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage",
+      "current_disposition": "Implemented before this review: retained source/store witnesses, not UTC sorting, support checker order."
     },
     {
       "id": "native-turns",
@@ -73,7 +76,8 @@
       "existing_test_module": "tests/hexagonal/test_completion_evidence.py",
       "slice": "evidence-order",
       "planned_action": "Replace time ordering while preserving unresolved turns and false-idle calibration.",
-      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage"
+      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage",
+      "current_disposition": "Implemented before this review: source/store witnesses and unresolved-turn vetoes support completion."
     },
     {
       "id": "held-work",
@@ -91,7 +95,8 @@
       "existing_test_module": "tests/hexagonal/test_verification.py",
       "slice": "evidence-order",
       "planned_action": "Record fixture boundaries synchronously; distinguish observation order from remote occurrence.",
-      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage"
+      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage",
+      "current_disposition": "Implemented before this review: fixture boundaries join the store serialization boundary; remote occurrence remains distinct."
     },
     {
       "id": "store-events",
@@ -109,7 +114,8 @@
       "existing_test_module": "tests/hexagonal/test_storage.py",
       "slice": "reused",
       "planned_action": "Existing xcontracts boundary; not a global occurrence clock.",
-      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage"
+      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage",
+      "current_disposition": "Existing mechanism retained; initial baseline fields above remain historical source observations."
     },
     {
       "id": "native-observation-wait",
@@ -127,7 +133,8 @@
       "existing_test_module": "tests/hexagonal/test_native_sessions.py",
       "slice": "wait-budgets",
       "planned_action": "Inject monotonic/sleeper, clamp polling, classify allowance and validate opt-in scale.",
-      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage"
+      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage",
+      "current_disposition": "Shared WaitBudget/bounded_wait already integrated; this candidate adds parent Deadline propagation and a reusable classified support-budget adapter."
     },
     {
       "id": "callback-gate",
@@ -145,7 +152,8 @@
       "existing_test_module": "tests/hexagonal/test_native_sessions.py",
       "slice": "later",
       "planned_action": "Do not multiply the deliberate schedule; separate release watchdog from product deadlines.",
-      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage"
+      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage",
+      "current_disposition": "Fault controls retain independent watchdogs and explicit release; operation-bound readiness is a separate concurrent change."
     },
     {
       "id": "composed-wait",
@@ -163,7 +171,8 @@
       "existing_test_module": "tests/hexagonal/test_verification.py",
       "slice": "later",
       "planned_action": "Consider remaining-budget propagation into nested dispatch; keep existing observation predicate.",
-      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage"
+      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage",
+      "current_disposition": "This candidate shares a Deadline across safe-conflict retries and clamps polling; arbitrary in-process application/snapshot work remains cooperative."
     },
     {
       "id": "command-timeout",
@@ -181,7 +190,8 @@
       "existing_test_module": "tests/hexagonal/test_testkit_command.py",
       "slice": "later",
       "planned_action": "Preserve current check/run cancellation scope; state total-return vs execution budget explicitly.",
-      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage"
+      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage",
+      "current_disposition": "This candidate charges signal work to grace and shares one forced-cleanup allowance across kill/drain/reap/verification; execution and run-cancellation scopes remain distinct."
     },
     {
       "id": "check-duration",
@@ -199,7 +209,8 @@
       "existing_test_module": "tests/hexagonal/test_testkit_core.py",
       "slice": "reused",
       "planned_action": "Do not reinterpret as cross-process physical or causal proof.",
-      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage"
+      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage",
+      "current_disposition": "Existing mechanism retained; initial baseline fields above remain historical source observations."
     },
     {
       "id": "acceptance-rpc",
@@ -217,7 +228,8 @@
       "existing_test_module": "tests/hexagonal/test_acceptance_lifecycle.py",
       "slice": "later",
       "planned_action": "Review nested write/read/cleanup budgets; do not scale behavioral requirements.",
-      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage"
+      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage",
+      "current_disposition": "This candidate bounds partial pipe writes and framed reads by the original scenario deadline; client close retains explicit separate cleanup stages."
     },
     {
       "id": "managed-cleanup",
@@ -235,7 +247,8 @@
       "existing_test_module": "tests/hexagonal/test_managed_workflow.py",
       "slice": "later",
       "planned_action": "Review minimum per-call grace vs remaining cleanup budget, without assuming a demonstrated defect.",
-      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage"
+      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage",
+      "current_disposition": "This candidate passes actual remaining grace including zero, clamps observation waits and retains elapsed/overrun evidence. Terminal-host port calls remain cooperative."
     },
     {
       "id": "managed-worker",
@@ -253,7 +266,8 @@
       "existing_test_module": "tests/hexagonal/test_managed_workflow.py",
       "slice": "later",
       "planned_action": "Preserve ownership and explicit retained-terminal semantics.",
-      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage"
+      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage",
+      "current_disposition": "This candidate clamps each deliberate cleanup phase; terminal close, TERM grace and final KILL allowance remain separate. Retained presentation remains excluded."
     },
     {
       "id": "collector-receipt",
@@ -271,7 +285,8 @@
       "existing_test_module": "tests/hexagonal/test_telemetry_collector_storage.py",
       "slice": "reused",
       "planned_action": "Already rollback-safe in corpus order; does not establish remote occurrence or source completeness.",
-      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage"
+      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage",
+      "current_disposition": "Existing mechanism retained; initial baseline fields above remain historical source observations."
     },
     {
       "id": "operational-duration",
@@ -289,7 +304,8 @@
       "existing_test_module": "tests/hexagonal/test_telemetry_views.py",
       "slice": "later",
       "planned_action": "Retain local meaning; producer/counter/clock-domain propagation is a later compatibility slice.",
-      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage"
+      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage",
+      "current_disposition": "Local diagnostic interval semantics retained; no cross-process or remote-occurrence inference."
     },
     {
       "id": "shard-weights",
@@ -307,15 +323,288 @@
       "existing_test_module": "tests/hexagonal/test_testkit_timing_model.py",
       "slice": "reused",
       "planned_action": "This CI publication policy does not govern manual scripts.testkit.timings regeneration, which permits --allow-partial. Keep shard estimates separate from temporal correctness.",
-      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage"
+      "baseline_review": "source inspected; linked tests are discovery leads, not a claim of executed coverage",
+      "current_disposition": "Existing mechanism retained; initial baseline fields above remain historical source observations."
     }
   ],
   "remaining_inventory": [
-    "native adapter transport/turn/startup deadlines",
-    "provider/evaluator subprocess and HTTP deadlines",
-    "recovery and persisted calendar/lease policies",
-    "remaining support polling/sleep sites and nested waits",
-    "source incarnation/counters, clock domains and capture closure",
-    "WSL/CI passive clock characterization and native suspend qualification"
-  ]
+    "source incarnation/counters, clock domains and finite capture closure beyond the existing store witness domain",
+    "WSL/CI passive clock characterization and native suspend/resume qualification",
+    "persisted calendar/lease changes require their own policy contract; none introduced by the deadline review"
+  ],
+  "deadline_review": {
+    "source_revision": "314e979d01c5f8bf563b060ad91406e1b7bd7c14",
+    "candidate": "feat/temporal-budget-propagation; changed dispositions describe this candidate, separate runtime/readiness candidates remain explicitly distinct",
+    "method": "Grouped source review of harness/support, verification/acceptance, execution/cleanup, runtime transports/providers, storage/telemetry and intentionally ongoing services. Static inventory is distinct from executed validation.",
+    "groups": [
+      {
+        "id": "native-observation",
+        "paths": [
+          "tests/hexagonal/support/native.py",
+          "scripts/testkit/waits.py"
+        ],
+        "purpose": "harness allowance",
+        "boundary": "predicate attempts, retries and sleeps",
+        "disposition": "Reused shared Clock/WaitBudget; inherited Deadline never extends parent.",
+        "timeout_scale": "explicit XO_TEST_TIMEOUT_SCALE for harness_allowance only",
+        "limits": "Late truthy predicate accepted; only explicit safe native Conflict retries; independent real watchdog required for fake clocks."
+      },
+      {
+        "id": "end-to-end-nesting",
+        "paths": [
+          "tests/hexagonal/support/e2e_disturbances.py",
+          "tests/hexagonal/support/e2e_world.py"
+        ],
+        "purpose": "harness allowance",
+        "boundary": "nested await -> blocking CLI command",
+        "disposition": "Changed: inner polling inherits outer expiry; remaining is zero after expiry and another CLI dispatch is refused.",
+        "timeout_scale": "explicit harness observation factor",
+        "limits": "CLI process creation and OS scheduling are cooperative; an unrelated subprocess timeout remains a separate failure."
+      },
+      {
+        "id": "workflow-terminal-polling",
+        "paths": [
+          "tests/hexagonal/support/managed_workflow.py",
+          "tests/hexagonal/support/terminal_host.py"
+        ],
+        "purpose": "harness allowance",
+        "boundary": "semantic observation -> condition or timeout",
+        "disposition": "Changed: shared bounded_wait; old return and exception policies preserved.",
+        "timeout_scale": "explicit harness observation factor",
+        "limits": "Generic predicates do not inherit native safe-conflict retry policy."
+      },
+      {
+        "id": "terminal-stream-observation",
+        "paths": [
+          "tests/hexagonal/support/managed_terminals.py"
+        ],
+        "purpose": "harness allowance",
+        "boundary": "socket/PTY marker receive",
+        "disposition": "Changed: socket and selector waits receive actual remainder with no positive floor.",
+        "timeout_scale": "explicit harness observation factor",
+        "limits": "EOF/missing-marker and underlying socket errors retain their previous meanings."
+      },
+      {
+        "id": "acceptance-client",
+        "paths": [
+          "scripts/acceptance/scenario.py",
+          "scripts/testkit/adapters/streams.py"
+        ],
+        "purpose": "scenario execution allowance",
+        "boundary": "scenario start -> request write -> complete response",
+        "disposition": "Changed: nonblocking writes and framed reads share the scenario Deadline.",
+        "timeout_scale": "not applied",
+        "limits": "Client close has separate 5 s graceful, 1 s terminate and 1 s kill stages; blocked remote work is not cancelled by an RPC timeout."
+      },
+      {
+        "id": "verification-host-readiness",
+        "paths": [
+          "scripts/verification/lifecycle.py",
+          "scripts/testkit/adapters/streams.py"
+        ],
+        "purpose": "harness startup allowance",
+        "boundary": "host launch -> complete ready frame",
+        "disposition": "Changed: incomplete lines cannot bypass startup bound; probe polling sleeps clamp.",
+        "timeout_scale": "not applied",
+        "limits": "Deferred host termination and kill each retain a separate 10 s cleanup allowance; readiness does not prove later completion."
+      },
+      {
+        "id": "composed-verification",
+        "paths": [
+          "scripts/verification/multi_harness.py"
+        ],
+        "purpose": "harness allowance",
+        "boundary": "dispatch -> snapshot -> checker predicate",
+        "disposition": "Changed: one Deadline bounds safe-conflict retry admission and sleeps.",
+        "timeout_scale": "not applied",
+        "limits": "Application calls, snapshots and final diagnostic save are synchronous cooperative work; outer command owns process watchdog."
+      },
+      {
+        "id": "command-lifecycle",
+        "paths": [
+          "scripts/testkit/adapters/command.py",
+          "scripts/testkit/core.py"
+        ],
+        "purpose": "execution and cancellation with separate cleanup",
+        "boundary": "spawn -> exit/check timeout/run cancel -> graceful then forced cleanup",
+        "disposition": "Changed: grace starts before TERM; forced 5 s shared across KILL, drain, reap and group verification; current check/run scope preserved.",
+        "timeout_scale": "not applied",
+        "limits": "Proc scans and scheduling can overrun; no claimed cancellation of detached or unidentified foreign processes."
+      },
+      {
+        "id": "acceptance-supervisor",
+        "paths": [
+          "scripts/testkit/adapters/supervised_run.py",
+          "scripts/acceptance/__main__.py"
+        ],
+        "purpose": "cooperative cleanup allowance",
+        "boundary": "worker termination -> host close -> owned survivor verification",
+        "disposition": "Changed: exact remaining terminal grace, no .1 floor; elapsed_seconds, overrun_seconds and cooperative budget scope retained.",
+        "timeout_scale": "not applied",
+        "limits": "Terminal observation, forced close tail and shutdown port calls have no total-call timeout. Outer command is independent watchdog."
+      },
+      {
+        "id": "managed-worker-cleanup",
+        "paths": [
+          "scripts/testkit/adapters/managed_process.py"
+        ],
+        "purpose": "separate cleanup phase allowances",
+        "boundary": "terminal close -> TERM grace -> 2 s KILL phase",
+        "disposition": "Changed: phase signals, observation and sleeps spend their own allowance; separate stages retained.",
+        "timeout_scale": "not applied",
+        "limits": "Host close/shutdown remain cooperative; kept presentation is excluded from work cleanup."
+      },
+      {
+        "id": "mcp-provider-exchange",
+        "paths": [
+          "xorchestrate/adapters/capabilities.py"
+        ],
+        "purpose": "runtime operation allowance",
+        "boundary": "connect/initialize -> initialized notification -> request",
+        "disposition": "Existing remaining-budget mechanism inspected; initialized-notify propagation belongs to the separate runtime transport candidate.",
+        "timeout_scale": "not applied",
+        "limits": "Runtime adapter semantics are independent of testkit harness scaling."
+      },
+      {
+        "id": "jsonrpc-request",
+        "paths": [
+          "xorchestrate/adapters/jsonrpc.py"
+        ],
+        "purpose": "runtime request allowance",
+        "boundary": "pending request admission -> bounded write -> response",
+        "disposition": "Retained existing write/response remaining-budget implementation.",
+        "timeout_scale": "not applied",
+        "limits": "Request timeout does not establish remote cancellation or unknown-effect replay safety."
+      },
+      {
+        "id": "bridge-peer-request",
+        "paths": [
+          "xorchestrate/adapters/bridge_transport.py"
+        ],
+        "purpose": "runtime request allowance",
+        "boundary": "writer admission -> frame send -> pending response",
+        "disposition": "Reviewed lock/write/response seam; remaining-budget implementation belongs to the separate runtime transport candidate.",
+        "timeout_scale": "not applied",
+        "limits": "Whole service reader/writer lifetimes remain distinct from individual requests."
+      },
+      {
+        "id": "unix-gateway-request",
+        "paths": [
+          "xorchestrate/adapters/unix.py",
+          "xorchestrate/adapters/native_gateway.py"
+        ],
+        "purpose": "runtime operation allowance",
+        "boundary": "connect -> handshake/control send -> framed read",
+        "disposition": "Reviewed per-I/O renewal seam; framed-operation propagation belongs to the separate runtime transport candidate.",
+        "timeout_scale": "not applied",
+        "limits": "Individual connection/read settings are not globally scaled or evidence of remote effect cancellation."
+      },
+      {
+        "id": "hosted-attach-probes",
+        "paths": [
+          "xorchestrate/adapters/hosted.py"
+        ],
+        "purpose": "runtime startup allowance",
+        "boundary": "endpoint discovery -> attach while terminal runs",
+        "disposition": "Retained cooperative attach loop and its existing adapter call settings; no new terminal-host timeout port introduced.",
+        "timeout_scale": "not applied",
+        "limits": "Outer loop does not preempt terminal-host calls; runtime transport fixes only bound their own applicable request phase."
+      },
+      {
+        "id": "native-driver-phases",
+        "paths": [
+          "xorchestrate/adapters/claude.py",
+          "xorchestrate/adapters/acp.py",
+          "xorchestrate/adapters/grok.py"
+        ],
+        "purpose": "configured startup, request and turn limits",
+        "boundary": "native launch/readiness; accepted submission; long-lived turn observation",
+        "disposition": "Retained separately configured driver phases; literal values alone do not establish a defect.",
+        "timeout_scale": "not applied",
+        "limits": "Submission timeout and completion timeout describe distinct observable boundaries and unknown outcomes."
+      },
+      {
+        "id": "evaluator-request",
+        "paths": [
+          "xorchestrate/adapters/evaluation.py"
+        ],
+        "purpose": "runtime evaluation allowance",
+        "boundary": "attempt/response body/retry -> result",
+        "disposition": "Retained existing monotonic body/retry remainder propagation.",
+        "timeout_scale": "not applied",
+        "limits": "A provider transport can still have independent lower-level connection/DNS semantics."
+      },
+      {
+        "id": "git-provider-commands",
+        "paths": [
+          "xorchestrate/adapters/github.py",
+          "xorchestrate/adapters/git_cli.py",
+          "xorchestrate/adapters/pr_workspace.py",
+          "xorchestrate/adapters/pr_github.py"
+        ],
+        "purpose": "per-command runtime settings",
+        "boundary": "one subprocess invocation -> completed result",
+        "disposition": "Retained configured per-invocation limits; no new aggregate PR/workflow deadline asserted.",
+        "timeout_scale": "not applied",
+        "limits": "A sequence of independently bounded commands is not one total-return guarantee."
+      },
+      {
+        "id": "storage-telemetry-bounds",
+        "paths": [
+          "xorchestrate/adapters/storage.py",
+          "xorchestrate/adapters/telemetry_collector/sqlite.py",
+          "xorchestrate/adapters/telemetry_capture.py",
+          "xorchestrate/adapters/telemetry_snapshot.py",
+          "xorchestrate/adapters/telemetry_export.py"
+        ],
+        "purpose": "storage contention, diagnostic drain/backup/export allowances",
+        "boundary": "one lock attempt, queue drain, snapshot backup or export",
+        "disposition": "Retained distinct existing units and purposes; telemetry cannot rewrite product outcomes.",
+        "timeout_scale": "not applied",
+        "limits": "SQLite busy_timeout_ms is milliseconds; diagnostic elapsed measurements remain local; optional telemetry timeout is not product latency proof."
+      },
+      {
+        "id": "service-lifetime-loops",
+        "paths": [
+          "xorchestrate/server.py",
+          "xorchestrate/adapters/native_terminal.py",
+          "scripts/testkit/operator_composition.py"
+        ],
+        "purpose": "service lifetime, heartbeats and operator attachment",
+        "boundary": "service starts -> explicit stop/process exit",
+        "disposition": "Retained intentionally ongoing listeners/reader loops and periodic service observation.",
+        "timeout_scale": "not applied",
+        "limits": "A loop without a global deadline can be intentional; request, stop and run-watchdog boundaries are reviewed separately."
+      },
+      {
+        "id": "fault-schedule-controls",
+        "paths": [
+          "scripts/verification/fixture.py",
+          "tests/hexagonal/support/native.py",
+          "tests/hexagonal/support/completion_runtime.py",
+          "tests/hexagonal/fixtures/controlled_gates.py",
+          "tests/hexagonal/support/e2e_disturbances.py"
+        ],
+        "purpose": "fault control and release watchdog",
+        "boundary": "arm/entry witness -> release -> completion",
+        "disposition": "Retained deliberate schedules and independent watchdogs; operation-bound gate work is a separate concurrent candidate.",
+        "timeout_scale": "never applied",
+        "limits": "A watchdog expiry is not proof the desired operation entered; causal gate observations remain required."
+      },
+      {
+        "id": "calendar-and-measurements",
+        "paths": [
+          "xorchestrate/adapters/recovery.py",
+          "xorchestrate/adapters/telemetry_export.py",
+          "scripts/ci/timings.py",
+          "scripts/testkit/timings.py"
+        ],
+        "purpose": "policy, local duration and CI performance estimate",
+        "boundary": "policy decision or local interval -> retained observation",
+        "disposition": "Retained purposes; no new persisted monotonic epoch or wall-time lease policy introduced.",
+        "timeout_scale": "not applied",
+        "limits": "WSL/CI clock-step prevalence and native suspend/resume qualification remain separate environment measurements, not deadline implementation evidence."
+      }
+    ]
+  }
 }

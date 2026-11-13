@@ -9,6 +9,11 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- Nested test-kit waits and blocking pipe observations consume their actual
+  remaining allowance, including partial readiness frames and saturated request
+  pipes. Command shutdown shares one forced-cleanup budget; cooperative host
+  cleanup reports overruns. Reviewed workflow and terminal observation helpers
+  also honor `XO_TEST_TIMEOUT_SCALE` without changing product or fault durations.
 - An ownerless `close` of a managed run ends a leftover process only when it names the run and the
   run's marker, its private endpoint or descent from one of those selects it; it no longer ends a
   process for naming the run alone. Its cleanup verdict is stricter: a process that names the run or

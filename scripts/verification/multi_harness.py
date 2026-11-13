@@ -29,11 +29,16 @@ from scripts.testkit.adapters.evidence import (
     write_json,
 )
 from scripts.testkit.core import CheckRecorder, ResourceScope
+from scripts.testkit.waits import Deadline
 
 from .checker import PEERS, VerificationFailure, check_case, native_inventory, normalize, verify
 
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURE = Path(__file__).with_name("build-log.json")
+
+
+class _ObservationDeadline(TimeoutError):
+    """Only the suite's own exhausted allowance becomes its observation verdict."""
 
 
 def snapshot(application):
@@ -115,7 +120,7 @@ class ComposedSuite:
         with self.application.store.transaction() as tx:
             tx.emit({"type": "verification.provider", "observation": deepcopy(event)})
 
-    def call(self, action, arguments):
+    def call(self, action, arguments, *, deadline=None):
         from xorchestrate.model import Conflict
         # Autonomous callbacks may change the authorization snapshot between
         # reading and reserving an effect. Retry only the application's explicit
@@ -124,12 +129,14 @@ class ComposedSuite:
         retryable = {"create_work", "add_actor", "start_session", "send_session",
                      "dispatch_deliveries", "verify_exchange"}
         for attempt in range(8):
+            if deadline is not None and deadline.remaining() <= 0:
+                raise _ObservationDeadline("verification observation deadline expired")
             try:
                 return self.application.call(action, arguments, actor="owner")
             except Conflict as error:
                 if action not in retryable or not error.details.get("retry_safe") or attempt == 7:
                     raise
-                time.sleep(.01)
+                time.sleep(.01 if deadline is None else deadline.remaining(.01))
 
     def raw_run(self):
         # Every published fixture event already has a committed marker. Read
@@ -159,10 +166,15 @@ class ComposedSuite:
         return run
 
     def wait(self, predicate, code):
-        deadline = time.monotonic() + self.timeout
+        # In-process application calls are cooperative. The process supervisor
+        # owns their hard watchdog; retries and sleeps share this local bound.
+        deadline = Deadline.after(self.timeout, clock=SystemClock())
         diagnostic = code
-        while time.monotonic() < deadline:
-            self.call("dispatch_deliveries", {})
+        while deadline.remaining() > 0:
+            try:
+                self.call("dispatch_deliveries", {}, deadline=deadline)
+            except _ObservationDeadline:
+                break
             run = self.raw_run()
             try:
                 result = predicate(run)
@@ -171,7 +183,9 @@ class ComposedSuite:
             except VerificationFailure as exc:
                 diagnostic = exc.assertion
             # Callback progress is autonomous; this loop does not call poll_session.
-            time.sleep(.025)
+            remaining = deadline.remaining(.025)
+            if remaining > 0:
+                time.sleep(remaining)
         self.save()
         raise VerificationFailure(diagnostic)
 

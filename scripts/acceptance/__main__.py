@@ -30,7 +30,7 @@ def main(argv=None):
     parser.add_argument("--shutdown-grace", type=float, default=10,
                         help="Bounded scenario finalization before owned escalation")
     parser.add_argument("--cleanup-budget", type=float,
-                        help="Internal total cleanup bound when nested beneath a command owner")
+                        help="Cooperative cleanup allowance when nested beneath a command owner")
     args = parser.parse_args(argv)
     try:
         validate_limits(max_sessions=args.max_sessions, max_turns=args.max_turns, max_tool_calls=args.max_tool_calls)

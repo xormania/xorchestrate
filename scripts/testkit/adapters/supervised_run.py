@@ -17,6 +17,8 @@ from pathlib import Path
 
 from xorchestrate.ports import TerminalCommand
 
+from ..waits import Deadline
+from .clock import SystemClock
 from .evidence import write_json
 from .ownership import OwnedProcesses, environment, processes, send_signal, subreaper
 
@@ -67,28 +69,30 @@ def supervise(command, run_dir, *, host, host_report=None, profile="fixture", ti
     tracker = None
     opened = False
     cleanup_deadline = None
+    clock = SystemClock()
 
     def remaining(bound):
         if cleanup_deadline is None:
             return bound
-        return max(0.0, min(bound, cleanup_deadline - time.monotonic()))
+        return cleanup_deadline.remaining(bound)
 
     def interrupt(number, frame):
         interrupted.append(number)
 
     def observe_wait(duration):
-        deadline = time.monotonic() + remaining(duration)
-        while time.monotonic() < deadline:
+        deadline = Deadline.after(remaining(duration), clock=clock)
+        while deadline.remaining() > 0:
             tracker.observe()
             tracker.reap()
-            time.sleep(min(0.02, max(0, deadline - time.monotonic())))
+            time.sleep(deadline.remaining(.02))
 
     def observation():
         return next((item for item in host.terminals() if item.name == TERMINAL), None)
 
     def finish():
         nonlocal cleanup_deadline
-        cleanup_deadline = time.monotonic() + cleanup_budget if cleanup_budget is not None else None
+        cleanup_started = clock.monotonic()
+        cleanup_deadline = Deadline.after(cleanup_budget, clock=clock) if cleanup_budget is not None else None
         errors = []
         forced = False
         if tracker:
@@ -100,19 +104,22 @@ def supervise(command, run_dir, *, host, host_report=None, profile="fixture", ti
                     # Timeout or interruption: close first. The host asks the worker alone to stop and gives it the
                     # grace (its children stay up for it to stop in order); what it prints meanwhile goes to the
                     # terminal's log, whose tail becomes the capture.
-                    closure = host.close_terminal(TERMINAL, grace=max(0.1, remaining(grace)))
+                    closure = host.close_terminal(TERMINAL, grace=remaining(grace))
                     if not closure.cleanup_verified:
                         errors.append("terminal_cleanup_unverified")
                     (run_dir / "pane.txt").write_text(_log_tail(run_dir / "terminal.log"), encoding="utf-8")
                 else:
                     (run_dir / "pane.txt").write_text(host.recent_output(TERMINAL, CAPTURE_LINES), encoding="utf-8")
-                    closure = host.close_terminal(TERMINAL, grace=max(0.1, remaining(grace)))
+                    closure = host.close_terminal(TERMINAL, grace=remaining(grace))
                     if not closure.cleanup_verified:
                         errors.append("terminal_cleanup_unverified")
             except (OSError, ValueError) as error:
                 errors.append(getattr(error, "code", "terminal_shutdown"))
         if host is not None:
             try:
+                # The port has no total-call timeout. Cleanup remains
+                # cooperative here; retain any overrun rather than claiming
+                # the configured allowance preempts the host.
                 host.shutdown()
             except (OSError, ValueError) as error:
                 errors.append(getattr(error, "code", "terminal_host_shutdown"))
@@ -134,12 +141,15 @@ def supervise(command, run_dir, *, host, host_report=None, profile="fixture", ti
             survivors = tracker.observe()
         else:
             survivors = []
-        if cleanup_deadline is not None and time.monotonic() >= cleanup_deadline:
+        elapsed = clock.monotonic() - cleanup_started
+        if cleanup_deadline is not None and cleanup_deadline.remaining() <= 0:
             errors.append("cleanup_deadline")
         report["cleanup"] = {"verified": not errors and not survivors,
                              "forced": forced, "remaining_processes": len(survivors),
                              "observed_processes": len(tracker.known) if tracker else 0, "errors": sorted(set(errors)),
-                             "budget_seconds": cleanup_budget, "scenario_grace_seconds": grace}
+                             "budget_seconds": cleanup_budget, "scenario_grace_seconds": grace,
+                             "budget_scope": "cooperative_cleanup", "elapsed_seconds": elapsed,
+                             "overrun_seconds": max(0, elapsed - cleanup_budget) if cleanup_budget is not None else None}
 
     try:
         if host is None:
@@ -155,7 +165,7 @@ def supervise(command, run_dir, *, host, host_report=None, profile="fixture", ti
         with subreaper():
             tracker = OwnedProcesses()
             try:
-                deadline = started + timeout
+                deadline = Deadline(started + timeout, clock)
                 before = tracker.children()
                 terminal = host.open_terminal(TERMINAL, TerminalCommand(
                     tuple(command), str(cwd or Path.cwd()), tuple(env.items()), ROWS, COLUMNS),
@@ -178,7 +188,7 @@ def supervise(command, run_dir, *, host, host_report=None, profile="fixture", ti
                     if interrupted:
                         report["failure"] = "interrupted"
                         break
-                    if time.monotonic() >= deadline:
+                    if deadline.remaining() <= 0:
                         report["failure"] = "timeout"
                         break
                     current = observation()
@@ -190,7 +200,7 @@ def supervise(command, run_dir, *, host, host_report=None, profile="fixture", ti
                             report["failure"] = "worker_signaled"
                         break
                     tracker.reap()
-                    time.sleep(0.05)
+                    time.sleep(deadline.remaining(.05))
             finally:
                 finish()
     except (OSError, ValueError, RuntimeError) as error:

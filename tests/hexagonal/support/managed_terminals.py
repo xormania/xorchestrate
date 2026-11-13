@@ -9,13 +9,13 @@ import struct
 import subprocess
 import sys
 import termios
-import time
 from contextlib import contextmanager
 from pathlib import Path
 
+from scripts.testkit.adapters.clock import SystemClock
 from xorchestrate.adapters import native_terminal
 
-from .native import wait_for
+from .native import observation_budget, wait_for
 
 
 @contextmanager
@@ -39,10 +39,13 @@ def native_terminal_process(directory, command):
 
 
 def receive_until(connection, marker, timeout=3):
-    deadline = time.monotonic() + timeout
+    deadline = observation_budget(timeout).start(SystemClock())
     result = bytearray()
-    while marker not in result and time.monotonic() < deadline:
-        connection.settimeout(max(deadline - time.monotonic(), .01))
+    while marker not in result:
+        remaining = deadline.remaining()
+        if remaining <= 0:
+            break
+        connection.settimeout(remaining)
         data = connection.recv(65536)
         if not data:
             break
@@ -107,10 +110,11 @@ def public_attached_terminal(workflow, directory):
 
 
 def receive_terminal_until(descriptor, marker, timeout=20):
-    deadline = time.monotonic() + timeout
+    deadline = observation_budget(timeout).start(SystemClock())
     result = bytearray()
-    while marker not in result and time.monotonic() < deadline:
-        if not select.select([descriptor], [], [], max(deadline - time.monotonic(), .01))[0]:
+    while marker not in result:
+        remaining = deadline.remaining()
+        if remaining <= 0 or not select.select([descriptor], [], [], remaining)[0]:
             break
         try:
             data = os.read(descriptor, 65536)

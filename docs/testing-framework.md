@@ -277,14 +277,19 @@ is clamped to the remaining allowance; no new poll starts at or after its deadli
 The native helper defaults to `harness_allowance`. Set `XO_TEST_TIMEOUT_SCALE`
 to a positive finite factor for a slower environment, or pass `timeout_scale`
 explicitly to override it. For example, `XO_TEST_TIMEOUT_SCALE=2 python3 -m
-scripts.testkit run --suite tests` doubles this helper's observation allowances.
+scripts.testkit run --suite tests` doubles the reviewed shared observation allowances:
+native `wait_for`, end-to-end `World.await_`, managed-workflow `await_condition`,
+terminal-host `wait`, and managed-terminal stream observations. These helpers
+share the native support adapter's `observation_budget` selection; generic
+workflow/terminal predicates retain their original immediate error propagation.
+Only the native helper retries explicitly safe `Conflict` errors.
 This setting does not scale product timeouts, fixture fault delays, arbitrary
 literal waits, command/run deadlines, or polling intervals. Existing callers
 retain their nominal timeout unless the factor is selected. An explicit
 `classification="product_guarantee"` or `"fault_control"` preserves its duration
 even with a selected factor. Invalid settings fail before any predicate or sleep.
 
-Timeouts remain `AssertionError` instances and keep the caller's message. Their
+Native helper timeouts remain `AssertionError` instances and keep the caller's message. Their
 `details` retain classification, requested/effective seconds, configured/applied
 factor, elapsed seconds, attempt count and retry count. Normal test-kit run and
 command receipts retain an explicitly set environment factor; that configured
@@ -303,6 +308,31 @@ controls exercise clock steps without physical waiting. Those controls govern
 the polling loop only; they do not virtualize subprocesses or external I/O, and
 do not replace the surrounding test command's real timeout. A fake sleeper that
 never advances its clock can stall the loop.
+
+`WaitBudget.start(clock, parent=...)` produces a running `Deadline`. A child
+shares its parent's clock and cannot extend its expiry. `remaining()` returns
+zero after exhaustion; callers never replace zero with a minimum positive
+timeout. End-to-end nested waits share the earliest boundary, and a new CLI
+command is refused once its enclosing wait has no allowance left. A complete
+in-flight predicate may still return its established late truthy result.
+
+The reviewed blocking boundaries use that same remainder:
+
+| Boundary | What the allowance covers | Expiry and cleanup |
+| --- | --- | --- |
+| Acceptance MCP client | Scenario start through pipe writing and response framing | Nonblocking partial writes/reads share the scenario deadline; failure names request or response. Closing the client has separate graceful 5 s, terminate 1 s and kill 1 s stages. |
+| External verification host | Launch through a complete readiness frame | Readability of an incomplete line cannot bypass the deadline. Deferred host cleanup retains its separate terminate/kill stages. |
+| Composed verification | One observation, its safe-conflict retries and polling sleeps | In-process application calls and snapshots remain cooperative; the surrounding command owns the independent process watchdog. An independent adapter timeout propagates unchanged. |
+| Command runner | Spawn, command execution and cancellation checks | Check expiry and run cancellation retain distinct scopes. Shutdown has a graceful allowance starting before TERM, then one 5 s forced-cleanup allowance shared by KILL, drain, reap and group verification. |
+| Acceptance supervisor | Remaining cleanup allowance passed to terminal grace and survivor waits | This is cooperative: terminal observation, the port's forced-close tail and `shutdown()` have no total-call budget. Receipts retain elapsed cleanup time, overrun and `cleanup_deadline`; the outer command remains the independent watchdog. |
+| Managed worker | Terminal-close grace, followed by separate TERM grace and 2 s KILL phase | These are intentionally separate phases. Signals, observation and sleeps consume each phase's allowance; retained presentation is excluded from work cleanup. |
+
+These execution and cleanup allowances are not multiplied by the observation
+scale. Filesystem/proc scans, Python callbacks, terminal-host port calls and
+scheduler latency can exceed a requested wait: no helper claims a strict total
+wall-time return bound. Persisted calendar policy, service-lifetime loops and
+deliberate gate watchdogs retain their existing meanings. The reviewed inventory
+and unchanged categories are recorded in [temporal uses](temporal-uses.json).
 
 See [selectable local stories](local-stories.md) for the story catalog, bounded
 controller requests, native callback selection and managed tmux automation.
