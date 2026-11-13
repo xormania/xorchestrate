@@ -316,7 +316,9 @@ def managed_worker(directory, plan):
 
 
 RUN_MARKER = "XORCHESTRATE_PROOF_DIRECTORY"
-"""Set to the run directory in the environment of what a managed run launches (``ManagedWorker``)."""
+"""The run directory, in the worker's and dashboard's environment (``ManagedWorker``, ``worker``) and inherited
+by their children, except non-live check commands, which blank it (``composition``): those are selected only
+as descendants of a live worker."""
 
 
 def _selected(directory, placement, within=None):
