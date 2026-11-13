@@ -38,9 +38,28 @@ def processes():
     return result
 
 
+def _identity_of(pid):
+    """``(Identity, state)`` of the one process ``pid``, read as ``processes`` reads it, or None if it is gone.
+
+    Answers only what a scan of /proc lists: a process by its integer id, never a thread of one, since a
+    signal sent to a thread's id reaches its whole process.
+    """
+    if type(pid) is not int or pid <= 0:
+        return None
+    try:
+        fields = Path(f"/proc/{pid}/stat").read_text().rsplit(") ", 1)[1].split()
+        leader = next(line for line in Path(f"/proc/{pid}/status").read_text().splitlines() if line.startswith("Tgid:"))
+        if int(leader.split()[1]) != pid:
+            return None
+        return Identity(pid, int(fields[19])), fields[0]
+    except (OSError, ValueError, IndexError, StopIteration):
+        return None
+
+
 def alive(identity):
-    current = processes().get(identity.pid)
-    return current is not None and current[0] == identity and current[2] != "Z"
+    """Whether this exact identity (pid and start time) still runs; a zombie is dead. Reads only that process."""
+    current = _identity_of(identity.pid)
+    return current is not None and current[0] == identity and current[1] != "Z"
 
 
 def send_signal(identity, number):

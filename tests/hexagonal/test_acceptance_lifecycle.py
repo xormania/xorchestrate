@@ -6,6 +6,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -86,13 +87,94 @@ def test_fixture_child_import_keeps_bytecode_outside_source(tmp_path, monkeypatc
     assert bool(list(cache.rglob("cache_probe*.pyc"))) == (policy == "external")
 
 
-def test_reused_pid_is_never_signaled(monkeypatch):
-    called = []
-    monkeypatch.setattr(ownership, "processes", lambda: {100: (ownership.Identity(100, 20), 1, "S")})
-    monkeypatch.setattr(ownership.os, "kill", lambda *args: called.append(args))
-    monkeypatch.setattr(ownership.os, "pidfd_open", lambda *args: called.append(args))
-    ownership.send_signal(ownership.Identity(100, 10), signal.SIGTERM)
-    assert called == []
+ECHO_HELD_ON_STDIN = ("import sys\n"
+                      "for line in sys.stdin.buffer:\n"
+                      "    sys.stdout.buffer.write(line); sys.stdout.buffer.flush()\n")
+"""A child that answers each line it reads and lives until the test closes its stdin or dies itself, never longer."""
+
+
+def held_child():
+    return subprocess.Popen([sys.executable, "-c", ECHO_HELD_ON_STDIN], stdin=subprocess.PIPE,
+                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+
+
+def answers(child):
+    """Whether the child still answers: a signal already sent to it is pending, so a killed child cannot answer."""
+    try:
+        child.stdin.write(b"still here\n")
+        child.stdin.flush()
+        return child.stdout.readline() == b"still here\n"
+    except BrokenPipeError:
+        return False
+
+
+def end(child):
+    if child.poll() is None:
+        child.kill()
+    for stream in (child.stdin, child.stdout):
+        try:
+            stream.close()
+        except BrokenPipeError:
+            pass
+    child.wait(timeout=10)
+
+
+def test_reused_pid_is_never_signaled():
+    """A live process under a pid the kit once knew with another start time is what a reused pid looks like."""
+    child = held_child()
+    try:
+        identity = ownership.processes()[child.pid][0]
+        reused = ownership.Identity(child.pid, identity.started + 1)
+        ownership.send_signal(reused, signal.SIGKILL)
+        assert answers(child), "a reused pid was signalled"
+    finally:
+        end(child)
+
+
+@pytest.mark.parametrize("given", ["text", "thread"])
+def test_liveness_answers_only_for_a_process_id_given_as_a_number(given):
+    """Only a process, by its integer id, is alive: never the same id given as text, nor the id of one of its
+    threads even with that thread's real start time. A scan of every process listed neither."""
+    me = ownership.processes()[os.getpid()][0]
+    ready, release = threading.Event(), threading.Event()
+    worker = threading.Thread(target=lambda: (ready.set(), release.wait()), daemon=True)
+    worker.start()
+    try:
+        assert ready.wait(timeout=10)
+        thread_id = worker.native_id
+        assert thread_id != os.getpid()
+        fields = Path(f"/proc/{os.getpid()}/task/{thread_id}/stat").read_text().rsplit(") ", 1)[1].split()
+        asked = {"text": ownership.Identity(str(me.pid), me.started),
+                 "thread": ownership.Identity(thread_id, int(fields[19]))}[given]
+        assert ownership.alive(me)
+        assert not ownership.alive(asked), f"a {given} id is alive: {asked}"
+    finally:
+        release.set()
+        worker.join(timeout=10)
+
+
+def test_liveness_reads_the_one_process_it_is_asked_about(monkeypatch):
+    """``alive`` answers from that process's own entry, never from a scan of every process on the machine."""
+    me = ownership.processes()[os.getpid()][0]
+    zombie, gone = held_child(), held_child()
+    try:
+        dead = ownership.processes()[zombie.pid][0]
+        reaped = ownership.processes()[gone.pid][0]
+        zombie.kill()
+        os.waitid(os.P_PID, zombie.pid, os.WEXITED | os.WNOWAIT)  # exited, left unreaped: a zombie
+        end(gone)
+
+        def scan():
+            raise AssertionError("alive() scanned every process")
+
+        monkeypatch.setattr(ownership, "processes", scan)
+        assert ownership.alive(me)
+        assert not ownership.alive(ownership.Identity(me.pid, me.started + 1)), "another start time is alive"
+        assert not ownership.alive(dead), "a zombie is alive"
+        assert not ownership.alive(reaped), "a reaped process is alive"
+    finally:
+        end(zombie)
+        end(gone)
 
 
 @pytest.mark.parametrize("already_spawned", [True, False], ids=["initial-descendant", "later-observed-descendant"])
