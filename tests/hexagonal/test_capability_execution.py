@@ -56,8 +56,9 @@ def test_receipt_local_settlement_failure_and_reconciliation_keep_payloads_ephem
     receipt_settlement_contract(Subject(store, "receipt"))
 
 
-def test_native_receipt_reconciliation_returns_success_and_replays_without_payloads(store):
-    native_receipt_reconciliation_contract(Subject(store, "receipt"))
+@pytest.mark.parametrize("outcome", ["completed", "failed"])
+def test_native_receipt_reconciliation_returns_success_and_replays_without_payloads(store, outcome):
+    native_receipt_reconciliation_contract(Subject(store, "receipt"), outcome)
 
 
 @pytest.mark.parametrize("mode", ["journaled", "receipt"])

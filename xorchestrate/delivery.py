@@ -263,8 +263,8 @@ class DeliveryMixin:
                 observation["result"] = {"result_retained": False}
                 if isinstance(result, dict) and isinstance(result.get("operation_id"), str):
                     observation["result"]["operation_id"] = result["operation_id"]
-                    if result.get("status") == "completed":
-                        observation["result"]["status"] = "completed"
+                    if result.get("status") in {"completed", "failed"}:
+                        observation["result"]["status"] = result["status"]
         session_id = context.get("session_id")
         if not session_id:
             raise OrchestrationError("Native observation has no application session binding.", "session_identity")
@@ -462,9 +462,11 @@ class DeliveryMixin:
             result = self.call(action_name, arguments, actor=context["actor"], native_context=context)
             completed = True
             operation_id = result.get("operation_id")
+            operation_status = "completed"
             if operation_id is None and isinstance(result.get("operation"), dict):
                 operation_id = result["operation"].get("id")
-            receipt = effect_receipt(operation_id) if policy["mode"] == "receipt" else {"result_retained": False}
+                operation_status = result["operation"]["status"]
+            receipt = effect_receipt(operation_id, operation_status) if policy["mode"] == "receipt" else {"result_retained": False}
             self.observe_native(driver_name, context, {**native, "phase": "completed", "result": receipt})
             with self.store.transaction() as tx:
                 row = self._require(tx, "native_call", identity)
