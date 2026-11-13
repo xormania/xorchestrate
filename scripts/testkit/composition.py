@@ -260,6 +260,15 @@ def readiness(check, *, root, mode, config=None, driver=None, brief=None, famili
         items.extend({"name": path, "passed": False, "reason": "Required input is absent"} for path in missing)
         if check.name == "ruff":
             items.append({"name": "ruff", "passed": importlib.util.find_spec("ruff") is not None})
+        if check.name == "zizmor":
+            from .adapters.static import _zizmor_executable
+
+            try:
+                executable = _zizmor_executable(cache_environment(Path(root).resolve()))
+            except (OSError, ValueError) as error:
+                items.append({"name": "zizmor", "passed": False, "reason": str(error)})
+            else:
+                items.append({"name": "zizmor", "passed": True, "path": executable})
         if check.name == "tests":
             from .adapters.pytest_plugin import load_catalog, shard_selection
             from .catalog import select_families

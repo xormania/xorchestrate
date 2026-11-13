@@ -1,0 +1,13 @@
+rules:
+  dangerous-triggers:
+    # These handlers run trusted default-branch code and collect only bounded event evidence.
+    ignore:
+      - jev-events.yml:85
+      - jev-events.yml:94
+      - jev.yml:4
+  github-env:
+    # These writes use fixed runner-temporary paths and trusted commit-SHA values.
+    ignore:
+      - jev-events.yml:31
+      - jev.yml:58
+      - jev.yml:72
