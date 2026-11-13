@@ -131,14 +131,13 @@ def driver_observation_policy_contract(subject, observation, boundary):
     assert all(row["session_id"] == subject.native_context["session_id"]
                and row["observation"]["native_id"] == subject.native_context["native_id"]
                and row["observation"]["incarnation"] == subject.native_context["incarnation"] for row in rows)
-    source_data = {"observations": rows, "capture": retained["capture"]}
     durable = json.dumps(rows)
     assert "PRIVATE_PROVIDER_ARGUMENT" in durable and "PRIVATE_PROVIDER_RESULT" in durable, \
         "CONTROL_JOURNALED_MODE_MUST_KEEP_NATIVE_CORRECTNESS_EVIDENCE"
     if observation == "none":
         assert not retained["capture"], "DRIVER_OBSERVATION_NONE_MUST_SUPPRESS_OPTIONAL_CAPTURE"
     else:
-        encoded = json.dumps(source_data)
+        encoded = json.dumps(retained["capture"])
         assert "PRIVATE_PROVIDER_ARGUMENT" in encoded and "PRIVATE_PROVIDER_RESULT" in encoded, \
             "CONTROL_FULL_DRIVER_CAPTURE_MUST_KEEP_REQUEST_AND_RESULT"
         assert {event["event_type"] for event in retained["capture"]} >= {"native.native_tool_call", "native.native_tool_result"}
