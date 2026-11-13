@@ -181,17 +181,17 @@ def world(host, *, clock=None, sleep=None, gates=None):
     directory for controlled gates; by default one inside the world, removed with it.
     """
     with short_directory() as directory:
-        scope = ResourceScope()
         cli = CliEnvironment(directory, terminal_host={"adapter": HOSTS[host]})
+        gate_directory = directory / "gates" if gates is None else gates
+        gate_directory.mkdir(parents=True, exist_ok=True)
+        value = World(cli, host, clock=clock, sleep=sleep, gates=gate_directory)
         try:
             probe = cli.json("status", expect=3)["terminal_host"]
             if probe.get("error") or probe.get("adapter") != HOSTS[host]:
                 pytest.skip(f"terminal host unavailable: {probe}")
-            gate_directory = directory / "gates" if gates is None else gates
-            gate_directory.mkdir(parents=True, exist_ok=True)
             cli.options["sessions"] = _session_options(directory / "peer-ledger.jsonl", gate_directory)
-            yield World(cli, host, clock=clock, sleep=sleep, gates=gate_directory, scope=scope)
+            yield value
         finally:
-            scope.close()  # release anything held first, so shutting the project down cannot stall on it
+            value.scope.close()  # release anything held first, so shutting the project down cannot stall on it
             cli.cleanup()
-            e2e_disturbances.reap(directory)
+            e2e_disturbances.reap(value)

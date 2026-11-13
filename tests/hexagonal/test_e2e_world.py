@@ -325,3 +325,297 @@ def test_after_a_total_loss_a_manual_world_awaits_the_recovery_decision_without_
         assert detected["unclean_stop"] is True and detected["selected"] == [], detected
         assert sum(clock.sleeps) < 1, f"the boundary was reached by waiting, not observed: {clock.sleeps}"
         assert alive(sentinel)
+
+
+# Gaps found by planted faults -------------------------------------------------------------------
+
+def test_a_victim_that_survives_the_grace_fails_the_disturbance_naming_its_receipt(monkeypatch, sentinel):
+    monkeypatch.setenv("XO_TEST_TIMEOUT_SCALE", "0.05")
+    with World("detached-process") as world:
+        running(world)
+        with monkeypatch.context() as during:
+            during.setattr(ownership(), "send_signal", lambda identity, number: None)  # the signal never lands
+            with pytest.raises(AssertionError, match="total_loss"):
+                world.disturb(contract().TotalLoss())
+        assert world.processes(), "nothing should have died without a signal"
+        assert alive(sentinel)
+
+
+def test_the_remaining_budget_never_reaches_zero_at_the_deadline():
+    clock = ControlledClock()
+    seen = []
+
+    def predicate():
+        clock.advance(elapsed=31)
+        seen.append(world.remaining())
+        return True
+
+    with World("detached-process", clock=clock, sleep=clock.sleep) as world:
+        world.await_("past the deadline", predicate, timeout=30)
+    assert seen and seen[0] > 0, seen
+
+
+def test_there_is_no_remaining_budget_outside_an_await():
+    clock = ControlledClock()
+    with World("detached-process", clock=clock, sleep=clock.sleep) as world:
+        assert world.remaining() is None
+        world.await_("instant", lambda: True, timeout=5)
+        assert world.remaining() is None, "a finished wait left its budget behind"
+
+
+# Pre-draft review findings ----------------------------------------------------------------------
+
+def outside_process(argv_suffix_path):
+    """A same-user process outside the world (cwd elsewhere) whose arguments merely mention ``argv_suffix_path``."""
+    outside = Path(track(tempfile.mkdtemp(prefix="xo-outside-")))
+    process = subprocess.Popen([sys.executable, "-c", "import time, sys; time.sleep(120)", argv_suffix_path],
+                               cwd=outside, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                               stderr=subprocess.DEVNULL)
+    return process, outside
+
+
+def end(process, outside):
+    process.kill()
+    process.wait(timeout=10)
+    os.rmdir(outside)
+
+
+@pytest.mark.parametrize("kind", ["TotalLoss", "ServerLoss", "teardown"])
+def test_a_process_outside_the_world_that_only_names_its_directory_survives(kind, sentinel):
+    with World("detached-process") as world:
+        running(world)
+        mentions = [outside_process(str(world.directory) + "/home/x.log"),
+                    outside_process(str(world.directory) + "x")]
+        try:
+            identities = [next(item for pid, (item, _, _) in ownership().processes().items() if pid == process.pid)
+                          for process, _ in mentions]
+            if kind != "teardown":
+                world.disturb(getattr(contract(), kind)())
+                assert all(alive(item) for item in identities), "a process outside the world was killed"
+        except BaseException:
+            for pair in mentions:
+                end(*pair)
+            raise
+    try:
+        assert all(alive(item) for item in identities), "leaving the world killed a process outside it"
+        assert alive(sentinel)
+    finally:
+        for pair in mentions:
+            end(*pair)
+
+
+def test_a_server_loss_after_the_server_is_gone_reports_no_victim(sentinel):
+    with World("detached-process") as world:
+        running(world)
+        extra = sleeper(world)
+        assert_applied(world.disturb(contract().ServerLoss()), "server_loss")
+        receipt = world.disturb(contract().ServerLoss())
+        assert receipt.outcome == "no_victim" and list(receipt.before) == [], receipt
+        assert alive(extra) and alive(sentinel)
+
+
+def test_a_blocking_call_cut_off_at_the_deadline_is_an_expired_wait(monkeypatch):
+    project_server = importlib.import_module("tests.hexagonal.support.project_server")
+    clock = ControlledClock()
+    with World("detached-process", clock=clock, sleep=clock.sleep) as world:
+        running(world)
+
+        def cut_off(*args, **kwargs):
+            raise subprocess.TimeoutExpired(args[0] if args else "command", kwargs.get("timeout"))
+
+        with monkeypatch.context() as during:
+            during.setattr(project_server.subprocess, "run", cut_off)
+            with pytest.raises(contract().WaitExpired, match="status at the deadline"):
+                world.await_("status at the deadline", lambda: world.status(), timeout=5)
+
+
+def test_an_inner_await_never_gets_more_time_than_the_outer_one_has_left():
+    clock = ControlledClock()
+    seen = []
+    with World("detached-process", clock=clock, sleep=clock.sleep) as world:
+        def inner():
+            seen.append(world.remaining())
+            return True
+
+        world.await_("outer", lambda: world.await_("inner", inner, timeout=60), timeout=2)
+    assert seen and all(value <= 2 for value in seen), seen
+
+
+def test_a_stage_can_be_held_again_after_release(sentinel):
+    with World("detached-process") as world:
+        first = world.hold("hang")
+        done = world.directory / "first-done"
+        gate_peer(world, first, "hang", done)
+        world.await_("first peer held", first.entered)
+        first.release()
+        world.await_("first peer through", done.exists)
+        second = world.hold("hang")
+        assert not second.entered(), "a re-armed gate reports the earlier peer's entry"
+        again = world.directory / "second-done"
+        gate_peer(world, second, "hang", again)
+        world.await_("second peer held", second.entered)
+        time.sleep(0.3)
+        assert not again.exists(), "a re-armed gate let its peer through"
+        second.release()
+        world.await_("second peer through", again.exists)
+        assert alive(sentinel)
+
+
+def test_total_loss_also_kills_a_world_process_that_appears_after_identification(monkeypatch, sentinel):
+    real = ownership().send_signal
+    late = []
+    with World("detached-process") as world:
+        running(world)
+
+        def spawning_first(identity, number):
+            if not late:
+                late.append(sleeper(world))
+            return real(identity, number)
+
+        with monkeypatch.context() as during:
+            during.setattr(ownership(), "send_signal", spawning_first)
+            try:
+                receipt = world.disturb(contract().TotalLoss())
+            except AssertionError:
+                receipt = None  # raising about it is also acceptable
+        assert late, "the hook never ran"
+        if receipt is not None:
+            assert late[0] in receipt.before, "a world process born during the disturbance is missing from it"
+            assert not alive(late[0]), "a world process born during the disturbance survived it"
+        assert alive(sentinel)
+
+
+def test_a_surviving_victim_fails_the_disturbance_before_its_sockets_are_removed(monkeypatch, sentinel):
+    monkeypatch.setenv("XO_TEST_TIMEOUT_SCALE", "0.05")
+    real = ownership().send_signal
+    with World("detached-process") as world:
+        running(world)
+        spared = sleeper(world)
+        sockets = sockets_under(world.directory)
+        with monkeypatch.context() as during:
+            during.setattr(ownership(), "send_signal",
+                           lambda identity, number: None if identity == spared else real(identity, number))
+            with pytest.raises(AssertionError, match=str(spared.pid)):
+                world.disturb(contract().TotalLoss())
+        assert sockets and sockets_under(world.directory) == sockets, "sockets were removed before the failure"
+        assert alive(sentinel)
+
+
+def test_leaving_a_world_reports_a_process_it_could_not_stop(monkeypatch, sentinel):
+    monkeypatch.setenv("XO_TEST_TIMEOUT_SCALE", "0.05")
+    real = ownership().send_signal
+    spared = []
+    try:
+        with pytest.raises(AssertionError, match="left"):
+            with World("detached-process") as world:
+                spared.append(sleeper(world))
+                monkeypatch.setattr(ownership(), "send_signal",
+                                    lambda identity, number: None if identity in spared else real(identity, number))
+    finally:
+        monkeypatch.setattr(ownership(), "send_signal", real)
+        for identity in spared:
+            real(identity, 9)
+    assert alive(sentinel)
+
+
+# The selector: the world's own home in the environment, or what the world spawned --------------------
+
+def started(argv, *, cwd, env):
+    process = subprocess.Popen(argv, cwd=cwd, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                               stderr=subprocess.DEVNULL)
+    identity = ownership().processes()[process.pid][0]
+    return process, identity
+
+
+def stop(process):
+    if process.poll() is None:
+        process.kill()
+    process.wait(timeout=10)
+
+
+def without_home():
+    return {name: value for name, value in os.environ.items() if name != "XORCHESTRATE_HOME"}
+
+
+@pytest.mark.parametrize("home", ["none", "another"])
+@pytest.mark.parametrize("kind", ["TotalLoss", "teardown"])
+def test_a_process_inside_the_worlds_tree_without_its_home_survives(kind, home, sentinel):
+    other = Path(track(tempfile.mkdtemp(prefix="xo-other-home-")))
+    env = without_home() if home == "none" else {**without_home(), "XORCHESTRATE_HOME": str(other)}
+    with World("detached-process") as world:
+        running(world)
+        inside = world.directory / "inside"
+        inside.mkdir()
+        process, identity = started([sys.executable, "-c", "import time; time.sleep(120)"], cwd=inside, env=env)
+        try:
+            if kind == "TotalLoss":
+                receipt = world.disturb(contract().TotalLoss())
+                assert identity not in receipt.before and alive(identity), "a process without the world's home was taken"
+        except BaseException:
+            stop(process)
+            raise
+    try:
+        assert alive(identity), "leaving the world killed a process without its home"
+        assert alive(sentinel)
+    finally:
+        stop(process)
+        os.rmdir(other)
+
+
+def test_a_process_carrying_the_worlds_home_is_taken_wherever_it_runs(sentinel):
+    outside = Path(track(tempfile.mkdtemp(prefix="xo-outside-")))
+    with World("detached-process") as world:
+        running(world)
+        env = {**without_home(), "XORCHESTRATE_HOME": str(world.cli.home)}
+        process, identity = started([sys.executable, "-c", "import time; time.sleep(120)"], cwd=outside, env=env)
+        try:
+            receipt = world.disturb(contract().TotalLoss())
+            assert identity in receipt.before and not alive(identity), "a process of the world's home was missed"
+        finally:
+            stop(process)
+    os.rmdir(outside)
+    assert alive(sentinel)
+
+
+def test_a_world_whose_home_it_did_not_create_refuses_to_disturb(monkeypatch, sentinel):
+    foreign = Path(track(tempfile.mkdtemp(prefix="xo-foreign-home-")))
+    signalled = []
+    with World("detached-process") as world:
+        running(world)
+        monkeypatch.setattr(world.cli, "home", foreign)
+        with monkeypatch.context() as during:
+            during.setattr(ownership(), "send_signal", lambda identity, number: signalled.append(identity))
+            with pytest.raises((AssertionError, ValueError, RuntimeError)):
+                world.disturb(contract().TotalLoss())
+        assert signalled == [], "a world with a home it did not create signalled something"
+        monkeypatch.undo()
+    os.rmdir(foreign)
+    assert alive(sentinel)
+
+
+NOT_DUMPABLE = ("import ctypes, time; ctypes.CDLL(None).prctl(4, 0, 0, 0, 0);"  # PR_SET_DUMPABLE 0
+                "open(__import__('sys').argv[1], 'w').write('ready'); time.sleep(120)")
+
+
+def test_a_process_whose_environment_cannot_be_read_is_not_a_victim(tmp_path, sentinel):
+    outside = Path(track(tempfile.mkdtemp(prefix="xo-outside-")))
+    ready = tmp_path / "ready"
+    with World("detached-process") as world:
+        running(world)
+        env = {**without_home(), "XORCHESTRATE_HOME": str(world.cli.home)}
+        process, identity = started([sys.executable, "-c", NOT_DUMPABLE, str(ready)], cwd=outside, env=env)
+        try:
+            deadline = time.monotonic() + 10
+            while not ready.exists() and time.monotonic() < deadline:
+                time.sleep(0.05)
+            try:
+                Path(f"/proc/{process.pid}/environ").read_bytes()
+                pytest.skip("this kernel lets the same user read a non-dumpable process's environment")
+            except PermissionError:
+                pass
+            receipt = world.disturb(contract().TotalLoss())
+            assert identity not in receipt.before and alive(identity), "an unreadable environment was taken"
+        finally:
+            stop(process)
+    os.rmdir(outside)
+    assert alive(sentinel)
