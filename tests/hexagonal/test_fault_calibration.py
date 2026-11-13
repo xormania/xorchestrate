@@ -511,12 +511,14 @@ def _test_source(target):
     return ast.get_source_segment(path.read_text(encoding="utf-8"), nodes[0])
 
 
-def test_every_registered_target_test_carries_its_diagnostic_text():
+def test_every_registered_case_carries_its_diagnostic_text_where_it_asserts():
+    """In the target test, or in the contract function the case declares."""
     _, inventories = _real()
     for name, inventory in inventories.items():
         for fault in inventory.cases:
             assert fault.target in {module_form(selector) for selector in fault.selectors}, (name, fault.name)
-            assert fault.diagnostic in _test_source(fault.target), (name, fault.name, fault.diagnostic)
+            site = fault.contract.replace(":", "::", 1) if fault.contract else fault.target
+            assert fault.diagnostic in _test_source(site), (name, fault.name, site, fault.diagnostic)
 
 
 def test_the_migrated_native_inventory_gives_todays_verdicts_on_this_candidate(tmp_path):
