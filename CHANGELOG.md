@@ -9,6 +9,9 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- Acceptance and tool evaluation share semantic provider-result decoding while
+  preserving the exact raw evidence. Direct measurements can include business
+  `content`; MCP assessment JSON text with duplicate fields is now refused.
 - CI runs eight application-test shards with refreshed fallback weights and a shared artifact-based timing model that updates from complete qualified runs.
 - Small advisory Jev probes select PR review attention, examine specific findings
   and classify failed CI evidence in trusted event workflows. Their bounded,
@@ -262,6 +265,12 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   are selected adapters (`corpus`, `artifacts`). `composition.build()` accepts
   `telemetry_defaults` to construct the local collector when a configuration
   has no telemetry section.
+- Operational telemetry accepts a nested `sink` adapter selection, including
+  trusted installed factories, through the existing composition resolver.
+  Current flat local/OTLP options keep working; sampling, bounded dispatch and
+  local corpus capture remain shared. Approval summaries and `doctor` disclose
+  external sink factory references without importing their code. See
+  [telemetry options](docs/telemetry.md#configuration-options).
 - `telemetry_status` reports a bounded `cause` when telemetry is unavailable.
 - A shared project server, so several agent harnesses use one application,
   state store and set of live sessions (see
@@ -409,7 +418,11 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   (or a typed code) instead of an exception class name; terminal host errors
   and readiness reasons carry an errno name. `application.failed` telemetry no
   longer has `error.type`. Consumers matching class names should match codes.
-- **Adapter options and custom adapters:** None changed. Third-party adapters
+- **Adapter options and custom adapters:** local telemetry adds optional
+  `operational.sink` selection through the existing trusted resolver. Current
+  flat local/OTLP settings keep working; no configuration migration is needed.
+  Nested sink factories receive `(options, CollectorScope)` and expose `emit`;
+  this internal kind is not a new public xcontracts kind. Third-party adapters
   that import from `xorchestrate.ports` or `xorchestrate.model` keep working;
   new adapters should depend on `xcontracts>=0.1,<0.2` instead. `xcontracts`
   is a new runtime dependency.

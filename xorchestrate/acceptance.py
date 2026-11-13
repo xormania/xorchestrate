@@ -6,7 +6,6 @@ boundary; caller prose and evaluator confidence are not mechanical proof.
 """
 from __future__ import annotations
 
-import json
 from copy import deepcopy
 from typing import Callable
 
@@ -19,18 +18,14 @@ from .model import (
     canonical_digest,
     public_error_code,
     record_view,
-    unique_keys,
 )
 from .ports import AcceptancePolicy, Clock, StateStore, Transaction
+from .provider_results import ProviderResultError, read_provider_result
 
 
 def _same(left, right):
     # Python equality conflates JSON booleans with numbers.
     return canonical_digest(left) == canonical_digest(right)
-
-
-def _invalid_constant(value):
-    raise ValueError("Nonfinite measurement value")
 
 
 _STRING = {"type": "string", "minLength": 1}
@@ -74,20 +69,12 @@ ACCEPTANCE_ACTIONS = {
 
 
 def _observation(raw):
-    """Unwrap provider transport envelopes without inventing measurement fields."""
-    if not isinstance(raw, dict) or raw.get("isError"):
+    """Read a measurement without inventing its domain fields."""
+    try:
+        value = read_provider_result(raw, direct_field="measurement")
+    except ProviderResultError:
         return None
-    if "structuredContent" in raw:
-        raw = raw["structuredContent"]
-    elif "content" in raw:
-        blocks = raw["content"]
-        if not isinstance(blocks, list) or len(blocks) != 1 or not isinstance(blocks[0], dict) or blocks[0].get("type") != "text":
-            return None
-        try:
-            raw = json.loads(blocks[0]["text"], object_pairs_hook=unique_keys("Duplicate measurement field"), parse_constant=_invalid_constant)
-        except (KeyError, ValueError, TypeError, RecursionError):
-            return None
-    return raw.get("measurement") if isinstance(raw, dict) and isinstance(raw.get("measurement"), dict) else None
+    return value.get("measurement") if isinstance(value.get("measurement"), dict) else None
 
 
 def assessment_configuration_identity(assessment, evaluator_configurations):
