@@ -154,6 +154,7 @@
       "guarantee": "Independent checker observations, verdicts and fault attribution establish the selected candidate behavior without using product verdicts as the oracle.",
       "modules": {
         "tests/hexagonal/test_verification.py": "calibration",
+        "tests/hexagonal/test_calibrated_checks.py": "calibration",
         "tests/hexagonal/test_verification_decoders.py": "adapter",
         "tests/hexagonal/test_lifecycle_runner.py": "composition",
         "tests/hexagonal/test_calibration_attribution.py": "calibration",

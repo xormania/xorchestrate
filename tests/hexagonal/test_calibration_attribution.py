@@ -170,3 +170,69 @@ def test_missing_instruction_positions_cannot_earn_detection(tmp_path, monkeypat
     assert classify_work(mutant_command["exit_status"], Path(mutant_command["xml"]), "test_target", MARKER)["classification"] == "unrelated_failure"
     assert mutant[TARGET]["attribution"]["instruction_span"] is None
     assert mutant[TARGET]["attribution"]["target_assertion"] is False
+
+
+# Checks declared in a contract function ------------------------------------------------------------
+
+CONTRACT = "contract_probe:check"
+CONTRACT_SOURCE = (f"def check(value):\n    assert value == 1, '{MARKER}'\n"
+                   f"def other_check(value):\n    assert value == 1, '{MARKER}'\n")
+RAISING_SOURCE = f"def check(value):\n    if value != 1:\n        raise AssertionError('{MARKER}')\n"
+DECORATED_SOURCE = ("import functools\n"
+                    "def logged(function):\n    @functools.wraps(function)\n"
+                    "    def wrapper(*args):\n        return function(*args)\n    return wrapper\n"
+                    f"@logged\ndef check(value):\n    assert value == 1, '{MARKER}'\n")
+
+
+def run_contract_subject(root, value, *, body="check(compute())", source=CONTRACT_SOURCE, contract=CONTRACT):
+    # Imported here so this section merges cleanly with the slice that re-points the module's own imports.
+    from scripts.verification.__main__ import observed_pytest
+
+    root.mkdir(parents=True)
+    (root / "contract_probe.py").write_text(source)
+    names = "check, other_check" if "other_check" in source else "check"
+    (root / "test_probe.py").write_text(
+        f"from contract_probe import {names}\n"
+        f"def compute():\n    return {value}\n"
+        "def helper(value):\n    check(value)\n"
+        f"def test_target():\n    {body}\n"
+        f"def {CONTROL}():\n    assert True\n")
+    command = observed_pytest(root, root / "result", ["test_probe.py"], timeout=45, contract=contract)
+    return command, junit_cases(Path(command["xml"]))
+
+
+@pytest.mark.parametrize("body,source,contract,expected", [
+    ("check(compute())", CONTRACT_SOURCE, CONTRACT, "detected"),
+    ("helper(compute())", CONTRACT_SOURCE, CONTRACT, "detected"),
+    ("check(compute())", DECORATED_SOURCE, CONTRACT, "detected"),
+    ("other_check(compute())", CONTRACT_SOURCE, CONTRACT, "unrelated_failure"),
+    ("check(compute())", RAISING_SOURCE, CONTRACT, "unrelated_failure"),
+    (f"assert compute() == 1, '{MARKER}'", CONTRACT_SOURCE, CONTRACT, "unrelated_failure"),
+    ("check(compute())", CONTRACT_SOURCE, "contract_probe_missing:check", "unrelated_failure"),
+    ("check(compute())", CONTRACT_SOURCE, None, "unrelated_failure"),
+], ids=["direct", "through-helper", "decorated", "other-function", "explicit-raise", "test-body-assert",
+        "unimportable", "not-declared-to-pytest"])
+def test_only_an_assertion_in_the_declared_contract_function_earns_contract_credit(tmp_path, body, source, contract,
+                                                                                  expected):
+    control_command, control = run_contract_subject(tmp_path / "control", 1, body=body, source=source,
+                                                    contract=contract)
+    mutant_command, mutant = run_contract_subject(tmp_path / "mutant", 2, body=body, source=source, contract=contract)
+    result = classify(control, mutant, TARGET, MARKER, [UNAFFECTED], contract=CONTRACT,
+                      control_exit=control_command["exit_status"], mutant_exit=mutant_command["exit_status"])
+    assert result["classification"] == expected, "CONTRACT_ASSERTION_ATTRIBUTION"
+    attribution = mutant[TARGET]["attribution"]
+    assert attribution["contract_assertion"] is (expected == "detected"), attribution
+    assert attribution["target_assertion"] is (body.startswith("assert")), attribution
+
+
+def test_without_a_declared_contract_credit_is_unchanged(tmp_path):
+    control_command, control = run_contract_subject(tmp_path / "control", 1)
+    mutant_command, mutant = run_contract_subject(tmp_path / "mutant", 2)
+    assert classify(control, mutant, TARGET, MARKER, [UNAFFECTED], control_exit=control_command["exit_status"],
+                    mutant_exit=mutant_command["exit_status"])["classification"] == "unrelated_failure"
+
+
+def test_every_attribution_says_whether_a_contract_assertion_failed(passing_control, tmp_path):
+    _, mutant = run_subject(tmp_path / "mutant", "def compute():\n    return 2")
+    assert mutant[TARGET]["attribution"]["contract_assertion"] is False
+    assert mutant[TARGET]["attribution"]["target_assertion"] is True

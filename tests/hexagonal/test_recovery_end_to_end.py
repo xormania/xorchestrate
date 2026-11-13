@@ -112,6 +112,39 @@ def finished_recovery(cli, timeout=60):
     raise AssertionError(f"recovery did not finish: {cli.json('status')['recovery']}")
 
 
+class ScriptedStatus:
+    """A CLI whose ``status`` reports the scripted recovery states in turn, then the last one forever."""
+
+    def __init__(self, *states):
+        self.states = list(states)
+
+    def json(self, command):
+        assert command == "status"
+        return {"recovery": self.states.pop(0) if len(self.states) > 1 else self.states[0]}
+
+
+def within(cli, timeout):
+    """``recovery_within`` looked up when called, so the module stays importable before it exists."""
+    return globals()["recovery_within"](cli, timeout)
+
+
+def test_recovery_within_is_true_once_a_report_exists_and_nothing_runs():
+    cli = ScriptedStatus({"running": True}, {"running": True, "report": {"x": 1}}, {"running": False, "report": {"x": 1}})
+    assert within(cli, 5) is True
+
+
+@pytest.mark.parametrize("state", [{"running": True}, {"running": True, "report": {"x": 1}}, {"running": False}])
+def test_recovery_within_is_false_at_the_deadline_and_never_raises(state):
+    started = time.monotonic()
+    assert within(ScriptedStatus(state), 0.3) is False
+    assert time.monotonic() - started < 5
+
+
+def test_finished_recovery_still_raises_at_the_deadline():
+    with pytest.raises(AssertionError):
+        finished_recovery(ScriptedStatus({"running": True}), timeout=0.3)
+
+
 def sessions(client):
     return {item["id"]: item for item in client.call("list_sessions", {})["sessions"]}
 
