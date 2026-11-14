@@ -1,0 +1,388 @@
+{
+  "schema_version": 1,
+  "base": "314e979d01c5f8bf563b060ad91406e1b7bd7c14",
+  "reviewed_source": "e81bc94f540b276c826e6cebc259ed0cdd504df8",
+  "reviewed_tree": "b51afb0d78f38985f8aa05256a0124c31b0faba6",
+  "runtime": {
+    "python": "3.12.16",
+    "ruff": "0.16.8",
+    "zizmor": "1.32.0"
+  },
+  "source_sha256": {
+    "CHANGELOG.md": "0433bda932395b3024a5ecd470283a95bce4ecd8dea527455729f0d852e2ddce",
+    "contracts/testing.json": "14539f08ec99578f311404e2e9ec43c0eff91abb39efc32e9d61f56481790567",
+    "docs/native-sessions.md": "8f002c90ce95e4f311e51a4674b55d6d28383df1c066fb4303eddea5f009e3e7",
+    "docs/runtime-request-budgets.md": "dfca057c89019dfd04b3519db4abe1391c0f79f1b870928250d17d05a9231055",
+    "tests/hexagonal/support/hosted_request_budgets.py": "9eea65be0cae31230e02b0916edeaccfc807bccaf29d01a0032ad04761b3aaf1",
+    "tests/hexagonal/support/runtime_request_budgets.py": "816e17c94020ac2aded12d9cb22f65c0ae12d921e59d3c6592bbdc52e4c66b04",
+    "tests/hexagonal/support/socket_request_budgets.py": "3e0ade0d2d1ac66a5609eb362b6d6bc31538724bb61ffa3c68fda2e17af72245",
+    "tests/hexagonal/test_hosted_request_budgets.py": "3b2f0607bd7b999fc142bdd6d05d5954473410b5a165889e45ddbcd64b51cfd8",
+    "tests/hexagonal/test_runtime_budget_options.py": "cbf1e06319b30ddc2bd361a427b0a3674708c595751b3fc6e70c3b6bbac537b1",
+    "tests/hexagonal/test_runtime_request_budgets.py": "831a3c254b440ae6c4ad085fa333a2fc6c787f3834497563c532cd6c088dbb0b",
+    "tests/hexagonal/test_socket_request_budgets.py": "254921d72ea39864aa71d555699ebcd935f5cd0409511e3a5ce43408073281b6",
+    "xorchestrate/adapters/bridge.py": "e93cd9fdacb143d895379eebf5006ff83bdfba4a6e9259fa294a8efc06e1ded5",
+    "xorchestrate/adapters/bridge_transport.py": "54c95dd6847de9399b15ed3a7d52810a518d1a44042df50a2a8b2ff31687c6b1",
+    "xorchestrate/adapters/capabilities.py": "c86b9cc55c707d90c6649029859003c95eebf1e4a642aa58afba557a702d0a75",
+    "xorchestrate/adapters/hosted.py": "12463b108a0ac5edfebc868aa2dcefb857d3b86476c4248a84a7422fcd12cd74",
+    "xorchestrate/adapters/jsonrpc.py": "ea8e68121948f1c9423fbfeeee910e1e7416ebe6680b8d7e96328690c30437ad",
+    "xorchestrate/adapters/native_gateway.py": "df958486093512b7e69d4cf4ed38368088db1bd9ce4874285336de810e662b95",
+    "xorchestrate/adapters/unix.py": "0451a43bd038da237397fac7dc9569177036b98de9b42039f31570f3f6337943"
+  },
+  "test_authoring": "Separate test and implementation authors. Tests-only checkpoints precede implementation and the two review repairs.",
+  "test_checkpoints": [
+    "b2b1aa4",
+    "f625fba",
+    "ce11998",
+    "5dde33a"
+  ],
+  "red": {
+    "predecessor": "314e979d01c5f8bf563b060ad91406e1b7bd7c14",
+    "initial_transport_cases": {
+      "counts": {
+        "name": "pytest",
+        "errors": "0",
+        "failures": "21",
+        "skipped": "0",
+        "tests": "31",
+        "time": "5.321",
+        "timestamp": "2026-11-13T16:42:04.316337-05:00",
+        "hostname": "658d7b640686"
+      },
+      "tests_sha256": {
+        "contracts/testing.json": "c6299a296df5da59da58d91c38552d4558a9296b788d31a97cb740a645c7dbe9",
+        "tests/hexagonal/test_runtime_request_budgets.py": "831a3c254b440ae6c4ad085fa333a2fc6c787f3834497563c532cd6c088dbb0b",
+        "tests/hexagonal/test_socket_request_budgets.py": "d1bf4af7621f3570c19d45843415c201ecd5295cf465b8ae17974ce091ad0430",
+        "tests/hexagonal/support/runtime_request_budgets.py": "816e17c94020ac2aded12d9cb22f65c0ae12d921e59d3c6592bbdc52e4c66b04",
+        "tests/hexagonal/support/socket_request_budgets.py": "32fa307052e606ad8f5f8e552ece4942fab97581cbcd980b9ed15562814835a5"
+      }
+    },
+    "hosted_composition_cases": {
+      "counts": {
+        "name": "pytest",
+        "errors": "0",
+        "failures": "12",
+        "skipped": "0",
+        "tests": "16",
+        "time": "0.109",
+        "timestamp": "2026-11-13T16:44:33.699826-05:00",
+        "hostname": "658d7b640686"
+      },
+      "tests_sha256": {
+        "contracts/testing.json": "9cce7aad9bd624467d9894432eeb287b058c75ca1ef93199cb79f1062561702e",
+        "tests/hexagonal/test_hosted_request_budgets.py": "041f6f5fa892d1feab2a756ff0ab2011c8e8830a400034ea927634c798fe81d4",
+        "tests/hexagonal/support/hosted_request_budgets.py": "1b68423ee1592dc8e38cb74ee8b7e5322cdb179d0bd5c09384f6e4f42661befd"
+      }
+    },
+    "gateway_admission_cases": {
+      "tests": 2,
+      "failures": 1,
+      "errors": 0,
+      "skipped": 0
+    },
+    "combined_summary": "49 predecessor cases: 34 intended assertion failures and 15 healthy controls; zero errors/skips. The later import-only formatting repair does not change assertions.",
+    "optional_keyword": {
+      "base_source": "314e979d01c5f8bf563b060ad91406e1b7bd7c14",
+      "candidate_transport_sha256": "54c95dd6847de9399b15ed3a7d52810a518d1a44042df50a2a8b2ff31687c6b1",
+      "test_sha256": "cbf1e06319b30ddc2bd361a427b0a3674708c595751b3fc6e70c3b6bbac537b1",
+      "cases": [
+        {
+          "case": "healthy",
+          "source_sha256": "54c95dd6847de9399b15ed3a7d52810a518d1a44042df50a2a8b2ff31687c6b1",
+          "exit_code": 0,
+          "counts": {
+            "name": "pytest",
+            "errors": "0",
+            "failures": "0",
+            "skipped": "0",
+            "tests": "4",
+            "time": "0.189",
+            "timestamp": "2026-11-13T16:46:18.019596-05:00",
+            "hostname": "658d7b640686"
+          },
+          "failures": []
+        },
+        {
+          "case": "ignore-shorter-allowance",
+          "source_sha256": "fd0e4a1184e73755798b4071f3e2af2b2ce80d727863ccb96445926d728283bd",
+          "exit_code": 1,
+          "counts": {
+            "name": "pytest",
+            "errors": "0",
+            "failures": "2",
+            "skipped": "0",
+            "tests": "4",
+            "time": "0.099",
+            "timestamp": "2026-11-13T16:46:18.474051-05:00",
+            "hostname": "658d7b640686"
+          },
+          "failures": [
+            {
+              "test": {
+                "classname": "tests.hexagonal.test_runtime_budget_options",
+                "name": "test_bridge_request_override_cannot_extend_its_effective_allowance[3-3]",
+                "time": "0.002"
+              },
+              "reason": {
+                "message": "assert 10.0 == 3\n +  where 10.0 = <tests.hexagonal.support.temporal_waits.ControlledClock object at 0x7fba744d2f60>.elapsed\n +    where <tests.hexagonal.support.temporal_waits.ControlledClock object at 0x7fba744d2f60> = namespace(peer=<xorchestrate.adapters.bridge_transport.Peer object at 0x7fba744d3230>, connection=<tests.hexagonal.sup...ject.<locals>.<lambda> at 0x7fba74619800>, packet=<function bridge_budget_subject.<locals>.<lambda> at 0x7fba746568e0>).clock"
+              }
+            },
+            {
+              "test": {
+                "classname": "tests.hexagonal.test_runtime_budget_options",
+                "name": "test_bridge_request_override_preserves_healthy_completion[3-3]",
+                "time": "0.001"
+              },
+              "reason": {
+                "message": "assert [10.0] == [3]\n  \n  At index 0 diff: 10.0 != 3\n  Use -v to get more diff"
+              }
+            }
+          ]
+        },
+        {
+          "case": "allow-expansion",
+          "source_sha256": "a6656160f91627d5fd1de273776b854b76b8cb0ab1cc80bc5f78943d022f7fc7",
+          "exit_code": 1,
+          "counts": {
+            "name": "pytest",
+            "errors": "0",
+            "failures": "2",
+            "skipped": "0",
+            "tests": "4",
+            "time": "0.109",
+            "timestamp": "2026-11-13T16:46:18.910221-05:00",
+            "hostname": "658d7b640686"
+          },
+          "failures": [
+            {
+              "test": {
+                "classname": "tests.hexagonal.test_runtime_budget_options",
+                "name": "test_bridge_request_override_cannot_extend_its_effective_allowance[30-10]",
+                "time": "0.001"
+              },
+              "reason": {
+                "message": "Failed: DID NOT RAISE OrchestrationError"
+              }
+            },
+            {
+              "test": {
+                "classname": "tests.hexagonal.test_runtime_budget_options",
+                "name": "test_bridge_request_override_preserves_healthy_completion[30-10]",
+                "time": "0.001"
+              },
+              "reason": {
+                "message": "assert [30.0] == [10]\n  \n  At index 0 diff: 30.0 != 10\n  Use -v to get more diff"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "review_regressions": {
+      "product_source": "f16a6796d3c48a0a6cb54fb6c63c711c3ef69253",
+      "execution_head": "e8013421a2bf13a1d2a74f807c6bb919f9b00006",
+      "product_diff": "",
+      "tests_sha256": {
+        "tests/hexagonal/test_hosted_request_budgets.py": "3b2f0607bd7b999fc142bdd6d05d5954473410b5a165889e45ddbcd64b51cfd8",
+        "tests/hexagonal/support/hosted_request_budgets.py": "9eea65be0cae31230e02b0916edeaccfc807bccaf29d01a0032ad04761b3aaf1",
+        "tests/hexagonal/test_socket_request_budgets.py": "254921d72ea39864aa71d555699ebcd935f5cd0409511e3a5ce43408073281b6",
+        "tests/hexagonal/support/socket_request_budgets.py": "3e0ade0d2d1ac66a5609eb362b6d6bc31538724bb61ffa3c68fda2e17af72245"
+      },
+      "counts": {
+        "name": "pytest",
+        "errors": "0",
+        "failures": "5",
+        "skipped": "0",
+        "tests": "13",
+        "time": "0.564",
+        "timestamp": "2026-11-13T16:58:49.838693-05:00",
+        "hostname": "658d7b640686"
+      },
+      "failures": [
+        {
+          "test": {
+            "classname": "tests.hexagonal.test_hosted_request_budgets",
+            "name": "test_hosted_uncertain_attach_failure_is_not_retried_or_reclassified[start]",
+            "time": "0.006"
+          },
+          "reason": {
+            "message": "Failed: DID NOT RAISE OrchestrationError"
+          }
+        },
+        {
+          "test": {
+            "classname": "tests.hexagonal.test_hosted_request_budgets",
+            "name": "test_hosted_uncertain_attach_failure_is_not_retried_or_reclassified[attach]",
+            "time": "0.002"
+          },
+          "reason": {
+            "message": "Failed: DID NOT RAISE OrchestrationError"
+          }
+        },
+        {
+          "test": {
+            "classname": "tests.hexagonal.test_hosted_request_budgets",
+            "name": "test_hosted_uncertain_attach_failure_is_not_retried_or_reclassified[resume]",
+            "time": "0.001"
+          },
+          "reason": {
+            "message": "Failed: DID NOT RAISE OrchestrationError"
+          }
+        },
+        {
+          "test": {
+            "classname": "tests.hexagonal.test_hosted_request_budgets",
+            "name": "test_hosted_uncertain_attach_failure_is_not_retried_or_reclassified[reconnect]",
+            "time": "0.001"
+          },
+          "reason": {
+            "message": "Failed: DID NOT RAISE OrchestrationError"
+          }
+        },
+        {
+          "test": {
+            "classname": "tests.hexagonal.test_socket_request_budgets",
+            "name": "test_gateway_server_does_not_admit_a_frame_after_its_total_budget[exhausts-budget]",
+            "time": "0.052"
+          },
+          "reason": {
+            "message": "AssertionError: individual fragments must not renew the server's frame-admission budget\nassert [('tools/call... 'admitted'})] == []\n  \n  Left contains one more item: ('tools/call', {'marker': 'admitted'})\n  Use -v to get more diff"
+          }
+        }
+      ]
+    },
+    "interpretation": "Missing API/import/setup failures are not counted as detection. Optional timeout behavior uses two planted faults with healthy controls; each detects two intended failures."
+  },
+  "final": {
+    "focused": {
+      "tests": 64,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "command": "python -m pytest tests/hexagonal/test_runtime_request_budgets.py tests/hexagonal/test_socket_request_budgets.py tests/hexagonal/test_hosted_request_budgets.py tests/hexagonal/test_runtime_budget_options.py -q -p no:cacheprovider --junitxml=<external> --test-inventory=<external>",
+    "static": {
+      "status": "passed",
+      "candidate_integrity": {
+        "actual": "1f6c249439bdfdc623b40f1866296dc1384c02d386a11bbc2e63e40c3eadc7f0",
+        "changed_paths": [],
+        "deleted": [],
+        "expected": "1f6c249439bdfdc623b40f1866296dc1384c02d386a11bbc2e63e40c3eadc7f0",
+        "passed": true
+      },
+      "checks": [
+        {
+          "name": "ruff",
+          "status": "passed"
+        },
+        {
+          "name": "syntax",
+          "status": "passed"
+        },
+        {
+          "name": "architecture",
+          "status": "passed"
+        },
+        {
+          "name": "secret-scan",
+          "status": "passed"
+        },
+        {
+          "name": "zizmor",
+          "status": "passed"
+        }
+      ]
+    },
+    "calibration": {
+      "status": "failed",
+      "candidate_integrity": {
+        "actual": "1f6c249439bdfdc623b40f1866296dc1384c02d386a11bbc2e63e40c3eadc7f0",
+        "changed_paths": [],
+        "deleted": [],
+        "expected": "1f6c249439bdfdc623b40f1866296dc1384c02d386a11bbc2e63e40c3eadc7f0",
+        "passed": true
+      },
+      "checks": [
+        {
+          "name": "native-calibration",
+          "status": "passed"
+        },
+        {
+          "name": "hosted-calibration",
+          "status": "failed"
+        },
+        {
+          "name": "recovery-calibration",
+          "status": "failed"
+        }
+      ]
+    },
+    "calibration_cases": {
+      "recovery.progress.json": {
+        "recovery-policy-ignored": "invalid_control",
+        "manual-leaves-dead-sessions-active": "invalid_control",
+        "disconnect-reason-not-recorded": "invalid_control",
+        "one-failure-stops-the-rest": "invalid_control",
+        "recover-ignores-caller-authority": "invalid_control",
+        "up-never-starts-recovery": "invalid_control",
+        "running-terminal-reopened": "invalid_control",
+        "recover-ignores-work-binding": "detected",
+        "shutdown-does-not-wait-for-recovery": "invalid_control",
+        "recovery-takes-sessions-while-stopping": "invalid_control",
+        "running-outlives-recovery": "detected",
+        "doctor-opens-unapproved-store": "detected",
+        "doctor-constructs-store-factory": "detected",
+        "in-flight-turn-replayed-after-recovery": "invalid_control",
+        "unknown-replacement-taken-as-reconnectable": "invalid_control",
+        "resolved-operation-kept-for-reconciliation": "invalid_control"
+      },
+      "native.progress.json": {
+        "grok-native-observation": "detected",
+        "requested-selection": "detected",
+        "claude-native-hook": "detected",
+        "external-detach": "detected",
+        "crash-uncertainty": "detected",
+        "autonomous-callback": "detected",
+        "delivery-uncertainty": "detected"
+      },
+      "hosted.progress.json": {
+        "stop-removes-saved-state": "invalid_control",
+        "detach-closes-the-terminal": "invalid_control",
+        "vanished-terminal-not-reopened": "invalid_control",
+        "unverified-cleanup-reported-verified": "invalid_control",
+        "failed-start-returns-terminal-output": "detected",
+        "specification-on-command-line": "invalid_control"
+      }
+    }
+  },
+  "adjacent_before_review_repairs": {
+    "source": "f16a6796d3c48a0a6cb54fb6c63c711c3ef69253",
+    "counts": {
+      "tests": 232,
+      "failures": 16,
+      "errors": 0,
+      "skipped": 15
+    },
+    "subtests_passed": 34,
+    "interpretation": "167 passed, 15 skipped, 16 failures from AF_UNIX EPERM/native host startup, including one controller receipt assertion with a child PermissionError. These are unavailable local qualification, not passes. Hosted CI exercises the full paths."
+  },
+  "adversarial_review": {
+    "initial_candidate": "f16a6796d3c48a0a6cb54fb6c63c711c3ef69253",
+    "findings": [
+      {
+        "problem": "Hosted retry downgraded bridge_unavailable/unknown to not_started and terminal cleanup.",
+        "disposition": "Retry only explicit not_started failures; public start/attach/resume/reconnect matrix fails before repair and passes after."
+      },
+      {
+        "problem": "Gateway dispatched a frame arriving at exact expiry.",
+        "disposition": "Recheck remaining budget immediately before handler dispatch; equality case fails before repair and passes after, with admitted-handler response controls."
+      }
+    ],
+    "final_targeted_verification": "The independent reviewer confirmed the two repairs and targeted controls; no further material findings."
+  },
+  "failed_attempts": [
+    "First incomplete implementation check had a missing positive_number import and unfinished gateway server behavior; not counted as red proof.",
+    "First static attempt found two test import ordering issues; fixed by the separate test author.",
+    "Initial manual calibration retained the same native-host availability limitations and is superseded only for changed-source qualification by the final attempt."
+  ],
+  "limits": "Execution/I/O budgets do not preempt arbitrary application handlers, port callbacks or cleanup. Manual inventories with invalid controls remain incomplete; green ordinary CI is not described as completion of those manual fault controls."
+}

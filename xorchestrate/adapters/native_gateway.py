@@ -17,6 +17,7 @@ import socketserver
 import sys
 import tempfile
 import threading
+import time
 import uuid
 from pathlib import Path
 
@@ -39,6 +40,26 @@ def _encode(value):
 
 
 _GATEWAY_FAILURE = {"code": "gateway_error", "message": "Native gateway request failed"}
+
+
+def _remaining(connection, deadline):
+    remaining = deadline - time.monotonic()
+    if remaining <= 0:
+        raise TimeoutError("Gateway request deadline")
+    connection.settimeout(remaining)
+
+
+def _read_frame(connection, maximum, deadline):
+    """Read one bounded frame without renewing the allowance per fragment."""
+    data = bytearray()
+    while b"\n" not in data and len(data) <= maximum:
+        _remaining(connection, deadline)
+        chunk = connection.recv(min(65536, maximum + 1 - len(data)))
+        if not chunk:
+            break
+        data.extend(chunk)
+    line, newline, _ = bytes(data).partition(b"\n")
+    return line + newline
 
 
 class GatewayFailure(RuntimeError):
@@ -105,14 +126,15 @@ class LocalGateway:
 
         class Request(socketserver.StreamRequestHandler):
             def handle(self):
-                self.connection.settimeout(gateway.timeout)
+                deadline = time.monotonic() + gateway.timeout
                 try:
-                    raw = self.rfile.readline(gateway.maximum + 1)
+                    raw = _read_frame(self.connection, gateway.maximum, deadline)
                     if not raw.endswith(b"\n") or len(raw) > gateway.maximum:
                         raise ValueError("Gateway input exceeds frame bound")
                     packet = _decode(raw)
                     if not isinstance(packet, dict) or not isinstance(packet.get("token"), str) or not hmac.compare_digest(packet["token"], gateway.token):
                         raise ValueError("Gateway authentication failed")
+                    _remaining(self.connection, deadline)
                     result = handler(packet.get("action"), packet.get("payload", {}))
                     response = {"result": result}
                 except OrchestrationError as error:
@@ -128,6 +150,10 @@ class LocalGateway:
                 if len(raw) > gateway.maximum:
                     raw = _encode({"error": {"code": "frame_limit", "message": "Gateway result exceeds bound"}})
                 try:
+                    # Handler execution belongs to its application policy. An
+                    # expired caller has an unknown effect; do not renew its
+                    # response allowance after admission or handler execution.
+                    _remaining(self.connection, deadline)
                     self.wfile.write(raw)
                 except OSError:
                     pass
@@ -156,6 +182,7 @@ class LocalGateway:
 
 def request(descriptor, action, payload=None):
     config = _decode(Path(descriptor).read_bytes())
+    deadline = time.monotonic() + config["timeout"]
     packet = _encode({"token": config["token"], "action": action, "payload": payload or {}})
     maximum = config["maximum"]
     if len(packet) > maximum:
@@ -163,11 +190,11 @@ def request(descriptor, action, payload=None):
     family = socket.AF_UNIX if config["transport"] == "unix" else socket.AF_INET
     address = config["address"] if family == socket.AF_UNIX else tuple(config["address"])
     with socket.socket(family, socket.SOCK_STREAM) as connection:
-        connection.settimeout(config["timeout"])
+        _remaining(connection, deadline)
         connection.connect(address)
+        _remaining(connection, deadline)
         connection.sendall(packet)
-        with connection.makefile("rb") as stream:
-            raw = stream.readline(maximum + 1)
+        raw = _read_frame(connection, maximum, deadline)
     if len(raw) > maximum or not raw.endswith(b"\n"):
         raise ValueError("Invalid gateway response")
     result = _decode(raw)

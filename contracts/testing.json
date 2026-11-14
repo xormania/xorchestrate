@@ -256,6 +256,15 @@
         "tests/hexagonal/test_telemetry_snapshots.py": "composition"
       }
     },
+    "runtime-budgets": {
+      "guarantee": "Configured request allowances include admission, transport writes and response reads without resetting between phases; expiry preserves effect uncertainty and fences partial streams.",
+      "modules": {
+        "tests/hexagonal/test_runtime_request_budgets.py": "adapter",
+        "tests/hexagonal/test_runtime_budget_options.py": "adapter",
+        "tests/hexagonal/test_hosted_request_budgets.py": "adapter",
+        "tests/hexagonal/test_socket_request_budgets.py": "adapter"
+      }
+    },
     "contracts": {
       "guarantee": "The public ports, their values and errors and the adapter factory convention come from xcontracts unchanged; built-in adapters are selectable through that convention and satisfy its ports and conformance kit, and xcontracts depends on nothing but the standard library.",
       "modules": {

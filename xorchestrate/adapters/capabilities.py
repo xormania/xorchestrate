@@ -269,7 +269,7 @@ class StdioMCPProvider(TelemetrySource):
                     raise OrchestrationError("MCP server did not advertise tools support.", "provider_protocol")
                 if not isinstance(info, dict) or not isinstance(info.get("name"), str) or not isinstance(info.get("version"), str):
                     raise OrchestrationError("MCP server returned invalid implementation information.", "provider_protocol")
-                client.notify("notifications/initialized")
+                client.notify("notifications/initialized", timeout=self._remaining(deadline))
             except Exception:
                 self._disconnect()
                 raise

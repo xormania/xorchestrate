@@ -5,6 +5,9 @@ session drivers. Commands and native permissions come from trusted configuration
 They are independent of the `mcp` or `cli` providers used by application tools.
 No historical organizational roles or fixed evaluator policy are required.
 
+Native and hosted exchanges use [runtime request budgets](runtime-request-budgets.md)
+across nested blocking phases, with explicit limits on cleanup and handler execution.
+
 ## Submission and observations
 
 `send_session` starts ordinary conversation work. `send_message` plus

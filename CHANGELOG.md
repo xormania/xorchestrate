@@ -9,6 +9,10 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
 
 ### Changed
 
+- Runtime adapter requests share monotonic allowances across connection, writer
+  admission, fragmented I/O and response waits. Hosted attachment propagates its
+  remaining allowance through bridge activation; uncertain effects and existing
+  cleanup policies are preserved. See [runtime request budgets](docs/runtime-request-budgets.md).
 - Shared native test scenarios arm operation observations before delivery and
   retain exact native completion and boundary activation receipts. Independent
   callback/start/tail holds compose across direct and FIFO peers; the selectable
