@@ -9,21 +9,21 @@ from contextlib import ExitStack, contextmanager
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
-from threading import Event
 from uuid import uuid4
 
 from scripts.verification.checker import verify
 from scripts.verification.multi_harness import snapshot
 from tests.hexagonal.contracts.completion import CompletionObservation
-from tests.hexagonal.support.native import application_message, peer_options, wait_for
+from tests.hexagonal.support.native import ControlledCallbacks, application_message, peer_options, wait_for
 from tests.hexagonal.support.native import retry as call
+from tests.hexagonal.support.operation_controls import ProcessOperation
+from tests.hexagonal.support.operation_observation import OperationLog, OperationObserver
 from tests.hexagonal.support.temporal_evidence import StoreOrder
 from xorchestrate.adapters.bridge_host import SessionBridgeHost
 from xorchestrate.adapters.claude import ClaudeSessionDriver
 from xorchestrate.adapters.codex import CodexSessionDriver
 from xorchestrate.adapters.grok import GrokSessionDriver
 from xorchestrate.composition import build
-from xorchestrate.model import Capability
 
 
 def await_condition(predicate, reason):
@@ -35,30 +35,13 @@ def sha256_json(value):
     return hashlib.sha256(encoded).hexdigest()
 
 
-class ControlledCalls:
+class ControlledCalls(ControlledCallbacks):
     def __init__(self):
-        self.calls = {}
-
-    def discover(self):
-        return [Capability("hold", "Controlled callback completion", {"type": "object"})]
-
-    def prepare(self, label, held):
-        entered, release, returned = Event(), Event(), Event()
-        if not held:
-            release.set()
-        self.calls[label] = (entered, release, returned)
+        super().__init__((), timeout=30, argument="label")
 
     def invoke(self, name, arguments, context):
-        label = arguments["label"]
-        entered, release, returned = self.calls[label]
-        entered.set()
-        assert release.wait(30), "test must release its controlled callback"
-        returned.set()
-        return {"label": label, "effect": "returned"}
-
-    def close(self):
-        for _, release, _ in self.calls.values():
-            release.set()
+        super().invoke(name, arguments, context)
+        return {"label": arguments["label"], "effect": "returned"}
 
 
 class NativePeer:
@@ -119,46 +102,93 @@ class ComposedCompletionFixture:
         self.adapter = self.app.sessions["native"]
         self.read_activity = read_activity or (lambda: self.adapter.status(self.session["backend"])["activity"])
         self.gates = {}
+        self.operations, self.completions = {}, {}
+        self.observed_terminals = set()
+        self.native_log = OperationLog(self.session["backend"]["native_id"], self.session["backend"]["incarnation"])
+        self.native_observer = OperationObserver(self._native_observations)
         self.capture_sequence = 0
 
     def submit(self, label, *, callback=False, start=False, tail=False):
+        if label in self.operations:
+            raise ValueError("operation already submitted: " + label)
         self.control.prepare(label, callback)
-        gates = {}
+        operation = ProcessOperation(self.directory, self.native_log.source, self.native_log.incarnation, label)
+        self.operations[label] = operation
+        gates = dict(operation.arguments)
         for stage, held in (("start", start), ("tail", tail)):
             if held:
-                gates[stage + "_gate"] = str(self.directory / (label + "." + stage + ".release"))
-                gates[stage + "_entered"] = str(self.directory / (label + "." + stage + ".entered"))
+                gates.update(operation.hold(stage).arguments)
         self.gates[label] = gates
+        # The cursor is captured before delivery, including synchronous peers.
+        self.completions[label] = self.native_observer.arm(
+            self.native_log.source, self.native_log.incarnation, label, "completed")
         call(self.app, "send_session", {"session_id": self.session["id"],
             "message": self.peer.message(label, gates), "idempotency_key": label})
         if start:
             self._await_gate(label, "start")
         elif callback:
-            await_condition(self.control.calls[label][0].is_set, label + " callback entered")
+            self.control.tickets[label].wait(timeout=12)
         elif tail:
             self._await_gate(label, "tail")
 
     def _await_gate(self, label, stage):
-        await_condition(lambda: Path(self.gates[label][stage + "_entered"]).exists(), label + " " + stage + " entered")
+        await_condition(self.operations[label].boundaries[stage].entered, label + " " + stage + " entered")
 
-    def _terminal_identities(self):
-        # Poll is the session port's public observation transport. In a bridge,
-        # callback evidence is pushed but ordinary native events are polled.
+    def activation(self, label, stage):
+        if stage == "callback":
+            return self.control.activation(label)
+        return self.operations[label].boundaries[stage].activation()
+
+    def _native_observations(self):
+        # Poll remains the public transport. The local journal's counter means
+        # capture order only; exact native identity is the completion witness.
         self.adapter.poll(self.session["backend"])
-        return frozenset(row["observation"].get("turn_id", row["observation"].get("prompt_id"))
-                         for row in snapshot(self.app)["observations"] if self.peer.terminal(row))
+        bindings = {}
+        for label, operation in self.operations.items():
+            activation = operation.activation()
+            if activation is not None:
+                bindings[activation["native_operation"]] = label
+        raw = snapshot(self.app)
+        rows = {row["id"]: row for row in raw["observations"]}
+        # Import the persisted observation prefix using its store witnesses,
+        # independent of record-list sorting and diagnostic timestamps.
+        for event in sorted(raw["ordering"]["events"], key=lambda event: event["seq"]):
+            if event.get("type") != "native_observation.created":
+                continue
+            identifier = event["record_id"]
+            if identifier in self.observed_terminals or identifier not in rows:
+                continue
+            row, observation = rows[identifier], rows[identifier]["observation"]
+            native_operation = observation.get("turn_id", observation.get("prompt_id"))
+            if (not self.peer.terminal(row) or row.get("session_id") != self.session["id"]
+                    or observation.get("native_id") != self.native_log.source
+                    or observation.get("incarnation") != self.native_log.incarnation
+                    or native_operation not in bindings):
+                continue
+            self.native_log.record(bindings[native_operation], "completed", {
+                "native_operation": native_operation, "observation": observation,
+                "record_id": identifier, "store_sequence": event["seq"]})
+            self.observed_terminals.add(identifier)
+        return self.native_log.snapshot()
+
+    def completion(self, label):
+        return self.completions[label].poll()
 
     def release_callback(self, label):
-        self.control.calls[label][1].set()
+        self.control.release_operation(label)
         if "tail_gate" in self.gates[label]:
             self._await_gate(label, "tail")
         else:
             await_condition(self.control.calls[label][2].is_set, label + " callback returned")
 
     def _release_gate(self, label, stage):
-        before = self._terminal_identities()
-        Path(self.gates[label][stage + "_gate"]).touch()
-        await_condition(lambda: self._terminal_identities() - before, label + " native terminal observed")
+        self.operations[label].boundaries[stage].release()
+        if stage == "start" and not self.control.release[label].is_set():
+            self.control.tickets[label].wait(timeout=12)
+        elif stage == "start" and "tail" in self.operations[label].boundaries:
+            self._await_gate(label, "tail")
+        else:
+            self.completions[label].wait(timeout=12)
 
     def release_start(self, label):
         self._release_gate(label, "start")
@@ -189,10 +219,16 @@ class ComposedCompletionFixture:
             returned_callbacks=frozenset(label for label, (_, _, returned) in self.control.calls.items() if returned.is_set()),
             evidence=self._evidence())
         self.capture_sequence += 1
+        controls = {label: {"operation": operation.activation(),
+                            "callback": self.control.activation(label),
+                            "boundaries": {stage: boundary.activation()
+                                           for stage, boundary in operation.boundaries.items()}}
+                    for label, operation in self.operations.items()}
         (self.directory / ("capture-%02d.json" % self.capture_sequence)).write_text(json.dumps({
             "activity": observed.activity, "held_callbacks": sorted(observed.held_callbacks),
             "held_starts": sorted(observed.held_starts), "held_tails": sorted(observed.held_tails),
-            "returned_callbacks": sorted(observed.returned_callbacks), "evidence": observed.evidence}, indent=2))
+            "returned_callbacks": sorted(observed.returned_callbacks), "controls": controls,
+            "evidence": observed.evidence}, indent=2))
         return observed
 
     def with_false_idle(self, observation):
@@ -235,10 +271,8 @@ class ComposedCompletionFixture:
 
     def close(self):
         self.control.close()
-        for gates in self.gates.values():
-            for key, value in gates.items():
-                if key.endswith("_gate"):
-                    Path(value).touch()
+        for operation in self.operations.values():
+            operation.close()
 
 
 @contextmanager

@@ -411,6 +411,11 @@ assertions and `pytest.raises` stay as they are; they are not calibrated checks.
 
 ### Retained observation order
 
+Shared completion scenarios also use [operation-bound observations and witnessed
+schedule controls](operation-observations.md). They arm before delivery, retain
+early completion, correlate actual native turn identities, and require a fresh
+activation receipt before releasing a controlled process boundary.
+
 The multi-harness snapshot retains an `ordering` envelope, version 1, with a
 capture-local `source_id` and the store's committed event log. Message/evidence
 creation, native observation creation and successful delivery-attempt transitions

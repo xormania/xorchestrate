@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "name": "competing-operation-completes-target",
+      "mutation": {
+        "path": "tests/hexagonal/support/operation_observation.py",
+        "old": "and row.operation == self.operation and row.boundary == self.boundary",
+        "new": "and row.boundary == self.boundary"
+      },
+      "selectors": [
+        "tests/hexagonal/test_operation_observation.py::test_unrelated_operations_and_boundaries_cannot_release_target",
+        "tests/hexagonal/test_operation_observation.py::test_completion_before_wait_is_retained"
+      ],
+      "target": "tests.hexagonal.test_operation_observation::test_unrelated_operations_and_boundaries_cannot_release_target",
+      "diagnostic": "OBSERVATION_REQUIRES_EXACT_OPERATION",
+      "contract": "tests.hexagonal.contracts.operation_observation:unrelated_completions_do_not_release_operation",
+      "unaffected": [
+        "tests.hexagonal.test_operation_observation::test_completion_before_wait_is_retained"
+      ]
+    },
+    {
+      "name": "prearm-completion-reused",
+      "mutation": {
+        "path": "tests/hexagonal/support/operation_observation.py",
+        "old": "return ObservationTicket(self.read, source, incarnation, operation, boundary, snapshot.through)",
+        "new": "return ObservationTicket(self.read, source, incarnation, operation, boundary, 0)"
+      },
+      "selectors": [
+        "tests/hexagonal/test_operation_observation.py::test_completion_before_wait_is_retained",
+        "tests/hexagonal/test_operation_observation.py::test_unrelated_operations_and_boundaries_cannot_release_target"
+      ],
+      "target": "tests.hexagonal.test_operation_observation::test_completion_before_wait_is_retained",
+      "diagnostic": "OBSERVATION_MUST_NOT_REUSE_PREARM_COMPLETION",
+      "contract": "tests.hexagonal.contracts.operation_observation:completion_before_wait_is_retained",
+      "unaffected": [
+        "tests.hexagonal.test_operation_observation::test_unrelated_operations_and_boundaries_cannot_release_target"
+      ]
+    },
+    {
+      "name": "boundary-released-without-activation",
+      "mutation": {
+        "path": "tests/hexagonal/support/operation_controls.py",
+        "old": "        if self.activation() is None:\n            raise ObservationError(\"cannot release an operation boundary before activation\")",
+        "new": "        if False:\n            raise ObservationError(\"cannot release an operation boundary before activation\")"
+      },
+      "selectors": [
+        "tests/hexagonal/test_operation_activation_calibration.py::test_unwitnessed_release_has_no_process_side_effect",
+        "tests/hexagonal/test_operation_controls.py::test_separate_controls_cannot_share_a_release_path_or_challenge"
+      ],
+      "target": "tests.hexagonal.test_operation_activation_calibration::test_unwitnessed_release_has_no_process_side_effect",
+      "diagnostic": "SCHEDULE_REQUIRES_VERIFIED_ACTIVATION",
+      "unaffected": [
+        "tests.hexagonal.test_operation_controls::test_separate_controls_cannot_share_a_release_path_or_challenge"
+      ]
+    },
+    {
+      "name": "native-terminal-completes-every-operation",
+      "mutation": {
+        "path": "tests/hexagonal/support/completion_runtime.py",
+        "old": "            self.native_log.record(bindings[native_operation], \"completed\", {\n                \"native_operation\": native_operation, \"observation\": observation,\n                \"record_id\": identifier, \"store_sequence\": event[\"seq\"]})",
+        "new": "            for bound_label in bindings.values():\n                self.native_log.record(bound_label, \"completed\", {\n                    \"native_operation\": native_operation, \"observation\": observation,\n                    \"record_id\": identifier, \"store_sequence\": event[\"seq\"]})"
+      },
+      "selectors": [
+        "tests/hexagonal/test_completion_contracts.py::test_operation_bound_schedule_has_activation_and_exact_native_completion[sqlite-direct-codex]",
+        "tests/hexagonal/test_completion_contracts.py::test_final_idle_identity_claims_reconcile[codex]"
+      ],
+      "target": "tests.hexagonal.test_completion_contracts::test_operation_bound_schedule_has_activation_and_exact_native_completion[sqlite-direct-codex]",
+      "diagnostic": "COMPETING_COMPLETION_CANNOT_RELEASE_TARGET",
+      "contract": "tests.hexagonal.contracts.operation_observation:witnessed_native_schedule",
+      "unaffected": [
+        "tests.hexagonal.test_completion_contracts::test_final_idle_identity_claims_reconcile[codex]"
+      ]
+    }
+  ]
+}

@@ -191,10 +191,13 @@
       }
     },
     "framework": {
-      "guarantee": "Shared execution, resource ownership, configuration, evidence and collection guarantee complete declared plans and honest outcomes for every selected test family; same-candidate metadata events queue behind source validation and only first-attempt zero-job waiting observations are neutral to qualified evidence reuse; trusted queue cleanup cancels older source runs only after fresh proof of a surviving current-head replacement and preserves incomplete or changed observations. Classified observation waits consume one monotonic budget, preserve retry safety and scale only harness allowances.",
+      "guarantee": "Shared execution, resource ownership, configuration, evidence and collection guarantee complete declared plans and honest outcomes for every selected test family; same-candidate metadata events queue behind source validation and only first-attempt zero-job waiting observations are neutral to qualified evidence reuse; trusted queue cleanup cancels older source runs only after fresh proof of a surviving current-head replacement and preserves incomplete or changed observations. Classified observation waits consume one monotonic budget, preserve retry safety and scale only harness allowances. Armed observations retain operation-specific completion, bind source incarnations and refuse incomplete retained windows; composed native schedules retain boundary activation witnesses.",
       "modules": {
         "tests/hexagonal/test_testkit_core.py": "contract",
         "tests/hexagonal/test_testkit_temporal_waits.py": "framework",
+        "tests/hexagonal/test_operation_observation.py": "framework",
+        "tests/hexagonal/test_operation_controls.py": "framework",
+        "tests/hexagonal/test_operation_activation_calibration.py": "calibration",
         "tests/hexagonal/test_testkit_command.py": "adapter",
         "tests/hexagonal/test_testkit_sharding.py": "framework",
         "tests/hexagonal/test_testkit_configuration.py": "adapter",
