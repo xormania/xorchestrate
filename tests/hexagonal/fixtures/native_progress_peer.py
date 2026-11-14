@@ -10,7 +10,7 @@ import threading
 import uuid
 from pathlib import Path
 
-from controlled_gates import wait_gate
+from controlled_gates import announce_operation, wait_gate
 
 protocol = sys.argv[1]
 write_lock = threading.Lock()
@@ -194,9 +194,10 @@ def execute(packet):
             except ValueError:
                 body = {'text': body}
         prompt = params.get('_meta', {}).get('promptId') or params.get('interjectionId') or uuid.uuid4().hex
+        observation = announce_operation(body, native_id, prompt)
         if method in ('turn/start', '_x.ai/interject'):
             write({'id': ident, 'result': {'accepted': True, 'turn': {'id': prompt}, 'wire': params}})
-        wait_gate(body, 'start')
+        wait_gate(body, 'start', observation)
         if protocol == 'codex':
             write({'method': 'turn/started', 'params': {'threadId': native_id, 'turn': {'id': prompt}}})
         else:
@@ -224,7 +225,7 @@ def execute(packet):
         elif body.get('action') == 'tool':
             call(body.get('name', 'echo'), body.get('arguments', {}), prompt, body.get('observed', True))
         # A callback can finish before native reasoning/turn completion.
-        wait_gate(body, 'tail')
+        wait_gate(body, 'tail', observation)
         if protocol == 'codex':
             write({'method': 'turn/completed', 'params': {'threadId': native_id, 'turn': {'id': prompt, 'status': 'completed'}}})
         else:

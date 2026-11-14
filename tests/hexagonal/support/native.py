@@ -13,10 +13,12 @@ import threading
 import time
 from contextlib import ExitStack, contextmanager
 from pathlib import Path
+from uuid import uuid4
 
 from scripts.testkit.adapters.clock import SystemClock
 from scripts.testkit.core import ResourceScope
 from scripts.testkit.waits import WaitBudget, bounded_wait
+from tests.hexagonal.support.operation_observation import OperationLog, OperationObserver
 from tests.hexagonal.support.work_acceptance import MeasuringProvider, accept, make_app, measure, setup_work
 from xorchestrate.adapters.acp import ACPSessionDriver
 from xorchestrate.adapters.bridge_host import SessionBridgeHost
@@ -99,22 +101,54 @@ def wait_for(predicate, timeout=5, *, message="Expected native observation did n
 
 
 class ControlledCallbacks:
-    """One controllable provider for ordering and overlapping callback scenarios."""
+    """Concurrent callback holds with retained per-invocation activation."""
 
-    def __init__(self, labels=("A", "B"), *, timeout=15):
-        self.entered = {label: threading.Event() for label in labels}
-        self.release = {label: threading.Event() for label in labels}
+    def __init__(self, labels=("A", "B"), *, timeout=15, argument="nonce"):
+        self.entered, self.release, self.returned = {}, {}, {}
+        self.calls, self.tickets = {}, {}
+        self._claimed, self._claim_lock = set(), threading.Lock()
         self.finished = []
-        self.timeout = timeout
+        self.timeout, self.argument = timeout, argument
+        self.log = OperationLog("controlled-callback", uuid4().hex)
+        self.observer = OperationObserver(self.log.snapshot)
+        for label in labels:
+            self.prepare(label, True)
+
+    def prepare(self, label, held):
+        if label in self.calls:
+            raise ValueError("operation already prepared: " + label)
+        self.entered[label], self.release[label], self.returned[label] = (
+            threading.Event(), threading.Event(), threading.Event())
+        if not held:
+            self.release[label].set()
+        self.calls[label] = (self.entered[label], self.release[label], self.returned[label])
+        self.tickets[label] = self.observer.arm(self.log.source, self.log.incarnation, label, "entered")
+
+    def activation(self, label):
+        observation = self.tickets[label].poll()
+        return observation.payload if observation else None
+
+    def release_operation(self, label):
+        if self.activation(label) is None:
+            raise AssertionError("cannot release callback before its activation")
+        self.release[label].set()
 
     def discover(self):
         return [Capability("hold", "Controlled callback", {"type": "object"})]
 
     def invoke(self, name, arguments, context):
-        label = arguments["nonce"]
+        label = arguments[self.argument]
+        with self._claim_lock:
+            if label not in self.calls or label in self._claimed:
+                raise ValueError("operation is unknown or already invoked: " + label)
+            self._claimed.add(label)
+        self.log.record(label, "entered", {"source": self.log.source, "incarnation": self.log.incarnation,
+                                          "operation": label, "stage": "callback", "invocation": uuid4().hex})
         self.entered[label].set()
         assert self.release[label].wait(self.timeout), "test must release its callbacks"
         self.finished.append(label)
+        self.log.record(label, "returned")
+        self.returned[label].set()
         return {"released": label}
 
     def close(self):
