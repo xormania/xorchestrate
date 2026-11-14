@@ -14,6 +14,12 @@ for when entries are written and [releases](docs/releases.md) for the procedure.
   pipes. Command shutdown shares one forced-cleanup budget; cooperative host
   cleanup reports overruns. Reviewed workflow and terminal observation helpers
   also honor `XO_TEST_TIMEOUT_SCALE` without changing product or fault durations.
+- Shared native test scenarios arm operation observations before delivery and
+  retain exact native completion and boundary activation receipts. Independent
+  callback/start/tail holds compose across direct and FIFO peers; the selectable
+  `operation-observation` calibration proves stale or competing completions and
+  unwitnessed releases cannot satisfy their controls.
+
 - An ownerless `close` of a managed run ends a leftover process only when it names the run and the
   run's marker, its private endpoint or descent from one of those selects it; it no longer ends a
   process for naming the run alone. Its cleanup verdict is stricter: a process that names the run or

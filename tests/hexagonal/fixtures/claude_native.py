@@ -9,7 +9,7 @@ import threading
 import uuid
 from pathlib import Path
 
-from controlled_gates import wait_gate
+from controlled_gates import announce_operation, wait_gate
 
 
 def argument(flag):
@@ -143,6 +143,8 @@ def delivery(params):
     thread_context.mcp_request_id = replay.get("mcp_request_id")
     thread_context.label = replay.get("label")
     try:
+        observation = announce_operation(body, native_id, thread_context.prompt_id)
+        wait_gate(body, "start", observation)
         hook("UserPromptSubmit", prompt_id=getattr(thread_context, "prompt_id", None))
         if verification(message):
             hook("Stop", prompt_id=getattr(thread_context, "prompt_id", None))
@@ -162,7 +164,7 @@ def delivery(params):
             decision = hook("PreToolUse", tool_name=body["native_tool"], tool_input={"command": "fixture"},
                             tool_use_id=uuid.uuid4().hex)
             tool("echo", {"marker": "native_permission", "nonce": decision.get("hookSpecificOutput", {}).get("permissionDecision", "defer")})
-        wait_gate(body, "tail")
+        wait_gate(body, "tail", observation)
         hook("Stop", prompt_id=getattr(thread_context, "prompt_id", None))
     except Exception:
         hook("StopFailure", prompt_id=getattr(thread_context, "prompt_id", None))

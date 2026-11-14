@@ -42,6 +42,12 @@
       "stages": [
         "manual"
       ]
+    },
+    "operation-observation": {
+      "file": "operation-observation.json",
+      "stages": [
+        "manual"
+      ]
     }
   }
 }

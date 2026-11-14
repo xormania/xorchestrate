@@ -87,6 +87,10 @@ the evidence; an inventory or unused interface does not complete them.
    arm-before-action observations and boundary gates to the existing test kit.
    Exercise required competing schedules and retain an activation witness.
    Compare controlled adapters with real process/transport/store boundaries.
+   The [shared operation controls](operation-observations.md) now integrate
+   source/incarnation-bound observation tickets, retained completion and fresh
+   native activation receipts into the existing completion matrix. General
+   telemetry identity/export compatibility remains the separate first item.
 4. **Environment measurements.** Provide a selectable passive clock profile in
    the managed local proof workflow and a bounded CI sample. Bracket wall reads
    with monotonic samples; retain uncertainty, dispatch delay, conditions,
