@@ -30,10 +30,10 @@ from pathlib import Path
 
 from scripts.testkit.adapters import ownership
 from scripts.testkit.adapters.clock import SystemClock
-from scripts.testkit.waits import WaitBudget, WaitTimeout
+from scripts.testkit.waits import WaitTimeout
 from tests.hexagonal.contracts.e2e_world import Receipt, ServerLoss, TotalLoss, WaitExpired
 from tests.hexagonal.support.host_processes import processes_under
-from tests.hexagonal.support.native import wait_for
+from tests.hexagonal.support.native import observation_budget, wait_for
 
 HOME_KEY = "XORCHESTRATE_HOME"
 POLL_SECONDS = .25
@@ -204,13 +204,6 @@ def hold(world, stage):
 
 # Waiting ------------------------------------------------------------------------------------------------
 
-def _scale():
-    try:
-        return float(os.environ.get("XO_TEST_TIMEOUT_SCALE", "1"))
-    except ValueError as error:
-        raise ValueError("XO_TEST_TIMEOUT_SCALE must be a positive finite number") from error
-
-
 def await_(world, label, predicate, timeout):
     """The shared classified wait; only its own expiry becomes ``WaitExpired`` naming ``label``.
 
@@ -218,13 +211,15 @@ def await_(world, label, predicate, timeout):
     which is the wait's own expiry seen through a child process. While it runs, ``remaining(world)`` gives
     the seconds left.
     """
-    clock = world.clock or SystemClock()
-    budget = WaitBudget(timeout, "harness_allowance", scale=_scale())
-    deadline = clock.monotonic() + budget.effective_timeout
     stack = _waits.setdefault(world, [])
-    stack.append((clock, deadline))
+    parent = stack[-1][0] if stack else None
+    clock = world.clock or (parent.clock if parent is not None else SystemClock())
+    budget = observation_budget(timeout)
+    deadline = budget.start(clock, parent=parent)
+    stack.append((deadline, label))
     try:
-        return wait_for(predicate, timeout, message=label, clock=clock, sleep=world.sleep, poll_interval=POLL_SECONDS)
+        return wait_for(predicate, timeout, message=label, clock=clock, sleep=world.sleep,
+                        poll_interval=POLL_SECONDS, timeout_scale=budget.scale, deadline=deadline)
     except WaitTimeout as expired:
         raise WaitExpired(label) from expired
     except subprocess.TimeoutExpired as expired:
@@ -237,13 +232,15 @@ def await_(world, label, predicate, timeout):
             _handed.pop(world, None)
 
 
-def remaining(world):
-    """The seconds left before the earliest deadline among the waits in progress, or None outside any wait."""
+def remaining(world, *, blocking=False):
+    """The enclosing remainder, or None outside a wait; expired blocking dispatch is refused."""
     stack = _waits.get(world)
     if not stack:
         return None
-    clock = stack[-1][0]
-    left = max(min(deadline for _, deadline in stack) - clock.monotonic(), 0.001)
+    deadline, label = stack[-1]
+    left = deadline.remaining()
+    if blocking and left <= 0:
+        raise WaitExpired(label)
     _handed.setdefault(world, set()).add(left)
     return left
 

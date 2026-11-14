@@ -104,7 +104,9 @@ def test_native_session_completion_text_without_callback_does_not_pass(tmp_path)
     config = application_project(tmp_path, options)
     scenario = Scenario(tmp_path, 1, "native")
     try:
-        with pytest.raises(AcceptanceFailure, match="response_deadline|native_callback_missing"):
+        # The allowance can expire before the next observation request is written or while its response is awaited.
+        # The durable evidence assertions below establish the completed turn and missing callback receipt.
+        with pytest.raises(AcceptanceFailure, match="request_deadline|response_deadline|native_callback_missing"):
             run_native(scenario, config, "callback")
         scenario.close(scenario.clients[0])
         scenario.deadline = time.monotonic() + 3

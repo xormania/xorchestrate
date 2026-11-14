@@ -92,7 +92,7 @@ class World:
 
     def _json(self, *arguments):
         """A CLI command's JSON reply; inside an await it gets only the budget that is left."""
-        left = self.remaining()
+        left = e2e_disturbances.remaining(self, blocking=True)
         return self.cli.json(*arguments, timeout=DEFAULT_COMMAND_TIMEOUT if left is None else left)
 
     @property

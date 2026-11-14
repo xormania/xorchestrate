@@ -105,8 +105,8 @@
     {
       "diagnostic": "TESTKIT_TIMEOUT_STOPS_THE_WORKER_ALONE_FIRST",
       "mutation": {
-        "new": "                    host.interrupt(TERMINAL)\n                    time.sleep(min(grace, 2))\n                    (run_dir / \"pane.txt\").write_text(host.recent_output(TERMINAL, CAPTURE_LINES), encoding=\"utf-8\")\n                    host.close_terminal(TERMINAL, grace=max(0.1, remaining(grace)))",
-        "old": "                    closure = host.close_terminal(TERMINAL, grace=max(0.1, remaining(grace)))\n                    if not closure.cleanup_verified:\n                        errors.append(\"terminal_cleanup_unverified\")\n                    (run_dir / \"pane.txt\").write_text(_log_tail(run_dir / \"terminal.log\"), encoding=\"utf-8\")",
+        "new": "                    host.interrupt(TERMINAL)\n                    time.sleep(min(grace, 2))\n                    (run_dir / \"pane.txt\").write_text(host.recent_output(TERMINAL, CAPTURE_LINES), encoding=\"utf-8\")\n                    host.close_terminal(TERMINAL, grace=remaining(grace))",
+        "old": "                    closure = host.close_terminal(TERMINAL, grace=remaining(grace))\n                    if not closure.cleanup_verified:\n                        errors.append(\"terminal_cleanup_unverified\")\n                    (run_dir / \"pane.txt\").write_text(_log_tail(run_dir / \"terminal.log\"), encoding=\"utf-8\")",
         "path": "scripts/testkit/adapters/supervised_run.py"
       },
       "name": "timeout-interrupts-the-whole-group",

@@ -10,6 +10,8 @@ from pathlib import Path
 
 from xorchestrate.ports import TerminalCommand
 
+from ..waits import Deadline
+from .clock import SystemClock
 from .ownership import Identity, OwnedProcesses, alive, send_signal
 
 WORKER, DASHBOARD = "worker", "dashboard"
@@ -97,14 +99,16 @@ class ManagedWorker:
             except (OSError, ValueError) as error:
                 errors.append(getattr(error, "code", "terminal_shutdown"))
         for number in (signal.SIGTERM, signal.SIGKILL):
+            # Terminal closure, TERM and KILL are distinct cleanup phases.
+            # The phase's signals and observations consume its own allowance.
+            deadline = Deadline.after(self.grace if number == signal.SIGTERM else 2, clock=SystemClock())
             survivors = [item for item in self.tracker.observe() if item not in self.retained]
             for item in survivors:
                 send_signal(item, number)
-            deadline = time.monotonic() + (self.grace if number == signal.SIGTERM else 2)
-            while survivors and time.monotonic() < deadline:
+            while survivors and deadline.remaining() > 0:
                 self.tracker.reap()
                 survivors = [item for item in self.tracker.observe() if item not in self.retained]
-                time.sleep(.025)
+                time.sleep(deadline.remaining(.025))
             if not survivors:
                 break
         after = [item for item in self.tracker.observe() if item not in self.retained]

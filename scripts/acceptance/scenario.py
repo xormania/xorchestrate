@@ -5,7 +5,6 @@ import hashlib
 import json
 import math
 import os
-import selectors
 import signal
 import subprocess
 import sys
@@ -19,8 +18,10 @@ from scripts.testkit.adapters.configuration import isolated_config
 from scripts.testkit.adapters.diagnostics import NAME as DIAGNOSTICS
 from scripts.testkit.adapters.diagnostics import describe, failure, write_failures
 from scripts.testkit.adapters.evidence import write_json as atomic_json
+from scripts.testkit.adapters.streams import FrameTooLarge, read_line, write_bytes
 from scripts.testkit.core import CheckRecorder, ResourceScope
 from scripts.testkit.stories import select_stories, validate_limits
+from scripts.testkit.waits import Deadline
 from xorchestrate.composition import RELEASE, load_config
 from xorchestrate.instance import operations
 from xorchestrate.instance.home import write_document
@@ -98,7 +99,7 @@ class Client:
         self.process = subprocess.Popen(
             [sys.executable, "-m", "xorchestrate", "--project", str(project.repository), "--actor", actor, "serve"],
             cwd=ROOT, env={**os.environ, **project.environment},
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0,
         )
         try:
             initialized = self.call("initialize", {"protocolVersion": "2025-06-18", "capabilities": {},
@@ -113,22 +114,23 @@ class Client:
     def write(self, packet):
         payload = json.dumps({"jsonrpc": "2.0", **packet}, allow_nan=False).encode() + b"\n"
         require(len(payload) <= MAX_FRAME, "request_frame_limit")
-        self.process.stdin.write(payload)
-        self.process.stdin.flush()
+        try:
+            write_bytes(self.process.stdin, payload, Deadline(self.deadline, SystemClock()))
+        except TimeoutError:
+            raise AcceptanceFailure("request_deadline") from None
 
     def call(self, method, params):
         self.identifier += 1
         self.write({"id": self.identifier, "method": method, "params": params})
-        with selectors.DefaultSelector() as selector:
-            selector.register(self.process.stdout, selectors.EVENT_READ)
-            while b"\n" not in self.buffer:
-                remaining = self.deadline - time.monotonic()
-                require(remaining > 0 and selector.select(remaining), "response_deadline")
-                chunk = os.read(self.process.stdout.fileno(), 65536)
-                require(bool(chunk), "response_eof")
-                self.buffer += chunk
-                require(len(self.buffer) <= MAX_FRAME, "response_frame_limit")
-        line, self.buffer = self.buffer.split(b"\n", 1)
+        try:
+            line, self.buffer = read_line(self.process.stdout, self.buffer,
+                                          Deadline(self.deadline, SystemClock()), limit=MAX_FRAME)
+        except TimeoutError:
+            raise AcceptanceFailure("response_deadline") from None
+        except EOFError:
+            raise AcceptanceFailure("response_eof") from None
+        except FrameTooLarge:
+            raise AcceptanceFailure("response_frame_limit") from None
         packet = json.loads(line)
         require(packet.get("id") == self.identifier and "result" in packet, "rpc_response")
         return packet["result"]
@@ -181,22 +183,25 @@ class Client:
             return None
 
     def close(self):
+        graceful = Deadline.after(5, clock=SystemClock())
         if self.process.stdin and not self.process.stdin.closed:
             try:
                 self.process.stdin.close()
             except OSError:
                 pass
         try:
-            self.process.wait(timeout=5)
+            self.process.wait(timeout=graceful.remaining())
         except subprocess.TimeoutExpired:
             # The supervisor tracks and stops owned descendants if graceful
             # runtime cleanup is broken. Do not hide that as a passing check.
+            terminate = Deadline.after(1, clock=SystemClock())
             self.process.terminate()
             try:
-                self.process.wait(timeout=1)
+                self.process.wait(timeout=terminate.remaining())
             except subprocess.TimeoutExpired:
+                forced = Deadline.after(1, clock=SystemClock())
                 self.process.kill()
-                self.process.wait(timeout=1)
+                self.process.wait(timeout=forced.remaining())
             raise AcceptanceFailure("runtime_cleanup_timeout") from None
         finally:
             self.process.stdout.close()
@@ -350,7 +355,9 @@ def callback_receipt(scenario, client, driver, work_id, actor, nonce):
         require(time.monotonic() < scenario.deadline, "native_callback_missing")
         counter += 1
         client.tool("poll_session", {"session_id": session["id"], "idempotency_key": f"callback-poll-{counter}"})
-        time.sleep(0.05)
+        remaining = Deadline(scenario.deadline, SystemClock()).remaining(.05)
+        if remaining > 0:
+            time.sleep(remaining)
     stopped = client.tool("stop_session", {"session_id": session["id"], "idempotency_key": "callback-stop"})
     require(stopped["session"]["status"] == "stopped", "callback_session_stop")
 

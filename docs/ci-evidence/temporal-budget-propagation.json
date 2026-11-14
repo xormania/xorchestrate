@@ -1,0 +1,359 @@
+{
+  "schema_version": 1,
+  "scope": "Propagate remaining test-kit budgets through nested observation, blocking framing, cancellation and explicit cleanup phases; reviewed deadline inventory and classified support scaling.",
+  "base_revision": "314e979d01c5f8bf563b060ad91406e1b7bd7c14",
+  "source_revision": "7a8213050bd374b6529baa4af8c7d0c5205b0c7c",
+  "source_tree": "d4c947c7dc3cda843b6925b63a0a54fe269c3b1d",
+  "source_sha256": {
+    "CHANGELOG.md": "e19723a8f9d863f3073e4ded54be55361a8e446c0693effee368e884c07c4fcc",
+    "contracts/hexagonal.json": "2dc02478b1c09827ff20d6889a80193948438ee139be18781427e3edf626e36b",
+    "contracts/testing.json": "66f7a320de90e2a0081175b223a8db3303320796672417db753354522bf16bfd",
+    "docs/temporal-uses.json": "da4a2bbf154b013017853b4d96db5265d25d125dfdebb120b2e16067952ace5c",
+    "docs/testing-framework.md": "e5b19722c3558af12f365e4e7317ac7f450cabe3b657df8fb7fe66248969edfd",
+    "docs/timing-ordering-work.md": "661f16f47751798118afe56b19179c74e540c5904991e64dc85f99236a76a69c",
+    "scripts/acceptance/__main__.py": "e6f2893e522fb4975373c5cbe2e3eb5ea649d69a7c14a0c574fd1810673b5040",
+    "scripts/acceptance/scenario.py": "e0e731e1b57417586933b257ca3c37eb0af125e37c08ae9bcbd7100072d2c788",
+    "scripts/testkit/adapters/command.py": "d15354dcd67387a0b022ebbe6004d3df68ebe980503009e5cee874b5c5c94927",
+    "scripts/testkit/adapters/managed_process.py": "4a5b8a289d07e52beacfb384c689f4e88aec0440ee8fdfd6beaa2595e4a099a5",
+    "scripts/testkit/adapters/streams.py": "f27403a1ae36f027972beadd9bef2357d7f8f1b16e5c3d86cdb9e7bf2a5b321c",
+    "scripts/testkit/adapters/supervised_run.py": "9797b596e9296838a8718d79106551581bce5edf80120a335223ab6dbf3fe6f6",
+    "scripts/testkit/waits.py": "edd9ad665aaa58352f825d34fc9595c16d8881e448898ab10c87c2258e0cae0a",
+    "scripts/verification/inventories/testkit.json": "e1f5ef60b07e7380babf2d6cf100d7acc55d10ae1c03dc20e2debad930ed75ed",
+    "scripts/verification/lifecycle.py": "bffdc6c23ca08f42b639e7b5813ff7cc672ff397027ab4a2d6709fa14795b2ee",
+    "scripts/verification/multi_harness.py": "720923abddb3af674a898452e339e9bf4515d94ef0e7a67d57d5c8719ace5556",
+    "tests/hexagonal/support/deadline_boundaries.py": "6cb11e7efe05854738b8343dbc6f074e71017337eab33404d477e3ad1ce94b90",
+    "tests/hexagonal/support/e2e_disturbances.py": "461be17a0022c6da55ffb1c14390de47a676e30586656b1ad1d34caf1fcf362b",
+    "tests/hexagonal/support/e2e_world.py": "394642e62bcb6958105b34469e370ccc09d123df1cfed51aaaf21a6b13c50316",
+    "tests/hexagonal/support/managed_terminals.py": "22fff84f8a524685fdac7c70f57f7a48ca733e4ed04b1d18fa2b5400af779dfb",
+    "tests/hexagonal/support/managed_workflow.py": "697925012015f702931f4626cfbb1d3b1a4c266bef6ceda08ed1feb2d9575fda",
+    "tests/hexagonal/support/native.py": "59024df96cf6009b2f5989505cacbe75f72662dd9d12274cc2ee475d8bf40ff6",
+    "tests/hexagonal/support/terminal_host.py": "2d466cb1c7ebb4ee38ec2e1c746d59effe0cdeb1420fc799d474ef0b5f6c057c",
+    "tests/hexagonal/test_deadline_boundaries.py": "892ec51a0db0ddb1b6cd08ed13513670a002a8546e9306567a0ef10c6e482b04",
+    "tests/hexagonal/test_e2e_world.py": "bdff0d3e0bb0dd7628a660ec4910e5a4a35ef2f71a613fd462a57c191bbdd745",
+    "tests/hexagonal/test_testkit_command.py": "a625cd9b194261126b17e10100230b0cc7e32361b6620ed9ac04879c2987a0c5",
+    "tests/hexagonal/test_testkit_integration.py": "a697139405777a2cce378e3fd66a2757eaac62895e67d0c186cab69cd633a250",
+    "tests/hexagonal/test_testkit_temporal_waits.py": "a1965f6b01af1abf9de736fa54ae1467e2b7c1a5572b938cd94bacb6b056a5b0"
+  },
+  "test_authoring": "Implementation and collected tests/support were written independently. Seven tests-only checkpoints precede the implementation commit; existing resource-cleanup assertions were retained when their readiness fixture moved from select/readline to the shared framing seam.",
+  "test_checkpoints": [
+    "00ab8e988f18a8ea8ded3331357feebe42331a8f",
+    "d1012043aa82f561201b993503d507cfa7f3025e",
+    "68073b3b8c2f78f1d3207becbc68ed856755306c",
+    "a2adc37095f10ae401a137e4441610e6332ff243",
+    "b60bca7dd8931f47356c3d804b4ba561cc60c3ac",
+    "70604dfc2abc1b4fd7f7bac234e96fc3a0157b7e",
+    "c9a1416f991e8a3ed31a439ceff5740abe4ce7be"
+  ],
+  "red_evidence": {
+    "execution": "Working tree tests over unchanged predecessor implementation; no implementation edits existed for the exercised boundaries at each red run.",
+    "runs": [
+      {
+        "command": "PYTHONPYCACHEPREFIX=/workspace/scratch/ab325f7a673c/timing-v2-pycache/budget-tests /workspace/scratch/ab325f7a673c/timing-v2-env/bin/python -m pytest -q -p no:cacheprovider tests/hexagonal/test_deadline_boundaries.py",
+        "exit": 1,
+        "outcome": "6 failed in 2.23s, all intended behavioral assertion failures",
+        "witnesses": {
+          "CANCELLATION_GRACE_INCLUDES_SIGNAL_COST": "child communicate received 1 instead of 0.6 after signal consumed 0.4 of the grace",
+          "CLEANUP_REAP_USES_REMAINDER": "reap received renewed 5 seconds after drain consumed the full 5-second cleanup budget",
+          "ACCEPTANCE_REQUEST_WRITE_MUST_OBSERVE_DEADLINE": "saturated real pipe write missed independent 1-second watchdog despite supplied 0.05-second deadline; closing reader released and joined old writer",
+          "HOST_READINESS_PARTIAL_FRAME_MUST_OBSERVE_DEADLINE": "readline on real incomplete readiness pipe missed independent 1-second watchdog despite 0.05-second timeout; closing writer released and joined old reader",
+          "NESTED_WAIT_MUST_NOT_RESTART_THE_PARENT_BUDGET": "inner wait consumed 1 second despite outer 0.05-second budget",
+          "EXHAUSTED_WAIT_MUST_NOT_LAUNCH_ANOTHER_COMMAND": "expired outer wait dispatched CLI command with manufactured 0.001-second allowance"
+        }
+      },
+      {
+        "command": "PYTHONPYCACHEPREFIX=/workspace/scratch/ab325f7a673c/timing-v2-pycache/budget-tests /workspace/scratch/ab325f7a673c/timing-v2-env/bin/python -m pytest -q -p no:cacheprovider tests/hexagonal/test_deadline_boundaries.py -k 'composed or healthy_control or exchange_keeps'",
+        "exit": 1,
+        "outcome": "2 failed, 3 passed, 6 deselected in 0.09s",
+        "witnesses": {
+          "COMPOSED_WAIT_SLEEP_USES_POST_OBSERVATION_REMAINDER": "sleep requested full 0.025 instead of remaining 0.005 after observation work",
+          "COMPOSED_RETRIES_SHARE_THE_OBSERVATION_BUDGET": "8 retry attempts instead of 3 within the 0.025-second observation deadline"
+        },
+        "healthy_controls": [
+          "acceptance request framing, request IDs and buffered two-response exchange",
+          "lifecycle complete readiness frame accepted and launch receipt retained",
+          "late truthy synchronous composed observation accepted without false preemption claim"
+        ]
+      },
+      {
+        "command": "PYTHONPYCACHEPREFIX=/workspace/scratch/ab325f7a673c/timing-v2-pycache/budget-tests /workspace/scratch/ab325f7a673c/timing-v2-env/bin/python -m pytest -q -p no:cacheprovider tests/hexagonal/test_deadline_boundaries.py -k shared_support",
+        "exit": 1,
+        "outcome": "4 failed, 4 passed, 11 deselected in 0.11s",
+        "witnesses": {
+          "SHARED_SUPPORT_WAIT_CLAMPS_POST_PREDICATE_REMAINDER": "managed-workflow slept 0.05 and terminal-host slept 0.02 with only 0.005 remaining",
+          "SHARED_HARNESS_ALLOWANCE_APPLIES_CONFIGURED_SCALE": "managed-workflow consumed 0.05 and terminal-host 0.04 instead of configured 0.03 * 2 allowance"
+        },
+        "healthy_controls": [
+          "both adapters preserve exact predicate exception identity",
+          "managed-workflow returns truthy value, terminal-host returns None"
+        ],
+        "source_scope": "unchanged managed_workflow.await_condition and terminal_host.wait predecessor source"
+      },
+      {
+        "command": "PYTHONPYCACHEPREFIX=/workspace/scratch/ab325f7a673c/timing-v2-pycache/budget-tests /workspace/scratch/ab325f7a673c/timing-v2-env/bin/python -m pytest -q -p no:cacheprovider tests/hexagonal/test_deadline_boundaries.py -k 'terminal_receive or socket_receiver or supervisor or managed_worker or independent'",
+        "exit": 1,
+        "outcome": "6 failed, 6 passed, 19 deselected in 0.26s; five original-predecessor assertion reds plus new wrapper exception-identity failure",
+        "witnesses": {
+          "TERMINAL_RECEIVE_USES_ACTUAL_REMAINDER": "both socket and terminal reads received 0.01 despite only 0.005 allowance",
+          "SUPERVISOR_CLEANUP_PASSES_ZERO_WITHOUT_NEW_GRACE": "host close received 0.1 despite remaining 0.02 or 0",
+          "MANAGED_WORKER_PHASE_SLEEP_USES_POST_OBSERVATION_REMAINDER": "worker TERM phase slept 0.025 despite only 0.005 remaining"
+        },
+        "healthy_controls": [
+          "socket and terminal EOF missing-marker assertions",
+          "socket underlying error identity",
+          "cooperative host.shutdown overrun recorded cleanup_deadline",
+          "independent composed TimeoutError preserved",
+          "terminal independent WaitTimeout preserved"
+        ]
+      },
+      {
+        "command": "PYTHONPYCACHEPREFIX=/workspace/scratch/ab325f7a673c/timing-v2-pycache/budget-tests /workspace/scratch/ab325f7a673c/timing-v2-env/bin/python -m pytest -q -p no:cacheprovider tests/hexagonal/test_deadline_boundaries.py -k independent-wait-timeout-managed_workflow",
+        "exit": 1,
+        "outcome": "1 failed, 30 deselected in 0.10s; intended identity assertion",
+        "witnesses": {
+          "SHARED_SUPPORT_PRESERVES_INDEPENDENT_PREDICATE_ERROR": "new initial managed-workflow wrapper translated predicate-owned WaitTimeout to its own TimeoutError"
+        },
+        "source_scope": "initial working-tree helper migration, not the master predecessor"
+      },
+      {
+        "command": "PYTHONPYCACHEPREFIX=/workspace/scratch/ab325f7a673c/timing-v2-pycache/budget-tests /workspace/scratch/ab325f7a673c/timing-v2-env/bin/python -m pytest -q -p no:cacheprovider tests/hexagonal/test_deadline_boundaries.py -k 'minimum_timeout and 0.02'",
+        "exit": 1,
+        "outcome": "2 failed, 31 deselected in 0.10s; intended scale assertion reds",
+        "witnesses": {
+          "TERMINAL_RECEIVE_USES_ACTUAL_REMAINDER": "both socket and terminal reads supplied 0.02 instead of classified harness allowance 0.02 * configured scale 2"
+        },
+        "source_scope": "unchanged managed_terminals.receive_until and receive_terminal_until predecessor source"
+      }
+    ],
+    "limits": "Clock doubles exercise deadline accounting only. Real pipe cases have independent real watchdogs. No native vendor, terminal-host, cross-host clock or scheduler preemption claim. New Deadline API tests require post-implementation deliberate-fault healthy-control proof, not missing-API failures."
+  },
+  "new_machinery_calibration": {
+    "service": "scripts.verification.__main__.calibrate; isolated control and mutation copies",
+    "receipt": "/workspace/scratch/ab325f7a673c/timing-v2-budget-calibration-final/calibration.json",
+    "classification": "detected",
+    "mutation_applied": true,
+    "mutation": "WaitBudget.start ignores parent expiry and starts a fresh allowance.",
+    "mutation_sha256": "435231c91613019974d2c67fea17bd3d68f14c0dc7680f6fa16ccda67a385fa2",
+    "capture_sha256": "0c60421a151502224d25834cfdc36b569b16238b4f88b7777eb32e1eab15bdb0",
+    "expected_diagnostic": "NATIVE_CHILD_WAIT_USES_PARENT_REMAINDER",
+    "target": "tests.hexagonal.test_testkit_temporal_waits::test_shared_parent_deadline_limits_the_native_wait_without_restarting",
+    "healthy_control": [
+      "tests.hexagonal.test_testkit_temporal_waits::test_running_zero_deadline_has_no_minimum_new_allowance"
+    ],
+    "control_exit": 0,
+    "mutant_exit": 1,
+    "source_binding": "This earlier working-tree capture has the same waits.py and native.py contents as the final source. Final focused execution additionally checks the committed candidate."
+  },
+  "validation": [
+    {
+      "name": "focused final behavior",
+      "source_revision": "7a8213050bd374b6529baa4af8c7d0c5205b0c7c",
+      "command": "PYTHONPYCACHEPREFIX=<external> python -m pytest -q -p no:cacheprovider tests/hexagonal/test_testkit_temporal_waits.py tests/hexagonal/test_deadline_boundaries.py tests/hexagonal/test_testkit_command.py tests/hexagonal/test_testkit_integration.py tests/hexagonal/test_verification.py",
+      "result": "171 passed, 2 skipped in 11.73s",
+      "exit_status": 0,
+      "junit": "/workspace/scratch/ab325f7a673c/timing-v2-budget-focused-final.xml",
+      "skips": "Two nested terminal-host finalization scenarios require unavailable tmux."
+    },
+    {
+      "name": "final static",
+      "command": "PATH=<validation-bin>:$PATH PYTHONPYCACHEPREFIX=<external> python -m scripts.testkit run --suite static --output <external>",
+      "report": "/workspace/scratch/ab325f7a673c/timing-v2-budget-static-final/20261113T215251Z-a78502da3df6/report.json",
+      "result": "Ruff, syntax, architecture, secret-scan and Zizmor all passed",
+      "exit_status": 0,
+      "candidate_integrity": {
+        "actual": "ddd6fab2582e76d2c61f1445072ad3590161a142587757525db51780054e3187",
+        "changed_paths": [],
+        "deleted": [],
+        "expected": "ddd6fab2582e76d2c61f1445072ad3590161a142587757525db51780054e3187",
+        "passed": true
+      }
+    },
+    {
+      "name": "required manual testkit inventory",
+      "command": "PATH=<validation-bin>:$PATH PYTHONPYCACHEPREFIX=<external> python -m scripts.testkit run --suite calibration --inventory testkit --output <external>",
+      "report": "/workspace/scratch/ab325f7a673c/timing-v2-budget-manual-final/20261113T215252Z-0d322d051b7e/report.json",
+      "exit_status": 1,
+      "result": "4 detected; 5 invalid_control because required hosted controls were skipped. This is not a passing inventory.",
+      "candidate_integrity": {
+        "actual": "ddd6fab2582e76d2c61f1445072ad3590161a142587757525db51780054e3187",
+        "changed_paths": [],
+        "deleted": [],
+        "expected": "ddd6fab2582e76d2c61f1445072ad3590161a142587757525db51780054e3187",
+        "passed": true
+      },
+      "cases": {
+        "worker-context-not-set": "invalid_control: one required host control skipped",
+        "schema-one-descriptors-accepted": "detected",
+        "attach-runs-the-descriptors-argv": "detected",
+        "placement-not-checked": "detected",
+        "readiness-keeps-the-old-name": "detected",
+        "default-keeps-the-product-fallback": "invalid_control: one required host control skipped",
+        "timeout-interrupts-the-whole-group": "invalid_control: both required host controls skipped",
+        "endpoint-removed-without-checks": "invalid_control: one required host control skipped",
+        "keep-allowed-in-the-foreground": "invalid_control: both required host controls skipped"
+      },
+      "anchor_change": "Updated only the existing supervised_run source anchor from max(.1, remaining(grace)) to remaining(grace); the deliberate whole-group interrupt mutation and intended assertion are retained."
+    },
+    {
+      "name": "broader affected existing modules",
+      "command": "PYTHONPYCACHEPREFIX=<external> python -m pytest -q -p no:cacheprovider tests/hexagonal/test_testkit_command.py tests/hexagonal/test_acceptance_lifecycle.py tests/hexagonal/test_testkit_integration.py tests/hexagonal/test_e2e_world.py tests/hexagonal/test_verification.py tests/hexagonal/test_managed_workflow.py tests/hexagonal/test_managed_terminals.py tests/hexagonal/test_terminal_host.py",
+      "junit": "/workspace/scratch/ab325f7a673c/timing-v2-budget-existing.xml",
+      "result": "264 passed, 76 skipped, 55 failed in 80.10s",
+      "exit_status": 1,
+      "disposition": "Three old readiness fixtures patched the removed lifecycle.select import; their seam was repaired without weakening cleanup assertions (c9a1416), the selected three passed and final focused execution includes them. The remaining 52 fail at project/native host startup in this sandbox. AF_UNIX socket construction independently fails with PermissionError errno 1. These are unavailable native/hosted evidence, not passes."
+    },
+    {
+      "name": "first static/manual attempts",
+      "result": "Discarded as candidate evidence: tests/hexagonal/test_testkit_integration.py changed during validation, and the framework correctly reported candidate integrity failure. Final static/manual runs above used frozen source and passed integrity."
+    },
+    {
+      "name": "initial existing-module invocation",
+      "result": "Output was not retained; no outcome claimed. The recorded JUnit run above is the evidence-bearing invocation."
+    }
+  ],
+  "runtime": {
+    "python": "3.12.16",
+    "ruff": "0.16.8",
+    "zizmor": "1.32.0",
+    "validation_environment": "/workspace/scratch/ab325f7a673c/timing-v2-env",
+    "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+    "bytecode": "External per-run PYTHONPYCACHEPREFIX; no shared source-tree bytecode."
+  },
+  "semantics": [
+    "Running deadlines share one injected monotonic clock; children cannot extend the parent; expired remainder is zero. No new command starts with a fabricated minimum allowance.",
+    "Polling remains cooperative and preserves a late truthy observation. Generic workflow and terminal predicates retain their original error policy; only native wait_for retries explicitly safe Conflict.",
+    "Acceptance request writes and response framing share the original scenario deadline. Real pipe regressions use an independent real watchdog; fake clocks do not virtualize external I/O.",
+    "Command execution, check timeout and run cancellation remain distinct. Shutdown grace begins before TERM; one forced 5-second phase covers KILL, pipe drain, reap and group verification.",
+    "Supervisor cleanup is cooperative across terminal-host ports. Exact remaining grace may be zero; receipts expose elapsed cleanup, overrun and cleanup_deadline. ManagedWorker close, TERM and KILL remain intentionally separate phases.",
+    "Scale applies only to reviewed classified shared-support observations. Product guarantees, deliberate fault controls, command/run budgets and cleanup phases are not scaled.",
+    "The inventory retains historical e251 observations and a 22-group current review at 314e979, including intentional service-lifetime loops and independent provider/turn/storage limits. Separate runtime and operation-readiness candidates are not claimed as implemented here."
+  ],
+  "limits": [
+    "No native vendor authentication or WSL/host-suspend qualification performed.",
+    "Hosted/native scenarios blocked by unavailable tmux or AF_UNIX sockets require an appropriate execution environment.",
+    "Arbitrary synchronous application, filesystem/proc and terminal-host calls are not preempted; requested timeouts are not strict total-return guarantees."
+  ],
+  "ci_inventory_pin_repair": {
+    "base_commit": "210134e60d0b3e1cc20f836fb687553c20175980",
+    "source_comparison_base": "314e979d01c5f8bf563b060ad91406e1b7bd7c14",
+    "repair": {
+      "path": "tests/hexagonal/test_fault_calibration.py",
+      "source_sha256": "68c051d4212f474b409a52f08d4f8970d9619a6f26cf0a9e114b66627b24fe20",
+      "old_digest": "abb8b4ef2e43a001ed30b679c2f7d621d331610d008e9120c1ea36ce2411ac4d",
+      "new_digest": "3338d87984f136de1ba68974d128dda59db5a9db77c0d3f05680ab5ad9bbfae2",
+      "comment": "Clarified canonical digest binds current source anchors of retained faults"
+    },
+    "inventory_verification": "Parsed structural comparison confirmed only timeout-interrupts-the-whole-group mutation.old and mutation.new replaced max(0.1, remaining(grace)) with remaining(grace); all nine case identities, target paths, diagnostics, selectors, healthy controls and expectations unchanged.",
+    "red": {
+      "command": "PYTHONPYCACHEPREFIX=/workspace/scratch/ab325f7a673c/timing-v2-pycache/budget-tests /workspace/scratch/ab325f7a673c/timing-v2-env/bin/python -m pytest -q -p no:cacheprovider tests/hexagonal/test_fault_calibration.py::test_the_testkit_inventory_is_the_old_faults_with_standard_checks --junitxml=/workspace/scratch/ab325f7a673c/timing-v2-inventory-pin-red.xml",
+      "result": "1 failed in 0.22s; intended canonical digest assertion"
+    },
+    "green": {
+      "command": "PYTHONPYCACHEPREFIX=/workspace/scratch/ab325f7a673c/timing-v2-pycache/budget-tests /workspace/scratch/ab325f7a673c/timing-v2-env/bin/python -m pytest -q -p no:cacheprovider tests/hexagonal/test_fault_calibration.py --junitxml=/workspace/scratch/ab325f7a673c/timing-v2-inventory-pin-green.xml",
+      "result": "115 passed in 52.43s"
+    },
+    "ruff": "python -m ruff check tests/hexagonal/test_fault_calibration.py: All checks passed!",
+    "limits": "Test-only working-tree repair; no remote or commit changes. This module validates retained fault inventory semantics and runs its existing state/work calibration parity controls; no new claim about native-host manual execution.",
+    "hosted_failure": {
+      "pull_request": 133,
+      "source_commit": "15503e2ad5b5aa31a4f7e3cb313dfba694b230c2",
+      "merge_revision": "e8028de3d93f32a1d5b21d739a1996f7310da818",
+      "tree": "3d52a2334ca0abf94fa6f14a0a52bc23c1da6b0b",
+      "run_id": 43515299285,
+      "job_id": 132195821302,
+      "artifact_id": 14079828505,
+      "outcome": "Shard 3: 618 passed, 1 failed at the canonical testkit mutation digest assertion; candidate integrity passed.",
+      "artifact": "/workspace/scratch/ab325f7a673c/timing-v2-evidence/pr133-shard3-attempt1.zip"
+    }
+  },
+  "ci_post_completion_phase_repair": {
+    "base_commit": "48268eba1155908a0d09699d82dd70cfff2ebff1",
+    "repair": {
+      "path": "tests/hexagonal/test_acceptance_scenario.py",
+      "sha256": "d810ad20d02b4e56206dd6945f198d99fae5cfc834d678ef772581a676683025",
+      "scope": "Add request_deadline to allowed expiry phases and adjacent rationale comment; scenario timeout, actual peer, completed-turn evidence, absent callback receipt and failed-check assertions unchanged."
+    },
+    "deterministic_witness": {
+      "script": "/workspace/scratch/ab325f7a673c/timing-v2-post-completion-witness.py",
+      "script_sha256": "3a31cc296560c79db7af0b56a1c5f630dc4e088056c70ed0a827ec8630898d50",
+      "instrumentation": "/workspace/scratch/ab325f7a673c/timing-v2-post-completion-witness/instrumentation.py",
+      "receipt": "/workspace/scratch/ab325f7a673c/timing-v2-post-completion-witness/witness.json",
+      "command": "PYTHONPYCACHEPREFIX=/workspace/scratch/ab325f7a673c/timing-v2-pycache/budget-tests PYTHONPATH=/workspace/scratch/ab325f7a673c/timing-v2-worktrees/budgets /workspace/scratch/ab325f7a673c/timing-v2-env/bin/python /workspace/scratch/ab325f7a673c/timing-v2-post-completion-witness.py",
+      "old": "Target fails AssertionError: Regex pattern did not match; actual request_deadline during poll_session. Healthy real callback control passes.",
+      "repaired": "Both target and healthy real callback control pass, including original durable evidence and failed-check assertions.",
+      "phase_proof": "Both copies recorded real completed evidence and zero callbacks before arming; next poll_session write began before original deadline, consumed that unchanged real deadline, and original Client.write reported request_deadline afterward.",
+      "execution_inputs": "Shared calibration capture retains source; old/repaired copies append exactly instrumentation.py to conftest.py. The repaired copy changes only the expiry regex. Current source also has a nonbehavioral explanatory comment.",
+      "source_capture_sha256": "c9b1b6ca27d888388fddd1674b2f92eba2bb9bcceffe44e5da749d8f72c67887",
+      "mutation": {
+        "path": "tests/hexagonal/test_acceptance_scenario.py",
+        "old": "match=\"response_deadline|native_callback_missing\"",
+        "new": "match=\"request_deadline|response_deadline|native_callback_missing\""
+      },
+      "instrumentation_source": "\n\n@pytest.fixture(autouse=True)\ndef expire_only_after_real_completed_turn(request, monkeypatch):\n    if request.node.name != \"test_native_session_completion_text_without_callback_does_not_pass\":\n        yield\n        return\n    import json\n    import time\n    from pathlib import Path\n    from scripts.acceptance.scenario import AcceptanceFailure, Client\n\n    original_tool, original_write = Client.tool, Client.write\n    state = {\"armed\": False, \"fired\": False, \"write_failure\": None}\n    armed_client = []\n    record = Path(__file__).resolve().parents[2] / \"post-completion-expiry.json\"\n\n    def tool(client, name, arguments, *args, **kwargs):\n        reply = original_tool(client, name, arguments, *args, **kwargs)\n        if name == \"get_work\" and not state[\"armed\"]:\n            evidence = reply[\"evidence\"]\n            completed = [row for row in evidence if isinstance(row[\"result\"], dict)\n                         and row[\"result\"].get(\"turn\", {}).get(\"status\") == \"completed\"]\n            callbacks = [row for row in evidence if row.get(\"label\") == \"terminal-acceptance\"]\n            if completed and not callbacks:\n                armed_client.append(client)\n                state.update(armed=True, armed_at=time.monotonic(),\n                             observed_completed_ids=[row[\"id\"] for row in completed],\n                             observed_callback_count=len(callbacks))\n        return reply\n\n    def write(client, packet):\n        if (armed_client and client is armed_client[0] and not state[\"fired\"]\n                and packet.get(\"method\") == \"tools/call\"\n                and packet.get(\"params\", {}).get(\"name\") == \"poll_session\"):\n            state.update(fired=True, write_started_at=time.monotonic(),\n                         original_deadline=client.deadline,\n                         request_name=packet[\"params\"][\"name\"])\n            # Consume this request's existing real allowance at the write\n            # boundary. The scenario timeout and clock are not replaced.\n            while (remaining := client.deadline - time.monotonic()) > 0:\n                time.sleep(remaining)\n            try:\n                return original_write(client, packet)\n            except AcceptanceFailure as error:\n                state[\"write_failure\"] = error.code\n                state[\"expired_at\"] = time.monotonic()\n                record.write_text(json.dumps(state, indent=2) + \"\\n\")\n                raise\n        return original_write(client, packet)\n\n    monkeypatch.setattr(Client, \"tool\", tool)\n    monkeypatch.setattr(Client, \"write\", write)\n    yield\n    assert state[\"armed\"] and state[\"fired\"], \"POST_COMPLETION_WRITE_FAULT_WAS_EXERCISED\"\n    assert state[\"write_failure\"] == \"request_deadline\", \"REAL_WRITE_BOUNDARY_REPORTED_EXPIRY\"\n",
+      "reproduction": "Use scripts.verification.__main__.calibration_workspace with the captured predecessor and mutation above. Append the same instrumentation_source to tests/hexagonal/conftest.py in both disposable copies. Run the target and healthy callback control with observed_pytest; retain JUnit and post-completion-expiry.json. No live source or product reply is modified.",
+      "phase_records": {
+        "old_expectation": {
+          "exit_status": 1,
+          "cases": {
+            "tests.hexagonal.test_acceptance_scenario::test_native_session_completion_text_without_callback_does_not_pass": "failed",
+            "tests.hexagonal.test_acceptance_scenario::test_native_scenario_requires_persisted_callback_using_protocol_peer": "passed"
+          },
+          "phase_witness": {
+            "armed": true,
+            "fired": true,
+            "write_failure": "request_deadline",
+            "armed_at": 5501.408407435,
+            "observed_completed_ids": [
+              "85b0ac6bded5432281d041664907489a"
+            ],
+            "observed_callback_count": 0,
+            "write_started_at": 5501.408427235,
+            "original_deadline": 5501.847020726,
+            "request_name": "poll_session",
+            "expired_at": 5501.847333719
+          }
+        },
+        "repaired_expectation": {
+          "exit_status": 0,
+          "cases": {
+            "tests.hexagonal.test_acceptance_scenario::test_native_session_completion_text_without_callback_does_not_pass": "passed",
+            "tests.hexagonal.test_acceptance_scenario::test_native_scenario_requires_persisted_callback_using_protocol_peer": "passed"
+          },
+          "phase_witness": {
+            "armed": true,
+            "fired": true,
+            "write_failure": "request_deadline",
+            "armed_at": 5504.148748054,
+            "observed_completed_ids": [
+              "90e91072faa64fd9acd0d53401b3d33a"
+            ],
+            "observed_callback_count": 0,
+            "write_started_at": 5504.148767482,
+            "original_deadline": 5504.657023871,
+            "request_name": "poll_session",
+            "expired_at": 5504.657672419
+          }
+        }
+      },
+      "independent_phase_check": "Both records satisfy armed_at <= write_started_at < original_deadline <= expired_at, have a real completed evidence ID and zero callback receipts, and name the original Client.write request_deadline. Capture hash matches the failing hosted candidate."
+    },
+    "uninstrumented": {
+      "command": "PYTHONPYCACHEPREFIX=/workspace/scratch/ab325f7a673c/timing-v2-pycache/budget-tests /workspace/scratch/ab325f7a673c/timing-v2-env/bin/python -m pytest -q -p no:cacheprovider tests/hexagonal/test_acceptance_scenario.py::test_native_session_completion_text_without_callback_does_not_pass tests/hexagonal/test_acceptance_scenario.py::test_native_scenario_requires_persisted_callback_using_protocol_peer --junitxml=/workspace/scratch/ab325f7a673c/timing-v2-post-completion-uninstrumented.xml",
+      "result": "2 passed in 2.34s",
+      "junit": "/workspace/scratch/ab325f7a673c/timing-v2-post-completion-uninstrumented.xml"
+    },
+    "ruff": "All checks passed for tests/hexagonal/test_acceptance_scenario.py",
+    "limitations": "Test-only phase expectation repair and controlled timing witness. No product changes, native vendor claim, timeout increase, remote operation or commit.",
+    "hosted_failure": {
+      "pull_request": 133,
+      "source_commit": "58674f7d6e36270991fc3fe138293e167a1ce0f7",
+      "merge_revision": "9b62c933b735f842ea63eff4468e5cb568608e49",
+      "tree": "8b29ed38e16a52488e521038f6a97f3752102d5a",
+      "run_id": 43516887264,
+      "job_id": 132201772345,
+      "artifact_id": 14080558432,
+      "outcome": "Shard 6: 648 passed, 1 failed, 2 skipped. The missing-callback test rejected request_deadline as an unexpected phase; candidate integrity passed.",
+      "artifact": "/workspace/scratch/ab325f7a673c/timing-v2-evidence/pr133-metadata-shard6-attempt1.zip",
+      "content_sha256": "c9b1b6ca27d888388fddd1674b2f92eba2bb9bcceffe44e5da749d8f72c67887"
+    }
+  }
+}

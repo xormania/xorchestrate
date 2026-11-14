@@ -343,7 +343,7 @@ def test_a_victim_that_survives_the_grace_fails_the_disturbance_naming_its_recei
         assert alive(sentinel)
 
 
-def test_the_remaining_budget_never_reaches_zero_at_the_deadline(monkeypatch):
+def test_the_remaining_budget_is_exhausted_at_the_deadline(monkeypatch):
     monkeypatch.setenv("XO_TEST_TIMEOUT_SCALE", "1")  # nominal budgets: these deadlines are compared with fixed values
     clock = ControlledClock()
     seen = []
@@ -355,7 +355,7 @@ def test_the_remaining_budget_never_reaches_zero_at_the_deadline(monkeypatch):
 
     with World("detached-process", clock=clock, sleep=clock.sleep) as world:
         world.await_("past the deadline", predicate, timeout=30)
-    assert seen and seen[0] > 0, seen
+    assert seen == [0], "EXHAUSTED_WAIT_DOES_NOT_CREATE_A_NEW_ALLOWANCE"
 
 
 def test_there_is_no_remaining_budget_outside_an_await():

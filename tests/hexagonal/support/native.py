@@ -81,21 +81,29 @@ def complete_json_lines(path):
     return [json.loads(line) for line in text[:text.rfind("\n") + 1].splitlines()]
 
 
+def observation_budget(timeout, *, classification="harness_allowance", timeout_scale=None):
+    """Resolve the explicitly selected scale for classified shared-support waits."""
+    if timeout_scale is None:
+        try:
+            timeout_scale = float(os.environ.get("XO_TEST_TIMEOUT_SCALE", "1"))
+        except ValueError as error:
+            raise ValueError("XO_TEST_TIMEOUT_SCALE must be a positive finite number") from error
+    return WaitBudget(timeout, classification, scale=timeout_scale)
+
+
 def wait_for(predicate, timeout=5, *, message="Expected native observation did not arrive",
-             clock=None, sleep=None, poll_interval=.01, classification="harness_allowance", timeout_scale=None):
+             clock=None, sleep=None, poll_interval=.01, classification="harness_allowance", timeout_scale=None,
+             deadline=None):
     """Observe with a classified allowance; retry only explicitly safe conflicts.
 
     XO_TEST_TIMEOUT_SCALE applies here to harness allowances only. An explicit
     timeout_scale takes precedence. Predicates must bound their own I/O: the
     shared wait cannot preempt them and accepts a late truthy observation.
     """
-    if timeout_scale is None:
-        try:
-            timeout_scale = float(os.environ.get("XO_TEST_TIMEOUT_SCALE", "1"))
-        except ValueError as error:
-            raise ValueError("XO_TEST_TIMEOUT_SCALE must be a positive finite number") from error
-    budget = WaitBudget(timeout, classification, scale=timeout_scale)
-    return bounded_wait(predicate, budget, clock=SystemClock() if clock is None else clock,
+    budget = observation_budget(timeout, classification=classification, timeout_scale=timeout_scale)
+    if clock is None:
+        clock = deadline.clock if deadline is not None else SystemClock()
+    return bounded_wait(predicate, budget, clock=clock, deadline=deadline,
                         sleep=time.sleep if sleep is None else sleep, poll_interval=poll_interval, message=message,
                         retryable=lambda error: isinstance(error, Conflict) and error.details.get("retry_safe") is True)
 

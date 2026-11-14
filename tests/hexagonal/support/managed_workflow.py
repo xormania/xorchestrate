@@ -71,13 +71,28 @@ def await_owner_exit(read_owner, *, timeout=20):
 
 
 def await_condition(predicate, *, timeout=20):
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        result = predicate()
-        if result:
-            return result
-        time.sleep(.05)
-    raise TimeoutError("Expected managed workflow transition was not observed")
+    from scripts.testkit.adapters.clock import SystemClock
+    from scripts.testkit.waits import WaitTimeout, bounded_wait
+    from tests.hexagonal.support.native import observation_budget
+
+    predicate_failure = None
+
+    def observe():
+        nonlocal predicate_failure
+        try:
+            return predicate()
+        except WaitTimeout as error:
+            predicate_failure = error
+            raise
+
+    try:
+        return bounded_wait(observe, observation_budget(timeout), clock=SystemClock(),
+                            poll_interval=.05, sleep=time.sleep,
+                            message="Expected managed workflow transition was not observed")
+    except WaitTimeout as expired:
+        if expired is predicate_failure:
+            raise
+        raise TimeoutError("Expected managed workflow transition was not observed") from expired
 
 
 class PublicWorkflow:

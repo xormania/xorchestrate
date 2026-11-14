@@ -8,30 +8,33 @@ proposed scope, rather than an immutable specification.
 
 ## Source inventory
 
-[temporal-uses.json](temporal-uses.json) records the first reviewed hotspots at
-master `e2511f6`: owner, purpose, clock, scope, units, start/end boundaries,
-configuration, cancellation, persistence and a coverage-discovery lead. It is a
-documentation inventory, not an executable gate or a complete deadline census.
-Linked test modules identify where to inspect existing coverage; they do not
-assert that every temporal property has been tested.
+[temporal-uses.json](temporal-uses.json) preserves the first reviewed hotspots at
+master `e2511f6` and records the grouped deadline review against `314e979`.
+The initial entries remain historical; their current dispositions distinguish
+already merged ordering work, this test-kit candidate and separate runtime or
+readiness candidates. The review covers shared support, verification/acceptance,
+execution/cleanup, runtime transports/providers, storage/telemetry and ongoing
+services. It classifies purposes and observable boundaries instead of treating
+every timeout literal as a defect. Linked tests are discovery leads; executed
+coverage belongs in the candidate evidence.
 
 The important existing mechanisms are:
 
 - The state-store event log already owns commit-order sequence numbers.
   Record lists are key-sorted and cannot stand in for that log.
-- Native observation waits already use a monotonic deadline. The missing pieces
-  include substitutable effects, budget classification and remaining-budget
-  handling at the actual blocking operation.
+- Native observation waits already share injected classified monotonic budgets.
+  This candidate propagates running boundaries into nested waits and blocking
+  pipe/socket observations instead of renewing a full allowance at each step.
 - Collector receipts preserve persistence order across capture-clock rollback.
-  The checker currently needs its own repair because it orders different source
-  observations by UTC timestamps.
+  The merged checker work now carries retained order witnesses as well; neither
+  persistence boundary proves arbitrary remote occurrence order.
 - Callback gates and fixture holds already support controlled overlap. Reuse
   them and prove the intended boundary was reached before injecting a fault.
 
 ## First delivery group
 
-These changes have separate review boundaries and start from the same master
-revision. Integrate each through its own Draft PR; keep the others independent.
+The first group was delivered through separate review boundaries. Its purposes
+and evidence requirements remain useful context for the following work.
 
 | Slice | Result | Evidence required before handoff |
 |---|---|---|
@@ -48,9 +51,25 @@ for xor's review. [PR quality](pr-quality.md) defines the existing process.
 
 ## Following delivery groups
 
-Keep these visible while the first group establishes usable boundaries. Their
-exact PR boundaries depend on the integrated evidence; they are not completed by
-the initial inventory or an unused interface.
+The reviewed waits/budgets group now has concrete test-kit and runtime transport
+review boundaries. The test-kit changes use one running `Deadline` for nested
+observation, saturated pipe writes and partial-line readiness. Execution,
+cancellation and cleanup remain distinct: command cleanup shares one forced
+allowance, while terminal-host cleanup explicitly remains cooperative and
+retains elapsed/overrun evidence. Reviewed shared observation helpers opt into
+the existing harness scale; product settings and deliberate fault controls do
+not. See [bounded observation waits](testing-framework.md#bounded-observation-waits)
+for exact boundaries and limitations.
+
+The runtime transport candidate separately handles request-level remainder
+through writer admission, sending and framed response reads. It cannot depend
+on test-kit infrastructure. Per-command provider settings, native startup/turn
+phases, database contention, service-lifetime loops and deliberate gate
+watchdogs retain their distinct purposes. The inventory marks those dispositions
+and the remaining cooperative port boundaries explicitly.
+
+The broader groups remain visible below. Their exact PR boundaries depend on
+the evidence; an inventory or unused interface does not complete them.
 
 1. **Shared observation contracts and compatibility.** Carry producer/source
    identity, incarnation, operation binding and source counters through actual

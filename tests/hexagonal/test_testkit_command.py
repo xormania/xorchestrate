@@ -330,9 +330,9 @@ def test_interrupt_during_group_acquisition_still_terminates_the_whole_session(t
         events.append(("signal", pgid, number))
         return real_killpg(pgid, number)
 
-    def finish(child):
+    def finish(child, **kwargs):
         events.append(("reap", child.pid, None))
-        return real_finish(child)
+        return real_finish(child, **kwargs)
 
     monkeypatch.setattr(command, "_OwnedGroup", interrupted)
     monkeypatch.setattr(os, "killpg", killpg)

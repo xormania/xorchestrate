@@ -12,6 +12,84 @@ def clear_timeout_scale(monkeypatch):
     monkeypatch.delenv("XO_TEST_TIMEOUT_SCALE", raising=False)
 
 
+def test_running_deadline_children_keep_the_earlier_expiry_and_same_clock():
+    from scripts.testkit.waits import Deadline
+
+    clock = ControlledClock()
+    parent = Deadline.after(5, clock=clock)
+    clock.advance(elapsed=2, wall=-10_000)
+    long_child, short_child = parent.child(10), parent.child(1)
+    assert parent.remaining() == 3 and parent.remaining(limit=.5) == .5
+    assert long_child.remaining() == 3 and short_child.remaining() == 1
+    clock.advance(elapsed=2, wall=20_000)
+    assert parent.remaining() == long_child.remaining() == 1
+    assert short_child.remaining() == 0, "CHILD_EXPIRY_NEVER_RENEWS_PARENT_TIME"
+    assert long_child.clock is short_child.clock is clock
+
+
+def test_running_zero_deadline_has_no_minimum_new_allowance():
+    from scripts.testkit.waits import Deadline
+
+    clock = ControlledClock()
+    deadline = Deadline.after(0, clock=clock)
+    assert deadline.remaining() == deadline.child(10).remaining() == 0
+    clock.advance(elapsed=1)
+    assert deadline.remaining(limit=.001) == 0
+
+
+@pytest.mark.parametrize("duration", [-1, float("nan"), float("inf"), True])
+def test_running_deadline_rejects_unusable_durations(duration):
+    from scripts.testkit.waits import Deadline
+
+    with pytest.raises(ValueError):
+        Deadline.after(duration, clock=ControlledClock())
+
+
+@pytest.mark.parametrize("classification,expected", [
+    ("harness_allowance", 4), ("product_guarantee", 2), ("fault_control", 2),
+])
+def test_started_wait_budget_keeps_classification_and_parent_remainder(classification, expected):
+    from scripts.testkit.waits import Deadline, WaitBudget
+
+    clock = ControlledClock()
+    parent = Deadline.after(5, clock=clock)
+    clock.advance(elapsed=1)
+    started = WaitBudget(2, classification, scale=3).start(clock, parent=parent)
+    assert started.remaining() == expected, "STARTED_BUDGET_CANNOT_EXTEND_THE_PARENT"
+    clock.advance(elapsed=1, wall=-500)
+    assert started.remaining() == expected - 1
+
+
+def test_shared_parent_deadline_limits_the_native_wait_without_restarting():
+    from scripts.testkit.waits import Deadline, WaitTimeout
+
+    clock = ControlledClock()
+    parent = Deadline.after(.025, clock=clock)
+    polls = []
+
+    def observe():
+        polls.append(clock.elapsed)
+        return False
+
+    with pytest.raises(WaitTimeout):
+        native.wait_for(observe, timeout=1, timeout_scale=3, deadline=parent,
+                        clock=clock, sleep=clock.sleep)
+    assert clock.sleeps == pytest.approx([.01, .01, .005]), "NATIVE_CHILD_WAIT_USES_PARENT_REMAINDER"
+    assert polls == pytest.approx([0, .01, .02])
+
+
+def test_exhausted_parent_does_not_start_a_predicate():
+    from scripts.testkit.waits import Deadline, WaitBudget, WaitTimeout, bounded_wait
+
+    clock = ControlledClock()
+    calls = []
+    with pytest.raises(WaitTimeout) as caught:
+        bounded_wait(lambda: calls.append(True), WaitBudget(1, "harness_allowance"),
+                     deadline=Deadline.after(0, clock=clock), clock=clock, sleep=clock.sleep)
+    assert calls == clock.sleeps == [], "EXHAUSTED_PARENT_PREVENTS_CHILD_POLLING"
+    assert caught.value.details["attempts"] == 0
+
+
 def test_native_wait_clamps_sleep_to_remaining_budget(monkeypatch):
     clock = ControlledClock()
     polls = []

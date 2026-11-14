@@ -91,11 +91,12 @@ class Programs:
 
 
 def wait(condition, timeout=10, interval=0.02):
-    deadline = time.monotonic() + timeout
-    while not condition():
-        if time.monotonic() >= deadline:
-            raise AssertionError("condition not reached before the timeout")
-        time.sleep(interval)
+    from scripts.testkit.adapters.clock import SystemClock
+    from scripts.testkit.waits import bounded_wait
+    from tests.hexagonal.support.native import observation_budget
+
+    bounded_wait(condition, observation_budget(timeout), clock=SystemClock(), sleep=time.sleep,
+                 poll_interval=interval, message="condition not reached before the timeout")
 
 
 @dataclass

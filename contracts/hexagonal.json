@@ -412,6 +412,7 @@
         "scripts.testkit.adapters.command",
         "scripts.testkit.adapters.evidence",
         "scripts.testkit.adapters.clock",
+        "scripts.testkit.adapters.streams",
         "scripts.testkit.adapters.ownership",
         "scripts.testkit.adapters.static",
         "scripts.testkit.adapters.identity",

@@ -7,15 +7,17 @@ Private memories are supplied only at initialization, never in retention probes.
 from __future__ import annotations
 
 import json
-import select
 import subprocess
 import sys
 import time
 import uuid
 from copy import deepcopy
 
+from scripts.testkit.adapters.clock import SystemClock
 from scripts.testkit.adapters.evidence import now, write_json
+from scripts.testkit.adapters.streams import FrameTooLarge, read_line
 from scripts.testkit.core import ResourceScope
+from scripts.testkit.waits import Deadline
 from xorchestrate.composition import build
 from xorchestrate.model import OrchestrationError
 
@@ -64,8 +66,8 @@ def _probe(suite, application, peer, session, case_id, initialize=False):
         phase = "lifecycle"
     _call(application, "send_session", session_id=session["id"],
           message={"text": explanation + "\nVERIFICATION_COMMAND=" + json.dumps(command)}, idempotency_key=uuid.uuid4().hex)
-    deadline = time.monotonic() + suite.timeout
-    while time.monotonic() < deadline:
+    deadline = Deadline.after(suite.timeout, clock=SystemClock())
+    while deadline.remaining() > 0:
         raw = _records(application)
         evidence = {row["id"]: row for row in raw["evidence"]}
         for callback in raw["native_observation"]:
@@ -93,7 +95,9 @@ def _probe(suite, application, peer, session, case_id, initialize=False):
             return {"memory": payload["memory"], "native_id": value["native_id"], "incarnation": value["incarnation"],
                     "call_id": value["call_id"], "session_id": session["id"], "evidence_id": saved["id"],
                     "native_observation_id": native["id"], "callback_observation_id": callback["id"]}
-        time.sleep(.025)
+        remaining = deadline.remaining(.025)
+        if remaining > 0:
+            time.sleep(remaining)
     raise VerificationFailure("lifecycle_retained_native_callback_missing")
 
 
@@ -137,19 +141,20 @@ def _host(config_file, peer, endpoint, directory, timeout, resources):
     resources.defer("host_stderr", stderr.close)
     command = [sys.executable, "-m", "xorchestrate.bridge", "--config", str(config_file), "--driver", peer,
         "--endpoint", str(endpoint), "--transport", "fifo", "--state", str(directory / "host-state.json"), "--application-tools"]
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=stderr, text=True)
+    deadline = Deadline.after(timeout, clock=SystemClock())
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=stderr, bufsize=0)
     resources.defer("host_stdout", process.stdout.close)
     resources.defer("external_host", lambda: _stop_host(process))
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        if select.select([process.stdout], [], [], .1)[0]:
-            line = process.stdout.readline()
-            if not line:
-                break
+    pending = b""
+    while deadline.remaining() > 0:
+        try:
+            line, pending = read_line(process.stdout, pending, deadline, limit=1_048_576)
             ready = json.loads(line)
             if ready.get("ready"):
                 write_json(directory / "host-launch.json", {"command": command, "pid": process.pid, "ready": ready, "at": now()})
                 return process, stderr
+        except (TimeoutError, EOFError, FrameTooLarge):
+            break
         if process.poll() is not None:
             break
     raise VerificationFailure("external_host_start_failed")

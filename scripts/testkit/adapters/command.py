@@ -16,6 +16,8 @@ import time
 from pathlib import Path
 
 from ..model import Cancelled, Result, Timeout
+from ..waits import Deadline
+from .clock import SystemClock
 
 CLEANUP_TIMEOUT = 5.0
 
@@ -90,16 +92,17 @@ def _group_members(pgid):
     return count
 
 
-def _finish(child):
-    """A detached descendant holding pipes cannot hold cleanup indefinitely."""
+def _finish(child, *, deadline=None):
+    """Pipe draining and reaping share one cleanup allowance, even on failure."""
+    deadline = deadline or Deadline.after(CLEANUP_TIMEOUT, clock=SystemClock())
     try:
-        return child.communicate(timeout=CLEANUP_TIMEOUT)
+        return child.communicate(timeout=deadline.remaining())
     except subprocess.TimeoutExpired as exc:
         for stream in (child.stdin, child.stdout, child.stderr):
             if stream is not None:
                 with contextlib.suppress(OSError):
                     stream.close()
-        child.wait(timeout=CLEANUP_TIMEOUT)
+        child.wait(timeout=deadline.remaining())
         return exc.stdout or b"", exc.stderr or b""
 
 
@@ -134,11 +137,12 @@ class SubprocessRunner:
         receipt = {"reason": str(reason), "scope": scope, "forced": False,
                    "grace_seconds": self.shutdown_grace, "errors": []}
         out, err = b"", b""
-        deadline = time.monotonic() + self.shutdown_grace
+        clock = SystemClock()
+        deadline = Deadline.after(self.shutdown_grace, clock=clock)
         drain_pending = False
         try:
             group.signal(signal.SIGTERM, owner_only=self.shutdown_target == "owner")
-            out, err = child.communicate(timeout=self.shutdown_grace)
+            out, err = child.communicate(timeout=deadline.remaining())
         except subprocess.TimeoutExpired:
             drain_pending = True
         except OSError as error:
@@ -147,24 +151,24 @@ class SubprocessRunner:
         # communicate() proves the owner's exit and pipe closure, not the
         # group's exit: a grandchild can redirect stdio and ignore TERM.
         remaining = group.observe()
-        while remaining and time.monotonic() < deadline:
-            time.sleep(min(.02, max(0, deadline - time.monotonic())))
+        while remaining and deadline.remaining() > 0:
+            time.sleep(deadline.remaining(.02))
             remaining = group.observe()
+        forced_deadline = Deadline.after(CLEANUP_TIMEOUT, clock=clock)
         if remaining or drain_pending:
             receipt["forced"] = True
             _kill_session(child, group)
         if drain_pending:
             try:
-                out, err = _finish(child)
+                out, err = _finish(child, deadline=forced_deadline)
             except (OSError, subprocess.TimeoutExpired) as error:
                 receipt["errors"].append({"type": type(error).__name__, "phase": "forced_drain"})
                 out, err = getattr(error, "stdout", b""), getattr(error, "stderr", b"")
-        verification_deadline = time.monotonic() + min(CLEANUP_TIMEOUT, max(.1, self.shutdown_grace))
         remaining = group.observe()
-        while remaining and time.monotonic() < verification_deadline:
+        while remaining and forced_deadline.remaining() > 0:
             receipt["forced"] = True
             group.signal(signal.SIGKILL)
-            time.sleep(.01)
+            time.sleep(forced_deadline.remaining(.01))
             remaining = group.observe()
         if group.unknown:
             receipt["errors"].append({"type": "OwnershipUnknown", "phase": "group_verification"})
@@ -190,28 +194,29 @@ class SubprocessRunner:
         receipt = {"reason": str(reason), "scope": scope, "forced": False,
                    "grace_seconds": self.shutdown_grace,
                    "errors": [{"type": "OwnershipUnavailable", "phase": "group_acquisition"}]}
+        clock = SystemClock()
+        deadline = Deadline.after(self.shutdown_grace, clock=clock)
         with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
             if self.shutdown_target == "owner":
                 child.send_signal(signal.SIGTERM)
             else:
                 os.killpg(child.pid, signal.SIGTERM)
         # A zombie owner still answers killpg(pid, 0); count live members instead.
-        deadline = time.monotonic() + self.shutdown_grace
         members = _group_members(child.pid)
-        while members != 0 and time.monotonic() < deadline:
-            time.sleep(min(.02, max(0, deadline - time.monotonic())))
+        while members != 0 and deadline.remaining() > 0:
+            time.sleep(deadline.remaining(.02))
             members = _group_members(child.pid)
-        verification_deadline = time.monotonic() + CLEANUP_TIMEOUT
-        while members != 0 and time.monotonic() < verification_deadline:
+        forced_deadline = Deadline.after(CLEANUP_TIMEOUT, clock=clock)
+        while members != 0 and forced_deadline.remaining() > 0:
             receipt["forced"] = True
             with contextlib.suppress(ProcessLookupError, PermissionError, OSError):
                 os.killpg(child.pid, signal.SIGKILL)
-            time.sleep(.01)
+            time.sleep(forced_deadline.remaining(.01))
             members = _group_members(child.pid)
         if members is None:
             receipt["errors"].append({"type": "MembershipUnavailable", "phase": "group_verification"})
         try:
-            out, err = _finish(child)
+            out, err = _finish(child, deadline=forced_deadline)
         except (OSError, subprocess.TimeoutExpired) as error:
             receipt["errors"].append({"type": type(error).__name__, "phase": "forced_drain"})
             out, err = getattr(error, "stdout", b""), getattr(error, "stderr", b"")
@@ -234,6 +239,7 @@ class SubprocessRunner:
             raise ValueError("inherited terminal input cannot also be supplied")
         argv = tuple(str(arg) for arg in argv)
         started = time.monotonic()
+        deadline = Deadline(started + timeout, SystemClock())
         reason = self.cancellation() if self.cancellation is not None else None
         if reason:
             raise Cancelled(argv, cwd=cwd, reason=reason, launched=False,
@@ -250,7 +256,7 @@ class SubprocessRunner:
             group = _OwnedGroup(child)
             while True:
                 reason = self.cancellation() if self.cancellation is not None else None
-                remaining = started + timeout - time.monotonic()
+                remaining = deadline.remaining()
                 if reason or remaining <= 0:
                     out, err, shutdown = self._shutdown(
                         child, reason=reason or "check_timeout", scope="run" if reason else "check", group=group)

@@ -24,6 +24,54 @@ def _positive_finite(value, name):
         raise ValueError(f"{name} must be a positive finite number")
 
 
+def _nonnegative_finite(value, name):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"{name} must be a nonnegative finite number")
+    try:
+        valid = math.isfinite(value) and value >= 0
+    except OverflowError:
+        valid = False
+    if not valid:
+        raise ValueError(f"{name} must be a nonnegative finite number")
+
+
+@dataclass(frozen=True)
+class Deadline:
+    """A live local boundary, shared by nested blocking operations.
+
+    Zero remaining means no allowance, never an unbounded timeout or a new
+    minimum allowance. A child shares this clock and cannot extend its parent.
+    This value controls supplied blocking timeouts, not arbitrary code or the
+    operating system's scheduling latency; it is not portable across boots.
+    """
+
+    expires: float
+    clock: Clock
+
+    def __post_init__(self):
+        try:
+            finite = not isinstance(self.expires, bool) and math.isfinite(self.expires)
+        except (TypeError, OverflowError):
+            finite = False
+        if not finite:
+            raise ValueError("deadline must be finite")
+
+    @classmethod
+    def after(cls, seconds, *, clock):
+        _nonnegative_finite(seconds, "duration")
+        return cls(clock.monotonic() + seconds, clock)
+
+    def remaining(self, limit=None):
+        if limit is not None:
+            _nonnegative_finite(limit, "remaining limit")
+        left = max(0.0, self.expires - self.clock.monotonic())
+        return left if limit is None else min(left, limit)
+
+    def child(self, timeout):
+        child = self.after(timeout, clock=self.clock)
+        return Deadline(min(self.expires, child.expires), self.clock)
+
+
 @dataclass(frozen=True)
 class WaitBudget:
     """Only harness allowances expand with a configured timeout scale.
@@ -55,6 +103,13 @@ class WaitBudget:
     def effective_timeout(self):
         return self.timeout * self.effective_scale
 
+    def start(self, clock, *, parent=None):
+        if parent is not None:
+            if parent.clock is not clock:
+                raise ValueError("nested deadlines must share the same clock")
+            return parent.child(self.effective_timeout)
+        return Deadline.after(self.effective_timeout, clock=clock)
+
 
 class WaitTimeout(AssertionError):
     """An observation allowance expired; retain the actual consumed budget."""
@@ -78,7 +133,8 @@ class WaitTimeout(AssertionError):
 def bounded_wait(predicate: Callable[[], T], budget: WaitBudget, *, clock: Clock,
                  sleep: Callable[[float], None], poll_interval: float = .01,
                  message: str = "Expected observation did not arrive",
-                 retryable: Callable[[Exception], bool] | None = None) -> T:
+                 retryable: Callable[[Exception], bool] | None = None,
+                 deadline: Deadline | None = None) -> T:
     """Poll while one elapsed budget permits another attempt.
 
     A predicate already running is not preempted, and its truthy result is
@@ -91,12 +147,10 @@ def bounded_wait(predicate: Callable[[], T], budget: WaitBudget, *, clock: Clock
     """
     _positive_finite(poll_interval, "poll interval")
     started = clock.monotonic()
-    deadline = started + budget.effective_timeout
-    if not math.isfinite(deadline):
-        raise ValueError("wait deadline must be finite")
+    running = budget.start(clock, parent=deadline)
     attempts = retries = 0
     now = clock.monotonic()
-    while now < deadline:
+    while now < running.expires:
         attempts += 1
         try:
             result = predicate()
@@ -107,7 +161,7 @@ def bounded_wait(predicate: Callable[[], T], budget: WaitBudget, *, clock: Clock
                 raise
             retries += 1
         now = clock.monotonic()
-        remaining = deadline - now
+        remaining = running.expires - now
         if remaining <= 0:
             break
         sleep(min(poll_interval, remaining))
