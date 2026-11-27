@@ -80,7 +80,7 @@
         },
         {
           "name": "Resolve the pinned runtime manager for evidence compatibility",
-          "uses": "astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2",
+          "uses": "astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d",
           "with": {
             "version": "0.13.7",
             "enable-cache": false,
@@ -176,7 +176,7 @@
         },
         {
           "name": "Install pinned validation runtime manager",
-          "uses": "astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2",
+          "uses": "astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d",
           "with": {
             "version": "0.13.7",
             "enable-cache": true,
@@ -298,7 +298,7 @@
         },
         {
           "name": "Install pinned validation runtime manager",
-          "uses": "astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2",
+          "uses": "astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d",
           "with": {
             "version": "0.13.7",
             "enable-cache": true,
@@ -395,7 +395,7 @@
         },
         {
           "name": "Install pinned validation runtime manager",
-          "uses": "astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2",
+          "uses": "astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d",
           "with": {
             "version": "0.13.7",
             "enable-cache": true,
@@ -489,7 +489,7 @@
         },
         {
           "name": "Install pinned validation runtime manager",
-          "uses": "astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2",
+          "uses": "astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d",
           "with": {
             "version": "0.13.7",
             "enable-cache": true,
@@ -578,7 +578,7 @@
           "run": "python_cache_dir=\"$(mktemp -d \"$RUNNER_TEMP/package-python-cache.XXXXXX\")\"\nprintf 'PYTHONPYCACHEPREFIX=%s\\n' \"$python_cache_dir\" >> \"$GITHUB_ENV\"\nprintf 'UV_PROJECT_ENVIRONMENT=%s\\n' \"$RUNNER_TEMP/package-builder\" >> \"$GITHUB_ENV\""
         },
         {
-          "uses": "astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2",
+          "uses": "astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d",
           "with": {
             "version": "0.13.7",
             "enable-cache": false,
@@ -655,7 +655,7 @@
         },
         {
           "name": "Resolve the pinned runtime manager for evidence compatibility",
-          "uses": "astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2",
+          "uses": "astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d",
           "with": {
             "version": "0.13.7",
             "enable-cache": false,
